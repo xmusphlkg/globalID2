@@ -57,6 +57,12 @@
 
 @layer base {
   :root {
+    --page-reading-width: 74rem;
+    --page-tool-width: 78rem;
+    --page-directory-width: 88rem;
+    --page-gutter: 2rem;
+    --page-block-space: clamp(1.5rem, 3vw, 2.5rem);
+    --page-title-size: clamp(2rem, 4.5vw, 3.5rem);
     --color-brand: 16 42 67;
     --color-teal: 15 118 110;
     --color-accent: 181 71 46;
@@ -97,6 +103,10 @@
 
   html {
     @apply scroll-smooth;
+  }
+
+  @media (max-width: 640px) {
+    :root { --page-gutter: 1rem; }
   }
 
   body {

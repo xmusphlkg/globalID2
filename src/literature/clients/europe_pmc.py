@@ -42,6 +42,26 @@ class EuropePmcClient(LiteratureHttpClient):
                         result[doi] = row
         return result
 
+    async def search_recent_page(
+        self, *, query: str, since: datetime, until: datetime,
+        max_records: int, cursor: str | int | None = None,
+    ):
+        """Read one bounded page of a fixed publication-date query."""
+        from .search_page import cursor_page
+
+        size = max(1, min(100, int(max_records)))
+        token = str(cursor or "*")
+        bounded_query = f"({query}) AND FIRST_PDATE:[{since.date().isoformat()} TO {until.date().isoformat()}]"
+        async with httpx.AsyncClient(base_url=self.BASE_URL, follow_redirects=True) as client:
+            payload = await self.get_json(client, "/search", params={
+                "query": bounded_query, "format": "json", "pageSize": size,
+                "resultType": "core", "cursorMark": token,
+            })
+        records = (payload.get("resultList") or {}).get("result")
+        if not isinstance(records, list) or any(not isinstance(row, dict) for row in records):
+            raise ValueError("Invalid Europe PMC discovery page")
+        return cursor_page(records, size=size, cursor=token, next_cursor=payload.get("nextCursorMark"))
+
     async def search_recent(
         self,
         *,

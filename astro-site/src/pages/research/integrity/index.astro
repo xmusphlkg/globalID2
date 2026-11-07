@@ -1,12 +1,13 @@
 ---
+import { readResearchIndex } from '../../../lib/generated-site-data.ts';
 import ReportLayout from '../../../layouts/ReportLayout.astro';
-import researchData from '../../../data/research/index.json';
 import {
   integrityAlertLabel,
   normalizeIntegrityAlerts,
 } from '../../../lib/research-integrity';
 import { buildAlternatePaths } from '../../../lib/seo';
 import { translateUi } from '../../../utils/i18n';
+import { siteHref } from '../../../lib/papers';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
@@ -14,7 +15,7 @@ const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => zh ? zhValue : fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : en;
 
-const alerts = normalizeIntegrityAlerts((researchData as any).integrity_alerts);
+const alerts = normalizeIntegrityAlerts((readResearchIndex() as any).integrity_alerts);
 const counts = {
   retraction: alerts.filter(alert => alert.event_type === 'retraction').length,
   expression_of_concern: alerts.filter(alert => alert.event_type === 'expression_of_concern').length,
@@ -125,7 +126,7 @@ const structuredData = {
                   </dl>
                   <div class="alert-actions">
                     {alert.source_url && <a class="source-link" href={alert.source_url} target="_blank" rel="noopener noreferrer">{pick('Verify source record ↗', '核对来源记录 ↗', 'Vérifier la source ↗')}</a>}
-                    {alert.article_url && <a href={(zh || fr) && alert.article_url.startsWith('/') ? `${prefix}${alert.article_url}` : alert.article_url}>{pick('View corrected public record →', '查看已更正公开记录 →', 'Voir la référence publique corrigée →')}</a>}
+                    {alert.article_url && <a href={siteHref((zh || fr) && alert.article_url.startsWith('/') ? `${prefix}${alert.article_url}` : alert.article_url)}>{pick('View corrected public record →', '查看已更正公开记录 →', 'Voir la référence publique corrigée →')}</a>}
                   </div>
                 </article>
               </li>
@@ -138,11 +139,11 @@ const structuredData = {
 </ReportLayout>
 
 <style>
-  .integrity-page { width: min(74rem, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 4rem; }
+  .integrity-page { width: min(var(--page-reading-width), calc(100% - var(--page-gutter))); margin: 0 auto; padding: var(--page-block-space) 0 3rem; }
   .integrity-hero { padding: clamp(1.5rem, 4vw, 3rem); }
   .integrity-topline { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
   .integrity-topline a, .alert-actions a { color: rgb(var(--color-brand)); font-size: .72rem; font-weight: 700; }
-  .integrity-hero h1 { max-width: 50rem; margin-top: 1rem; color: rgb(var(--text-strong)); font: 600 clamp(2rem, 5vw, 4rem)/1.02 'IBM Plex Sans', sans-serif; letter-spacing: -.035em; }
+  .integrity-hero h1 { max-width: 50rem; margin-top: 1rem; color: rgb(var(--text-strong)); font: 600 var(--page-title-size)/1.02 'IBM Plex Sans', sans-serif; letter-spacing: -.035em; }
   .integrity-lede { max-width: 54rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .95rem; line-height: 1.7; }
   .integrity-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid rgb(var(--border) / .72); }
   .integrity-metrics dt, .integrity-alert dt { color: rgb(var(--text-faint)); font-size: .63rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
@@ -173,7 +174,7 @@ const structuredData = {
   .integrity-empty h3 { color: rgb(var(--text-strong)); font: 600 1.35rem/1.2 'IBM Plex Sans', sans-serif; }
   .integrity-empty p { max-width: 42rem; margin: .65rem auto 0; color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.65; }
   @media (max-width: 700px) {
-    .integrity-page { width: min(100% - 1rem, 74rem); }
+    .integrity-page { width: min(var(--page-reading-width), calc(100% - var(--page-gutter))); }
     .integrity-metrics { grid-template-columns: repeat(2, 1fr); }
     .integrity-explainer { grid-template-columns: 1fr; gap: .75rem; }
   }

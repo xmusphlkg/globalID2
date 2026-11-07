@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.collection import PublishDirty
+from src.core.config import get_config
 from src.services.data_release_service import data_release_service
 
 from ..deps import get_db
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/publish")
 
 @router.get("/pending", response_model=DataResponse[PendingOut])
 async def pending(db: AsyncSession = DB_DEPENDENCY):
+    config = get_config().data_release
     rows = (
         await db.execute(
             select(PublishDirty.line, PublishDirty.scope_key)
@@ -36,15 +38,20 @@ async def pending(db: AsyncSession = DB_DEPENDENCY):
             literature=bool(groups["literature"]),
             situation=bool(groups["situation"]),
             knowledge=groups["knowledge"],
+            surveillance_json_enabled=bool(config.surveillance_json_enabled),
+            situation_json_enabled=bool(config.situation_json_enabled),
         )
     )
 
 
 @router.post("/runs", response_model=DataResponse[dict], status_code=202)
 async def start(body: PublishRunCreate):
+    if sum((body.full, body.reports_only, body.code_only)) > 1:
+        raise HTTPException(400, "Full, reports-only and code-only release modes are mutually exclusive")
     try:
         result = await data_release_service.trigger_job(
-            body.job_id, manual=True, trigger="dashboard", full=body.full
+            body.job_id, manual=True, trigger="dashboard", full=body.full,
+            reports_only=body.reports_only, code_only=body.code_only,
         )
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc

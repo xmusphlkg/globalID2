@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -90,6 +91,17 @@ def test_classifier_keeps_preflight_syntax_and_credentials_terminal():
         )
     )
     assert credential.retryable is False
+
+
+@pytest.mark.parametrize("stage,message,expected", [
+    ("r2_reports_publish", "Connection reset by peer", True),
+    ("r2_reports_publish", "HTTP 503 Service unavailable", True),
+    ("r2_reports_publish", "HTTP 403 Forbidden", False),
+    ("reports_build", "JavaScript heap out of memory", False),
+    ("reports_bundle", "validation failed", False),
+])
+def test_reports_retry_is_limited_to_transient_upload_failures(stage, message, expected):
+    assert classify_release_failure(_command_error(message, stage=stage)).retryable is expected
 
 
 def test_classifier_allows_transient_cloudflare_preflight_diagnostic():
@@ -199,6 +211,75 @@ class _Database:
 
     async def commit(self):
         self.commits += 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("retry_status", ["terminal", "queued", "scheduled"])
+async def test_completed_release_records_recovery_without_losing_failure_history(monkeypatch, retry_status):
+    task = SimpleNamespace(
+        task_uuid="recovered-release",
+        task_type=TaskType.EXPORT_DATA,
+        status=TaskStatus.COMPLETED,
+        completed_at=datetime(2026, 11, 5, 8, 51, tzinfo=timezone.utc),
+        metadata_={"automatic_retry": {
+            "status": retry_status, "stage": "generate_site_data",
+            "last_error": "previous failure", "scheduled_attempts": 0,
+            "next_attempt_at": "2026-11-05T00:00:00+00:00", "exhausted": True,
+        }},
+    )
+    database = _Database([_ScalarResult(one=task)])
+    monkeypatch.setattr(release_module, "get_database", lambda: database)
+    log = AsyncMock()
+    monkeypatch.setattr(release_module.task_manager, "add_workbook_entry", log)
+
+    assert await DataReleaseService().mark_automatic_retry_succeeded(task.task_uuid)
+    retry = task.metadata_["automatic_retry"]
+    assert retry["status"] == "succeeded"
+    assert retry["next_attempt_at"] is None and retry["exhausted"] is False
+    assert retry["last_error"] == "previous failure"
+    assert retry["stage"] == "generate_site_data"
+    assert datetime.fromisoformat(retry["succeeded_at"]) == task.completed_at
+    assert database.commits == 1
+    assert log.await_args.kwargs["metadata"]["event"] == "release_retry_succeeded"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("task_status,retry_status", [
+    (TaskStatus.COMPLETED, "not_scheduled"),
+    (TaskStatus.COMPLETED, "succeeded"),
+    (TaskStatus.RUNNING, "terminal"),
+])
+async def test_release_retry_recovery_ignores_unrelated_or_inflight_tasks(monkeypatch, task_status, retry_status):
+    task = SimpleNamespace(
+        task_uuid="unchanged-release", task_type=TaskType.EXPORT_DATA,
+        status=task_status, metadata_={"automatic_retry": {"status": retry_status}},
+    )
+    database = _Database([_ScalarResult(one=task)])
+    monkeypatch.setattr(release_module, "get_database", lambda: database)
+    log = AsyncMock()
+    monkeypatch.setattr(release_module.task_manager, "add_workbook_entry", log)
+    assert not await DataReleaseService().mark_automatic_retry_succeeded(task.task_uuid)
+    assert task.metadata_["automatic_retry"]["status"] == retry_status
+    assert database.commits == 0
+    log.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("metadata_failure", [False, True])
+async def test_successful_release_finalizes_retry_without_reversing_publication(monkeypatch, metadata_failure):
+    task = SimpleNamespace(task_uuid="release-lifecycle-success", task_type=TaskType.EXPORT_DATA)
+    statuses = []
+    async def update(_uuid, status, **_kwargs):
+        statuses.append(status)
+    monkeypatch.setattr(lifecycle_module.task_manager, "update_task_status", update)
+    monkeypatch.setattr(lifecycle_module.task_manager, "is_cancel_requested", AsyncMock(return_value=False))
+    recovered = AsyncMock(side_effect=RuntimeError("metadata unavailable") if metadata_failure else None)
+    monkeypatch.setattr(lifecycle_module.data_release_service, "mark_automatic_retry_succeeded", recovered)
+    monkeypatch.setattr(lifecycle_module.data_release_service, "maybe_trigger_after_task_completion", AsyncMock())
+    async with lifecycle_module.task_lifecycle(task, exit_on_cancel=False):
+        pass
+    assert statuses == [TaskStatus.RUNNING, TaskStatus.COMPLETED]
+    recovered.assert_awaited_once_with(task.task_uuid)
 
 
 @pytest.mark.asyncio

@@ -205,6 +205,35 @@ async def test_stream_lane_rests_when_its_task_made_no_progress(monkeypatch):
     assert lane.next_at > time.monotonic() + 60
 
 
+async def test_stream_lane_relaunches_at_once_after_lease_expiry(monkeypatch):
+    from src.domain import TaskStatus
+
+    tasks = {"task-0": _task(TaskStatus.CANCELLED)}
+    lane, queued = _stream_lane(monkeypatch, tasks)
+    service, _ = make_service([lane])
+
+    await service.process_once()
+    cycle = await service.process_once()
+    assert queued == ["task-0", "task-1"]
+    assert lane.task_uuid == "task-1" and lane.next_at <= time.monotonic()
+    assert cycle["lanes"]["articles"]["outage"] is None
+
+
+async def test_stream_lane_rests_after_an_explicit_cancel(monkeypatch):
+    from src.domain import TaskStatus
+
+    task = _task(TaskStatus.CANCELLED)
+    task.metadata_ = {"cancel_requested": True}
+    tasks = {"task-0": task}
+    lane, queued = _stream_lane(monkeypatch, tasks)
+    service, _ = make_service([lane])
+
+    await service.process_once()
+    await service.process_once()
+    assert queued == ["task-0"]
+    assert lane.next_at > time.monotonic() + 60
+
+
 async def test_stream_lane_failed_task_backs_off(monkeypatch):
     from src.domain import TaskStatus
 

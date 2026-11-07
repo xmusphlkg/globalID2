@@ -14,11 +14,13 @@ export interface EmailContent {
   subject: string;
   text: string;
   html: string;
+  unsubscribeUrl?: string;
 }
 
 export interface RawEmailConfig {
   fromEmail: string;
   fromName: string;
+  configurationSet?: string;
 }
 
 export interface NotificationEmailContent {
@@ -30,17 +32,20 @@ export function buildNotificationEmail(
   locale: string,
   content: NotificationEmailContent,
   unsubscribeUrl: string,
+  manageUrl?: string,
 ): EmailContent {
   const labels = notificationTemplateLabels(locale);
   const subject = cleanHeaderValue(content.subject, 200) || labels.title;
   const markdown = cleanMarkdown(content.markdown);
   const bodyHtml = markdownToHtml(markdown);
+  const manageLabel = locale === "zh" ? "管理订阅偏好" : locale === "fr" ? "Gérer les préférences" : "Manage preferences";
   const text = [
     subject,
     "",
     markdown,
     "",
     `${labels.unsubscribe}: ${unsubscribeUrl}`,
+    ...(manageUrl ? [`${manageLabel}: ${manageUrl}`] : []),
     "",
     "GIDS - Global Infectious Disease Surveillance",
   ].join("\n");
@@ -61,13 +66,14 @@ export function buildNotificationEmail(
         <p style="margin:8px 0 0;color:#64748b;font-size:12px">
           <a href="${escapeHtml(unsubscribeUrl)}" style="color:#0f766e">${escapeHtml(labels.unsubscribe)}</a>
         </p>
+        ${manageUrl ? `<p style="margin:8px 0 0;font-size:12px"><a href="${escapeHtml(manageUrl)}" style="color:#0f766e">${escapeHtml(manageLabel)}</a></p>` : ""}
       </div>
       <p style="margin:14px 0 0;color:#64748b;font-size:12px">GIDS - Global Infectious Disease Surveillance</p>
     </div>
   </body>
 </html>`;
 
-  return { subject, text, html };
+  return { subject, text, html, unsubscribeUrl };
 }
 
 export function buildConfirmationEmail(
@@ -152,11 +158,22 @@ export function buildRawEmail(
 ): string {
   const boundary = `gids-${crypto.randomUUID()}`;
   const from = `${formatAddressName(config.fromName)} <${cleanAddressHeader(config.fromEmail)}>`;
+  const unsubscribe = safeUnsubscribeUrl(email.unsubscribeUrl);
+  const correlation = email.messageId?.split("@")[0] || "";
+  const safeCorrelation = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(correlation) ? correlation : "";
+  const sesSet = config.configurationSet && /^[A-Za-z0-9_-]{1,64}$/.test(config.configurationSet) ? config.configurationSet : "";
   return [
     `From: ${from}`,
     `To: <${cleanAddressHeader(email.to)}>`,
     `Subject: ${encodeHeader(email.subject)}`,
     ...(email.messageId ? [`Message-ID: <${cleanMessageId(email.messageId)}>`] : []),
+    ...(safeCorrelation ? [`X-GIDS-Delivery-ID: ${safeCorrelation}`] : []),
+    ...(sesSet ? [`X-SES-CONFIGURATION-SET: ${sesSet}`] : []),
+    ...(sesSet && safeCorrelation ? [`X-SES-MESSAGE-TAGS: gids-delivery=${safeCorrelation}`] : []),
+    ...(unsubscribe ? [
+      `List-Unsubscribe: <${unsubscribe}>`,
+      "List-Unsubscribe-Post: List-Unsubscribe=One-Click",
+    ] : []),
     "MIME-Version: 1.0",
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
     "",
@@ -174,6 +191,17 @@ export function buildRawEmail(
     "",
     `--${boundary}--`,
   ].join("\r\n");
+}
+
+function safeUnsubscribeUrl(value: string | undefined): string | null {
+  if (!value || /[\r\n<>\s]/.test(value) || value.length > 1800) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+    return url.href;
+  } catch {
+    return null;
+  }
 }
 
 function cleanMessageId(value: string): string {
@@ -207,6 +235,7 @@ function listDisplayName(code: string, locale: string): string {
     reports: { en: "Report updates", zh: "报告更新" },
     alerts: { en: "Priority alerts", zh: "重点提醒" },
     weekly_digest: { en: "Weekly digest", zh: "每周摘要" },
+    research_digest: { en: "Research Radar", zh: "研究雷达" },
   };
   const label = labels[code] || { en: code, zh: code };
   return locale === "zh" ? label.zh : label.en;

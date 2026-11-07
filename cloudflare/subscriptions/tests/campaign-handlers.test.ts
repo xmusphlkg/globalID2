@@ -32,7 +32,7 @@ const deps = {
 
 test("admin campaign routes enforce authorization before querying D1", async () => {
   let queried = false;
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     ADMIN_API_TOKEN: "secret",
     DB: database(() => { queried = true; return null; }),
   };
@@ -45,7 +45,7 @@ test("admin campaign routes enforce authorization before querying D1", async () 
 });
 
 test("a routed campaign detail request reaches its handler", async () => {
-  const env: Env = { ADMIN_API_TOKEN: "secret", DB: database(() => null) };
+  const env: Env = { DELIVERY_MODE: "full", ADMIN_API_TOKEN: "secret", DB: database(() => null) };
   const handlers = createCampaignHandlers(deps);
   const response = await handlers.get(new Request("https://example.test/api/admin/notifications/missing", {
     headers: { authorization: "Bearer secret" },
@@ -55,7 +55,7 @@ test("a routed campaign detail request reaches its handler", async () => {
 });
 
 test("D1 failures propagate to the worker error boundary", async () => {
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     ADMIN_API_TOKEN: "secret",
     DB: database(() => { throw new Error("D1 unavailable"); }),
   };
@@ -65,16 +65,16 @@ test("D1 failures propagate to the worker error boundary", async () => {
   }), env), /D1 unavailable/);
 });
 
-test("processing without SMTP marks queued deliveries failed and closes campaign", async () => {
+test("processing without SMTP leaves queued deliveries intact", async () => {
   const updates: string[] = [];
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     ADMIN_API_TOKEN: "secret",
     DB: database((query, operation) => {
       if (operation === "first" && query.includes("FROM message_campaigns")) {
         return { id: "campaign-1", subject: "Alert", metadata_json: "{}", status: "queued", created_at: "now" };
       }
       if (operation === "all" && query.includes("GROUP BY status")) {
-        return { results: [{ status: "failed", count: 2 }] };
+        return { results: [{ status: "queued", count: 2 }] };
       }
       if (operation === "run") { updates.push(query); return {}; }
       return operation === "all" ? { results: [] } : null;
@@ -84,18 +84,18 @@ test("processing without SMTP marks queued deliveries failed and closes campaign
   const response = await handlers.process(new Request("https://example.test/api/admin/notifications/campaign-1/process", {
     method: "POST", headers: { authorization: "Bearer secret", "content-type": "application/json" }, body: "{}",
   }), env);
-  assert.equal(response.status, 200);
-  const body = await response.json() as { status: string; reason: string; progress: { failed: number } };
-  assert.equal(body.status, "failed");
+  assert.equal(response.status, 503);
+  const body = await response.json() as { status: string; reason: string; progress: { queued: number } };
+  assert.equal(body.status, "queued");
   assert.equal(body.reason, "smtp_not_configured");
-  assert.equal(body.progress.failed, 2);
-  assert.ok(updates.some((query) => query.includes("UPDATE message_deliveries")));
+  assert.equal(body.progress.queued, 2);
+  assert.equal(updates.some((query) => query.includes("UPDATE message_deliveries")), false);
   assert.ok(updates.some((query) => query.includes("UPDATE message_campaigns")));
 });
 
 test("manual campaigns cannot bypass verified Situation ingestion for the alerts list", async () => {
   let queried = false;
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     ADMIN_API_TOKEN: "secret",
     DB: database(() => { queried = true; return null; }),
   };
@@ -128,8 +128,10 @@ test("Research Radar campaigns honor subscriber topic and study preferences", as
     },
     async all<T>() { return { results: [] as T[] }; },
     async run() { return {}; },
-  }; return statement; } };
-  const env: Env = { ADMIN_API_TOKEN: "secret", DB: db };
+  }; return statement; }, async batch(statements: Array<{ run(): Promise<unknown> }>) {
+    return Promise.all(statements.map((statement) => statement.run()));
+  } };
+  const env: Env = { DELIVERY_MODE: "full", ADMIN_API_TOKEN: "secret", DB: db };
   const handlers = createCampaignHandlers(deps);
   const response = await handlers.create(new Request("https://example.test/api/admin/notifications", {
     method: "POST",
@@ -167,7 +169,7 @@ test("Research Radar campaigns honor subscriber topic and study preferences", as
 
 test("campaign creation fails closed when the requested list does not exist", async () => {
   const queries: string[] = [];
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     ADMIN_API_TOKEN: "secret",
     DB: database((query, operation) => {
       queries.push(query);
@@ -204,7 +206,7 @@ test("idempotent campaign replay returns the original campaign without rebuildin
     default_locale: "en",
     contents: { en: { subject: "Weekly brief", markdown: "Cited source." } },
   });
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     ADMIN_API_TOKEN: "secret",
     DB: database((query, operation) => {
       if (operation === "first" && query.includes("SELECT id FROM subscription_lists")) return { id: "list-research" };
@@ -236,7 +238,7 @@ test("idempotent campaign replay returns the original campaign without rebuildin
 });
 
 test("an idempotency key cannot be reused for changed campaign content", async () => {
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     ADMIN_API_TOKEN: "secret",
     DB: database((query, operation) => {
       if (operation === "first" && query.includes("SELECT id FROM subscription_lists")) return { id: "list-research" };

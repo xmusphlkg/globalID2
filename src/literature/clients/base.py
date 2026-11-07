@@ -12,6 +12,18 @@ import httpx
 _RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
+async def gather_cancel_on_error(*awaitables):
+    """Finish cancelling sibling requests before leaving a provider scope."""
+    tasks = [asyncio.create_task(awaitable) for awaitable in awaitables]
+    try:
+        return await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
+
 class AsyncRequestLimiter:
     """Space request starts across concurrent workers without blocking the loop."""
 

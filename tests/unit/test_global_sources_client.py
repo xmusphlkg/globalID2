@@ -42,6 +42,22 @@ def test_persistent_server_error_raises_after_retries():
         fetch("https://a.example/x", client=_client(lambda r: httpx.Response(500)), guard=HostGuard(), retries=2)
 
 
+def test_empty_successful_response_is_retried_before_parsing():
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(200, content=b"" if len(calls) < 3 else b"report")
+
+    assert fetch("https://a.example/x", client=_client(handler), guard=HostGuard()).content == b"report"
+    assert len(calls) == 3
+
+
+def test_persistent_empty_response_is_a_transient_transport_error():
+    with pytest.raises(httpx.ReadError, match="empty HTTP 200"):
+        fetch("https://a.example/x", client=_client(lambda r: httpx.Response(200)), guard=HostGuard(), retries=2)
+
+
 def test_unreachable_host_trips_the_breaker_and_later_calls_fail_without_a_request():
     clock = Clock()
     guard = HostGuard(threshold=2, cooldown=600, clock=clock)

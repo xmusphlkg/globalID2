@@ -35,6 +35,92 @@ def test_generate_script_reexports_extracted_projection_api() -> None:
     assert validate_series_first_projection is extracted_projection_validator
 
 
+def test_shared_reporting_calendars_are_computed_once_per_projection_call(monkeypatch):
+    from src.generation import site_series_projection as projection
+    actual = projection.report_period_key
+    calls = []
+    def observed(value, cadence=None):
+        calls.append((value, cadence))
+        return actual(value, cadence)
+    monkeypatch.setattr(projection, "report_period_key", observed)
+    sources = [
+        _series(did, "SER_" + did, when, value, temporal_granularity=cadence)
+        for did, cadence, dates in (
+            ("D001", "weekly", ["2026-01-05", "2026-01-12"]),
+            ("D002", "weekly", ["2026-01-05", "2026-01-12"]),
+            ("D003", "monthly", ["2026-01-05", "2026-02-12"]),
+        )
+        for value, when in enumerate(dates, 1)
+    ]
+    legacy = [_legacy("D001", "2026-01-19", 8, temporal_granularity="weekly", metric_type="case_notifications", reporting_basis="notification")]
+    result = projection.apply_series_first_projection(legacy, sources)
+    assert len(calls) == len(set(calls)) == 5
+    assert any(row["date"] == "2026-01-19" and row["cases"] == 8 for row in result)
+    # A later call must see changed inputs, even for the same dates and series.
+    sources[0]["cases"] = 44
+    second = projection.apply_series_first_projection(legacy, sources)
+    assert len(calls) == 10
+    assert next(row["cases"] for row in second if row["disease_id"] == "D001" and row["date"] == "2026-01-05") == 44
+
+
+def test_source_summary_reuse_never_omits_nonprojectable_dimensions(monkeypatch):
+    from src.generation import site_series_projection as projection
+    actual = projection._source_series_details
+    calls = []
+    def observed(records):
+        calls.append(len(records))
+        return actual(records)
+    monkeypatch.setattr(projection, "_source_series_details", observed)
+    sources = [_series("D001", "SER_TOTAL", "2026-01-01", 3), _series("D001", "SER_TOTAL", "2026-02-01", 4)]
+    first = projection.apply_series_first_projection([], sources)
+    assert calls == [2]
+    assert first[0]["_series_context"]["source_series"][0]["values"] == [3, 4]
+    age = _series("D001", "SER_TOTAL", "2026-02-01", 2)
+    age.update(dimension_key="age:0-4", dimensions={"age": "0-4"})
+    second = projection.apply_series_first_projection([], [*sources, age])
+    assert calls == [2, 2, 3]
+    retained = second[0]["_series_context"]["source_series"]
+    assert {(item["dimension_key"], tuple(item["values"])) for item in retained} == {("all", (3, 4)), ("age:0-4", (2,))}
+    assert second[-1]["cases"] == 4
+
+
+def test_cutover_reuse_is_scoped_to_context_disease_and_current_policy(monkeypatch):
+    from types import SimpleNamespace
+    from src.generation import site_series_projection as projection
+    allowed = {"data_layer": SERIES_DATA_LAYER, "projection_policy": "single_series", "selected_series_codes": ["A"]}
+    other = {"data_layer": SERIES_DATA_LAYER, "projection_policy": "single_series", "selected_series_codes": ["B"]}
+    rows = [{"disease_id": "D001", "date": when, "_series_context": context} for when, context in (("2026-01-01", allowed), ("2026-02-01", allowed), ("2026-03-01", other))]
+    policy = SimpleNamespace(read_mode="series_only", required_series=("A",), allowed_projection_policy="single_series", shadow_compare=False, target_override=True)
+    config = SimpleNamespace(release_version="first", resolve_read_policy=lambda *_: policy)
+    monkeypatch.setattr(projection, "get_disease_cutover_config", lambda: config)
+    monkeypatch.setattr(projection, "apply_series_first_projection", lambda *_: rows)
+    first = projection.apply_disease_cutover_projection([], [{"disease_id": "D001"}], country_code="XX")
+    assert [row["date"] for row in first] == ["2026-01-01", "2026-02-01"]
+    assert other["cutover"]["blocked_reasons"] == ["missing_required_series:A"]
+    policy.required_series = ("B",)
+    config.release_version = "second"
+    second = projection.apply_disease_cutover_projection([], [{"disease_id": "D001"}], country_code="XX")
+    assert [row["date"] for row in second] == ["2026-03-01"]
+    assert allowed["cutover"]["release_version"] == "second"
+
+
+def test_empty_dimension_fast_path_preserves_nonobject_json_identity():
+    from src.generation.site_series_projection import _source_series_details
+    empty = _series("D001", "SER_TOTAL", "2026-01-01", 1)
+    nonobject = {**empty, "date": "2026-02-01", "dimensions": "[]"}
+    assert len(_source_series_details([empty, nonobject])) == 2
+
+
+def test_eligible_selection_error_precedes_malformed_hidden_source():
+    eligible = [_series("D001", "SER_TOTAL", "2026-01-01", 1), _series("D001", "SER_TOTAL", "2026-02-01", 2)]
+    eligible[0]["dimensions"] = {"definition": "first"}
+    eligible[1]["dimensions"] = {"definition": "second"}
+    hidden = _series("D001", "SER_HIDDEN", "2026-01-01", 3)
+    hidden.update(dimension_key="age:0-4", dimensions={"unserializable": set()})
+    with pytest.raises(ValueError, match="unique non-empty series_code"):
+        apply_series_first_projection([], [*eligible, hidden])
+
+
 def _legacy(
     disease_id: str,
     date: str,

@@ -1,6 +1,7 @@
 ---
 // src/components/ReportCard.astro
 import CountryFlag from './CountryFlag.astro';
+import { siteHref } from '../lib/papers';
 
 interface Props {
   id: number;
@@ -34,7 +35,7 @@ const {
 } = Astro.props;
 
 const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
-const href = `${prefix}/countries/${(countryCode ?? 'cn').toLowerCase()}/reports/${id}/`;
+const href = siteHref(`${prefix}/countries/${(countryCode ?? 'cn').toLowerCase()}/reports/${id}/`);
 const displayTitle = locale === 'fr' ? (titleFr ?? 'Titre français en attente.') : title;
 const displaySummary = locale === 'fr' ? (summaryFr ?? (summary ? 'Résumé français en attente.' : null)) : summary;
 

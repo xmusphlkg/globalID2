@@ -38,3 +38,12 @@ it("limits collection navigation to four sources, tasks, schedules and runtime",
   expect(findRouteByPath("/models/knowledge")?.section).toBe("models");
   expect(findRouteByPath("/publish/tasks")?.section).toBe("publish");
 });
+
+it("offers realtime data publication as a global publishing workspace in both languages", () => {
+  const route = findRouteByPath("/publish/realtime")!;
+  expect(route.id).toBe("publish.realtime");
+  expect(route.section).toBe("publish");
+  expect(route.countryScope).toBe("none");
+  expect(t("en", route.labelKey)).toBe("Realtime data");
+  expect(t("zh", route.labelKey)).toBe("实时数据发布");
+});

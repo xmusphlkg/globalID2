@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "globalid-surveillance-data",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "globalinfectiousdisease.com/site-data/current.json*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/site-data/objects/*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/site-data/countries/*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/site-data/diseases/*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/site-data/meta.json*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/site-data/site-status.json*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/site-data/situation/*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/situation/map-data.json*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/situation/outbreaks/*", "zone_name": "globalinfectiousdisease.com" }
+  ],
+  "r2_buckets": [{ "binding": "DATA", "bucket_name": "globalid-papers" }],
+  "vars": { "DATA_PREFIX": "site-data/surveillance", "SITUATION_PREFIX": "site-data/situation" },
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
+}

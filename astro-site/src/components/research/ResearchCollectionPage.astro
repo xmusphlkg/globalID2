@@ -2,6 +2,7 @@
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchArticleCard from './ResearchArticleCard.astro';
 import { buildAlternatePaths, clampSeoTitle, isIndexableResearchCollection } from '../../lib/seo';
+import { absoluteSiteUrl } from '../../lib/papers';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
 import { RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS } from '../../utils/i18n';
 
@@ -82,7 +83,7 @@ const structuredData = {
       '@type': 'ListItem',
       position: index + 1,
       name: article.title,
-      url: new URL(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
+      url: absoluteSiteUrl(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
     })),
   },
 };
@@ -175,6 +176,7 @@ const structuredData = {
 
 <script>
   import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
+  import { siteHref } from '../../lib/papers';
   const list = document.querySelector<HTMLElement>('#collection-list');
   const cards = [...document.querySelectorAll<HTMLElement>('[data-research-card]')].filter(card => card.closest('#collection-list'));
   const count = document.querySelector<HTMLElement>('#collection-result-count');
@@ -297,7 +299,7 @@ const structuredData = {
 
     const title = make('h3', 'research-card-title');
     const titleLink = make('a');
-    titleLink.href = `${routePrefix}/research/articles/${article.slug}/`;
+    titleLink.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
     titleLink.textContent = text(article.title);
     title.appendChild(titleLink);
     card.appendChild(title);
@@ -432,13 +434,13 @@ const structuredData = {
 </script>
 
 <style>
-  .research-collection { width: min(74rem, calc(100% - 2rem)); margin: 0 auto; padding: 2.5rem 0 3rem; }
+  .research-collection { width: min(var(--page-reading-width), calc(100% - var(--page-gutter))); margin: 0 auto; padding: var(--page-block-space) 0 3rem; }
   .collection-hero { padding: clamp(1.5rem, 4vw, 2.75rem); }
   .collection-topline { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
   .collection-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
   .collection-actions a { border: 1px solid rgb(var(--border)); padding: .35rem .6rem; color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 650; }
   .collection-actions a:hover { border-color: rgb(var(--color-brand) / .55); color: rgb(var(--color-brand)); }
-  .collection-hero h1 { max-width: 56rem; margin-top: .75rem; color: rgb(var(--text-strong)); font: 600 clamp(2.15rem, 6vw, 4.4rem)/1 'IBM Plex Sans', sans-serif; letter-spacing: -.04em; }
+  .collection-hero h1 { max-width: 56rem; margin-top: .75rem; color: rgb(var(--text-strong)); font: 600 var(--page-title-size)/1 'IBM Plex Sans', sans-serif; letter-spacing: -.04em; }
   .collection-lede { max-width: 50rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: clamp(.9rem, 1.7vw, 1.05rem); line-height: 1.7; }
   .collection-metrics { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 2rem; border-top: 1px solid rgb(var(--border) / .72); }
   .collection-metrics div { padding: 1rem 1rem 0; border-left: 1px solid rgb(var(--border) / .58); }
@@ -456,5 +458,5 @@ const structuredData = {
   .collection-empty { display: grid; place-items: center; min-height: 15rem; text-align: center; }
   .collection-empty h3 { color: rgb(var(--text-strong)); font: 600 1.25rem/1.2 'IBM Plex Sans', sans-serif; }
   .collection-empty p { max-width: 32rem; margin-top: .55rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.6; }
-  @media (max-width: 640px) { .research-collection { width: min(100% - 1rem, 74rem); padding-top: 1rem; } .collection-topline { align-items: start; flex-direction: column; } .collection-metrics { grid-template-columns: repeat(2, 1fr); } .collection-metrics div:nth-child(3) { padding-left: 0; border-left: 0; } }
+  @media (max-width: 640px) { .research-collection { width: min(var(--page-reading-width), calc(100% - var(--page-gutter))); padding-top: 1rem; } .collection-topline { align-items: start; flex-direction: column; } .collection-metrics { grid-template-columns: repeat(2, 1fr); } .collection-metrics div:nth-child(3) { padding-left: 0; border-left: 0; } }
 </style>

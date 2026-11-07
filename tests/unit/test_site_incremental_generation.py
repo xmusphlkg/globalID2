@@ -3,7 +3,7 @@ import copy
 import json
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import ANY, AsyncMock
 
 import pytest
 
@@ -53,6 +53,7 @@ def snapshot(tmp_path, monkeypatch):
     monkeypatch.setattr(export, "_fetch_publish_states", AsyncMock(return_value=None))
     monkeypatch.setattr(export, "_published_country_codes_by_disease", AsyncMock(side_effect=lambda _: {"D001":{"US", "JP"}, "D002":{"JP"}}))
     monkeypatch.setattr(export, "fetch_countries", AsyncMock(return_value=countries))
+    monkeypatch.setattr(export, "fetch_reports", AsyncMock(return_value=[]))
     monkeypatch.setattr(export, "fetch_disease_knowledge_briefs", AsyncMock(return_value={}))
     monkeypatch.setattr(export, "fetch_country_briefs", AsyncMock(return_value={}))
     literature = AsyncMock(return_value={"articles": []})
@@ -60,6 +61,79 @@ def snapshot(tmp_path, monkeypatch):
     monkeypatch.setattr(export, "latest_situation_snapshot", AsyncMock(return_value={}))
     monkeypatch.setattr(export, "attach_surveillance_evidence", lambda data, *_args, **_kwargs: data)
     return SimpleNamespace(output=output, public=public, country_data=country_data, diseases=diseases, literature=literature)
+
+
+async def test_reports_only_export_reuses_files_and_does_not_collect_other_sources(snapshot, monkeypatch):
+    monkeypatch.setattr(export, "fetch_reports", AsyncMock(return_value=[{"id": 8, "updated_at": "2026-10-01"}]))
+    detail = AsyncMock(return_value={"id": 8, "report_document_v4": {}})
+    monkeypatch.setattr(export, "fetch_report_detail", detail)
+    await export.export_reports_only(snapshot.output, snapshot.public)
+    paths = [snapshot.output / "reports/8.json", snapshot.public / "reports/8.json"]
+    mtimes = [p.stat().st_mtime_ns for p in paths]
+    await export.export_reports_only(snapshot.output, snapshot.public)
+    assert detail.await_count == 1
+    assert [p.stat().st_mtime_ns for p in paths] == mtimes
+    snapshot.literature.assert_not_awaited()
+
+
+async def test_incremental_reports_fetch_only_new_or_updated_detail_json(snapshot, monkeypatch):
+    reports_dir = snapshot.output / "reports"
+    public_reports_dir = snapshot.public / "reports"
+    reports_dir.mkdir(exist_ok=True)
+    public_reports_dir.mkdir(exist_ok=True)
+    cached = [{"id": 1, "created_at": "2026-01-01", "updated_at": "2026-01-02"}]
+    (reports_dir / "index.json").write_text(json.dumps(cached), encoding="utf-8")
+    (reports_dir / "1.json").write_text('{"id":1}', encoding="utf-8")
+    (public_reports_dir / "1.json").write_text('{"id":1}', encoding="utf-8")
+    latest = [
+        {"id": 1, "created_at": "2026-01-01", "updated_at": "2026-01-02"},
+        {"id": 2, "created_at": "2026-02-01", "updated_at": "2026-02-01"},
+        {"id": 3, "created_at": "2026-03-01", "updated_at": "2026-03-02"},
+    ]
+    monkeypatch.setattr(export, "fetch_reports", AsyncMock(return_value=latest))
+    calls = []
+
+    async def fetch_detail(_session, report_id):
+        calls.append(report_id)
+        return {"id": report_id, "updated_at": next(row["updated_at"] for row in latest if row["id"] == report_id)}
+
+    monkeypatch.setattr(export, "fetch_report_detail", fetch_detail)
+    reports, details = await export._collect_report_exports(
+        object(), snapshot.output, snapshot.public, incremental=True
+    )
+
+    assert reports == latest
+    assert calls == [2, 3]
+    assert set(details) == {2, 3}
+
+
+async def test_incremental_writer_publishes_report_json_to_r2_projection(snapshot, monkeypatch):
+    monkeypatch.setattr(export, "build_about_snapshot", lambda **_: {})
+    monkeypatch.setattr(export, "write_literature_artifacts", lambda *_args, **_kwargs: None)
+    context = {
+        "incremental_country_codes": [],
+        "changed_disease_ids": [],
+        "country_exports": [],
+        "disease_exports": [],
+        "countries_simple": [],
+        "diseases": [],
+        "disease_knowledge_briefs": {},
+        "reports": [{"id": 8, "updated_at": "2026-06-01", "title": "Reviewed report"}],
+        "report_details": {8: {"id": 8, "report_document_v4": {"peer_review": {"status": "published"}}}},
+        "generated_at": "2026-06-01T00:00:00Z",
+        "literature_export": {},
+        "retired_country_codes": [],
+    }
+
+    export.write_incremental_site_export_artifacts(context, snapshot.output, snapshot.public)
+    index_path = snapshot.public / "reports" / "index.json"
+    detail_path = snapshot.public / "reports" / "8.json"
+    assert json.loads(index_path.read_text(encoding="utf-8"))[0]["id"] == 8
+    assert json.loads(detail_path.read_text(encoding="utf-8"))["report_document_v4"]["peer_review"]["status"] == "published"
+    before = {path: path.stat().st_mtime_ns for path in (index_path, detail_path)}
+
+    export.write_incremental_site_export_artifacts(context, snapshot.output, snapshot.public)
+    assert {path: path.stat().st_mtime_ns for path in before} == before
 
 
 async def test_empty_scope_does_not_read_or_project_any_curve(snapshot, monkeypatch):
@@ -118,6 +192,117 @@ async def test_us_scope_only_projects_us_and_affected_disease(snapshot, monkeypa
     assert merged["country_series"]["JP"] == snapshot.country_data["JP"]["disease_series"]["D001"]
     export.write_incremental_site_export_artifacts(context, snapshot.output, snapshot.public)
     assert all((path.read_bytes(), path.stat().st_mtime_ns) == state for path, state in before.items())
+
+
+async def test_completed_dependency_receipt_limits_country_update_to_changed_disease(snapshot, monkeypatch):
+    """One changed measure must not reproject every disease in the country."""
+    monkeypatch.setattr(export, "build_about_snapshot", lambda **_: {})
+    monkeypatch.setattr(export, "write_literature_artifacts", lambda *_args, **_kwargs: None)
+    current = copy.deepcopy(snapshot.country_data["JP"])
+
+    async def collect(country, **_kwargs):
+        assert country["code"] == "JP"
+        return dict(code="JP", country_name="Japan", country_name_zh=None, country_data=copy.deepcopy(current), records=[], source_records=[], source_info=current["source_info"])
+
+    monkeypatch.setattr(export, "_collect_country_export", collect)
+    initial = await export.collect_site_export_context(snapshot.output, incremental_country_codes=["JP"], public_site_data_dir=snapshot.public)
+    export.write_incremental_site_export_artifacts(initial, snapshot.output, snapshot.public)
+    untouched = snapshot.output / "diseases/d002.json"
+    before = (untouched.read_bytes(), untouched.stat().st_mtime_ns)
+    current["disease_series"]["D001"]["source_series"] = [{"series_code": "new-provenance", "dates": ["2026-01-01"], "values": [1]}]
+    projected = []
+    project = export.build_disease_site_data
+    monkeypatch.setattr(export, "build_disease_site_data", lambda data, *args: (projected.append(data["disease_id"]), project(data, *args))[1])
+    changed = await export.collect_site_export_context(snapshot.output, incremental_country_codes=["JP"], public_site_data_dir=snapshot.public)
+    assert changed["changed_disease_ids"] == ["D001"]
+    assert changed["country_disease_changes"] == {"JP": ["D001"]}
+    assert projected == ["D001"]
+    export.write_incremental_site_export_artifacts(changed, snapshot.output, snapshot.public)
+    assert (untouched.read_bytes(), untouched.stat().st_mtime_ns) == before
+    repeat = await export.collect_site_export_context(snapshot.output, incremental_country_codes=["JP"], public_site_data_dir=snapshot.public)
+    assert repeat["changed_disease_ids"] == []
+
+
+async def test_dependency_receipt_recovers_partial_country_write_and_damaged_disease(snapshot, monkeypatch):
+    from src.generation import site_data_dependencies as dependencies
+    data = snapshot.country_data["JP"]
+    inputs = dependencies.country_inputs(data, name="Japan", name_zh=None, source_info=data["source_info"])
+    context = {"country_dependency_inputs": {"JP": inputs}, "disease_exports": [{"disease_id": "D001"}, {"disease_id": "D002"}]}
+    dependencies.save_receipt(context, snapshot.output, snapshot.public)
+    receipt = dependencies.load_receipt(snapshot.output)
+    assert dependencies.changed_diseases("JP", inputs, receipt, snapshot.output, snapshot.public) == set()
+    updated = copy.deepcopy(data)
+    updated["disease_series"]["D001"]["cases"] = [55]
+    # Simulate a failed writer which replaced a country, but not its disease.
+    export.write_pretty_json(snapshot.output / "countries/jp.json", updated)
+    desired = dependencies.country_inputs(updated, name="Japan", name_zh=None, source_info=data["source_info"])
+    assert dependencies.changed_diseases("JP", desired, receipt, snapshot.output, snapshot.public) == {"D001"}
+    (snapshot.public / "diseases/d002.json").write_text("{}")
+    assert dependencies.changed_diseases("JP", desired, receipt, snapshot.output, snapshot.public) == {"D001", "D002"}
+    # An unrecognized receipt cannot authorize reuse.
+    (snapshot.output / dependencies.RECEIPT_NAME).write_text('{"schema_version":99}')
+    assert dependencies.changed_diseases("JP", desired, dependencies.load_receipt(snapshot.output), snapshot.output, snapshot.public) is None
+
+
+async def test_surveillance_collection_does_not_load_static_content(snapshot, monkeypatch):
+    monkeypatch.setattr(export, "fetch_disease_knowledge_briefs", AsyncMock(side_effect=AssertionError("knowledge belongs to static export")))
+    monkeypatch.setattr(export, "_collect_report_exports", AsyncMock(side_effect=AssertionError("reports belong to static export")))
+    monkeypatch.setattr(export, "collect_literature_export", AsyncMock(side_effect=AssertionError("literature belongs to static export")))
+    monkeypatch.setattr(export, "latest_situation_snapshot", AsyncMock(side_effect=AssertionError("situation belongs to its own feed")))
+    context = await export.collect_site_export_context(snapshot.output, incremental_site=True, public_site_data_dir=snapshot.public, surveillance_only=True)
+    assert context["literature_export"] == {}
+    assert context["reports"] == []
+    assert context["disease_knowledge_briefs"] == {}
+
+
+async def test_full_surveillance_reuses_country_projection_and_releases_raw_rows(snapshot, monkeypatch):
+    results = []
+    source = {"series_code": "lossless", "dates": ["2026-01-01"], "values": [7], "quality_statuses": ["final"], "source_urls": ["https://official.example/data"]}
+    async def collect(country, **_kwargs):
+        data = copy.deepcopy(snapshot.country_data[country["code"]])
+        data["disease_series"]["D001"]["source_series"] = [copy.deepcopy(source)]
+        result = dict(code=country["code"], country_name=country["name"], country_name_zh=None, country_data=data, records=[{"disease_id": "D001", "date": "2026-01-01", "cases": 1}], source_records=[{"series_code": "lossless"}], source_info=data["source_info"])
+        results.append(result)
+        return result
+    monkeypatch.setattr(export, "_collect_country_export", collect)
+    monkeypatch.setattr(export, "build_disease_data", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("country projection must not be rebuilt from raw rows")))
+    context = await export.collect_site_export_context(snapshot.output, public_site_data_dir=snapshot.public, surveillance_only=True)
+    assert all(result["records"] == result["source_records"] == [] for result in results)
+    assert all(result["input_record_count"] == 2 for result in results)
+    disease = next(item["disease_data"] for item in context["disease_exports"] if item["disease_id"] == "D001")
+    assert disease["country_series"]["US"]["source_series"] == [source]
+    assert disease["country_series"]["JP"]["source_series"] == [source]
+
+
+async def test_content_only_export_never_queries_surveillance_or_builds_downloads(snapshot, monkeypatch):
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("content export crossed into the surveillance update lane")
+    for name in ("ensure_site_export_database_ready", "has_table", "has_population_table", "fetch_countries", "fetch_country_briefs", "_fetch_publish_states", "_published_country_codes_by_disease", "_collect_country_export"):
+        monkeypatch.setattr(export, name, AsyncMock(side_effect=forbidden))
+    monkeypatch.setattr(export, "build_country_site_data", forbidden)
+    monkeypatch.setattr(export, "build_disease_site_data", forbidden)
+    monkeypatch.setattr(export, "build_direct_download_files", forbidden)
+    monkeypatch.setattr(export, "build_about_snapshot", lambda **_: {})
+    monkeypatch.setattr(export, "write_literature_artifacts", lambda *_args, **_kwargs: None)
+    monkeypatch.setenv("GLOBALID_RELEASE_FROM_OBSERVATIONS", "1")
+    context = await export.collect_site_export_context(snapshot.output, public_site_data_dir=snapshot.public, static_content_only=True)
+    assert context["incremental_country_codes"] == context["changed_disease_ids"] == []
+    assert context["static_content_only"] is True
+    before = {path: (path.read_bytes(), path.stat().st_mtime_ns) for directory in (snapshot.output / "countries", snapshot.output / "diseases", snapshot.public / "countries", snapshot.public / "diseases") for path in directory.glob("*.json")}
+    manifest = snapshot.output / "downloads.json"
+    manifest.write_text('{"archive":"frozen"}')
+    await export.export(snapshot.output, manifest, public_site_data_dir=snapshot.public, content_only=True)
+    assert manifest.read_text() == '{"archive":"frozen"}'
+    assert not (snapshot.output / "_release-projection").exists()
+    assert all((path.read_bytes(), path.stat().st_mtime_ns) == value for path, value in before.items())
+    assert (snapshot.output / "static-surveillance-coverage.json").is_file()
+
+
+async def test_content_only_without_baseline_fails_before_database(snapshot, monkeypatch):
+    (snapshot.output / "meta.json").unlink()
+    monkeypatch.setattr(export, "get_db", lambda: (_ for _ in ()).throw(AssertionError("no database access")))
+    with pytest.raises(RuntimeError, match="existing frozen surveillance snapshot"):
+        await export.collect_site_export_context(snapshot.output, public_site_data_dir=snapshot.public, static_content_only=True)
 
 
 async def test_knowledge_only_updates_and_withdraws_without_curve_writes(snapshot, monkeypatch):
@@ -249,20 +434,59 @@ async def test_disabled_ie_is_removed_from_site_and_all_download_formats(snapsho
     assert repeat["changed_disease_ids"] == []
 
 
-async def test_cached_full_export_invalidates_retired_ie_slices(snapshot, monkeypatch):
+async def test_full_export_reads_lossless_observations_and_invalidates_retired_ie_slices(snapshot, monkeypatch):
     snapshot = _historical_ie_snapshot(snapshot, monkeypatch)
     monkeypatch.setattr(export, "fetch_countries", AsyncMock(return_value=[dict(code="US", name="United States", language="en")]))
     monkeypatch.setattr(export, "_fetch_publish_states", AsyncMock(return_value={"US":{"content_hash":"same", "point_count":1}, "IE":{"content_hash":"retired", "point_count":2}}))
     monkeypatch.setattr(export, "_local_publish_hashes", lambda *_: {"US":"same"})
     monkeypatch.setattr(export, "_fetch_published_rows_by_country", AsyncMock(return_value={}))
     monkeypatch.setattr(export, "fetch_reports", AsyncMock(return_value=[]))
-    monkeypatch.setattr(export, "_collect_country_export", AsyncMock(side_effect=AssertionError("no active country changed")))
+    data = copy.deepcopy(snapshot.country_data["US"])
+    records = [dict(disease_id="D001", date="2026-01-01", year_month="2026-01", cases=1, deaths=0)]
+    collect = AsyncMock(return_value=dict(code="US", country_name="United States", country_name_zh="美国", country_data=data, records=records, source_records=[], source_info=data["source_info"]))
+    monkeypatch.setattr(export, "_collect_country_export", collect)
     context = await export.collect_site_export_context(snapshot.output, public_site_data_dir=snapshot.public)
-    assert context["publish_curve_refresh_codes"] == []
+    collect.assert_awaited_once()
+    export._fetch_published_rows_by_country.assert_not_awaited()
+    assert context["publish_curve_refresh_codes"] is None
     assert context["retired_country_codes"] == ["IE"]
     assert context["changed_disease_ids"] == ["D001", "D002"]
-    assert "IE" not in context["publish_hashes"]
+    assert not context["publish_hashes"]
     assert all("IE" not in item["disease_data"]["country_series"] for item in context["disease_exports"])
+
+
+async def test_exact_country_scope_does_not_expand_parent(snapshot, monkeypatch):
+    def unexpected_expansion(*_args, **_kwargs):
+        raise AssertionError("an already resolved dirty scope must not expand again")
+
+    monkeypatch.setattr(export, "expand_country_scopes", unexpected_expansion)
+    data = copy.deepcopy(snapshot.country_data["US"])
+    collect = AsyncMock(return_value=dict(code="US", country_name="United States", country_name_zh="美国", country_data=data, records=[], source_records=[], source_info=data["source_info"]))
+    monkeypatch.setattr(export, "_collect_country_export", collect)
+    context = await export.collect_site_export_context(
+        snapshot.output, incremental_country_codes=["US"],
+        public_site_data_dir=snapshot.public, country_scopes_exact=True,
+    )
+    assert context["incremental_country_codes"] == ["US"]
+    assert context["country_scopes_exact"] is True
+    collect.assert_awaited_once()
+
+
+async def test_changed_country_ignores_lossy_published_cache(snapshot, monkeypatch):
+    monkeypatch.delenv("GLOBALID_RELEASE_FROM_OBSERVATIONS", raising=False)
+    states = AsyncMock(return_value={"US": {"content_hash": "same", "point_count": 1}})
+    monkeypatch.setattr(export, "_fetch_publish_states", states)
+    data = copy.deepcopy(snapshot.country_data["US"])
+    data["disease_series"]["D001"]["source_series"] = [{"series_code": "test", "dates": ["2026-01-01"], "values": [3]}]
+    collect = AsyncMock(return_value=dict(code="US", country_name="United States", country_name_zh="美国", country_data=data, records=[], source_records=[], source_info=data["source_info"]))
+    monkeypatch.setattr(export, "_collect_country_export", collect)
+    context = await export.collect_site_export_context(
+        snapshot.output, incremental_country_codes=["US"], public_site_data_dir=snapshot.public,
+    )
+    states.assert_not_awaited()
+    collect.assert_awaited_once()
+    country = next(row for row in context["country_exports"] if row["code"] == "US")
+    assert country["country_data"]["disease_series"]["D001"]["source_series"] == data["disease_series"]["D001"]["source_series"]
 
 
 def test_incremental_merge_filters_disallowed_country_even_when_not_updated():
@@ -282,3 +506,18 @@ async def test_export_readiness_never_imports_population_data(monkeypatch):
     monkeypatch.setattr(builtins, "__import__", forbid_population_import)
     await export.ensure_site_export_database_ready()
     readiness.assert_awaited_once_with()
+
+
+async def test_literature_only_release_reuses_published_coverage(snapshot, monkeypatch):
+    monkeypatch.setenv("GLOBALID_RELEASE_FROM_OBSERVATIONS", "1")
+    states = AsyncMock(return_value={"US": {"content_hash": "same", "point_count": 1}, "JP": {"content_hash": "same", "point_count": 2}})
+    monkeypatch.setattr(export, "_fetch_publish_states", states)
+    monkeypatch.setattr(export, "_fetch_published_rows_by_country", AsyncMock(return_value={}))
+    monkeypatch.setattr(export, "_collect_country_export", AsyncMock(side_effect=AssertionError("no changed curves")))
+    context = await export.collect_site_export_context(snapshot.output, incremental_country_codes=[], incremental_site=True, public_site_data_dir=snapshot.public)
+    states.assert_awaited_once()
+    export._published_country_codes_by_disease.assert_awaited_once()
+    assert context["incremental_country_codes"] == []
+    export._fetch_published_rows_by_country.assert_awaited_once_with(ANY, [])
+    assert context["changed_disease_ids"] == []
+    assert all(row["unchanged_curve"] for row in context["country_exports"])

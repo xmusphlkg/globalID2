@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import EChartsReact from '../../lib/echartsReact';
 import echarts from '../../lib/echartsHeatmap';
 import ChartResultActions from './ChartResultActions';
+import RuntimeChartSource from './RuntimeChartSource';
 import { pngFromCanvases } from './chartExport';
 import type { DiseaseDatasetMonthlyData } from './diseaseDataset';
 
@@ -12,7 +13,7 @@ const labels = {
   fr: { cases: 'Cas', deaths: 'Décès', allYears: 'Afficher toutes les années', recentYears: 'Afficher les années récentes', low: 'Faible', high: 'Élevé', empty: 'Aucune observation mensuelle.', note: 'Chaque cellule appartient à la série mensuelle publiée par le pays choisi. Une cellule vide indique une donnée absente, et non zéro.', rows: 'Valeurs mensuelles' },
 };
 
-export default function DiseaseSeasonalityHeatmap({ data, language = 'en', filename = 'disease-seasonality' }: { data: DiseaseDatasetMonthlyData; language?: Language; filename?: string }) {
+export default function DiseaseSeasonalityHeatmap({ data, dataUrl, language = 'en', filename = 'disease-seasonality' }: { data: DiseaseDatasetMonthlyData; dataUrl?: string; language?: Language; filename?: string }) {
   const [ready, setReady] = useState(false);
   const [dark, setDark] = useState(false);
   const [metric, setMetric] = useState<'cases' | 'deaths'>('cases');
@@ -81,5 +82,6 @@ export default function DiseaseSeasonalityHeatmap({ data, language = 'en', filen
     <p className="disease-trend-note">{t.note}</p>
     {cells.length ? ready ? <div ref={plot}><EChartsReact ref={chart} echarts={echarts} option={option} notMerge style={{ height: Math.max(280, years.length * 27 + 80), width: '100%' }} /></div> : <div className="disease-seasonality-fallback"><table aria-label={t.cases}><thead><tr><th></th>{months.map(month => <th key={month}>{month}</th>)}</tr></thead><tbody>{years.map((year, yearIndex) => <tr key={year}><th>{year}</th>{months.map((month, monthIndex) => { const value = cells.find(cell => cell[0] === monthIndex && cell[1] === yearIndex)?.[2]; return <td key={month} style={{ background: value == null ? 'transparent' : `rgba(15,118,110,${.12 + .78 * value / max})` }} title={value == null ? '—' : `${year}-${String(monthIndex + 1).padStart(2, '0')}: ${value.toLocaleString(language)}`}>{value == null ? '—' : <span className="sr-only">{value.toLocaleString(language)}</span>}</td>; })}</tr>)}</tbody></table></div> : <p className="disease-trend-empty">{t.empty}</p>}
     {cells.length > 0 && <div className="disease-seasonality-scale"><span>{t.low} · 0</span><i aria-hidden="true" /><span>{t.high} · {max.toLocaleString(language)}</span></div>}
+    {dataUrl && <RuntimeChartSource dataUrl={dataUrl} language={language} />}
   </div>;
 }

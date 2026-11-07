@@ -98,7 +98,7 @@ async def _worker_request(
             url = f"{url}?{urlparse.urlencode(clean_query)}"
 
     body = None
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "User-Agent": "GIDS-Release-Verifier/1.0"}
     if admin:
         headers["Authorization"] = f"Bearer {_admin_token()}"
     if payload is not None:

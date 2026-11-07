@@ -84,7 +84,7 @@ def compose_report_document(
         _decision_summary(summary, death_reporting, lead, country_zh, country_en, country_fr),
         _priority_actions(summary, death_reporting, lead),
         _signal_evidence(attention_ranking, summary),
-        _disease_context(disease_cards),
+        _disease_context(disease_cards, attention_ranking),
         _data_notes(evidence_packet, death_reporting),
         _method_appendix(evidence_packet),
     ]
@@ -917,8 +917,11 @@ def _signal_evidence(ranking: list[dict[str, Any]], summary: dict[str, Any]) -> 
     return Section("signal_evidence", "signal_evidence", 3, LocalizedText("关键证据", "Signal Evidence", "Preuves relatives aux signaux"), LocalizedText(zh, en, fr), refs)
 
 
-def _disease_context(diseases: list[dict[str, Any]]) -> Section:
-    top = diseases[:5]
+def _disease_context(diseases: list[dict[str, Any]], ranking: list[dict[str, Any]] | None = None) -> Section:
+    # Background and historical candidates must describe the priority signals,
+    # not whichever disease identifiers happen to sort first in the database.
+    order = {str(row.get("disease_id")): index for index, row in enumerate(ranking or [])}
+    top = sorted(diseases, key=lambda row: order.get(str(row.get("disease_id")), len(order)))[:5]
     if not top:
         zh = "- 当前没有疾病卡片可用于背景解释。"
         en = "- No disease cards are available for contextual interpretation."

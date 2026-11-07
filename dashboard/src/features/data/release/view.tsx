@@ -77,8 +77,7 @@ type BooleanReleaseField =
   | "enabled"
   | "auto_after_crawls"
   | "include_git_push"
-  | "include_cloudflare_deploy"
-  | "require_clean_worktree";
+  | "include_cloudflare_deploy";
 type JobFilter = "all" | "enabled" | "disabled" | "failed" | "auto";
 
 const inputClass =
@@ -728,19 +727,16 @@ export default function DataReleasePage() {
             <div className="mt-3 grid gap-2">
               <AccessDetail label="Branch" value={checks?.git.branch || settings?.github.github_data_share_repo_branch || "-"} />
               <AccessDetail label="Repo" value={checks?.git.repo_url || settings?.github.github_data_share_repo_url || "-"} mono />
-              <div className="grid gap-2 sm:grid-cols-2">
-                <AccessDetail label="Blocking Changes" value={String(checks?.git.dirty_blocking_paths.length ?? 0)} />
-                <AccessDetail
-                  label={lang === "zh" ? "代码仓库边界" : "Code Repository Boundary"}
-                  value={
-                    checks?.repository_boundary
-                      ? checks.repository_boundary.enforced
-                        ? "Enforced"
-                        : "Violated"
-                      : "-"
-                  }
-                />
-              </div>
+              <AccessDetail
+                label={lang === "zh" ? "代码仓库边界" : "Code Repository Boundary"}
+                value={
+                  checks?.repository_boundary
+                    ? checks.repository_boundary.enforced
+                      ? "Enforced"
+                      : "Violated"
+                    : "-"
+                }
+              />
               <CheckOutput label="Read Check" value={checks?.git.read_check_output} />
               <CheckOutput label="Write Check" value={checks?.git.write_check_output} />
             </div>
@@ -1020,7 +1016,6 @@ export default function DataReleasePage() {
                 ["auto_after_crawls", form.auto_after_crawls, lang === "zh" ? "数据任务后自动发布" : "Auto after data tasks"],
                 ["include_git_push", form.include_git_push, lang === "zh" ? "包含 Git push" : "Include Git push"],
                 ["include_cloudflare_deploy", form.include_cloudflare_deploy, lang === "zh" ? "包含 Cloudflare 部署" : "Include Cloudflare deploy"],
-                ["require_clean_worktree", form.require_clean_worktree, lang === "zh" ? "要求干净工作区" : "Require clean worktree"],
               ] as Array<[BooleanReleaseField, boolean, string]>).map(([field, checked, label]) => (
                 <label
                   key={field}

@@ -154,6 +154,52 @@ class DataReleaseLegacySnapshotOut(BaseModel):
     branch: str = ""
 
 
+class DataReleaseR2PapersCheckOut(BaseModel):
+    configured: bool = False
+    enabled: bool = False
+    bucket: Optional[str] = None
+    public_base_url: Optional[str] = None
+    credentials_present: bool = False
+    bucket_access_ok: bool = False
+    error: Optional[str] = None
+
+
+class DataReleaseR2ReportsCheckOut(BaseModel):
+    configured: bool = False
+    enabled: bool = False
+    bucket: Optional[str] = None
+    public_base_url: Optional[str] = None
+    credentials_present: bool = False
+    bucket_access_ok: bool = False
+    error: Optional[str] = None
+
+
+class DataReleasePagesBudgetOut(BaseModel):
+    dist_present: bool = False
+    file_count: Optional[int] = None
+    budget: int = 20000
+    warn_at: int = 18000
+    ok: Optional[bool] = None
+    warn: Optional[bool] = None
+
+
+class DataReleaseChannelOut(BaseModel):
+    enabled: bool = False
+    ready: bool = False
+    file_count: Optional[int] = None
+    file_budget: Optional[int] = None
+    repo_url: Optional[str] = None
+    public_base_url: Optional[str] = None
+    bucket: Optional[str] = None
+
+
+class DataReleaseChannelsOut(BaseModel):
+    pages_main: DataReleaseChannelOut = Field(default_factory=DataReleaseChannelOut)
+    github_downloads: DataReleaseChannelOut = Field(default_factory=DataReleaseChannelOut)
+    r2_papers: DataReleaseChannelOut = Field(default_factory=DataReleaseChannelOut)
+    r2_reports: DataReleaseChannelOut = Field(default_factory=DataReleaseChannelOut)
+
+
 class DataReleaseChecksOut(BaseModel):
     checked_at: str
     overall_ready: bool
@@ -162,6 +208,10 @@ class DataReleaseChecksOut(BaseModel):
     cloudflare: DataReleaseCloudflareCheckOut
     commands: DataReleaseCommandCheckOut
     repository_boundary: DataReleaseRepositoryBoundaryOut
+    r2_papers: DataReleaseR2PapersCheckOut = Field(default_factory=DataReleaseR2PapersCheckOut)
+    r2_reports: DataReleaseR2ReportsCheckOut = Field(default_factory=DataReleaseR2ReportsCheckOut)
+    pages_budget: DataReleasePagesBudgetOut = Field(default_factory=DataReleasePagesBudgetOut)
+    channels: DataReleaseChannelsOut = Field(default_factory=DataReleaseChannelsOut)
     # Deprecated response alias. Remove only after old frontend bundles can no
     # longer be served from browser/CDN caches.
     data_refresh_snapshot: DataReleaseLegacySnapshotOut = Field(

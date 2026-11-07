@@ -17,8 +17,12 @@ then emits one machine-readable JSON object.
 - Release-validator messages are reduced to category counts. Unexpected CLI
   exceptions collapse to `health_check_failed` instead of echoing exception
   text.
-- Files are size-bounded before parsing (64 MiB for the release and 2 MiB for
-  the checkpoint).
+- Releases up to 64 MiB retain the in-memory reader. Larger releases are checked
+  record by record with bounded memory and temporary SQLite indexes for global
+  identifiers, ordering and evidence relationships. Limits are 2 GiB total input,
+  8 MiB per record, 2 MiB per string and 128 nesting levels. A file changed during
+  streaming, malformed input or an exceeded limit fails closed; no partial scan
+  is reported as healthy. Backfill checkpoints retain their 2 MiB limit.
 
 ## Checks and SLOs
 
@@ -57,7 +61,7 @@ run, `enabled_source_success` evaluates a source as successful only when:
 3. all of its error counters are zero; and
 4. credential-gated sources were not skipped for missing credentials.
 
-The contracts cover Crossref result counters; Europe PMC, OpenAlex, and
+The contracts cover Crossref result and journal-error counters; Europe PMC, OpenAlex, and
 Unpaywall enrichment/error counters; controlled-query result/query-error
 counters; publisher-RSS result/feed-error counters; WHO IRIS OAI result/error
 counters; bioRxiv/medRxiv result/error counters; and Springer Nature/Elsevier
@@ -66,6 +70,10 @@ is healthy: a successful request may legitimately find no records. RSS still
 requires at least one modified or not-modified feed response so an empty feed
 configuration cannot appear healthy. Missing or malformed counters fail closed
 instead of being coerced to zero.
+
+Crossref also checks `checkpoint.source_errors`: older runs sometimes recorded
+journal failures there while reporting zero in `counts.crossref_source_errors`.
+The larger valid count is authoritative, so those failures remain visible.
 
 The check exposes only provider labels and aggregate reason codes in
 `source_results`: `success`, `not_in_latest_completed_run`,

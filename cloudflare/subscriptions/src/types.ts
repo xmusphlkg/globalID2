@@ -13,6 +13,8 @@ type OptionalGeneratedBindings = Omit<
 export interface Env extends OptionalGeneratedBindings {
   DB: CloudflareBindings["DB"];
   SITUATION_ALERT_QUEUE?: Queue<SituationAlertJob>;
+  DELIVERY_MODE?: string;
+  PILOT_RECIPIENTS?: string;
   TURNSTILE_SECRET_KEY?: string;
   TOKEN_SIGNING_SECRET?: string;
   ADMIN_API_TOKEN?: string;

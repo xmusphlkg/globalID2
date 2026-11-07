@@ -39,6 +39,8 @@ def build_evidence_packet(
     summary_metrics = dict(packet.get("summary_metrics") or {})
     summary_metrics["death_reporting"] = death_reporting.to_dict()
     summary_metrics["total_deaths"] = death_reporting.total_deaths
+    if death_reporting.status in {"not_reported", "unknown"}:
+        summary_metrics["latest_deaths"] = None
     packet["summary_metrics"] = summary_metrics
     packet["death_reporting"] = death_reporting.to_dict()
     packet["method_version"] = METHOD_VERSION

@@ -128,6 +128,14 @@ def _queued_lane(name: str, operation: str, options) -> Lane:
             if task is not None:
                 if task.status == TaskStatus.FAILED:
                     return SliceResult(outage=f"task {task.task_uuid} failed")
+                cancel_requested = bool((getattr(task, "metadata_", None) or {}).get("cancel_requested"))
+                if task.status == TaskStatus.CANCELLED and not cancel_requested:
+                    # Usually a worker restart expired the lease mid-stream. That says
+                    # nothing about the backlog, so start a new stream instead of resting.
+                    lane.pass_finalised += _finalised(task)
+                    task = await enqueue_model_operation(operation, options(slice_size, workers), priority=TaskPriority.LOW)
+                    lane.task_uuid = task.task_uuid
+                    return SliceResult(detail={"queued_task_uuid": task.task_uuid, "after_cancelled": True})
                 finalised = _finalised(task)
                 if task.status != TaskStatus.COMPLETED or not finalised:
                     # No progress: rest instead of re-claiming rows that keep deferring.

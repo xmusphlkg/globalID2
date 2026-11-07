@@ -50,6 +50,7 @@ from src.services.literature_automation_service import (
     decide_article,
     decide_evidence_link,
     decide_summary,
+    restore_parent_excluded_summaries,
 )
 from dashboard.api.routers.literature import _publication_blockers
 
@@ -513,22 +514,22 @@ def test_public_summary_gate_withholds_metadata_only_peer_reviewed_and_preprint_
 
 
 def test_browser_research_index_splits_lists_that_exceed_the_file_budget(tmp_path):
-    articles = [{"slug": f"article-{index}", "title": "x" * 40} for index in range(8)]
+    articles = [{"slug": f"article-{index}", "title": "x" * 40} for index in range(40)]
     document = {
         "schema_version": 1,
         "last_updated": "2026-10-21T00:00:00Z",
-        "metrics": {"articles_total": 8},
+        "metrics": {"articles_total": 40},
         "articles": articles,
     }
     full_size = len(_compact_json_bytes(document))
     slim_size = len(_compact_json_bytes({**document, "articles": []}))
-    budget = slim_size + (full_size - slim_size) // 3
+    budget = 1024
     assert budget < full_size
 
     published = publish_browser_research_index(document, tmp_path, max_bytes=budget)
 
     assert published["articles"]["sharded"] is True
-    assert published["articles"]["count"] == 8
+    assert published["articles"]["count"] == 40
     assert len(published["articles"]["chunks"]) >= 2
     assert (tmp_path / "index.json").stat().st_size <= budget
     assert (tmp_path / "catalogue.json").stat().st_size <= budget
@@ -546,7 +547,7 @@ def test_browser_research_index_splits_lists_that_exceed_the_file_budget(tmp_pat
     smaller = {**document, "articles": articles[:1]}
     republished = publish_browser_research_index(smaller, tmp_path, max_bytes=budget)
     assert republished["articles"] == articles[:1]
-    assert list((tmp_path / "shards").glob("*.json")) == []
+    assert list((tmp_path / "shards").glob("*.json"))  # cached old manifests still resolve
 
 
 def test_literature_artifacts_keep_the_build_index_while_sharding_the_browser_copy(tmp_path):
@@ -637,6 +638,22 @@ def test_literature_collection_files_keep_card_fields_without_repeating_summarie
     assert detail["summary"]["fr"]["main_findings"] == "Long detail"
     routes = json.loads((tmp_path / "research/routes.json").read_text(encoding="utf-8"))
     assert routes["articles"] == [{"slug": "published-article", "indexable": True}]
+
+
+def test_research_shared_disease_lookup_is_stable_when_article_rank_changes(tmp_path):
+    articles = [
+        {"article_id": name, "slug": name.lower(), "title": name,
+         "diseases": [{"disease_id": name, "name_en": name}],
+         "countries": [], "topics": []}
+        for name in ["Zulu", "Alpha"]
+    ]
+    payload = {**empty_literature_export(), "articles": articles}
+    write_literature_artifacts(payload, tmp_path)
+    first = json.loads((tmp_path / "research/routes.json").read_text())["diseases"]
+    write_literature_artifacts({**payload, "articles": list(reversed(articles))}, tmp_path)
+    second = json.loads((tmp_path / "research/routes.json").read_text())["diseases"]
+    assert first == second
+    assert [row["name_en"] for row in first] == ["Alpha", "Zulu"]
 
 
 def test_integrity_alert_projection_is_publication_gated_and_metadata_only():
@@ -1890,7 +1907,10 @@ def test_relevance_exception_band_remains_fail_closed_for_human_health_research(
     assert decision.reasons == ("article relevance is inside the exception-review band",)
 
 
-def test_non_public_summary_review_is_deferred_or_archived_by_article_state():
+def test_non_public_summary_review_is_deferred_by_article_state():
+    # After the exclusion-gate fix, an excluded parent no longer causes an
+    # irreversible "archive" — it returns "defer" so the summary stays in
+    # review and can be published if the article is later reopened.
     summary = SimpleNamespace(status="review", generation_metadata={})
     autopublished = SimpleNamespace(
         status="published",
@@ -1918,13 +1938,14 @@ def test_non_public_summary_review_is_deferred_or_archived_by_article_state():
         _autopilot_config(),
     )
 
-    assert excluded.action == "archive"
+    # Both "excluded" and "review" parents now yield "defer" — not "archive".
+    assert excluded.action == "defer"
     assert pending.action == "defer"
     assert decide_summary(
         autopublished,
         _autopilot_article(publication_status="excluded"),
         _autopilot_config(),
-    ).action == "archive"
+    ).action == "defer"
     assert decide_summary(
         autopublished,
         _autopilot_article(publication_status="review"),
@@ -1934,7 +1955,7 @@ def test_non_public_summary_review_is_deferred_or_archived_by_article_state():
         archived,
         _autopilot_article(publication_status="excluded"),
         _autopilot_config(),
-    ).action == "archive"
+    ).action == "defer"
     assert decide_summary(
         archived,
         _autopilot_article(publication_status="review"),
@@ -1970,6 +1991,18 @@ def test_autopilot_publishes_only_current_well_grounded_model_summaries():
         **fields,
     )
     assert decide_summary(summary, article, _autopilot_config()).action == "publish"
+    summary.status = "archived"
+    summary.generation_metadata["publication_gate"] = "awaiting-peer-review"
+    summary.generation_metadata["ai_content_governance"] = {"decision": "archive"}
+    assert decide_summary(summary, article, _autopilot_config()).action == "hold"
+    # Even a stale parent-exclusion marker cannot override an explicit AI archive.
+    summary.generation_metadata["publication_gate"] = "parent-article-excluded"
+    assert decide_summary(summary, article, _autopilot_config()).action == "hold"
+    summary.generation_metadata["publication_gate"] = "awaiting-article-decision"
+    assert decide_summary(summary, article, _autopilot_config()).action == "hold"
+    del summary.generation_metadata["ai_content_governance"]
+    assert decide_summary(summary, article, _autopilot_config()).action == "publish"
+    summary.status = "review"
     summary.limitations = ""
     missing_limits = decide_summary(summary, article, _autopilot_config())
     assert missing_limits.action == "hold"
@@ -2044,3 +2077,162 @@ async def test_french_enrichment_uses_canonical_english_contract():
     request = json.loads(agent.calls[0]["prompt"])
     assert "French" in agent.calls[0]["system"]
     assert request["canonical_summary_en"]["main_findings"] == canonical["main_findings"]
+
+
+# ---------------------------------------------------------------------------
+# Problem 1 new tests: article exclusion gate
+# ---------------------------------------------------------------------------
+
+def test_low_discovery_with_disease_link_becomes_hold_not_exclude():
+    """High-relevance but low-discovery paper must go to hold, not exclude.
+
+    Mirrors the motivating case: relevance 1.0, discovery 0.579 — previously
+    excluded by the discovery score gate, now must be held for AI peer review.
+    """
+    article = _autopilot_article(
+        discovery_score=0.579,
+        # default domain is not set → treated as human_health by _research_domain
+        metadata_={},
+    )
+    decision = decide_article(
+        article,
+        _autopilot_config(),
+        max_disease_confidence=0.90,  # has a disease link
+        confirmed_relation_levels=set(),
+        now=datetime(2026, 8, 17, tzinfo=timezone.utc),
+    )
+    assert decision.action == "hold"
+    assert "below the automatic publication gate" in decision.reasons[0]
+    assert "AI review decides" in decision.reasons[0]
+
+
+def test_low_discovery_no_disease_link_still_excluded():
+    """An article with no disease link and a sub-threshold score must still be excluded."""
+    article = _autopilot_article(
+        discovery_score=0.50,
+        metadata_={},
+    )
+    decision = decide_article(
+        article,
+        _autopilot_config(),
+        max_disease_confidence=0.0,  # no disease link
+        confirmed_relation_levels=set(),
+        now=datetime(2026, 8, 17, tzinfo=timezone.utc),
+    )
+    assert decision.action == "exclude"
+    assert "no disease link" in decision.reasons[0]
+
+
+# ---------------------------------------------------------------------------
+# Problem 4 new tests: summary under excluded parent + restore function
+# ---------------------------------------------------------------------------
+
+def test_summary_under_excluded_parent_is_not_archived():
+    """decide_summary must return 'defer', not 'archive', when the parent is excluded."""
+    summary = SimpleNamespace(
+        status="review",
+        generated_by="literature-evidence-agent",
+        generation_metadata={},
+        quality_score=0.95,
+        language="en",
+        review_notes="",
+        evidence_map={},
+        research_question="q", study_design="s", population_setting="p",
+        main_findings="f", public_health_relevance="r", limitations="l",
+        gids_interpretation="g",
+    )
+    article = _autopilot_article(publication_status="excluded")
+    decision = decide_summary(summary, article, _autopilot_config())
+    assert decision.action == "defer"
+    assert decision.action != "archive"
+    assert "not final for public release" in decision.reasons[0]
+
+
+@pytest.mark.asyncio
+async def test_restore_parent_excluded_summaries_restores_and_respects_dry_run():
+    """restore_parent_excluded_summaries restores only parent-exclusion archives."""
+    from types import SimpleNamespace as NS
+
+    # Build fake ORM rows -------------------------------------------------
+    # summary_a: archived because parent was excluded → should be restored
+    summary_a = NS(
+        id=1,
+        article_id="lit-a",
+        status="archived",
+        generation_metadata={
+            "publication_gate": "parent-article-excluded",
+            "autopilot": {"decision": "archive"},
+        },
+    )
+    article_a = NS(article_id="lit-a", publication_status="review")
+
+    # summary_b: archived for a different reason (quality gate) → must NOT be restored
+    summary_b = NS(
+        id=2,
+        article_id="lit-b",
+        status="archived",
+        generation_metadata={
+            "publication_gate": "some-other-reason",
+        },
+    )
+    article_b = NS(article_id="lit-b", publication_status="published")
+
+    # summary_c: archived because parent was excluded, parent now published
+    summary_c = NS(
+        id=3,
+        article_id="lit-c",
+        status="archived",
+        generation_metadata={
+            "publication_gate": "parent-article-excluded",
+        },
+    )
+    article_c = NS(article_id="lit-c", publication_status="published")
+
+    # An explicit AI archive remains final even if an older parent gate remains.
+    summary_d = NS(
+        id=4, article_id="lit-d", status="archived",
+        generation_metadata={"publication_gate": "parent-article-excluded",
+                             "ai_content_governance": {"decision": "archive"}},
+    )
+    article_d = NS(article_id="lit-d", publication_status="published")
+    rows = [(summary_a, article_a), (summary_b, article_b), (summary_c, article_c), (summary_d, article_d)]
+
+    class _FakeResult:
+        def all(self):
+            return rows
+
+    class _FakeDB:
+        def __init__(self):
+            self.flushed = False
+
+        async def execute(self, _stmt):
+            return _FakeResult()
+
+        async def flush(self):
+            self.flushed = True
+
+    db = _FakeDB()
+
+    # dry_run=True — nothing should be mutated
+    result_dry = await restore_parent_excluded_summaries(db, dry_run=True)
+    assert result_dry["dry_run"] is True
+    assert result_dry["candidates"] == 2   # a and c match the gate
+    assert result_dry["restored"] == 0     # dry_run; no writes
+    assert summary_a.status == "archived"  # unchanged
+    assert not db.flushed
+
+    # real run — a and c should be moved to review
+    db2 = _FakeDB()
+    result_real = await restore_parent_excluded_summaries(db2, dry_run=False)
+    assert result_real["dry_run"] is False
+    assert result_real["candidates"] == 2
+    assert result_real["restored"] == 2
+    assert result_real["by_parent_status"] == {"review": 1, "published": 1}
+    assert summary_a.status == "review"
+    assert summary_c.status == "review"
+    assert summary_a.generation_metadata["publication_gate"] == "restored-from-parent-exclusion"
+    assert "autopilot_restore" in summary_a.generation_metadata
+    # summary_b must not have been touched
+    assert summary_b.status == "archived"
+    assert summary_d.status == "archived"
+    assert db2.flushed

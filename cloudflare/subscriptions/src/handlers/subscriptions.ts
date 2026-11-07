@@ -1,3 +1,4 @@
+import { deliveryMode, recipientSql } from "../lib/pilot.ts";
 import { SUPPORTED_LOCALES, boundedText, normalizeCode, valueAsString } from "../lib/input.ts";
 import { HttpError, configInt, json, publicBaseUrl, requireAdmin, type JsonValue } from "../lib/http.ts";
 import { FREQUENCIES, LOCALE_LABELS, SUBSCRIPTION_STATUSES, escapeLike, maskEmail, normalizeFilter, parseFilterGroups, pendingCutoff, rowsToCounts } from "../lib/subscriptions.ts";
@@ -60,6 +61,7 @@ export async function listSubscriptionOptions(request: Request, env: Env): Promi
 
   return json({
     ok: true,
+    pilot_mode: deliveryMode(env) === "pilot",
     lists: (lists.results || []).map((list) => ({
       code: list.code,
       name_en: list.name,
@@ -67,8 +69,15 @@ export async function listSubscriptionOptions(request: Request, env: Env): Promi
       description_en: list.description || "",
       description_zh: list.description_zh || list.description || "",
       default_frequency: list.default_frequency,
+      available: list.code === "research_digest" ? env.RESEARCH_DIGEST_ENABLED === "true"
+        : list.code === "alerts" ? env.NOTICE_ALERTS_ENABLED === "true"
+        : list.code === "reports" || list.code === "weekly_digest" ? env.REPORT_DIGEST_ENABLED === "true"
+        : false,
     })),
-    locales: SUPPORTED_LOCALES.map((locale) => ({
+    // Automated research and notice content currently has complete English and
+    // Chinese editions. Keep historical locale values, but do not promise a
+    // new reader an untranslated automated email in another language.
+    locales: SUPPORTED_LOCALES.filter((locale) => locale === "en" || locale === "zh").map((locale) => ({
       value: locale,
       label_en: LOCALE_LABELS[locale]?.label_en || locale,
       label_zh: LOCALE_LABELS[locale]?.label_zh || locale,
@@ -113,6 +122,9 @@ export async function listAudience(request: Request, env: Env, deps: Subscriptio
     "l.code = ?",
   ];
   const binds: unknown[] = [listCode];
+  const policy = recipientSql(env, "c.address");
+  clauses.push(policy.sql);
+  binds.push(...policy.binds);
 
   for (const filter of [
     { type: "country", value: country },

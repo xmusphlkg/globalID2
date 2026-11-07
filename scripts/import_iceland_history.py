@@ -33,6 +33,7 @@ from sqlalchemy import text
 
 from src.core import get_database, init_app
 from src.core.country_library import get_country_bootstrap_config, get_country_profile
+from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
 from src.data.crawlers.is_history import (
     DEFAULT_LANDING_URL,
     DEFAULT_RAW_DIR,
@@ -171,6 +172,9 @@ async def _import_database(processor: IcelandHistoryProcessor, prepared) -> None
     )
     store = SeriesObservationStore()
     async with get_database() as db:
+        # This maintenance import also retires legacy facts before reaching
+        # the series store; exclude live writers before those first mutations.
+        await acquire_disease_data_mutation_lock(db)
         await _ensure_country(db)
         retired_projection_rows = await _retire_ineligible_compatibility_rows(
             db, prepared

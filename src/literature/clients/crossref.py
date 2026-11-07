@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import asyncio
-from collections import deque
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
 import hashlib
 import heapq
 import json
 import math
+from collections import deque
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
 
-from .base import LiteratureHttpClient
+from .base import LiteratureHttpClient, gather_cancel_on_error
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,7 +149,7 @@ class CrossrefClient(LiteratureHttpClient):
         streams = [_JournalStream(journal=journal) for journal in journals]
 
         async with httpx.AsyncClient(base_url=self.BASE_URL, follow_redirects=True) as client:
-            async def fill(stream: _JournalStream) -> None:
+            async def fill(stream: _JournalStream, *, rows: int = page_size) -> None:
                 async with semaphore:
                     try:
                         await self._fill_journal_stream(
@@ -157,19 +157,20 @@ class CrossrefClient(LiteratureHttpClient):
                             stream=stream,
                             since=since,
                             until=until,
-                            rows=page_size,
+                            rows=rows,
                             resume_indexed_at=resume_indexed_at,
                             resume_record_ids=resume_record_ids,
                         )
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001 - failed journals retain their checkpoint for retry.
                         # One journal's TLS or upstream failure must not cancel
                         # all other streams. The pipeline can still persist
-                        # partial Crossref results and will use PubMed as a
-                        # core fallback when every stream is unavailable.
+                        # partial results, but cannot advance the shared
+                        # watermark past this unread stream. Leave it
+                        # unexhausted so failure is distinct from an empty
+                        # successful journal response in the checkpoint.
                         stream.error = type(exc).__name__ or "Exception"
-                        stream.exhausted = True
 
-            await asyncio.gather(*(fill(stream) for stream in streams))
+            await gather_cancel_on_error(*(fill(stream) for stream in streams))
             heap: list[tuple[datetime, str, int, dict[str, Any]]] = []
             for index, stream in enumerate(streams):
                 if stream.buffer:
@@ -192,28 +193,12 @@ class CrossrefClient(LiteratureHttpClient):
 
                 if len(records) >= max_records:
                     break
-                if not stream.buffer and not stream.exhausted:
-                    active_streams = sum(
-                        int(bool(other.buffer) or not other.exhausted)
-                        for other in streams
-                    )
-                    refill_rows = max(
-                        1,
-                        min(
-                            page_size,
-                            math.ceil((max_records - len(records)) / max(1, active_streams)),
-                        ),
-                    )
-                    async with semaphore:
-                        await self._fill_journal_stream(
-                            client,
-                            stream=stream,
-                            since=since,
-                            until=until,
-                            rows=refill_rows,
-                            resume_indexed_at=resume_indexed_at,
-                            resume_record_ids=resume_record_ids,
-                        )
+                if not stream.buffer and not stream.exhausted and not stream.error:
+                    # Crossref cursor continuations must retain every original
+                    # request parameter, including rows. The return cap still
+                    # applies to the merge; spare look-ahead stays bounded by
+                    # one proportional page per journal.
+                    await fill(stream)
                 if stream.buffer:
                     next_item = stream.buffer.popleft()
                     next_indexed_at, next_stable_id = _record_sort_key(next_item)
@@ -222,7 +207,8 @@ class CrossrefClient(LiteratureHttpClient):
                         (next_indexed_at, next_stable_id, stream_index, next_item),
                     )
 
-        truncated = bool(heap) or any(stream.buffer or not stream.exhausted for stream in streams)
+        source_errors = sum(1 for stream in streams if stream.error)
+        truncated = bool(source_errors or heap) or any(stream.buffer or not stream.exhausted for stream in streams)
         through = max((value for item in records if (value := _indexed_at(item)) is not None), default=None)
         through_value = through if through and truncated else until
         boundary_record_ids: list[str] = []
@@ -242,6 +228,17 @@ class CrossrefClient(LiteratureHttpClient):
             if truncated and through is not None
             else None
         )
+        if source_errors:
+            # A missing journal head invalidates the global merge frontier.
+            # Successfully returned records may be persisted, but must be
+            # replayed until every journal covers the original window. Keep
+            # only the previously committed boundary IDs: adopting a later
+            # timestamp here would permanently skip the failed journal's rows.
+            through_value = since
+            next_resume_after = {
+                "indexed_at": since.isoformat(),
+                "record_ids": sorted(resume_record_ids) if resume_indexed_at == since else [],
+            }
         records_prefetched = sum(stream.records_prefetched for stream in streams)
         records_examined = sum(stream.records_examined for stream in streams)
         lookahead_records = max(0, records_prefetched - records_examined)
@@ -297,7 +294,8 @@ class CrossrefClient(LiteratureHttpClient):
             "catch_up_required": truncated,
             "remaining_index_span_seconds": remaining_index_span_seconds,
             "journal_count": len(journal_checkpoints),
-            "source_errors": sum(1 for stream in streams if stream.error),
+            "source_errors": source_errors,
+            "watermark_held_for_errors": bool(source_errors),
             "journals": journal_checkpoints,
             "sort": "indexed",
             "order": "asc",
@@ -374,6 +372,36 @@ class CrossrefClient(LiteratureHttpClient):
             )
             if not stream.exhausted:
                 stream.cursor = next_cursor
+
+    async def search_works_page(
+        self, *, query: str, since: datetime, until: datetime,
+        max_records: int, cursor: str | int | None = None,
+    ):
+        """Read one resumable page; callers retain the query/window/page size."""
+        from .search_page import cursor_page
+
+        size = max(1, min(100, int(max_records)))
+        token = str(cursor or "*")
+        async with httpx.AsyncClient(base_url=self.BASE_URL, follow_redirects=True) as client:
+            payload = await self.get_json(client, "/works", params={
+                "query.bibliographic": query,
+                "filter": (
+                    f"from-pub-date:{since.date().isoformat()},"
+                    f"until-pub-date:{until.date().isoformat()},type:journal-article"
+                ),
+                "cursor": token, "rows": size, "mailto": self.mailto,
+                # Crossref forbids publication-date sorting with cursors.
+                # Keep every parameter fixed while paging this date window.
+            })
+        message = payload.get("message") or {}
+        items = message.get("items")
+        if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+            raise ValueError("Invalid Crossref discovery page")
+        records = items
+        return cursor_page(
+            records, size=size, cursor=token, next_cursor=message.get("next-cursor"),
+            missing_cursor_is_terminal=True,
+        )
 
     async def search_works(
         self,

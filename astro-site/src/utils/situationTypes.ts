@@ -143,6 +143,22 @@ export interface MonitoringProduct {
   alert_count: number;
 }
 
+/**
+ * Public payload for `/situation/map-data.json`. Markers and monitoring stay off
+ * the HTML page so the three locale shells stay inside the gzip budget as the
+ * history window grows; the island fetches this once on load.
+ */
+export interface SituationMapDataFile {
+  schema_version: string;
+  generated_at: string;
+  as_of: string;
+  points: MapMarker[];
+  monitoring: MonitoringProduct[];
+  active_outbreaks: number;
+  sources_ok: number;
+  source_count: number;
+}
+
 export interface SourceStatus {
   source_id: string;
   label?: { en?: string; zh?: string };

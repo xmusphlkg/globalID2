@@ -37,6 +37,18 @@ async def records(capture_db):
         return list((await session.scalars(select(SourceArtifact))).all())
 
 
+async def test_cancelled_capture_does_not_poison_successful_scope(capture_db, monkeypatch):
+    async def cancelled_write(*args, **kwargs):
+        raise asyncio.CancelledError()
+
+    with capture.capture_sources(str(uuid4()), 1, "literature") as bound:
+        monkeypatch.setattr(bound.writer, "write", cancelled_write)
+        with pytest.raises(asyncio.CancelledError):
+            await capture.capture_async(b"raw", "https://fixture.test/data")
+        bound.verify()
+    assert await records(capture_db) == []
+
+
 @pytest.mark.parametrize("blocking", [False, True])
 async def test_parser_input_is_reread_only_after_hash_registration(
     capture_db, monkeypatch, blocking

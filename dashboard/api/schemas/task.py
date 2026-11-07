@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
+from src.control_plane.publication_kind import PublicationKind
 
 
 class TaskOut(BaseModel):
@@ -10,6 +11,7 @@ class TaskOut(BaseModel):
     task_uuid: str
     task_name: str
     task_type: str
+    publication_kind: PublicationKind | None = None
     status: str
     priority: str
     progress: int = 0

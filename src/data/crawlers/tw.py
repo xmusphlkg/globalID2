@@ -34,6 +34,9 @@ logger = get_logger(__name__)
 DEFAULT_SOURCE_NAME = "Taiwan, China CDC NIDSS Open Data"
 DEFAULT_INDEX_URL = "https://nidss.cdc.gov.tw/Home/Index"
 DEFAULT_MONTHLY_EXPORT_URL = "https://nidss.cdc.gov.tw/Export/NidssReportTimer"
+ODS_TIMEOUT = (10, 30)
+CSV_TIMEOUT = (10, 30)
+CSV_TRANSPORT_COOLDOWN_SECONDS = 60
 # These NIDSS source series use diagnosis year/month, also accepted by the
 # original CSV normalizer. TB registration dates and reported-only diseases
 # are deliberately not substituted for onset/confirmed-case series.
@@ -105,14 +108,35 @@ def _decode_csv_response(content: bytes) -> str:
     return content.decode("utf-8", errors="replace")
 
 
+def is_tw_ods_transient_error(exc: Exception) -> bool:
+    """Identify service-wide transport failures without masking TLS identity errors."""
+    if isinstance(exc, requests.exceptions.SSLError):
+        message = str(exc).lower()
+        if any(marker in message for marker in ("certificate", "cert_verify", "hostname")):
+            return False
+        return any(marker in message for marker in (
+            "unexpected_eof_while_reading", "unexpected eof while reading",
+            "eof occurred in violation of protocol", "connection reset by peer",
+        ))
+    if isinstance(exc, (requests.Timeout, requests.ConnectionError)):
+        return True
+    if isinstance(exc, requests.HTTPError) and exc.response is not None:
+        status = exc.response.status_code
+        return status == 429 or 500 <= status <= 599
+    return False
+
+
 def parse_monthly_export(payload: bytes, *, disease: TWDiseaseSource, months, date_basis: str, population: str) -> List[Dict[str, str]]:
     """Read the national total from an official monthly ODS, never its subtotals."""
     table_ns = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
-    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-        info = archive.getinfo("content.xml")
-        if info.file_size > 20_000_000:
-            raise ValueError("NIDSS monthly export exceeds the XML size limit")
-        root = ET.fromstring(archive.read(info))
+    try:
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            info = archive.getinfo("content.xml")
+            if info.file_size > 20_000_000:
+                raise ValueError("NIDSS monthly export exceeds the XML size limit")
+            root = ET.fromstring(archive.read(info))
+    except (zipfile.BadZipFile, KeyError, ET.ParseError, EOFError) as exc:
+        raise ValueError("NIDSS monthly export is corrupt or incomplete") from exc
     grid = []
     for row in root.iter(table_ns + "table-row"):
         cells = []
@@ -138,7 +162,7 @@ def parse_monthly_export(payload: bytes, *, disease: TWDiseaseSource, months, da
     output = []
     for index in range(1, len(month_numbers)):
         year = years[index] if index < len(years) else ""
-        if re.fullmatch(r"20\d{2}", year):
+        if re.fullmatch(r"(?:19|20)\d{2}", year):
             current_year = int(year)
         month = _parse_int(month_numbers[index])
         if current_year is None or month is None or not 1 <= month <= 12:
@@ -286,12 +310,21 @@ class TaiwanNIDSSCrawler(BaseCrawler):
             log_label="[TW-NIDSS]",
         )
         self._http_fallback_hosts: Set[str] = set()
-        self._csv_transport_unavailable = False
+        self._csv_retry_after = 0.0
+        self.last_csv_transport_url: Optional[str] = None
+        self._csv_request_url: Optional[str] = None
         # CSV retries are owned by download_csv_bytes. Avoid multiplying its
         # three attempts by the base session's transport retries.
         for scheme in ("http", "https"):
             self.session.mount(
                 f"{scheme}://od.cdc.gov.tw/eic/",
+                requests.adapters.HTTPAdapter(max_retries=0),
+            )
+        # Export failures are handled by the caller's bounded outage policy;
+        # do not let the base adapter retry each GET or POST four times.
+        for path in ("nndss/disease", "Export/NidssReportTimer"):
+            self.session.mount(
+                f"https://nidss.cdc.gov.tw/{path}",
                 requests.adapters.HTTPAdapter(max_retries=0),
             )
 
@@ -340,10 +373,18 @@ class TaiwanNIDSSCrawler(BaseCrawler):
         raw = self.download_csv_bytes(disease)
         return _decode_csv_response(raw) if raw is not None else None
 
+    def csv_transport_cooling_down(self) -> bool:
+        """Return whether a known transient CSV outage is still cooling down."""
+        return time.monotonic() < self._csv_retry_after
+
     def download_csv_bytes(self, disease: TWDiseaseSource) -> Optional[bytes]:
         """Download an undecoded response entity for immutable collection."""
-        if self._csv_transport_unavailable:
+        self.last_csv_transport_url = None
+        self._csv_request_url = None
+        if self.csv_transport_cooling_down():
             return None
+        # Once the cooldown expires the next disease is a half-open probe.
+        self._csv_retry_after = 0.0
         last_error: Optional[Exception] = None
         for attempt in range(1, 4):
             try:
@@ -361,7 +402,13 @@ class TaiwanNIDSSCrawler(BaseCrawler):
                         f"[TW-NIDSS] CSV returned HTML | code={disease.code} url={disease.monthly_csv_url}"
                     )
                     return None
-                return response.content
+                content = response.content
+                if not content:
+                    raise requests.ConnectionError("TW NIDSS CSV returned an empty response")
+                self.last_csv_transport_url = (
+                    getattr(response, "url", None) or self._csv_request_url or disease.monthly_csv_url
+                )
+                return content
             except requests.RequestException as exc:
                 last_error = exc
                 logger.warning(
@@ -371,9 +418,8 @@ class TaiwanNIDSSCrawler(BaseCrawler):
                 time.sleep(attempt)
 
         if last_error is not None:
-            self._csv_transport_unavailable = isinstance(
-                last_error, (requests.ConnectionError, requests.Timeout)
-            )
+            if is_tw_ods_transient_error(last_error):
+                self._csv_retry_after = time.monotonic() + CSV_TRANSPORT_COOLDOWN_SECONDS
             logger.warning(
                 f"[TW-NIDSS] CSV skipped after retries | code={disease.code} "
                 f"name={disease.name} error={last_error}"
@@ -392,7 +438,7 @@ class TaiwanNIDSSCrawler(BaseCrawler):
         if not target:
             raise ValueError("NIDSS monthly export needs a requested month")
         page_url = f"https://nidss.cdc.gov.tw/nndss/disease?id={disease.code}"
-        page = self._tls_fallback.request(self.session, "GET", page_url, timeout=self.timeout)
+        page = self._tls_fallback.request(self.session, "GET", page_url, timeout=ODS_TIMEOUT)
         page.raise_for_status()
         soup = BeautifulSoup(page.content, "html.parser")
         form = soup.select_one('form[action="/Export/NidssReportTimer"]')
@@ -417,7 +463,7 @@ class TaiwanNIDSSCrawler(BaseCrawler):
         data.update(pty_period_value="ym", pty_y_s=str(target[0][0]), pty_m_s=str(target[0][1]), pty_y_e=str(target[-1][0]), pty_m_e=str(target[-1][1]), pty_date_type_value=date_options[date_basis], pty_sickclass_value="determined_cnt")
         exports = []
         for population_code, population in populations:
-            response = self._tls_fallback.request(self.session, "POST", DEFAULT_MONTHLY_EXPORT_URL, data={**data, "pty_immigration_value": population_code}, timeout=self.timeout)
+            response = self._tls_fallback.request(self.session, "POST", DEFAULT_MONTHLY_EXPORT_URL, data={**data, "pty_immigration_value": population_code}, timeout=ODS_TIMEOUT)
             response.raise_for_status()
             if not response.content.startswith(b"PK"):
                 raise ValueError("NIDSS export did not return an ODS workbook")
@@ -426,23 +472,26 @@ class TaiwanNIDSSCrawler(BaseCrawler):
 
     def _get_csv_response(self, url: str) -> requests.Response:
         parsed = urlparse(url)
+        self._csv_request_url = None
         if parsed.hostname in self._http_fallback_hosts:
             try:
-                return self.session.get(
-                    urlunparse(parsed._replace(scheme="http")),
-                    timeout=self.timeout,
-                )
+                fallback_url = urlunparse(parsed._replace(scheme="http"))
+                response = self.session.get(fallback_url, timeout=CSV_TIMEOUT)
+                self._csv_request_url = fallback_url
+                return response
             except requests.RequestException:
                 # A failed fallback must not pin the rest of this collection
                 # to HTTP when the verified HTTPS endpoint may have recovered.
                 self._http_fallback_hosts.discard(parsed.hostname)
         try:
-            return self._tls_fallback.request(
+            response = self._tls_fallback.request(
                 self.session,
                 "GET",
                 url,
-                timeout=self.timeout,
+                timeout=CSV_TIMEOUT,
             )
+            self._csv_request_url = url
+            return response
         except requests.exceptions.SSLError as exc:
             error = str(exc).lower()
             handshake_eof = any(marker in error for marker in (
@@ -458,13 +507,14 @@ class TaiwanNIDSSCrawler(BaseCrawler):
             # The Taiwan CDC open-data CDN intermittently closes TLS handshakes
             # before returning a certificate, so a CA-bundle retry cannot help.
             # Its public CSV endpoint also exposes HTTP; restrict the downgrade
-            # to this exact host and retain the HTTPS URL as provenance.
+            # to this exact host and record the actual transport URL.
             fallback_url = urlunparse(parsed._replace(scheme="http"))
             logger.warning(
                 f"[TW-NIDSS] HTTPS handshake unavailable; using official HTTP CSV endpoint | "
                 f"url={fallback_url} error={exc}"
             )
-            response = self.session.get(fallback_url, timeout=self.timeout)
+            response = self.session.get(fallback_url, timeout=CSV_TIMEOUT)
+            self._csv_request_url = fallback_url
             if (
                 response.status_code == 200 and response.content
                 and "html" not in response.headers.get("content-type", "").lower()

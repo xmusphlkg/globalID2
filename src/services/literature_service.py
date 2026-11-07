@@ -10,8 +10,8 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, or_, select, union
 
-from src.control_plane.schedule_state import schedule_state_repository
 from src.ai.model_center import is_provider_authentication_error
+from src.control_plane.schedule_state import schedule_state_repository
 from src.core import get_config, get_database, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
@@ -24,7 +24,6 @@ from src.domain import (
 )
 from src.literature import LiteraturePipeline
 from src.literature.enrichment import LiteratureEnrichmentPipeline
-
 
 logger = get_logger(__name__)
 
@@ -305,9 +304,13 @@ class LiteratureService:
         result["catch_up_backlog_limit"] = int(
             getattr(cfg, "catch_up_max_exception_backlog", 500)
         )
+        result["catch_up_backlog_counting_basis"] = "distinct_actionable_review_articles"
+        result["catch_up_review_backlog_high"] = 0
         max_records = int(getattr(cfg, "max_records_per_run", 300))
-        # Editorial review volume remains visible, while each metadata sync
-        # stays bounded by max_records_per_run.
+        # This guard controls accelerated follow-ups only. The ordinary
+        # schedule remains available even when editorial capacity is exhausted.
+        result["catch_up_resume_below_backlog"] = result["catch_up_backlog_limit"] - max_records
+        result["catch_up_required_backlog_reduction"] = 0
         scheduled_trigger = bool((task.input_data or {}).get("scheduled_trigger"))
         if not catch_up_required:
             return result
@@ -323,12 +326,12 @@ class LiteratureService:
         backlog_limit = result["catch_up_backlog_limit"]
         try:
             backlog_count = await _count_catch_up_exception_backlog()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - unknown capacity must not accelerate collection.
             result["catch_up_paused_backpressure"] = 1
             result["catch_up_backpressure_reason"] = "backlog_measurement_unavailable"
             result["catch_up_status"] = "paused_backlog_measurement"
             result["catch_up_next_action_code"] = "retry_backlog_measurement"
-            logger.warning(
+            logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                 "Research Radar catch-up paused because backlog measurement failed error_type={}",
                 type(exc).__name__ or "Exception",
             )
@@ -338,12 +341,22 @@ class LiteratureService:
         result["catch_up_backlog_projected_upper_bound"] = projected_upper_bound
         if projected_upper_bound >= backlog_limit:
             result["catch_up_review_backlog_high"] = 1
-            logger.info(
-                "Research Radar catch-up continuing with review backlog_count={} projected_upper_bound={} threshold={}",
+            result["catch_up_paused_backpressure"] = 1
+            result["catch_up_backpressure_reason"] = "exception_backlog_headroom_exhausted"
+            result["catch_up_status"] = "paused_backpressure"
+            result["catch_up_required_backlog_reduction"] = projected_upper_bound - backlog_limit + 1
+            result["catch_up_next_action_code"] = (
+                "configure_catch_up_backlog_headroom"
+                if backlog_limit <= max_records
+                else "reduce_exception_backlog_below_resume_threshold"
+            )
+            logger.info(  # noqa: PLE1205 - get_logger returns a brace-format logger.
+                "Research Radar accelerated catch-up paused backlog_count={} projected_upper_bound={} threshold={}",
                 backlog_count,
                 projected_upper_bound,
                 backlog_limit,
             )
+            return result
         now = datetime.now(ZoneInfo(cfg.timezone))
         next_run_at = now + timedelta(
             minutes=getattr(cfg, "catch_up_interval_minutes", 5)
@@ -357,7 +370,7 @@ class LiteratureService:
             self._state.next_run_at = next_run_at
             result["catch_up_status"] = "scheduled"
             result["catch_up_next_action_code"] = "await_accelerated_catch_up"
-            logger.info(
+            logger.info(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                 "Research Radar catch-up scheduled next_run_at={} remaining_index_span_seconds={}",
                 next_run_at.isoformat(),
                 int(result.get("source_remaining_index_span_seconds") or 0),
@@ -441,10 +454,10 @@ class LiteratureService:
                 ),
                 manual=False,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - committed metadata is recovered by the normal enrichment schedule.
             base["status"] = "failed"
             base["reason"] = type(exc).__name__ or "Exception"
-            logger.warning(
+            logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                 "Research Radar new-article French enrichment could not be queued error_type={}",
                 type(exc).__name__ or "Exception",
             )
@@ -659,7 +672,7 @@ class LiteratureService:
             output["ai_enrichment_catch_up_status"] = "scheduled"
             output["ai_enrichment_catch_up_next_action_code"] = "await_accelerated_enrichment"
             output["ai_enrichment_catch_up_next_run_at"] = _iso(next_run_at)
-            logger.info(
+            logger.info(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                 "Research Radar enrichment catch-up scheduled next_run_at={} selected_articles={} batch_limit={}",
                 next_run_at.isoformat(),
                 selected,

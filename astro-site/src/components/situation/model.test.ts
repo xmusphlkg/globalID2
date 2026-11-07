@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { WORLD_CENTER, ageDays, buildAnchors, buildGraph, filterPoints, fitView, placePoints, recencyOf, sortPoints } from './model.ts';
+import { WORLD_CENTER, ageDays, buildAnchors, buildGraph, deduplicateAlerts, deduplicatePoints, filterPoints, fitView, placePoints, recencyOf, sortPoints } from './model.ts';
 
 const AS_OF = '2026-10-28';
 const point = (id: string, day: string, extra: Record<string, unknown> = {}) =>
@@ -33,6 +33,55 @@ test('filters combine and the window drops older points', () => {
   assert.deepEqual(filterPoints(rows, { ...base, country: 'KE' }, AS_OF).map(item => item.alert_id), ['b']);
   assert.deepEqual(filterPoints(rows, { ...base, source: 'ecdc_cdtr' }, AS_OF).map(item => item.alert_id), ['c']);
   assert.equal(filterPoints(rows, { ...base, disease: 'D999' }, AS_OF).length, 0);
+});
+
+test('time windows include the boundary but exclude future and invalid dates', () => {
+  const rows = [point('boundary', '2026-10-21'), point('old', '2026-10-20'), point('future', '2026-10-29'), point('invalid', 'bad')];
+  const filters = { disease: '', country: '', source: '', window: '7' } as const;
+  assert.deepEqual(filterPoints(rows, filters, AS_OF).map(row => row.alert_id), ['boundary']);
+  assert.deepEqual(filterPoints(rows, { ...filters, window: 'all' }, AS_OF).map(row => row.alert_id), ['boundary', 'old']);
+});
+
+const alert = (id: string, extra = {}) => point(id, AS_OF, {
+  outbreak_id: 'OB-1', notice_id: `notice-${id}`, admin_area: 'Nairobi',
+  status: 'ongoing', cases: 6, deaths: 0, count_basis: 'confirmed', as_of: AS_OF,
+  quote: 'Six cases reported.', url: `https://example.org/${id}`, ...extra,
+});
+
+test('repeated facts from different feeds form one event and retain both sources', () => {
+  const first = alert('a');
+  const second = alert('b', { source_id: 'ecdc_cdtr', admin_area: ' NAIROBI  ' });
+  const groups = deduplicateAlerts([first, second, first], 'b');
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].alert_id, 'b');
+  assert.deepEqual(groups[0].reports.map(row => row.alert_id), ['a', 'b']);
+  assert.equal(first.reports, undefined);
+  const filtered = filterPoints([first, second], { country: '', disease: '', source: 'ecdc_cdtr', window: '30' }, AS_OF);
+  assert.deepEqual(deduplicateAlerts(filtered)[0].reports.map(row => row.alert_id), ['b']);
+});
+
+test('distinct updates, places, outbreaks and count bases never collapse', () => {
+  const rows = [
+    alert('a'), alert('b', { cases: 7 }), alert('c', { deaths: 1 }),
+    alert('d', { published_date: '2026-10-27' }), alert('e', { as_of: '2026-10-27' }),
+    alert('f', { country_code: 'KE' }), alert('g', { admin_area: 'Mombasa' }),
+    alert('h', { outbreak_id: 'OB-2' }), alert('i', { count_basis: 'suspected' }),
+    alert('j', { status: 'ended' }), alert('k', { disease_id: 'D999' }),
+  ];
+  assert.equal(deduplicateAlerts(rows).length, rows.length);
+});
+
+test('reports without figures need matching evidence, not just matching empty fields', () => {
+  const empty = { cases: null, deaths: null, quote: null };
+  assert.equal(deduplicateAlerts([alert('a', empty), alert('b', empty)]).length, 2);
+  assert.equal(deduplicateAlerts([alert('a', { ...empty, quote: 'An outbreak.' }), alert('b', { ...empty, quote: 'An outbreak.' })]).length, 1);
+});
+
+test('map points collapse repeated place reports after source filtering', () => {
+  const rows = [alert('a'), alert('b', { source_id: 'ecdc_cdtr' }), alert('c', { outbreak_id: 'OB-2' })];
+  assert.deepEqual(deduplicatePoints(rows).map(row => row.alert_id), ['a', 'c']);
+  const filtered = filterPoints(rows, { country: '', disease: '', source: 'ecdc_cdtr', window: '30' }, AS_OF);
+  assert.deepEqual(deduplicatePoints(filtered).map(row => row.alert_id), ['b']);
 });
 
 test('anchors use the largest landmass and points in one country fan out', () => {

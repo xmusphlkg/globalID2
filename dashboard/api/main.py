@@ -19,6 +19,7 @@ from .routers import (
     knowledge_sources,
     models,
     publish,
+    realtime,
     agent_runs,
     countries,
     diseases,
@@ -131,6 +132,7 @@ def create_app() -> FastAPI:
     app.include_router(collection.router, prefix=prefix, tags=["Collection"])
     app.include_router(models.router, prefix=prefix, tags=["Models"])
     app.include_router(publish.router, prefix=prefix, tags=["Publish"])
+    app.include_router(realtime.router, prefix=prefix, tags=["Realtime Publishing"])
     app.include_router(countries.router, prefix=prefix, tags=["Countries"])
     app.include_router(mappings.router, prefix=prefix, tags=["Disease Mapping Registry v3"])
     app.include_router(overview.router, prefix=prefix, tags=["Overview"])

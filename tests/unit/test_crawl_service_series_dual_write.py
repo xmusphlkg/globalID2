@@ -5,15 +5,16 @@ from types import SimpleNamespace
 import pytest
 
 from src.services.crawl_service import CrawlService
+from src.data.storage.series_observation_store import SeriesObservationSaveResult
 
 
 @pytest.fixture(autouse=True)
 def _stub_shared_mutation_lock(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _noop(_db) -> None:
+    async def _noop(_db, _country_code) -> None:
         return None
 
     monkeypatch.setattr(
-        "src.services.crawl_service.acquire_disease_data_mutation_lock",
+        "src.services.crawl_service.acquire_country_data_mutation_lock",
         _noop,
     )
 
@@ -63,11 +64,11 @@ async def test_import_rows_dual_writes_in_the_same_session(monkeypatch) -> None:
                 ),
             )
 
-    async def acquire_lock(session):
-        calls.append(("lock", session))
+    async def acquire_lock(session, country_code):
+        calls.append(("lock", session, country_code))
 
     monkeypatch.setattr(
-        "src.services.crawl_service.acquire_disease_data_mutation_lock",
+        "src.services.crawl_service.acquire_country_data_mutation_lock",
         acquire_lock,
     )
     monkeypatch.setattr(
@@ -84,17 +85,17 @@ async def test_import_rows_dual_writes_in_the_same_session(monkeypatch) -> None:
     )
 
     assert result is import_result
-    assert [call[0] for call in calls] == ["lock", "legacy", "series"]
-    assert calls[0][1] is db
-    assert calls[1][1:3] == calls[2][1:3] == (db, rows)
-    assert calls[2][3] == "US"
-    assert calls[2][4]["quality_policy"].mode == "quarantine"
-    assert calls[2][4]["quality_policy"].registry_coverage == "required"
-    assert calls[2][4]["source_id"] == {
+    assert [call[0] for call in calls] == ["lock", "legacy", "lock", "series"]
+    assert calls[0][1:] == calls[2][1:] == (db, "US")
+    assert calls[1][1:3] == calls[3][1:3] == (db, rows)
+    assert calls[3][3] == "US"
+    assert calls[3][4]["quality_policy"].mode == "quarantine"
+    assert calls[3][4]["quality_policy"].registry_coverage == "required"
+    assert calls[3][4]["source_id"] == {
         "US CDC NNDSS": "SRC_US_NNDSS",
         "US CDC NHSS": "SRC_US_NHSS",
     }
-    assert calls[2][4]["geography_key"] == "country:US:national"
+    assert calls[3][4]["geography_key"] == "country:US:national"
 
 
 @pytest.mark.asyncio
@@ -261,6 +262,38 @@ async def test_series_only_save_surfaces_registry_prefilter_counts(monkeypatch) 
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("with_weeks,expected", [(False, [10000, 10000, 1]), (True, [12000, 8001])])
+async def test_japan_series_write_is_bounded_and_preserves_all_rows(monkeypatch, with_weeks, expected):
+    batches = []
+
+    class Store:
+        def _jp_mixed_holding_profiles(self, rows, *_args):
+            assert len(rows) == 20001
+            return {("identity",): {"all_case": {}, "sentinel": {}}}
+
+        async def save_rows(self, db, rows, *_args, **_kwargs):
+            batches.append((db, list(rows)))
+            assert ("identity",) in _kwargs["jp_holding_profiles"]
+            return SeriesObservationSaveResult(
+                upserted=len(rows), skipped_unmatched=0, skipped_ambiguous=0,
+                skipped_invalid=0, skipped_registry_not_synced=0,
+                quality_report=SimpleNamespace(issues=(), highest_severity=None),
+            )
+
+    monkeypatch.setattr("src.services.crawl_service.SeriesObservationStore", Store)
+    db = object()
+    rows = [{"n": n, **({"MMWRYear": "2026", "MMWRWeek": str(1 if n < 6000 else 2 if n < 12000 else 3)} if with_weeks else {})} for n in range(20001)]
+    result = await CrawlService._save_series_rows(
+        db, SimpleNamespace(country_code="JP", series_country_code="JP"), rows,
+    )
+
+    assert [len(batch) for _, batch in batches] == expected
+    assert all(session is db for session, _ in batches)
+    assert [row for _, batch in batches for row in batch] == rows
+    assert result.upserted == len(rows)
+
+
+@pytest.mark.asyncio
 async def test_us_registered_only_selection_blocks_missing_resident_scope(
     monkeypatch,
 ) -> None:
@@ -300,6 +333,31 @@ async def test_us_registered_only_selection_blocks_missing_resident_scope(
             source_latest_date=None,
             force=True,
         )
+
+
+@pytest.mark.parametrize("deaths", ["7", "", None])
+async def test_legacy_supplemental_write_cannot_be_declared_case_series_noop(monkeypatch, deaths):
+    async def save(*_args, **_kwargs):
+        return SeriesObservationSaveResult(
+            upserted=1, skipped_unmatched=0, skipped_ambiguous=0,
+            skipped_invalid=0, skipped_registry_not_synced=0,
+            quality_report=SimpleNamespace(), publication_changes=(),
+        )
+
+    class Updater:
+        country_code = "US"
+
+        async def import_rows(self, *_args, **_kwargs):
+            return SimpleNamespace(inserted_or_updated=1)
+
+    monkeypatch.setattr(CrawlService, "_save_series_rows", save)
+    results = []
+    await CrawlService._import_rows_with_series(
+        object(), Updater(), [{"Cases": "10", "Deaths": deaths}],
+        db_latest_date=None, source_latest_date=None, force=True,
+        publication_results=results,
+    )
+    assert results[0].publication_changes is None
 
 
 def test_legacy_only_updater_can_explicitly_disable_registry_requirement() -> None:

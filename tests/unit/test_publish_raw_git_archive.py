@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import threading
 
 import pytest
 
@@ -35,6 +36,69 @@ def _git_log(repository: Path) -> list[str]:
         text=True,
     )
     return result.stdout.splitlines()
+
+
+def test_parallel_copies_preserve_serial_archive_bytes(monkeypatch, tmp_path):
+    source = tmp_path / "raw"
+    source.mkdir()
+    for index in range(12):
+        (source / f"{index:02}.bin").write_bytes(bytes([index]) * 8192)
+    serial, parallel = tmp_path / "serial", tmp_path / "parallel"
+    archive.publish_raw_archive(source, serial, copy_workers=1)
+    original = archive._atomic_copy
+    barrier, lock = threading.Barrier(4, timeout=10), threading.Lock()
+    entered = 0
+
+    def overlapping_copy(*args, **kwargs):
+        nonlocal entered
+        with lock:
+            entered += 1
+            first_wave = entered <= 4
+        if first_wave:
+            barrier.wait()
+        original(*args, **kwargs)
+
+    monkeypatch.setattr(archive, "_atomic_copy", overlapping_copy)
+    archive.publish_raw_archive(source, parallel, copy_workers=4)
+    for path in (serial / "data/raw").rglob("*"):
+        if path.is_file():
+            assert path.read_bytes() == (parallel / "data/raw" / path.relative_to(serial / "data/raw")).read_bytes()
+    assert verify_raw_archive(parallel, source_dir=source).file_count == 12
+
+
+@pytest.mark.parametrize("previously_split", [False, True])
+def test_failed_parallel_copy_cannot_commit_and_retry_recovers(monkeypatch, tmp_path, previously_split):
+    source, repository = tmp_path / "raw", tmp_path / "archive"
+    source.mkdir()
+    monkeypatch.setattr(archive, "MAX_DIRECT_FILE_BYTES", 16)
+    original_bytes = b"original" * (4 if previously_split else 1)
+    (source / "bad.bin").write_bytes(original_bytes)
+    archive.publish_raw_archive(source, repository)
+    before = _git_log(repository)
+    (source / "bad.bin").write_bytes(b"changed")
+    (source / "good.bin").write_bytes(b"new file")
+    original = archive._atomic_copy
+
+    def corrupt_copy(source, destination, *, size, sha256):
+        original(source, destination, size=size,
+                 sha256="0" * 64 if source.name == "bad.bin" else sha256)
+
+    monkeypatch.setattr(archive, "_atomic_copy", corrupt_copy)
+    with pytest.raises(archive.RawArchiveError, match="Source changed"):
+        archive.publish_raw_archive(source, repository, copy_workers=2)
+    assert _git_log(repository) == before
+    assert not list(repository.rglob("*.sync-*"))
+    old_path = repository / ("data/raw/bad.bin.parts/part-0001" if previously_split else "data/raw/bad.bin")
+    assert old_path.read_bytes() == original_bytes
+    monkeypatch.setattr(archive, "_atomic_copy", original)
+    archive.publish_raw_archive(source, repository, copy_workers=2)
+    assert verify_raw_archive(repository, source_dir=source).file_count == 2
+
+
+@pytest.mark.parametrize("workers", [0, 17])
+def test_copy_worker_limit_is_bounded(tmp_path, workers):
+    with pytest.raises(ValueError, match="between 1 and 16"):
+        archive.publish_raw_archive(tmp_path / "raw", tmp_path / "archive", copy_workers=workers)
 
 
 def test_local_archive_is_readable_incremental_and_excludes_auth(tmp_path: Path) -> None:

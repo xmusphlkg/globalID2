@@ -114,6 +114,9 @@ class PublishDirty(Base):
     id: Mapped[int] = mapped_column(BIG_PK, primary_key=True, autoincrement=True)
     line: Mapped[str] = mapped_column(String(32), nullable=False)
     scope_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Null means a legacy/coarse marker. Only versioned, complete changes may
+    # suppress descendant expansion and select individual download windows.
+    change_set: Mapped[dict | None] = mapped_column(JSON_DOCUMENT, nullable=True)
     source_task_uuid: Mapped[str] = mapped_column(String(36), nullable=False)
     marked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     published_task_uuid: Mapped[str | None] = mapped_column(String(36))

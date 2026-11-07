@@ -9,6 +9,7 @@ import {
 import { readPublishableReports } from '../../../../lib/report-data';
 import { loadCountry } from '../../../../lib/seo-page-data';
 import { buildAlternatePaths } from '../../../../lib/seo';
+import { shouldBuildPage } from '../../../../lib/page-build-plan';
 
 interface Props {
   countryCode?: string;
@@ -16,7 +17,9 @@ interface Props {
 }
 
 export async function getStaticPaths() {
-  return reportArchiveCountries(readPublishableReports()).map(country => ({
+  return reportArchiveCountries(readPublishableReports())
+    .filter(country => shouldBuildPage(`report-archive:${country}`))
+    .map(country => ({
     params: { country },
     props: { countryCode: country, locale: 'en' },
   }));

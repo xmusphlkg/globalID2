@@ -67,7 +67,7 @@ test("late non-terminal feedback cannot downgrade a terminal delivery", async ()
   });
   assert.ok(feedback);
   await applyDeliveryFeedback(db, feedback);
-  const deliveryUpdates = updates.filter((query) => query.startsWith("UPDATE"));
+  const deliveryUpdates = updates.filter((query) => query.startsWith("UPDATE message_deliveries") || query.startsWith("UPDATE transactional_email_deliveries"));
   assert.equal(deliveryUpdates.length, 2);
   assert.ok(deliveryUpdates.every((query) => query.includes("status NOT IN ('delivered', 'failed', 'skipped')")));
 });

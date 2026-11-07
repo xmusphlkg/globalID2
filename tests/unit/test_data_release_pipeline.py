@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -9,6 +10,11 @@ import pytest
 from src.services import data_release_service as release_module
 from src.services.data_release import pipeline
 from src.services.data_release_service import DataReleaseService
+
+
+@asynccontextmanager
+async def read_snapshot():
+    yield {"GLOBALID_RELEASE_DB_SNAPSHOT": "00000003-0000001B-1"}
 
 
 def _runtime(manager, root_dir: Path) -> pipeline.ReleasePipelineRuntime:
@@ -25,6 +31,7 @@ def _runtime(manager, root_dir: Path) -> pipeline.ReleasePipelineRuntime:
         astro_build_timeout_seconds=900,
         download_publish_timeout_seconds=900,
         cloudflare_deploy_timeout_seconds=900,
+        read_snapshot=read_snapshot,
     )
 
 
@@ -68,7 +75,32 @@ async def test_repository_publisher_failures_are_aggregated_after_all_finish():
 
 
 @pytest.mark.asyncio
-async def test_pipeline_local_only_success_preserves_stage_order(tmp_path):
+async def test_repository_publisher_preserves_release_stage_for_retry_classification():
+    from src.services.data_release.process_runner import ReleaseCommandError
+
+    async def fail_r2() -> None:
+        raise ReleaseCommandError(
+            "Publish Papers Bundle to R2 failed with exit code 1",
+            release_stage="r2_papers_publish",
+            title="Publish Papers Bundle to R2",
+            returncode=1,
+        )
+
+    async def succeed() -> None:
+        return None
+
+    with pytest.raises(ReleaseCommandError) as raised:
+        await pipeline._run_repository_publications(
+            [("r2_papers", fail_r2()), ("direct_downloads", succeed())]
+        )
+
+    assert raised.value.release_stage == "r2_papers_publish"
+    assert "r2_papers:" in str(raised.value)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("resume", [False, True])
+async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monkeypatch, resume):
     commands = []
     timeouts = []
     command_envs = {}
@@ -166,6 +198,21 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path):
         def _validate_situation_release_command(self, **_kwargs):
             return ["validate-situation-release"]
 
+        def _r2_papers_enabled(self, _job=None):
+            return False
+
+        def _split_papers_bundle_command(self, **_kwargs):
+            return ["split-papers"]
+
+        def _publish_papers_r2_command(self, **_kwargs):
+            return ["publish-papers-r2"]
+
+        def _cloudflare_account_id(self):
+            return "account"
+
+        def _cloudflare_api_token(self):
+            return "token"
+
         def _publish_download_repo_command(self, **_kwargs):
             return ["publish-downloads"]
 
@@ -197,19 +244,26 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path):
         input_data={"release_job_id": "site-release"},
     )
 
+    if resume:
+        from src.services.data_release.artifact_checkpoint import ArtifactCheckpoint
+
+        identity = await Service()._site_release_identity("main")
+        monkeypatch.setattr(ArtifactCheckpoint, "restore", lambda *_args: identity)
+
     output = await pipeline.execute_release_task(Service(), task, runtime=runtime)
 
-    assert commands == [
+    expected_commands = [
         "Export Situation",
         "Generate Site Data",
         "Build Astro Site",
         "Validate Situation Release Gate",
     ]
-    assert timeouts[0] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
-    assert (
-        command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=6144"
-    )
-    assert progress == [5, 15, 22, 35, 45, 60, 88, 100]
+    assert commands == ([] if resume else expected_commands)
+    if not resume:
+        assert timeouts[0] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
+        assert command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=12288"
+    assert progress == ([5, 15, 60, 88, 100] if resume else [5, 15, 22, 35, 45, 60, 88, 100])
+    assert output["release_timing"]["within_target"]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False
     assert output["pages_deployed"] is False
@@ -217,7 +271,11 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_pipeline_passes_local_gates_before_remote_publication(tmp_path):
+async def test_pipeline_passes_local_gates_before_remote_publication(tmp_path, monkeypatch):
+    from unittest.mock import AsyncMock
+    from src.services.data_release import raw_archive_jobs
+    enqueue = AsyncMock(return_value={"status": "queued", "task_uuid": "archive-1"})
+    monkeypatch.setattr(raw_archive_jobs, "enqueue", enqueue)
     commands = []
     stored_task = SimpleNamespace(output_data=None)
 
@@ -347,9 +405,9 @@ async def test_pipeline_passes_local_gates_before_remote_publication(tmp_path):
 
     await pipeline.execute_release_task(Service(), task, runtime=runtime)
 
-    assert commands.index("Build Astro Site") < commands.index(
-        "Archive Raw Crawler Data"
-    )
+    assert "Archive Raw Crawler Data" not in commands
+    enqueue.assert_awaited_once()
+    assert stored_task.output_data["raw_archive_task"]["task_uuid"] == "archive-1"
     assert commands.index("Validate Situation Release Gate") < commands.index(
         "Publish Partitioned Data Downloads"
     )
@@ -358,6 +416,7 @@ async def test_pipeline_passes_local_gates_before_remote_publication(tmp_path):
     await pipeline.execute_release_task(Service(), task, runtime=runtime)
     assert "Archive Raw Crawler Data" not in commands
     assert "Publish Partitioned Data Downloads" not in commands
+    enqueue.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -412,6 +471,10 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
     astro_dir = tmp_path / "astro-site"
     dist = astro_dir / "dist"
     dist.mkdir(parents=True)
+    (astro_dir / "src/data").mkdir(parents=True)
+    (astro_dir / "src/data/meta.json").write_text("{}")
+    (astro_dir / "public/site-data").mkdir(parents=True)
+    (astro_dir / "public/site-data/index.json").write_text("{}")
     (dist / "index.html").write_text("first attempt published old observations")
     original_digest = pipeline._built_site_digest(dist)
 
@@ -443,6 +506,10 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
         "built_at": "2026-08-05T00:00:00+00:00",
         "commit_dirty": False,
     }
+    from src.services.data_release.stage_receipts import StageReceipts
+    StageReceipts(tmp_path, "retry-task", {}, {}).mark_published(
+        {**identity, "build_digest": original_digest},
+    )
 
     class Service:
         def _config(self):
@@ -499,7 +566,8 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
             return "main"
 
         async def _release_identity_for_task(self, *_args):
-            checkpoint = {"release_id": "release-retry-1"}
+            checkpoint = {"release_id": "release-retry-1", "project_name": "globalid",
+                          "account_id": "account", "deployment_branch": "main"}
             if checkpoint_state != "missing_digest":
                 checkpoint["artifact_digest"] = original_digest
             return identity, {"cloudflare_deploy": checkpoint}
@@ -512,6 +580,21 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
 
         def _validate_situation_release_command(self, **_kwargs):
             return ["validate"]
+
+        def _r2_papers_enabled(self, _job=None):
+            return False
+
+        def _split_papers_bundle_command(self, **_kwargs):
+            return ["split-papers"]
+
+        def _split_reports_bundle_command(self, **_kwargs):
+            return ["split-reports"]
+
+        def _publish_papers_r2_command(self, **_kwargs):
+            return ["publish-papers-r2"]
+
+        def _cloudflare_account_id(self):
+            return "account"
 
         async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
             commands.append(title)
@@ -541,12 +624,7 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
             recorded.append(_args[2])
 
         async def _verify_cloudflare_production_release(self, **_kwargs):
-            assert _kwargs["release_identity"][
-                "build_digest"
-            ] == pipeline._built_site_digest(dist)
-            if failure_stage == "verification":
-                raise RuntimeError("production verification failed")
-            return {"verified": True, "production_url": "https://globalid.example"}
+            raise AssertionError("Public website verification must never run")
 
     runtime = _runtime(Manager(), tmp_path)
     runtime = pipeline.ReleasePipelineRuntime(
@@ -566,7 +644,7 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
         input_data={"release_job_id": "site-release"},
     )
 
-    if failure_stage:
+    if failure_stage == "build":
         with pytest.raises(RuntimeError, match="failed"):
             await pipeline.execute_release_task(Service(), task, runtime=runtime)
         commit_projection.assert_not_awaited()
@@ -584,6 +662,9 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
     # longer dispatched by releases.
     assert "Dispatch Reviewed Situation Alerts" not in commands
     assert output["pages_deployed"] is True
+    assert output["website_verification"] == "skipped"
+    assert output["artifact_rollback"] is False
+    assert any(entry["title"] == "Website Verification Skipped" for entry in entries)
     assert "situation_alert_dispatch_attempted" not in output
     completion = next(
         entry for entry in entries if entry["title"] == "Data Release Completed"
@@ -616,7 +697,7 @@ async def test_service_execute_release_task_is_compatibility_facade(monkeypatch)
     assert captured["runtime"].raw_archive_branch == "main"
 
 
-async def test_failed_release_restores_generated_files_including_deletions(
+async def test_failed_release_retains_generated_files_including_deletions(
     tmp_path, monkeypatch
 ):
     from dataclasses import replace
@@ -639,51 +720,48 @@ async def test_failed_release_restores_generated_files_including_deletions(
     monkeypatch.setattr(pipeline, "_execute_release_task", failed_build)
     with pytest.raises(RuntimeError, match="Astro build failed"):
         await pipeline.execute_release_task(None, None, runtime=runtime)
-    assert original.read_text() == '{"version": 1}'
-    assert not (snapshot / "new.json").exists()
+    assert not original.exists()
+    assert (snapshot / "new.json").read_text() == '{"version": 2}'
 
 
-async def test_release_backups_use_export_volume_and_never_block_dispatcher(
-    tmp_path, monkeypatch
-):
+async def test_release_does_not_copy_artifact_trees_for_rollback(tmp_path, monkeypatch):
     import shutil
-    import tempfile
-    import threading
 
     runtime = _runtime(SimpleNamespace(), tmp_path)
     snapshot = runtime.astro_dir / "src" / "data"
     snapshot.mkdir(parents=True)
     (snapshot / "meta.json").write_text("original snapshot")
-    backup_root = tmp_path / "exports" / "release-backups"
-    loop_thread = threading.get_ident()
-    original_copytree = shutil.copytree
-    original_cleanup = tempfile.TemporaryDirectory.cleanup
-    copies, removals = [], []
 
-    def copytree(source, destination, *args, **kwargs):
-        assert threading.get_ident() != loop_thread
-        copies.append(Path(destination))
-        return original_copytree(source, destination, *args, **kwargs)
-
-    def cleanup(directory):
-        assert threading.get_ident() != loop_thread
-        removals.append(Path(directory.name))
-        return original_cleanup(directory)
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("Publication must not create rollback copies")
 
     async def release(*_args, **_kwargs):
-        temporary = list(backup_root.iterdir())
-        assert len(temporary) == 1
-        backup = temporary[0] / "0" / "meta.json"
         (snapshot / "meta.json").write_text("new snapshot")
-        assert backup.read_text() == "original snapshot"
         return {"ok": True}
 
-    monkeypatch.setattr(shutil, "copytree", copytree)
-    monkeypatch.setattr(tempfile.TemporaryDirectory, "cleanup", cleanup)
+    monkeypatch.setattr(shutil, "copytree", forbidden)
     monkeypatch.setattr(pipeline, "_execute_release_task", release)
-    assert await pipeline.execute_release_task(None, None, runtime=runtime) == {
-        "ok": True
-    }
-    assert copies and all(path.is_relative_to(backup_root) for path in copies)
-    assert removals and all(path.is_relative_to(backup_root) for path in removals)
-    assert list(backup_root.iterdir()) == []
+    assert await pipeline.execute_release_task(None, None, runtime=runtime) == {"ok": True}
+    assert (snapshot / "meta.json").read_text() == "new snapshot"
+    assert not (tmp_path / "exports" / "release-backups").exists()
+
+
+async def test_later_channel_failure_does_not_restore_published_downloads(tmp_path, monkeypatch):
+    from src.generation.direct_download_files import _write_if_changed
+
+    runtime = _runtime(SimpleNamespace(), tmp_path)
+    downloads = tmp_path / "exports" / "site-downloads"
+    downloads.mkdir(parents=True)
+    partition = downloads / "partition.csv"
+    partition.write_bytes(b"old content")
+
+    async def failed_release(*_args, **_kwargs):
+        assert _write_if_changed(partition, b"published content")
+        (downloads / "new.csv").write_bytes(b"published file")
+        raise RuntimeError("another channel failed")
+
+    monkeypatch.setattr(pipeline, "_execute_release_task", failed_release)
+    with pytest.raises(RuntimeError, match="another channel failed"):
+        await pipeline.execute_release_task(None, None, runtime=runtime)
+    assert partition.read_bytes() == b"published content"
+    assert (downloads / "new.csv").read_bytes() == b"published file"

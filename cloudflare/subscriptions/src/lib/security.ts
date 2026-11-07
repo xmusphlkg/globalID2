@@ -1,6 +1,6 @@
 const TEXT = new TextEncoder();
 
-export type SubscriptionTokenKind = "confirm" | "unsubscribe";
+export type SubscriptionTokenKind = "confirm" | "unsubscribe" | "manage";
 
 export async function signSubscriptionToken(
   secret: string,
@@ -8,11 +8,13 @@ export async function signSubscriptionToken(
   subscriptionId: string,
   ttlSeconds: number,
   nowMs = Date.now(),
+  version?: string,
 ): Promise<string> {
   const payload = base64UrlEncode(JSON.stringify({
     k: kind,
     sid: subscriptionId,
     exp: Math.floor(nowMs / 1000) + ttlSeconds,
+    ...(version !== undefined ? { v: version } : {}),
   }));
   const signature = await hmacSha256(payload, secret);
   return `${payload}.${signature}`;
@@ -23,17 +25,17 @@ export async function verifySubscriptionToken(
   token: string,
   kind: SubscriptionTokenKind,
   nowMs = Date.now(),
-): Promise<{ subscriptionId: string } | null> {
+): Promise<{ subscriptionId: string; version?: string } | null> {
   const [payload, signature] = token.split(".");
   if (!payload || !signature) return null;
   const expected = await hmacSha256(payload, secret);
   if (!(await secureTextEqual(signature, expected))) return null;
 
   try {
-    const parsed = JSON.parse(base64UrlDecode(payload)) as { k?: string; sid?: string; exp?: number };
+    const parsed = JSON.parse(base64UrlDecode(payload)) as { k?: string; sid?: string; exp?: number; v?: unknown };
     if (parsed.k !== kind || !parsed.sid || !parsed.exp) return null;
     if (parsed.exp < Math.floor(nowMs / 1000)) return null;
-    return { subscriptionId: parsed.sid };
+    return { subscriptionId: parsed.sid, ...(typeof parsed.v === "string" ? { version: parsed.v } : {}) };
   } catch {
     return null;
   }

@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 
 from ..normalization import normalize_doi
-from .base import AsyncRequestLimiter, LiteratureHttpClient
+from .base import AsyncRequestLimiter, LiteratureHttpClient, gather_cancel_on_error
 
 
 class OpenAlexClient(LiteratureHttpClient):
@@ -68,7 +68,7 @@ class OpenAlexClient(LiteratureHttpClient):
                     payload = await self.get_json(client, "/works", params=params)
                     return [row for row in payload.get("results") or [] if isinstance(row, dict)]
 
-            pages = await asyncio.gather(*(fetch(batch) for batch in batches))
+            pages = await gather_cancel_on_error(*(fetch(batch) for batch in batches))
 
         requested = set(normalized)
         result: dict[str, dict[str, Any]] = {}

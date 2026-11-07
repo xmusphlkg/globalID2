@@ -257,11 +257,11 @@ async def test_updater_commit_strategy_persists_rows_separately_from_series(tmp_
     updater = USWeeklyUpdater()
     fixture_mapping(monkeypatch, updater, CONTRACT["mappings"]["US"])
     monkeypatch.setattr(updater, "get_db_latest_date", AsyncMock(return_value=None))
-    monkeypatch.setattr("src.services.crawl_service.acquire_disease_data_mutation_lock", AsyncMock())
+    monkeypatch.setattr("src.services.crawl_service.acquire_country_data_mutation_lock", AsyncMock())
     save_series = AsyncMock(return_value=SimpleNamespace(upserted=100))
     monkeypatch.setattr(CrawlService, "_save_series_rows", save_series)
     dirty = AsyncMock()
-    monkeypatch.setattr(strategies, "mark_dirty", dirty)
+    monkeypatch.setattr(strategies, "mark_observation_changes_dirty", dirty)
     fetched = organize(us_artifacts(), updater=updater, source="all")
     assert len(fetched.series_rows) > len(fetched.rows)
     async with records_database(CONTRACT["countries"]) as sessions:

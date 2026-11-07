@@ -9,7 +9,7 @@ import time
 import weakref
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Sequence
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -68,6 +68,10 @@ _recovery_probe_attempted_at: Dict[int, float] = {}
 #: Anthropic rejects a request that omits ``max_tokens``. This is that protocol's
 #: ceiling, not a product limit. OpenAI-compatible calls omit the field entirely.
 ANTHROPIC_PROTOCOL_MAX_TOKENS = 64000
+#: SDK timeout for native Anthropic calls when the route sets none. Passing any
+#: explicit value skips the SDK's "streaming is required" guard for large
+#: max_tokens; the dispatcher's asyncio deadline still bounds the call.
+ANTHROPIC_RUNTIME_TIMEOUT_SECONDS = 600.0
 _DEFAULT_AVAILABILITY_TIMEZONE = "Asia/Shanghai"
 _CLOCK_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$")
 _THINK_BLOCK_RE = re.compile(
@@ -120,7 +124,8 @@ async def record_model_call_log(
     model response into an application failure.
     """
     route = route or {}
-    error_message = _SECRET_VALUE_RE.sub(r"\1[REDACTED]", str(error))[:1000] if error else None
+    error_text = (str(error).strip() or type(error).__name__) if error is not None else None
+    error_message = _SECRET_VALUE_RE.sub(r"\1[REDACTED]", error_text)[:1000] if error_text else None
     try:
         async with get_db() as db:
             db.add(
@@ -605,6 +610,8 @@ def _legacy_transient_probe_unavailable(message: Any) -> bool:
             "connection reset",
             "returned html",
             "invalid structured json",
+            "no available channel",
+            "可用渠道不存在",
         )
     )
 
@@ -648,21 +655,13 @@ def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, Any]:
     # Provider capacity is telemetry only. Admission and pressure handling are
     # owned by each model, so sibling models never share a request permit.
     provider_maximum = auto_provider_maximum
-    provider_minimum = provider_maximum
     model_maximum = _positive_int(
         model_params.get("runtime_max_concurrency"),
         _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY,
         maximum=_MODEL_CONCURRENCY_CEILING,
     )
-    model_minimum = min(
-        model_maximum,
-        _positive_int(model_params.get("runtime_min_concurrency"), 1),
-    )
     return {
-        "provider_minimum": provider_minimum,
         "provider_maximum": provider_maximum,
-        "provider_auto": False,
-        "model_minimum": model_minimum,
         "model_maximum": model_maximum,
     }
 
@@ -756,11 +755,7 @@ class RuntimeRouteAdmissionController:
         return {
             "runtime_provider_capacity": provider_capacity,
             "runtime_provider_inflight": self._provider_inflight.get(provider_key, 0),
-            "runtime_provider_min_capacity": settings["provider_minimum"],
             "runtime_provider_max_capacity": settings["provider_maximum"],
-            "runtime_provider_auto_concurrency": settings["provider_auto"],
-            "runtime_provider_success_streak": 0,
-            "runtime_provider_backoff_remaining_seconds": 0,
             "runtime_model_capacity": settings["model_maximum"],
             "runtime_model_inflight": self._model_inflight.get(model_key, 0),
         }
@@ -773,11 +768,7 @@ class RuntimeRouteAdmissionController:
             snapshots[provider_key] = {
                 "runtime_provider_capacity": provider_capacity,
                 "runtime_provider_inflight": self._provider_inflight.get(provider_key, 0),
-                "runtime_provider_min_capacity": settings["provider_minimum"],
                 "runtime_provider_max_capacity": settings["provider_maximum"],
-                "runtime_provider_auto_concurrency": settings["provider_auto"],
-                "runtime_provider_success_streak": 0,
-                "runtime_provider_backoff_remaining_seconds": 0,
             }
         return snapshots
 
@@ -1356,7 +1347,7 @@ def _extract_error_codes(error: Any) -> List[str]:
 
 def is_model_unavailable_error(error: Any) -> bool:
     """Detect unrecoverable model-level errors (missing model or no access)."""
-    if is_provider_authentication_error(error):
+    if is_provider_authentication_error(error) or is_model_channel_failure(error):
         return False
 
     status_code = getattr(error, "status_code", None)
@@ -1410,14 +1401,13 @@ def is_model_channel_failure(error: Any) -> bool:
     if any(code in _ROUTE_CHANNEL_FAILURE_CODES for code in code_candidates):
         return True
 
-    # NewAI/compatible providers emit this as a 500 code with explicit channel
-    # routing context in the message.
+    # Gateways can use model_not_found even for a temporary routing failure.
     try:
         normalized_status = int(status_code) if status_code is not None else None
     except (TypeError, ValueError):
         normalized_status = None
 
-    if normalized_status == 500:
+    if normalized_status in {500, 503, None}:
         message = str(error).lower()
         return "可用渠道不存在" in str(error) or "no available channel" in message
 
@@ -1455,6 +1445,8 @@ def extract_retry_after_seconds(error: Any) -> Optional[int]:
         r"try again in\s+(\d+(?:\.\d+)?)s",
         r"in\s+(\d+(?:\.\d+)?)\s*seconds",
         r"after\s+(\d+(?:\.\d+)?)\s*seconds",
+        # Pooled gateways: "the pool resumes in 6050s".
+        r"resumes?\s+in\s+(\d+(?:\.\d+)?)\s*s\b",
         r"(?:please\s*)?retry\s*(?:in\s*)?(\d+(?:\.\d+)?)\s*s",
         r"(\d+(?:\.\d+)?)\s*\u79d2\s*(?:\u540e)?\s*(?:\u518d\u8bd5|\u91cd\u8bd5)",
         r"\u8bf7\u5728\s*(\d+(?:\.\d+)?)\s*\u79d2\s*(?:\u540e)?\s*(?:\u91cd\u8bd5|\u518d\u8bd5)",
@@ -1576,6 +1568,32 @@ async def get_active_model_routes() -> List[Dict[str, Any]]:
     """Return routable model routes ordered by model priority."""
     routes = await get_runtime_routes()
     return [route for route in routes if route.get("available_for_routing")]
+
+
+async def live_model_permits(*, ceiling: int | None = None) -> int:
+    """Model calls the center admits at once: the summed permits of routable routes.
+
+    The one sizing rule for every AI pool (content review, Situation, ...). A pool
+    that keeps this many items in flight fills the dispatcher without claiming a
+    fixed batch ahead of the routes that can run it. Never below one, so an
+    unreadable or empty center degrades to serial work instead of stopping it.
+    """
+
+    try:
+        routes = await get_runtime_routes()
+    except Exception as exc:  # noqa: BLE001 - a capacity miss must not abort the caller
+        logger.warning("Could not read model capacity; pool keeps one slot | {}", exc)
+        return 1
+    total = 0
+    for route in routes:
+        if not route.get("available_for_routing"):
+            continue
+        try:
+            total += max(0, int(route.get("runtime_model_capacity") or 0))
+        except (TypeError, ValueError):
+            continue
+    total = max(1, total)
+    return min(ceiling, total) if ceiling else total
 
 
 def _content_to_text(content: Any) -> str:
@@ -1934,6 +1952,25 @@ def _model_ids_from_catalogue(payload: Any) -> List[str]:
     return sorted(model_ids)
 
 
+def anthropic_sdk_base_url(base_url: str | None) -> str | None:
+    """Base URL for the Anthropic SDK, which appends ``/v1/messages`` itself.
+
+    The model center stores the same ``.../v1`` root used by OpenAI-compatible
+    gateways. Leaving that suffix in place would call ``/v1/v1/messages``.
+    """
+    raw = str(base_url or "").strip()
+    if not raw:
+        return None
+    parts = urlsplit(raw)
+    if parts.scheme not in {"http", "https"} or not parts.netloc:
+        return raw.rstrip("/") or None
+    path = parts.path.rstrip("/")
+    if path == "/v1" or path.endswith("/v1"):
+        path = path[: -len("/v1")]
+    rebuilt = urlunsplit((parts.scheme, parts.netloc, path, "", ""))
+    return rebuilt.rstrip("/") or None
+
+
 def _openai_base_url_candidates(base_url: str) -> List[Optional[str]]:
     """Try /v1 only when the configured URL has no versioned API path."""
     base_url = base_url.rstrip("/")
@@ -1957,9 +1994,22 @@ async def discover_provider_models_by_id(provider_id: int) -> Dict[str, Any]:
             return {"success": False, "status": "not_found", "message": "Provider not found", "models": []}
         if not provider.api_key:
             return {"success": False, "status": "invalid", "message": "API key is not configured", "models": []}
-        if str(provider.api_style or "openai_compatible").lower() == "anthropic":
-            return {"success": False, "status": "unsupported", "message": "Anthropic does not expose an OpenAI-compatible model catalogue", "models": []}
+        # Anthropic-format gateways on this host publish the same /v1/models
+        # catalogue. Strip a stored /v1 suffix first so the client does not
+        # request /v1/v1/models. A provider with no base URL stays on the
+        # vendor default, which has no OpenAI catalogue.
+        style = str(provider.api_style or "openai_compatible").lower()
         base_url = str(provider.base_url or "").rstrip("/")
+        if style == "anthropic":
+            normalized = anthropic_sdk_base_url(base_url)
+            if normalized is None:
+                return {
+                    "success": False,
+                    "status": "unsupported",
+                    "message": "Anthropic does not expose an OpenAI-compatible model catalogue",
+                    "models": [],
+                }
+            base_url = f"{normalized}/v1"
         api_key = provider.api_key
         headers = provider.extra_headers or {}
 
@@ -2147,6 +2197,8 @@ async def _test_anthropic(
     prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
     client = AsyncAnthropic(
         api_key=route.get("api_key"),
+        base_url=anthropic_sdk_base_url(route.get("base_url")),
+        default_headers=(route.get("extra_headers") or None),
         timeout=_test_timeout_seconds(route, structured=structured),
         max_retries=0,
     )
@@ -2171,6 +2223,90 @@ async def _test_anthropic(
     else:
         _validate_test_response(text)
     return {"response_preview": _response_preview(text)}
+
+
+async def probe_native_file_capability(route: Dict[str, Any]) -> Optional[bool]:
+    """Send a PDF carrying a random marker and check that the model reads it.
+
+    Returns True when the reply contains the marker, False when the model answered
+    without it or the provider rejected the file, and None when the outcome says
+    nothing about file support (timeout, rate limit, server fault).
+    """
+    import secrets
+
+    from src.ai.attachments import (
+        Attachment,
+        as_native_content,
+        build_probe_pdf,
+        looks_like_file_rejection,
+    )
+    from src.ai.work_queue import require_dispatcher
+
+    require_dispatcher()
+    marker = "GIDS" + secrets.token_hex(6)
+    style = str(route.get("api_style") or "openai_compatible").lower()
+    model_name = str(route.get("model_name") or "")
+    # The attachment text is empty so the marker can only come from the file itself.
+    content = as_native_content(
+        style,
+        "The attached PDF contains one short code. Reply with that code only.",
+        [Attachment(name="probe.pdf", text="", data=build_probe_pdf(marker))],
+    )
+    timeout = _test_timeout_seconds(route)
+    try:
+        if style == "anthropic":
+            client = AsyncAnthropic(
+                api_key=route.get("api_key"),
+                base_url=anthropic_sdk_base_url(route.get("base_url")),
+                default_headers=(route.get("extra_headers") or None),
+                timeout=timeout,
+                max_retries=0,
+            )
+            response = await client.messages.create(
+                model=model_name,
+                messages=[{"role": "user", "content": content}],
+                max_tokens=256,
+                temperature=0,
+            )
+            reply = visible_assistant_text(
+                [b for b in response.content if getattr(b, "type", None) == "text"]
+            )
+        else:
+            client = AsyncOpenAI(
+                api_key=route.get("api_key"),
+                base_url=(_openai_base_url_candidates(str(route.get("base_url") or "")) or [None])[0],
+                default_headers=(route.get("extra_headers") or None),
+                timeout=timeout,
+                max_retries=0,
+            )
+            payload: Dict[str, Any] = {
+                "model": model_name,
+                "messages": [{"role": "user", "content": content}],
+                "temperature": 0,
+            }
+            extra_body = route_completion_extra_body(route)
+            if extra_body:
+                payload["extra_body"] = extra_body
+            reply = _openai_response_text(await client.chat.completions.create(**payload))
+    except Exception as exc:
+        if looks_like_file_rejection(exc):
+            return False
+        logger.info("Native file probe inconclusive for '{}': {}", model_name, exc)
+        return None
+    return marker.lower() in reply.lower()
+
+
+async def _store_native_files_probe(model_id: int, supported: bool) -> None:
+    from src.ai.attachments import PROBE_KEY
+
+    async with get_db() as db:
+        model = await db.get(AIModelConfig, model_id)
+        if model is None:
+            return
+        params = dict(model.extra_params or {})
+        params[PROBE_KEY] = {"supported": supported, "checked_at_epoch": time.time()}
+        model.extra_params = params
+        await db.commit()
 
 
 async def test_route_connection(
@@ -2247,12 +2383,6 @@ async def update_model_check_result(model_id: int, status: str, message: str) ->
                 duration_seconds=None,
             )
         await db.commit()
-    if status == "available":
-        # Probes run in the worker process, so a proven recovery must also lift
-        # the in-process cooldown the dispatcher and transport still honour.
-        from src.ai.agents.base import BaseAgent
-
-        BaseAgent.ROUTE_COOLDOWNS.pop(str(model.model_key or model.model_name or ""), None)
 
 
 async def update_provider_check_result(provider_id: int, status: str, message: str) -> None:
@@ -2374,7 +2504,7 @@ async def record_route_runtime_failure(
         return {"recorded": False, "reason": "route_has_no_persistent_ids"}
 
     now = _utcnow()
-    message = str(error or "")[:1000]
+    message = (str(error).strip() or type(error).__name__)[:1000]
     async with get_db() as db:
         model = await db.get(AIModelConfig, model_id, with_for_update=True)
         if model is None:
@@ -2529,6 +2659,18 @@ async def clear_route_rate_limit(route: Dict[str, Any], message: str = "Connecti
         await db.commit()
 
 
+async def _refresh_native_files_probe(model_id: int, route: Dict[str, Any]) -> None:
+    """Probe file support after a healthy check unless an operator override or a fresh result exists."""
+    from src.ai.attachments import probe_is_fresh
+
+    params = route.get("extra_params") or {}
+    if isinstance(params.get("runtime_native_files"), bool) or probe_is_fresh(params):
+        return
+    supported = await probe_native_file_capability(route)
+    if supported is not None:
+        await _store_native_files_probe(model_id, supported)
+
+
 async def check_model_by_id(model_id: int, *, structured: bool = True) -> Dict[str, Any]:
     """Test one model route by DB id and persist status.
 
@@ -2592,6 +2734,7 @@ async def check_model_by_id(model_id: int, *, structured: bool = True) -> Dict[s
         )
     await update_model_check_result(model_id, result["status"], result["message"])
     if result.get("success"):
+        await _refresh_native_files_probe(model_id, route)
         await update_provider_check_result(route["provider_id"], result["status"], result["message"])
     elif result["status"] == "unavailable" and (
         result.get("failure_scope") == "provider"

@@ -1,0 +1,20 @@
+{
+  "name": "@globalid/surveillance-data",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "test:runtime": "wrangler deploy --dry-run --outdir .wrangler/test-bundle && node --test tests/runtime.test.mjs",
+    "types": "wrangler types worker-configuration.d.ts --env-interface Env --include-runtime=false",
+    "build": "wrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "@cloudflare/workers-types": "5.20261107.1",
+    "@types/node": "^22.20.5",
+    "typescript": "5.9.3",
+    "miniflare": "5.20261104.0-beta",
+    "wrangler": "4.158.0"
+  }
+}

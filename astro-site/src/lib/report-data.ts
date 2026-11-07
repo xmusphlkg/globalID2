@@ -5,7 +5,7 @@ import {
   buildPublishableReports,
   normalizeReportRouteSegment,
   type PublishableReport,
-} from './report-routes';
+} from './report-routes.ts';
 
 const reportsIndexPath = resolve('./src/data/reports/index.json');
 const cacheDuringBuild = process.env.NODE_ENV === 'production';

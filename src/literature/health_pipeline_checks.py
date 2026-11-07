@@ -179,7 +179,12 @@ def _pipeline_checks(
         catch_up_next_action = "await_accelerated_catch_up"
     elif orchestration_status == "paused_backpressure":
         catch_up_health = "warning"
-        catch_up_next_action = "reduce_exception_backlog_below_resume_threshold"
+        resume_below = catch_up.get("catch_up_resume_below_backlog")
+        catch_up_next_action = (
+            "configure_catch_up_backlog_headroom"
+            if isinstance(resume_below, (int, float)) and resume_below <= 0
+            else "reduce_exception_backlog_below_resume_threshold"
+        )
     elif orchestration_status == "paused_backlog_measurement":
         catch_up_health = "critical"
         catch_up_next_action = "retry_backlog_measurement"
@@ -208,6 +213,8 @@ def _pipeline_checks(
                 "catch_up_backlog_projected_upper_bound"
             ),
             "backlog_limit": catch_up.get("catch_up_backlog_limit"),
+            "backlog_counting_basis": catch_up.get("catch_up_backlog_counting_basis"),
+            "resume_below_backlog": catch_up.get("catch_up_resume_below_backlog"),
             "review_backlog_high": catch_up.get("catch_up_review_backlog_high"),
             "required_backlog_reduction": catch_up.get(
                 "catch_up_required_backlog_reduction"
@@ -231,6 +238,7 @@ def _pipeline_checks(
             source,
             completed_sources=completed_sources,
             counts=latest_counts,
+            checkpoint=checkpoint,
         )
         for source in snapshot.expected_sources
     ]

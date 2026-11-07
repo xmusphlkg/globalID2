@@ -84,6 +84,70 @@ async def test_cooling_route_leaves_item_queued_for_other_route(db):
     assert (await queue.claim_work(route("second"))).id == work_id
 
 
+async def test_retry_prefers_another_idle_route_after_transient_failure(db):
+    work_id = await add()
+    live = [route(), route("second")]
+
+    async def routes():
+        return live
+
+    async def complete(item, chosen):
+        if chosen["model_key"] == "first":
+            raise TimeoutError()
+        return "recovered"
+
+    dispatcher = queue.AIWorkDispatcher(routes, complete)
+    first = await queue.claim_work(live[0])
+    await dispatcher._execute(first, live[0])
+    waiting = await row(db, work_id)
+    assert (waiting.status, waiting.attempt, waiting.payload["last_failed_route"]) == (
+        "queued", 2, "first"
+    )
+    assert await queue.claim_work(live[0], alternatives={"first", "second"}) is None
+    second = await queue.claim_work(live[1], alternatives={"first", "second"})
+    assert second.id == work_id
+    await dispatcher._execute(second, live[1])
+    assert (await row(db, work_id)).status == "succeeded"
+
+
+@pytest.mark.parametrize("alternatives,avoid", [
+    ({"first"}, []),
+    ({"first", "second"}, ["second"]),
+])
+async def test_failed_route_can_retry_when_no_eligible_alternative(db, alternatives, avoid):
+    work_id = await queue.enqueue_work(
+        parent_task_uuid="parent", line="knowledge_brief", priority="low",
+        payload={"avoid_models": avoid, "last_failed_route": "first"},
+    )
+    assert (await queue.claim_work(route(), alternatives=alternatives)).id == work_id
+
+
+@pytest.mark.parametrize("payload", [
+    {"last_failed_route": "first"},
+    {"avoid_models": ["first"]},
+])
+async def test_incompatible_idle_route_does_not_starve_vision_work(db, monkeypatch, payload):
+    work_id = await queue.enqueue_work(
+        parent_task_uuid="parent", line="knowledge_brief", priority="low",
+        payload=payload, capability="vision",
+    )
+    vision = {**route(), "capabilities": ["vision"]}
+    text_only = {**route("second"), "capabilities": ["text"]}
+
+    async def routes():
+        return [vision, text_only]
+
+    async def complete(item, chosen):
+        assert chosen["model_key"] == "first"
+        return "recovered"
+
+    monkeypatch.setattr(queue.random, "choices", lambda options, weights: [options[0]])
+    dispatcher = queue.AIWorkDispatcher(routes, complete)
+    assert await dispatcher.tick() == 1
+    await asyncio.gather(*dispatcher.active.values())
+    assert (await row(db, work_id)).status == "succeeded"
+
+
 async def test_no_routable_routes_never_fail_parent_or_work(db):
     work_id = await add()
 
@@ -108,6 +172,26 @@ async def test_expired_lease_reuses_id_and_attempt_is_bounded(db):
     item = await row(db, work_id)
     assert item.status == "failed"
     assert item.attempt == 3
+
+
+async def test_startup_release_requeues_live_leases_without_spending_an_attempt(db):
+    leased_id = await add()
+    queued_id = await add()
+    claimed = await queue.claim_work(route())
+    assert claimed.id == leased_id
+    before = (await row(db, leased_id)).attempt
+    assert await queue.claim_work(route()) is None  # the permit is held by the old lease
+
+    assert await queue.release_leases_on_startup() == 1
+
+    released = await row(db, leased_id)
+    assert released.status == "queued"
+    assert released.route_key is None
+    assert released.lease_expires_at is None
+    assert released.attempt == before
+    assert (await row(db, queued_id)).status == "queued"
+    assert (await queue.claim_work(route())) is not None  # permit is free again
+    assert await queue.release_leases_on_startup() == 1
 
 
 async def test_dispatcher_calls_only_with_dispatch_context_and_requeues_rate_limit(db):
@@ -319,14 +403,11 @@ async def test_background_sweep_is_not_queued_twice(db):
     assert await queue.enqueue_runtime_probe() is not None
 
 
-async def test_locally_cooling_route_is_not_claimed(db, monkeypatch):
-    from src.ai.agents.base import BaseAgent
-
+async def test_non_routable_route_is_not_claimed(db):
     work_id = await add()
-    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {"first": 1e18})
 
     async def routes():
-        return [route()]
+        return [{**route(), "available_for_routing": False, "rate_limit_active": True}]
 
     dispatcher = queue.AIWorkDispatcher(route_loader=routes)
     assert await dispatcher.tick() == 0
@@ -1144,3 +1225,74 @@ async def test_terminal_result_rechecks_cancellation_despite_recent_cached_allow
             await queue.submit_completion(
                 fake_agent(), "already completed", None, False, {}
             )
+
+
+async def test_avoided_route_takes_work_when_the_other_route_is_full(db):
+    # "second" is the only alternative but its single permit is busy, so an item
+    # that avoids "first" must not wait for it while "first" sits idle.
+    busy = await add()
+    work_id = await queue.enqueue_work(
+        parent_task_uuid="parent",
+        line="knowledge_brief",
+        priority="low",
+        payload={"avoid_models": ["first"]},
+    )
+    release = asyncio.Event()
+    served = {}
+
+    async def routes():
+        return [route("first"), route("second")]
+
+    async def complete(item, chosen):
+        served[item.id] = chosen["model_key"]
+        if item.id == busy:
+            await release.wait()
+        return "done"
+
+    dispatcher = queue.AIWorkDispatcher(routes, complete)
+    # Pin the first claim to "second" so it is full when the avoiding item is scanned.
+    first = await queue.claim_work(route("second"), alternatives={"second"})
+    assert first.id == busy
+    dispatcher.active[busy] = asyncio.create_task(complete(first, route("second")))
+    dispatcher.active[busy]._ai_route_key = "second"
+    await asyncio.sleep(0)
+    await dispatcher.tick()
+    release.set()
+    await asyncio.gather(*dispatcher.active.values())
+    assert served[work_id] == "first"
+
+
+def test_route_pool_hands_avoid_models_to_the_queued_completer():
+    from src.ai.peer_review_completer import QueuedModelCompleter, ReviewRoutePool
+
+    pool = ReviewRoutePool({"p:a": 1}, line="t", max_tokens=10)
+    token = queue._PARENT.set(queue.ParentContext("parent", "situation_notice", "normal"))
+    try:
+        completer = pool.completer({"m1", ""})
+    finally:
+        queue._PARENT.reset(token)
+    assert isinstance(completer, QueuedModelCompleter)
+    assert completer.avoid_models == ["m1"]
+
+
+async def test_queued_completer_sends_avoid_models_for_both_roles(monkeypatch):
+    from src.ai import peer_review_completer as module
+
+    seen = []
+
+    class Agent:
+        def __init__(self, *_a, **_k):
+            pass
+
+        async def complete(self, **kwargs):
+            seen.append(kwargs.get("_avoid_models"))
+            return "{}"
+
+        def get_latest_conversation(self):
+            return {"model": "served"}
+
+    monkeypatch.setattr(module, "PeerReviewAgent", Agent)
+    completer = module.QueuedModelCompleter(line="t", avoid_models=["m1"])
+    await completer("author", "s", "p")
+    await completer("reviewer", "s", "p")
+    assert seen == [["m1"], ["m1", "served"]]

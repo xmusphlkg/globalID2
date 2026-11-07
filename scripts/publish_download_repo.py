@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -25,11 +26,12 @@ from src.core.data_share import (  # noqa: E402
 )
 
 DEFAULT_SOURCE_DIR = ROOT / "exports" / "site-downloads"
-DEFAULT_WORKDIR = ROOT / "external-data" / "globalID2_data_download"
+DEFAULT_WORKDIR = DEFAULT_SOURCE_DIR
 DEFAULT_REPO_URL = get_data_share_repo_url()
 DEFAULT_REPO_BRANCH = get_data_share_repo_branch()
 MANAGED_PATHS = ("countries", "diseases", "manifest.json")
 GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024
+PUSH_BATCH_BYTES = 1024 * 1024 * 1024
 ASSET_DIRECTORIES = ("countries", "diseases")
 GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 NETWORK_ATTEMPTS = 4
@@ -187,6 +189,122 @@ def remote_branch_exists(repo_url: str, branch: str) -> bool:
     return bool(output.strip())
 
 
+def push_download_snapshot(workdir: Path, branch: str, *, batch_bytes: int = PUSH_BATCH_BYTES) -> None:
+    """Preload bounded batches on a resumable ref, then atomically publish HEAD.
+
+    GitHub limits each received pack to 2 GiB. A temporary branch makes each
+    batch's objects available to the next push without exposing partial data
+    on the public branch. Its name is content-addressed so a restarted export
+    with the same tree can resume even if its commit timestamp changed.
+    """
+    if batch_bytes < 1:
+        raise ValueError("Push batch size must be positive")
+    target = run_git(["rev-parse", "HEAD"], workdir)
+    tree = run_git(["rev-parse", "HEAD^{tree}"], workdir)
+    branch_key = hashlib.sha256(branch.encode()).hexdigest()[:12]
+    staging = f"globalid-upload/{branch_key}-{tree}"
+    remote = run_git_with_retry(["ls-remote", "--heads", "origin", branch, staging], workdir)
+    refs = {line.split()[1]: line.split()[0] for line in remote.splitlines()}
+    remote_head = refs.get(f"refs/heads/{branch}")
+    base = refs.get(f"refs/heads/{staging}") or remote_head
+    staged = f"refs/heads/{staging}" in refs
+    if base:
+        run_git_with_retry(["fetch", "origin", base], workdir)
+    if staged and remote_head and remote_head != base:
+        run_git_with_retry(["fetch", "origin", remote_head], workdir)
+        if subprocess.run(
+            ["git", "merge-base", "--is-ancestor", remote_head, base], cwd=workdir,
+            capture_output=True,
+        ).returncode != 0:
+            raise RuntimeError("Public download branch advanced during staged upload")
+    if remote_head and subprocess.run(
+        ["git", "merge-base", "--is-ancestor", remote_head, target],
+        cwd=workdir, capture_output=True,
+    ).returncode != 0:
+        # In particular, do not build a staging history on a concurrent remote
+        # commit and then silently replace its files with our older snapshot.
+        raise RuntimeError("Download publication is non-fast-forward: remote branch advanced; reconcile the local export repository")
+    # A new repository needs an empty tree as the comparison/index base.
+    empty_tree = subprocess.run(
+        ["git", "hash-object", "-t", "tree", "--stdin", "-w"], cwd=workdir,
+        input="", text=True, capture_output=True, check=True,
+    ).stdout.strip()
+    raw = run_git(["diff", "--raw", "-z", "--no-abbrev", "--no-renames", base or empty_tree, target], workdir)
+    fields = raw.split("\0")
+    changes: list[tuple[str, str, str]] = []
+    for offset in range(0, len(fields) - 1, 2):
+        meta, path = fields[offset].split(), fields[offset + 1]
+        if meta[1] != "000000":  # Deletions need no uploaded blob.
+            changes.append((meta[1], meta[3], path))
+    sizes: dict[str, int] = {}
+    if changes:
+        checked = subprocess.run(
+            ["git", "cat-file", "--batch-check=%(objectname) %(objectsize)"], cwd=workdir,
+            input="".join(f"{oid}\n" for _, oid, _ in changes),
+            text=True, capture_output=True, check=True,
+        )
+        sizes = {oid: int(size) for oid, size in (line.split() for line in checked.stdout.splitlines())}
+    if any(sizes[oid] > batch_bytes for _, oid, _ in changes):
+        raise RuntimeError("A download blob exceeds the push batch limit")
+    if sum(sizes[oid] for _, oid, _ in changes) > batch_bytes:
+        with tempfile.TemporaryDirectory(prefix="globalid-upload-index-") as directory:
+            env = {**os.environ, "GIT_INDEX_FILE": str(Path(directory) / "index")}
+
+            def index_git(args: list[str], payload: str | None = None) -> str:
+                return subprocess.run(
+                    ["git", *args], cwd=workdir, env=env, input=payload,
+                    text=True, capture_output=True, check=True,
+                ).stdout.strip()
+
+            index_git(["read-tree", base or empty_tree])
+            batches: list[list[tuple[str, str, str]]] = []
+            current: list[tuple[str, str, str]] = []
+            current_bytes = 0
+            for change in changes:
+                size = sizes[change[1]]
+                if current and current_bytes + size > batch_bytes:
+                    batches.append(current)
+                    current, current_bytes = [], 0
+                current.append(change)
+                current_bytes += size
+            if current:
+                batches.append(current)
+            for number, batch in enumerate(batches, 1):
+                index_git(["update-index", "-z", "--index-info"], "".join(
+                    f"{mode} {oid}\t{path}\0" for mode, oid, path in batch
+                ))
+                staged_tree = index_git(["write-tree"])
+                commit_args = ["commit-tree", staged_tree, "-m", "Stage bounded download objects"]
+                if base:
+                    commit_args.extend(["-p", base])
+                staged_commit = run_git(commit_args, workdir)
+                print(f"Upload download batch {number}/{len(batches)} ({sum(sizes[oid] for _, oid, _ in batch)} bytes)", flush=True)
+                # Large generated partitions are already compressed as Git
+                # objects. Avoid expensive delta searches for these bounded
+                # backfill batches; ordinary small releases retain Git defaults.
+                run_git_with_retry(
+                    ["-c", "pack.window=0", "push", "origin", f"{staged_commit}:refs/heads/{staging}"],
+                    workdir,
+                )
+                base = staged_commit
+                staged = True
+    if staged:
+        # Git's push negotiation is scoped to the destination ref; merely
+        # uploading blobs to an unrelated ref does not keep the final pack
+        # small. Make the completed snapshot a child of the staging history,
+        # so the final fast-forward contains only the remaining bounded blobs.
+        message = run_git(["log", "-1", "--format=%B", target], workdir)
+        final = run_git(["commit-tree", tree, "-p", base, "-m", message], workdir)
+        run_git(["update-ref", f"refs/heads/{branch}", final, target], workdir)
+    # This remains a normal fast-forward push: concurrent releases cannot be overwritten.
+    push_branch(workdir, branch)
+    if staged:
+        try:
+            run_git_with_retry(["push", "origin", "--delete", staging], workdir)
+        except RuntimeError as exc:
+            print(f"Published successfully; staging ref cleanup deferred: {exc}", file=sys.stderr, flush=True)
+
+
 def _asset_relative_path(relative_path: str) -> Path:
     """Return a safe, managed download asset path from manifest metadata."""
 
@@ -313,6 +431,78 @@ def ensure_repo(repo_url: str, branch: str, workdir: Path) -> None:
         run_git(["checkout", "-B", branch, f"origin/{branch}"], workdir)
     else:
         run_git(["checkout", "-B", branch], workdir)
+
+
+def prepare_export_repo(repo_url: str, branch: str, workdir: Path) -> None:
+    """Adopt generated files in place; never reset their contents or local commits.
+
+    Git history lives beside the export tree so artifact rollback restores only
+    generated files. A first run fetches a baseline and resets the index only.
+    """
+    configure_github_ssh_transport(repo_url)
+    workdir.mkdir(parents=True, exist_ok=True)
+    metadata = workdir.parent / f".{workdir.name}.git"
+    if not (workdir / ".git").exists():
+        if metadata.is_dir():
+            (workdir / ".git").write_text(f"gitdir: {metadata.resolve()}\n")
+        else:
+            run_git(["init", "--separate-git-dir", str(metadata.resolve()), "-b", branch, "."], workdir)
+    remotes = run_git(["remote"], workdir).splitlines()
+    if "origin" not in remotes:
+        run_git(["remote", "add", "origin", repo_url], workdir)
+    elif run_git(["remote", "get-url", "origin"], workdir) != repo_url:
+        raise RuntimeError("Download repository destination changed; use a separate export directory")
+    if run_git(["symbolic-ref", "--short", "HEAD"], workdir) != branch:
+        raise RuntimeError("Download repository branch changed; use a separate export directory")
+    # Artifact backups hard-link immutable exports, which changes ctime but
+    # neither bytes nor mtime/inode. Keep those links from invalidating Git's
+    # entire stat cache; atomic replacement still changes the inode/mtime.
+    run_git(["config", "--local", "core.trustctime", "false"], workdir)
+    head = subprocess.run(["git", "rev-parse", "--verify", "HEAD"], cwd=workdir, capture_output=True)
+    if head.returncode != 0 and remote_branch_exists(repo_url, branch):
+        run_git_with_retry(["fetch", "origin", f"{branch}:refs/remotes/origin/{branch}", "--depth", "1"], workdir)
+        run_git(["reset", "--mixed", "--no-refresh", f"origin/{branch}"], workdir)
+
+
+def _receipt_path(workdir: Path) -> Path:
+    return Path(run_git(["rev-parse", "--absolute-git-dir"], workdir)) / "download-publication.json"
+
+
+def publication_is_verified(workdir: Path, repo_url: str, branch: str) -> bool:
+    try:
+        receipt = json.loads(_receipt_path(workdir).read_text())
+        return (
+            isinstance(receipt, dict)
+            and receipt.get("schema") == 1
+            and receipt.get("repo_url") == repo_url
+            and receipt.get("branch") == branch
+            and receipt.get("commit") == run_git(["rev-parse", "HEAD"], workdir)
+            and not run_git(["status", "--porcelain", "--untracked-files=all"], workdir)
+        )
+    except (OSError, ValueError, RuntimeError):
+        return False
+
+
+def record_publication(workdir: Path, repo_url: str, branch: str, commit: str) -> None:
+    """Advance the durable receipt only after push and remote verification."""
+    path = _receipt_path(workdir)
+    temporary = path.with_suffix(".tmp")
+    receipt = {
+        "schema": 1, "repo_url": repo_url, "branch": branch,
+        "commit": commit, "verified_at": datetime.now(timezone.utc).isoformat(),
+    }
+    # Keep the audit history outside public content so timestamps never dirty
+    # a dataset. A crash before the latest pointer is replaced may repeat an
+    # event on retry; the commit remains its stable publication identity.
+    with (path.parent / "download-publications.jsonl").open("a") as journal:
+        journal.write(json.dumps(receipt, sort_keys=True) + "\n")
+        journal.flush()
+        os.fsync(journal.fileno())
+    with temporary.open("w") as handle:
+        json.dump(receipt, handle, sort_keys=True)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
 
 
 def ensure_commit_identity(workdir: Path) -> dict[str, str]:
@@ -447,7 +637,7 @@ def sync_managed_assets(source_dir: Path, workdir: Path) -> dict[str, int]:
 
 
 def write_readme(workdir: Path, manifest: dict) -> None:
-    generated_at = manifest.get("generated_at") or datetime.now(timezone.utc).isoformat()
+    generated_at = manifest.get("generated_at") or "unspecified"
     countries = len(manifest.get("countries") or [])
     diseases = len(manifest.get("diseases") or [])
     base = manifest.get("download_url_base") or ""
@@ -466,7 +656,12 @@ Public files are stable branch links under:
 
 `{base}`
 """
-    (workdir / "README.md").write_text(readme, encoding="utf-8")
+    path = workdir / "README.md"
+    if not path.exists() or path.read_text(encoding="utf-8") != readme:
+        # Export backups may hard-link old artifacts. Replace, never truncate.
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(readme, encoding="utf-8")
+        os.replace(temporary, path)
 
 
 def commit_and_push(
@@ -478,6 +673,10 @@ def commit_and_push(
 ) -> bool:
     status = run_git(["status", "--short"], workdir)
     if not status:
+        if push:
+            # A clean tree can still contain a commit whose push failed.
+            push_download_snapshot(workdir, branch)
+            return True
         print("No changes to publish.")
         return False
     print(summarize_git_status(status))
@@ -486,7 +685,7 @@ def commit_and_push(
         return False
     run_git(["add", "countries", "diseases", "manifest.json", "README.md"], workdir)
     run_git(["commit", "-m", commit_message], workdir)
-    push_branch(workdir, branch)
+    push_download_snapshot(workdir, branch)
     return True
 
 
@@ -581,7 +780,11 @@ def verify_public_files(source_dir: Path, manifest: dict, commit_sha: str) -> No
         checks.append((source_dir / relative_path, relative_path))
     for local_path, relative_path in checks:
         remote_sha = _read_remote_blob_sha(owner, repository, relative_path, commit_sha)
-        local_sha = _git_blob_sha(local_path.read_bytes())
+        local_sha = (
+            run_git(["rev-parse", f"{commit_sha}:{relative_path}"], source_dir)
+            if (source_dir / ".git").exists()
+            else _git_blob_sha(local_path.read_bytes())
+        )
         if remote_sha != local_sha:
             raise RuntimeError(
                 f"Published GitHub file differs from local output: {relative_path}"
@@ -595,7 +798,7 @@ def main() -> None:
     )
     parser.add_argument("--repo-url", default=DEFAULT_REPO_URL)
     parser.add_argument("--branch", default=DEFAULT_REPO_BRANCH)
-    parser.add_argument("--workdir", type=Path, default=DEFAULT_WORKDIR)
+    parser.add_argument("--workdir", type=Path, help="Separate legacy checkout (default: export directly in source-dir)")
     parser.add_argument("--source-dir", type=Path, default=DEFAULT_SOURCE_DIR)
     parser.add_argument(
         "--commit-message",
@@ -611,9 +814,27 @@ def main() -> None:
         action="store_true",
         help="Recompute every asset SHA-256 before publishing (full audit; reads all generated data)",
     )
+    parser.add_argument("--verify-remote", action="store_true", help="Audit the remote even when the last verified local version is unchanged")
     args = parser.parse_args()
     if not args.repo_url.strip():
         raise RuntimeError("Missing data download repository URL")
+    args.source_dir = args.source_dir.resolve()
+    args.workdir = (args.workdir or args.source_dir).resolve()
+    args.workdir.parent.mkdir(parents=True, exist_ok=True)
+    with (args.workdir.parent / f".{args.workdir.name}.publish.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        publish(args)
+
+
+def publish(args) -> None:
+    in_place = args.source_dir == args.workdir
+    if in_place:
+        prepare_export_repo(args.repo_url, args.branch, args.workdir)
+        if not args.verify_checksums and not args.verify_remote and publication_is_verified(
+            args.workdir, args.repo_url, args.branch
+        ):
+            print("No download changes since verified publication; skipped validation, upload and remote checks.", flush=True)
+            return
 
     phase_started = time.perf_counter()
     manifest = validate_source(args.source_dir, args.branch)
@@ -626,7 +847,8 @@ def main() -> None:
             if _sha256_file(path) != expected:
                 raise RuntimeError(f"Manifest checksum mismatch: {path}")
     phase_started = time.perf_counter()
-    ensure_repo(args.repo_url, args.branch, args.workdir)
+    if not in_place:
+        ensure_repo(args.repo_url, args.branch, args.workdir)
     print(f"Download repository sync completed in {time.perf_counter() - phase_started:.1f}s", flush=True)
     identity = ensure_commit_identity(args.workdir)
     print(
@@ -634,13 +856,24 @@ def main() -> None:
         f"{identity['name']} <{identity['email']}> ({identity['source']})"
     )
     phase_started = time.perf_counter()
-    sync_result = sync_managed_assets(args.source_dir, args.workdir)
-    print(
-        "Incremental sync: "
-        f"{sync_result['copied']} changed files, {sync_result['removed']} removed files; "
-        f"completed in {time.perf_counter() - phase_started:.1f}s",
-        flush=True,
-    )
+    sync_result = {"copied": 0, "removed": 0} if in_place else sync_managed_assets(args.source_dir, args.workdir)
+    if in_place and not args.verify_checksums:
+        # Check new/modified files only; Git already knows unchanged blobs.
+        from src.generation.direct_download_files import _git_unchanged_paths
+
+        trusted = _git_unchanged_paths(args.workdir)
+        for relative, (_size, expected) in _manifest_assets(args.source_dir / "manifest.json").items():
+            if relative not in trusted and _sha256_file(args.source_dir / relative) != expected:
+                raise RuntimeError(f"Manifest checksum mismatch: {relative}")
+    if in_place:
+        print(f"Using export Git worktree directly; changed-file validation completed in {time.perf_counter() - phase_started:.1f}s", flush=True)
+    else:
+        print(
+            "Incremental sync: "
+            f"{sync_result['copied']} changed files, {sync_result['removed']} removed files; "
+            f"completed in {time.perf_counter() - phase_started:.1f}s",
+            flush=True,
+        )
     write_readme(args.workdir, manifest)
     phase_started = time.perf_counter()
     pushed = commit_and_push(
@@ -653,16 +886,21 @@ def main() -> None:
     if args.push:
         phase_started = time.perf_counter()
         commit_sha = run_git(["rev-parse", "HEAD"], args.workdir)
-        remote_sha = run_git(
-            ["ls-remote", "origin", f"refs/heads/{args.branch}"],
-            args.workdir,
-        ).split()[0]
-        if remote_sha != commit_sha:
-            raise RuntimeError(
-                f"Remote {args.branch} is {remote_sha}, expected pushed commit {commit_sha}"
-            )
-        verify_public_files(args.source_dir, manifest, commit_sha)
-        print(f"Download remote verification completed in {time.perf_counter() - phase_started:.1f}s", flush=True)
+        if args.verify_remote:
+            remote_refs = run_git_with_retry(
+                ["ls-remote", "origin", f"refs/heads/{args.branch}"],
+                args.workdir,
+            ).split()
+            remote_sha = remote_refs[0] if remote_refs else "missing"
+            if remote_sha != commit_sha:
+                raise RuntimeError(
+                    f"Remote {args.branch} is {remote_sha}, expected pushed commit {commit_sha}"
+                )
+            verify_public_files(args.source_dir, manifest, commit_sha)
+        else:
+            print("Public download verification skipped; Git push acknowledged.", flush=True)
+        record_publication(args.workdir, args.repo_url, args.branch, commit_sha)
+        print(f"Download publication recorded in {time.perf_counter() - phase_started:.1f}s", flush=True)
     if pushed:
         print(f"Published direct downloads to {args.repo_url} ({args.branch})")
 

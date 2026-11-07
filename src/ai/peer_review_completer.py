@@ -164,10 +164,13 @@ class ModelCenterCompleter:
 
 class QueuedModelCompleter:
     """Peer-review roles routed by the worker without testing route availability."""
-    def __init__(self, *, line="situation_notice", max_tokens=2400, allow_single_model=True, author_model=None):
+    def __init__(self, *, line="situation_notice", max_tokens=2400, allow_single_model=True, author_model=None,
+                 avoid_models: Iterable[str] = ()):
         self.agents = {role: PeerReviewAgent(f"{line}_{role}", max_tokens=max_tokens)
                        for role in ("author", "reviewer")}
         self.author_model = author_model
+        #: Models a first opinion already used; both roles steer away from them.
+        self.avoid_models = [name for name in avoid_models if name]
         self.allow_single_model = allow_single_model
         self.single_model = False
 
@@ -178,8 +181,11 @@ class QueuedModelCompleter:
     async def __call__(self, role, system, prompt, *, attachments=None):
         agent = self.agents[role]
         extra = {"attachments": list(attachments)} if attachments else {}
+        avoid = list(self.avoid_models)
         if role == "reviewer" and self.author_model:
-            extra["_avoid_models"] = [self.author_model]
+            avoid.append(self.author_model)
+        if avoid:
+            extra["_avoid_models"] = avoid
         text = await agent.complete(prompt=prompt, system=system, use_cache=False, **extra)
         conversation = agent.get_latest_conversation() or {}
         served_by = str(conversation.get("model") or "unknown")
@@ -312,13 +318,16 @@ class ReviewRoutePool:
     def completer(self, avoid: Iterable[str] = ()) -> ModelCenterCompleter:
         from .work_queue import current_parent
         if current_parent() is not None:
-            return QueuedModelCompleter(line=self._line, max_tokens=self._max_tokens)
+            # The worker's dispatcher picks the routes; ``avoid`` reaches it as work-item
+            # metadata, which is how a second opinion lands on other models.
+            return QueuedModelCompleter(line=self._line, max_tokens=self._max_tokens, avoid_models=avoid)
         # Author and reviewer are different models. Any pair is fine (a fast model may
         # review another fast model); load and failure rate decide, so a saturated
         # or failing route stops attracting work. ``avoid`` holds models a failed
         # attempt collapsed onto (route key or bare model name); they are skipped
         # while at least two other routes remain.
-        keys = [key for key in self._capacity if not BaseAgent._is_route_cooling_down(key)] or list(self._capacity)
+        # Capacity already comes from get_active_model_routes (routable only).
+        keys = list(self._capacity)
         avoided = {name for name in avoid if name}
         if avoided:
             remaining = [key for key in keys if key not in avoided and key.split(":", 1)[-1] not in avoided]

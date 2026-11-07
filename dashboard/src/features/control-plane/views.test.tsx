@@ -87,7 +87,7 @@ describe("control-plane workflow", () => {
     expect(await screen.findByText("US")).toBeInTheDocument();
     expect(screen.getByText("D001")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Publish site-release" }),
+      screen.getByRole("button", { name: "Publish static site" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /collect|crawl|fetch|download/i }),
@@ -371,7 +371,7 @@ describe("control-plane recovery and interactions", () => {
     });
     show(<PublishView />);
     expect(
-      await screen.findByText("No unpublished changes."),
+      await screen.findByText("No pending changes for the static site."),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Run preflight" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -382,16 +382,16 @@ describe("control-plane recovery and interactions", () => {
       await screen.findByRole("heading", { name: "Preflight results" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
-    fireEvent.click(screen.getByLabelText("Full generation"));
+    fireEvent.click(screen.getByLabelText("Rebuild static content"));
     fireEvent.click(
-      screen.getByRole("button", { name: "Publish site-release" }),
+      screen.getByRole("button", { name: "Publish static site" }),
     );
     expect(
       await screen.findByRole("link", { name: "Open release run" }),
     ).toHaveAttribute("href", "/publish/tasks?detail=release-1");
     expect(apiFetch).toHaveBeenCalledWith("/publish/runs", {
       method: "POST",
-      body: JSON.stringify({ job_id: "site-release", full: true }),
+      body: JSON.stringify({ job_id: "site-release", full: true, reports_only: false, code_only: false }),
     });
   });
 
@@ -408,8 +408,10 @@ describe("control-plane recovery and interactions", () => {
       ),
     );
     show(<PublishView />);
+    await screen.findByText("No pending changes for the static site.");
+    fireEvent.click(screen.getByLabelText("Rebuild static content"));
     fireEvent.click(
-      screen.getByRole("button", { name: "Publish site-release" }),
+      screen.getByRole("button", { name: "Publish static site" }),
     );
     expect(
       await screen.findByText("Release not queued: A release is already running."),

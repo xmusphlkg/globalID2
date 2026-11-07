@@ -2,8 +2,9 @@
 
 ``www.paho.org`` rejects non-browser clients with 403, including its RSS and
 JSON:API endpoints.  PAHO's own IRIS repository (``iris.paho.org``) exposes the
-same epidemiological alerts, updates and regional surveillance newsletters
-through the documented DSpace search API, so this adapter reads from there.
+regional surveillance newsletters through the DSpace search API. Dedicated
+alerts are collected separately by the ``paho_alerts`` ReliefWeb adapter;
+IRIS must not be treated as a complete mirror of PAHO's alerts archive.
 
 The search index mixes journal articles and governing-body documents with
 surveillance products, so only ``Newsletters`` whose title is an
@@ -25,7 +26,9 @@ SEARCH_URL = "https://iris.paho.org/server/api/discover/search/objects"
 HANDLE_URL = "https://iris.paho.org/handle/{handle}"
 QUERY = "epidemiological"
 PAGE_SIZE = 40
-MAX_PAGES = 5
+#: The query is broad, so a three-year window needs more than the first five pages.
+#: Paging still stops once the last hit is older than ``since``.
+MAX_PAGES = 40
 _KEEP_TITLE = re.compile(r"\b(epidemiological\s+(alert|update)|regional\s+update|situation\s+report)\b", re.I)
 
 

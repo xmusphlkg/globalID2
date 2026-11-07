@@ -1,12 +1,15 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, eventStreamUrl } from "@/lib/api";
+import type { PublicationKind } from "@/features/operations/publication-kind";
+import { normalizeTaskProgress } from "@/lib/task-progress";
 
 export interface TaskItem {
   id: number;
   task_uuid: string;
   task_name: string;
   task_type: string;
+  publication_kind?: PublicationKind | null;
   status: string;
   priority: string;
   progress: number;
@@ -83,13 +86,13 @@ export function useTasks(
 ) {
   return useQuery<TaskItem[]>({
     queryKey: ["tasks", status, taskType, countryCode, search, limit],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams({ page: "1", page_size: String(limit) });
       if (status) params.set("status", status);
       if (taskType) params.set("task_type", taskType);
       if (countryCode) params.set("country_code", countryCode);
       if (search) params.set("search", search);
-      return apiFetch(`/tasks?${params}`);
+      return (await apiFetch<TaskItem[]>(`/tasks?${params}`)).map(normalizeTaskProgress);
     },
     staleTime: 10 * 1000,
     refetchInterval: 5 * 1000,
@@ -123,7 +126,7 @@ export function usePaginatedTasks(
       const parsedOffset = ((meta.pagination?.page ?? apiPage) - 1) * parsedLimit;
 
       return {
-        items: data,
+        items: data.map(normalizeTaskProgress),
         totalCount: Number.isFinite(totalCount) ? totalCount : data.length,
         limit: Number.isFinite(parsedLimit) ? parsedLimit : limit,
         offset: Number.isFinite(parsedOffset) ? parsedOffset : offset,
@@ -146,7 +149,7 @@ export function useWorkerStatus() {
 export function useTaskDetail(uuid: string | null) {
   return useQuery<TaskDetail>({
     queryKey: ["task", uuid],
-    queryFn: () => apiFetch(`/tasks/${uuid}`),
+    queryFn: async () => normalizeTaskProgress(await apiFetch<TaskDetail>(`/tasks/${uuid}`)),
     enabled: !!uuid,
     staleTime: 5 * 1000,
     refetchInterval: uuid ? 5 * 1000 : false,

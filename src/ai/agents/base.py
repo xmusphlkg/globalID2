@@ -26,7 +26,9 @@ from src.ai.attachments import (
 )
 from src.ai.model_center import (
     ANTHROPIC_PROTOCOL_MAX_TOKENS,
+    ANTHROPIC_RUNTIME_TIMEOUT_SECONDS,
     acquire_runtime_route_admission,
+    anthropic_sdk_base_url,
     clear_route_rate_limit,
     drop_rejected_optional_parameter,
     extract_retry_after_seconds,
@@ -66,16 +68,9 @@ class BaseAgent(ABC):
     Supports multiple AI providers: OpenAI, Anthropic, QianWen, Azure, and more.
     """
     
-    # Process-wide cooldowns used when a model/route hits quota or rate-limit errors.
-    MODEL_COOLDOWNS: Dict[str, float] = {}
-
-    # 启动时检查得到的可用模型列表（保持优先级顺序）。若不为 None，complete() 仅从该列表中选模型。
-    AVAILABLE_MODEL_CHAIN: Optional[List[str]] = None
     # 模型中心返回的运行时路由（含 provider/api_key/base_url），若存在则优先使用。
     AVAILABLE_MODEL_ROUTES: Optional[List[Dict[str, Any]]] = None
     AVAILABLE_MODEL_ROUTES_LOADED_AT: Optional[float] = None
-    # Route 级别冷却（provider:model），避免某条路由持续触发限流。
-    ROUTE_COOLDOWNS: Dict[str, float] = {}
     # Model-center internal metadata keys that must never be forwarded to completion APIs.
     INTERNAL_COMPLETION_PARAM_KEYS = {
         "routing_state",
@@ -152,76 +147,31 @@ class BaseAgent(ABC):
         )
 
     @classmethod
-    def _purge_expired_cooldowns(cls) -> None:
-        now = time.time()
-        cls.MODEL_COOLDOWNS = {
-            key: until for key, until in cls.MODEL_COOLDOWNS.items() if until > now
-        }
-        cls.ROUTE_COOLDOWNS = {
-            key: until for key, until in cls.ROUTE_COOLDOWNS.items() if until > now
-        }
-
-    @classmethod
-    def _is_model_cooling_down(cls, model_name: str) -> bool:
-        cls._purge_expired_cooldowns()
-        return (cls.MODEL_COOLDOWNS.get(model_name) or 0) > time.time()
-
-    @classmethod
-    def _is_route_cooling_down(cls, route_key: str) -> bool:
-        cls._purge_expired_cooldowns()
-        return (cls.ROUTE_COOLDOWNS.get(route_key) or 0) > time.time()
-
-    @classmethod
-    def _mark_model_cooling_down(cls, model_name: str, cooldown_seconds: int) -> None:
-        cls.MODEL_COOLDOWNS[model_name] = time.time() + max(1, int(cooldown_seconds))
-
-    @classmethod
-    def _mark_route_cooling_down(cls, route_key: str, cooldown_seconds: int) -> None:
-        cls.ROUTE_COOLDOWNS[route_key] = time.time() + max(1, int(cooldown_seconds))
-
-    @classmethod
-    def _cooldown_remaining_seconds(cls, until: Optional[float]) -> int:
-        if not until:
-            return 0
-        return max(0, int(until - time.time()))
-
-    @classmethod
     def _estimate_wait_seconds_for_empty_candidates(
         cls,
         runtime_routes: Optional[List[Dict[str, Any]]],
         chain: Optional[List[str]],
         wait_cap_seconds: int,
     ) -> int:
-        """Estimate a bounded wait before retrying when all candidates are cooling down."""
-        cls._purge_expired_cooldowns()
+        """Estimate a bounded wait before retrying when all candidates are cooling down.
 
+        ``chain`` is unused; Model Center route snapshots are the only cooldown source.
+        """
         waits: List[int] = []
-        if runtime_routes:
-            for route in runtime_routes:
-                route_key = str(route.get("model_key") or route.get("model_name") or "")
-                route_wait = cls._cooldown_remaining_seconds(cls.ROUTE_COOLDOWNS.get(route_key))
-                if route_wait > 0:
-                    waits.append(route_wait)
+        for route in runtime_routes or []:
+            try:
+                db_wait = int(route.get("rate_limit_remaining_seconds") or 0)
+            except (TypeError, ValueError):
+                db_wait = 0
+            if db_wait > 0:
+                waits.append(db_wait)
 
-                try:
-                    db_wait = int(route.get("rate_limit_remaining_seconds") or 0)
-                except (TypeError, ValueError):
-                    db_wait = 0
-                if db_wait > 0:
-                    waits.append(db_wait)
-
-                try:
-                    runtime_wait = int(route.get("runtime_failure_remaining_seconds") or 0)
-                except (TypeError, ValueError):
-                    runtime_wait = 0
-                if runtime_wait > 0:
-                    waits.append(runtime_wait)
-
-        if runtime_routes is None:
-            for model_name in chain or []:
-                model_wait = cls._cooldown_remaining_seconds(cls.MODEL_COOLDOWNS.get(model_name))
-                if model_wait > 0:
-                    waits.append(model_wait)
+            try:
+                runtime_wait = int(route.get("runtime_failure_remaining_seconds") or 0)
+            except (TypeError, ValueError):
+                runtime_wait = 0
+            if runtime_wait > 0:
+                waits.append(runtime_wait)
 
         if not waits:
             return 1
@@ -233,6 +183,12 @@ class BaseAgent(ABC):
         runtime_routes: Optional[List[Dict[str, Any]]],
         ignore_local_cooldowns: bool = False,
     ) -> Tuple[List[Dict[str, Any]], List[str]]:
+        """Build completion candidates from Model Center route snapshots.
+
+        ``ignore_local_cooldowns`` still names the final recovery probe: it may
+        try non-durable non-routable routes (for example probe_unavailable) but
+        must never bypass a durable rate-limit or runtime circuit.
+        """
         candidates: List[Dict[str, Any]] = []
         chain_used: List[str] = []
         runtime_model_names: list[str] = []
@@ -246,9 +202,9 @@ class BaseAgent(ABC):
                 route_status = str(route.get("last_check_status") or "").strip().lower()
                 if route_status == "unavailable":
                     continue
-                # A final in-process probe may ignore only transient local
-                # cooldown markers. It must never bypass a durable Model
-                # Center rate-limit or runtime circuit.
+                # A final recovery probe may try non-durable non-routable routes.
+                # It must never bypass a durable Model Center rate-limit or
+                # runtime circuit.
                 durably_blocked = bool(route.get("runtime_failure_active")) or bool(
                     route.get("rate_limit_active")
                 )
@@ -258,11 +214,15 @@ class BaseAgent(ABC):
                     ) > 0
                 except (TypeError, ValueError):
                     pass
+                try:
+                    durably_blocked = durably_blocked or int(
+                        route.get("runtime_failure_remaining_seconds") or 0
+                    ) > 0
+                except (TypeError, ValueError):
+                    pass
                 if not bool(route.get("available_for_routing", True)) and (
                     not ignore_local_cooldowns or durably_blocked
                 ):
-                    continue
-                if not ignore_local_cooldowns and BaseAgent._is_route_cooling_down(route_key):
                     continue
                 candidates.append(
                     {
@@ -624,10 +584,8 @@ class BaseAgent(ABC):
         from src.ai.work_queue import require_dispatcher
         require_dispatcher()
         scheduled_route = kwargs.pop("_scheduled_route", None)
-        # Consume the legacy flag; the round counter below bounds recovery.
-        kwargs.pop("_quota_recovery_attempted", None)
-        quota_recovery_round = int(kwargs.pop("_quota_recovery_round", 0) or 0)
-        recovery_round_override = kwargs.pop("max_quota_recovery_rounds", None)
+        # Callers still pass this; the dispatcher owns retry after a quota failure.
+        kwargs.pop("max_quota_recovery_rounds", None)
         wait_for_model_recovery = bool(kwargs.pop("wait_for_model_recovery", True))
         model_request_timeout_seconds = kwargs.pop("model_request_timeout_seconds", None)
         max_attempts_per_model = kwargs.pop("max_attempts_per_model", None)
@@ -722,8 +680,7 @@ class BaseAgent(ABC):
             )
             logger.warning(
                 f"No candidate model available for agent '{self.name}'. "
-                f"Will wait {wait_seconds}s, refresh routes, and retry candidate selection once "
-                f"(quota recovery round {quota_recovery_round})."
+                f"Will wait {wait_seconds}s, refresh routes, and retry candidate selection once."
             )
             await asyncio.sleep(wait_seconds)
 
@@ -744,7 +701,8 @@ class BaseAgent(ABC):
             candidates, chain_used = self._build_candidates(runtime_routes, ignore_local_cooldowns=False)
             candidates = self._prioritize_candidates(candidates, preferred_models)
 
-            # 最后做一次安全探测：忽略本地进程冷却，尝试首个候选，避免直接抛出空链路错误。
+            # Final recovery probe: try non-durable non-routable routes without
+            # bypassing durable Model Center rate-limit or runtime circuits.
             if not candidates:
                 probe_candidates, _ = self._build_candidates(runtime_routes, ignore_local_cooldowns=True)
                 probe_candidates = self._prioritize_candidates(probe_candidates, preferred_models)
@@ -752,7 +710,7 @@ class BaseAgent(ABC):
                     candidates = probe_candidates
                     logger.warning(
                         f"Candidate list still empty after wait/refresh. "
-                        f"Will probe {len(candidates)} model(s) by ignoring local cooldown markers."
+                        f"Will probe {len(candidates)} model(s) that are not under a durable cooldown."
                     )
         elif not candidates:
             logger.warning(
@@ -761,8 +719,6 @@ class BaseAgent(ABC):
             )
 
         last_error = None
-        saw_quota_failure = False
-        quota_wait_candidates: List[int] = []
         attempted_models: List[str] = []
         authentication_failed_providers: set[str] = set()
         original_model = self.model
@@ -850,11 +806,6 @@ class BaseAgent(ABC):
                             BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
                         except Exception as clear_exc:
                             logger.warning(f"Failed to clear route cooldown for '{route_key}': {clear_exc}")
-
-                    # Success means local cooldown markers should no longer block this model/route.
-                    if route is None:
-                        BaseAgent.MODEL_COOLDOWNS.pop(model_name, None)
-                    BaseAgent.ROUTE_COOLDOWNS.pop(route_key, None)
 
                     # 记录对话历史
                     duration = time.time() - start_time
@@ -963,16 +914,8 @@ class BaseAgent(ABC):
                     )
 
                     if isinstance(e, TimeoutError):
-                        if timeout_cooldown_seconds:
-                            if route is None:
-                                BaseAgent._mark_model_cooling_down(
-                                    self.model,
-                                    timeout_cooldown_seconds,
-                                )
-                            BaseAgent._mark_route_cooling_down(
-                                route_key,
-                                timeout_cooldown_seconds,
-                            )
+                        # record_route_runtime_failure above already opened the
+                        # durable Model Center circuit for this route.
                         logger.warning(
                             f"Model '{self.model}' exceeded its per-route request timeout; "
                             "switching to the next candidate."
@@ -1003,11 +946,10 @@ class BaseAgent(ABC):
                         break
 
                     if quota_related:
-                        saw_quota_failure = True
                         if route:
-                            # The Model Center escalates the cooldown per
-                            # consecutive limit; the local marker must follow
-                            # that value instead of the flat configured ceiling.
+                            # Model Center escalates the durable cooldown per
+                            # consecutive limit; claim and candidate selection
+                            # read that value from the next route snapshot.
                             try:
                                 persisted = await mark_route_rate_limited(
                                     route,
@@ -1019,41 +961,32 @@ class BaseAgent(ABC):
                                 logger.warning(
                                     f"Failed to persist route cooldown for '{route_key}': {persist_exc}"
                                 )
-                        quota_wait_candidates.append(max(1, int(cooldown_seconds)))
                         logger.warning(
                             f"Detected quota/rate-limit issue for model '{self.model}', "
                             f"will cool down this route for {cooldown_seconds}s and switch to the next model if available."
                         )
-                        if route is None:
-                            BaseAgent._mark_model_cooling_down(self.model, cooldown_seconds)
-                        BaseAgent._mark_route_cooling_down(route_key, cooldown_seconds)
                         BaseAgent.AVAILABLE_MODEL_ROUTES = None
                         BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
                         break
 
                     if channel_failed_related:
+                        # record_route_runtime_failure above already opened the
+                        # durable Model Center circuit for this route.
                         channel_cooldown_seconds = max(60, int(cooldown_seconds))
                         logger.warning(
                             "Detected model channel failure for '{}'; "
                             f"cooling down model/route for {channel_cooldown_seconds}s before probing alternatives.",
                             self.model,
                         )
-                        if route is None:
-                            BaseAgent._mark_model_cooling_down(self.model, channel_cooldown_seconds)
-                        BaseAgent._mark_route_cooling_down(route_key, channel_cooldown_seconds)
                         BaseAgent.AVAILABLE_MODEL_ROUTES = None
                         BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
                         break
 
                     if unavailable_related:
-                        unavailable_cooldown = max(300, int(getattr(self.config.ai, "rate_limit_cooldown_seconds", 300)))
                         logger.warning(
                             f"Detected unavailable model/permission issue for '{self.model}'. "
                             f"Will skip this model for now and continue with the next candidate."
                         )
-                        if route is None:
-                            BaseAgent._mark_model_cooling_down(self.model, unavailable_cooldown)
-                        BaseAgent._mark_route_cooling_down(route_key, unavailable_cooldown)
                         if route:
                             try:
                                 await mark_route_unavailable(route, str(e))
@@ -1076,55 +1009,19 @@ class BaseAgent(ABC):
         # 所有模型都失败
         self.model = original_model
 
-        max_recovery_rounds = (
-            max(0, int(recovery_round_override))
-            if recovery_round_override is not None
-            else int(getattr(self.config.ai, "rate_limit_recovery_max_rounds", 1) or 1)
-        )
-        if saw_quota_failure and quota_recovery_round < max_recovery_rounds:
-            wait_cap_seconds = max(
-                3,
-                int(
-                    getattr(
-                        self.config.ai,
-                        "rate_limit_wait_cap_seconds",
-                        getattr(self.config.ai, "rate_limit_cooldown_seconds", 300),
-                    )
-                ),
-            )
-            raw_wait = min(quota_wait_candidates) if quota_wait_candidates else 1
-            wait_seconds = max(1, min(int(raw_wait), wait_cap_seconds))
-            logger.warning(
-                f"All candidate models failed and at least one error was quota-related. "
-                f"Will wait {wait_seconds}s and run recovery retry pass "
-                f"{quota_recovery_round + 1}/{max_recovery_rounds}."
-            )
-            await asyncio.sleep(wait_seconds)
-            BaseAgent.AVAILABLE_MODEL_ROUTES = None
-            BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-            return await self._complete_transport(
-                prompt=prompt,
-                system=system,
-                use_cache=use_cache,
-                preferred_models=preferred_models,
-                max_quota_recovery_rounds=max_recovery_rounds,
-                wait_for_model_recovery=wait_for_model_recovery,
-                model_request_timeout_seconds=model_request_timeout_seconds,
-                max_attempts_per_model=attempt_limit,
-                timeout_cooldown_seconds=timeout_cooldown_seconds,
-                _quota_recovery_attempted=True,
-                _quota_recovery_round=quota_recovery_round + 1,
-                **kwargs,
-            )
-
-        logger.error(f"All models failed for agent '{self.name}': {last_error}")
+        # TimeoutError and other exceptions may have an empty string
+        # representation; preserve the class in task logs and retry records.
+        failure_detail = str(last_error).strip() if last_error is not None else ""
+        if not failure_detail and last_error is not None:
+            failure_detail = type(last_error).__name__
+        logger.error(f"All models failed for agent '{self.name}': {failure_detail}")
         if not attempted_models:
             raise NoModelAvailable(
                 f"Agent completion failed: no model route could take the request for agent '{self.name}' (all cooling down, rate limited or removed)"
             )
         raise Exception(
-            f"Agent completion failed after trying models {attempted_models}: {last_error}"
-        )
+            f"Agent completion failed after trying models {attempted_models}: {failure_detail}"
+        ) from last_error
 
     async def _complete_with_runtime_route(
         self,
@@ -1234,16 +1131,29 @@ class BaseAgent(ABC):
         sanitized_kwargs.pop("max_completion_tokens", None)
 
         if style == "anthropic":
-            client = AsyncAnthropic(api_key=route.get("api_key"))
-            response = await client.messages.create(
-                model=model_name,
-                system=system or "",
-                messages=[{"role": "user", "content": content}],
-                temperature=temperature,
-                # The Anthropic API cannot omit this field. It is the protocol ceiling.
-                max_tokens=ANTHROPIC_PROTOCOL_MAX_TOKENS,
-                **sanitized_kwargs,
+            # An explicit timeout is required: with the SDK default, a non-streaming
+            # request at the protocol max_tokens raises "Streaming is required" before
+            # anything is sent. The caller's asyncio deadline still bounds the call,
+            # and retries belong to the dispatcher, not the SDK.
+            route_timeout = runtime_route_request_timeout_seconds(route, None)
+            client = AsyncAnthropic(
+                api_key=route.get("api_key"),
+                base_url=anthropic_sdk_base_url(route.get("base_url")),
+                default_headers=(route.get("extra_headers") or None),
+                timeout=float(route_timeout) if route_timeout else ANTHROPIC_RUNTIME_TIMEOUT_SECONDS,
+                max_retries=0,
             )
+            request: Dict[str, Any] = {
+                "model": model_name,
+                "messages": [{"role": "user", "content": content}],
+                "temperature": temperature,
+                # The Anthropic API cannot omit this field. It is the protocol ceiling.
+                "max_tokens": ANTHROPIC_PROTOCOL_MAX_TOKENS,
+                **sanitized_kwargs,
+            }
+            if system:
+                request["system"] = system
+            response = await client.messages.create(**request)
 
             token_usage = {}
             if hasattr(response, "usage") and response.usage:

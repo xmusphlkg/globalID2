@@ -8,10 +8,9 @@ around a broken safety gate.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Any
-
 
 AUTOMATIC_RELEASE_TRIGGERS = frozenset({"scheduled", "upstream_completion"})
 
@@ -20,8 +19,16 @@ _EXTERNAL_RETRY_STAGES = frozenset(
         "refresh_situation_notices",
         "raw_git_archive_publish",
         "github_direct_download_publish",
+        "r2_papers_publish",
+        "r2_reports_publish",
+        "surveillance_json_publish",
+        "situation_json_publish",
         "subscription_options_sync",
+        "research_digest_dispatch",
+        "report_digest_dispatch",
+        "notice_alert_dispatch",
         "cloudflare_pages_deploy",
+        "shared_assets_compatibility_deploy",
         "cloudflare_production_verification",
     }
 )
@@ -47,6 +54,8 @@ _PERMANENT_PATTERNS = (
     r"\bno production branch configured\b",
     r"\bproduction branch\b.*\b(not configured|missing|unconfigured)\b",
     r"\bpreflight\b.*\bsyntax\b",
+    r"\bfile budget exceeded\b",
+    r"\bpages file budget\b",
 )
 
 _TRANSIENT_PATTERNS = (

@@ -2,12 +2,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
-import researchData from '../../../data/research/index.json';
+import researchData from '../../../data/research/routes.json';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { normalizeDiseaseHref } from '../../../lib/seo';
+import { siteHref } from '../../../lib/papers';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 
 export function getStaticPaths() {
-  return ((researchData as any).facets?.diseases ?? []).map((facet: any) => ({
+  return ((researchData as any).facets?.diseases ?? []).filter((facet: any) => shouldBuildPage(`research:diseases:${facet.slug}`)).map((facet: any) => ({
     params: { slug: facet.slug },
     props: { facet, diseaseSlug: facet.slug, locale: 'en' },
   }));
@@ -64,7 +66,7 @@ const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNam
     </div> : <p class="timeline-empty">{zh ? '暂无月度发表记录。' : fr ? 'Aucune publication mensuelle disponible.' : 'No monthly publication records are available.'}</p>}
     {evidenceEvents.length > 0 && <div class="evidence-events" aria-label={fr ? 'Publications de recommandations et de politiques vaccinales' : 'Guidance and vaccine-policy evidence publications'}>
       <h3>{zh ? '指南与疫苗政策证据' : fr ? 'Recommandations et politiques vaccinales' : 'Guidance and vaccine-policy evidence'}</h3>
-      {evidenceEvents.slice(0, 8).map((event) => <a href={`${prefix}/research/articles/${event.slug}/`}>
+      {evidenceEvents.slice(0, 8).map((event) => <a href={siteHref(`${prefix}/research/articles/${event.slug}/`)}>
         <time datetime={event.date}>{event.date}</time>
         <span>{event.event_type === 'guideline_publication' ? (zh ? '指南相关文献' : fr ? 'Étude liée aux recommandations' : 'Guidance-related publication') : (zh ? '疫苗政策证据' : fr ? 'Preuve de politique vaccinale' : 'Vaccine-policy evidence')}</span>
         <strong>{event.title}</strong>

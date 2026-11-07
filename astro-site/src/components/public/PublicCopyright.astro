@@ -5,8 +5,8 @@ const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const updatedIso = '2026-08-18';
-const updatedLabel = zh ? '2026 年 8 月 18 日' : fr ? '18 août 2026' : '18 August 2026';
+const updatedIso = '2026-11-06';
+const updatedLabel = zh ? '2026 年 11 月 6 日' : fr ? '6 novembre 2026' : '6 November 2026';
 const currentYear = new Date().getUTCFullYear();
 
 /**
@@ -17,7 +17,7 @@ const currentYear = new Date().getUTCFullYear();
 const FR_COPY: Record<string, string> = {
   Breadcrumb: 'Fil d’Ariane', Home: 'Accueil', 'Copyright & reuse': 'Droits d’auteur et réutilisation',
   'Legal & reuse': 'Droits et réutilisation', 'Copyright, licensing & reuse': 'Droits d’auteur, licences et réutilisation',
-  'Citation and reuse guidance for GIDS content, surveillance data, code, and brand materials.': 'Guide de citation et de réutilisation des contenus GIDS, des données de surveillance, du code et des éléments de marque.',
+  'How to use GIDS surveillance data, cite its sources, and ask about access for your project.': 'Comment utiliser les données de surveillance GIDS, citer leurs sources et demander un accès pour votre projet.',
   'On this page': 'Sur cette page', 'Quick guide': 'Guide rapide', 'Material types': 'Types de contenus', Attribution: 'Attribution',
   'Source licences': 'Licences des sources', 'Automated use': 'Usage automatisé', 'Automated & commercial use': 'Usage automatisé et commercial', 'Rights concerns': 'Questions relatives aux droits',
   'Service Terms & Privacy Notice': 'Conditions du service et avis de confidentialité',
@@ -35,11 +35,15 @@ const FR_COPY: Record<string, string> = {
   'Data licences follow the source': 'Les licences des données suivent la source',
   'GIDS integrates materials published by multiple public health authorities. There is no single licence that automatically applies to every surveillance record. Some sources carry an explicit open licence; others permit access without a general reuse licence or impose their own conditions.': 'GIDS intègre des contenus publiés par plusieurs autorités de santé publique. Aucune licence unique ne s’applique automatiquement à tous les enregistrements de surveillance. Certaines sources disposent d’une licence ouverte explicite ; d’autres autorisent l’accès sans licence générale de réutilisation ou imposent leurs propres conditions.',
   'An open licence attached to one source does not extend to another source, to the GIDS brand, or to material that has not been expressly licensed.': 'Une licence ouverte attachée à une source ne s’étend pas à une autre source, à la marque GIDS ni à un contenu qui n’a pas fait l’objet d’une licence expresse.',
-  'Read the official licence deed': 'Lire le texte officiel de la licence', 'Before redistributing a dataset, check': 'Avant de redistribuer un jeu de données, vérifiez',
+  'Explore data downloads and source notes': 'Explorer les téléchargements et les indications de source', 'Before redistributing a dataset, check': 'Avant de redistribuer un jeu de données, vérifiez',
   'When no explicit licence can be identified, do not interpret public availability alone as an unrestricted licence to redistribute the material.': 'Lorsqu’aucune licence explicite ne peut être identifiée, ne considérez pas la seule disponibilité publique comme une autorisation illimitée de redistribuer le contenu.',
   'Automated access, model training & commercial reuse': 'Accès automatisé, entraînement de modèles et réutilisation commerciale',
   'Copyright, data licensing, and technical access are separate issues. Automated access may be subject to rate limits, robots directives, API rules, security controls, and the Service Terms. Following those technical rules does not grant reuse rights.': 'Le droit d’auteur, les licences de données et l’accès technique sont des questions distinctes. L’accès automatisé peut être soumis à des limites de débit, aux directives robots, aux règles d’API, aux contrôles de sécurité et aux Conditions du service. Le respect de ces règles techniques n’accorde pas de droits de réutilisation.',
-  'For source data, the original publisher’s licence remains controlling. Commercial reuse of GIDS-created content, branded outputs, or services may require written permission. Contact the project about large-scale research access or uses not clearly covered here.': 'Pour les données sources, la licence de l’éditeur d’origine reste déterminante. La réutilisation commerciale des contenus créés par GIDS, des productions de marque ou des services peut nécessiter une autorisation écrite. Contactez le projet pour les accès de recherche à grande échelle ou les usages non clairement couverts ici.',
+  'For commercial products or services, including work under a government contract, obtain written authorization from GIDS before using its public service or project-created content. Authorization from GIDS does not replace permission required from an original data provider.': 'Pour les produits ou services commerciaux, y compris les travaux effectués dans le cadre d’un contrat public, obtenez une autorisation écrite de GIDS avant d’utiliser son service public ou les contenus créés par le projet. Cette autorisation ne remplace pas celle éventuellement requise auprès du fournisseur des données d’origine.',
+  'The downloads page provides surveillance data in CSV, JSON and XLSX, organized by country or disease and time period. Coverage, reporting schedules and definitions differ by source; data may be delayed or revised. Downloads do not promise real-time updates, a public API or a service-level agreement.': 'La page de téléchargement propose des données de surveillance en CSV, JSON et XLSX, organisées par pays ou maladie et par période. La couverture, les calendriers et les définitions varient selon les sources ; les données peuvent être retardées ou révisées. Ces téléchargements ne garantissent ni mise à jour en temps réel, ni API publique, ni engagement de niveau de service.',
+  'Request access or discuss reuse': 'Demander un accès ou discuter de la réutilisation',
+  'For bulk access, recurring delivery, commercial use, model training, or a use not covered here, email us with your organization, end users, intended use, data and time period, delivery format and frequency, and any redistribution plans. We will review feasibility and source conditions; this page does not itself grant authorization.': 'Pour un accès en masse, une livraison récurrente, un usage commercial, l’entraînement de modèles ou un usage non décrit ici, indiquez-nous par e-mail votre organisation, les utilisateurs finaux, l’usage prévu, les données et la période souhaitées, le format et la fréquence de livraison, ainsi que tout projet de redistribution. Nous examinerons la faisabilité et les conditions des sources ; cette page ne constitue pas une autorisation.',
+  'Email GIDS about access': 'Contacter GIDS par e-mail au sujet de l’accès',
   'Review the Service Terms and technical access rules': 'Consulter les Conditions du service et les règles d’accès technique',
   'Report a copyright or licensing issue': 'Signaler un problème de droit d’auteur ou de licence',
   'If material appears incorrectly attributed, licensed, or made available, please report it.': 'Si un contenu semble incorrectement attribué, licencié ou mis à disposition, veuillez le signaler.',
@@ -75,27 +79,27 @@ const uses = zh ? [
   ['下载或分析监测数据', '需查看来源许可', '查看来源机构、数据许可和下载文件中的相关说明。', 'check'],
   ['转载或重新绘制 GIDS 图表', '使用前核对', '同时注明 GIDS 与原始来源，并说明筛选、聚合、翻译或重新制图等改动。', 'check'],
   ['用于新闻报道或公共利益传播', '通常可以', '区分 GIDS 的整理或分析与原始机构的官方发布，不得暗示相关机构背书。', 'allow'],
-  ['用于商业产品或服务', '部分情形需授权', '除非相关来源或具体材料已有明确许可，否则使用 GIDS 原创内容或服务前请联系项目方。', 'permission'],
+  ['商业产品、服务或承接政府合同', '事先申请书面授权', '请说明最终用户、用途和交付需求；原始数据还须遵守各来源的许可。', 'permission'],
   ['使用 GIDS 名称、Logo 或视觉标识', '品牌使用需授权', '正常学术署名无需品牌授权，但不得暗示合作、认证、赞助或官方认可。', 'permission'],
-  ['批量获取、自动化商业提取或模型训练', '适用额外规则', '同时查看服务协议、技术访问规则及相关来源材料的许可。', 'check'],
+  ['批量获取、自动化访问或模型训练', '请先联系', '请说明范围和访问方式；商业提取及模型训练须事先取得书面授权。', 'check'],
 ] : fr ? [
   ['Citer ou créer un lien vers une page GIDS', 'Autorisé', 'Citez le titre de la page, GIDS, l’URL et la date d’accès, ainsi que la source originale lorsque cela est pertinent.', 'allow'],
   ['Utiliser GIDS pour la recherche, l’enseignement ou l’étude personnelle', 'Généralement autorisé', 'Attribuez GIDS, conservez les informations de source originale et respectez les conditions propres à chaque source.', 'allow'],
   ['Télécharger ou analyser des données de surveillance', 'Vérifier la licence de la source', 'Examinez l’autorité source, les informations de licence et la documentation fournie avec le jeu de données.', 'check'],
   ['Republier ou redessiner un graphique GIDS', 'Vérifier avant réutilisation', 'Mentionnez GIDS et la source sous-jacente, et indiquez tout filtrage, toute agrégation, traduction ou modification graphique.', 'check'],
   ['Utiliser un contenu dans un article ou une communication d’intérêt public', 'Généralement autorisé', 'Distinguez le traitement effectué par GIDS de la publication officielle originale et ne suggérez aucune approbation.', 'allow'],
-  ['Utiliser un contenu créé par GIDS dans un produit ou service commercial', 'Autorisation éventuellement requise', 'Contactez GIDS, sauf si une licence de source ou de composant autorise indépendamment l’usage envisagé.', 'permission'],
+  ['Produit ou service commercial, ou prestation sous contrat public', 'Autorisation écrite préalable', 'Précisez les utilisateurs finaux, les usages et les besoins de livraison ; les conditions des sources restent applicables.', 'permission'],
   ['Utiliser le nom, le logo ou l’identité visuelle de GIDS', 'Autorisation requise pour la marque', 'L’attribution factuelle ordinaire est bienvenue. Ne suggérez ni partenariat, ni certification, ni parrainage, ni approbation.', 'permission'],
-  ['Accès en masse, extraction commerciale automatisée ou entraînement de modèles', 'Conditions distinctes applicables', 'Consultez les Conditions du service, les règles d’accès technique et les licences des contenus sous-jacents.', 'check'],
+  ['Accès en masse, accès automatisé ou entraînement de modèles', 'Contactez-nous au préalable', 'Précisez le périmètre et le mode d’accès ; l’extraction commerciale et l’entraînement de modèles exigent une autorisation écrite préalable.', 'check'],
 ] : [
   ['Link to or cite a GIDS page', 'Permitted', 'Cite the page title, GIDS, URL, and access date, plus the original source where relevant.', 'allow'],
   ['Use GIDS for research, teaching, or personal study', 'Generally permitted', 'Attribute GIDS, preserve the original source information, and follow any source-specific terms.', 'allow'],
   ['Download or analyse surveillance data', 'Check the source licence', 'Review the source authority, licence information, and documentation supplied with the dataset.', 'check'],
   ['Republish or redraw a GIDS chart', 'Check before reuse', 'Credit GIDS and the underlying source, and identify any filtering, aggregation, translation, or redrawing.', 'check'],
   ['Use material in journalism or public-interest communication', 'Generally permitted', 'Distinguish GIDS processing from the original official publication and do not imply endorsement.', 'allow'],
-  ['Use GIDS-created material in a commercial product or service', 'Permission may be required', 'Contact GIDS unless a source or component licence independently permits the intended use.', 'permission'],
+  ['Commercial product, service, or government contracting', 'Prior written authorization', 'Tell us about the end users, intended use, and delivery needs; source-specific terms still apply.', 'permission'],
   ['Use the GIDS name, logo, or visual identity', 'Brand use requires permission', 'Ordinary factual attribution is welcome. Do not imply partnership, certification, sponsorship, or endorsement.', 'permission'],
-  ['Bulk access, automated commercial extraction, or model training', 'Separate conditions apply', 'Review the Service Terms, technical access rules, and licences of the underlying materials.', 'check'],
+  ['Bulk access, automation, or model training', 'Contact us first', 'Describe the scope and access method; commercial extraction and model training require prior written authorization.', 'check'],
 ];
 
 const materials = zh ? [
@@ -103,14 +107,14 @@ const materials = zh ? [
     number: '01',
     title: 'GIDS 原创内容',
     status: '适用 GIDS 使用规则',
-    summary: '原创文字、说明文档、摘要、原创图表表达、页面设计及项目专门制作的其他内容。',
-    body: '允许正常链接和学术引用。大量复制、作为其他产品重新分发或用于商业用途时，可能需要事先获得许可。除非具体页面或材料另有说明，相关权利予以保留。',
+    summary: 'GIDS 的说明文字、生成的摘要和报告、图表、文档及网站设计。',
+    body: '允许正常链接和学术引用。大量复制或在其他产品中重新分发时请先联系；商业使用须事先取得书面授权。除非具体页面或材料另有说明，相关权利予以保留。',
   },
   {
     number: '02',
     title: '官方来源监测数据',
     status: '以原始来源规则为准',
-    summary: '来自公共卫生机构、官方开放数据平台、监测报告、仪表板或 API 的监测记录与元数据。',
+    summary: '来自公共卫生机构、官方数据平台、报告、仪表板或 API 的监测记录；GIDS 将其标准化后用于展示和下载。',
     body: 'GIDS 不会仅因收集、标准化、分析或展示相关数据，就主张对基础监测事实本身拥有所有权。原始发布机构的许可、署名和复用条件继续有效。',
   },
   {
@@ -130,12 +134,12 @@ const materials = zh ? [
 ] : fr ? [
   {
     number: '01', title: 'Contenus créés par GIDS', status: 'Les règles GIDS s’appliquent',
-    summary: 'Textes originaux, documentation, résumés, expression visuelle, conception des pages et autres contenus créés par le projet.',
-    body: 'Les liens et citations sont autorisés. La reproduction de contenus substantiels, leur redistribution dans un autre produit ou leur usage commercial peut nécessiter une autorisation préalable. Les droits sont réservés sauf indication contraire sur une page ou un composant.',
+    summary: 'Explications GIDS, résumés et rapports générés, graphiques, documentation et conception du site.',
+    body: 'Les liens et citations sont autorisés. Contactez-nous avant toute reproduction substantielle ou redistribution dans un autre produit ; l’usage commercial exige une autorisation écrite préalable. Les droits sont réservés sauf indication contraire sur une page ou un composant.',
   },
   {
     number: '02', title: 'Données de surveillance des sources officielles', status: 'Les règles de la source s’appliquent',
-    summary: 'Enregistrements et métadonnées de surveillance provenant d’autorités sanitaires, de systèmes officiels de données ouvertes, de rapports, de tableaux de bord ou d’API.',
+    summary: 'Enregistrements recueillis auprès d’autorités sanitaires, de portails officiels, de rapports, de tableaux de bord et d’API ; GIDS les normalise pour l’affichage et le téléchargement.',
     body: 'GIDS ne revendique pas la propriété des faits de surveillance sous-jacents du seul fait qu’ils sont collectés, normalisés, analysés ou affichés ici. La licence, l’attribution et les conditions de réutilisation de l’éditeur d’origine continuent de s’appliquer.',
   },
   {
@@ -153,14 +157,14 @@ const materials = zh ? [
     number: '01',
     title: 'GIDS-created content',
     status: 'GIDS rules apply',
-    summary: 'Original writing, documentation, summaries, visual expression, page design, and other project-created material.',
-    body: 'Linking and citation are permitted. Reproducing substantial material, redistributing it as part of another product, or using it commercially may require prior permission. Rights are reserved unless a page or component states otherwise.',
+    summary: 'GIDS explanations, generated summaries and reports, charts, documentation, and website design.',
+    body: 'Linking and citation are permitted. Contact us before substantial reproduction or redistribution in another product; commercial use requires prior written authorization. Rights are reserved unless a page or component states otherwise.',
   },
   {
     number: '02',
     title: 'Official-source surveillance data',
     status: 'Source rules apply',
-    summary: 'Surveillance records and metadata from health authorities, official open-data systems, reports, dashboards, or APIs.',
+    summary: 'Records collected from public health authorities and official data portals, reports, dashboards, and APIs; GIDS normalizes them for display and download.',
     body: 'GIDS does not claim ownership of underlying surveillance facts merely because they are collected, standardized, analysed, or displayed here. The original publisher’s licence, attribution, and reuse conditions continue to apply.',
   },
   {
@@ -247,21 +251,21 @@ const sourceChecks = zh ? [
   '原始公共卫生机构或发布方',
   'GIDS 提供的原始来源页面',
   '来源机构公布的版权、开放数据或复用说明',
-  '下载文件中的 README、字段说明、来源字段和许可信息',
+  'GIDS 页面和下载中提供的字段、来源及许可说明（如有）',
   '是否包含第三方图片、Logo、报告版式或其他单独受保护的内容',
   '是否修改了疾病定义、报告周期、地理单位或其他关键特征',
 ] : fr ? [
   'l’autorité sanitaire publique ou l’éditeur d’origine',
   'la page source liée par GIDS',
   'la licence ou les conditions de réutilisation associées à cette source',
-  'le README, le guide des champs, les champs de provenance et les métadonnées de licence du téléchargement',
+  'les champs, indications de provenance et conditions de licence disponibles sur GIDS ou dans le téléchargement',
   'la présence éventuelle d’images, de logos, de mises en page de rapports ou d’autres contenus protégés de tiers',
   'toute modification des définitions, périodes de déclaration, unités géographiques ou autres caractéristiques substantielles',
 ] : [
   'the original public health authority or publisher',
   'the source page linked by GIDS',
   'the licence or reuse statement associated with that source',
-  'the README, field guide, provenance fields, and licence metadata in the download',
+  'any field descriptions, provenance, and licensing information provided on GIDS or with the download',
   'whether third-party images, logos, report layouts, or other protected material are included',
   'whether definitions, reporting periods, geographic units, or other material characteristics changed',
 ];
@@ -293,7 +297,7 @@ const concerns = zh ? [
       <p class="copyright-label">{tr('Legal & reuse', '法律与复用')}</p>
       <h1>{tr('Copyright, licensing & reuse', '版权、许可与复用说明')}</h1>
       <p class="copyright-intro">
-        {tr('Citation and reuse guidance for GIDS content, surveillance data, code, and brand materials.', '了解 GIDS 内容、监测数据、代码与品牌材料的引用和复用边界。')}
+        {tr('How to use GIDS surveillance data, cite its sources, and ask about access for your project.', '了解如何使用 GIDS 监测数据、引用原始来源，以及为你的项目申请访问。')}
       </p>
       <dl class="copyright-summary">
         {heroFacts.map(([label, value]) => (
@@ -401,7 +405,7 @@ const concerns = zh ? [
         <div class="copyright-prose">
           <p>{tr('GIDS integrates materials published by multiple public health authorities. There is no single licence that automatically applies to every surveillance record. Some sources carry an explicit open licence; others permit access without a general reuse licence or impose their own conditions.', 'GIDS 整合了多个公共卫生机构发布的资料，因此不存在一项自动覆盖网站全部监测数据的统一许可证。部分来源采用明确的开放许可；另一些来源可能允许公众访问，但没有提供一般再利用许可，或对署名、再发布及商业使用另有规定。')}</p>
           <p>{tr('An open licence attached to one source does not extend to another source, to the GIDS brand, or to material that has not been expressly licensed.', '某一来源采用开放许可，并不意味着该许可自动适用于其他来源、GIDS 品牌或未明确标注许可的材料。')}</p>
-          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">{tr('Read the official licence deed', '查看 CC BY 4.0 官方许可摘要')} <span aria-hidden="true">↗</span></a>
+          <a href={`${prefix}/downloads/`}>{tr('Explore data downloads and source notes', '查看数据下载及来源说明')} <span aria-hidden="true">→</span></a>
         </div>
         <div class="copyright-checklist">
           <h3>{tr('Before redistributing a dataset, check', '再发布数据前建议核对')}</h3>
@@ -417,7 +421,13 @@ const concerns = zh ? [
         </div>
         <div class="copyright-prose copyright-prose-columns">
           <p>{tr('Copyright, data licensing, and technical access are separate issues. Automated access may be subject to rate limits, robots directives, API rules, security controls, and the Service Terms. Following those technical rules does not grant reuse rights.', '版权、数据许可和网站技术访问规则属于不同层面。自动化访问可能受到请求频率限制、robots 规则、API 规范、安全措施及《服务协议》的约束；遵守这些技术规则并不意味着自动获得底层材料的复用许可。')}</p>
-          <p>{tr('For source data, the original publisher’s licence remains controlling. Commercial reuse of GIDS-created content, branded outputs, or services may require written permission. Contact the project about large-scale research access or uses not clearly covered here.', '对于来源数据，应继续以原始发布机构的许可为准。将 GIDS 原创内容、品牌化输出或相关服务用于商业用途时，部分情形可能需要书面许可。大规模研究访问或本页未明确覆盖的使用场景，请先联系项目方。')}</p>
+          <p>{tr('For commercial products or services, including work under a government contract, obtain written authorization from GIDS before using its public service or project-created content. Authorization from GIDS does not replace permission required from an original data provider.', '用于商业产品或服务，包括承接政府合同的工作时，请在使用 GIDS 公开服务或项目原创内容前取得 GIDS 书面授权。GIDS 的授权不能替代原始数据提供方可能要求的许可。')}</p>
+          <p>{tr('The downloads page provides surveillance data in CSV, JSON and XLSX, organized by country or disease and time period. Coverage, reporting schedules and definitions differ by source; data may be delayed or revised. Downloads do not promise real-time updates, a public API or a service-level agreement.', '下载页面按国家或疾病及时间段提供 CSV、JSON 和 XLSX 监测数据。覆盖范围、报告周期和定义因来源而异；数据可能延迟或修订。提供下载不代表承诺实时更新、公开 API 或服务等级协议。')}</p>
+        </div>
+        <div class="copyright-checklist">
+          <h3>{tr('Request access or discuss reuse', '申请访问或讨论复用')}</h3>
+          <p>{tr('For bulk access, recurring delivery, commercial use, model training, or a use not covered here, email us with your organization, end users, intended use, data and time period, delivery format and frequency, and any redistribution plans. We will review feasibility and source conditions; this page does not itself grant authorization.', '如果需要批量访问、定期交付、商业使用、模型训练或本页未涵盖的用途，请通过邮件说明所属机构、最终用户、使用目的、所需数据和时间范围、交付格式及频率，以及是否计划再分发。我们会评估可行性和原始来源条件；本页面本身不构成授权。')}</p>
+          <a href="mailto:lkg1116@outlook.com">{tr('Email GIDS about access', '发邮件咨询数据访问')} →</a>
         </div>
         <a class="copyright-inline-link" href={`${prefix}/terms/`}>{tr('Review the Service Terms and technical access rules', '查看服务协议与技术访问规则')} <span aria-hidden="true">→</span></a>
       </section>
@@ -500,7 +510,7 @@ const concerns = zh ? [
   .copyright-breadcrumb a:hover { color: rgb(var(--text-strong)); text-decoration: underline; text-underline-offset: .2em; }
   .copyright-label, .copyright-section-heading > p:first-child, .copyright-summary dt, .copyright-toc > p, .copyright-citation-header span { color: rgb(var(--text-faint)); font-size: .68rem; font-weight: 750; letter-spacing: 0; line-height: 1.5; text-transform: uppercase; }
   .copyright-label { margin: 1.1rem 0 0; }
-  .copyright-header h1 { max-width: 54rem; margin: .35rem 0 0; color: rgb(var(--text-strong)); font-family: var(--font-serif, Georgia, serif); font-size: clamp(2rem, 4.4vw, 3rem); font-weight: 650; letter-spacing: 0; line-height: 1.1; text-wrap: balance; }
+  .copyright-header h1 { max-width: 54rem; margin: .35rem 0 0; color: rgb(var(--text-strong)); font-family: var(--font-interface); font-size: clamp(2rem, 4.4vw, 3rem); font-weight: 650; letter-spacing: 0; line-height: 1.1; text-wrap: balance; }
   .copyright-intro { max-width: 51rem; margin: .65rem 0 0; color: rgb(var(--text-muted)); font-size: .92rem; line-height: 1.6; }
   .copyright-summary { display: grid; gap: .45rem; margin: 1rem 0 0; }
   .copyright-summary div { display: flex; min-height: 2.5rem; align-items: center; justify-content: space-between; gap: .85rem; padding: .5rem .65rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .42); }
@@ -511,9 +521,9 @@ const concerns = zh ? [
   .copyright-section { padding: clamp(2.25rem, 5vw, 3.5rem) 0; border-top: 1px solid rgb(var(--border)); scroll-margin-top: 6rem; }
   .copyright-section-first { border-top: 0; }
   .copyright-section-heading { max-width: 46rem; }
-  .copyright-section-heading h2 { margin: .35rem 0 0; color: rgb(var(--text-strong)); font-family: var(--font-serif, Georgia, serif); font-size: clamp(1.55rem, 3.5vw, 2.1rem); font-weight: 650; letter-spacing: 0; line-height: 1.2; }
+  .copyright-section-heading h2 { margin: .35rem 0 0; color: rgb(var(--text-strong)); font-family: var(--font-interface); font-size: clamp(1.55rem, 3.5vw, 2.1rem); font-weight: 650; letter-spacing: 0; line-height: 1.2; }
   .copyright-section-heading > p:last-child:not(:first-child) { max-width: 42rem; margin: .65rem 0 0; color: rgb(var(--text-muted)); font-size: .9rem; line-height: 1.7; }
-  .copyright-table-wrap { overflow-x: auto; margin-top: 1.5rem; border: 1px solid rgb(var(--border)); border-radius: 3px; background: rgb(var(--surface)); }
+  .copyright-table-wrap { overflow-x: auto; margin-top: 1.5rem; border: 1px solid rgb(var(--border)); border-radius: 0; background: rgb(var(--surface)); }
   .copyright-table-wrap table { width: 100%; min-width: 46rem; border-collapse: collapse; text-align: left; }
   .copyright-table-wrap th, .copyright-table-wrap td { padding: .8rem .9rem; border-bottom: 1px solid rgb(var(--border)); vertical-align: top; }
   .copyright-table-wrap thead th { color: rgb(var(--text-faint)); background: rgb(var(--bg-soft)); font-size: .7rem; font-weight: 750; text-transform: uppercase; }
@@ -522,11 +532,11 @@ const concerns = zh ? [
   .copyright-table-wrap tbody td:nth-child(2) { width: 23%; }
   .copyright-table-wrap tbody tr:nth-child(even) { background: rgb(var(--bg-soft) / .35); }
   .copyright-table-wrap tr:last-child th, .copyright-table-wrap tr:last-child td { border-bottom: 0; }
-  .copyright-decision { display: inline-flex; max-width: 100%; padding: .16rem .44rem; border: 1px solid rgb(var(--border)); border-radius: 2px; color: rgb(var(--text-strong)); background: rgb(var(--bg-soft)); font-size: .68rem; font-weight: 750; line-height: 1.45; }
+  .copyright-decision { display: inline-flex; max-width: 100%; padding: .16rem .44rem; border: 1px solid rgb(var(--border)); border-radius: 0; color: rgb(var(--text-strong)); background: rgb(var(--bg-soft)); font-size: .68rem; font-weight: 750; line-height: 1.45; }
   .copyright-decision-allow { border-color: rgb(var(--accent) / .35); color: rgb(var(--accent-strong)); background: rgb(var(--accent) / .07); }
   .copyright-note { margin: 1rem 0 0; padding-left: .9rem; border-left: 2px solid rgb(var(--border-soft)); color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.68; }
   .copyright-material-grid { display: grid; gap: .75rem; margin-top: 1.5rem; }
-  .copyright-material-grid article { min-width: 0; padding: 1.15rem; border: 1px solid rgb(var(--border)); border-radius: 4px; background: rgb(var(--surface)); }
+  .copyright-material-grid article { min-width: 0; padding: 1.15rem; border: 1px solid rgb(var(--border)); border-radius: 0; background: rgb(var(--surface)); }
   .copyright-material-top { display: flex; justify-content: space-between; gap: .75rem; align-items: start; }
   .copyright-material-top span { color: rgb(var(--text-faint)); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .7rem; font-weight: 700; }
   .copyright-material-top strong { max-width: 70%; color: rgb(var(--accent-strong)); font-size: .7rem; font-weight: 750; line-height: 1.4; text-align: right; }
@@ -540,11 +550,11 @@ const concerns = zh ? [
   .copyright-attribution-list span, .copyright-concern-grid article > span { color: rgb(var(--text-faint)); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .7rem; font-weight: 700; line-height: 1.55; }
   .copyright-attribution-list strong { color: rgb(var(--text-strong)); font-size: .86rem; line-height: 1.5; }
   .copyright-attribution-list p { margin: .25rem 0 0; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.6; }
-  .copyright-citation-tool { margin-top: 1.25rem; overflow: hidden; border: 1px solid rgb(var(--border)); border-radius: 4px; background: rgb(var(--surface)); }
+  .copyright-citation-tool { margin-top: 1.25rem; overflow: hidden; border: 1px solid rgb(var(--border)); border-radius: 0; background: rgb(var(--surface)); }
   .copyright-citation-header { display: flex; justify-content: space-between; gap: 1rem; align-items: center; padding: .85rem 1rem; border-bottom: 1px solid rgb(var(--border)); }
   .copyright-citation-header div { display: grid; gap: .12rem; }
   .copyright-citation-header strong { color: rgb(var(--text-strong)); font-size: .86rem; }
-  .copyright-copy-button { min-height: 2.25rem; padding: .35rem .7rem; border: 1px solid rgb(var(--text-strong)); border-radius: 2px; color: rgb(var(--surface)); background: rgb(var(--text-strong)); font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; }
+  .copyright-copy-button { min-height: 2.25rem; padding: .35rem .7rem; border: 1px solid rgb(var(--text-strong)); border-radius: 0; color: rgb(var(--surface)); background: rgb(var(--text-strong)); font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; }
   .copyright-copy-button:hover { opacity: .84; }
   .copyright-copy-button:focus-visible, .copyright-citation-tabs button:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
   .copyright-citation-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--bg-soft)); }
@@ -553,10 +563,10 @@ const concerns = zh ? [
   .copyright-citation-panel pre { min-height: 8rem; margin: 0; overflow-x: auto; padding: 1rem; white-space: pre-wrap; overflow-wrap: anywhere; color: rgb(var(--text)); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .76rem; line-height: 1.65; }
   .copyright-modified-note { margin: 0; padding: .8rem 1rem; border-top: 1px solid rgb(var(--border)); color: rgb(var(--text-muted)); background: rgb(var(--bg-soft) / .5); font-size: .76rem; line-height: 1.6; }
   .copyright-modified-note strong { color: rgb(var(--text-strong)); }
-  .copyright-prose { display: grid; gap: .7rem; margin-top: 1.5rem; padding: 1rem; border: 1px solid rgb(var(--border)); border-radius: 4px; background: rgb(var(--surface)); }
+  .copyright-prose { display: grid; gap: .7rem; margin-top: 1.5rem; padding: 1rem; border: 1px solid rgb(var(--border)); border-radius: 0; background: rgb(var(--surface)); }
   .copyright-prose p { margin: 0; color: rgb(var(--text-muted)); font-size: .86rem; line-height: 1.72; }
   .copyright-prose a, .copyright-inline-link, .copyright-contact a, .copyright-terms-link { color: rgb(var(--text-strong)); font-size: .8rem; font-weight: 700; text-decoration: underline; text-underline-offset: .18em; }
-  .copyright-checklist { margin-top: 1rem; padding: 1rem; border: 1px solid rgb(var(--border)); border-radius: 4px; }
+  .copyright-checklist { margin-top: 1rem; padding: 1rem; border: 1px solid rgb(var(--border)); border-radius: 0; }
   .copyright-checklist h3 { margin: 0; color: rgb(var(--text-strong)); font-size: .9rem; }
   .copyright-checklist ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem 1.5rem; margin: .8rem 0 0; padding: 0; list-style: none; }
   .copyright-checklist li { position: relative; padding-left: 1rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.55; }
@@ -569,7 +579,7 @@ const concerns = zh ? [
   .copyright-concern-grid article:nth-child(even) { padding-left: 1rem; }
   .copyright-concern-grid h3 { margin: .35rem 0 0; color: rgb(var(--text-strong)); font-size: .88rem; }
   .copyright-concern-grid p { margin: .35rem 0 0; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.6; }
-  .copyright-contact { display: flex; justify-content: space-between; gap: 1.25rem; align-items: center; margin-top: 1rem; padding: 1rem; border: 1px solid rgb(var(--border)); border-radius: 4px; background: rgb(var(--surface)); }
+  .copyright-contact { display: flex; justify-content: space-between; gap: 1.25rem; align-items: center; margin-top: 1rem; padding: 1rem; border: 1px solid rgb(var(--border)); border-radius: 0; background: rgb(var(--surface)); }
   .copyright-contact p { max-width: 37rem; margin: 0; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.6; }
   .copyright-contact a { flex: 0 0 auto; }
   .copyright-document-footer { display: grid; gap: .3rem; max-width: 51rem; padding: 1.4rem 0 2.75rem; border-top: 1px solid rgb(var(--border)); color: rgb(var(--text-faint)); font-size: .72rem; line-height: 1.58; }

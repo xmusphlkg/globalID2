@@ -19,7 +19,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 from bs4 import BeautifulSoup
@@ -77,17 +77,23 @@ def html_to_text(markup: str) -> str:
     return "\n".join(line for line in lines if line)
 
 
+#: pdfium is not thread-safe: documents are fetched on several threads at once, and two
+#: threads inside pdfium crash the whole worker process. Every pdfium call holds this lock.
+_PDFIUM_LOCK = threading.RLock()
+
+
 def pdf_to_text(data: bytes) -> tuple[str, int]:
     """Page text via pdfium: orders of magnitude faster than pdfminer on large reports."""
 
     import pypdfium2
 
-    pdf = pypdfium2.PdfDocument(data)
-    try:
-        pages = _page_texts(pdf)
-        return "\n\n".join(page for page in pages if page), len(pages)
-    finally:
-        pdf.close()
+    with _PDFIUM_LOCK:
+        pdf = pypdfium2.PdfDocument(data)
+        try:
+            pages = _page_texts(pdf)
+            return "\n\n".join(page for page in pages if page), len(pages)
+        finally:
+            pdf.close()
 
 
 def _page_texts(pdf: Any) -> list[str]:
@@ -115,9 +121,11 @@ def pdf_ocr_text(data: bytes) -> tuple[str, int]:
     global _OCR_ENGINE
     import pypdfium2
 
-    pdf = pypdfium2.PdfDocument(data)
+    with _PDFIUM_LOCK:
+        pdf = pypdfium2.PdfDocument(data)
     try:
-        count = len(pdf)
+        with _PDFIUM_LOCK:
+            count = len(pdf)
         if count > MAX_OCR_PAGES:
             raise DocumentUnavailable(f"scanned PDF has {count} pages, over the {MAX_OCR_PAGES}-page OCR limit")
         pages = []
@@ -127,16 +135,19 @@ def pdf_ocr_text(data: bytes) -> tuple[str, int]:
 
                 _OCR_ENGINE = RapidOCR()
             for index in range(count):
-                page = pdf[index]
-                try:
-                    image = page.render(scale=2).to_numpy()
-                finally:
-                    page.close()
+                # Render under the pdfium lock; recognition only needs the image.
+                with _PDFIUM_LOCK:
+                    page = pdf[index]
+                    try:
+                        image = page.render(scale=2).to_numpy()
+                    finally:
+                        page.close()
                 result = _OCR_ENGINE(image)
                 pages.append("\n".join(result.txts or ()).strip())
         return "\n\n".join(page for page in pages if page), count
     finally:
-        pdf.close()
+        with _PDFIUM_LOCK:
+            pdf.close()
 
 
 def _pdf_document(data: bytes) -> FetchedDocument:
@@ -187,13 +198,46 @@ def _wp_rest(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
     return FetchedDocument(HTML, f"{title}\n\n{body}" if title else body)
 
 
+def ecdc_event_text(markup: str) -> str:
+    """Body of an ECDC public health event page: its titled sections, without site navigation.
+
+    Each section (Key facts, Overview, ECDC assessment, Actions, ...) is a heading
+    with the ``ecdc-section-anchor`` class followed by its content in the same block.
+    """
+
+    soup = BeautifulSoup(markup or "", "html.parser")
+    parts: list[str] = []
+    for heading in soup.select("h2.ecdc-section-anchor"):
+        for link in heading.find_all("a"):
+            link.decompose()
+        name = heading.get_text(" ", strip=True)
+        block = heading.parent
+        heading.extract()
+        body = html_to_text(str(block)) if block is not None else ""
+        if body:
+            parts.append(f"## {name}\n{body}")
+    if not parts:
+        return ""
+    title = soup.find("h1")
+    head = title.get_text(" ", strip=True) if title is not None else ""
+    return "\n\n".join([head, *parts] if head else parts)
+
+
+def _ecdc_event(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
+    page = fetch(_https(ref.get("page_url")), client=client)
+    text = ecdc_event_text(page.text)
+    if not text:
+        raise DocumentUnavailable("ECDC event page has no readable sections")
+    return FetchedDocument(HTML, text)
+
+
 def pdf_link(markup: str, base_url: str) -> str | None:
     """First anchor on a landing page that downloads a PDF (a ``.pdf`` link or a repository bitstream)."""
 
     for anchor in BeautifulSoup(markup, "html.parser").find_all("a", href=True):
         href = str(anchor["href"])
         path = href.lower().split("?")[0]
-        if ".pdf" in href.lower() or (path.endswith("/content") and "/bitstreams/" in path):
+        if ".pdf" in href.lower() or (path.endswith(("/content", "/download")) and "/bitstreams/" in path):
             return urljoin(base_url, href)
     return None
 
@@ -231,25 +275,26 @@ def _article_pages(data: bytes, page_range: Any) -> bytes:
         return data
     import pypdfium2
 
-    source = pypdfium2.PdfDocument(data)
-    try:
-        offset = printed_page_offset(_page_texts(source))
-        if offset is None:
-            return data
-        first = max(0, int(page_range[0]) - offset)
-        last = min(len(source) - 1, int(page_range[1]) - offset)
-        if first > last or (first == 0 and last == len(source) - 1):
-            return data
-        article = pypdfium2.PdfDocument.new()
+    with _PDFIUM_LOCK:
+        source = pypdfium2.PdfDocument(data)
         try:
-            article.import_pages(source, list(range(first, last + 1)))
-            buffer = io.BytesIO()
-            article.save(buffer)
-            return buffer.getvalue()
+            offset = printed_page_offset(_page_texts(source))
+            if offset is None:
+                return data
+            first = max(0, int(page_range[0]) - offset)
+            last = min(len(source) - 1, int(page_range[1]) - offset)
+            if first > last or (first == 0 and last == len(source) - 1):
+                return data
+            article = pypdfium2.PdfDocument.new()
+            try:
+                article.import_pages(source, list(range(first, last + 1)))
+                buffer = io.BytesIO()
+                article.save(buffer)
+                return buffer.getvalue()
+            finally:
+                article.close()
         finally:
-            article.close()
-    finally:
-        source.close()
+            source.close()
 
 
 def _pdf_page(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
@@ -261,6 +306,36 @@ def _pdf_page(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
     if data.startswith(b"%PDF") and ref.get("pages"):
         data = _article_pages(data, ref.get("pages"))
     return _pdf_document(data)
+
+
+def _pdf_url(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
+    return _pdf_document(fetch(_https(ref.get("url")), client=client, timeout=DOWNLOAD_TIMEOUT).content)
+
+
+def _reliefweb_report(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
+    url = _https(ref.get("page_url"))
+    if urlsplit(url).hostname != "reliefweb.int" or not urlsplit(url).path.startswith("/report/"):
+        raise DocumentUnavailable("invalid ReliefWeb report URL")
+    page = fetch(url, client=client)
+    article = BeautifulSoup(page.text, "html.parser").select_one("article.rw-article--report")
+    if article is None:
+        raise ValueError("ReliefWeb report markup changed: missing article")
+    organization = str(ref.get("organization") or "")
+    authors = article.select('[class*="tag-value--source"] a[href]')
+    if organization not in {"paho", "who"} or not any(
+        urlsplit(a["href"]).path.rstrip("/") == f"/organization/{organization}" for a in authors
+    ):
+        raise DocumentUnavailable("ReliefWeb report author does not match the source")
+    # Do not read an abstract as if it were the full report, or accidentally
+    # download a PDF from the unrelated-report recommendations below it.
+    # WHO polio bulletins are sometimes tagged "Infographic" but still carry
+    # the original PDF under .rw-attachment--infographic.
+    attachments = article.select(".rw-attachment a[href]")
+    for anchor in attachments:
+        link = urljoin(url, anchor["href"])
+        if urlsplit(link).hostname == "reliefweb.int" and urlsplit(link).path.lower().endswith(".pdf"):
+            return _pdf_document(fetch(link, client=client, timeout=DOWNLOAD_TIMEOUT).content)
+    raise DocumentUnavailable("ReliefWeb report has no original PDF attachment")
 
 
 def _embedded(payload: dict[str, Any], key: str) -> list[dict[str, Any]]:
@@ -299,7 +374,10 @@ def _dspace(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
 _HANDLERS: dict[str, Callable[[dict[str, Any], httpx.Client], FetchedDocument]] = {
     "who_don": _who_don,
     "wp_rest": _wp_rest,
+    "ecdc_event": _ecdc_event,
     "pdf_page": _pdf_page,
+    "pdf_url": _pdf_url,
+    "reliefweb_report": _reliefweb_report,
     "dspace": _dspace,
 }
 

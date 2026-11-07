@@ -1,0 +1,9 @@
+.curve-field { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; color: rgb(var(--color-teal)); opacity: .74; }
+.curve-field svg { display: block; width: 100%; height: 100%; }
+.curve-line { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: home-curve-draw 18s cubic-bezier(.45, 0, .22, 1) infinite; }
+.curve-line-a { stroke: rgb(var(--color-teal) / .62); stroke-width: 4; }
+.curve-line-b { stroke: rgb(var(--color-accent) / .42); stroke-width: 3; animation-delay: -8s; }
+.curve-annotation { position: absolute; right: max(1rem, calc((100vw - 1240px) / 2)); bottom: 1rem; max-width: calc(100% - 2rem); margin: 0; color: rgb(var(--text-muted)); font-size: .68rem; line-height: 1.4; text-align: right; }
+@keyframes home-curve-draw { 0% { stroke-dashoffset: 1; opacity: .3; } 35%, 80% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: .3; } }
+@media (max-width: 900px) { .curve-field { opacity: .56; } }
+@media (prefers-reduced-motion: reduce) { .curve-line { animation: none; stroke-dashoffset: 0; } }

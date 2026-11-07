@@ -160,6 +160,14 @@ def fetch(
                 _backoff(attempt)
                 continue
             response.raise_for_status()
+            # Some public archive caches intermittently return HTTP 200 with
+            # zero bytes. This is a transport failure, not a valid empty feed
+            # or a permanently unavailable PDF. Retry before parsing/capture.
+            if response.status_code == 200 and not response.content:
+                if attempt < attempts:
+                    _backoff(attempt)
+                    continue
+                raise httpx.ReadError("source returned an empty HTTP 200 response", request=response.request)
             from src.services.ingestion.capture import capture_sync, is_capturing
             if is_capturing():
                 response._content = capture_sync(response.content, str(response.url), response.headers.get("Content-Type", ""))

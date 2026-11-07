@@ -58,6 +58,7 @@ elif is_truthy "${GLOBALID_DASHBOARD_BUILD_ON_START:-0}"; then
 elif find \
   src \
   public \
+  ../shared \
   -type f \
   -newer ".next/BUILD_ID" \
   -print \
@@ -81,23 +82,40 @@ if [[ "$needs_build" == "1" ]]; then
   "$NPM_BIN" run build
 fi
 
-if [[ -f ".next/standalone/server.js" ]]; then
+# Preserve the server's Node options without applying preload hooks or opening
+# debugger ports in the supervisor too. The build above keeps its original env.
+if [[ ${NODE_OPTIONS+x} ]]; then
+  export GLOBALID_DASHBOARD_CHILD_NODE_OPTIONS="$NODE_OPTIONS"
+else
+  unset GLOBALID_DASHBOARD_CHILD_NODE_OPTIONS
+fi
+unset NODE_OPTIONS
+
+standalone_app=""
+standalone_entry="server.js"
+if [[ -f ".next/standalone/dashboard/server.js" ]]; then
+  standalone_app="dashboard"
+  standalone_entry="dashboard/server.js"
+fi
+
+if [[ -f ".next/standalone/$standalone_entry" ]]; then
   build_id="$(<.next/BUILD_ID)"
   release_root="$LOG_DIR/dashboard-web-releases"
   release_dir="$release_root/$build_id"
 
   mkdir -p "$release_root"
 
-  if [[ ! -f "$release_dir/server.js" ]]; then
+  if [[ ! -f "$release_dir/$standalone_entry" ]]; then
     staged_release="$(mktemp -d "$release_root/.staging.XXXXXX")"
     trap 'rm -rf "${staged_release:-}"' EXIT
 
     cp -a ".next/standalone/." "$staged_release/"
-    mkdir -p "$staged_release/.next"
-    cp -a ".next/static" "$staged_release/.next/static"
+    staged_app="$staged_release${standalone_app:+/$standalone_app}"
+    mkdir -p "$staged_app/.next"
+    cp -a ".next/static" "$staged_app/.next/static"
 
     if [[ -d "public" ]]; then
-      cp -a "public" "$staged_release/public"
+      cp -a "public" "$staged_app/public"
     fi
 
     mv "$staged_release" "$release_dir"
@@ -109,7 +127,12 @@ if [[ -f ".next/standalone/server.js" ]]; then
 
   export HOSTNAME="$DASHBOARD_HOST"
   export PORT="$DASHBOARD_PORT"
-  exec "$NODE_BIN" "$release_dir/server.js"
+  exec "$NODE_BIN" "$ROOT_DIR/scripts/dashboard_web_supervisor.cjs" \
+    "$NODE_BIN" "$release_dir/$standalone_entry"
 fi
 
-exec "$NPM_BIN" run start -- --hostname "$DASHBOARD_HOST" --port "$DASHBOARD_PORT"
+# package.json's start script is "next start". Invoke the same CLI directly so
+# the supervisor can wait for and, if necessary, stop the actual server process.
+exec "$NODE_BIN" "$ROOT_DIR/scripts/dashboard_web_supervisor.cjs" \
+  "$NODE_BIN" "$DASHBOARD_DIR/node_modules/next/dist/bin/next" start \
+  --hostname "$DASHBOARD_HOST" --port "$DASHBOARD_PORT"

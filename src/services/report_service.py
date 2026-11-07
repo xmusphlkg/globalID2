@@ -82,7 +82,9 @@ class ReportService:
         Raises on unrecoverable errors (caller handles via task_lifecycle).
         """
         from src.generation import ReportGenerator
+        from src.core.report_scope import require_report_country
 
+        country_code = require_report_country(country_code)
         language = "zh"
         report_layout = "report_v4"
 
@@ -681,11 +683,18 @@ class ReportService:
 
     @staticmethod
     def _is_reusable_v4_report(report: Report) -> bool:
+        from src.generation.report_v4.models import METHOD_VERSION
+        from src.generation.report_v4.peer_review import PROMPT_VERSION
+
         metadata = report.metadata_ if isinstance(report.metadata_, dict) else {}
+        document = metadata.get("report_document_v4") or {}
         return (
             metadata.get("report_layout") == "report_v4"
             and isinstance(metadata.get("report_document_v4"), dict)
             and (metadata.get("quality_gate") or {}).get("passed") is True
+            and metadata.get("method_version") == METHOD_VERSION
+            and (document.get("peer_review") or {}).get("prompt_version") == PROMPT_VERSION
+            and (document.get("peer_review") or {}).get("status") == "published"
         )
 
     @staticmethod

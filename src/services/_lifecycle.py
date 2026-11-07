@@ -89,6 +89,17 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
         if await task_manager.is_cancel_requested(task.task_uuid):
             raise TaskCancelledError("Cancellation requested by user")
         await task_manager.update_task_status(task.task_uuid, TaskStatus.COMPLETED)
+        if task.task_type == TaskType.EXPORT_DATA:
+            try:
+                await data_release_service.mark_automatic_retry_succeeded(task.task_uuid)
+            except Exception as exc:
+                # A metadata update must not turn a completed publication into
+                # a failed one or cause its remote side effects to repeat.
+                logger.warning(
+                    "Failed to finalize release retry metadata for {}: {}",
+                    task.task_uuid,
+                    exc,
+                )
         if task.task_type == TaskType.CRAWL_DATA:
             try:
                 await automation_service.mark_automatic_retry_succeeded(
@@ -100,6 +111,12 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
                     task.task_uuid,
                     exc,
                 )
+            try:
+                from src.services.report_schedule_service import report_schedule_service
+                await report_schedule_service.maybe_trigger_after_crawl(task)
+            except Exception as exc:
+                # The periodic scheduler remains a durable fallback.
+                logger.warning("Post-crawl report scheduling skipped for {}: {}", task.task_uuid, exc)
         try:
             await data_release_service.maybe_trigger_after_task_completion(task.task_uuid, task.task_type)
         except Exception as exc:

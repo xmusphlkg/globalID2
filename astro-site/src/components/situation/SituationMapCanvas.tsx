@@ -164,7 +164,8 @@ export default function SituationMapCanvas({
       else still.push(datum);
     }
 
-    const effect = (data: PlacedDatum[], period: number, scale: number) => ({
+    const effect = (id: string, data: PlacedDatum[], period: number, scale: number) => ({
+      id,
       type: 'effectScatter',
       coordinateSystem: 'geo',
       geoIndex: 0,
@@ -228,10 +229,10 @@ export default function SituationMapCanvas({
         regions: geoRegions,
       },
       series: [
-        fresh.length ? effect(fresh, 2.6, 3.2) : null,
-        recent.length ? effect(recent, 4.8, 2.2) : null,
+        fresh.length ? effect('fresh', fresh, 2.6, 3.2) : null,
+        recent.length ? effect('recent', recent, 4.8, 2.2) : null,
         still.length
-          ? { type: 'scatter', coordinateSystem: 'geo', geoIndex: 0, z: 3, data: still }
+          ? { id: 'still', type: 'scatter', coordinateSystem: 'geo', geoIndex: 0, z: 3, data: still }
           : null,
       ].filter(Boolean),
     };
@@ -273,6 +274,7 @@ export default function SituationMapCanvas({
       <ReactEChartsCore
         echarts={echarts}
         option={option}
+        replaceMerge={['series']}
         style={{ height: '100%', width: '100%' }}
         onEvents={events}
         onChartReady={(instance: any) => setChart(instance)}

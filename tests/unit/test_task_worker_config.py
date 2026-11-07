@@ -244,20 +244,20 @@ def test_knowledge_source_cap_stays_inside_the_general_lane():
     assert blocked == {TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES}
 
 
-def test_release_export_runs_beside_ai_review_and_excludes_collection_stores():
+def test_release_export_runs_beside_ai_review_and_collection_stores():
     blocked_by_release = task_worker._release_memory_blocked_task_types([TaskType.EXPORT_DATA])
-    assert TaskType.SYNC_LITERATURE in blocked_by_release
-    assert TaskType.UPDATE_DISEASE_KNOWLEDGE in blocked_by_release
+    assert TaskType.SYNC_LITERATURE not in blocked_by_release
+    assert TaskType.UPDATE_DISEASE_KNOWLEDGE not in blocked_by_release
     assert TaskType.ENRICH_LITERATURE not in blocked_by_release
     assert TaskType.AGENT_WORKFLOW not in blocked_by_release
     assert task_worker._release_memory_blocked_task_types([TaskType.ENRICH_LITERATURE]) == set()
     assert task_worker._release_memory_blocked_task_types([TaskType.AGENT_WORKFLOW]) == set()
     waiting = task_worker._release_memory_blocked_task_types([], release_waiting=True)
-    assert TaskType.SYNC_LITERATURE in waiting
-    assert TaskType.UPDATE_DISEASE_KNOWLEDGE in waiting
+    assert TaskType.SYNC_LITERATURE not in waiting
+    assert TaskType.UPDATE_DISEASE_KNOWLEDGE not in waiting
     assert TaskType.ENRICH_LITERATURE not in waiting
     assert TaskType.AGENT_WORKFLOW not in waiting
-    assert task_worker._release_memory_blocked_task_types([TaskType.CRAWL_DATA]) == {TaskType.EXPORT_DATA}
+    assert task_worker._release_memory_blocked_task_types([TaskType.CRAWL_DATA]) == set()
 
 
 def test_knowledge_task_disease_id_uses_single_task_resource():
@@ -308,6 +308,53 @@ def test_controlled_restart_requeues_only_resumable_tasks(monkeypatch):
         ("workbook", "knowledge-task"),
         ("requeue", "literature-sync"),
     ]
+
+
+def test_restart_interrupts_resumable_work_but_drains_active_crawl(monkeypatch):
+    calls = []
+
+    async def fake_requeue(task_uuid, owner, reason):
+        calls.append((task_uuid, owner))
+        return True
+
+    async def fake_workbook(*_args, **_kwargs):
+        pass
+
+    monkeypatch.setattr(task_worker.task_manager, "requeue_owned_task_lease", fake_requeue)
+    monkeypatch.setattr(task_worker.task_manager, "add_workbook_entry", fake_workbook)
+
+    async def exercise():
+        crawl_finished = asyncio.Event()
+        ai_started = asyncio.Event()
+        crawl_started = asyncio.Event()
+
+        async def ai_work():
+            ai_started.set()
+            await asyncio.Event().wait()
+
+        async def crawl_work():
+            crawl_started.set()
+            await crawl_finished.wait()
+            return "crawl completed"
+
+        ai = asyncio.create_task(ai_work())
+        crawl = asyncio.create_task(crawl_work())
+        await ai_started.wait()
+        await crawl_started.wait()
+        interrupted = await task_worker._interrupt_resumable_tasks_for_restart(
+            {ai, crawl},
+            {ai: "ai-task", crawl: "crawl-task"},
+            {ai: TaskType.ENRICH_LITERATURE, crawl: TaskType.CRAWL_DATA},
+            "worker-1",
+        )
+        assert interrupted == {ai}
+        assert ai.cancelled()
+        assert not crawl.done()
+        crawl_finished.set()
+        assert await crawl == "crawl completed"
+
+    asyncio.run(exercise())
+    assert calls == [("ai-task", "worker-1")]
 
 
 def test_controlled_restart_keeps_requested_cancellation_terminal(monkeypatch):

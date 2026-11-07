@@ -198,6 +198,7 @@ def runtime_vars(environment):
         "PUBLIC_BASE_URL": public_url,
         "ALLOWED_ORIGINS": allowed,
         "DEBUG_RETURN_TOKENS": "true" if debug_tokens else "false",
+        "DELIVERY_MODE": value("SUBSCRIPTIONS__DELIVERY_MODE", "pilot"),
         "PENDING_EXPIRY_DAYS": integer("SUBSCRIPTIONS__PENDING_EXPIRY_DAYS", 14, 1, 365),
         "SUBMISSION_RATE_LIMIT_PER_HOUR": integer("SUBSCRIPTIONS__SUBMISSION_RATE_LIMIT_PER_HOUR", 30, 1, 10_000),
         "CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES": integer("SUBSCRIPTIONS__CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES", 2, 1, 100),
@@ -206,8 +207,45 @@ def runtime_vars(environment):
         "SITUATION_ALERT_MAX_ATTEMPTS": integer("SUBSCRIPTIONS__SITUATION_ALERT_MAX_ATTEMPTS", 5, 1, 20),
         "SITUATION_ALERT_RETENTION_DAYS": integer("SUBSCRIPTIONS__SITUATION_ALERT_RETENTION_DAYS", 180, 7, 3650),
         "SITUATION_ALERT_AUTOMATED_POLICY_ENABLED": "true" if boolean("SUBSCRIPTIONS__SITUATION_ALERT_AUTOMATED_POLICY_ENABLED", False) else "false",
+        "RESEARCH_DIGEST_ENABLED": "true" if boolean("SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED", False) else "false",
+        "NOTICE_ALERTS_ENABLED": "true" if boolean("SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED", False) else "false",
+        "REPORT_DIGEST_ENABLED": "true" if boolean("SUBSCRIPTIONS__REPORT_DIGEST_ENABLED", False) else "false",
+        "SES_SNS_FEEDBACK_ENABLED": "true" if boolean("SUBSCRIPTIONS__SES_SNS_FEEDBACK_ENABLED", False) else "false",
+        "SES_SNS_TOPIC_ARN": value("SUBSCRIPTIONS__SES_SNS_TOPIC_ARN"),
         "SITUATION_PUBLIC_ORIGINS": situation_origins,
     }
+    if result["SES_SNS_FEEDBACK_ENABLED"] == "true" and re.fullmatch(
+        r"arn:(?:aws|aws-us-gov|aws-cn):sns:[a-z0-9-]+:[0-9]{12}:[A-Za-z0-9_-]{1,256}(?:\.fifo)?",
+        result["SES_SNS_TOPIC_ARN"],
+    ) is None:
+        raise SystemExit("SUBSCRIPTIONS__SES_SNS_TOPIC_ARN must be a single exact SNS topic ARN when feedback is enabled.")
+    if not is_local:
+        for flag, setting in (
+            ("RESEARCH_DIGEST_ENABLED", "SUBSCRIPTIONS__RESEARCH_DIGEST_START_WEEK"),
+            ("REPORT_DIGEST_ENABLED", "SUBSCRIPTIONS__REPORT_DIGEST_START_WEEK"),
+        ):
+            if result[flag] != "true":
+                continue
+            match = re.fullmatch(r"(\d{4})-W(\d{2})", value(setting))
+            try:
+                if not match:
+                    raise ValueError("invalid ISO week")
+                dt.date.fromisocalendar(int(match.group(1)), int(match.group(2)), 1)
+            except ValueError as exc:
+                raise SystemExit(f"{setting} must be a valid ISO week when {flag} is enabled.") from exc
+        if result["NOTICE_ALERTS_ENABLED"] == "true":
+            setting = "SUBSCRIPTIONS__NOTICE_ALERTS_START_DATE"
+            raw_date = value(setting)
+            try:
+                parsed = dt.date.fromisoformat(raw_date)
+                if parsed.isoformat() != raw_date:
+                    raise ValueError("noncanonical date")
+            except ValueError as exc:
+                raise SystemExit(f"{setting} must be YYYY-MM-DD when notices are enabled.") from exc
+    ses_set = value("SUBSCRIPTIONS__SMTP_SES_CONFIGURATION_SET")
+    if ses_set and re.fullmatch(r"[A-Za-z0-9_-]{1,64}", ses_set) is None:
+        raise SystemExit("SUBSCRIPTIONS__SMTP_SES_CONFIGURATION_SET is invalid.")
+    result["SMTP_SES_CONFIGURATION_SET"] = ses_set
     smtp_host = "" if is_local else value("SUBSCRIPTIONS__SMTP_HOST", value("AUTOMATION__SMTP_HOST"))
     smtp_from = "" if is_local else value("SUBSCRIPTIONS__SMTP_FROM_EMAIL", value("AUTOMATION__SMTP_FROM_EMAIL"))
     if smtp_host or smtp_from:
@@ -294,7 +332,7 @@ if target != "local":
     if queue_name:
         consumer = {
             "queue": queue_name,
-            "max_batch_size": 10,
+            "max_batch_size": 1,
             "max_batch_timeout": 5,
             "max_retries": 5,
             "retry_delay": 60,
@@ -497,9 +535,23 @@ sync_secret_any() {
 
 cd "$SUBSCRIPTIONS_DIR"
 
+# Wrangler prints a temporary bearer URL for D1 exports. Never copy it into
+# terminal/CI logs, and keep the SQL backup private even under a loose umask.
+secure_d1_export() (
+  umask 077
+  set -o pipefail
+  "$WRANGLER_BIN" d1 export "$SUBSCRIPTIONS__D1_DATABASE_NAME" -c "$GENERATED_CONFIG" \
+    --env "$1" --remote --output "$2" 2>&1 | python3 -u -c '
+import re, sys
+for line in sys.stdin:
+    sys.stdout.write(re.sub(r"https?://\S+", "[temporary URL redacted]", line))
+    sys.stdout.flush()
+'
+)
+
 case "${1:-}" in
   "")
-    echo "Usage: $0 <whoami|config-path [env]|dry-run env|startup env|migrate-local [persist-dir]|migration-plan env|backup-remote env [output]|migrate-remote env|sync-options-local|sync-options-remote env|sync-secrets env|deploy env>" >&2
+    echo "Usage: $0 <whoami|config-path [env]|dry-run env|startup env|migrate-local [persist-dir]|migration-plan env|backup-remote env [output]|migrate-remote env|sync-options-local|sync-options-remote env|sync-secrets env|sync-pilot env|deploy env>" >&2
     exit 1
     ;;
   whoami|login|logout)
@@ -509,12 +561,21 @@ case "${1:-}" in
     write_config "${2:-local}"
     printf '%s\n' "$GENERATED_CONFIG"
     ;;
+  sync-pilot)
+    target="${2:-}"
+    require_remote_target "$target"
+    require_remote_auth
+    require_gate SUBSCRIPTIONS__ALLOW_SECRET_SYNC "$target"
+    prepare_run_config "$target"
+    sync_secret_any PILOT_RECIPIENTS required "$target" AUTOMATION__ADMIN_EMAILS_RAW
+    ;;
   sync-secrets)
     target="${2:-}"
     require_remote_target "$target"
     require_remote_auth
     require_gate SUBSCRIPTIONS__ALLOW_SECRET_SYNC "$target"
     prepare_run_config "$target"
+    sync_secret_any PILOT_RECIPIENTS required "$target" AUTOMATION__ADMIN_EMAILS_RAW
     sync_secret TOKEN_SIGNING_SECRET SUBSCRIPTIONS__TOKEN_SIGNING_SECRET required "$target"
     sync_secret ADMIN_API_TOKEN SUBSCRIPTIONS__ADMIN_API_TOKEN required "$target"
     sync_secret SITUATION_ALERT_INGEST_TOKEN SUBSCRIPTIONS__SITUATION_ALERT_INGEST_TOKEN required "$target"
@@ -544,8 +605,7 @@ case "${1:-}" in
     mkdir -p "$backup_dir"
     backup_run_dir="$(mktemp -d "$backup_dir/${target}-pre-migration.XXXXXX")"
     backup_path="$backup_run_dir/backup.sql"
-    "$WRANGLER_BIN" d1 export "$SUBSCRIPTIONS__D1_DATABASE_NAME" -c "$GENERATED_CONFIG" \
-      --env "$target" --remote --output "$backup_path"
+    secure_d1_export "$target" "$backup_path"
     "$WRANGLER_BIN" d1 migrations apply "$SUBSCRIPTIONS__D1_DATABASE_NAME" \
       -c "$GENERATED_CONFIG" --env "$target" --remote
     printf 'Pre-migration export: %s\n' "$backup_path"
@@ -572,8 +632,7 @@ case "${1:-}" in
       backup_path="$backup_run_dir/backup.sql"
     fi
     mkdir -p "$(dirname "$backup_path")"
-    exec "$WRANGLER_BIN" d1 export "$SUBSCRIPTIONS__D1_DATABASE_NAME" \
-      -c "$GENERATED_CONFIG" --env "$target" --remote --output "$backup_path"
+    secure_d1_export "$target" "$backup_path"
     ;;
   sync-options-local)
     prepare_run_config local

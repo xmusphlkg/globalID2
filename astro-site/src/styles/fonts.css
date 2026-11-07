@@ -1,4 +1,8 @@
 /* One interface family keeps dense data pages visually coherent in every locale. */
+:root {
+  --font-interface: 'IBM Plex Sans', 'IBM Plex Sans Fallback', 'Noto Sans CJK SC', system-ui, sans-serif;
+}
+
 @font-face {
   font-family: 'IBM Plex Sans Fallback';
   src: local('Arial'), local('Liberation Sans');

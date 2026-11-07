@@ -7,6 +7,19 @@ import pandas as pd
 from src.generation.data_cleaner import infer_frequency, long_to_wide
 
 
+def test_period_aggregation_preserves_missing_totals_and_real_zero():
+    frame = pd.DataFrame({
+        "time": ["2026-01-01", "2026-01-02", "2026-02-01", "2026-02-02"],
+        "cases": ["0", None, "2", "3"],
+        "deaths": [None, "bad", None, None],
+        "incidence_rate": [2.0, 4.0, 6.0, 8.0],
+    })
+    wide = long_to_wide(frame, "monthly")
+    assert wide["cases"].tolist() == [0, 5]
+    assert wide["deaths"].isna().all()
+    assert wide["incidence_rate"].tolist() == [3.0, 7.0]
+
+
 def test_monthly_aggregation_normalizes_aware_timestamps_to_utc_without_warning():
     frame = pd.DataFrame(
         {

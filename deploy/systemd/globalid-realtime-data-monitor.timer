@@ -1,0 +1,11 @@
+[Unit]
+Description=Check realtime data publication every minute without notifications
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=globalid-realtime-data-monitor.service
+
+[Install]
+WantedBy=timers.target

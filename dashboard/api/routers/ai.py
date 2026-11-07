@@ -682,11 +682,7 @@ class RuntimeRouteOut(BaseModel):
     runtime_last_error: Optional[str] = None
     runtime_provider_capacity: int = 1
     runtime_provider_inflight: int = 0
-    runtime_provider_min_capacity: int = 1
     runtime_provider_max_capacity: int = 1
-    runtime_provider_auto_concurrency: bool = True
-    runtime_provider_success_streak: int = 0
-    runtime_provider_backoff_remaining_seconds: int = 0
     runtime_model_capacity: int = 1
     runtime_model_inflight: int = 0
 
@@ -1247,11 +1243,7 @@ async def list_runtime_routes():
     admission_fields = {
         "runtime_provider_capacity",
         "runtime_provider_inflight",
-        "runtime_provider_min_capacity",
         "runtime_provider_max_capacity",
-        "runtime_provider_auto_concurrency",
-        "runtime_provider_success_streak",
-        "runtime_provider_backoff_remaining_seconds",
     }
     for route in routes:
         worker_snapshot = provider_capacities.get(str(route.get("provider_id")))
@@ -1315,11 +1307,7 @@ async def list_runtime_routes():
             runtime_last_error=route.get("runtime_last_error"),
             runtime_provider_capacity=int(route.get("runtime_provider_capacity") or 1),
             runtime_provider_inflight=int(route.get("runtime_provider_inflight") or 0),
-            runtime_provider_min_capacity=int(route.get("runtime_provider_min_capacity") or 1),
             runtime_provider_max_capacity=int(route.get("runtime_provider_max_capacity") or 1),
-            runtime_provider_auto_concurrency=bool(route.get("runtime_provider_auto_concurrency", True)),
-            runtime_provider_success_streak=int(route.get("runtime_provider_success_streak") or 0),
-            runtime_provider_backoff_remaining_seconds=int(route.get("runtime_provider_backoff_remaining_seconds") or 0),
             runtime_model_capacity=int(route.get("runtime_model_capacity") or 1),
             runtime_model_inflight=int(route.get("runtime_model_inflight") or 0),
         )

@@ -26,7 +26,12 @@ function database(
       };
       return statement;
     },
-  };
+    async batch(statements: Array<{ run(): Promise<unknown> }>) {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      return results;
+    },
+  } as D1Database;
 }
 
 function validAlert() {
@@ -114,7 +119,7 @@ const baseDeps = {
 
 test("ingest authentication fails before parsing or querying D1", async () => {
   let queried = false;
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     DB: database(() => { queried = true; return null; }),
     SITUATION_ALERT_INGEST_TOKEN: "ingest-secret",
   };
@@ -130,7 +135,7 @@ test("ingest authentication fails before parsing or querying D1", async () => {
 
 test("ingest rejects an unknown automatic verification policy before writing to D1", async () => {
   let queried = false;
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     DB: database(() => { queried = true; return null; }),
     SITUATION_ALERT_INGEST_TOKEN: "ingest-secret",
   };
@@ -153,7 +158,7 @@ test("ingest rejects an unknown automatic verification policy before writing to 
 
 test("ingest rejects tiered automatic policy by default before writing to D1", async () => {
   let queried = false;
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     DB: database(() => { queried = true; return null; }),
     SITUATION_ALERT_INGEST_TOKEN: "ingest-secret",
   };
@@ -172,7 +177,7 @@ test("ingest rejects tiered automatic policy by default before writing to D1", a
 
 test("an explicit Worker flag lets calibrated automatic policy reach persistence", async () => {
   let queried = false;
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     DB: database(() => { queried = true; return null; }),
     SITUATION_ALERT_INGEST_TOKEN: "ingest-secret",
     SITUATION_ALERT_AUTOMATED_POLICY_ENABLED: "true",
@@ -194,7 +199,7 @@ test("ingest persists once, fans out with filter SQL, and falls back to the D1 o
   let insertedEventId = "";
   const queries: Array<{ query: string; binds: unknown[] }> = [];
   const payload = validAlert();
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     SITUATION_ALERT_INGEST_TOKEN: "ingest-secret",
     SITUATION_PUBLIC_ORIGINS: "https://globalinfectiousdisease.com",
     DB: database((query, operation, binds) => {
@@ -288,7 +293,7 @@ test("ingest persists once, fans out with filter SQL, and falls back to the D1 o
 
 test("an idempotency key cannot be reused for different alert content", async () => {
   let fannedOut = false;
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     SITUATION_ALERT_INGEST_TOKEN: "ingest-secret",
     DB: database((query, operation) => {
       if (query.includes("INSERT INTO situation_alert_deliveries")) fannedOut = true;
@@ -328,10 +333,10 @@ test("an idempotency key cannot be reused for different alert content", async ()
 test("outbox failure schedules an exponential retry and never logs an email address", async () => {
   const updates: unknown[][] = [];
   let transactionalMetadata = "";
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     PUBLIC_BASE_URL: "https://worker.example.test",
     DB: database((query, operation, binds) => {
-      if (operation === "all" && query.includes("SELECT id FROM situation_alert_deliveries")) {
+      if (operation === "all" && query.includes("SELECT d.id FROM situation_alert_deliveries")) {
         return { results: [{ id: "delivery-1" }] };
       }
       if (operation === "first" && query.includes("d.claim_token")) {
@@ -355,20 +360,20 @@ test("outbox failure schedules an exponential retry and never logs an email addr
       }
       if (operation === "run" && query.includes("SET status = ?, next_attempt_at")) updates.push(binds);
       if (operation === "run" && query.includes("INSERT INTO transactional_email_deliveries")) {
-        transactionalMetadata = String(binds[13]);
+        transactionalMetadata = String(binds[7]);
       }
       return operation === "all" ? { results: [] } : operation === "first" ? null : {};
     }),
   };
   const result = await processSituationAlertOutbox(env, {
     ...baseDeps,
-    async sendSmtpEmail() { throw new Error("temporary smtp failure"); },
+    async sendSmtpEmail() { throw new Error("DATA_END_rejected:450"); },
   });
   assert.equal(result.processed, 1);
   assert.equal(result.retried, 1);
   assert.equal(result.dead_letter, 0);
   assert.equal(updates[0]?.[0], "retry");
-  assert.equal(updates[0]?.[2], "temporary smtp failure");
+  assert.equal(updates[0]?.[2], "DATA_END_rejected:450");
   assert.equal(updates.flat().includes("private@example.test"), false);
   assert.deepEqual(JSON.parse(transactionalMetadata), {
     event_id: "event-1",
@@ -383,7 +388,7 @@ test("outbox failure schedules an exponential retry and never logs an email addr
 test("unsubscribe cancellation only changes queued or retrying Situation deliveries", async () => {
   let updateQuery = "";
   let updateBinds: unknown[] = [];
-  const env: Env = {
+  const env: Env = { DELIVERY_MODE: "full",
     DB: database((query, operation, binds) => {
       if (operation === "run") { updateQuery = query; updateBinds = binds; }
       return {};

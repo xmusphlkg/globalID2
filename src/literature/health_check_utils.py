@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections import Counter
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 
@@ -23,3 +24,26 @@ def _check(
         "observed": dict(observed),
         "threshold": dict(threshold or {}),
     }
+
+
+def _blocker_categories(blockers: Sequence[str]) -> dict[str, int]:
+    categories: Counter[str] = Counter()
+    patterns = (
+        ("bilingual", "bilingual_gate"),
+        ("classification", "classification"),
+        ("private fields", "private_data"),
+        ("integrity", "integrity"),
+        ("duplicate", "duplicate"),
+        ("peer-reviewed", "peer_review"),
+        ("preprint", "peer_review"),
+        ("signal", "surveillance_evidence"),
+        ("weekly brief", "weekly_brief"),
+        ("editorial", "editorial_gate"),
+        ("indexable", "editorial_gate"),
+        ("research domain", "classification"),
+    )
+    for blocker in blockers:
+        lowered = blocker.lower()
+        category = next((label for needle, label in patterns if needle in lowered), "other")
+        categories[category] += 1
+    return dict(sorted(categories.items()))

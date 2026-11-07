@@ -1,7 +1,7 @@
 ---
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../../../lib/seo';
-import { listMonths, weeksOfMonth } from '../../../utils/international';
+import SituationArchive from '../../../components/situation/SituationArchive';
 import { translateUi } from '../../../utils/i18n';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
@@ -9,10 +9,6 @@ const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : fr ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
-const months = listMonths().map(month => {
-  const weeks = weeksOfMonth(month);
-  return { month, weeks: weeks.length, alerts: weeks.reduce((sum, week) => sum + week.alerts, 0) };
-});
 const title = pick('Monthly situation archive', '每月态势归档', 'Archive mensuelle de la situation');
 const canonicalPath = `${prefix}/situation/monthly/`;
 const seo: SeoDocument = {
@@ -21,20 +17,14 @@ const seo: SeoDocument = {
   canonicalPath,
   locale,
   alternatePaths: buildAlternatePaths(canonicalPath, locale),
-  noindex: months.length === 0,
+  noindex: false,
 };
 ---
 
 <ReportLayout title={title} description={seo.description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation map', '态势地图', 'Carte de situation'), href: `${prefix}/situation/` }, { label: pick('Monthly archive', '每月归档', 'Archive mensuelle') }]}>
   <div class="archive max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
     <header><h1>{title}</h1></header>
-    {months.length ? (
-      <ol>
-        {months.map(({ month, weeks, alerts }) => (
-          <li><a href={`${prefix}/situation/monthly/${month}/`}><b>{month}</b><span>{weeks} {pick('weeks', '周', 'semaines')} · {alerts} {pick('alerts', '条警报', 'alertes')}</span></a></li>
-        ))}
-      </ol>
-    ) : <p class="empty">{pick('No month has been archived yet.', '尚无归档月份。', 'Aucun mois n’est encore archivé.')}</p>}
+    <SituationArchive client:load locale={locale} mode="monthly" />
   </div>
 </ReportLayout>
 

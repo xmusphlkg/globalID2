@@ -31,6 +31,8 @@ class ReportType(str, PyEnum):
     DAILY = "daily"  # 日报
     WEEKLY = "weekly"  # 周报
     MONTHLY = "monthly"  # 月报
+    QUARTERLY = "quarterly"  # 季报
+    ANNUAL = "annual"  # 年报
     SPECIAL = "special"  # 专题报告
 
 

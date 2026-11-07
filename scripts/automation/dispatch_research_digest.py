@@ -209,7 +209,11 @@ def _validated_findings(brief: Mapping[str, Any], public_origin: str) -> list[di
         article = article_by_id.get(article_id)
         if not isinstance(article, dict):
             raise DispatchError("cited_finding_article_missing")
-        if article.get("editorial_status") != "published" or article.get("content_tier") != "quality_gated_bilingual_evidence":
+        # Multilingual evidence is the same publication gate with an additional
+        # language; both satisfy the bilingual email contract below.
+        if article.get("editorial_status") != "published" or article.get("content_tier") not in {
+            "quality_gated_bilingual_evidence", "quality_gated_multilingual_evidence",
+        }:
             raise DispatchError("cited_finding_not_public_bilingual_evidence")
         if finding.get("provenance") != "published_bilingual_structured_summary":
             raise DispatchError("cited_finding_provenance_required")
@@ -319,26 +323,30 @@ def build_campaign_payload(
         article for article in brief.get("articles", [])
         if isinstance(article, dict) and str(article.get("article_id")) in cited_ids
     ]
-    diseases = _unique([
-        _slug(disease.get("slug"))
-        for article in cited_articles
-        for disease in (article.get("diseases") if isinstance(article.get("diseases"), list) else [])
-        if isinstance(disease, dict)
-    ])
-    countries = _unique([
-        str(country.get("code") or country.get("country_code") or "").strip().upper()
-        for article in cited_articles
-        for country in (article.get("countries") if isinstance(article.get("countries"), list) else [])
-        if isinstance(country, dict)
-    ])
-    topics = _unique([
-        _slug(topic.get("name"))
-        for article in cited_articles
-        for topic in (article.get("topics") if isinstance(article.get("topics"), list) else [])
-        if isinstance(topic, dict)
-    ])
-    study_types = _unique([_slug(article.get("study_type")) for article in cited_articles])
-    peer_statuses = _unique([_slug(article.get("peer_review_status")) for article in cited_articles])
+    # Keep dimensions together by article. A subscriber interested in China
+    # and measles must not match an issue that only contains China/influenza
+    # and US/measles. An absent dimension stays empty and cannot satisfy a
+    # subscriber who explicitly chose that dimension.
+    content_items = [{
+        "id": str(article["article_id"]),
+        "diseases": _unique([
+            _slug(disease.get("slug"))
+            for disease in (article.get("diseases") if isinstance(article.get("diseases"), list) else [])
+            if isinstance(disease, dict)
+        ]),
+        "countries": _unique([
+            str(country.get("code") or country.get("country_code") or "").strip().upper()
+            for country in (article.get("countries") if isinstance(article.get("countries"), list) else [])
+            if isinstance(country, dict)
+        ]),
+        "research_topics": _unique([
+            _slug(topic.get("name"))
+            for topic in (article.get("topics") if isinstance(article.get("topics"), list) else [])
+            if isinstance(topic, dict)
+        ]),
+        "study_types": _unique([_slug(article.get("study_type"))]),
+        "peer_review_statuses": _unique([_slug(article.get("peer_review_status"))]),
+    } for article in cited_articles]
 
     return {
         "idempotency_key": f"research-digest:{week}:{revision}",
@@ -364,11 +372,7 @@ def build_campaign_payload(
                 ),
             },
         },
-        "countries": countries,
-        "diseases": diseases,
-        "research_topics": topics,
-        "study_types": study_types,
-        "peer_review_statuses": peer_statuses,
+        "content_items": content_items,
         "created_by": "research-brief-dispatcher",
         "max_recipients": max_recipients,
     }
@@ -391,7 +395,7 @@ def _post_json(
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "User-Agent": "globalid-research-digest-dispatch/1",
+        "User-Agent": "GIDS-Release-Verifier/1.0",
     })
     try:
         with opener(request, timeout=timeout_seconds) as response:
@@ -414,6 +418,32 @@ def _post_json(
     return result
 
 
+def require_content_item_capability(
+    worker_base_url: str, *, timeout_seconds: float, opener: Callable[..., Any] = urlopen,
+) -> None:
+    """Do not send a new-filter payload to an older Worker that ignores it."""
+    request = Request(_endpoint(worker_base_url, "/health"), headers={
+        "Accept": "application/json", "Cache-Control": "no-cache", "User-Agent": "GIDS-Release-Verifier/1.0",
+    })
+    try:
+        with opener(request, timeout=timeout_seconds) as response:
+            status = int(getattr(response, "status", 0) or response.getcode())
+            raw = response.read(64 * 1024 + 1)
+    except HTTPError as exc:
+        raise DispatchError(f"worker_http_error:{exc.code}") from exc
+    except (URLError, socket.timeout, TimeoutError, OSError) as exc:
+        raise DispatchError(f"worker_transport_error:{type(exc).__name__}") from exc
+    if status < 200 or status >= 300 or len(raw) > 64 * 1024:
+        raise DispatchError("worker_capabilities_unavailable")
+    try:
+        health = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise DispatchError("worker_invalid_json_response") from exc
+    capabilities = health.get("capabilities") if isinstance(health, dict) else None
+    if not isinstance(capabilities, dict) or capabilities.get("research_content_items_v1") is not True:
+        raise DispatchError("worker_research_content_items_capability_required")
+
+
 def queue_campaign(
     worker_base_url: str,
     token: str,
@@ -424,6 +454,7 @@ def queue_campaign(
 ) -> dict[str, Any]:
     if not token:
         raise DispatchError("admin_token_required")
+    require_content_item_capability(worker_base_url, timeout_seconds=timeout_seconds, opener=opener)
     return _post_json(
         _endpoint(worker_base_url, CREATE_ROUTE), token, payload,
         timeout_seconds=timeout_seconds, opener=opener,

@@ -334,6 +334,18 @@ const test = base.extend<{ state: State }>({
   },
 });
 
+async function prepareAccessibilityAudit(page: Page) {
+  // Polling can enable controls during axe's asynchronous scan. Reduced-motion
+  // transitions still occupy a frame, so inspect static states throughout the
+  // audit. This changes no colors, opacity states, semantics, or axe rules.
+  await page.addStyleTag({ content: `
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  ` });
+}
+
 async function fitsViewport(page: Page) {
   const dimensions = await page.evaluate(() => ({
     viewport: innerWidth,
@@ -531,8 +543,8 @@ test("publication recovers a preflight error and submits only a release", async 
   await expect(
     page.locator("main").getByRole("alert").filter({ hasText: "Preflight unavailable" }),
   ).toHaveCount(0);
-  await page.getByLabel("Full generation").check();
-  await page.getByRole("button", { name: "Publish site-release" }).click();
+  await page.getByLabel("Rebuild static content").check();
+  await page.getByRole("button", { name: "Publish static site" }).click();
   await expect(
     page.getByRole("link", { name: "Open release run" }),
   ).toBeVisible();
@@ -541,7 +553,7 @@ test("publication recovers a preflight error and submits only a release", async 
       {
         path: "/publish/runs",
         method: "POST",
-        body: { job_id: "site-release", full: true },
+        body: { job_id: "site-release", full: true, reports_only: false, code_only: false },
       },
     ],
   );
@@ -565,14 +577,14 @@ test("empty states and failed reads remain navigable and recoverable", async ({
   state.pendingFails = true;
   await page.goto("/publish");
   await expect(
-    page.getByRole("button", { name: "Reload unpublished scopes" }),
+    page.getByRole("button", { name: "Reload static publication scopes" }),
   ).toBeVisible();
-  await expect(page.getByText("No unpublished changes.")).toHaveCount(0);
+  await expect(page.getByText("No pending changes for the static site.")).toHaveCount(0);
   state.pendingFails = false;
-  await page.getByRole("button", { name: "Reload unpublished scopes" }).click();
-  await expect(page.getByText("No unpublished changes.")).toBeVisible();
+  await page.getByRole("button", { name: "Reload static publication scopes" }).click();
+  await expect(page.getByText("No pending changes for the static site.")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Reload unpublished scopes" }),
+    page.getByRole("button", { name: "Reload static publication scopes" }),
   ).toHaveCount(0);
   await fitsViewport(page);
 });
@@ -646,19 +658,19 @@ test("incremental publication recovers a submission error", async ({ page, state
   await page.getByRole("button", { name: "Run preflight" }).click();
   await expect(page.getByRole("heading", { name: "Preflight results" })).toBeVisible();
   state.publishFails = true;
-  await page.getByRole("button", { name: "Publish site-release" }).click();
+  await page.getByRole("button", { name: "Publish static site" }).click();
   await expect(page.locator("main").getByRole("alert")).toContainText("Release temporarily unavailable");
   state.publishFails = false;
-  await page.getByRole("button", { name: "Publish site-release" }).click();
+  await page.getByRole("button", { name: "Publish static site" }).click();
   await expect(page.getByRole("link", { name: "Open release run" })).toBeVisible();
   await expect(page.locator("main").getByRole("alert")).toHaveCount(0);
   const mutations = state.requests.filter((request) => request.method === "POST");
   expect(mutations).toHaveLength(2);
   expect(mutations.every((request) => request.path === "/publish/runs")).toBe(true);
-  expect(mutations[1].body).toEqual({ job_id: "site-release", full: false });
-  await expect(page.getByRole("button", { name: "Publish site-release" })).toBeDisabled();
+  expect(mutations[1].body).toEqual({ job_id: "site-release", full: false, reports_only: false, code_only: false });
+  await expect(page.getByRole("button", { name: "Publish static site" })).toBeDisabled();
   state.releaseStatus = "failed";
-  await expect(page.getByRole("button", { name: "Publish site-release" })).toBeEnabled({ timeout: 12_000 });
+  await expect(page.getByRole("button", { name: "Publish static site" })).toBeEnabled({ timeout: 12_000 });
   await expect(page.getByRole("cell").filter({ hasText: /US.*JP/ })).toBeVisible();
 });
 
@@ -679,8 +691,8 @@ test("loading state is explicit and does not masquerade as empty", async ({ page
   state.empty = true;
   await page.goto("/publish");
   await expect(page.getByRole("status").filter({ hasText: /Loading/ })).toBeVisible();
-  await expect(page.getByText("No unpublished changes.")).toHaveCount(0);
-  await expect(page.getByText("No unpublished changes.")).toBeVisible();
+  await expect(page.getByText("No pending changes for the static site.")).toHaveCount(0);
+  await expect(page.getByText("No pending changes for the static site.")).toBeVisible();
 });
 
 test("keyboard navigation exposes all six workspaces and settings entries", async ({ page, state }, testInfo) => {
@@ -717,6 +729,7 @@ test("core control center pages meet automated accessibility checks", async ({ p
     await page.goto(path);
     await expect(page.locator("main h1")).toBeVisible();
     await expect(page.getByRole("status").filter({ hasText: /^Loading/ })).toHaveCount(0);
+    await prepareAccessibilityAudit(page);
     const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
     expect(result.violations, `${path} accessibility`).toEqual([]);
   }
@@ -762,10 +775,10 @@ test("a blocking preflight prevents release until checks pass", async ({ page, s
   await page.goto("/publish");
   await page.getByRole("button", { name: "Run preflight" }).click();
   await expect(page.getByText("Repository requires review")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Publish site-release" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Publish static site" })).toBeDisabled();
   state.preflightBlocked = false;
   await page.getByRole("button", { name: "Run preflight" }).click();
-  await expect(page.getByRole("button", { name: "Publish site-release" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Publish static site" })).toBeEnabled();
   await expect(page.getByText("Repository requires review")).toHaveCount(0);
   expect(state.requests.every((request) => request.method === "GET")).toBe(true);
 });
@@ -919,6 +932,7 @@ test("source pages and new workbenches meet automated accessibility checks", asy
     await expect(page.locator("main h1")).toBeVisible();
     await expect(page.locator("main").getByRole("status").filter({ hasText: /^Loading/ })).toHaveCount(0);
     if (path.includes("ingestion")) await page.getByRole("button", { name: "New collection run" }).click();
+    await prepareAccessibilityAudit(page);
     const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
     expect(result.violations, `${path} accessibility`).toEqual([]);
   }

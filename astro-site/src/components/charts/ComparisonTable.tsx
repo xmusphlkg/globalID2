@@ -24,7 +24,7 @@ interface DiseaseRow {
 }
 
 interface Props {
-  rows: DiseaseRow[];
+  rows?: DiseaseRow[];
   countryCode?: string;
   series?: Record<string, CountryDatasetSeriesEntry>;
   dataUrl?: string;
@@ -173,11 +173,18 @@ function Sparkline({
   );
 }
 
-export default function ComparisonTable({ rows, countryCode, series: initialSeries, dataUrl, initialLanguage = 'en' }: Props) {
+export default function ComparisonTable({ rows: initialRows, countryCode, series: initialSeries, dataUrl, initialLanguage = 'en' }: Props) {
   void countryCode;
   const hasInitialSeries = Boolean(initialSeries && Object.keys(initialSeries).length > 0);
   const remoteDataset = useCountryDataset(dataUrl, !hasInitialSeries);
   const series = initialSeries ?? remoteDataset.data?.disease_series;
+  const rows = useMemo<DiseaseRow[]>(() => series ? Object.values(series).map(entry => ({
+    disease_id: entry.disease_id, name_en: entry.name_en, name_zh: entry.name_zh ?? entry.name_en,
+    name_fr: entry.name_fr, category: entry.category ?? 'Other', slug: entry.slug ?? entry.disease_id.toLowerCase(),
+    total_cases: entry.total_cases ?? 0, total_deaths: entry.total_deaths ?? 0,
+    latest_cases: entry.latest_cases ?? 0, latest_deaths: entry.latest_deaths ?? 0,
+    incidence_rate: entry.incidence_rate, mortality_rate: entry.mortality_rate,
+  })) : (initialRows ?? []), [series, initialRows]);
   const [sortKey, setSortKey] = useState<SortKey>('total_cases');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [catFilter, setCatFilter] = useState<string>('All');

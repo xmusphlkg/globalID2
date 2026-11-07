@@ -169,6 +169,9 @@ export const STUDY_TYPE_LABELS: Record<string, Record<Lang, string>> = {
   'Outbreak investigation': { en: 'Outbreak investigation', zh: '暴发调查', fr: 'Enquête sur une flambée' },
   'Randomised controlled trial': { en: 'Randomised controlled trial', zh: '随机对照试验', fr: 'Essai contrôlé randomisé' },
   'Systematic review': { en: 'Systematic review', zh: '系统综述', fr: 'Revue systématique' },
+  'Meta-analysis': { en: 'Meta-analysis', zh: '荟萃分析', fr: 'Méta-analyse' },
+  Commentary: { en: 'Commentary', zh: '述评', fr: 'Commentaire' },
+  Preprint: { en: 'Preprint', zh: '预印本', fr: 'Prépublication' },
 };
 
 export const RESEARCH_TOPIC_LABELS: Record<string, Record<Lang, string>> = {
@@ -208,6 +211,7 @@ export const RESEARCH_FACET_LABELS: Record<string, Record<Lang, string>> = {
   Parasite: { en: 'Parasite', zh: '寄生虫', fr: 'Parasite' },
   Bacterium: { en: 'Bacterium', zh: '细菌', fr: 'Bactérie' },
   Fungus: { en: 'Fungus', zh: '真菌', fr: 'Champignon' },
+  Prion: { en: 'Prion', zh: '朊病毒', fr: 'Prion' },
   Children: { en: 'Children', zh: '儿童', fr: 'Enfants' },
   'Pregnant women': { en: 'Pregnant women', zh: '孕妇', fr: 'Femmes enceintes' },
   Infants: { en: 'Infants', zh: '婴儿', fr: 'Nourrissons' },

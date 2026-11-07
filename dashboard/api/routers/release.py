@@ -118,9 +118,9 @@ async def delete_data_release_job(job_id: str, db: AsyncSession = Depends(get_db
 
 
 @router.get("/releases/{job_id}/checks", response_model=DataReleaseChecksOut)
-async def get_data_release_checks(job_id: str):
+async def get_data_release_checks(job_id: str, code_only: bool = False):
     try:
-        result = await data_release_service.integration_checks(job_id)
+        result = await data_release_service.integration_checks(job_id, code_only=code_only)
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
     return DataReleaseChecksOut(

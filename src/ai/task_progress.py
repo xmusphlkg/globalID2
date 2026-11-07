@@ -67,8 +67,9 @@ def displayed_progress(
     """Progress the control panel should show.
 
     Agent workflows report model-call completion while they run, because those
-    tasks otherwise stay at 0 until the row is gone. A finished AI task reads
-    as 100. Other AI tasks keep the progress their own service already recorded.
+    tasks otherwise stay at 0 until the row is gone. Any completed task reads
+    as 100, including historical rows recorded before completion normalized it.
+    Other AI tasks keep the progress their own service already recorded.
     """
 
     stored_value = max(0, min(100, int(stored or 0)))
@@ -78,7 +79,7 @@ def displayed_progress(
     stages_done = stage_ratio(stages)
     if kind == "agent_workflow" and ratio is not None and state in _ACTIVE:
         return min(99, ratio)
-    if state == "completed" and kind in AI_TASK_TYPES and stored_value < 100:
+    if state == "completed":
         return 100
     if (
         kind == "agent_workflow"

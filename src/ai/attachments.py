@@ -7,7 +7,9 @@ this module decides, per model route, which one travels:
 1. ``extra_params.runtime_native_files`` on the route is an explicit operator
    override (``true`` or ``false``);
 2. a route that recently rejected a file is sent text until the block expires;
-3. otherwise a conservative capability guess: Anthropic routes and OpenAI
+3. ``extra_params.native_files_probe`` is the result of the model-center probe,
+   which sends a PDF carrying a random marker and checks the model reads it;
+4. otherwise a conservative capability guess: Anthropic routes and OpenAI
    models documented to read PDFs get the file, every other route gets text.
 
 A guess can be wrong, so a native request that the provider rejects as a file
@@ -38,9 +40,13 @@ BLOCK_SECONDS = 6 * 60 * 60
 _OPENAI_PDF_MODELS = re.compile(r"^(gpt-4o|gpt-4\.1|gpt-5|o1|o3|o4)", re.I)
 _REJECTION_STATUSES = {400, 413, 415, 422}
 _REJECTION_WORDS = re.compile(
-    r"(file|document|pdf|input_file|content[ _-]?type|media[ _-]?type|unsupported|multimodal|too large|page)",
+    r"(file|document|pdf|input_file|content[ _-]?type|media[ _-]?type|unsupported|unrecogni[sz]ed"
+    r"|invalid (?:chat )?message|multimodal|too large|page)",
     re.I,
 )
+PROBE_KEY = "native_files_probe"
+#: A stored probe result is trusted this long before the next health check repeats it.
+PROBE_TTL_SECONDS = 24 * 60 * 60
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,10 +103,71 @@ def route_accepts_native_files(route: Mapping[str, Any]) -> bool:
         return forced
     if LEDGER.blocked(route_key(route)):
         return False
+    probe = params.get(PROBE_KEY) if isinstance(params, Mapping) else None
+    if isinstance(probe, Mapping) and isinstance(probe.get("supported"), bool):
+        return probe["supported"]
     if str(route.get("api_style") or "").lower() == "anthropic":
         return True
     host = urlparse(str(route.get("base_url") or "")).hostname or ""
     return host == "api.openai.com" and bool(_OPENAI_PDF_MODELS.match(str(route.get("model_name") or "")))
+
+
+def route_accepts_page_images(route: Mapping[str, Any]) -> bool:
+    """Reserved: True when a PDF may be sent as rendered page images instead of text.
+
+    Some gateways drop PDF blocks but pass images. Nothing renders pages yet, so no
+    caller uses this; ``runtime_page_images`` is the operator override and the
+    probe may later record ``images`` next to ``supported``.
+    """
+
+    params = route.get("extra_params")
+    if not isinstance(params, Mapping):
+        return False
+    forced = params.get("runtime_page_images")
+    if isinstance(forced, bool):
+        return forced
+    probe = params.get(PROBE_KEY)
+    return isinstance(probe, Mapping) and probe.get("images") is True
+
+
+def probe_is_fresh(params: Mapping[str, Any] | None, *, now: float | None = None) -> bool:
+    """True when a stored probe result exists and is younger than the TTL."""
+
+    probe = params.get(PROBE_KEY) if isinstance(params, Mapping) else None
+    if not isinstance(probe, Mapping) or not isinstance(probe.get("supported"), bool):
+        return False
+    try:
+        checked = float(probe.get("checked_at_epoch"))
+    except (TypeError, ValueError):
+        return False
+    return (now if now is not None else time.time()) - checked < PROBE_TTL_SECONDS
+
+
+def build_probe_pdf(marker: str) -> bytes:
+    """A one-page PDF whose only text is ``marker`` (ASCII letters and digits)."""
+
+    if not re.fullmatch(r"[A-Za-z0-9]+", marker):
+        raise ValueError("probe marker must be alphanumeric")
+    stream = f"BT /F1 28 Tf 72 700 Td ({marker}) Tj ET".encode("ascii")
+    bodies = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
+        b"/Resources << /Font << /F1 5 0 R >> >> >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for number, body in enumerate(bodies, start=1):
+        offsets.append(len(out))
+        out += f"{number} 0 obj\n".encode() + body + b"\nendobj\n"
+    xref = len(out)
+    out += f"xref\n0 {len(bodies) + 1}\n".encode() + b"0000000000 65535 f \n"
+    for offset in offsets:
+        out += f"{offset:010d} 00000 n \n".encode()
+    out += f"trailer\n<< /Size {len(bodies) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode()
+    return bytes(out)
 
 
 def looks_like_file_rejection(error: BaseException) -> bool:
@@ -166,10 +233,15 @@ __all__ = [
     "Attachment",
     "LEDGER",
     "NATIVE_INPUT",
+    "PROBE_KEY",
+    "PROBE_TTL_SECONDS",
     "TEXT_INPUT",
     "as_native_content",
     "as_text",
+    "build_probe_pdf",
     "looks_like_file_rejection",
     "note_native_rejection",
+    "probe_is_fresh",
     "route_accepts_native_files",
+    "route_accepts_page_images",
 ]

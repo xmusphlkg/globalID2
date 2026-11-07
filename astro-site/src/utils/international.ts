@@ -1,5 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { jsonFileCache } from '../lib/json-file-cache.ts';
 import type {
   MonitoringProduct,
   OutbreakFile,
@@ -20,7 +21,7 @@ const PERIOD = /^\d{4}-W\d{2}$/;
 function readVersioned<T>(path: string): T | null {
   if (!existsSync(path)) return null;
   try {
-    const parsed = JSON.parse(readFileSync(path, 'utf-8'));
+    const parsed = jsonFileCache.read<any>(path);
     return parsed && parsed.schema_version === INTERNATIONAL_SCHEMA_VERSION ? (parsed as T) : null;
   } catch {
     return null;
@@ -77,7 +78,7 @@ function countryKeysForPage(pageSlug: string): string[] {
   const recordPath = resolve(COUNTRY_RECORD_DIR, `${pageSlug.toLowerCase()}.json`);
   if (existsSync(recordPath)) {
     try {
-      const record = JSON.parse(readFileSync(recordPath, 'utf-8')) as Record<string, unknown>;
+      const record = jsonFileCache.read<Record<string, unknown>>(recordPath);
       for (const field of ['iso2', 'iso3', 'alpha2', 'alpha3', 'code', 'country_code', 'iso_code']) {
         const value = record[field];
         if (typeof value === 'string' && value.trim()) keys.push(value.trim());

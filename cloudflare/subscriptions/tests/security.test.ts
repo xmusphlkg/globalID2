@@ -19,6 +19,13 @@ test("round-trips a signed subscription token", async () => {
   );
 });
 
+test("management tokens authenticate the subscription generation", async () => {
+  const token = await signSubscriptionToken(SECRET, "manage", "sub-123", 600, NOW, "generation-a");
+  assert.deepEqual(await verifySubscriptionToken(SECRET, token, "manage", NOW + 1000),
+    { subscriptionId: "sub-123", version: "generation-a" });
+  assert.equal(await verifySubscriptionToken(SECRET, token, "unsubscribe", NOW + 1000), null);
+});
+
 test("rejects wrong purpose, secret, tampering, and expiration", async () => {
   const token = await signSubscriptionToken(SECRET, "confirm", "sub-123", 600, NOW);
   assert.equal(await verifySubscriptionToken(SECRET, token, "unsubscribe", NOW), null);

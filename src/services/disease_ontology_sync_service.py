@@ -9,6 +9,40 @@ from typing import Any
 from src.ontology import DiseaseOntology
 
 
+async def restore_missing_registry_series(db, ontology: DiseaseOntology, series_codes: set[str], *, country_code: str) -> set[str]:
+    """Insert only requested, locally validated definitions in the caller's transaction.
+
+    Never overwrite reviewed database mappings or fabricate an unknown series.
+    The observation quality gate still rejects any unresolved dependency.
+    """
+    from sqlalchemy import select
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    from src.domain import DiseaseSurveillanceSeries
+
+    if not series_codes:
+        return set()
+    document = ontology.to_dict()
+    payload = build_disease_ontology_sync_payload(ontology)
+    rows = [
+        {**row, "metadata": {**row["metadata"], "registry_id": document["registry_id"]}}
+        for row in payload.surveillance_series
+        if row["series_code"] in series_codes and row["country_code"] == country_code
+    ]
+    if not rows:
+        return set()
+    table = DiseaseSurveillanceSeries.__table__
+    for offset in range(0, len(rows), 100):
+        await db.execute(
+            pg_insert(table).values(rows[offset:offset + 100])
+            .on_conflict_do_nothing(index_elements=["series_code"])
+        )
+    # Re-read after ON CONFLICT to include a concurrent worker's insertion.
+    result = await db.execute(select(table.c.series_code).where(
+        table.c.series_code.in_([row["series_code"] for row in rows])
+    ))
+    return set(result.scalars())
+
+
 @dataclass(frozen=True)
 class DiseaseOntologySyncPayload:
     """Database-shaped rows derived from one validated registry version."""

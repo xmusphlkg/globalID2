@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.core.database import get_db  # noqa: E402
+from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock  # noqa: E402
 from src.data.storage import (  # noqa: E402
     SeriesObservationQualityPolicy,
     SeriesObservationStore,
@@ -594,6 +595,10 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
     overrides = _input_overrides(args.input)
     saved: dict[str, Any] = {}
     async with get_db() as db:
+        # A reconstruction can span multiple countries. Take the exclusive
+        # maintenance gate before any per-country store call, never upgrade
+        # after already holding a shared country gate.
+        await acquire_disease_data_mutation_lock(db)
         for country_code, rows in sorted(ready_rows.items()):
             source_ids = {
                 report["source_id"]

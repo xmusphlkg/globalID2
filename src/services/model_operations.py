@@ -141,6 +141,10 @@ async def run_worker_operation(operation: str, arguments: dict[str, Any]) -> Any
 
 
 async def execute_model_operation(operation: str, arguments: dict[str, Any]) -> Any:
+    if operation == "literature_replay":
+        from src.literature.replay import execute_replay
+
+        return await execute_replay(arguments)
     if operation == "notification_translation":
         return await _translate_notification(arguments)
     if operation == "disease_audit":

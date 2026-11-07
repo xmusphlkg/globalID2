@@ -11,6 +11,7 @@ import unicodedata
 from collections import Counter
 from datetime import date, datetime, timezone
 from typing import Any, Iterable, Mapping, Optional
+from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import and_, func, inspect as sa_inspect, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -31,6 +32,7 @@ from src.domain import (
 )
 from src.ontology import load_disease_ontology
 from src.services.disease_mapping_config import load_reviewed_source_category_mappings
+from src.services.ingestion.stages import mark_dirty
 from src.services.settings_service import system_settings_service
 
 logger = get_logger(__name__)
@@ -1653,6 +1655,19 @@ class DiseaseMappingRegistryService:
                 select(DiseaseMappingRelease).where(DiseaseMappingRelease.status == "active")
             )
         ).scalars().all()
+        # A release may remove mappings without changing any observation. Read
+        # both sets before replacing the active release, including assertions
+        # no longer approved/canonical, so their old public curves are removed.
+        countries = (
+            await db.execute(
+                select(SourceDiseaseCategory.country_code)
+                .join(DiseaseMappingAssertion, DiseaseMappingAssertion.category_id == SourceDiseaseCategory.id)
+                .join(DiseaseMappingReleaseItem, DiseaseMappingReleaseItem.assertion_id == DiseaseMappingAssertion.id)
+                .where(DiseaseMappingReleaseItem.release_id.in_([release.id, *(item.id for item in current)]))
+                .distinct()
+            )
+        ).scalars().all()
+        parent_scopes = sorted({code.strip().upper().split("-", 1)[0] for code in countries})
         now = datetime.now(timezone.utc)
         for item in current:
             item.status = "superseded"
@@ -1660,6 +1675,11 @@ class DiseaseMappingRegistryService:
             release.supersedes_release_id = current[0].id
         release.status = "active"
         release.activated_at = now
+        # Activation has no collection task. Its stable event UUID identifies
+        # these coarse markers; the caller's transaction owns their lifetime.
+        event_uuid = str(uuid5(NAMESPACE_URL, f"globalid:mapping-release:{release.id}:{release.checksum}"))
+        for scope in parent_scopes:
+            await mark_dirty(db, line="surveillance", scope_key=scope, task_uuid=event_uuid)
         await db.flush()
         return release
 

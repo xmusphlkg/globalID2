@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import re
 from typing import Optional
 
 from sqlalchemy import func, select
@@ -65,9 +66,43 @@ async def record_stage(
 __all__ = ["next_attempt", "record_stage"]
 
 
-async def mark_dirty(db: AsyncSession, *, line: str, scope_key: str, task_uuid: str) -> None:
+async def mark_dirty(
+    db: AsyncSession, *, line: str, scope_key: str, task_uuid: str,
+    change_set: dict | None = None,
+) -> None:
     """Participate in the formal-row transaction; never commit independently."""
-    db.add(PublishDirty(line=line, scope_key=scope_key, source_task_uuid=task_uuid, marked_at=_now()))
+    db.add(PublishDirty(
+        line=line, scope_key=scope_key, source_task_uuid=task_uuid,
+        marked_at=_now(), change_set=change_set,
+    ))
+
+
+async def mark_observation_changes_dirty(
+    db: AsyncSession, *, result, scope_key: str, task_uuid: str,
+    conservative: bool = False,
+) -> None:
+    """Publish proven changes; keep unknown/legacy/deletion coverage conservative.
+
+    Each marker and its observations participate in the caller's transaction.
+    An empty, complete change list is the only evidence sufficient to skip it.
+    """
+    changes = getattr(result, "publication_changes", None)
+    grouped: dict[str, list[dict]] = {}
+    if changes is not None and not conservative:
+        for change in changes:
+            match = re.fullmatch(r"country:([A-Z]{2}(?:-[A-Z0-9]+)?):.+", change["geography_key"])
+            if match is None:
+                conservative = True
+                break
+            grouped.setdefault(match[1], []).append(change)
+    if changes is None or conservative:
+        await mark_dirty(db, line="surveillance", scope_key=scope_key, task_uuid=task_uuid)
+        return
+    for code, entries in sorted(grouped.items()):
+        await mark_dirty(
+            db, line="surveillance", scope_key=code, task_uuid=task_uuid,
+            change_set={"version": 1, "precise": True, "changes": entries},
+        )
 
 
 class StageRun:

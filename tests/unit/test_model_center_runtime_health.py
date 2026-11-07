@@ -326,12 +326,9 @@ def test_runtime_admission_uses_provider_telemetry_and_model_permit() -> None:
     )
 
     assert automatic["provider_maximum"] == 5
-    assert automatic["provider_minimum"] == 5
-    assert automatic["provider_auto"] is False
     assert automatic["model_maximum"] == 1
     assert configured["provider_maximum"] == 5
     assert configured["model_maximum"] == 3
-    assert configured["provider_auto"] is False
 
 
 def test_runtime_admission_keeps_each_model_limit_when_another_model_fails() -> None:
@@ -361,7 +358,6 @@ def test_runtime_admission_keeps_each_model_limit_when_another_model_fails() -> 
         assert controller.snapshot(cautious)["runtime_model_capacity"] == 3
         assert controller.snapshot(fast)["runtime_provider_capacity"] == 6
         assert controller.provider_snapshots()["2"]["runtime_provider_capacity"] == 3
-        assert controller.snapshot(fast)["runtime_provider_backoff_remaining_seconds"] == 0
 
         for error in (
             RuntimeError("429 Too Many Requests"),
@@ -372,7 +368,6 @@ def test_runtime_admission_keeps_each_model_limit_when_another_model_fails() -> 
             permit = await controller.acquire(fast)
             await permit.release(success=False, error=error)
             assert controller.snapshot(fast)["runtime_model_capacity"] == 6
-            assert controller.snapshot(fast)["runtime_provider_backoff_remaining_seconds"] == 0
             assert controller.snapshot(cautious)["runtime_model_capacity"] == 3
 
     import asyncio

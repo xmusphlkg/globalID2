@@ -1,13 +1,27 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
+import { resolve } from 'node:path';
 
 const siteUrl = process.env.GLOBALID_SITE_URL || process.env.SITE_URL || 'https://globalinfectiousdisease.com';
-const buildConcurrency = Number(process.env.GIDS_ASTRO_BUILD_CONCURRENCY ?? 2);
+const buildConcurrency = Number(process.env.GIDS_ASTRO_BUILD_CONCURRENCY ?? 8);
 if (!Number.isInteger(buildConcurrency) || buildConcurrency < 1 || buildConcurrency > 8) {
   throw new Error('GIDS_ASTRO_BUILD_CONCURRENCY must be an integer from 1 to 8');
 }
 
+// Each parallel prerender worker has its own module cache and parses the full
+// research corpus. Keep a single shared cache unless explicitly configured.
+const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 0);
+if (!Number.isInteger(renderWorkers) || renderWorkers < 0 || renderWorkers > 32) {
+  throw new Error('GIDS_ASTRO_RENDER_WORKERS must be an integer from 0 to 32');
+}
 export default defineConfig({
+  experimental: { parallelPrerender: renderWorkers ? { workers: renderWorkers } : false },
+  ...(process.env.GIDS_BUILD_PUBLIC_DIR ? { publicDir: resolve(process.env.GIDS_BUILD_PUBLIC_DIR) } : {}),
+  ...(process.env.GIDS_REPORTS_BUILD_DIR ? {
+    srcDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'src'),
+    publicDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'public'),
+    outDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'dist'),
+  } : {}),
   site: siteUrl,
   output: 'static',
   compressHTML: true,
@@ -86,6 +100,9 @@ export default defineConfig({
       rollupOptions: {
         output: {
           manualChunks(id) {
+            // Country and disease pages share source cards, downloads and chart
+            // citations. Keep their repeated UI copy in one cacheable asset.
+            if (/(?:SurveillanceDownloads|SurveillanceSources|RuntimeChartSource)\.tsx$/.test(id)) return 'surveillance-sources';
             // ECharts shares zrender across every feature registry. Keeping it
             // as a stable cacheable vendor chunk prevents the shared graph
             // from collapsing back into a >500 kB monolith.

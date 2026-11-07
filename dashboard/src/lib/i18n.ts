@@ -4,9 +4,11 @@ import { scopeMessages } from "@/features/operations/scope-messages";
 import { modelsPublishMessages } from "@/features/control-plane/models-publish-messages";
 import { collectionMessages } from "@/features/control-plane/collection-messages";
 import { controlMessages } from "./control-messages";
+import { realtimePublishMessages } from "@/features/realtime-publish/messages";
 
 const dict = {
   en: {
+    rt_nav: realtimePublishMessages.en.rt_nav,
     ...workflowMessages.en,
     ...sourceMessages.en,
     ...scopeMessages.en,
@@ -217,6 +219,7 @@ const dict = {
     disease_mapping: "Disease Mapping",
   },
   zh: {
+    rt_nav: realtimePublishMessages.zh.rt_nav,
     ...workflowMessages.zh,
     ...sourceMessages.zh,
     ...scopeMessages.zh,

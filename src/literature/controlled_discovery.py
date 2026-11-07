@@ -9,15 +9,18 @@ network call and returned record is subject to a hard cap.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
-from datetime import datetime
 import hashlib
 import json
 import re
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from typing import Any
 
+import httpx
 
-CHECKPOINT_SCHEMA = "literature_controlled_discovery.v1"
+CHECKPOINT_SCHEMA = "literature_controlled_discovery.v2"
+_LEGACY_CHECKPOINT_SCHEMA = "literature_controlled_discovery.v1"
 _SPACE_RE = re.compile(r"\s+")
 _NON_CONCEPT_DISEASE_IDS = {"D999"}
 _NON_CONCEPT_DISEASE_NAMES = {"all", "other", "total", "unknown", "unspecified"}
@@ -154,7 +157,9 @@ def build_controlled_query_batches(
         row = pathogen_rows[pathogen_id]
         if not isinstance(row, dict):
             continue
-        terms = _unique_terms([row.get("name"), *(row.get("aliases") or [])], limit=limit)
+        terms = _unique_terms(
+            [row.get("name"), *(row.get("aliases") or [])], limit=limit
+        )
         pathogen = _batch(
             query_id=f"pathogen:{pathogen_id.removeprefix('pathogen:')}",
             categories=("pathogen", "mesh"),
@@ -216,7 +221,8 @@ def select_controlled_query_batches(
     fingerprint = _plan_fingerprint(batches)
     valid_checkpoint = bool(
         isinstance(checkpoint, dict)
-        and checkpoint.get("schema_version") == CHECKPOINT_SCHEMA
+        and checkpoint.get("schema_version")
+        in {CHECKPOINT_SCHEMA, _LEGACY_CHECKPOINT_SCHEMA}
         and checkpoint.get("plan_fingerprint") == fingerprint
     )
     previous = checkpoint if valid_checkpoint else {}
@@ -230,8 +236,13 @@ def select_controlled_query_batches(
     ]
     selected: list[ControlledQueryBatch] = []
     selected_ids: set[str] = set()
+    # Reserve rotation capacity so a permanently failing query cannot starve
+    # the rest of the catalogue. With one slot, alternate retries and rotation.
+    retry_cap = max(1, cap // 2) if cap else 0
+    if cap == 1 and previous.get("retry_only_last_run"):
+        retry_cap = 0
     for query_id in retry_ids:
-        if len(selected) >= cap:
+        if len(selected) >= retry_cap:
             break
         selected.append(by_id[query_id])
         selected_ids.add(query_id)
@@ -255,9 +266,11 @@ def select_controlled_query_batches(
         "plan_fingerprint": fingerprint,
         "plan_size": len(batches),
         "start_offset": offset,
-        "next_offset": next_offset,
+        "next_offset": cursor if new_count else next_offset,
         "selected_query_ids": [batch.query_id for batch in selected],
-        "selected_categories": sorted({category for batch in selected for category in batch.categories}),
+        "selected_categories": sorted(
+            {category for batch in selected for category in batch.categories}
+        ),
         "selected_queries": [
             {
                 "query_id": batch.query_id,
@@ -270,9 +283,27 @@ def select_controlled_query_batches(
             for batch in selected
         ],
         "retry_query_ids": [],
+        "retry_only_last_run": bool(selected and new_count == 0),
         "query_errors": [],
     }
     return selected, state
+
+
+def _utc(value: datetime) -> datetime:
+    return (
+        value.astimezone(timezone.utc)
+        if value.tzinfo
+        else value.replace(tzinfo=timezone.utc)
+    )
+
+
+def _checkpoint_time(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return _utc(datetime.fromisoformat(str(value).replace("Z", "+00:00")))
+    except (TypeError, ValueError):
+        return None
 
 
 async def fetch_controlled_discovery(
@@ -325,79 +356,193 @@ async def fetch_controlled_discovery(
             request_caps[index] += 1
             remaining_budget -= 1
 
+    from .clients.search_page import SearchPage
+
+    previous = (
+        checkpoint
+        if isinstance(checkpoint, dict)
+        and checkpoint.get("schema_version")
+        in {CHECKPOINT_SCHEMA, _LEGACY_CHECKPOINT_SCHEMA}
+        else {}
+    )
+    baseline = _checkpoint_time(previous.get("initial_since")) or _utc(since)
+    state["initial_since"] = baseline.isoformat()
+    state["legacy_coverage_unknown"] = bool(
+        previous.get("legacy_coverage_unknown")
+        or previous.get("schema_version") == _LEGACY_CHECKPOINT_SCHEMA
+    )
+    previous_queries = previous.get("query_states") or {}
+    query_states: dict[str, Any] = {}
+    for batch in batches:
+        fingerprint = _plan_fingerprint([batch])
+        old = previous_queries.get(batch.query_id, {})
+        query_states[batch.query_id] = (
+            {
+                **old,
+                "providers": {
+                    key: dict(value) for key, value in old.get("providers", {}).items()
+                },
+            }
+            if isinstance(old, dict) and old.get("fingerprint") == fingerprint
+            else {
+                "fingerprint": fingerprint,
+                "providers": {},
+                "initial_since": baseline.isoformat(),
+            }
+        )
+    state["query_states"] = query_states
+
     calls: list[
         tuple[
             ControlledQueryBatch,
             str,
             int,
-            Callable[[], Awaitable[list[dict[str, Any]]]],
+            dict[str, Any],
+            Callable[[], Awaitable[SearchPage]],
         ]
     ] = []
+    clients = {"crossref": crossref, "europe_pmc": europe_pmc, "pubmed": pubmed}
     for (batch, provider), request_cap in zip(call_specs, request_caps, strict=True):
-        if provider == "crossref":
-            async def request_crossref(
-                current: ControlledQueryBatch = batch,
-                cap: int = request_cap,
-            ) -> list[dict[str, Any]]:
-                return await crossref.search_works(
-                    query=str(current.crossref_query or ""),
-                    since=since,
-                    until=until,
-                    max_records=cap,
-                )
+        query_state = query_states[batch.query_id]
+        provider_state = dict(query_state["providers"].get(provider) or {})
+        window_from = _checkpoint_time(provider_state.get("window_from"))
+        window_until = _checkpoint_time(provider_state.get("window_until"))
+        if window_from is None or window_until is None:
+            window_from = _checkpoint_time(provider_state.get("next_from")) or baseline
+            # These discovery APIs filter publication dates, not index time.
+            # An inclusive overlap rechecks the last covered day for late rows.
+            window_from = window_from.replace(hour=0, minute=0, second=0, microsecond=0)
+            window_until = min(_utc(until), window_from + timedelta(days=30))
+            window_until = max(window_until, window_from)
+            provider_state.update(
+                window_from=window_from.isoformat(),
+                window_until=window_until.isoformat(),
+                cursor=None,
+            )
+        size = min(100, request_cap)
+        # Cursor requests must keep the original parameters, including rows.
+        # A smaller configured budget restarts this fixed window safely.
+        if provider_state.get("page_size", size) > size:
+            provider_state["cursor"] = None
+        size = min(size, int(provider_state.get("page_size") or size))
+        provider_state["page_size"] = size
+        query_state["providers"][provider] = provider_state
+        method_name = "search_works" if provider == "crossref" else "search_recent"
+        client = clients[provider]
+        query = str(getattr(batch, f"{provider}_query") or "")
+        page_cursor = provider_state.get("cursor")
 
-            calls.append((batch, provider, request_cap, request_crossref))
-        elif provider == "europe_pmc":
-            async def request_europe_pmc(
-                current: ControlledQueryBatch = batch,
-                cap: int = request_cap,
-            ) -> list[dict[str, Any]]:
-                return await europe_pmc.search_recent(
-                    query=str(current.europe_pmc_query or ""),
-                    since=since,
-                    until=until,
-                    max_records=cap,
-                )
+        async def request(
+            current_client: Any = client,
+            current_method: str = method_name,
+            current_query: str = query,
+            start: datetime = window_from,
+            end: datetime = window_until,
+            cap: int = size,
+            cursor: Any = page_cursor,
+        ) -> SearchPage:
+            page_method = getattr(current_client, current_method + "_page", None)
+            arguments = {
+                "query": current_query,
+                "since": start,
+                "until": end,
+                "max_records": cap,
+            }
+            if callable(page_method):
+                return await page_method(**arguments, cursor=cursor)
+            # Compatibility for custom adapters: a capped list cannot prove
+            # completeness. Keep its window pending instead of skipping rows.
+            rows = await getattr(current_client, current_method)(**arguments)
+            return SearchPage(
+                rows[:cap], next_cursor="unpaged" if len(rows) >= cap else None
+            )
 
-            calls.append((batch, provider, request_cap, request_europe_pmc))
-        else:
-            async def request_pubmed(
-                current: ControlledQueryBatch = batch,
-                cap: int = request_cap,
-            ) -> list[dict[str, Any]]:
-                return await pubmed.search_recent(
-                    query=str(current.pubmed_query or ""),
-                    since=since,
-                    until=until,
-                    max_records=cap,
-                )
-
-            calls.append((batch, provider, request_cap, request_pubmed))
+        calls.append((batch, provider, size, provider_state, request))
 
     semaphore = asyncio.Semaphore(max(1, int(concurrency)))
 
-    async def execute_call(call: Callable[[], Awaitable[list[dict[str, Any]]]]) -> Any:
+    async def execute_call(call: Callable[[], Awaitable[SearchPage]]) -> Any:
         async with semaphore:
             try:
                 return await call()
-            except Exception as exc:  # A secondary source must not block the whitelist sync.
+            except Exception as exc:  # noqa: BLE001 - optional providers are isolated and checkpointed.
                 return exc
 
-    results = await asyncio.gather(*(execute_call(call) for _, _, _, call in calls))
+    tasks = [asyncio.create_task(execute_call(call)) for _, _, _, _, call in calls]
+    try:
+        results = await asyncio.gather(*tasks)
+    except BaseException:
+        for pending in tasks:
+            pending.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
     crossref_records: list[dict[str, Any]] = []
     europe_pmc_records: list[dict[str, Any]] = []
     pubmed_records: list[dict[str, Any]] = []
-    failed_ids: set[str] = set()
-    errors: list[dict[str, str]] = []
-    for (batch, provider, request_cap, _), result in zip(calls, results, strict=True):
+    # Preserve retry obligations not selected in this bounded run.
+    selected_ids = {batch.query_id for batch in selected}
+    failed_ids = {
+        str(value)
+        for value in previous.get("retry_query_ids") or []
+        if str(value) in query_states and str(value) not in selected_ids
+    }
+    errors: list[dict[str, str]] = [
+        dict(error)
+        for error in previous.get("query_errors") or []
+        if isinstance(error, dict) and error.get("query_id") in failed_ids
+    ]
+    pending_pages = 0
+    for (batch, provider, request_cap, provider_state, _), result in zip(
+        calls, results, strict=True
+    ):
+        if isinstance(result, SearchPage) and len(result.records) > request_cap:
+            result = ValueError("Discovery provider exceeded the requested page size")
+        if isinstance(result, SearchPage) and result.split_required:
+            start = _checkpoint_time(provider_state["window_from"])
+            end = _checkpoint_time(provider_state["window_until"])
+            days = (end.date() - start.date()).days
+            if days:
+                provider_state["window_until"] = (
+                    start + timedelta(days=days // 2)
+                ).isoformat()
+                provider_state["cursor"] = None
+                pending_pages += 1
+                continue
+            result = ValueError("PubMed daily discovery window exceeds 10000 records")
         if isinstance(result, Exception):
+            if (
+                provider_state.get("cursor") is not None
+                and isinstance(result, httpx.HTTPStatusError)
+                and result.response.status_code in {400, 404, 410}
+                and "cursor" in result.response.text[:4096].lower()
+            ):
+                # A rejected token must not strand the same window forever.
+                # Replay that window; idempotent persistence absorbs duplicates.
+                provider_state["cursor"] = None
             failed_ids.add(batch.query_id)
-            errors.append({
-                "query_id": batch.query_id,
-                "provider": provider,
-                "error": str(result)[:500],
-            })
+            provider_state["last_error"] = type(result).__name__
+            errors.append(
+                {
+                    "query_id": batch.query_id,
+                    "provider": provider,
+                    "error": str(result)[:500],
+                }
+            )
             continue
+        provider_state.pop("last_error", None)
+        if result.next_cursor is not None:
+            provider_state["cursor"] = result.next_cursor
+            pending_pages += 1
+        else:
+            provider_state["completed_through"] = provider_state.pop("window_until")
+            covered = _checkpoint_time(provider_state["completed_through"])
+            next_from = covered.replace(hour=0, minute=0, second=0, microsecond=0)
+            if covered.date() < _utc(until).date():
+                next_from += timedelta(days=1)
+            provider_state["next_from"] = next_from.isoformat()
+            provider_state.pop("window_from", None)
+            provider_state.pop("cursor", None)
+            provider_state.pop("page_size", None)
         destination = (
             crossref_records
             if provider == "crossref"
@@ -405,7 +550,7 @@ async def fetch_controlled_discovery(
             if provider == "europe_pmc"
             else pubmed_records
         )
-        for raw in result[:request_cap]:
+        for raw in result.records[:request_cap]:
             if not isinstance(raw, dict):
                 continue
             record = dict(raw)
@@ -418,19 +563,33 @@ async def fetch_controlled_discovery(
             }
             destination.append(record)
 
-    state.update({
-        "retry_query_ids": sorted(failed_ids),
-        "query_errors": errors,
-        "network_calls": len(calls),
-        "records_requested": sum(cap for _, _, cap, _ in calls),
-        "records_returned": len(crossref_records) + len(europe_pmc_records) + len(pubmed_records),
-        "crossref_records": len(crossref_records),
-        "europe_pmc_records": len(europe_pmc_records),
-        "pubmed_records": len(pubmed_records),
-        "max_queries": max_queries,
-        "records_per_query": records_per_query,
-        "max_records": max_records,
-    })
+    state.update(
+        {
+            "retry_query_ids": sorted(failed_ids),
+            "query_errors": errors,
+            "network_calls": len(calls),
+            "records_requested": sum(cap for _, _, cap, _, _ in calls),
+            "pending_pages": pending_pages,
+            "pending_provider_windows": sum(
+                "window_from" in provider
+                for query in query_states.values()
+                for provider in query["providers"].values()
+            ),
+            "unvisited_queries": sum(
+                not query["providers"] for query in query_states.values()
+            ),
+            "coverage_basis": "per_query_provider_publication_window",
+            "records_returned": len(crossref_records)
+            + len(europe_pmc_records)
+            + len(pubmed_records),
+            "crossref_records": len(crossref_records),
+            "europe_pmc_records": len(europe_pmc_records),
+            "pubmed_records": len(pubmed_records),
+            "max_queries": max_queries,
+            "records_per_query": records_per_query,
+            "max_records": max_records,
+        }
+    )
     return ControlledDiscoveryResult(
         crossref_records=crossref_records,
         europe_pmc_records=europe_pmc_records,

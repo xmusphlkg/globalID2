@@ -10,6 +10,7 @@ interface Props {
   focusDiseaseId?: string;
 }
 import { normalizeDiseaseHref } from '../../lib/seo';
+import { siteHref } from '../../lib/papers';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedDynamicText, localizedRegionName, localizedResearchTopic, localizedStudyType } from '../../utils/i18n';
 
@@ -119,7 +120,7 @@ const whyItMattersFr = localizedDynamicText('fr', {
     {article.doi && <a class="research-card-doi" href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">DOI {article.doi} ↗</a>}
   </div>
 
-  <h3 class="research-card-title"><a href={`${prefix}/research/articles/${article.slug}/`}>{article.title}</a></h3>
+  <h3 class="research-card-title"><a href={siteHref(`${prefix}/research/articles/${article.slug}/`)}>{article.title}</a></h3>
   {authorLineEn && <p class="research-card-authors">{zh ? authorLineZh : fr ? authorLineFr : authorLineEn}</p>}
   <p class="research-card-source">
     <span>{article.journal ?? (zh ? '期刊信息暂缺' : fr ? 'Revue indisponible' : 'Journal unavailable')}</span>

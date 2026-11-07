@@ -35,6 +35,7 @@ def _healthy_source_counts() -> dict[str, int]:
     # execution evidence used by the health check.
     return {
         "crossref_fetched": 0,
+        "crossref_source_errors": 0,
         "source_records_seen": 0,
         "source_records_returned": 0,
         "europe_pmc_enriched": 0,
@@ -230,6 +231,7 @@ def test_enabled_sources_accept_explicit_zero_record_success_for_every_contract(
 @pytest.mark.parametrize(
     ("source", "counter"),
     [
+        ("crossref", "crossref_source_errors"),
         ("europe-pmc", "europe_pmc_errors"),
         ("openalex", "openalex_errors"),
         ("unpaywall", "unpaywall_errors"),
@@ -778,7 +780,10 @@ def test_cli_stdout_is_exactly_one_json_document_without_log_noise(tmp_path) -> 
 
 
 @pytest.mark.asyncio
-async def test_collector_issues_selects_only(tmp_path) -> None:
+@pytest.mark.parametrize("streamed", [False, True])
+async def test_collector_issues_selects_only(tmp_path, monkeypatch, streamed) -> None:
+    if streamed:
+        monkeypatch.setattr("src.literature.health_snapshot._MAX_RELEASE_BYTES", 1)
     from sqlalchemy import create_engine, event
     from sqlalchemy.orm import Session
     from sqlalchemy.pool import StaticPool
@@ -838,6 +843,12 @@ async def test_collector_issues_selects_only(tmp_path) -> None:
         )
 
     assert snapshot.release_read_status == "ok"
+    if streamed:
+        assert snapshot.release_payload is None
+        assert snapshot.release_metrics["article_count"] == 1
+        assert snapshot.release_metrics["blocker_count"] == 0
+    else:
+        assert snapshot.release_metrics is None
     assert snapshot.backfill_read_status == "ok"
     assert snapshot.current_review_link_count == 0
     assert len(statements) == 7

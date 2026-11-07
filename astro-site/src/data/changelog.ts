@@ -26,6 +26,282 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.18.0',
+    date: '2026-11-07',
+    titleEn: 'Independent live data updates',
+    titleZh: '数据独立实时更新',
+    titleFr: 'Actualisation indépendante des données',
+    summaryEn: 'Surveillance corrections and reviewed Situation updates publish independently of website builds, with consistent data versions and automatic recovery.',
+    summaryZh: '监测数据修订与已审核的态势更新独立发布，无需等待站点重建，并保持数据版本一致与失败自动恢复。',
+    summaryFr: 'Les corrections de surveillance et les mises à jour Situation validées sont publiées indépendamment de la compilation du site, avec des versions cohérentes et une reprise automatique.',
+    sections: [
+      {
+        kind: 'new', labelEn: 'New', labelZh: '新增', labelFr: 'Nouveautés',
+        items: [{
+          en: 'New surveillance observations and reviewed Situation signals trigger their own data publication. Regular updates no longer wait for the daily website release.',
+          zh: '新增监测观测与已审核的态势信号触发独立数据发布，日常更新无需等待每日站点发布。',
+          fr: 'Les nouvelles observations de surveillance et les signaux Situation validés déclenchent leur propre publication, sans attendre la publication quotidienne du site.',
+        }],
+      },
+      {
+        kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations',
+        items: [{
+          en: 'Updates recalculate affected countries and diseases while reusing completed data. Each view keeps its summaries, charts and details on a consistent version.',
+          zh: '数据更新只重新计算受影响的国家和疾病，复用已完成数据；每个视图中的摘要、图表与详情保持版本一致。',
+          fr: 'Les actualisations recalculent les pays et maladies concernés et réutilisent les données déjà préparées. Les résumés, graphiques et détails de chaque vue restent sur une version cohérente.',
+        }, {
+          en: 'Publication failures retain the previous complete data version. Bounded retries and queue monitoring help recover delayed updates.',
+          zh: '发布失败时保留上一完整数据版本，通过有界重试与队列监测恢复延迟的更新。',
+          fr: 'En cas d’échec de publication, la version complète précédente reste disponible. Des tentatives limitées et le suivi des files facilitent la reprise des mises à jour retardées.',
+        }],
+      },
+    ],
+  },
+  {
+    version: '0.17.5',
+    date: '2026-11-06',
+    titleEn: 'Faster incremental data publication',
+    titleZh: '加快增量数据发布',
+    titleFr: 'Publication incrémentale des données plus rapide',
+    summaryEn: 'Data refreshes reuse unchanged pages and verified assets, with parallel rendering and validation to shorten publication time.',
+    summaryZh: '数据更新复用未变化的页面和已验证资源，通过并行渲染与检查缩短发布时间。',
+    summaryFr: 'Les actualisations réutilisent les pages inchangées et les ressources vérifiées, avec un rendu et des contrôles parallèles pour réduire le délai de publication.',
+    sections: [{
+      kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations',
+      items: [{
+        en: 'Country and disease updates rebuild affected pages while retaining unchanged research, reports and historical pages. Publication still validates page content and required assets.',
+        zh: '国家与疾病数据变化时重建受影响页面，复用未变化的研究、报告及历史页面；发布前仍检查页面内容和必需资源。',
+        fr: 'Les mises à jour par pays et maladie reconstruisent les pages concernées tout en réutilisant les pages de recherche, les rapports et les archives inchangés. Le contenu et les ressources nécessaires restent contrôlés avant publication.',
+      }],
+    }],
+  },
+  {
+    version: '0.17.4',
+    date: '2026-11-05',
+    titleEn: 'More reliable data refreshes and report publication',
+    titleZh: '数据更新与报告发布可靠性改进',
+    titleFr: 'Actualisation des données et publication des rapports plus fiables',
+    summaryEn: 'This maintenance update fixes historical data imports and reduces report publication failures, with automatic recovery for known recoverable conditions.',
+    summaryZh: '本次维护更新修复历史数据导入问题，减少报告发布失败，并对已知可恢复异常进行自动处理。',
+    summaryFr: 'Cette mise à jour corrige l’importation de données historiques et réduit les échecs de publication des rapports, avec une reprise automatique pour les incidents connus et récupérables.',
+    sections: [
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Taiwan historical imports now recognize years before 2000. An invalid disease export no longer interrupts valid exports, and reused cached values remain identified.',
+            zh: '台湾历史数据导入现可识别 2000 年以前的年份；单个病种导出异常不再中断其他有效数据，复用的缓存值仍有明确标记。',
+            fr: 'L’importation des données historiques de Taïwan reconnaît désormais les années antérieures à 2000. Un export invalide pour une maladie n’interrompt plus les autres exports valides, et les valeurs mises en cache restent identifiées.',
+          },
+          {
+            en: 'Data imports can restore missing, previously reviewed series definitions, including those that blocked the Canada refresh. Existing mappings and data quality checks are preserved.',
+            zh: '数据导入可自动补齐已审定但缺失的序列定义，解决此次加拿大更新受阻的问题，同时保留已有映射和数据质量检查。',
+            fr: 'L’importation peut rétablir les définitions de séries déjà validées mais manquantes, notamment celles qui bloquaient l’actualisation du Canada. Les correspondances existantes et les contrôles de qualité sont conservés.',
+          },
+          {
+            en: 'Report publication uses less build memory and automatically retries temporary upload failures within a fixed limit.',
+            zh: '报告发布减少构建内存占用，并在限定次数内自动重试临时上传故障。',
+            fr: 'La publication des rapports utilise moins de mémoire pendant la compilation et réessaie automatiquement les transferts temporairement défaillants, dans une limite définie.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.17.3',
+    date: '2026-11-04',
+    titleEn: 'Smoother publication and clearer research context',
+    titleZh: '发布流程优化与研究背景展示改进',
+    titleFr: 'Publication plus fluide et contexte de recherche plus clair',
+    summaryEn:
+      'This maintenance update reduces repeated publication work and improves the presentation and asset delivery of research pages.',
+    summaryZh:
+      '本次维护更新减少重复发布工作，并改进研究页面的展示和资源加载。',
+    summaryFr:
+      'Cette mise à jour de maintenance réduit les opérations de publication répétées et améliore la présentation et le chargement des ressources des pages de recherche.',
+    sections: [
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Unchanged download datasets are reused, and large updates upload in resumable batches. Publication retains completed work for retries.',
+            zh: '内容未变的下载数据集会被复用，大规模更新支持分批续传；发布流程保留已完成的工作，供重试使用。',
+            fr: 'Les jeux de données téléchargeables inchangés sont réutilisés et les mises à jour volumineuses sont transférées par lots reprenables. Le travail accompli est conservé pour les nouvelles tentatives.',
+          },
+          {
+            en: 'Research pages use consistent widths, spacing and title sizes. Related Situation context combines repeated places and events and labels historical context separately.',
+            zh: '研究页面统一宽度、间距和标题字号；相关态势背景合并重复地区与事件，并单独标注历史背景。',
+            fr: 'Les pages de recherche harmonisent leurs largeurs, espacements et tailles de titres. Le contexte Situation regroupe les lieux et événements répétés et distingue le contexte historique.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Research pages include the scripts and fonts they need when published on the dedicated Papers host.',
+            zh: '研究文献页发布到独立 Papers 站点时，会一并携带所需的脚本和字体资源。',
+            fr: 'Les pages de recherche incluent les scripts et polices nécessaires lors de leur publication sur le site Papers dédié.',
+          },
+          {
+            en: 'Publication can proceed between collection transactions, with collection resuming afterward. Data committed after a release selects its changes remains queued for the next release.',
+            zh: '发布任务可在采集事务之间执行，随后采集继续运行；发布选定变更后才提交的数据，会保留到下一次发布。',
+            fr: 'La publication peut intervenir entre les transactions de collecte, puis la collecte reprend. Les données validées après la sélection des changements restent en attente de la publication suivante.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.17.2',
+    date: '2026-11-03',
+    titleEn: 'Country reports have their own home',
+    titleZh: '国家报告迁移至独立站点',
+    titleFr: 'Les rapports nationaux ont leur propre site',
+    summaryEn:
+      'Country reports now have a dedicated directory and can be updated independently. Japan is the first country in the scheduled reporting pilot.',
+    summaryZh:
+      '国家报告拥有独立目录，并可单独更新。日本是定时生成报告的首个试点国家。',
+    summaryFr:
+      'Les rapports nationaux disposent désormais de leur propre répertoire et peuvent être actualisés indépendamment. Le Japon est le premier pays du programme pilote de rapports planifiés.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveautés',
+        items: [
+          {
+            en: 'Browse country reports and their disease details at reports.globalinfectiousdisease.com. Report pages and data are hosted separately from the main site.',
+            zh: '可在 reports.globalinfectiousdisease.com 浏览国家报告及疾病详情。报告页面和数据由独立站点提供。',
+            fr: 'Consultez les rapports nationaux et les détails par maladie sur reports.globalinfectiousdisease.com. Les pages et les données des rapports sont hébergées séparément du site principal.',
+          },
+          {
+            en: 'Japan reports use reviewed interpretations and evidence-based charts, with historical context where available.',
+            zh: '日本报告使用经过审核的分析解读和基于证据的图表，并在数据可用时提供历史背景。',
+            fr: 'Les rapports du Japon utilisent des interprétations révisées et des graphiques fondés sur les données, avec un contexte historique lorsqu’il est disponible.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Approved reports can be published automatically after fresh data arrives, and unchanged report files are reused during publication.',
+            zh: '新数据到达后，通过审核的报告可自动发布；发布时会复用内容未变的报告文件。',
+            fr: 'Les rapports approuvés peuvent être publiés automatiquement après l’arrivée de nouvelles données ; les fichiers inchangés sont réutilisés.',
+          },
+          {
+            en: 'Research articles group related Situation signals by disease and geography, distinguishing exact geographic matches from broader context.',
+            zh: '研究文献页按疾病和地区整理相关态势信号，区分地区完全匹配与更广泛的背景信息。',
+            fr: 'Les articles de recherche regroupent les signaux de Situation par maladie et par zone géographique, en distinguant les correspondances exactes du contexte plus large.',
+          },
+          {
+            en: 'Situation includes ECDC public health events, alongside its existing sources.',
+            zh: '态势模块在现有来源之外，增加了欧洲疾控中心公共卫生事件。',
+            fr: 'Situation inclut les événements de santé publique de l’ECDC en plus de ses sources existantes.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.17.1',
+    date: '2026-11-02',
+    titleEn: 'Research articles move to their own host',
+    titleZh: '研究文献页迁移到独立域名',
+    titleFr: 'Les articles de recherche passent sur leur propre domaine',
+    summaryEn:
+      'Research Radar article pages, social cards and research data now live on papers.globalinfectiousdisease.com, which keeps the main site under its file limit. Old article links redirect there, and the Situation history now reaches back three years.',
+    summaryZh:
+      'Research Radar 的文献页、分享卡片和研究数据迁移到 papers.globalinfectiousdisease.com，主站因此保持在文件数上限之内。旧的文献链接会自动跳转，态势历史也回溯到三年前。',
+    summaryFr:
+      'Les pages d’articles du Radar de recherche, leurs cartes de partage et leurs données sont désormais sur papers.globalinfectiousdisease.com, ce qui garde le site principal sous sa limite de fichiers. Les anciens liens redirigent vers ce domaine, et l’historique de Situation remonte à trois ans.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveautés',
+        items: [
+          {
+            en: 'Research article pages, cards and research data are served from papers.globalinfectiousdisease.com. Links, canonical addresses, feeds and search results all point there, and the old addresses redirect.',
+            zh: '研究文献页、分享卡片和研究数据由 papers.globalinfectiousdisease.com 提供。站内链接、规范地址、订阅源和搜索结果都指向新域名，旧地址会自动跳转。',
+            fr: 'Les pages d’articles, les cartes et les données de recherche sont servies depuis papers.globalinfectiousdisease.com. Les liens, adresses canoniques, flux et résultats de recherche y pointent, et les anciennes adresses redirigent.',
+          },
+          {
+            en: 'The new host has its own robots.txt and sitemap, so article URLs are no longer listed in the main-site sitemaps.',
+            zh: '新域名有独立的 robots.txt 和站点地图，主站站点地图不再列出文献页。',
+            fr: 'Le nouveau domaine a son propre robots.txt et son plan du site ; les articles ne figurent plus dans les plans du site principal.',
+          },
+          {
+            en: 'The ECDC Communicable Disease Threats Report is read back through its archive, and Africa CDC, PAHO and WHO periodicals collect further back, so older reports are no longer missed.',
+            zh: '欧洲疾控中心《传染病威胁报告》现在会回溯归档，非洲疾控中心、泛美卫生组织和 WHO 期刊的采集范围也更深，不再漏掉较早的报告。',
+            fr: 'Le rapport hebdomadaire de l’ECDC sur les menaces est lu jusque dans ses archives, et l’Africa CDC, l’OPS et les périodiques de l’OMS sont collectés plus loin dans le passé.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Situation outbreak history and the public export now cover the last three years, so a short refresh no longer drops older alerts.',
+            zh: '态势的疫情历史和公开导出现在覆盖最近三年，短周期刷新不再丢失较早的警报。',
+            fr: 'L’historique des flambées de Situation et l’export public couvrent désormais les trois dernières années ; une courte actualisation ne supprime plus les anciennes alertes.',
+          },
+          {
+            en: 'A published article keeps its status when the classifier later asks for review. Only a hard exclusion, an integrity change or an editorial action changes it.',
+            zh: '已发布的文献在分类器之后建议复核时保持原状态，只有明确排除、完整性变化或编辑操作才会改变。',
+            fr: 'Un article publié conserve son statut lorsque le classifieur demande ensuite une revue ; seuls une exclusion ferme, un changement d’intégrité ou une action éditoriale le modifient.',
+          },
+          {
+            en: 'French labels now cover Meta-analysis, Commentary, Preprint and Prion.',
+            zh: '法语界面补全了荟萃分析、述评、预印本和朊病毒的标签。',
+            fr: 'Les libellés français couvrent désormais Méta-analyse, Commentaire, Prépublication et Prion.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Weekly Research Radar briefs link straight to the article on the papers host instead of going through a redirect.',
+            zh: 'Research Radar 周报里的文献链接直接指向新域名，不再经过一次跳转。',
+            fr: 'Les bulletins hebdomadaires du Radar de recherche renvoient directement à l’article sur le nouveau domaine, sans redirection.',
+          },
+          {
+            en: 'The footer date, search box and graph links keep working on article pages served from the papers host.',
+            zh: '在新域名下的文献页中，页脚日期、搜索框和图谱链接保持可用。',
+            fr: 'La date du pied de page, la recherche et les liens du graphe continuent de fonctionner sur les pages d’articles du nouveau domaine.',
+          },
+          {
+            en: 'The Situation map loads its markers from /situation/map-data.json, so the three-year history stays inside the page HTML gzip budget.',
+            zh: '态势地图改为从 /situation/map-data.json 加载点位，三年历史不再撑破页面 HTML gzip 预算。',
+            fr: 'La carte de Situation charge ses marqueurs depuis /situation/map-data.json, ce qui garde l’historique sur trois ans sous le budget HTML gzip.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.16.2',
     date: '2026-11-01',
     titleEn: 'The Situation timeline reads like a commit graph',

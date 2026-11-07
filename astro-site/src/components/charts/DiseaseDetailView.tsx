@@ -9,6 +9,7 @@ import EChartsReact from '../../lib/echartsReact';
 import { marked } from 'marked';
 import echarts from '../../lib/echarts';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { siteHref } from '../../lib/papers';
 import type { CountryDatasetSeriesEntry } from './countryDataset';
 import ChartResultActions from './ChartResultActions';
 import { pngFromCanvases } from './chartExport';
@@ -507,7 +508,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, lates
               </span>
             </div>
             <a
-              href={`${localePrefix}/countries/${reportMeta.country_code}/reports/${reportMeta.id}/`}
+              href={siteHref(`${localePrefix}/countries/${reportMeta.country_code}/reports/${reportMeta.id}/`)}
               style={{ color: textMute }}
               className="text-xs hover:text-brand-400 transition-colors flex items-center gap-1.5"
             >
@@ -690,7 +691,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, lates
           className="flex items-center justify-between flex-wrap gap-4"
         >
           <a
-            href={`${localePrefix}/countries/${reportMeta.country_code}/reports/${reportMeta.id}/`}
+              href={siteHref(`${localePrefix}/countries/${reportMeta.country_code}/reports/${reportMeta.id}/`)}
             style={{ color: textBody }}
             className="flex items-center gap-2 text-sm hover:text-brand-400 transition-colors"
           >

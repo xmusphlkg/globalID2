@@ -91,6 +91,44 @@ def test_wp_rest_handler_requires_https_and_prefixes_the_title():
             docs._wp_rest({"endpoint": "http://africacdc.org/x", "id": 7}, client)
 
 
+ECDC_EVENT_PAGE = """
+<nav>Topics A-Z <h2>Main Navigation (desktop)</h2></nav>
+<h1>First detection of Shamonda virus, France October 2026</h1>
+<div class="ecdc-highlighted"><h2 class="ecdc-section-anchor" id="section-key-facts">Key facts <a aria-label="Copy link" href="#section-key-facts">#</a></h2>
+<p>French authorities reported one human infection.</p></div>
+<div class="mb-5"><h2 class="ecdc-section-anchor" id="section-actions">Actions</h2>
+<p>The joint risk assessment is expected on 30 November 2026.</p>
+<table><tr><th>Country</th><th>Cases</th></tr><tr><td>France</td><td>1</td></tr></table></div>
+<div class="view-header"><h2>Latest updates for this event</h2><a href="/x/2026-10-27">27 October 2026</a></div>
+<footer><h2>Footer Menu</h2></footer>
+"""
+
+
+def test_ecdc_event_text_keeps_the_titled_sections_and_drops_site_chrome():
+    text = docs.ecdc_event_text(ECDC_EVENT_PAGE)
+    assert text.splitlines()[0] == "First detection of Shamonda virus, France October 2026"
+    assert "## Key facts\nFrench authorities reported one human infection." in text
+    assert "## Actions\nThe joint risk assessment is expected on 30 November 2026." in text
+    assert "France | 1" in text
+    assert "Copy link" not in text and "Navigation" not in text and "Footer" not in text
+    assert "Latest updates" not in text
+    assert docs.ecdc_event_text("<h1>No sections</h1>") == ""
+
+
+def test_ecdc_event_handler_is_registered_and_requires_https_and_a_body():
+    assert docs._HANDLERS["ecdc_event"] is docs._ecdc_event
+    with _client(lambda request: httpx.Response(200, text=ECDC_EVENT_PAGE)) as client:
+        document = docs._ecdc_event({"page_url": "https://www.ecdc.europa.eu/en/public-health-events/x/2026-10-30"}, client)
+        assert document.media_type == docs.HTML and "## Key facts" in document.text
+        with pytest.raises(DocumentUnavailable):
+            docs._ecdc_event({"page_url": "http://www.ecdc.europa.eu/x"}, client)
+    with (
+        _client(lambda request: httpx.Response(200, text="<h1>Empty</h1>")) as client,
+        pytest.raises(DocumentUnavailable),
+    ):
+        docs._ecdc_event({"page_url": "https://www.ecdc.europa.eu/x"}, client)
+
+
 def test_pdf_documents_must_be_pdfs_with_text():
     with pytest.raises(DocumentUnavailable):
         docs._pdf_document(b"<html>not a pdf</html>")

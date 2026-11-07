@@ -717,7 +717,8 @@ def test_same_model_failure_is_retried_on_other_models_then_gives_up() -> None:
             raise SameModelReviewError("hy3")
         return item
 
-    assert asyncio.run(module._decide_with_retry(decide, pool, "x")) == "x"
+    done = _reviewed("published", "publish")
+    assert asyncio.run(module._decide_with_retry(decide, pool, done)) is done
     assert pool.avoids == [set(), {"hy3"}]
 
     async def always_same(_model, _item):
@@ -725,8 +726,68 @@ def test_same_model_failure_is_retried_on_other_models_then_gives_up() -> None:
 
     pool = Pool()
     with pytest.raises(SameModelReviewError):
-        asyncio.run(module._decide_with_retry(always_same, pool, "x"))
+        asyncio.run(module._decide_with_retry(always_same, pool, done))
     assert len(pool.avoids) == module.SAME_MODEL_RETRIES + 1
+
+
+def test_hold_gets_a_second_opinion_from_other_models_and_keeps_the_second_verdict() -> None:
+    from src.services import ai_content_governance_service as module
+
+    class Pool:
+        def __init__(self):
+            self.avoids = []
+
+        def completer(self, avoid=()):
+            self.avoids.append(set(avoid))
+            return object()
+
+    replies = [_reviewed("published", "hold"), _reviewed("published", "publish")]
+    pool = Pool()
+
+    async def decide(_model, _item):
+        return replies.pop(0)
+
+    result = asyncio.run(module._decide_with_retry(decide, pool, "x"))
+    assert result.payload["decision"] == "publish"
+    assert pool.avoids == [set(), {"a", "b"}]  # the second pair avoids both first-pass models
+    assert result.notes[0].startswith("second opinion after hold")
+
+
+def test_publish_or_reject_needs_no_second_opinion_and_two_holds_stay_a_hold() -> None:
+    from src.services import ai_content_governance_service as module
+
+    class Pool:
+        def completer(self, avoid=()):
+            return object()
+
+    calls = 0
+
+    async def decide_publish(_model, _item):
+        nonlocal calls
+        calls += 1
+        return _reviewed("published", "publish")
+
+    asyncio.run(module._decide_with_retry(decide_publish, Pool(), "x"))
+    assert calls == 1
+
+    calls = 0
+
+    async def decide_hold(_model, _item):
+        nonlocal calls
+        calls += 1
+        return _reviewed("published", "hold")
+
+    result = asyncio.run(module._decide_with_retry(decide_hold, Pool(), "x"))
+    assert calls == 2 and module._review_outcome(result) == "hold"
+
+
+def test_old_hold_without_second_opinion_is_read_again() -> None:
+    from src.services.ai_content_governance_service import AIContentGovernanceService as S
+
+    base = {"decision": "hold", "held_fingerprint": "f"}
+    assert S._held({"ai_content_governance": base}, "f") is False
+    assert S._held({"ai_content_governance": {**base, "second_opinion": True}}, "f") is True
+    assert S._held({"ai_content_governance": {**base, "second_opinion": True}}, "g") is False
 
 
 def test_route_pool_avoids_collapsed_model_while_two_others_remain() -> None:
@@ -742,3 +803,97 @@ def test_route_pool_avoids_collapsed_model_while_two_others_remain() -> None:
     two = ReviewRoutePool({"p:a": 10, "p:b": 10}, line="t", max_tokens=100, rng=random.Random(3))
     c = two.completer({"a"})
     assert {c.preferences["author"][0], c.preferences["reviewer"][0]} == {"p:a", "p:b"}
+
+
+def _reviewed(status: str, decision: str):
+    from src.ai.peer_review import ReviewedOutput
+
+    return ReviewedOutput(status, {"decision": decision, "reasons": ["r"]}, "a", "b", "accept", 1, [], 0.9, None)
+
+
+def _article_row(**overrides):
+    values = dict(
+        article_id="A1", title="t", journal="j", published_at=None, doi=None, pmid=None, authors=[],
+        article_type="journal-article", study_type=None, open_access_status="open", relevance_score=1.0,
+        public_health_score=0.5, discovery_score=0.6, abstract_text="abstract", source_urls={},
+        metadata_={}, publication_status="review",
+    )
+    values.update(overrides)
+    return SimpleNamespace(**values)
+
+
+def test_literature_review_includes_status_and_summary_language() -> None:
+    from src.literature.enrichment import SUMMARY_FIELDS
+
+    service = AIContentGovernanceService()
+    article = _article_row(peer_review_status="peer_reviewed", integrity_status="current")
+    summary = SimpleNamespace(
+        language="fr", quality_score=0.9, evidence_map={},
+        generation_metadata={}, **{field: "text" for field in SUMMARY_FIELDS},
+    )
+    article_item = service._literature_article_item(article)
+    summary_item = service._literature_review_item("1", summary, article)
+
+    assert article_item["peer_review_status"] == "peer_reviewed"
+    assert article_item["integrity_status"] == "current"
+    assert summary_item["summary_language"] == "fr"
+    assert summary_item["article"]["peer_review_status"] == "peer_reviewed"
+
+    # Existing held fingerprints are invalidated once by the new context;
+    # another unchanged hold under this context remains parked.
+    old_fingerprint = service._fingerprint({
+        "fields": {field: getattr(summary, field) for field in SUMMARY_FIELDS},
+        "quality": summary.quality_score,
+        "evidence_map": summary.evidence_map,
+        "source": None,
+    })
+    new_fingerprint = service._summary_fingerprint(summary)
+    assert old_fingerprint != new_fingerprint
+    held = {"ai_content_governance": {
+        "decision": "hold", "second_opinion": True, "held_fingerprint": new_fingerprint,
+    }}
+    assert service._held(held, new_fingerprint)
+    summary.language = "zh"
+    assert not service._held(held, service._summary_fingerprint(summary))
+
+
+def test_review_outcome_maps_hold_and_reviewer_disagreement_to_hold() -> None:
+    from src.services.ai_content_governance_service import _review_outcome
+
+    assert _review_outcome(_reviewed("published", "publish")) == "publish"
+    assert _review_outcome(_reviewed("published", "exclude")) == "exclude"
+    assert _review_outcome(_reviewed("published", "reject")) == "reject"
+    assert _review_outcome(_reviewed("published", "hold")) == "hold"
+    # The reviewer never accepted the draft: no verdict on the item, so it holds.
+    assert _review_outcome(_reviewed("rejected", "exclude")) == "hold"
+
+
+def test_stream_write_holds_article_in_review_and_skips_it_until_content_changes() -> None:
+    service = AIContentGovernanceService()
+    row = _article_row()
+    seen = service._article_fingerprint(row)
+
+    class _Result:
+        def scalars(self):
+            return self
+
+        def all(self):
+            return [row]
+
+    class _DB:
+        def add(self, _obj):
+            raise AssertionError("a hold must not write a status event")
+
+        async def execute(self, _query):
+            return _Result()
+
+    counts = asyncio.run(service._write_stream_results(_DB(), "articles", [("A1", seen, _reviewed("published", "hold"))]))
+
+    assert counts == {"published": 0, "rejected": 0, "held": 1, "stale": 0}
+    assert row.publication_status == "review"
+    record = row.metadata_["ai_content_governance"]
+    assert record["decision"] == "hold"
+    assert service._held(row.metadata_, service._article_fingerprint(row))
+
+    row.abstract_text = "a longer abstract with the missing methods"
+    assert not service._held(row.metadata_, service._article_fingerprint(row))

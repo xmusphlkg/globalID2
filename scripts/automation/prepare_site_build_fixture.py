@@ -460,6 +460,7 @@ def fixture_payloads() -> dict[str, Any]:
         "src/data/research/routes.json": {
             "articles": [{"slug": sample_article["slug"], "indexable": True}],
             "diseases": sample_article.get("diseases") or [],
+            "facets": research.get("facets") or {},
         },
         f"src/data/research/articles/{sample_article['slug']}.json": sample_article,
         "src/data/research/hotspots.json": hotspots,

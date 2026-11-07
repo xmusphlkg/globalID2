@@ -2,7 +2,18 @@
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
+
+
+class ReportWorkflowOut(BaseModel):
+    country_code: str
+    method_version: str
+    figure_catalog: list[dict[str, Any]]
+    max_figures: int
+    max_figures_per_section: int
+    schedule: dict[str, Any]
+    periods: list[dict[str, Any]]
 
 
 class ReportOut(BaseModel):

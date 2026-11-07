@@ -13,6 +13,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { type ReportDetail, type ReportListItem, type ReportSection, useReportDetail, useReports } from "@/features/reports/api";
 import { ReportFigureList } from "@/features/reports/report-figures";
+import { ReportWorkflow } from "@/features/reports/workflow";
+import { ReportV4Preview } from "@/features/reports/v4-preview";
 import { t } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
@@ -37,8 +39,8 @@ type FlowGroup = {
 
 const FLOW_GROUPS: FlowGroup[] = [
   { id: "queue", titleKey: "flow_queue", statuses: ["pending", "generating", "failed"] },
-  { id: "review", titleKey: "flow_review", statuses: ["reviewing"] },
-  { id: "published", titleKey: "flow_published", statuses: ["completed", "approved", "published"] },
+  { id: "review", titleKey: "flow_review", statuses: ["reviewing", "completed", "approved"] },
+  { id: "published", titleKey: "flow_published", statuses: ["published"] },
 ];
 
 function statusLabel(lang: "en" | "zh", status: string) {
@@ -49,6 +51,11 @@ function statusLabel(lang: "en" | "zh", status: string) {
 function percent(score: number | null | undefined) {
   if (score == null) return "--";
   return `${Math.round(score * 100)}%`;
+}
+
+// Reporting windows are UTC calendar dates, not local event timestamps.
+function periodDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}/.exec(value)?.[0] ?? "—";
 }
 
 function extractSectionDisease(sectionTitle: string | null | undefined, fallback: string) {
@@ -621,6 +628,9 @@ function ReportDetailPanel({
   const metadata = asRecord(detail.metadata);
   const figureData = asRecord(metadata.figure_data);
   const isAnalyticalV3 = metadata.report_layout === "analytical_v3";
+  if (metadata.report_layout === "report_v4" && metadata.report_document_v4) {
+    return <ReportV4Preview detail={detail} lang={lang} />;
+  }
 
   return (
     <div className="space-y-5">
@@ -658,7 +668,7 @@ function ReportDetailPanel({
           {detail.ai_model_used ? <StatusBadge tone="info">{detail.ai_model_used}</StatusBadge> : null}
         </div>
         <p className="mt-3 text-sm text-tremor-content dark:text-dark-tremor-content">
-          {formatDate(detail.period_start)} - {formatDate(detail.period_end)}
+          {periodDate(detail.period_start)} - {periodDate(detail.period_end)}
         </p>
       </div>
 
@@ -777,12 +787,12 @@ function ReportDetailPanel({
 }
 
 export default function ReportsPage() {
-  const { lang, countryCode } = useAppStore();
+  const { lang } = useAppStore();
   const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
   const [flowFilter, setFlowFilter] = useState<FlowGroupId | "all">("all");
   const [search, setSearch] = useState("");
 
-  const { data: reports, isLoading } = useReports(countryCode || null);
+  const { data: reports, isLoading } = useReports("JP");
   const { data: detail, isFetching: detailLoading } = useReportDetail(selectedUuid);
   const list = reports ?? [];
 
@@ -884,7 +894,7 @@ export default function ReportsPage() {
         header: lang === "zh" ? "周期" : "Period",
         render: (report) => (
           <span className="whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {formatDate(report.period_start)} - {formatDate(report.period_end)}
+            {periodDate(report.period_start)} - {periodDate(report.period_end)}
           </span>
         ),
       },
@@ -921,6 +931,8 @@ export default function ReportsPage() {
           </>
         }
       />
+
+      <ReportWorkflow lang={lang} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile

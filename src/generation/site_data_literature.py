@@ -7,16 +7,14 @@ abstracts and source payloads never cross this boundary.
 
 from __future__ import annotations
 
-from collections import Counter, defaultdict
-import calendar
-import copy
-from datetime import datetime, timedelta, timezone
 import hashlib
 import json
-from pathlib import Path
 import re
 import time
 import unicodedata
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import func, select
@@ -31,27 +29,59 @@ from src.domain import (
     LiteratureSummary,
     LiteratureTopicLink,
 )
-from src.generation.site_data_queries import has_table
-from src.generation.site_data_writer import remove_stale_json_files, write_compact_json, write_pretty_json
-from src.literature.knowledge_graph import build_knowledge_graph
-from src.literature.content_policy import content_policy
-from src.literature.recommendations import attach_related_research
-from src.literature.weekly_briefs import enrich_weekly_briefs, load_weekly_review_registry
-from src.literature.weekly_ai_review import load_weekly_ai_review_registry
 
+# Private helpers remain importable for existing integrations.
+from src.generation.literature_integrity import (
+    _PUBLIC_INTEGRITY_STATUSES,
+    _public_event_datetime,  # noqa: F401 - legacy import
+    _public_integrity_source_url,  # noqa: F401 - legacy import
+    _record_value,  # noqa: F401 - legacy import
+    project_public_integrity_alerts,
+)
+from src.generation.literature_visualizations import (
+    _add_months,  # noqa: F401
+    _article_diseases,  # noqa: F401
+    _article_topics,  # noqa: F401
+    _facet_slug,
+    _hotspot_article_reference,  # noqa: F401
+    _iso_week,  # noqa: F401
+    _month_key,  # noqa: F401
+    _month_periods,  # noqa: F401
+    _parse_public_datetime,
+    _quarter_key,  # noqa: F401
+    _quarter_periods,  # noqa: F401
+    _quarter_start,  # noqa: F401
+    build_emerging_topics,
+    build_hotspot_visualizations,
+    build_pipeline_funnel,
+    build_publication_pulse,
+    build_related_surveillance,
+    build_surveillance_coverage_matrix,
+)
+from src.generation.research_shards import (
+    PUBLIC_RESEARCH_SHARD_MAX_BYTES,
+    _chunk_records,  # noqa: F401 - legacy import
+    _compact_json_bytes,  # noqa: F401 - legacy import
+    publish_browser_research_index,
+)
+from src.generation.site_data_queries import has_table
+from src.generation.site_data_writer import (
+    remove_stale_json_files,
+    write_compact_json,
+    write_pretty_json,
+)
+from src.literature.content_policy import content_policy
+from src.literature.knowledge_graph import build_knowledge_graph
+from src.literature.recommendations import attach_related_research
+from src.literature.weekly_ai_review import load_weekly_ai_review_registry
+from src.literature.weekly_briefs import (
+    enrich_weekly_briefs,
+    load_weekly_review_registry,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 HISTORICAL_LITERATURE_SEED_PATH = ROOT / "configs" / "literature" / "historical_seed.json"
 LITERATURE_DISEASE_ALIASES_PATH = ROOT / "configs" / "literature" / "disease_aliases.json"
-
-
-def _parse_public_datetime(value: str) -> datetime:
-    parsed = datetime.fromisoformat(value)
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-
-
-def _facet_slug(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
 
 
 def _title_estimated_literature_links(
@@ -501,577 +531,6 @@ def build_disease_evidence_events(
     return sorted(events, key=lambda event: (event["date"], event["title"]), reverse=True)
 
 
-def _iso_week(value: datetime) -> tuple[str, str]:
-    iso_year, iso_week, _ = value.isocalendar()
-    start = datetime.fromisocalendar(iso_year, iso_week, 1).date().isoformat()
-    return f"{iso_year}-W{iso_week:02d}", start
-
-
-def _add_months(value: datetime, months: int) -> datetime:
-    month_index = value.year * 12 + value.month - 1 + months
-    year, zero_based_month = divmod(month_index, 12)
-    month = zero_based_month + 1
-    day = min(value.day, calendar.monthrange(year, month)[1])
-    return value.replace(year=year, month=month, day=day)
-
-
-def _month_periods(now: datetime, months: int) -> list[dict[str, str]]:
-    """Return complete month buckets ending with the month containing ``now``."""
-    current = now.astimezone(timezone.utc)
-    start = current.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    first = _add_months(start, -max(0, months - 1))
-    rows: list[dict[str, str]] = []
-    for offset in range(months):
-        bucket = _add_months(first, offset)
-        end = _add_months(bucket, 1) - timedelta(days=1)
-        rows.append({
-            "period": bucket.strftime("%Y-%m"),
-            "label": bucket.strftime("%b '%y"),
-            "start_date": bucket.date().isoformat(),
-            "end_date": end.date().isoformat(),
-        })
-    return rows
-
-
-def _quarter_start(value: datetime) -> datetime:
-    month = ((value.month - 1) // 3) * 3 + 1
-    return value.replace(month=month, day=1, hour=0, minute=0, second=0, microsecond=0)
-
-
-def _quarter_periods(now: datetime, quarters: int) -> list[dict[str, str]]:
-    current = _quarter_start(now.astimezone(timezone.utc))
-    first = _add_months(current, -3 * max(0, quarters - 1))
-    rows: list[dict[str, str]] = []
-    for offset in range(quarters):
-        bucket = _add_months(first, offset * 3)
-        end = _add_months(bucket, 3) - timedelta(days=1)
-        quarter = ((bucket.month - 1) // 3) + 1
-        rows.append({
-            "period": f"{bucket.year}-Q{quarter}",
-            "label": f"Q{quarter} '{str(bucket.year)[-2:]}",
-            "start_date": bucket.date().isoformat(),
-            "end_date": end.date().isoformat(),
-        })
-    return rows
-
-
-def _month_key(value: datetime) -> str:
-    return value.astimezone(timezone.utc).strftime("%Y-%m")
-
-
-def _quarter_key(value: datetime) -> str:
-    published = value.astimezone(timezone.utc)
-    quarter = ((published.month - 1) // 3) + 1
-    return f"{published.year}-Q{quarter}"
-
-
-def _article_topics(item: dict[str, Any], *, min_confidence: float = 0.66) -> list[str]:
-    seen: set[str] = set()
-    rows: list[str] = []
-    for topic in item.get("topics") or []:
-        name = str(topic.get("name") or "").strip()
-        if not name or name in seen:
-            continue
-        if float(topic.get("confidence") or 0) < min_confidence:
-            continue
-        seen.add(name)
-        rows.append(name)
-    return rows
-
-
-def _article_diseases(item: dict[str, Any], *, min_confidence: float = 0.78) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for disease in item.get("diseases") or []:
-        disease_id = str(disease.get("disease_id") or "").strip()
-        if not disease_id or disease_id in seen:
-            continue
-        if float(disease.get("confidence") or 0) < min_confidence:
-            continue
-        seen.add(disease_id)
-        rows.append(disease)
-    return rows
-
-
-def _hotspot_article_reference(item: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "article_id": item.get("article_id"),
-        "slug": item.get("slug"),
-        "title": item.get("title"),
-        "journal": item.get("journal"),
-        "published_at": item.get("published_at"),
-        "discovery_score": item.get("discovery_score"),
-    }
-
-
-def build_hotspot_visualizations(
-    articles: list[dict[str, Any]],
-    *,
-    now: datetime | None = None,
-    months: int = 18,
-    quarters: int = 6,
-    top_topics: int = 8,
-    heatmap_rows: int = 10,
-    burst_limit: int = 12,
-) -> dict[str, Any]:
-    """Build compact time-based research-hotspot datasets for public charts.
-
-    The output describes literature attention, not outbreak risk. Topic counts
-    are topic mentions from quality-gated public articles; disease-topic rows
-    use the same high-confidence disease threshold as public graph edges.
-    """
-    current = now or datetime.now(timezone.utc)
-    month_periods = _month_periods(current, months)
-    quarter_periods = _quarter_periods(current, quarters)
-    month_keys = {period["period"] for period in month_periods}
-    quarter_keys = {period["period"] for period in quarter_periods}
-    monthly_article_counts: Counter[str] = Counter()
-    monthly_topic_counts: dict[str, Counter[str]] = defaultdict(Counter)
-    monthly_topic_articles: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
-    disease_topic_counts: Counter[tuple[str, str]] = Counter()
-    disease_topic_meta: dict[tuple[str, str], dict[str, Any]] = {}
-    monthly_disease_topic_counts: dict[str, Counter[tuple[str, str]]] = defaultdict(Counter)
-    quarterly_topic_counts: dict[str, Counter[str]] = defaultdict(Counter)
-    topic_totals: Counter[str] = Counter()
-
-    for item in articles:
-        published = _parse_public_datetime(item["published_at"]) if item.get("published_at") else None
-        if not published or published > current:
-            continue
-        topics = _article_topics(item)
-        if not topics:
-            continue
-        month = _month_key(published)
-        quarter = _quarter_key(published)
-        reference = _hotspot_article_reference(item)
-        if month in month_keys:
-            monthly_article_counts[month] += 1
-            for topic in topics:
-                monthly_topic_counts[month][topic] += 1
-                monthly_topic_articles[(month, topic)].append(reference)
-                topic_totals[topic] += 1
-            diseases = _article_diseases(item)
-            for disease in diseases:
-                disease_id = str(disease.get("disease_id") or "")
-                disease_name = str(disease.get("name_en") or disease_id)
-                disease_name_zh = disease.get("name_zh")
-                disease_name_fr = disease.get("name_fr")
-                for topic in topics:
-                    key = (disease_id, topic)
-                    disease_topic_counts[key] += 1
-                    disease_topic_meta[key] = {
-                        "disease_id": disease_id,
-                        "disease_slug": disease.get("slug"),
-                        "disease_name_en": disease_name,
-                        "disease_name_zh": disease_name_zh,
-                        "topic": topic,
-                        **({"disease_name_fr": disease_name_fr} if disease_name_fr else {}),
-                    }
-                    monthly_disease_topic_counts[month][key] += 1
-        if quarter in quarter_keys:
-            for topic in topics:
-                quarterly_topic_counts[quarter][topic] += 1
-
-    selected_topics = [name for name, _ in topic_totals.most_common(top_topics)]
-    max_month_topic_mentions = max(
-        (
-            sum(monthly_topic_counts[period["period"]].get(topic, 0) for topic in selected_topics)
-            for period in month_periods
-        ),
-        default=0,
-    ) or 1
-    stream_points_by_topic: dict[str, list[dict[str, Any]]] = {topic: [] for topic in selected_topics}
-    for period in month_periods:
-        period_key = period["period"]
-        cursor = 0.0
-        total_mentions = sum(monthly_topic_counts[period_key].get(topic, 0) for topic in selected_topics)
-        total_height = total_mentions / max_month_topic_mentions if max_month_topic_mentions else 0
-        cursor = max(0.0, (1.0 - total_height) / 2)
-        article_count = monthly_article_counts.get(period_key, 0)
-        for topic in selected_topics:
-            count = monthly_topic_counts[period_key].get(topic, 0)
-            height = count / max_month_topic_mentions
-            y0 = cursor
-            y1 = cursor + height
-            stream_points_by_topic[topic].append({
-                "period": period_key,
-                "count": count,
-                "share_of_articles": round(count / article_count, 4) if article_count else 0.0,
-                "y0": round(y0, 4),
-                "y1": round(y1, 4),
-            })
-            cursor = y1
-
-    streamgraph = {
-        "periods": [
-            {
-                **period,
-                "article_count": monthly_article_counts.get(period["period"], 0),
-                "topic_mentions": sum(
-                    monthly_topic_counts[period["period"]].get(topic, 0)
-                    for topic in selected_topics
-                ),
-            }
-            for period in month_periods
-        ],
-        "series": [
-            {
-                "topic": topic,
-                "slug": _facet_slug(topic),
-                "count_total": topic_totals.get(topic, 0),
-                "points": stream_points_by_topic[topic],
-            }
-            for topic in selected_topics
-        ],
-        "method": "monthly public article topic mentions, scaled by selected-topic volume",
-    }
-
-    selected_pairs = [key for key, _ in disease_topic_counts.most_common(heatmap_rows)]
-    max_pair_cell_count = max(
-        (
-            monthly_disease_topic_counts[period["period"]].get(key, 0)
-            for period in month_periods
-            for key in selected_pairs
-        ),
-        default=0,
-    ) or 1
-    heatmap = {
-        "periods": month_periods,
-        "rows": [
-            {
-                **disease_topic_meta[key],
-                "key": f"{key[0]}::{_facet_slug(key[1])}",
-                "count_total": disease_topic_counts[key],
-                "cells": [
-                    {
-                        "period": period["period"],
-                        "count": monthly_disease_topic_counts[period["period"]].get(key, 0),
-                        "intensity": round(
-                            monthly_disease_topic_counts[period["period"]].get(key, 0) / max_pair_cell_count,
-                            4,
-                        ),
-                    }
-                    for period in month_periods
-                ],
-            }
-            for key in selected_pairs
-        ],
-        "method": "high-confidence disease links crossed with public-health topic mentions",
-    }
-
-    bursts: list[dict[str, Any]] = []
-    for topic in selected_topics:
-        counts = [monthly_topic_counts[period["period"]].get(topic, 0) for period in month_periods]
-        article_totals = [monthly_article_counts.get(period["period"], 0) for period in month_periods]
-        for index, count in enumerate(counts):
-            previous = counts[index - 1] if index else 0
-            previous_window = counts[max(0, index - 3):index]
-            baseline = (sum(previous_window) / len(previous_window)) if previous_window else 0.0
-            share = count / article_totals[index] if article_totals[index] else 0.0
-            previous_share = previous / article_totals[index - 1] if index and article_totals[index - 1] else 0.0
-            growth = count - previous
-            score = (count - baseline) / (max(baseline, 0.5) ** 0.5)
-            if count < 2 or growth <= 0 or (score < 1.0 and share <= previous_share):
-                continue
-            period = month_periods[index]
-            articles_for_burst = sorted(
-                monthly_topic_articles.get((period["period"], topic), []),
-                key=lambda article: (
-                    float(article.get("discovery_score") or 0),
-                    article.get("published_at") or "",
-                ),
-                reverse=True,
-            )
-            bursts.append({
-                "period": period["period"],
-                "label": period["label"],
-                "topic": topic,
-                "slug": _facet_slug(topic),
-                "count": count,
-                "previous_count": previous,
-                "growth": growth,
-                "share": round(share, 4),
-                "share_delta": round(share - previous_share, 4),
-                "burst_score": round(score, 2),
-                "articles": articles_for_burst[:3],
-            })
-    bursts.sort(key=lambda item: (item["period"], item["burst_score"], item["count"]), reverse=True)
-
-    quarter_topic_totals = Counter()
-    for period in quarter_periods:
-        quarter_topic_totals.update(quarterly_topic_counts[period["period"]])
-    alluvial_topics = [topic for topic, _ in quarter_topic_totals.most_common(min(top_topics, 7))]
-    max_quarter_mentions = max(
-        (
-            sum(quarterly_topic_counts[period["period"]].get(topic, 0) for topic in alluvial_topics)
-            for period in quarter_periods
-        ),
-        default=0,
-    ) or 1
-    nodes: list[dict[str, Any]] = []
-    node_lookup: dict[tuple[str, str], dict[str, Any]] = {}
-    for period in quarter_periods:
-        period_key = period["period"]
-        cursor = max(
-            0.0,
-            (
-                1.0
-                - sum(quarterly_topic_counts[period_key].get(topic, 0) for topic in alluvial_topics)
-                / max_quarter_mentions
-            )
-            / 2,
-        )
-        ranked_topics = sorted(
-            alluvial_topics,
-            key=lambda topic: (-quarterly_topic_counts[period_key].get(topic, 0), alluvial_topics.index(topic)),
-        )
-        for rank, topic in enumerate(ranked_topics, start=1):
-            count = quarterly_topic_counts[period_key].get(topic, 0)
-            height = count / max_quarter_mentions
-            node = {
-                "period": period_key,
-                "topic": topic,
-                "slug": _facet_slug(topic),
-                "count": count,
-                "rank": rank,
-                "y0": round(cursor, 4),
-                "y1": round(cursor + height, 4),
-            }
-            nodes.append(node)
-            node_lookup[(period_key, topic)] = node
-            cursor += height
-    links: list[dict[str, Any]] = []
-    for source, target in zip(quarter_periods, quarter_periods[1:]):
-        for topic in alluvial_topics:
-            source_count = quarterly_topic_counts[source["period"]].get(topic, 0)
-            target_count = quarterly_topic_counts[target["period"]].get(topic, 0)
-            if source_count <= 0 and target_count <= 0:
-                continue
-            source_node = node_lookup[(source["period"], topic)]
-            target_node = node_lookup[(target["period"], topic)]
-            links.append({
-                "topic": topic,
-                "slug": _facet_slug(topic),
-                "source_period": source["period"],
-                "target_period": target["period"],
-                "source_count": source_count,
-                "target_count": target_count,
-                "value": max(source_count, target_count),
-                "source_y": round((source_node["y0"] + source_node["y1"]) / 2, 4),
-                "target_y": round((target_node["y0"] + target_node["y1"]) / 2, 4),
-            })
-
-    return {
-        "schema_version": "research_hotspots.v1",
-        "generated_at": current.isoformat(),
-        "grain": {"streamgraph": "month", "heatmap": "month", "burst_timeline": "month", "alluvial": "quarter"},
-        "streamgraph": streamgraph,
-        "heatmap": heatmap,
-        "burst_timeline": {
-            "bursts": bursts[:burst_limit],
-            "method": "monthly topic bursts using count growth, share movement, and recent baseline deviation",
-        },
-        "alluvial": {
-            "periods": quarter_periods,
-            "topics": [{"topic": topic, "slug": _facet_slug(topic)} for topic in alluvial_topics],
-            "nodes": nodes,
-            "links": links,
-            "method": "quarterly topic attention flow among top public-health topics",
-        },
-        "interpretation_note": {
-            "en": "Hotspots show Research Radar literature attention, not disease risk or incidence.",
-            "zh": "热点图展示的是 Research Radar 文献关注度，不代表疾病风险或发病水平。",
-        },
-    }
-
-
-def build_publication_pulse(
-    articles: list[dict[str, Any]],
-    *,
-    now: datetime | None = None,
-    weeks: int = 12,
-) -> list[dict[str, Any]]:
-    """Weekly publication bars plus a four-week rolling average."""
-    current = now or datetime.now(timezone.utc)
-    week_start = datetime.fromisocalendar(current.isocalendar().year, current.isocalendar().week, 1).date()
-    first_week_start = week_start - timedelta(weeks=max(0, weeks - 1))
-    counts = Counter()
-    for item in articles:
-        if not item.get("published_at"):
-            continue
-        published = _parse_public_datetime(item["published_at"])
-        if published > current:
-            continue
-        week, start = _iso_week(published)
-        counts[(week, start)] += 1
-    rows: list[dict[str, Any]] = []
-    for index in range(weeks):
-        start_date = first_week_start + timedelta(weeks=index)
-        iso_year, iso_week, _ = start_date.isocalendar()
-        week = f"{iso_year}-W{iso_week:02d}"
-        count = counts.get((week, start_date.isoformat()), 0)
-        rolling_values = [
-            rows[position]["publication_count"]
-            for position in range(max(0, len(rows) - 3), len(rows))
-        ] + [count]
-        rows.append({
-            "week": week,
-            "start_date": start_date.isoformat(),
-            "publication_count": count,
-            "rolling_4_week_average": round(sum(rolling_values) / len(rolling_values), 2),
-        })
-    return rows
-
-
-def build_pipeline_funnel(
-    *,
-    total: int,
-    review: int,
-    published: int,
-    excluded: int,
-    summarized: int,
-    exact_linked: int,
-    public_catalogue: int | None = None,
-) -> list[dict[str, Any]]:
-    """Expose the editorial pipeline as stages with auditable counts."""
-    stages = [
-        ("indexed", "Indexed records", total),
-        ("classified", "Classified records", total),
-        ("review", "Awaiting review", review),
-        ("published", "Published status", published),
-        ("public_catalogue", "Public catalogue", published if public_catalogue is None else public_catalogue),
-        ("excluded", "Excluded", excluded),
-        ("summarized", "Published summaries", summarized),
-        ("exact_linked", "Exact signal links", exact_linked),
-    ]
-    return [
-        {
-            "stage": stage,
-            "label": label,
-            "count": int(count or 0),
-            "share_of_indexed": round((int(count or 0) / total), 4) if total else 0.0,
-        }
-        for stage, label, count in stages
-    ]
-
-
-def build_emerging_topics(
-    articles: list[dict[str, Any]],
-    *,
-    now: datetime | None = None,
-) -> list[dict[str, Any]]:
-    """Compare two 28-day windows using both counts and publication share."""
-    current = now or datetime.now(timezone.utc)
-    current_topic_counts = Counter()
-    previous_topic_counts = Counter()
-    current_total = 0
-    previous_total = 0
-    for item in articles:
-        published = _parse_public_datetime(item["published_at"]) if item.get("published_at") else None
-        article_topics = [topic["name"] for topic in item.get("topics") or []]
-        if not published or not article_topics:
-            continue
-        if current - timedelta(days=28) <= published <= current:
-            current_total += 1
-            current_topic_counts.update(article_topics)
-        elif current - timedelta(days=56) <= published < current - timedelta(days=28):
-            previous_total += 1
-            previous_topic_counts.update(article_topics)
-    rows = []
-    for name, count in current_topic_counts.items():
-        previous = previous_topic_counts.get(name, 0)
-        if count <= previous or count < 2:
-            continue
-        current_share = count / current_total if current_total else 0.0
-        previous_share = previous / previous_total if previous_total else 0.0
-        rows.append({
-            "name": name,
-            "count_28_days": count,
-            "previous_28_days": previous,
-            "growth": count - previous,
-            "current_share": round(current_share, 4),
-            "previous_share": round(previous_share, 4),
-            "share_delta": round(current_share - previous_share, 4),
-            "growth_ratio": round(count / previous, 2) if previous else None,
-        })
-    rows.sort(key=lambda item: (item["share_delta"], item["growth"], item["count_28_days"]), reverse=True)
-    return rows[:8]
-
-
-def build_surveillance_coverage_matrix(projection: dict[str, Any]) -> dict[str, Any]:
-    """Summarize signal-literature coverage by disease and geography."""
-    disease_counts: Counter[str] = Counter()
-    country_counts: Counter[str] = Counter()
-    disease_meta: dict[str, dict[str, Any]] = {}
-    country_meta: dict[str, dict[str, Any]] = {}
-    cells: dict[tuple[str, str], dict[str, Any]] = {}
-    for signal in projection.get("signals") or []:
-        disease_id = str(signal.get("disease_id") or "unknown")
-        disease_counts[disease_id] += 1
-        disease_meta[disease_id] = {
-            "disease_id": disease_id,
-            "name_en": signal.get("disease_name_en") or disease_id,
-            "name_zh": signal.get("disease_name_zh"),
-            **({"name_fr": signal.get("disease_name_fr")} if signal.get("disease_name_fr") else {}),
-        }
-        geographies = signal.get("geographies") or [{"code": "unknown", "name_en": "Geography unavailable"}]
-        for geography in geographies:
-            code = str(geography.get("code") or "unknown")
-            country_counts[code] += 1
-            country_meta[code] = {
-                "code": code,
-                "name_en": geography.get("name_en") or geography.get("name") or code,
-            }
-            key = (disease_id, code)
-            cell = cells.setdefault(key, {
-                "disease_id": disease_id,
-                "country_code": code,
-                "signals": 0,
-                "exact_links": 0,
-                "context_links": 0,
-                "gaps": 0,
-            })
-            cell["signals"] += 1
-            cell["exact_links"] += int(signal.get("exact_article_count") or 0)
-            cell["context_links"] += int(signal.get("context_article_count") or 0)
-            if signal.get("coverage_status") != "exact_evidence":
-                cell["gaps"] += 1
-    diseases = [disease_meta[key] for key, _ in disease_counts.most_common(8)]
-    countries = [country_meta[key] for key, _ in country_counts.most_common(8)]
-    allowed = {(disease["disease_id"], country["code"]) for disease in diseases for country in countries}
-    return {
-        "diseases": diseases,
-        "countries": countries,
-        "cells": [value for key, value in sorted(cells.items()) if key in allowed],
-        "method": "active Situation Room signals crossed with high-confidence Research Radar links",
-    }
-
-
-def build_related_surveillance(
-    article_diseases: list[dict[str, Any]],
-    article_countries: list[dict[str, Any]],
-    surveillance_coverage: dict[str, set[str]],
-) -> list[dict[str, Any]]:
-    """Return only precise article-place links that intersect a real GIDS series."""
-    links: list[dict[str, Any]] = []
-    for disease in article_diseases:
-        covered_countries = surveillance_coverage.get(disease["disease_id"], set())
-        for country in article_countries:
-            if country["confidence"] < 0.78 or country["code"] not in covered_countries:
-                continue
-            links.append({
-                "disease_id": disease["disease_id"],
-                "disease_name_en": disease["name_en"],
-                "disease_name_zh": disease.get("name_zh"),
-                "disease_slug": disease.get("slug"),
-                "country_code": country["code"],
-                "country_name_en": country["name_en"],
-                "url": f"/diseases/{disease.get('slug')}/" if disease.get("slug") else None,
-                "method": "high-confidence article geography intersected with GIDS series coverage",
-            })
-    return links
-
-
 def _article_reference(
     article: dict[str, Any],
     relation_level: str,
@@ -1463,6 +922,7 @@ def attach_surveillance_evidence(
     situation_snapshot: dict[str, Any] | None,
     *,
     diseases_by_id: dict[str, dict[str, Any]] | None = None,
+    related_cache_path: Path | None = None,
 ) -> dict[str, Any]:
     """Attach signal evidence and article backlinks without mutating input."""
     evidence_articles = [
@@ -1482,7 +942,7 @@ def attach_surveillance_evidence(
             "related_signals": related_by_article.get(str(article.get("article_id") or ""), []),
         }
         for article in payload.get("articles") or []
-    ])
+    ], cache_path=related_cache_path)
     by_id = {article["article_id"]: article for article in projected_articles}
     public_payload = {key: value for key, value in payload.items() if not key.startswith("_")}
     visualizations = {
@@ -1626,123 +1086,6 @@ def apply_public_summary_gate(
         [article for article in peer_reviewed if article.get("indexable") is True],
         [article for article in preprints if article.get("indexable") is True],
         withheld,
-    )
-
-
-_PUBLIC_INTEGRITY_STATUSES = {
-    "retracted": "retraction",
-    "retraction": "retraction",
-    "expression_of_concern": "expression_of_concern",
-    "corrected": "correction",
-    "correction": "correction",
-}
-
-
-def _record_value(record: Any, field: str, default: Any = None) -> Any:
-    if isinstance(record, dict):
-        return record.get(field, default)
-    return getattr(record, field, default)
-
-
-def _public_event_datetime(value: Any) -> str | None:
-    if isinstance(value, datetime):
-        aware = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-        return aware.isoformat()
-    text = str(value or "").strip()
-    return text or None
-
-
-def _public_integrity_source_url(article: Any) -> str | None:
-    source_urls = _record_value(article, "source_urls", {}) or {}
-    candidates = [
-        source_urls.get("doi") if isinstance(source_urls, dict) else None,
-        source_urls.get("publisher") if isinstance(source_urls, dict) else None,
-        source_urls.get("pubmed") if isinstance(source_urls, dict) else None,
-    ]
-    doi = str(_record_value(article, "doi") or "").strip()
-    if doi:
-        candidates.append(f"https://doi.org/{doi}")
-    for candidate in candidates:
-        value = str(candidate or "").strip()
-        if value.startswith(("https://", "http://")):
-            return value
-    return None
-
-
-def project_public_integrity_alerts(
-    events: list[Any],
-    articles: list[Any],
-    *,
-    ever_public_article_ids: set[str] | None = None,
-    currently_public_article_ids: set[str] | None = None,
-) -> list[dict[str, Any]]:
-    """Project a metadata-only integrity history for articles once made public.
-
-    Event ``metadata`` and article abstracts/source payloads are deliberately
-    never read here, so they cannot accidentally cross the static-site export
-    boundary.
-    """
-
-    article_by_id = {
-        str(_record_value(article, "article_id") or ""): article
-        for article in articles
-        if _record_value(article, "article_id")
-    }
-    ever_public = {str(value) for value in (ever_public_article_ids or set()) if value}
-    ever_public.update(
-        article_id
-        for article_id, article in article_by_id.items()
-        if str(_record_value(article, "publication_status") or "").lower() == "published"
-    )
-    currently_public = {
-        str(value) for value in (currently_public_article_ids or set()) if value
-    }
-    alerts: list[dict[str, Any]] = []
-    for event in events:
-        article_id = str(_record_value(event, "article_id") or "")
-        article = article_by_id.get(article_id)
-        normalized_status = re.sub(
-            r"[\s-]+", "_", str(_record_value(event, "current_status") or "").strip().lower()
-        )
-        public_event_type = _PUBLIC_INTEGRITY_STATUSES.get(normalized_status)
-        if article is None or article_id not in ever_public or public_event_type is None:
-            continue
-        effective_at = _public_event_datetime(
-            _record_value(event, "effective_at") or _record_value(event, "created_at")
-        )
-        event_id = _record_value(event, "id")
-        if event_id is None:
-            fingerprint = "|".join((
-                article_id,
-                public_event_type,
-                effective_at or "unknown",
-                str(_record_value(event, "source") or "unknown"),
-            ))
-            event_id = hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()[:16]
-        is_currently_public = article_id in currently_public
-        slug = str(_record_value(article, "slug") or "").strip()
-        alerts.append({
-            "alert_id": f"integrity-{event_id}",
-            "article_id": article_id,
-            "article_slug": slug,
-            "article_title": str(_record_value(article, "title") or "Literature record"),
-            "doi": _record_value(article, "doi"),
-            "journal": _record_value(article, "journal"),
-            "published_at": _public_event_datetime(_record_value(article, "published_at")),
-            "event_type": public_event_type,
-            "previous_status": _record_value(event, "previous_status"),
-            "current_status": normalized_status,
-            "effective_at": effective_at,
-            "recorded_at": _public_event_datetime(_record_value(event, "created_at")),
-            "source": str(_record_value(event, "source") or "source record"),
-            "source_url": _public_integrity_source_url(article),
-            "is_currently_public": is_currently_public,
-            "article_url": f"/research/articles/{slug}/" if is_currently_public and slug else None,
-        })
-    return sorted(
-        alerts,
-        key=lambda item: (item.get("effective_at") or item.get("recorded_at") or "", item["alert_id"]),
-        reverse=True,
     )
 
 
@@ -2428,149 +1771,6 @@ def _collection_card_article(article: dict[str, Any]) -> dict[str, Any]:
     return card
 
 
-# Pages rejects any one asset over 25 MiB on every plan. Keep each browser
-# file at or below 8 MiB so the research index can grow without a deploy failure.
-PUBLIC_RESEARCH_SHARD_MAX_BYTES = 8 * 1024 * 1024
-_SHARD_SKIP_KEYS = frozenset({"schema_version", "last_updated"})
-
-
-def _compact_json_bytes(value: Any) -> bytes:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-
-
-def _chunk_records(records: list[Any], max_bytes: int) -> list[list[Any]]:
-    """Pack records so each compact ``{"records": [...]}`` file fits the budget."""
-
-    chunks: list[list[Any]] = []
-    current: list[Any] = []
-    envelope_bytes = len(_compact_json_bytes({"records": []}))
-    current_bytes = envelope_bytes
-    for record in records:
-        record_bytes = len(_compact_json_bytes(record))
-        trial_bytes = current_bytes + record_bytes + (1 if current else 0)
-        if current and trial_bytes > max_bytes:
-            chunks.append(current)
-            current = [record]
-            current_bytes = envelope_bytes + record_bytes
-        else:
-            current.append(record)
-            current_bytes = trial_bytes
-    if current:
-        chunks.append(current)
-    return chunks
-
-
-def _store_shard_value(
-    key: str,
-    value: Any,
-    shard_dir: Path,
-    max_bytes: int,
-    written: set[str],
-) -> dict[str, Any]:
-    if isinstance(value, list):
-        chunks = _chunk_records(value, max_bytes)
-        manifest: list[dict[str, Any]] = []
-        for index, chunk in enumerate(chunks):
-            name = f"{key}-{index:03d}.json"
-            write_compact_json(shard_dir / name, {"records": chunk})
-            written.add(name)
-            manifest.append({"file": f"shards/{name}", "count": len(chunk)})
-        return {
-            "sharded": True,
-            "kind": "list",
-            "count": len(value),
-            "chunks": manifest,
-        }
-
-    name = f"{key}.json"
-    payload = {"value": value}
-    if len(_compact_json_bytes(payload)) <= max_bytes or not isinstance(value, dict):
-        write_compact_json(shard_dir / name, payload)
-        written.add(name)
-        return {"sharded": True, "kind": "value", "file": f"shards/{name}"}
-
-    parts = {
-        child_key: _store_shard_value(
-            f"{key}-{child_key}",
-            child,
-            shard_dir,
-            max_bytes,
-            written,
-        )
-        for child_key, child in value.items()
-    }
-    return {"sharded": True, "kind": "object", "parts": parts}
-
-
-def _largest_inline_key(document: dict[str, Any]) -> str | None:
-    best_key = None
-    best_size = -1
-    for key, value in document.items():
-        if key in _SHARD_SKIP_KEYS or not isinstance(value, (list, dict)):
-            continue
-        if isinstance(value, dict) and value.get("sharded") is True:
-            continue
-        size = len(_compact_json_bytes(value))
-        if size > best_size:
-            best_key = key
-            best_size = size
-    return best_key
-
-
-def publish_browser_research_index(
-    document: dict[str, Any],
-    directory: Path,
-    *,
-    max_bytes: int = PUBLIC_RESEARCH_SHARD_MAX_BYTES,
-) -> dict[str, Any]:
-    """Write the Pages copy of the research index as files within ``max_bytes``.
-
-    Astro keeps reading the single build-time ``index.json``. The browser copy
-    under ``public/site-data/research`` is uploaded as static assets, so the
-    large lists move into ``shards/`` and the index keeps a manifest.
-    """
-
-    if max_bytes < 128:
-        raise ValueError("max_bytes must leave room for a JSON envelope")
-    directory.mkdir(parents=True, exist_ok=True)
-    shard_dir = directory / "shards"
-    shard_dir.mkdir(parents=True, exist_ok=True)
-    published = copy.deepcopy(document)
-    written: set[str] = set()
-    while len(_compact_json_bytes(published)) > max_bytes:
-        key = _largest_inline_key(published)
-        if key is None:
-            break
-        before = len(_compact_json_bytes(published))
-        published[key] = _store_shard_value(key, published[key], shard_dir, max_bytes, written)
-        if len(_compact_json_bytes(published)) >= before:
-            break
-
-    articles = published.get("articles")
-    catalogue = {
-        "schema_version": published.get("schema_version"),
-        "last_updated": published.get("last_updated"),
-        "articles": articles,
-    }
-    if isinstance(articles, list) and len(_compact_json_bytes(catalogue)) > max_bytes:
-        published["articles"] = _store_shard_value("articles", articles, shard_dir, max_bytes, written)
-        catalogue["articles"] = published["articles"]
-
-    write_compact_json(directory / "index.json", published)
-    write_compact_json(directory / "catalogue.json", catalogue)
-    remove_stale_json_files(shard_dir, written)
-    oversized = [
-        path.name
-        for path in (directory / "index.json", directory / "catalogue.json", *shard_dir.glob("*.json"))
-        if path.stat().st_size > max_bytes
-    ]
-    if oversized:
-        raise RuntimeError(
-            "Research browser files exceed "
-            f"{max_bytes} bytes: {', '.join(oversized)}"
-        )
-    return published
-
 
 def write_literature_artifacts(
     payload: dict[str, Any],
@@ -2646,7 +1846,10 @@ def write_literature_artifacts(
                 {"slug": article["slug"], "indexable": article.get("indexable") is not False}
                 for article in public_article_details
             ],
-            "diseases": list(route_diseases.values()),
+            # Article ranking changes insertion order but not this name lookup.
+            # Keep it canonical: it is a shared dependency of every cached page.
+            "diseases": [route_diseases[name] for name in sorted(route_diseases)],
+            "facets": public_index.get("facets") or {},
         },
     )
     for article in public_article_details:
