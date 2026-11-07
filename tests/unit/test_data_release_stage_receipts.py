@@ -147,6 +147,32 @@ def test_legacy_verified_html_does_not_authorize_code_only_data(tmp_path):
         receipt.assert_published_data([downloads / "countries"])
 
 
+@pytest.mark.parametrize('legacy', [False, True])
+def test_editorial_changes_allow_code_only_without_relaxing_generated_data_checks(tmp_path, legacy):
+    from src.services.data_release.stage_receipts import _inventory
+    data = tmp_path / 'astro-site/src/data'
+    data.mkdir(parents=True)
+    notes = data / 'changelog.ts'
+    notes.write_text('export const version = 1;')
+    observations = data / 'meta.json'
+    observations.write_text('{"cases":1}')
+    receipt = StageReceipts(tmp_path, 'editorial-release', {}, {})
+    identity = {'release_id': 'editorial-release'}
+    receipt.mark_published(identity, data_paths=[data])
+    if legacy:
+        marker = tmp_path / 'exports/successful-site-release.json'
+        payload = json.loads(marker.read_text())
+        payload['data_snapshot']['files'] = _inventory([data])
+        marker.write_text(json.dumps(payload))
+    before = receipt.signature('ready', identity)
+    notes.write_text('export const version = 2;')
+    receipt.assert_published_data([data])
+    assert receipt.signature('ready', identity) != before
+    observations.write_text('{"cases":2}')
+    with pytest.raises(RuntimeError, match='Code-only release requires'):
+        receipt.assert_published_data([data])
+
+
 def test_success_baseline_is_recorded_even_when_data_inventory_fails(tmp_path):
     _, receipt, _ = _download_receipt(tmp_path)
     with pytest.raises(RuntimeError, match="Published baseline saved"):

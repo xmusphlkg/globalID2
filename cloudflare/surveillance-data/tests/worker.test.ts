@@ -102,3 +102,16 @@ test('Pages Advanced Mode preserves static routes and serves JSON through the sa
   assert.deepEqual(assets, ['https://site.test/countries/jp/', 'https://site.test/site-data/search-index.json']);
   assert.deepEqual(f.keys, ['site-data/surveillance/current.json', 'site-data/situation/current.json']);
 });
+
+test('public update files use a restricted namespace and are never cached', async () => {
+  const f = fixture();
+  for (const name of ['latest.json', '2026-11.json']) {
+    const response = await worker.fetch(new Request(`https://site.test/site-data/updates/${name}`), f.env);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+  }
+  for (const name of ['private.json', '2026-13.json', '2026-00.json']) {
+    assert.equal((await worker.fetch(new Request(`https://site.test/site-data/updates/${name}`), f.env)).status, 404);
+  }
+  assert.deepEqual(f.keys, ['site-data/updates/latest.json', 'site-data/updates/2026-11.json']);
+});

@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh public data update feed every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=globalid-public-updates.service
+
+[Install]
+WantedBy=timers.target

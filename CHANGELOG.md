@@ -16,6 +16,13 @@ This file records release-level changes to the GIDS application and its data ope
 - The control panel has a realtime publication workspace for Surveillance and Situation, with separate queue/backlog views, version and integrity receipts, task history, manual JSON publication and fresh retries. The site release center and shared task list identify JSON channels separately from template and report publication.
 - Automatic JSON publication can be paused per channel with durable cross-process state. Scheduler reconciliation, retries and continuation respect the pause; existing tasks and explicit manual runs remain available. Monitoring shows intentional pauses without treating their pending/retry age as an outage, while retaining integrity and execution alarms.
 
+## [0.18.1] - 2026-11-07
+
+- Added a multilingual website and data update history with monthly archives, channel filters, published coverage metrics and links to release notes. Successful acknowledged publication markers are projected into small JSON files by a separate minute timer, without rebuilding the site or blocking data publication.
+- Fixed stale events during month switches and independent refresh error handling. Failed refreshes retain known events, slow requests are bounded, and monthly records are validated before rendering.
+- Code-only releases recognize the hand-authored changelog and acknowledgements as source files while keeping generated data snapshots strictly unchanged; updating release notes no longer forces a data regeneration.
+- Restored the homepage's real China/Japan influenza curves, country/disease navigation, download selection, source citations, subdivision shortcuts and weekly/monthly outbreak archives while retaining independent JSON updates. Per-article social cards remain disabled.
+
 ## [0.18.0] - 2026-11-07
 
 ### Added

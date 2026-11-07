@@ -26,6 +26,31 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.18.1',
+    date: '2026-11-07',
+    titleEn: 'Website and data publication history',
+    titleZh: '网站与数据更新记录',
+    titleFr: 'Historique des publications du site et des données',
+    summaryEn: 'A new update page brings together website versions and published data activity, alongside restored surveillance navigation, downloads and real China/Japan influenza curves.',
+    summaryZh: '新增更新页面，集中查看网站版本与已发布数据动态；恢复监测导航、数据下载和首页中日真实流感曲线。',
+    summaryFr: 'Une nouvelle page réunit les versions du site et les publications de données, avec la navigation de surveillance, les téléchargements et les courbes réelles de grippe en Chine et au Japon rétablis.',
+    sections: [{
+      kind: 'new', labelEn: 'New', labelZh: '新增', labelFr: 'Nouveautés',
+      items: [{
+        en: 'Browse successful data publications by month and type. The update history refreshes independently every minute without rebuilding the website.',
+        zh: '按月份和类型查看成功发布的数据记录；更新记录每分钟独立刷新，无需重建网站。',
+        fr: 'Consultez les publications de données réussies par mois et par type. L’historique est actualisé indépendamment chaque minute, sans recompiler le site.',
+      }],
+    }, {
+      kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections',
+      items: [{
+        en: 'Restored real influenza curves on the homepage, contextual country/disease links, download filters, chart sources and weekly/monthly outbreak archives while retaining independent data publication.',
+        zh: '恢复首页真实流感曲线、国家与疾病关联跳转、下载筛选、图表来源和疫情周月归档，保留数据独立发布机制。',
+        fr: 'Les courbes réelles de grippe, les liens entre pays et maladies, les filtres de téléchargement, les sources des graphiques et les archives hebdomadaires et mensuelles sont rétablis, avec une publication des données toujours indépendante.',
+      }],
+    }],
+  },
+  {
     version: '0.18.0',
     date: '2026-11-07',
     titleEn: 'Independent live data updates',

@@ -26,6 +26,15 @@ def _digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def _generated_data_files(root: Path, files: dict) -> dict:
+    # These hand-authored TypeScript modules share src/data with generated JSON.
+    # Their content is covered by source/build fingerprints, not the database
+    # snapshot gate. Keep this exact allowlist narrow; JSON must remain frozen.
+    editorial = {str(root.resolve() / "astro-site/src/data" / name)
+                 for name in ("changelog.ts", "acknowledgements.ts")}
+    return {name: entry for name, entry in files.items() if name not in editorial}
+
+
 def _inventory(paths: list[Path]) -> dict:
     result = {}
     cutoff = time.time_ns() - 1_000_000_000
@@ -142,7 +151,7 @@ class StageReceipts:
         if data_paths is not None:
             roots = [path.resolve() for path in data_paths]
             try:
-                files = _inventory(roots)
+                files = _generated_data_files(self.root, _inventory(roots))
                 if not files:
                     raise ValueError("Empty published data snapshot")
                 payload["data_snapshot"] = {"roots": [str(path) for path in roots], "files": files}
@@ -200,8 +209,9 @@ class StageReceipts:
             roots = [path.resolve() for path in paths]
             if sorted(snapshot["roots"]) != sorted(str(path) for path in roots):
                 raise ValueError("Published data roots differ")
-            current = _inventory(roots)
-            expected = snapshot["files"]
+            current = _generated_data_files(self.root, _inventory(roots))
+            # Accept older receipts which included the editorial modules.
+            expected = _generated_data_files(self.root, snapshot["files"])
             if not current or current.keys() != expected.keys():
                 raise ValueError("Published data inventory differs")
             for name, entry in expected.items():

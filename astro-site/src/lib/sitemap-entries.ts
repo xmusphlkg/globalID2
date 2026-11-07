@@ -98,6 +98,7 @@ export const STATIC_SITEMAP_PATHS = [
   '/',
   '/about/',
   '/changelog/',
+  '/data-updates/',
   '/subscribe/',
   '/copyright/',
   '/terms/',

@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import DataUpdates from '../components/public/DataUpdates';
+import { changelogReleases } from '../data/changelog';
+import { buildAlternatePaths } from '../lib/seo';
+
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
+const pick = (en: string, zh: string, fr: string) => locale === 'zh' ? zh : locale === 'fr' ? fr : en;
+const prefix = locale === 'en' ? '' : `/${locale}`;
+const title = pick('Data & website updates', '网站与数据更新', 'Mises à jour du site et des données');
+const releases = changelogReleases.map(release => ({ version: release.version, date: release.date, title: pick(release.titleEn, release.titleZh, release.titleFr || release.titleEn), summary: pick(release.summaryEn, release.summaryZh, release.summaryFr || release.summaryEn) }));
+const description = pick('Explore the latest data and website updates across GIDS.', '查看 GIDS 数据发布、网站版本与版式更新。', 'Explorez les publications de données et les versions du site GIDS.');
+---
+<BaseLayout title={title} description={description} initialLanguage={locale} seo={{ title: `${title} | GIDS`, description, locale, canonicalPath: `${prefix}/data-updates/`, alternatePaths: buildAlternatePaths(`${prefix}/data-updates/`, locale), pageType: 'WebPage' }}>
+  <div class="updates-page">
+    <div class="updates-intro">
+      <p class="updates-eyebrow">{pick('PUBLICATION ACTIVITY', '公开发布动态', 'ACTIVITÉ DE PUBLICATION')}</p>
+      <h1>{title}</h1>
+      <p>{pick('Follow the data and product releases that keep GIDS growing.', '追踪全球数据更新，了解网站每一次进化。', 'Suivez les publications de données et les versions qui font évoluer GIDS.')}</p>
+      <p class="updates-note">{pick('Data times show publication by GIDS in your local time. Website versions have a publication date only. Source reporting schedules vary.', '数据时间为 GIDS 发布到网站的时间，按您的本地时区显示；网站版本仅记录发布日。各来源的报告周期不同。', 'Les heures des données correspondent aux publications GIDS dans votre fuseau horaire. Seule la date est indiquée pour les versions du site. Les fréquences varient selon les sources.')}</p>
+    </div>
+    <DataUpdates language={locale} releases={releases} client:load />
+  </div>
+</BaseLayout>
+<style>
+  .updates-page{max-width:1040px;margin:0 auto;padding:4rem 1.5rem 6rem}.updates-intro{max-width:740px;margin-bottom:2.5rem}.updates-eyebrow{font-size:.75rem;font-weight:700;letter-spacing:.13em;color:#16815b}.updates-intro h1{font-family:var(--font-serif);font-size:clamp(2.3rem,5vw,4rem);line-height:1.12;margin:.75rem 0 1rem}.updates-intro>p:not(.updates-eyebrow){color:rgb(var(--text-muted));line-height:1.7}.updates-note{font-size:.85rem;margin-top:1rem}@media(max-width:600px){.updates-page{padding:2.5rem 1rem 4rem}}
+</style>

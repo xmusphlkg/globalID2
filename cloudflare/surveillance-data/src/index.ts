@@ -8,6 +8,8 @@ export function objectPath(pathname: string): string | null {
 }
 
 export function dataRoute(pathname: string) {
+  const updates = /^\/site-data\/updates\/(latest\.json|\d{4}-(?:0[1-9]|1[0-2])\.json)$/.exec(pathname);
+  if (updates) return { channel: 'updates' as const, relative: updates[1], publicRoot: '/site-data/updates/' };
   const publicRoot = '/site-data/situation/';
   const relative = pathname.startsWith(publicRoot) ? pathname.slice(publicRoot.length)
     : pathname === '/situation/map-data.json' ? 'map-data.json'
@@ -42,10 +44,10 @@ export default {
       responseHeaders.set('Allow', 'GET, HEAD, OPTIONS');
       return new Response('{"error":"method_not_allowed"}', { status: 405, headers: responseHeaders });
     }
-    const prefix = (channel === 'situation' ? env.SITUATION_PREFIX || 'site-data/situation' : env.DATA_PREFIX || 'site-data/surveillance').replace(/^\/+|\/+$/g, '');
+    const prefix = (channel === 'updates' ? 'site-data/updates' : channel === 'situation' ? env.SITUATION_PREFIX || 'site-data/situation' : env.DATA_PREFIX || 'site-data/surveillance').replace(/^\/+|\/+$/g, '');
     const key = `${prefix}/${relative}`;
     try {
-      if (relative !== 'current.json' && !relative.startsWith('objects/')) {
+      if (channel !== 'updates' && relative !== 'current.json' && !relative.startsWith('objects/')) {
         const pointer = await env.DATA.get(`${prefix}/current.json`);
         if (!pointer) return new Response('{"error":"not_found"}', { status: 404, headers: headers() });
         if (pointer.size > 2 * 1024 * 1024) throw new Error('Data manifest exceeds supported size');
@@ -71,7 +73,7 @@ export default {
       // Missing pointers must not be negatively cached: the first initialized
       // generation may arrive independently of the template deployment.
       if (!object) return new Response('{"error":"not_found"}', { status: 404, headers: headers() });
-      const responseHeaders = headers(relative !== 'current.json');
+      const responseHeaders = headers(channel !== 'updates' && relative !== 'current.json');
       responseHeaders.set('ETag', object.httpEtag);
       responseHeaders.set('Content-Length', String(object.size));
       if (object.httpMetadata?.contentEncoding) responseHeaders.set('Content-Encoding', object.httpMetadata.contentEncoding);

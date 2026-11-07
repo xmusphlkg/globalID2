@@ -64,6 +64,7 @@ test('packaged Pages Worker routes live JSON while preserving ordinary static as
   const routes = JSON.parse(readFileSync(join(directory, '_routes.json'), 'utf8'));
   assert.equal(routes.include.includes('/*'), false);
   assert.equal(routes.include.includes('/site-data/situation/*'), true);
+  assert.equal(routes.include.includes('/site-data/updates/*'), true);
   const runtime = new Miniflare(convertV4MiniflareOptions({
     modules: true, rootPath: directory, scriptPath: join(directory, '_worker.js'), compatibilityDate: '2026-11-07',
     compatibilityFlags: ['nodejs_compat'], r2Buckets: ['DATA'],
@@ -73,6 +74,22 @@ test('packaged Pages Worker routes live JSON while preserving ordinary static as
     const bucket = await runtime.getR2Bucket('DATA');
     await bucket.put('site-data/situation/current.json', '{"schema_version":1,"release_id":"pages-situation","files":{}}');
     assert.equal((await (await runtime.dispatchFetch('https://site.test/site-data/situation/current.json')).json()).release_id, 'pages-situation');
+    const updateUrl = 'https://site.test/site-data/updates/latest.json';
+    const missing = await runtime.dispatchFetch(updateUrl);
+    assert.equal(missing.status, 404);
+    assert.equal(missing.headers.get('cache-control'), 'no-store');
+    await bucket.put('site-data/updates/latest.json', '{"schema_version":1,"months":["2026-11"]}');
+    const index = await runtime.dispatchFetch(updateUrl);
+    assert.deepEqual((await index.json()).months, ['2026-11']);
+    assert.equal(index.headers.get('cache-control'), 'no-store');
+    const unchanged = await runtime.dispatchFetch(updateUrl, { headers: { 'If-None-Match': index.headers.get('etag') } });
+    assert.equal(unchanged.status, 304);
+    assert.equal(unchanged.headers.get('cache-control'), 'no-store');
+    await bucket.put('site-data/updates/2026-11.json', '{"schema_version":1,"month":"2026-11","events":[]}');
+    const monthHead = await runtime.dispatchFetch('https://site.test/site-data/updates/2026-11.json', { method: 'HEAD' });
+    assert.equal(monthHead.status, 200);
+    assert.equal(await monthHead.text(), '');
+    assert.equal(monthHead.headers.get('cache-control'), 'no-store');
     assert.equal(await (await runtime.dispatchFetch('https://site.test/countries/jp/')).text(), 'static:/countries/jp/');
     assert.equal(await (await runtime.dispatchFetch('https://site.test/site-data/search-index.json')).text(), 'static:/site-data/search-index.json');
   } finally { await runtime.dispose(); rmSync(directory, { recursive: true, force: true }); }

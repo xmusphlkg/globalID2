@@ -8,6 +8,7 @@
     "/site-data/meta.json",
     "/site-data/site-status.json",
     "/site-data/situation/*",
+    "/site-data/updates/*",
     "/situation/map-data.json",
     "/situation/outbreaks/*"
   ],
