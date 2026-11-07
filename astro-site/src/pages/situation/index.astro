@@ -8,10 +8,9 @@
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import SituationExplorer from '../../components/situation/SituationExplorer';
 import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
-import { readSituationMap, readSources } from '../../utils/international';
+import { diseaseIndex } from '../../lib/seo-page-data';
 import { readSituationSite } from '../../utils/situationSite';
 import { translateUi } from '../../utils/i18n';
-import type { MapPoint } from '../../utils/situationTypes';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
@@ -19,24 +18,7 @@ const fr = locale === 'fr';
 const prefix = zh ? '/zh' : fr ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 
-const map = readSituationMap();
-const sources = readSources();
-const published = map !== null;
-const points: MapPoint[] = map?.points ?? [];
-const diseaseIds = [...new Set(points.flatMap(point => point.disease_id ? [point.disease_id] : []))];
-const alertCountries = [...new Map(points.map(point => [point.country_code.toUpperCase(), {
-  code: point.country_code,
-  name_en: point.country_name_en,
-  name_zh: point.country_name_zh,
-}])).values()];
-const site = map
-  ? readSituationSite({
-      diseaseIds,
-      alertCountries,
-      sparkPairs: points.flatMap(point => point.disease_id ? [`${point.country_code}:${point.disease_id}`] : []),
-      prefix,
-    })
-  : { countries: {}, diseases: {}, series: {} };
+const site = readSituationSite({ diseaseIds: diseaseIndex.map(row => row.disease_id), alertCountries: [], sparkPairs: [], prefix });
 const dataUrl = '/situation/map-data.json';
 
 const title = pick('Global Infectious Disease Situation Map', '全球传染病态势地图', 'Carte mondiale de la situation des maladies infectieuses');
@@ -47,35 +29,29 @@ const description = pick(
 );
 const canonicalPath = `${prefix}/situation/`;
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
-const structuredData = published ? [{
+const structuredData = [{
   '@type': 'Dataset',
   '@id': `${new URL(canonicalPath, siteOrigin)}#alerts`,
   name: title,
   description,
-  dateModified: map?.generated_at ?? undefined,
-  temporalCoverage: map?.since_date && map?.as_of ? `${map.since_date}/${map.as_of}` : undefined,
-  isBasedOn: sources.map(source => source.homepage).filter(Boolean),
-}] : [];
+}];
 const seo: SeoDocument = {
   title: `${title} | GIDS`,
   description,
   canonicalPath,
   locale,
   alternatePaths: buildAlternatePaths(canonicalPath, locale),
-  noindex: !published,
+  noindex: false,
   pageType: 'Report',
-  datePublished: map?.generated_at ?? null,
-  dateModified: map?.generated_at ?? null,
 };
 ---
 
-<ReportLayout title={title} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} stage={published} breadcrumbs={published ? [] : [{ label: pick('Situation map', '态势地图', 'Carte de situation') }]}>
-  {published && map ? (
+<ReportLayout title={title} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} stage={true} breadcrumbs={[]}>
     <SituationExplorer
       client:load
       locale={locale}
-      asOf={map.as_of}
-      generatedAt={map.generated_at}
+      asOf=""
+      generatedAt=""
       dataUrl={dataUrl}
       site={site}
       links={{
@@ -84,14 +60,6 @@ const seo: SeoDocument = {
         methods: `${prefix}/situation/methodology/`,
       }}
     />
-  ) : (
-    <section class="placeholder">
-      <p class="eyebrow">{pick('Not yet published', '尚未发布', 'Pas encore publié')}</p>
-      <h1>{pick('No situation data is available yet', '暂无态势数据', 'Aucune donnée de situation n’est encore disponible')}</h1>
-      <p>{pick('This page appears once official reports have been collected, read and exported.', '官方报告采集、解析并导出后，本页将显示内容。', 'Cette page apparaît une fois les rapports officiels collectés, lus et exportés.')}</p>
-      <a href={`${prefix}/diseases/`}>{pick('Browse disease datasets', '浏览疾病数据', 'Parcourir les données par maladie')}</a>
-    </section>
-  )}
 </ReportLayout>
 
 <style>

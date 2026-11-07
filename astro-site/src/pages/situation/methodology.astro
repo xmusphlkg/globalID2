@@ -1,10 +1,8 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
-import { readSituationMap } from '../../utils/international';
 import { translateUi } from '../../utils/i18n';
 
-const situationPublic = readSituationMap() !== null;
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 const fr = locale === 'fr';
@@ -73,7 +71,7 @@ const seo: SeoDocument = {
   canonicalPath: `${prefix}/situation/methodology/`,
   locale,
   alternatePaths: buildAlternatePaths(`${prefix}/situation/methodology/`, locale),
-  noindex: !situationPublic,
+  noindex: false,
 };
 ---
 

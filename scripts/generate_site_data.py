@@ -12,6 +12,8 @@ the Astro build process consumes at build time.
 
 import argparse
 import asyncio
+import os
+import json
 from datetime import datetime, timezone
 import sys
 from pathlib import Path
@@ -217,8 +219,50 @@ def main() -> None:
         ),
     )
     parser.add_argument("--reports-only", action="store_true", help="Refresh report index and changed details only; reuse all other data")
+    parser.add_argument("--data-only", action="store_true", help="Export versioned surveillance browser JSON without HTML, reports, literature or download formats")
+    parser.add_argument("--content-only", action="store_true", help="Refresh static content using the frozen local surveillance baseline; never read live observations or generate downloads")
+    parser.add_argument("--surveillance-state", type=Path, default=ROOT / "exports/surveillance-state")
+    parser.add_argument("--surveillance-output", type=Path, default=ROOT / "exports/surveillance-data")
+    parser.add_argument("--data-release-id", help="Stable data release identity (queued jobs use their task UUID)")
+    parser.add_argument("--surveillance-changes-file", type=Path, help="Exact selected versioned change sets for scoped JSON projection")
+    parser.add_argument("--surveillance-workers", type=int, default=None,
+        help="Independent country projection processes, 1–8 (default: CPU/cgroup memory budget)")
     parser.add_argument("--exact-country-scopes", action="store_true", help="Country selection is already expanded by the release planner")
     args = parser.parse_args()
+    if args.data_only:
+        if args.reports_only or args.content_only or args.incremental_site or args.recorded_at_as_of:
+            parser.error("--data-only cannot be combined with reports, literature or historical site export modes")
+        from src.generation.surveillance_data_export import export_surveillance_data
+        from src.generation.country_projection_workers import default_country_workers
+        if args.surveillance_workers is not None and not 1 <= args.surveillance_workers <= 8:
+            parser.error("--surveillance-workers must be 1–8")
+        async def export_json():
+            from src.core.database_snapshot import SNAPSHOT_ENV, export_read_snapshot
+            async def generate():
+                return await export_surveillance_data(
+                    args.surveillance_state, args.surveillance_output,
+                    release_id=args.data_release_id or datetime.now(timezone.utc).strftime("data-%Y%m%dT%H%M%S.%fZ"),
+                    incremental_country_codes=args.incremental_country_codes or None,
+                    incremental=bool(args.incremental_country_codes),
+                    country_scopes_exact=args.exact_country_scopes,
+                    publication_changes=(json.loads(args.surveillance_changes_file.read_text())
+                        if args.surveillance_changes_file else None),
+                    country_workers=args.surveillance_workers or default_country_workers(),
+                )
+            if os.environ.get(SNAPSHOT_ENV):
+                return await generate()
+            # Standalone CLI runs own the same consistent read boundary as
+            # queued data updates. The environment is scoped to this CLI only.
+            async with export_read_snapshot() as snapshot_env:
+                os.environ[SNAPSHOT_ENV] = snapshot_env[SNAPSHOT_ENV]
+                try:
+                    return await generate()
+                finally:
+                    os.environ.pop(SNAPSHOT_ENV, None)
+        asyncio.run(export_json())
+        return
+    if args.content_only and (args.reports_only or args.incremental_country_codes or args.recorded_at_as_of):
+        parser.error("--content-only cannot select surveillance or historical export scopes")
     if args.reports_only:
         if args.incremental_site or args.incremental_country_codes or args.recorded_at_as_of:
             parser.error("--reports-only cannot be combined with other export scopes")
@@ -252,6 +296,7 @@ def main() -> None:
             recorded_at_as_of=recorded_at_as_of,
             incremental_site=args.incremental_site,
             country_scopes_exact=args.exact_country_scopes,
+            content_only=args.content_only,
         )
     )
 

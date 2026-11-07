@@ -78,6 +78,7 @@ RELEASE_EXCLUSIVE_TASK_TYPES = {TaskType.EXPORT_DATA}
 # Archival has a separate single-job lane; it cannot consume the main release
 # slot merely because it shares the persisted EXPORT_DATA enum.
 _claimed_raw_archive_uuids: set[str] = set()
+_claimed_data_release_uuids: set[str] = set()
 # Releases share one filesystem lane; their database readers use an MVCC
 # snapshot, so ordinary collection/network/model work keeps its own lanes.
 # These operations persist their checkpoints and are designed to be resumed.
@@ -322,11 +323,26 @@ async def _claim_next_task_uuid(
     async with get_database() as db:
         reports_only = Task.input_data["reports_only"].as_boolean().is_(True)
         raw_archive_only = Task.input_data["raw_archive_only"].as_boolean().is_(True)
-        nonexclusive_export = or_(reports_only, raw_archive_only)
+        data_only = Task.input_data["data_only"].as_boolean().is_(True)
+        static_data_compatible = or_(
+            Task.input_data["content_only"].as_boolean().is_(True), reports_only,
+            Task.input_data["code_only"].as_boolean().is_(True),
+        )
+        legacy_site = and_(Task.task_type == TaskType.EXPORT_DATA,
+                           ~raw_archive_only, ~data_only, ~static_data_compatible)
+        situation_data = and_(data_only, (Task.input_data["data_line"].as_string() == "situation").is_(True))
+        surveillance_data = and_(data_only, Task.input_data["data_line"].as_string().is_distinct_from("situation"))
+        situation_legacy_site = and_(Task.task_type == TaskType.EXPORT_DATA,
+            ~raw_archive_only, ~data_only, ~reports_only,
+            Task.input_data["code_only"].as_boolean().is_not(True),
+            Task.input_data["situation_detached"].as_boolean().is_not(True))
+        nonexclusive_export = or_(reports_only, raw_archive_only, data_only)
         active_tasks = (
             await db.execute(
                 select(Task.task_uuid, Task.task_type, nonexclusive_export.label("nonexclusive"),
-                       raw_archive_only.label("raw_archive_only")).where(
+                       raw_archive_only.label("raw_archive_only"), data_only.label("data_only"),
+                       legacy_site.label("legacy_site"), situation_legacy_site.label("situation_legacy"),
+                       Task.input_data["data_line"].as_string().label("data_line")).where(
                     or_(
                         Task.status == TaskStatus.RUNNING,
                         and_(Task.status == TaskStatus.RETRYING, ~raw_archive_only),
@@ -335,7 +351,7 @@ async def _claim_next_task_uuid(
             )
         ).all()
         active_task_types = [
-            task_type for task_uuid, task_type, is_nonexclusive, _is_archive in active_tasks
+            task_type for task_uuid, task_type, is_nonexclusive, _is_archive, _is_data, _is_legacy, _is_situation_legacy, _data_line in active_tasks
             if not (task_type == TaskType.EXPORT_DATA and is_nonexclusive)
             and not (
                 task_type in COLLECTION_STORE_TASK_TYPES
@@ -372,16 +388,31 @@ async def _claim_next_task_uuid(
         )
         if blocked_task_types:
             allowed = Task.task_type.notin_(list(blocked_task_types))
-            # Archival owns neither the publication lane nor its database gate.
-            allowed = or_(allowed, and_(Task.task_type == TaskType.EXPORT_DATA, raw_archive_only))
+            # Archival and JSON own independent slots and artifact roots.
+            allowed = or_(allowed, and_(Task.task_type == TaskType.EXPORT_DATA, or_(raw_archive_only, data_only)))
             if TaskType.EXPORT_DATA in memory_blocked_task_types and TaskType.EXPORT_DATA not in lane_blocked:
                 # Reports read report snapshots only. They do not walk the
                 # surveillance, literature, or Situation tables being stored.
                 allowed = or_(allowed, and_(Task.task_type == TaskType.EXPORT_DATA, reports_only))
             query = query.where(allowed)
         if any(task_type == TaskType.EXPORT_DATA and is_archive
-               for _uuid, task_type, _nonexclusive, is_archive in active_tasks):
+               for _uuid, task_type, _nonexclusive, is_archive, _is_data, _is_legacy, _is_situation_legacy, _data_line in active_tasks):
             query = query.where(~raw_archive_only)
+        active_data = [(line or "surveillance") for _uuid, task_type, _nonexclusive,
+            _is_archive, is_data, _is_legacy, _is_situation_legacy, line in active_tasks
+            if task_type == TaskType.EXPORT_DATA and is_data]
+        if active_data:
+            query = query.where(~data_only)
+            if "surveillance" in active_data:
+                query = query.where(~legacy_site)
+            if "situation" in active_data:
+                query = query.where(~situation_legacy_site)
+        if any(task_type == TaskType.EXPORT_DATA and is_legacy
+               for _uuid, task_type, _nonexclusive, _is_archive, _is_data, is_legacy, _is_situation_legacy, _line in active_tasks):
+            query = query.where(~surveillance_data)
+        if any(task_type == TaskType.EXPORT_DATA and is_situation_legacy
+               for _uuid, task_type, _nonexclusive, _is_archive, _is_data, _is_legacy, is_situation_legacy, _line in active_tasks):
+            query = query.where(~situation_data)
         candidates = list((await db.execute(query)).scalars().all())
         if not candidates:
             return None
@@ -432,6 +463,8 @@ async def _claim_next_task_uuid(
         await db.commit()
         if (task.input_data or {}).get("raw_archive_only") is True:
             _claimed_raw_archive_uuids.add(task.task_uuid)
+        if (task.input_data or {}).get("data_only") is True:
+            _claimed_data_release_uuids.add(task.task_uuid)
         return task.task_uuid, task.task_type
 
 
@@ -709,6 +742,7 @@ async def run_worker() -> None:
                 )
         finally:
             _claimed_raw_archive_uuids.discard(task_uuid)
+            _claimed_data_release_uuids.discard(task_uuid)
             if task_type in AI_TASK_TYPES:
                 ai_concurrency.record_result(success=succeeded, error=execution_error)
             finished.set()
@@ -740,7 +774,8 @@ async def run_worker() -> None:
             waiting = waiting_parent_uuids()
             executing_types = [task_type for task, task_type in active_task_types.items()
                                if active_task_uuids.get(task) not in waiting
-                               and active_task_uuids.get(task) not in _claimed_raw_archive_uuids]
+                               and active_task_uuids.get(task) not in _claimed_raw_archive_uuids
+                               and active_task_uuids.get(task) not in _claimed_data_release_uuids]
             # Parent tasks use separate lanes. Model HTTP permits stay per model
             # inside AIWorkDispatcher and are not collapsed into one AI parent.
             lane_blocked = _lane_blocked_task_types(
@@ -748,7 +783,9 @@ async def run_worker() -> None:
                 ai_capacity=ai_concurrency.capacity,
             )
             if lane_blocked is None:
-                break
+                # JSON and archival each own an independent single slot. They
+                # can still be claimed when every ordinary/AI/static lane is full.
+                lane_blocked = set(TaskType)
             claimed = await _claim_next_task_safely(
                 instance_id,
                 blocked_task_types=lane_blocked or None,

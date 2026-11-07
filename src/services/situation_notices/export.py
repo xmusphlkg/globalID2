@@ -19,17 +19,19 @@ redistribution terms are cleared (``metadata_and_extract``).
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from collections import defaultdict
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import selectinload
 
 from src.ai.peer_review import review_mode
 from src.core.database import get_db
+from src.core.database_snapshot import SNAPSHOT_ENV
 from src.domain import SituationAlert, SituationExtraction, SituationNotice, SituationOutbreak, SituationSourceRun
 from src.services.global_sources.catalogue import (
     ROOT,
@@ -40,7 +42,7 @@ from src.services.global_sources.catalogue import (
 )
 
 from .gazetteer import locate
-from .pipeline import utc_now
+from .pipeline import cluster_alerts, utc_now
 
 SCHEMA_VERSION = "gids.situation_alerts.v1"
 DEFAULT_OUTPUT_DIR = ROOT / "astro-site" / "src" / "data" / "situation" / "international"
@@ -284,6 +286,7 @@ async def export_site(
     output_dir: Path | str = DEFAULT_OUTPUT_DIR,
     since_days: int = DEFAULT_SINCE_DAYS,
     as_of: date | None = None,
+    derive_outbreaks: bool = False,
 ) -> dict[str, Any]:
     as_of = as_of or utc_now().date()
     since = as_of - timedelta(days=since_days)
@@ -291,6 +294,10 @@ async def export_site(
     diseases = {row["disease_id"]: row for row in disease_catalogue()}
 
     async with get_db() as db:
+        if derive_outbreaks and not os.environ.get(SNAPSHOT_ENV) and db.get_bind().dialect.name == "postgresql":
+            # The complete export uses one session. Standalone CLI/API callers
+            # own a stable read-only view without mutating process-wide env.
+            await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
         alert_rows = (
             await db.execute(
                 select(SituationAlert)
@@ -329,6 +336,21 @@ async def export_site(
         ).group_by(SituationNotice.source_id))).all())
 
     records = [alert_record(row, row.notice, row.extraction, diseases) for row in alert_rows]
+    if derive_outbreaks:
+        # Accepted alerts commit independently of a long AI run. Derive grouping
+        # from this same read snapshot, even if a later rebuild never completed.
+        clusters = cluster_alerts(({"alert_id": row.alert_id, "notice_id": row.notice_id,
+            "source_id": row.source_id, "published_date": row.published_date,
+            "disease_id": row.disease_id, "disease_label": row.disease_label,
+            "country_code": row.country_code, "status": row.status,
+            "document_type": (row.extraction.document_type if row.extraction else None) or "other"}
+            for row in alert_rows), as_of=as_of)
+        memberships = {alert_id: cluster["outbreak_id"] for cluster in clusters for alert_id in cluster["alert_ids"]}
+        for record in records:
+            record["outbreak_id"] = memberships.get(record["alert_id"])
+        outbreak_rows = [SituationOutbreak(**{key: cluster[key] for key in
+            ("outbreak_id", "disease_id", "disease_label", "first_published", "last_published", "country_codes", "source_ids", "status")},
+            alert_count=len(cluster["alert_ids"]), notice_count=len(cluster["notice_ids"])) for cluster in clusters]
     by_outbreak: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         if record["outbreak_id"]:

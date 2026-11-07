@@ -61,7 +61,7 @@ async def test_save_reports_accepted_semantics_not_proposal_or_upsert_count(
         return None
 
     monkeypatch.setattr(
-        "src.data.storage.series_observation_store.acquire_disease_data_mutation_lock", noop,
+        "src.data.storage.series_observation_store.acquire_country_data_mutation_lock", noop,
     )
 
     class Store(SeriesObservationStore):
@@ -142,10 +142,10 @@ async def test_complete_noop_and_legacy_fallback(changes, conservative, expected
 async def test_empty_authoritative_replacement_cannot_hide_withdrawals(monkeypatch, strategy, code):
     markers = []
 
-    async def lock(_db):
+    async def lock(_db, _country_code):
         pass
 
-    monkeypatch.setattr("src.services.ingestion.strategies.acquire_disease_data_mutation_lock", lock)
+    monkeypatch.setattr("src.services.ingestion.strategies.acquire_country_data_mutation_lock", lock)
 
     class Updater:
         country_code = code

@@ -34,6 +34,12 @@ async def build_release_site(
     """Run local build gates in order and bind deployment identity to output bytes."""
     split = bool(job.include_cloudflare_deploy or r2_papers_enabled or r2_reports_enabled)
     config = service._config()
+    if ((runtime.astro_dir / "src/lib/surveillance-data.ts").is_file()
+            and not getattr(config, "surveillance_json_enabled", False)):
+        raise RuntimeError("Runtime data templates require an initialized JSON channel and Worker; enable DATA_RELEASE__SURVEILLANCE_JSON_ENABLED after initialization before publishing templates")
+    task_data = dict(getattr(task, "input_data", None) or {})
+    external_surveillance = bool(getattr(config, "surveillance_json_enabled", False)
+        and (task_data.get("content_only") or task_data.get("code_only")))
     reuse = None
     inputs = None
     matched = False
@@ -44,6 +50,8 @@ async def build_release_site(
             "job": job.model_dump() if hasattr(job, "model_dump") else vars(job),
             "deployment_branch": release_identity["deployment_branch"],
             "r2_papers": r2_papers_enabled, "r2_reports": r2_reports_enabled,
+            "external_surveillance": external_surveillance,
+            "pages_data_worker": bool(getattr(config, "pages_data_worker_enabled", False)),
         })
         inputs = await asyncio.to_thread(reuse.inputs)
         matched = await asyncio.to_thread(reuse.matches, inputs)
@@ -83,6 +91,10 @@ async def build_release_site(
             # The production worker has a 60 GiB memory budget.
             "NODE_OPTIONS": "--max-old-space-size=12288",
             "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
+            "GIDS_EXTERNAL_SURVEILLANCE_DATA": "1" if external_surveillance else "0",
+            "GIDS_RUNTIME_DATA_READY": "1" if getattr(config, "surveillance_json_enabled", False) else "0",
+            "GIDS_RUNTIME_SITUATION_READY": "1" if getattr(config, "situation_json_enabled", False) else "0",
+            "GIDS_PAGES_DATA_WORKER": "1" if getattr(config, "pages_data_worker_enabled", False) else "0",
             "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
             "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
             "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],

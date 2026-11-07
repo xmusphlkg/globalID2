@@ -227,6 +227,7 @@ class R2S3Client:
         cache_control: str | None = None,
         content_encoding: str | None = None,
         query: str = "",
+        conditional_headers: dict[str, str] | None = None,
     ) -> Request:
         now = datetime.now(timezone.utc)
         amz_date = now.strftime("%Y%m%dT%H%M%SZ")
@@ -242,6 +243,10 @@ class R2S3Client:
             "x-amz-content-sha256": payload_hash,
             "x-amz-date": amz_date,
         }
+        if conditional_headers:
+            if set(conditional_headers) - {"if-match", "if-none-match"}:
+                raise ValueError("Unsupported R2 conditional header")
+            headers.update(conditional_headers)
         if content_type:
             headers["content-type"] = content_type
         if cache_control:
@@ -296,6 +301,7 @@ class R2S3Client:
         cache_control: str | None = None,
         content_encoding: str | None = None,
         query: str = "",
+        conditional_headers: dict[str, str] | None = None,
     ) -> tuple[int, bytes]:
         last_error: BaseException | None = None
         for attempt in range(1, _TRANSPORT_RETRY_ATTEMPTS + 1):
@@ -307,6 +313,7 @@ class R2S3Client:
                 cache_control=cache_control,
                 content_encoding=content_encoding,
                 query=query,
+                conditional_headers=conditional_headers,
             )
             try:
                 with self._opener(request, self.timeout_seconds) as response:
@@ -364,6 +371,23 @@ class R2S3Client:
         status, _payload = self._request("DELETE", key)
         if status not in {200, 204}:
             raise R2S3Error(f"R2 DELETE {key!r} returned HTTP {status}")
+
+    def put_object_conditional(
+        self, key: str, body: bytes, *, previous: bytes | None,
+        content_type: str = "application/json", cache_control: str = "no-store",
+        content_encoding: str | None = None,
+    ) -> None:
+        """Atomically replace a single-PUT pointer only at the observed version."""
+        condition = ({"if-none-match": "*"} if previous is None else {
+            "if-match": '"' + hashlib.md5(previous, usedforsecurity=False).hexdigest() + '"',
+        })
+        status, _ = self._request(
+            "PUT", key, body=body, content_type=content_type,
+            cache_control=cache_control, conditional_headers=condition,
+            content_encoding=content_encoding,
+        )
+        if status not in {200, 201}:
+            raise R2S3Error(f"R2 conditional PUT {key!r} returned HTTP {status}")
 
     def get_object(self, key: str) -> bytes | None:
         try:

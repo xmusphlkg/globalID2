@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { buildSitemapGroups } from './sitemap-entries';
 import { diseaseIndex, loadCountryDirectory, loadDiseaseDirectory, loadCountry, loadDisease, loadKnowledge, loadReport, reportIndex, siteMeta } from './seo-page-data';
 import { listMonths, listWeeks, readSituationMap } from '../utils/international';
-import { jsonFileCache } from './json-file-cache';
+import { readResearchIndex } from './generated-site-data';
 import { memoizeForBuild } from './build-memo';
 
 // Every sitemap partition and the papers host share one derived catalogue.
@@ -20,6 +20,8 @@ export const siteSitemapGroups = memoizeForBuild(() => {
       weeks: listWeeks().map(week => ({ period_key: week.period_key, generated_at: map?.generated_at })),
       months: listMonths().map(period_key => ({ period_key })),
     },
-    research: existsSync(researchFile) ? jsonFileCache.read(researchFile) : undefined,
+    // Share the frozen research index with the other static routes. Parsing it
+    // again here can temporarily retain two copies of this very large file.
+    research: existsSync(researchFile) ? readResearchIndex() : undefined,
   });
 });

@@ -126,6 +126,9 @@ async def execute_release_task(
     service: Any, task: Any, *, runtime: ReleasePipelineRuntime
 ) -> dict[str, Any]:
     """Publish in place; upload errors retain artifacts without rolling them back."""
+    if (getattr(task, "input_data", None) or {}).get("data_only"):
+        from .data_pipeline import execute_data_release
+        return await execute_data_release(service, task, runtime=runtime)
     if (getattr(task, "input_data", None) or {}).get("raw_archive_only"):
         from .raw_archive_jobs import execute
         return await execute(task, service=service, runtime=runtime)
@@ -190,6 +193,15 @@ async def _execute_release_task(
     if input_data.get("publish_dirty_before"):
         raise RuntimeError("Legacy release uses a timestamp cutoff; enqueue a new release with exact dirty IDs")
     code_only = bool(input_data.get("code_only"))
+    content_only = bool(input_data.get("content_only"))
+    dispatch_subscriptions = not code_only and not bool(input_data.get("suppress_subscription_dispatch"))
+    situation_detached = bool(getattr(getattr(service, "_config", lambda: None)(), "situation_json_enabled", False))
+    if situation_detached and not code_only and not input_data.get("situation_detached"):
+        raise RuntimeError("Static release predates the independent Situation JSON contract; enqueue a new static release")
+    if ((runtime.astro_dir / "src/lib/surveillance-data.ts").is_file()
+            and not getattr(service._config(), "surveillance_json_enabled", False)):
+        # Check before any retained generation/render receipt can skip npm.
+        raise RuntimeError("Runtime data templates require an initialized JSON channel and Worker before static publication")
     job_id = str(input_data.get("release_job_id") or "").strip()
     if not job_id:
         raise RuntimeError("Release task is missing release_job_id")
@@ -317,7 +329,7 @@ async def _execute_release_task(
     generated_record = None if resumed_identity else await asyncio.to_thread(
         stage_receipts.matches, "generated", generated_signature,
     )
-    needs_projection = not code_only and bool(input_data.get("full") or input_data.get("incremental_country_codes"))
+    needs_projection = not code_only and not content_only and bool(input_data.get("full") or input_data.get("incremental_country_codes"))
     projection_manifest = runtime.astro_dir / "src/data/_release-projection/manifest.json"
     if needs_projection and not projection_manifest.is_file():
         # Never acknowledge fresh DB facts against a reused older site snapshot.
@@ -357,12 +369,12 @@ async def _execute_release_task(
                 from src.generation.release_projection_snapshot import validate_read_snapshot_projection
                 await asyncio.to_thread(validate_read_snapshot_projection, projection_manifest.parent)
 
-            await asyncio.to_thread(stage_receipts.save, "generated", generated_signature, [
-                runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data",
-                runtime.root_dir / "exports/site-downloads/countries",
-                runtime.root_dir / "exports/site-downloads/diseases",
-                runtime.root_dir / "exports/site-downloads/manifest.json",
-            ], identity=release_identity)
+            generated_paths = [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"]
+            if not content_only:
+                generated_paths.extend(runtime.root_dir / name for name in (
+                    "exports/site-downloads/countries", "exports/site-downloads/diseases", "exports/site-downloads/manifest.json"))
+            await asyncio.to_thread(stage_receipts.save, "generated", generated_signature,
+                generated_paths, identity=release_identity)
 
         if needs_projection and generated_record:
             from src.generation.release_projection_snapshot import validate_read_snapshot_projection
@@ -420,7 +432,7 @@ async def _execute_release_task(
         git_env=git_env, branch=branch, download_repo_url=download_repo_url,
         publish_commit_message=publish_commit_message,
         download_git_timeout_seconds=DOWNLOAD_GIT_PUBLISH_TIMEOUT_SECONDS,
-        literature_only=literature_only, code_only=code_only,
+        literature_only=literature_only or content_only, code_only=code_only,
         r2_papers_enabled=r2_papers_enabled, r2_reports_enabled=r2_reports_enabled,
     )
     completed_publications = await _run_repository_publications(repository_publications)
@@ -465,7 +477,7 @@ async def _execute_release_task(
         env_value = getattr(service, "_env_value", lambda _name, default="": default)
         from .subscription_reconciliation import dispatch_safely
 
-        if not code_only and env_value("SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
+        if dispatch_subscriptions and env_value("SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
             from .research_subscription import dispatch_after_release
 
             research_subscription_dispatch = await dispatch_safely(
@@ -480,7 +492,7 @@ async def _execute_release_task(
                 mode=env_value("SUBSCRIPTIONS__DELIVERY_MODE", "pilot").strip().lower(),
                 guard_activation=True,
             )
-        if not code_only and env_value("SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
+        if dispatch_subscriptions and env_value("SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
             from .notice_subscription import dispatch_after_release as dispatch_notices
 
             notice_subscription_dispatch = await dispatch_safely(
@@ -508,7 +520,7 @@ async def _execute_release_task(
     # The reports bundle has already been published and, when requested, the
     # main site deploy has succeeded. A subscription failure must not mark an
     # already-published release failed or prevent the Pages deployment.
-    if r2_reports_published and not code_only:
+    if r2_reports_published and dispatch_subscriptions:
         from .report_subscription import dispatch_if_enabled
 
         report_subscription_dispatch = await dispatch_if_enabled(
@@ -517,14 +529,27 @@ async def _execute_release_task(
         )
 
     raw_archive_task = {"status": "disabled"}
-    if raw_archive_cfg.enabled and not literature_only and not code_only:
+    if raw_archive_cfg.enabled and not literature_only and not code_only and not content_only:
         from .raw_archive_jobs import enqueue
         raw_archive_task = await enqueue(task, service=service, runtime=runtime)
 
     # Consume selected rows after successful publication commands. Concurrent
     # collections outside the worker (for example maintenance imports) have
     # different IDs and remain pending for the next release.
-    if pages_deployed and not code_only:
+    if pages_deployed and not code_only and content_only:
+        from datetime import datetime, timezone
+        from sqlalchemy import update
+        from src.domain.collection import PublishDirty
+        # Static content never advances surveillance projections or consumes
+        # surveillance markers, even if an old/manual task supplied their IDs.
+        async with runtime.get_database() as db:
+            await db.execute(update(PublishDirty).where(
+                PublishDirty.id.in_(input_data.get("publish_dirty_ids") or []),
+                (PublishDirty.line.not_in(["surveillance", "situation"]) if situation_detached
+                 else PublishDirty.line != "surveillance"), PublishDirty.published_at.is_(None),
+            ).values(published_at=datetime.now(timezone.utc), published_task_uuid=task.task_uuid))
+            await db.commit()
+    elif pages_deployed and not code_only:
         from .projection import commit_release_projection
 
         async with runtime.get_database() as db:
@@ -551,6 +576,8 @@ async def _execute_release_task(
         "release_job_id": job.job_id,
         "release_job_name": job.name,
         "code_only": code_only,
+        "content_only": content_only,
+        "subscription_dispatch_suppressed": bool(input_data.get("suppress_subscription_dispatch")),
         "release_plan": input_data.get("release_plan"),
         "incremental_country_codes": input_data.get("incremental_country_codes") or [],
         "github_repo_url": download_repo_url,

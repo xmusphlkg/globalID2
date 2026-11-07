@@ -28,7 +28,10 @@ export const GET: APIRoute = () => {
   const entries: SearchEntry[] = [];
   for (const country of siteMeta.countries ?? []) {
     const code = String(country.code ?? '').toLowerCase();
-    if (!code || country.data_available === false) continue;
+    // Registered country shells remain searchable when their data availability
+    // changes. Observation counts belong to the runtime dataset, not this
+    // independently published search/content catalogue.
+    if (!code) continue;
     const countryNameEn = country.name_en ?? country.name ?? code.toUpperCase();
     const countryNameFr = localizedRegionName('fr', code, { en: countryNameEn, zh: country.name_zh, fr: country.name_fr });
     entries.push({
@@ -36,9 +39,8 @@ export const GET: APIRoute = () => {
       kind: 'country',
       href: localized(`/countries/${code}/`),
       title: { en: countryNameEn, zh: country.name_zh, fr: countryNameFr },
-      summary: { en: `${country.disease_count ?? 0} monitored diseases · official-source coverage`, zh: `${country.disease_count ?? 0} 种疾病 · 官方来源覆盖`, fr: `${country.disease_count ?? 0} maladies surveillées · sources officielles` },
+      summary: { en: 'Current surveillance series and official sources', zh: '当前监测序列与官方来源', fr: 'Séries de surveillance actuelles et sources officielles' },
       aliases: clean([country.name, country.name_en, country.name_zh, country.name_fr, country.code]),
-      updated_at: country.date_range?.end,
     });
   }
 

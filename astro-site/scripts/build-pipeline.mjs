@@ -11,6 +11,15 @@ export function checkConcurrency(value = process.env.GIDS_BUILD_CHECK_WORKERS) {
   return count;
 }
 
+export function assertRuntimeDataReady(env) {
+  if (env.GLOBALID_SKIP_SITE_DATA_GENERATION === '1' && env.PUBLIC_GIDS_RELEASE_ID && env.GIDS_RUNTIME_DATA_READY !== '1') {
+    throw new Error('Runtime surveillance data is not initialized. Initialize and verify the data Worker and JSON publication, enable surveillance JSON publication, then restart the worker before deploying templates (GIDS_RUNTIME_DATA_READY=1 is required).');
+  }
+  if (env.GLOBALID_SKIP_SITE_DATA_GENERATION === '1' && env.PUBLIC_GIDS_RELEASE_ID && env.GIDS_RUNTIME_SITUATION_READY !== '1') {
+    throw new Error('Runtime Situation data is not initialized. Initialize and verify the Situation JSON publication and same-origin routes before deploying templates (GIDS_RUNTIME_SITUATION_READY=1 is required).');
+  }
+}
+
 export async function runStages(stages, { concurrency = 1, cwd, env = process.env, log = console.log, signal } = {}) {
   if (!Number.isInteger(concurrency) || concurrency < 1) throw new Error('Invalid stage concurrency');
   const started = performance.now();
@@ -71,6 +80,7 @@ export async function runStages(stages, { concurrency = 1, cwd, env = process.en
 }
 
 export async function buildPipeline({ cwd = resolve(import.meta.dirname, '..'), env = process.env, signal, run = runStages } = {}) {
+  assertRuntimeDataReady(env);
   const concurrency = checkConcurrency(env.GIDS_BUILD_CHECK_WORKERS);
   const stage = (name, file, ...args) => ({ name, args: ['--experimental-strip-types', `scripts/${file}.mjs`, ...args] });
   const options = { cwd, env, signal };
@@ -100,6 +110,9 @@ export async function buildPipeline({ cwd = resolve(import.meta.dirname, '..'), 
   ], checks);
   // Never promote a new page cache after any validator fails.
   await run([stage('finalize page caches', 'finalize-research-build')], options);
+  if (env.GIDS_PAGES_DATA_WORKER === '1') {
+    await run([{ name: 'package Pages data Worker', args: ['../cloudflare/surveillance-data/scripts/build-pages.mjs', 'dist'] }], options);
+  }
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {

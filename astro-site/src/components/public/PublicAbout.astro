@@ -2,7 +2,7 @@
 import aboutRaw from '../../data/about.json';
 import { acknowledgementEntries, acknowledgementIntro } from '../../data/acknowledgements';
 import PageAnchorNav from '../PageAnchorNav.astro';
-import StatBar from '../StatBar.astro';
+import SurveillanceSummary from './SurveillanceSummary';
 
 interface Props {
   locale?: 'en' | 'zh' | 'fr';
@@ -210,7 +210,7 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
         </div>
         <div>
           <p class="lead">{copy.lead}</p>
-          <p class="updated">{copy.updated}</p>
+          <div class="updated"><SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="coverage-caption" language={locale} /></div>
         </div>
       </div>
       <div id="gid-live-stats-widget" class="gid-audience">
@@ -306,14 +306,9 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
     </header>
 
     <div class="metrics">
-      <StatBar locale={locale} stats={copy.data.metrics.map(metric => ({
-        label: metric[0],
-        labelZh: metric[0],
-        value: typeof metric[1] === 'number' ? Number(metric[1]).toLocaleString(dateLocale) : metric[1],
-        accent: 'teal' as const,
-      }))} />
+      <SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="home-indicators" language={locale} />
     </div>
-    <p class="coverage-note">{copy.data.coverage}</p>
+    <div class="coverage-note"><SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="global-coverage" language={locale} /></div>
 
     <ol class="workflow">
       {copy.data.steps.map((step, index) => (

@@ -4,6 +4,7 @@ import argparse
 import csv
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -298,11 +299,14 @@ async def test_apply_uses_required_registry_quality_gate(
 
     monkeypatch.setattr(rebuild, "SeriesObservationStore", FakeStore)
     monkeypatch.setattr(rebuild, "get_db", lambda: FakeDBContext())
+    maintenance_lock = AsyncMock()
+    monkeypatch.setattr(rebuild, "acquire_disease_data_mutation_lock", maintenance_lock)
 
     summary = await rebuild.run(_args(transitions, source, apply=True))
 
     assert summary["saved"]["JP"]["upserted"] == 1
     assert len(calls) == 1
+    maintenance_lock.assert_awaited_once_with(db)
     policy = calls[0]["quality_policy"]
     assert isinstance(policy, rebuild.SeriesObservationQualityPolicy)
     assert policy.mode == "quarantine"
@@ -372,6 +376,7 @@ async def test_allow_partial_uses_only_ready_source_ids(
 
     monkeypatch.setattr(rebuild, "SeriesObservationStore", FakeStore)
     monkeypatch.setattr(rebuild, "get_db", lambda: FakeDBContext())
+    monkeypatch.setattr(rebuild, "acquire_disease_data_mutation_lock", AsyncMock())
 
     summary = await rebuild.run(
         _args(

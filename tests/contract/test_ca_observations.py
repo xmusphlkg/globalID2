@@ -91,7 +91,7 @@ async def test_ca_collect_does_not_parse_rows(monkeypatch):
 
 async def test_ca_delete_is_confined_to_national_commit_strategy(monkeypatch):
     lock = AsyncMock()
-    monkeypatch.setattr("src.services.ingestion.strategies.acquire_disease_data_mutation_lock", lock)
+    monkeypatch.setattr("src.services.ingestion.strategies.acquire_country_data_mutation_lock", lock)
     updater = SimpleNamespace(
         country_code="CA", delete_authoritative_window=AsyncMock(return_value=4)
     )
@@ -100,7 +100,7 @@ async def test_ca_delete_is_confined_to_national_commit_strategy(monkeypatch):
     )
     strategy = CanadaCndssWindowCommitStrategy()
     assert await strategy.commit("db", updater=updater, start_year=2023) == "stored"
-    lock.assert_awaited_once_with("db")
+    lock.assert_awaited_once_with("db", "CA")
     updater.delete_authoritative_window.assert_awaited_once_with("db", start_year=2023)
     updater.country_code = "CA-ON"
     with pytest.raises(ValueError, match="national Canada"):

@@ -71,6 +71,17 @@ from src.generation.site_data_writer import (
     write_compact_json,
     write_pretty_json,
 )
+from src.generation.site_data_dependencies import (
+    changed_diseases as _changed_dependency_diseases,
+    country_inputs as _country_dependency_inputs,
+    load_receipt as _load_dependency_receipt,
+    save_receipt as _save_dependency_receipt,
+)
+from src.generation.country_projection_inputs import (
+    attach_inputs as _attach_country_projection_inputs,
+    merge_country_diseases as _merge_country_diseases,
+    precise_disease_scope as _precise_disease_scope,
+)
 from src.knowledge.catalogue import should_generate_public_disease_page
 from src.ontology import load_disease_ontology
 from src.services.situation_notices.snapshot import latest_situation_snapshot
@@ -120,6 +131,16 @@ def _records_for_disease(
         for country_code, records_by_disease in grouped_by_country.items()
         if (records := records_by_disease.get(disease_id))
     }
+
+
+def _release_projected_country_rows(result: dict) -> dict:
+    """Data-only projections retain lossless source series, not duplicate rows."""
+    result["input_record_count"] = len(result["records"]) + len(result["source_records"])
+    result["source_record_count"] = len(result["source_records"])
+    result["record_count"] = sum(len(series.get("dates") or []) for series in (result["country_data"].get("disease_series") or {}).values())
+    result["records"] = []
+    result["source_records"] = []
+    return result
 
 
 def _retain_observed_iceland_sources(
@@ -606,6 +627,9 @@ async def _collect_country_export(
     registry_tables_exist: bool | None = None,
     recorded_at_as_of=None,
     session=None,
+    disease_ids: set[str] | None = None,
+    baseline: dict | None = None,
+    retain_projection_inputs: bool = False,
 ) -> dict:
     """Fetch and project one country using an isolated database session."""
 
@@ -624,8 +648,11 @@ async def _collect_country_export(
                 registry_tables_exist=registry_tables_exist,
                 recorded_at_as_of=recorded_at_as_of,
                 session=country_session,
+                disease_ids=disease_ids, baseline=baseline,
+                retain_projection_inputs=retain_projection_inputs,
             )
 
+    projection_started = time.perf_counter()
     frequency_meta = await fetch_country_frequency_meta(
         session, code, registry_tables_exist=registry_tables_exist
     )
@@ -634,14 +661,23 @@ async def _collect_country_export(
         frequency_meta,
         database_config=country,
     )
+    if disease_ids is not None and (
+        baseline is None or baseline.get("source_info") != country_source_info
+    ):
+        # Changed source/display configuration invalidates all country disease
+        # inputs even when the observation marker itself was precise.
+        disease_ids, baseline = None, None
+    read_started = time.perf_counter()
     records, source_records = await fetch_disease_export_layers(
         session,
         code,
         population_enabled,
         recorded_at_as_of=recorded_at_as_of,
         registry_tables_exist=registry_tables_exist,
+        **({"disease_ids": disease_ids} if disease_ids is not None else {}),
     )
 
+    aggregate_started = time.perf_counter()
     validate_record_catalogue_coverage(
         [*records, *source_records],
         catalogue_ids,
@@ -655,6 +691,10 @@ async def _collect_country_export(
         frequency_meta,
         source_records,
     )
+    if disease_ids is not None and baseline is not None:
+        country_data = _merge_country_diseases(baseline, country_data, disease_ids, records)
+    elif retain_projection_inputs:
+        _attach_country_projection_inputs(country_data, records)
     if recorded_at_as_of is not None:
         country_data["recorded_at_as_of"] = recorded_at_as_of.isoformat()
         country_data["recorded_history_complete"] = bool(source_records) and all(
@@ -683,6 +723,16 @@ async def _collect_country_export(
     country_data = apply_country_brief_fields(
         country_data, country_briefs.get(code.upper())
     )
+    finished = time.perf_counter()
+    print(
+        f"SITE_EXPORT_PROJECTION country={code} "
+        f"scope={'full' if disease_ids is None else len(disease_ids)} "
+        f"metadata_seconds={read_started - projection_started:.3f} "
+        f"read_and_select_seconds={aggregate_started - read_started:.3f} "
+        f"aggregate_seconds={finished - aggregate_started:.3f} "
+        f"records={len(records)} source_records={len(source_records)}",
+        flush=True,
+    )
     return {
         "code": code,
         "country_name": country_name_en,
@@ -691,6 +741,7 @@ async def _collect_country_export(
         "source_records": source_records,
         "country_data": country_data,
         "source_info": country_source_info,
+        "projected_disease_ids": sorted(disease_ids) if disease_ids is not None else None,
     }
 
 
@@ -699,6 +750,25 @@ def _read_json_file(path: Path, default):
         return json.loads(path.read_text(encoding="utf-8"))
     except (FileNotFoundError, OSError, json.JSONDecodeError):
         return default
+
+
+def _static_surveillance_coverage(output_dir: Path, public_dir: Path, diseases: list[dict]) -> tuple[dict[str, set[str]], dict]:
+    """Read frozen local coverage, never a newer database publication table."""
+    from .site_data_dependencies import file_identity
+    identities = {item["disease_id"]: file_identity(public_dir / "diseases" / f"{item['disease_id'].lower()}.json") for item in diseases}
+    if any(identity is None for identity in identities.values()):
+        raise RuntimeError("Content-only export requires a complete frozen browser surveillance baseline")
+    cached = _read_json_file(output_dir / "static-surveillance-coverage.json", {})
+    if isinstance(cached, dict) and cached.get("schema_version") == 1 and cached.get("files") == identities and isinstance(cached.get("coverage"), dict):
+        return {did: set(codes) for did, codes in cached["coverage"].items()}, cached
+    coverage = {}
+    for item in diseases:
+        did = item["disease_id"]
+        data = _read_json_file(public_dir / "diseases" / f"{did.lower()}.json", None)
+        if not isinstance(data, dict) or not isinstance(data.get("series"), list):
+            raise RuntimeError(f"Content-only export has an invalid frozen disease baseline: {did}")
+        coverage[did] = sorted({str(series["cc"]) for series in data["series"] if isinstance(series, dict) and series.get("cc")})
+    return {did: set(codes) for did, codes in coverage.items()}, {"schema_version": 1, "files": identities, "coverage": coverage}
 
 
 def _merge_incremental_disease_snapshot(
@@ -756,27 +826,39 @@ async def collect_site_export_context(
     recorded_at_as_of=None,
     incremental_site: bool = False,
     country_scopes_exact: bool = False,
+    surveillance_only: bool = False,
+    static_content_only: bool = False,
+    publication_changes: list[dict] | None = None,
+    country_workers: int = 1,
 ) -> dict:
     """Read and project all database-backed data without writing artifacts."""
     # Validate before readiness helpers can auto-create missing tables. A site
     # export must never hide an unapplied control-plane migration.
-    async with get_db() as session:
-        missing_publication_tables = [
-            name for name in ("country_publish_state", "public_disease_series")
-            if not await has_table(session, name)
-        ]
-        if missing_publication_tables:
-            raise RuntimeError(
-                "Site export requires the migrated publication schema; missing "
-                + ", ".join(missing_publication_tables)
-                + ". Apply database migrations before exporting."
-            )
-    await ensure_site_export_database_ready()
+    if static_content_only and (surveillance_only or incremental_country_codes or recorded_at_as_of is not None):
+        raise ValueError("Content-only export cannot refresh or re-date surveillance facts")
+    if not isinstance(country_workers, int) or not 1 <= country_workers <= 8:
+        raise ValueError("Surveillance country workers must be between 1 and 8")
+    frozen_meta = _read_json_file(output_dir / "meta.json", None) if static_content_only else None
+    if static_content_only and (not isinstance(frozen_meta, dict) or not isinstance(frozen_meta.get("countries"), list)):
+        raise RuntimeError("Content-only export requires an existing frozen surveillance snapshot")
+    if not static_content_only:
+        async with get_db() as session:
+            missing_publication_tables = [
+                name for name in ("country_publish_state", "public_disease_series")
+                if not await has_table(session, name)
+            ]
+            if missing_publication_tables:
+                raise RuntimeError(
+                    "Site export requires the migrated publication schema; missing "
+                    + ", ".join(missing_publication_tables)
+                    + ". Apply database migrations before exporting."
+                )
+        await ensure_site_export_database_ready()
     incremental_codes = {
         str(code).strip().upper() for code in incremental_country_codes or ()
         if str(code).strip()
     }
-    incremental = bool(incremental_codes) or incremental_site
+    incremental = bool(incremental_codes) or incremental_site or static_content_only
     if incremental and recorded_at_as_of is not None:
         raise ValueError(
             "Historical site exports must be complete builds, not incremental merges."
@@ -810,7 +892,7 @@ async def collect_site_export_context(
     literature_export: dict = {}
 
     async with get_db() as session:
-        population_enabled = await has_population_table(session)
+        population_enabled = False if static_content_only else await has_population_table(session)
         if population_enabled:
             print(
                 "  Population table detected: incidence will use jurisdiction-specific annual population"
@@ -820,8 +902,10 @@ async def collect_site_export_context(
                 "  Population table not found: incidence falls back to database values"
             )
 
-        disease_knowledge_briefs = await fetch_disease_knowledge_briefs(session)
-        country_briefs = await fetch_country_briefs(session)
+        disease_knowledge_briefs = (
+            {} if surveillance_only else await fetch_disease_knowledge_briefs(session)
+        )
+        country_briefs = {} if static_content_only else await fetch_country_briefs(session)
         if disease_knowledge_briefs:
             print(
                 f"  Knowledge briefs detected: {len(disease_knowledge_briefs)} diseases"
@@ -836,8 +920,8 @@ async def collect_site_export_context(
             )
 
         # ── Countries ──
-        countries = await fetch_countries(session)
-        registry_tables_exist = await has_table(
+        countries = [{**country, "language": country.get("language") or "en"} for country in frozen_meta["countries"]] if static_content_only else await fetch_countries(session)
+        registry_tables_exist = False if static_content_only else await has_table(
             session, "disease_surveillance_series"
         ) and await has_table(session, "disease_series_observations")
         countries_simple = []
@@ -894,6 +978,25 @@ async def collect_site_export_context(
             if incremental
             else countries
         )
+        disease_scopes: dict[str, set[str]] = {}
+        country_baselines: dict[str, dict] = {}
+        if surveillance_only and incremental and publication_changes:
+            for country in countries_to_refresh:
+                code = country["code"]
+                baseline = _read_json_file(output_dir / "countries" / f"{code.lower()}.json", {})
+                scope = _precise_disease_scope(code, publication_changes, baseline, set(diseases_by_id))
+                if scope is not None:
+                    disease_scopes[code] = scope
+                    country_baselines[code] = baseline
+                    print(f"  Country projection scope: {code} {len(scope)} precise diseases", flush=True)
+
+        def projection_options(code: str) -> dict:
+            if not surveillance_only:
+                return {}
+            return {
+                "retain_projection_inputs": True,
+                **({"disease_ids": disease_scopes[code], "baseline": country_baselines[code]} if code in disease_scopes else {}),
+            }
         if missing_incremental_codes:
             raise RuntimeError(
                 "Incremental site export requested unknown country scope(s): "
@@ -902,6 +1005,9 @@ async def collect_site_export_context(
 
         publish_states = None
         publish_coverage = None
+        static_coverage_receipt = None
+        if static_content_only:
+            publish_coverage, static_coverage_receipt = _static_surveillance_coverage(output_dir, public_site_data_dir, diseases)
         curve_refresh_codes: set[str] | None = None
         # A literature-only release has no surveillance curves to refresh.
         # Reuse published coverage instead of scanning every disease artifact.
@@ -909,7 +1015,7 @@ async def collect_site_export_context(
         # source observations, quality and provenance. Never reconstruct a data
         # download from that cache, regardless of how the export was invoked.
         literature_only = incremental and not incremental_codes
-        if recorded_at_as_of is None and literature_only:
+        if recorded_at_as_of is None and literature_only and not static_content_only:
             publish_states = await _fetch_publish_states(session)
             if publish_states is not None:
                 publish_states = {
@@ -954,7 +1060,7 @@ async def collect_site_export_context(
 
             async def collect_with_limit(country: dict) -> dict:
                 async with semaphore:
-                    return await _collect_country_export(
+                    result = await _collect_country_export(
                         country,
                         country_name_by_code=country_name_by_code,
                         country_name_zh_by_code=country_name_zh_by_code,
@@ -964,9 +1070,26 @@ async def collect_site_export_context(
                         population_enabled=population_enabled,
                         registry_tables_exist=registry_tables_exist,
                         recorded_at_as_of=recorded_at_as_of,
+                        **projection_options(country["code"]),
                     )
+                    return _release_projected_country_rows(result) if surveillance_only else result
 
-            if configured_pool_size <= 1:
+            if surveillance_only and min(country_workers, len(countries_to_refresh)) > 1:
+                from .country_projection_workers import project_countries
+                requests = [{"country": country, "options": {
+                    "country_name_by_code": country_name_by_code,
+                    "country_name_zh_by_code": country_name_zh_by_code,
+                    "diseases_by_id": diseases_by_id, "catalogue_ids": catalogue_ids,
+                    "country_briefs": country_briefs, "population_enabled": population_enabled,
+                    "registry_tables_exist": registry_tables_exist,
+                    "recorded_at_as_of": recorded_at_as_of,
+                    **projection_options(country["code"]),
+                }} for country in countries_to_refresh]
+                count = min(country_workers, len(requests))
+                print(f"  Country projection processes: {count} (shared read-only snapshot)", flush=True)
+                country_results = await project_countries(requests, workers=count,
+                    on_result=lambda result, done: print(f"SITE_EXPORT_COUNTRIES {done}/{len(requests)} country={result['code']}", flush=True))
+            elif configured_pool_size <= 1:
                 # The outer metadata session owns the only connection in this
                 # configuration, so reuse it instead of waiting for another one.
                 country_results = []
@@ -982,7 +1105,10 @@ async def collect_site_export_context(
                         registry_tables_exist=registry_tables_exist,
                         recorded_at_as_of=recorded_at_as_of,
                         session=session,
+                        **projection_options(country["code"]),
                     )
+                    if surveillance_only:
+                        _release_projected_country_rows(result)
                     country_results.append(result)
                     print(
                         f"SITE_EXPORT_COUNTRIES {len(country_results)}/{len(countries_to_refresh)} "
@@ -1010,6 +1136,7 @@ async def collect_site_export_context(
                     await asyncio.gather(*country_tasks, return_exceptions=True)
                     raise
         fresh_results_by_code = {result["code"]: result for result in country_results}
+        partial_country_codes = sorted(code for code, result in fresh_results_by_code.items() if result.get("projected_disease_ids") is not None)
         existing_country_summaries: dict[str, dict] = {}
         if (output_dir / "meta.json").is_file():
             existing_meta = _read_json_file(output_dir / "meta.json", {})
@@ -1082,7 +1209,7 @@ async def collect_site_export_context(
             layer_summary = country_data["data_layer_summary"]
             shown_records = result.get("record_count", len(records))
             print(
-                f"    {code}: records={shown_records}, source_records={len(source_records)}, "
+                f"    {code}: records={shown_records}, source_records={result.get('source_record_count', len(source_records))}, "
                 f"registry={layer_summary.get('series_registry_disease_count', 0)}, "
                 f"mixed_gap_fill={layer_summary.get('mixed_disease_count', 0)}, "
                 f"legacy_fallback={layer_summary.get('legacy_fallback_disease_count', 0)}, "
@@ -1137,13 +1264,16 @@ async def collect_site_export_context(
                 }
             )
 
-        reports, report_details = await _collect_report_exports(
-            session,
-            output_dir,
-            public_site_data_dir,
-            incremental=incremental,
-        )
-        if use_publish_read and publish_states is not None:
+        if not surveillance_only:
+            reports, report_details = await _collect_report_exports(
+                session,
+                output_dir,
+                public_site_data_dir,
+                incremental=incremental,
+            )
+        if surveillance_only:
+            total_record_count = sum(int(result.get("input_record_count") or 0) for result in fresh_results_by_code.values())
+        elif use_publish_read and publish_states is not None:
             total_record_count = sum(
                 int(state["point_count"]) for state in publish_states.values()
             ) + sum(len(records) for records in all_records_by_country.values())
@@ -1171,21 +1301,46 @@ async def collect_site_export_context(
             all_source_records_by_country
         )
         affected_disease_ids: set[str] = set()
+        dependency_receipt = _load_dependency_receipt(output_dir)
+        country_dependency_inputs: dict[str, dict] = {}
+        country_disease_changes: dict[str, list[str]] = {}
         affected_country_codes = set(incremental_codes if incremental else curve_refresh_codes or ())
         affected_country_codes.update(retired_country_codes)
+        # Full builds establish the dependency baseline for every country.
+        for code, fresh in fresh_results_by_code.items():
+            country_dependency_inputs[code] = _country_dependency_inputs(
+                fresh["country_data"], name=country_name_by_code[code],
+                name_zh=country_name_zh_by_code.get(code), source_info=fresh["source_info"],
+            )
         if affected_country_codes:
             for code in affected_country_codes:
                 fresh = fresh_results_by_code.get(code) or {}
-                affected_disease_ids.update(
-                    (fresh.get("country_data") or {}).get("disease_series") or {}
+                changed = (
+                    _changed_dependency_diseases(
+                        code, country_dependency_inputs[code], dependency_receipt,
+                        output_dir, public_site_data_dir,
+                    ) if code in country_dependency_inputs else None
                 )
+                if changed is not None:
+                    affected_disease_ids.update(changed)
+                    country_disease_changes[code] = sorted(changed)
+                    continue
+                # Old or incomplete receipts conservatively retain the original
+                # whole-country invalidation, including removed disease series.
+                changed = set((fresh.get("country_data") or {}).get("disease_series") or {})
                 previous = _read_json_file(
                     output_dir / "countries" / f"{code.lower()}.json",
                     None,
                 )
                 if isinstance(previous, dict):
-                    affected_disease_ids.update(previous.get("disease_series") or {})
-        if (incremental or retired_country_codes) and publish_coverage is None:
+                    changed.update(previous.get("disease_series") or {})
+                affected_disease_ids.update(changed)
+                country_disease_changes[code] = sorted(changed)
+            print(
+                f"  Projection dependencies: {len(affected_country_codes)} selected countries, "
+                f"{len(affected_disease_ids)} changed diseases", flush=True,
+            )
+        if (incremental or retired_country_codes) and publish_coverage is None and not static_content_only:
             publish_coverage = await _published_country_codes_by_disease(session) or None
         if publish_coverage is not None:
             for did, country_codes in publish_coverage.items():
@@ -1311,7 +1466,7 @@ async def collect_site_export_context(
                     changed_disease_ids.add(did)
                 else:
                     disease_data = existing_disease_data
-            elif use_publish_read:
+            elif use_publish_read or surveillance_only:
                 country_series = {}
                 for item in country_exports:
                     entry = (item["country_data"].get("disease_series") or {}).get(did)
@@ -1417,7 +1572,7 @@ async def collect_site_export_context(
         fresh_results_by_code.clear()
         refreshed_country_data.clear()
 
-        literature_export = await collect_literature_export(
+        literature_export = {} if surveillance_only else await collect_literature_export(
             session,
             diseases_by_id=diseases_by_id,
             surveillance_coverage={
@@ -1433,10 +1588,10 @@ async def collect_site_export_context(
 
     # The notice-based Situation module exports its own static shards; the
     # site-data export only needs its snapshot to link literature to events.
-    situation_latest = await latest_situation_snapshot()
+    situation_latest = {} if surveillance_only else await latest_situation_snapshot()
     situation_weekly: list = []
     situation_monthly: list = []
-    literature_export = attach_surveillance_evidence(
+    literature_export = literature_export if surveillance_only else attach_surveillance_evidence(
         literature_export,
         situation_latest,
         diseases_by_id=diseases_by_id,
@@ -1468,6 +1623,11 @@ async def collect_site_export_context(
         "incremental_country_codes": sorted(incremental_codes),
         "retired_country_codes": sorted(retired_country_codes),
         "changed_disease_ids": sorted(changed_disease_ids),
+        "country_disease_changes": country_disease_changes,
+        "country_dependency_inputs": country_dependency_inputs,
+        "partial_country_codes": partial_country_codes,
+        "static_content_only": static_content_only,
+        "static_coverage_receipt": static_coverage_receipt,
         "publish_hashes": (
             {
                 code: state["content_hash"]
@@ -1731,6 +1891,10 @@ def write_site_export_artifacts(
         remove_stale_json_files(output_dir / "situation" / legacy, set())
         remove_stale_json_files(public_site_data_dir / "situation" / legacy, set())
     _write_publish_hash_manifest(output_dir, context)
+    if "country_dependency_inputs" in context:
+        _save_dependency_receipt(context, output_dir, public_site_data_dir)
+    if context.get("static_coverage_receipt"):
+        write_pretty_json(output_dir / "static-surveillance-coverage.json", context["static_coverage_receipt"])
     report_phase("stale file cleanup and hashes")
 
 
@@ -1878,6 +2042,10 @@ def write_incremental_site_export_artifacts(
         (public_site_data_dir / "countries" / f"{code.lower()}.json").unlink(missing_ok=True)
         (public_site_data_dir / "countries" / f"{code.lower()}-source-series.json").unlink(missing_ok=True)
     _write_publish_hash_manifest(output_dir, context)
+    if "country_dependency_inputs" in context:
+        _save_dependency_receipt(context, output_dir, public_site_data_dir)
+    if context.get("static_coverage_receipt"):
+        write_pretty_json(output_dir / "static-surveillance-coverage.json", context["static_coverage_receipt"])
 
     print(
         "  ✓ incremental site artifacts "
@@ -1899,6 +2067,7 @@ async def export(
     recorded_at_as_of=None,
     incremental_site: bool = False,
     country_scopes_exact: bool = False,
+    content_only: bool = False,
 ) -> None:
     """Package and write one complete or scoped incremental export."""
     collect_started = time.perf_counter()
@@ -1910,6 +2079,7 @@ async def export(
         recorded_at_as_of=recorded_at_as_of,
         incremental_site=incremental_site,
         country_scopes_exact=country_scopes_exact,
+        static_content_only=content_only,
     )
     print(
         "  Phase timing: database reads and projections "
@@ -1933,6 +2103,9 @@ async def export(
         f"{time.perf_counter() - artifact_started:.1f}s",
         flush=True,
     )
+    if content_only:
+        print("  Content-only export completed; frozen surveillance curves and download archives reused", flush=True)
+        return
 
     # Freeze the curves and watermarks from the shared release read snapshot;
     # concurrent collections can already have committed newer formal facts.

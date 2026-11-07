@@ -7,6 +7,7 @@ import type { SituationMapDataFile } from '../../utils/situationTypes';
 // after the three-year history backfill.
 
 export const GET: APIRoute = () => {
+  if (process.env.GIDS_PAGES_DATA_WORKER === '1') return new Response('Independent Situation publication required', { status: 404 });
   const map = readSituationMap();
   if (!map) return new Response('Not found', { status: 404 });
   const sources = readSources();

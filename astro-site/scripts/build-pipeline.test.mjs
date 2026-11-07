@@ -3,7 +3,26 @@ import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { buildPipeline, checkConcurrency, runStages } from './build-pipeline.mjs';
+import { assertRuntimeDataReady, buildPipeline, checkConcurrency, runStages } from './build-pipeline.mjs';
+
+test('managed template releases require initialized runtime data before any stage runs', async () => {
+  const managed = { GLOBALID_SKIP_SITE_DATA_GENERATION: '1', PUBLIC_GIDS_RELEASE_ID: 'production' };
+  let ran = false;
+  await assert.rejects(buildPipeline({ env: managed, run: async () => { ran = true; } }), /Initialize and verify the data Worker/);
+  assert.equal(ran, false);
+  await assert.rejects(buildPipeline({ env: { ...managed, GIDS_RUNTIME_DATA_READY: '1' }, run: async () => { ran = true; } }), /Situation JSON publication/);
+  assert.equal(ran, false);
+  assert.doesNotThrow(() => assertRuntimeDataReady({ ...managed, GIDS_RUNTIME_DATA_READY: '1', GIDS_RUNTIME_SITUATION_READY: '1' }));
+  assert.doesNotThrow(() => assertRuntimeDataReady({ PUBLIC_GIDS_RELEASE_ID: 'offline-fixture' }));
+  assert.doesNotThrow(() => assertRuntimeDataReady({ GLOBALID_SKIP_SITE_DATA_GENERATION: '1' }));
+});
+
+test('Pages data Worker packaging survives every enabled template build', async () => {
+  const groups = [];
+  await buildPipeline({ env: { GIDS_PAGES_DATA_WORKER: '1' }, run: async stages => { groups.push(stages.map(stage => stage.name)); } });
+  assert.deepEqual(groups.at(-1), ['package Pages data Worker']);
+  assert.deepEqual(groups.at(-2), ['finalize page caches']);
+});
 
 test('independent validators execute concurrently in separate processes', async () => {
   const root = mkdtempSync(join(tmpdir(), 'gids-parallel-checks-'));

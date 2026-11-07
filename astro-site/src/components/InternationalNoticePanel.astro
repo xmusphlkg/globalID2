@@ -7,9 +7,12 @@
 import type { Locale, SituationAlertRecord } from '../utils/situationTypes';
 import { noticeSnapshotBadges } from '../utils/internationalSnapshot';
 import { alertSummary, countryName, countsLine, diseaseName, formatDay, sourceLabel, STATUS_LABELS } from './situation/labels';
+import RuntimeNoticePanel from './situation/RuntimeNoticePanel';
 
 interface Props {
-  alerts: SituationAlertRecord[];
+  alerts?: SituationAlertRecord[];
+  dataUrl?: string;
+  diseaseId?: string;
   locale: Locale;
   limit?: number;
   /** Jurisdictions the host page is about, cross-referenced when an alert does not name them. */
@@ -18,7 +21,7 @@ interface Props {
   mapHref?: string;
 }
 
-const { alerts, locale, limit = 8, contextCodes = [], mapHref } = Astro.props;
+const { alerts = [], dataUrl, diseaseId, locale, limit = 8, contextCodes = [], mapHref } = Astro.props;
 
 const COPY = {
   en: {
@@ -145,7 +148,10 @@ const PANEL_CSS = `  .intl-panel {
 ---
 
 {
-  rows.length > 0 && (
+  dataUrl && <><style set:html={PANEL_CSS} /><RuntimeNoticePanel client:visible dataUrl={dataUrl} diseaseId={diseaseId} locale={locale} limit={limit} contextCodes={contextCodes} mapHref={mapHref} /></>
+}
+{
+  !dataUrl && rows.length > 0 && (
     <>
       <style set:html={PANEL_CSS} />
       <section class="intl-panel" aria-labelledby="intl-panel-heading">

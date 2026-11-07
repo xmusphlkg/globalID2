@@ -1,8 +1,7 @@
 ---
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../../../lib/seo';
-import { weeklyDiff } from '../../../components/situation/text';
-import { listWeeks } from '../../../utils/international';
+import SituationArchive from '../../../components/situation/SituationArchive';
 import { translateUi } from '../../../utils/i18n';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
@@ -10,7 +9,6 @@ const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : fr ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
-const weeks = listWeeks();
 const title = pick('Weekly situation changes', '每周态势变化', 'Changements hebdomadaires de la situation');
 const canonicalPath = `${prefix}/situation/weekly/`;
 const seo: SeoDocument = {
@@ -19,20 +17,14 @@ const seo: SeoDocument = {
   canonicalPath,
   locale,
   alternatePaths: buildAlternatePaths(canonicalPath, locale),
-  noindex: weeks.length === 0,
+  noindex: false,
 };
 ---
 
 <ReportLayout title={title} description={seo.description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation map', '态势地图', 'Carte de situation'), href: `${prefix}/situation/` }, { label: pick('Weekly changes', '每周变化', 'Changements hebdomadaires') }]}>
   <div class="archive max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
     <header><h1>{title}</h1></header>
-    {weeks.length ? (
-      <ol>
-        {weeks.map(week => (
-          <li><a href={`${prefix}/situation/weekly/${week.period_key}/`}><b>{week.period_key}</b><span>{weeklyDiff(week, locale)}</span></a></li>
-        ))}
-      </ol>
-    ) : <p class="empty">{pick('No weekly change has been published yet.', '尚未发布每周变化。', 'Aucun changement hebdomadaire n’a encore été publié.')}</p>}
+    <SituationArchive client:load locale={locale} mode="weekly" />
   </div>
 </ReportLayout>
 

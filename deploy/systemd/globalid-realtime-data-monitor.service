@@ -1,0 +1,16 @@
+[Unit]
+Description=Read-only GlobalID Surveillance and Situation publication monitor
+After=globalid-docker.service globalid-dashboard-scheduler.service
+
+[Service]
+Type=oneshot
+User=__RUN_AS_USER__
+Group=__RUN_AS_GROUP__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=-__PROJECT_DIR__/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=__PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/monitor_realtime_data.py --archive-dir __PROJECT_DIR__/logs/realtime-data-monitor
+TimeoutStartSec=35
+UMask=0077
+StandardOutput=journal
+StandardError=journal

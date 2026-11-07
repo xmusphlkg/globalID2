@@ -120,8 +120,91 @@ async def worker_database(tmp_path, monkeypatch):
     monkeypatch.setattr(task_worker, "get_database", database)
     monkeypatch.setattr(task_worker, "release_admission", ReleaseAdmission())
     monkeypatch.setattr(task_worker, "_claimed_raw_archive_uuids", set())
+    monkeypatch.setattr(task_worker, "_claimed_data_release_uuids", set())
     yield maker
     await engine.dispose()
+
+
+@pytest.mark.parametrize("active_status", [TaskStatus.RUNNING, TaskStatus.RETRYING])
+@pytest.mark.parametrize("active_flags,queued_flags,blocked,expected", [
+    ({"content_only": True}, {"data_only": True}, {TaskType.EXPORT_DATA}, True),
+    ({"data_only": True}, {"content_only": True}, set(), True),
+    ({"data_only": True}, {"data_only": True}, set(), False),
+    ({"raw_archive_only": True}, {"data_only": True}, set(), True),
+    ({"content_only": True}, {"data_only": True}, set(TaskType), True),
+    ({"content_only": True, "situation_detached": True}, {"data_only": True, "data_line": "situation"}, set(TaskType), True),
+    ({"content_only": True}, {"data_only": True, "data_line": "situation"}, set(), False),
+    ({"data_only": True, "data_line": "situation"}, {"content_only": True}, set(), False),
+    ({"data_only": True, "data_line": "situation"}, {"content_only": True, "situation_detached": True}, set(), True),
+    ({"data_only": True}, {"data_only": True, "data_line": "situation"}, set(), False),
+    ({"data_only": True, "data_line": "situation"}, {"data_only": True}, set(), False),
+])
+async def test_json_has_independent_single_slot_and_bypasses_full_regular_lanes(
+    worker_database, active_flags, queued_flags, blocked, expected, active_status,
+):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="active", task_type=TaskType.EXPORT_DATA, task_name="Active",
+                 status=active_status, input_data=active_flags),
+            Task(task_uuid="json-or-site", task_type=TaskType.EXPORT_DATA, task_name="Queued",
+                 status=TaskStatus.QUEUED, input_data=queued_flags),
+        ])
+        await session.commit()
+    claimed = await task_worker._claim_next_task_uuid("worker", blocked_task_types=blocked)
+    assert (claimed is not None) is expected
+    if expected and queued_flags.get("data_only"):
+        assert "json-or-site" in task_worker._claimed_data_release_uuids
+
+
+async def test_parked_json_retry_does_not_block_site_or_collection(worker_database):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="retrying", task_type=TaskType.EXPORT_DATA, task_name="JSON retry",
+                 status=TaskStatus.RETRYING, input_data={"data_only": True}),
+            Task(task_uuid="crawl", task_type=TaskType.CRAWL_DATA, task_name="Crawl", status=TaskStatus.QUEUED),
+            Task(task_uuid="site", task_type=TaskType.EXPORT_DATA, task_name="Site", status=TaskStatus.QUEUED,
+                 input_data={"content_only": True}),
+        ])
+        await session.commit()
+    assert await task_worker._claim_next_task_uuid("worker") == ("site", TaskType.EXPORT_DATA)
+    assert await task_worker._claim_next_task_uuid("worker") == ("crawl", TaskType.CRAWL_DATA)
+
+
+@pytest.mark.parametrize("active_data,active_status", [
+    (False, TaskStatus.RUNNING), (False, TaskStatus.RETRYING),
+    (True, TaskStatus.RUNNING), (True, TaskStatus.RETRYING),
+])
+async def test_legacy_site_and_json_cannot_overlap_in_either_direction(worker_database, active_data, active_status):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="active", task_type=TaskType.EXPORT_DATA, task_name="Active",
+                 status=active_status, input_data={"data_only": True} if active_data else {}),
+            Task(task_uuid="incompatible", task_type=TaskType.EXPORT_DATA, task_name="Queued",
+                 status=TaskStatus.QUEUED, input_data={} if active_data else {"data_only": True}),
+            Task(task_uuid="crawl", task_type=TaskType.CRAWL_DATA, task_name="Collection", status=TaskStatus.QUEUED),
+        ])
+        await session.commit()
+    assert await task_worker._claim_next_task_uuid("worker") == ("crawl", TaskType.CRAWL_DATA)
+    assert await task_worker._claim_next_task_uuid("worker") is None
+
+
+@pytest.mark.parametrize("first_is_data", [False, True])
+async def test_queued_legacy_and_json_reserve_both_channels_when_first_claimed(worker_database, first_is_data):
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="first", task_type=TaskType.EXPORT_DATA, task_name="First",
+                 status=TaskStatus.QUEUED, created_at=now,
+                 input_data={"data_only": True} if first_is_data else {}),
+            Task(task_uuid="second", task_type=TaskType.EXPORT_DATA, task_name="Second",
+                 status=TaskStatus.QUEUED, created_at=now + timedelta(seconds=1),
+                 input_data={} if first_is_data else {"data_only": True}),
+        ])
+        await session.commit()
+    assert await task_worker._claim_next_task_uuid("worker") == ("first", TaskType.EXPORT_DATA)
+    assert await task_worker._claim_next_task_uuid("worker") is None
 
 
 @pytest.mark.parametrize("active_archive,queued_archive,queued_type,expected", [

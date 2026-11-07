@@ -1,6 +1,6 @@
 """Transaction policies: destructive replacement belongs to its source only."""
 from src.services.ingestion.stages import mark_dirty, mark_observation_changes_dirty
-from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
+from src.core.disease_mutation_lock import acquire_country_data_mutation_lock
 
 
 class UpdaterCommitStrategy:
@@ -25,7 +25,7 @@ class UpdaterCommitStrategy:
 
 class EcdcWindowCommitStrategy(UpdaterCommitStrategy):
     async def commit(self, db, *, updater, start_year, **kwargs):
-        await acquire_disease_data_mutation_lock(db)
+        await acquire_country_data_mutation_lock(db, updater.country_code)
         deleted = await updater.delete_authoritative_window(db, start_year=start_year)
         # History cannot represent withdrawals; do not infer a no-op from a
         # reinsert after destructive replacement (including an empty response).
@@ -37,7 +37,7 @@ class CanadaCndssWindowCommitStrategy(UpdaterCommitStrategy):
     async def commit(self, db, *, updater, start_year, **kwargs):
         if updater.country_code != "CA":
             raise ValueError("CNDSS replacement is restricted to national Canada")
-        await acquire_disease_data_mutation_lock(db)
+        await acquire_country_data_mutation_lock(db, updater.country_code)
         deleted = await updater.delete_authoritative_window(db, start_year=start_year)
         kwargs["publication_window_replaced"] = deleted is None or deleted != 0
         return await super().commit(db, updater=updater, **kwargs)

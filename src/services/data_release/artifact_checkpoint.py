@@ -33,7 +33,8 @@ def _fingerprint(value) -> str:
 def source_fingerprint(root: Path) -> str:
     digest = hashlib.sha256()
     paths = []
-    for name in ("src", "scripts", "configs", "astro-site/src", "astro-site/scripts", "astro-site/public"):
+    for name in ("src", "scripts", "configs", "astro-site/src", "astro-site/scripts", "astro-site/public",
+                 "cloudflare/surveillance-data/src", "cloudflare/surveillance-data/scripts"):
         directory = root / name
         paths.extend(
             path for path in directory.rglob("*") if path.is_file()
@@ -44,7 +45,9 @@ def source_fingerprint(root: Path) -> str:
             # and may advance between retries just like new database facts.
             and path != root / "configs/literature/weekly_ai_reviews.json"
         )
-    for name in ("requirements.txt", "astro-site/package.json", "astro-site/package-lock.json", "astro-site/astro.config.mjs"):
+    for name in ("requirements.txt", "astro-site/package.json", "astro-site/package-lock.json", "astro-site/astro.config.mjs",
+                 "cloudflare/surveillance-data/package.json", "cloudflare/surveillance-data/package-lock.json",
+                 "cloudflare/surveillance-data/wrangler.jsonc"):
         path = root / name
         if path.is_file():
             paths.append(path)
@@ -63,6 +66,8 @@ def rendering_configuration(root: Path) -> str:
         if key.startswith("PUBLIC_") or key in {
             "GLOBALID_SITE_URL", "SITE_URL", "SITUATION_SHADOW_PREVIEW",
             "SUBSCRIPTIONS__PUBLIC_BASE_URL", "NODE_ENV",
+            "GIDS_PAGES_DATA_WORKER", "GIDS_RUNTIME_DATA_READY", "GIDS_RUNTIME_SITUATION_READY",
+            "GIDS_EXTERNAL_SURVEILLANCE_DATA",
         }
     }
     return _fingerprint({"site": site, "environment": environment})

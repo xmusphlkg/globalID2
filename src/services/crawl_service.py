@@ -21,7 +21,7 @@ from src.core import get_database, get_logger
 from src.core.country_library import get_country_bootstrap_config
 from src.core.country_library import SUBDIVISION_REGISTRY
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
-from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
+from src.core.disease_mutation_lock import acquire_country_data_mutation_lock
 from src.core.task_manager import task_manager
 from src.data.crawlers.au import AU_STATE_SUBDIVISIONS
 from src.data.storage import (
@@ -251,6 +251,13 @@ class CrawlService:
         _jp_holding_profiles=None,
     ):
         """Persist lossless source-series facts without a legacy projection."""
+
+        # Discovery and dynamic holding-series creation also write registry
+        # tables. Protect them before the first such write, including callers
+        # that intentionally bypass the legacy projection.
+        await acquire_country_data_mutation_lock(
+            db, str(getattr(updater, "series_country_code", "") or updater.country_code)
+        )
 
         # The IDWR cache contains millions of rows. Building normalized
         # observations and holding-series payloads for the entire history at
@@ -492,11 +499,11 @@ class CrawlService:
     ):
         """Persist legacy projections and lossless source-series facts atomically."""
 
-        # Take the shared mutex before staging the legacy side of the dual
-        # write. SeriesObservationStore takes the same transaction lock again;
-        # doing it here preserves one global lock order and avoids a migration
-        # waiting on legacy rows while this transaction waits on the mutex.
-        await acquire_disease_data_mutation_lock(db)
+        # The country partition covers the complete dual-write transaction;
+        # maintenance is excluded by its shared outer gate.
+        await acquire_country_data_mutation_lock(
+            db, str(getattr(updater, "series_country_code", "") or updater.country_code)
+        )
         import_result = await updater.import_rows(
             db,
             rows,

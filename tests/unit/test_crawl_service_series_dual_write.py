@@ -10,11 +10,11 @@ from src.data.storage.series_observation_store import SeriesObservationSaveResul
 
 @pytest.fixture(autouse=True)
 def _stub_shared_mutation_lock(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _noop(_db) -> None:
+    async def _noop(_db, _country_code) -> None:
         return None
 
     monkeypatch.setattr(
-        "src.services.crawl_service.acquire_disease_data_mutation_lock",
+        "src.services.crawl_service.acquire_country_data_mutation_lock",
         _noop,
     )
 
@@ -64,11 +64,11 @@ async def test_import_rows_dual_writes_in_the_same_session(monkeypatch) -> None:
                 ),
             )
 
-    async def acquire_lock(session):
-        calls.append(("lock", session))
+    async def acquire_lock(session, country_code):
+        calls.append(("lock", session, country_code))
 
     monkeypatch.setattr(
-        "src.services.crawl_service.acquire_disease_data_mutation_lock",
+        "src.services.crawl_service.acquire_country_data_mutation_lock",
         acquire_lock,
     )
     monkeypatch.setattr(
@@ -85,17 +85,17 @@ async def test_import_rows_dual_writes_in_the_same_session(monkeypatch) -> None:
     )
 
     assert result is import_result
-    assert [call[0] for call in calls] == ["lock", "legacy", "series"]
-    assert calls[0][1] is db
-    assert calls[1][1:3] == calls[2][1:3] == (db, rows)
-    assert calls[2][3] == "US"
-    assert calls[2][4]["quality_policy"].mode == "quarantine"
-    assert calls[2][4]["quality_policy"].registry_coverage == "required"
-    assert calls[2][4]["source_id"] == {
+    assert [call[0] for call in calls] == ["lock", "legacy", "lock", "series"]
+    assert calls[0][1:] == calls[2][1:] == (db, "US")
+    assert calls[1][1:3] == calls[3][1:3] == (db, rows)
+    assert calls[3][3] == "US"
+    assert calls[3][4]["quality_policy"].mode == "quarantine"
+    assert calls[3][4]["quality_policy"].registry_coverage == "required"
+    assert calls[3][4]["source_id"] == {
         "US CDC NNDSS": "SRC_US_NNDSS",
         "US CDC NHSS": "SRC_US_NHSS",
     }
-    assert calls[2][4]["geography_key"] == "country:US:national"
+    assert calls[3][4]["geography_key"] == "country:US:national"
 
 
 @pytest.mark.asyncio
@@ -345,6 +345,8 @@ async def test_legacy_supplemental_write_cannot_be_declared_case_series_noop(mon
         )
 
     class Updater:
+        country_code = "US"
+
         async def import_rows(self, *_args, **_kwargs):
             return SimpleNamespace(inserted_or_updated=1)
 

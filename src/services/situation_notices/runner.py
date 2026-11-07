@@ -94,7 +94,7 @@ async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, do
             sources=sources,
         )
         summary["sources"] = envelope["sources"]
-        summary["stored"] = await store_notices(envelope, run_id=run_id)
+        summary["stored"] = await store_notices(envelope, run_id=run_id, task_uuid=stages.task_uuid)
         await log_situation_sources(stages.task_uuid, envelope.get("sources") or [])
     else:
         await log_situation_event(
@@ -132,7 +132,7 @@ async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, do
         summary["extract_concurrency"] = workers
         summary["requeued_stale_prompts"] = await requeue_stale_prompts()
         summary["extraction"] = await extract_pending(
-            new_completer(), limit=ai_limit, source_ids=sources, concurrency=workers, new_completer=new_completer
+            new_completer(), limit=ai_limit, source_ids=sources, concurrency=workers, new_completer=new_completer, task_uuid=stages.task_uuid
         )
         await log_situation_event(
             stages.task_uuid,

@@ -110,10 +110,15 @@ class BuildReuse:
         environment = {key: value for key, value in os.environ.items()
                        if (key.startswith("PUBLIC_") and key not in ignored_identity) or key in {
                            "GLOBALID_SITE_URL", "SITE_URL", "SITUATION_SHADOW_PREVIEW", "NODE_ENV", "TZ",
+                           "GIDS_PAGES_DATA_WORKER", "GIDS_RUNTIME_DATA_READY", "GIDS_RUNTIME_SITUATION_READY",
+                           "GIDS_EXTERNAL_SURVEILLANCE_DATA",
                            "SUBSCRIPTIONS__PUBLIC_BASE_URL"}}
         return {
             "tree": self._tree([self.root / name for name in (
                 "src", "scripts", "configs", "shared", "astro-site/src", "astro-site/scripts", "astro-site/public",
+                "cloudflare/surveillance-data/src", "cloudflare/surveillance-data/scripts",
+                "cloudflare/surveillance-data/package.json", "cloudflare/surveillance-data/package-lock.json",
+                "cloudflare/surveillance-data/wrangler.jsonc",
                 "astro-site/node_modules/.package-lock.json", "requirements.txt", "CHANGELOG.md", "data/system-settings.json")]
                 + (sorted(path for path in self.astro.iterdir() if path.is_file()) if self.astro.is_dir() else [])),
             "configuration": _digest(self.configuration), "environment": _digest(environment),

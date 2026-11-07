@@ -148,6 +148,7 @@ const maintainer = copy({
 
 <script>
   import { mainSiteBase } from '../lib/papers';
+  import { surveillanceData } from '../lib/surveillance-data';
 
   const pageLanguage = document.documentElement.lang.toLowerCase();
   const language = pageLanguage.startsWith('zh') ? 'zh-CN' : pageLanguage.startsWith('fr') ? 'fr-FR' : 'en-US';
@@ -169,8 +170,7 @@ const maintainer = copy({
       .then(data => showDate('[data-site-updated]', data?.built_at))
       .catch(() => showDate('[data-site-updated]', null));
   }
-  void fetch(`${mainSiteBase()}/site-data/site-status.json`)
-    .then(response => response.ok ? response.json() : null)
+  void surveillanceData.read<{ generated_at?: string }>('/site-data/site-status.json')
     .then(data => showDate('[data-database-updated]', data?.generated_at))
     .catch(() => showDate('[data-database-updated]', null));
 </script>

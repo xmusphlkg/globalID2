@@ -4,6 +4,20 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-07
+
+### Added
+
+- Surveillance and Situation publish versioned JSON independently of static HTML. Data changes trigger bounded publication queues with durable reconciliation and retries; unchanged observations and notice snapshots do not create repeated publication work.
+- Same-origin data delivery uses immutable, checksum-addressed R2 objects and an atomic current-version pointer. Browsers pin one data version per page for summaries, charts, maps and lazy details.
+- A read-only real-time publication monitor checks queue age, task outcomes, live manifests and sampled object integrity. Local observation logs and a systemd timer track rollout without sending notifications.
+
+### Performance and correctness
+
+- Complete-country projection resolves each distinct source identity once, reducing JP-25 category lookups from 60,319 to 112. Paired read-only query measurements reduced source reading from about 49.25 to 5.09 seconds; five alternating pure-computation runs reduced median CPU from 3.959 to 2.757 seconds.
+- Eight-country full projection took 19.7 seconds; generating all 504 public JSON objects into empty output directories took 27.682 seconds. All public object hashes matched the preceding complete export. A synthetic precise correction took 4.608 seconds. These local measurements exclude network publication and acknowledgement.
+- Mapping activation invalidates old and new country scopes in the same transaction. Frozen publication candidates, conditional pointer writes and exact change-ID acknowledgement prevent stale retries from overwriting newer data or losing concurrent updates.
+
 ### Changed
 
 - Release jobs can reuse verified, already split site artifacts across task IDs when rendering inputs and outputs are unchanged; release identity is stamped after rendering. Data changes still rebuild affected pages. Default rendering concurrency is 8, with source checks running alongside rendering and SEO page checks using multiple CPU cores before global catalogue validation. Bundle asset-reference parsing uses independent reader processes while manifests and routing retain one writer.

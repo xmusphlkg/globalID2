@@ -15,7 +15,7 @@ from typing import Any, Optional
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 
 from src.core import get_config, get_database, get_logger
 from src.core.data_share import (
@@ -79,6 +79,44 @@ except ImportError:  # pragma: no cover - python-dotenv is part of project requi
 logger = get_logger(__name__)
 
 
+def _data_line(input_data: dict[str, Any]) -> str:
+    line = str(input_data.get("data_line") or "surveillance")
+    if line not in {"surveillance", "situation"}:
+        raise ValueError(f"Unknown JSON publication line: {line}")
+    return line
+
+
+def _data_enabled(config, input_data: dict[str, Any]) -> bool:
+    return bool(getattr(config, f"{_data_line(input_data)}_json_enabled", False))
+
+
+def _release_conflict_clause(input_data: dict[str, Any]):
+    """Channel reservation, including legacy surveillance-exporting sites."""
+    archive = Task.input_data["raw_archive_only"].as_boolean().is_(True)
+    data = Task.input_data["data_only"].as_boolean().is_(True)
+    static_safe = or_(
+        Task.input_data["situation_detached" if input_data.get("data_only") and _data_line(input_data) == "situation" else "content_only"].as_boolean().is_(True),
+        Task.input_data["reports_only"].as_boolean().is_(True),
+        Task.input_data["code_only"].as_boolean().is_(True),
+    )
+    if input_data.get("raw_archive_only"):
+        return archive
+    if input_data.get("data_only"):
+        return and_(~archive, or_(data, ~static_safe))
+    if input_data.get("reports_only") or input_data.get("code_only"):
+        return and_(~archive, ~data)
+    if input_data.get("content_only") or input_data.get("situation_detached"):
+        conflicting_data = []
+        if not input_data.get("content_only"):
+            conflicting_data.append(and_(data, Task.input_data["data_line"].as_string().is_distinct_from("situation")))
+        if not input_data.get("situation_detached"):
+            conflicting_data.append(and_(data, Task.input_data["data_line"].as_string() == "situation"))
+        return and_(~archive, or_(~data, *conflicting_data))
+    # An old site task can read/write observations and published curves. Until
+    # it drains, it owns both the static and the surveillance channel.
+    return ~archive
+
+
 ROOT_DIR = Path(__file__).resolve().parents[2]
 ASTRO_DIR = ROOT_DIR / "astro-site"
 ENV_PATH = ROOT_DIR / ".env"
@@ -124,6 +162,7 @@ AUTO_RELEASE_TASK_TYPES = (
     TaskType.SYNC_LITERATURE,
     TaskType.ENRICH_LITERATURE,
     TaskType.DISCOVER_LITERATURE_GAPS,
+    TaskType.REFRESH_SITUATION_SOURCES,
 )
 LITERATURE_RELEASE_TASK_TYPES = {
     TaskType.SYNC_LITERATURE,
@@ -349,7 +388,7 @@ class DataReleaseService:
                 name="globalid-subscription-reconciliation",
             )
         cfg = self._config()
-        if not cfg.enabled:
+        if not cfg.enabled and not getattr(cfg, "surveillance_json_enabled", False) and not getattr(cfg, "situation_json_enabled", False):
             logger.info("Data release scheduler disabled by configuration")
             return
         await self.ensure_storage()
@@ -394,15 +433,16 @@ class DataReleaseService:
             try:
                 await self.requeue_due_automatic_retries()
                 await self.reconcile_release_continuations()
+                await self._reconcile_json_channels()
                 for job in await self.load_jobs():
-                    if not job.enabled:
+                    if not cfg.enabled or not job.enabled:
                         continue
                     state = self._states.setdefault(job.job_id, DataReleaseJobState())
                     now = datetime.now(ZoneInfo(job.timezone or cfg.timezone))
                     self._sync_state_schedule(job, state, reset=state.next_run_at is None)
                     if state.next_run_at and now >= state.next_run_at:
                         await self.trigger_job(job.job_id, manual=False, trigger="scheduled")
-                if getattr(cfg, "reports_auto_publish_enabled", False):
+                if cfg.enabled and getattr(cfg, "reports_auto_publish_enabled", False):
                     await self.reconcile_pending_reports()
             except Exception as exc:
                 logger.exception("Data release scheduler tick failed: {}", exc)
@@ -616,6 +656,8 @@ class DataReleaseService:
 
             for task in retrying:
                 input_data = dict(task.input_data or {})
+                if input_data.get("data_only") and not _data_enabled(self._config(), input_data):
+                    continue
                 metadata = dict(task.metadata_ or {})
                 retry = dict(metadata.get("automatic_retry") or {})
                 next_attempt_raw = str(retry.get("next_attempt_at") or "").strip()
@@ -657,7 +699,7 @@ class DataReleaseService:
                         .where(
                             Task.id != task.id,
                             Task.task_type == TaskType.EXPORT_DATA,
-                            Task.input_data["raw_archive_only"].as_boolean().is_(True) == bool(input_data.get("raw_archive_only")),
+                            _release_conflict_clause(input_data),
                             Task.status.in_(
                                 [TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING]
                             ),
@@ -665,8 +707,8 @@ class DataReleaseService:
                     )
                 ).scalars().all()
                 if active:
-                    # A release worker is globally serialized because the
-                    # generated artifact directories are shared across jobs.
+                    # Each publication channel serializes its own artifact
+                    # directories; another channel must not defer this retry.
                     continue
 
                 retry.update(
@@ -726,14 +768,25 @@ class DataReleaseService:
         full: bool = False,
         reports_only: bool = False,
         code_only: bool = False,
+        data_only: bool = False,
+        data_line: str = "surveillance",
         pending_ids: list[int] | None = None,
     ) -> dict[str, Any]:
-        if sum(bool(value) for value in (full, reports_only, code_only)) > 1:
-            raise ValueError("Full, reports-only and code-only release modes are mutually exclusive")
+        if sum(bool(value) for value in (full, reports_only, code_only, data_only)) > 1:
+            raise ValueError("Full, reports-only, code-only and data-only release modes are mutually exclusive")
         async with self._lock:
             job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
             if job is None:
                 raise ValueError(f"Data release job not found: {job_id}")
+
+            if data_only:
+                # The JSON channel has its own queue/retry state. A poll must
+                # not postpone or overwrite the static job's daily schedule.
+                return await self._enqueue_release_task(
+                    job, manual=manual, trigger=trigger,
+                    trigger_task_uuid=trigger_task_uuid, data_only=True, data_line=data_line,
+                    pending_ids=pending_ids,
+                )
 
             tz_name = job.timezone or self._config().timezone
             now = datetime.now(ZoneInfo(tz_name))
@@ -780,7 +833,7 @@ class DataReleaseService:
         trigger_task_type: str | TaskType,
     ) -> None:
         await self.ensure_storage()
-        if not self._config().enabled:
+        if not self._config().enabled and not any(getattr(self._config(), f"{line}_json_enabled", False) for line in ("surveillance", "situation")):
             return
         try:
             normalized_task_type = TaskType(trigger_task_type)
@@ -790,6 +843,9 @@ class DataReleaseService:
             await self._continue_completed_release(trigger_task_uuid)
             return
         if normalized_task_type not in AUTO_RELEASE_TASK_TYPES:
+            return
+        await self._reconcile_json_channels()
+        if not self._config().enabled:
             return
         if normalized_task_type in LITERATURE_RELEASE_TASK_TYPES:
             async with get_database() as db:
@@ -868,6 +924,8 @@ class DataReleaseService:
             return
         data = dict(parent.input_data or {})
         metadata = dict(parent.metadata_ or {})
+        if data.get("data_only") and not _data_enabled(self._config(), data):
+            return
         if any(data.get(flag) for flag in ("raw_archive_only", "reports_only", "code_only")):
             return
         if (metadata.get("release_continuation") or {}).get("status") in {"queued", "exhausted"}:
@@ -880,11 +938,19 @@ class DataReleaseService:
             return
         job_id = str(data.get("release_job_id") or metadata.get("release_job_id") or "")
         job = next((item for item in await self.load_jobs() if item.job_id == job_id and item.enabled), None)
-        if job is None or await self._release_failure_cooldown_reason(job_id):
+        if job is None:
+            return
+        data_only = data.get("data_only") is True
+        if data_only and await self._yield_json_turn(job_id, _data_line(data)):
+            return
+        cooldown = (await self._release_failure_cooldown_reason(job_id, data_only=True, **({"data_line": "situation"} if _data_line(data) == "situation" else {}))
+                    if data_only else await self._release_failure_cooldown_reason(job_id))
+        if cooldown:
             return
         result = await self.trigger_job(
             job_id, manual=False, trigger="upstream_completion",
             trigger_task_uuid=task_uuid, pending_ids=sorted(set(ids)),
+            data_only=data_only, **({"data_line": _data_line(data)} if data_only else {}),
         )
         if result.get("status") == "queued" or result.get("reason") == "continuation_already_queued":
             continuation = {"status": "queued", "task_uuid": result["task_uuid"]}
@@ -929,6 +995,7 @@ class DataReleaseService:
             active = (await db.execute(select(Task.id).where(
                 Task.task_type == TaskType.EXPORT_DATA,
                 Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                Task.input_data["data_only"].as_boolean().is_not(True),
                 Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.RETRYING]),
             ).limit(1))).scalar_one_or_none()
             if active is not None:
@@ -946,13 +1013,14 @@ class DataReleaseService:
             releases = list((await db.execute(
                 select(Task).where(Task.task_type == TaskType.EXPORT_DATA,
                     Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                    Task.input_data["data_only"].as_boolean().is_not(True),
                     Task.input_data["code_only"].as_boolean().is_not(True),
                     Task.status.in_([TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]))
                 .order_by(Task.completed_at.desc().nullslast(), Task.created_at.desc()).limit(100)
             )).scalars().all())
         report_time = _as_aware_utc(latest_report.completed_at)
         for release in releases:
-            if any((release.input_data or {}).get(flag) for flag in ("code_only", "raw_archive_only")):
+            if any((release.input_data or {}).get(flag) for flag in ("code_only", "raw_archive_only", "data_only")):
                 continue
             if release.status == TaskStatus.COMPLETED and (release.output_data or {}).get("r2_reports_published"):
                 snapshot_time = _as_aware_utc(release.started_at)
@@ -967,6 +1035,65 @@ class DataReleaseService:
         await self.trigger_job(jobs[0].job_id, manual=False, trigger="upstream_completion",
             trigger_task_uuid=latest_report.task_uuid, reports_only=True)
 
+    async def reconcile_pending_surveillance(self) -> None:
+        await self._reconcile_pending_json("surveillance")
+
+    async def reconcile_pending_situation(self) -> None:
+        await self._reconcile_pending_json("situation")
+
+    async def _reconcile_json_channels(self) -> None:
+        for line, reconcile in (("surveillance", self.reconcile_pending_surveillance),
+                                ("situation", self.reconcile_pending_situation)):
+            if _data_enabled(self._config(), {"data_line": line}):
+                try:
+                    await reconcile()
+                except Exception as error:
+                    # Bad scopes/configuration in one feed must not stop the
+                    # other channel or the independent static release clock.
+                    logger.exception("{} JSON reconciliation deferred: {}", line, error)
+
+    async def _reconcile_pending_json(self, line: str) -> None:
+        """Recover committed dirty markers independently of site schedules."""
+        if not _data_enabled(self._config(), {"data_line": line}):
+            return
+        jobs = [job for job in await self.load_jobs() if job.enabled]
+        if not jobs:
+            return
+        job = jobs[0]
+        if await self._yield_json_turn(job.job_id, line):
+            return
+        kwargs = {"data_line": line} if line != "surveillance" else {}
+        if await self._release_failure_cooldown_reason(job.job_id, data_only=True, **kwargs):
+            return
+        await self.trigger_job(job.job_id, manual=False, trigger="upstream_completion",
+            data_only=True, **kwargs)
+
+    async def _yield_json_turn(self, job_id: str, line: str) -> bool:
+        """Alternate ready channels so a country backlog cannot starve Situation."""
+        other = "situation" if line == "surveillance" else "surveillance"
+        if not _data_enabled(self._config(), {"data_line": other}):
+            return False
+        async with get_database() as db:
+            waiting = list((await db.execute(select(PublishDirty).where(
+                PublishDirty.line == other, PublishDirty.published_at.is_(None)))).scalars())
+            if not waiting:
+                return False
+            if other == "surveillance":
+                known = list((await db.execute(select(Country.code, Country.is_active))).all())
+                available = {str(code).strip().upper() for code, active in known if active
+                    and get_country_bootstrap_config(code).get("public_release_enabled", True) is not False}
+                from .data_release.planning import plan_changes
+                if not plan_changes(waiting, available, max_countries=1)["dirty_ids"]:
+                    return False
+            latest = (await db.execute(select(Task).where(
+                Task.task_type == TaskType.EXPORT_DATA,
+                Task.input_data["data_only"].as_boolean().is_(True),
+            ).order_by(Task.created_at.desc(), Task.id.desc()).limit(1))).scalar_one_or_none()
+        if latest is None or _data_line(latest.input_data or {}) != line:
+            return False
+        kwargs = {"data_line": other} if other != "surveillance" else {}
+        return not await self._release_failure_cooldown_reason(job_id, data_only=True, **kwargs)
+
     async def _release_up_to_date(self, job_id: str, crawl_completed_at: datetime) -> bool:
         async with get_database() as db:
             tasks = (
@@ -978,27 +1105,29 @@ class DataReleaseService:
                         Task.input_data["raw_archive_only"].as_boolean().is_not(True),
                         Task.input_data["reports_only"].as_boolean().is_not(True),
                         Task.input_data["code_only"].as_boolean().is_not(True),
+                        Task.input_data["data_only"].as_boolean().is_not(True),
                     )
                     .order_by(Task.created_at.desc())
                 )
             ).scalars().all()
         for task in tasks:
             metadata = dict(task.metadata_ or {})
-            if metadata.get("release_job_id") != job_id or any((task.input_data or {}).get(flag) for flag in ("reports_only", "raw_archive_only", "code_only")):
+            if metadata.get("release_job_id") != job_id or any((task.input_data or {}).get(flag) for flag in ("reports_only", "raw_archive_only", "code_only", "data_only")):
                 continue
             task_time = _as_aware_utc(task.completed_at or task.created_at)
             crawl_time = _as_aware_utc(crawl_completed_at)
             return bool(task_time and crawl_time and task_time >= crawl_time)
         return False
 
-    async def _release_failure_cooldown_reason(self, job_id: str) -> Optional[str]:
+    async def _release_failure_cooldown_reason(self, job_id: str, *, data_only: bool = False, data_line: str = "surveillance") -> Optional[str]:
         cooldown_minutes = int(self._config().auto_failure_cooldown_minutes or 0)
         if cooldown_minutes <= 0:
             return None
 
         now = datetime.now(ZoneInfo("UTC"))
         cutoff = now - timedelta(minutes=cooldown_minutes)
-        task = await self._latest_terminal_release_task(job_id)
+        task = (await self._latest_terminal_release_task(job_id, data_only=True, **({"data_line": data_line} if data_line != "surveillance" else {}))
+                if data_only else await self._latest_terminal_release_task(job_id))
         if task is None or task.status != TaskStatus.FAILED:
             return None
 
@@ -1011,7 +1140,7 @@ class DataReleaseService:
             f"auto release is cooling down until {until.isoformat()}"
         )
 
-    async def _latest_terminal_release_task(self, job_id: str) -> Optional[Task]:
+    async def _latest_terminal_release_task(self, job_id: str, *, data_only: bool = False, data_line: str = "surveillance") -> Optional[Task]:
         async with get_database() as db:
             result = await db.execute(
                 select(Task)
@@ -1021,6 +1150,10 @@ class DataReleaseService:
                     Task.input_data["raw_archive_only"].as_boolean().is_not(True),
                     Task.input_data["reports_only"].as_boolean().is_not(True),
                     Task.input_data["code_only"].as_boolean().is_not(True),
+                    Task.input_data["data_only"].as_boolean().is_(True) == data_only,
+                    ((Task.input_data["data_line"].as_string() == "situation")
+                        if data_line == "situation" else Task.input_data["data_line"].as_string().is_distinct_from("situation"))
+                        if data_only else True,
                 )
                 .order_by(Task.completed_at.desc().nullslast(), Task.created_at.desc())
                 .limit(100)
@@ -1029,6 +1162,8 @@ class DataReleaseService:
         for task in tasks:
             metadata = dict(task.metadata_ or {})
             if metadata.get("release_job_id") == job_id and not any((task.input_data or {}).get(flag) for flag in ("reports_only", "raw_archive_only", "code_only")):
+                if data_only and _data_line(task.input_data or {}) != data_line:
+                    continue
                 return task
         return None
 
@@ -1042,8 +1177,18 @@ class DataReleaseService:
         full: bool = False,
         reports_only: bool = False,
         code_only: bool = False,
+        data_only: bool = False,
+        data_line: str = "surveillance",
         pending_ids: list[int] | None = None,
     ) -> dict[str, Any]:
+        if sum(bool(value) for value in (full, reports_only, code_only, data_only)) > 1:
+            raise ValueError("Release modes are mutually exclusive")
+        _data_line({"data_line": data_line})
+        situation_detached = bool(getattr(self._config(), "situation_json_enabled", False) and not any((data_only, code_only, reports_only)))
+        content_only = bool(
+            getattr(self._config(), "surveillance_json_enabled", False)
+            and not any((data_only, code_only, reports_only))
+        )
         branch = self._download_repo_branch(job)
         project_name = self._cloudflare_project_name(job.cloudflare_project_name)
         download_repo_url = self._download_repo_url()
@@ -1057,6 +1202,13 @@ class DataReleaseService:
         marked_before = datetime.now(ZoneInfo("UTC")).isoformat()
         async with get_database() as db:
             selection_query = select(PublishDirty).where(PublishDirty.published_at.is_(None))
+            if data_only:
+                selection_query = selection_query.where(PublishDirty.line == data_line)
+            else:
+                if content_only:
+                    selection_query = selection_query.where(PublishDirty.line != "surveillance")
+                if situation_detached:
+                    selection_query = selection_query.where(PublishDirty.line != "situation")
             if pending_ids is not None:
                 selection_query = selection_query.where(PublishDirty.id.in_(pending_ids))
             dirty = [] if reports_only or code_only else list((await db.execute(selection_query.order_by(PublishDirty.id))).scalars().all())
@@ -1088,7 +1240,7 @@ class DataReleaseService:
                 )
                 incremental_country_codes = release_plan["country_codes"]
                 dirty_ids = release_plan["dirty_ids"]
-                if (pending_ids is not None or not manual) and not dirty_ids:
+                if (data_only or pending_ids is not None or not manual) and not dirty_ids:
                     return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid,
                             "reason": "no_publishable_changes"}
         description_parts = [
@@ -1109,14 +1261,16 @@ class DataReleaseService:
             description_parts = ["Build and publish code/templates using the existing data snapshot; no collection or download generation."]
         if reports_only:
             description_parts = ["Refresh report data, build report pages, publish changed files to Reports R2, and verify the public report host."]
+        if data_only:
+            description_parts = [f"Publish changed {data_line} JSON snapshots and their manifest without rebuilding static pages."]
 
         input_data = {
             "release_job_id": job.job_id,
             "release_job_name": job.name,
             "priority": job.priority,
             "auto_after_crawls": job.auto_after_crawls,
-            "include_git_push": bool(job.include_git_push and not reports_only and not code_only),
-            "include_cloudflare_deploy": bool(job.include_cloudflare_deploy and not reports_only),
+            "include_git_push": bool(job.include_git_push and not reports_only and not code_only and not data_only),
+            "include_cloudflare_deploy": bool(job.include_cloudflare_deploy and not reports_only and not data_only),
             "require_clean_worktree": job.require_clean_worktree,
             "download_repo_branch": branch,
             "deployment_branch": job.github_branch,
@@ -1132,6 +1286,13 @@ class DataReleaseService:
             "full": full,
             "reports_only": reports_only,
             "code_only": code_only,
+            "data_only": data_only,
+            "data_line": data_line if data_only else None,
+            "situation_detached": situation_detached,
+            # Freeze the selected publication contract. A configuration change
+            # before execution/retry must not turn a static content task into
+            # a surveillance exporter (or acknowledge unselected data rows).
+            "content_only": content_only,
             "country_scopes_exact": True,
             "release_plan": release_plan,
             "continuation_dirty_ids": release_plan.get("continuation_dirty_ids", []),
@@ -1142,16 +1303,15 @@ class DataReleaseService:
             "publish_change_count": len(dirty_ids),
             "trigger_task_uuid": trigger_task_uuid,
             "generated_paths": list(GENERATED_DATA_PATHS),
-            "raw_archive_enabled": raw_archive.enabled,
+            "raw_archive_enabled": bool(raw_archive.enabled and not data_only),
             "raw_archive_repo_url": raw_archive.repo_url,
             "raw_archive_branch": raw_archive.branch,
         }
         async with get_database() as db:
-            # All release jobs share generated output directories. Locking the
-            # complete job registry makes the active-task check and task insert
-            # one cross-process critical section, not merely an in-process
-            # asyncio lock. The task is born QUEUED with complete metadata, so a
-            # worker cannot claim a half-initialized PENDING row.
+            # Reserve a channel atomically across scheduler/API processes.
+            # JSON and static have separate runtime outputs, but their brief
+            # queue reservation uses the same job registry critical section.
+            # Tasks are born QUEUED with complete metadata.
             await db.execute(
                 select(DataReleaseJob.id)
                 .order_by(DataReleaseJob.id.asc())
@@ -1161,6 +1321,7 @@ class DataReleaseService:
                 child = (await db.execute(select(Task).where(
                     Task.task_type == TaskType.EXPORT_DATA,
                     Task.input_data["continuation_parent_task_uuid"].as_string() == trigger_task_uuid,
+                    Task.input_data["data_only"].as_boolean().is_(True) == data_only,
                 ).order_by(Task.id).limit(1))).scalar_one_or_none()
                 if child is not None:
                     return {"job_id": job.job_id, "status": "skipped", "task_uuid": child.task_uuid,
@@ -1170,7 +1331,7 @@ class DataReleaseService:
                     select(Task)
                     .where(
                         Task.task_type == TaskType.EXPORT_DATA,
-                        Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                        _release_conflict_clause(input_data),
                         Task.status.in_(
                             [
                                 TaskStatus.PENDING,
@@ -1194,9 +1355,23 @@ class DataReleaseService:
                     "reason": "already_running" if same_job else "release_pipeline_busy",
                 }
 
+            if data_only:
+                # Planning happened before taking the cross-process queue
+                # reservation. Another completed publisher may have consumed
+                # those exact IDs while this enqueue waited; never create a
+                # stale JSON candidate from that older selection.
+                pending = set((await db.execute(select(PublishDirty.id).where(
+                    PublishDirty.id.in_(dirty_ids),
+                    PublishDirty.line == data_line,
+                    PublishDirty.published_at.is_(None),
+                ).with_for_update())).scalars())
+                if pending != set(dirty_ids):
+                    return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid,
+                            "reason": "no_pending_changes" if not pending else "selection_changed"}
+
             task = Task(
                 task_type=TaskType.EXPORT_DATA,
-                task_name=f"Data Release: {job.name}",
+                task_name=f"{data_line.title() + ' JSON' if data_only else 'Data Release'}: {job.name}",
                 # A release always outranks collection and AI work in the queue,
                 # whatever priority the job row stores.
                 priority=TaskPriority.URGENT,
@@ -1210,6 +1385,8 @@ class DataReleaseService:
                     "trigger": trigger,
                     "manual_trigger": manual,
                     "reports_only": reports_only,
+                    "data_only": data_only,
+                    "data_line": data_line if data_only else None,
                     "trigger_task_uuid": trigger_task_uuid,
                     "automatic_retry": {
                         "policy_version": "release-transient-v1",

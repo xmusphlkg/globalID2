@@ -96,6 +96,358 @@ async def enqueue(maker, service, *, full=False):
         ).scalar_one()
 
 
+@pytest.mark.parametrize("json_enabled,expected_lines", [
+    (False, {"surveillance", "literature", "situation"}),
+    (True, {"literature", "situation"}),
+])
+@pytest.mark.parametrize("full", [False, True])
+async def test_static_release_selects_only_its_channel_when_json_enabled(release_db, monkeypatch, json_enabled, expected_lines, full):
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC", surveillance_json_enabled=json_enabled))
+    async with maker() as session:
+        rows = [PublishDirty(line=line, scope_key="US" if line == "surveillance" else "*", source_task_uuid="source", marked_at=datetime.now(timezone.utc))
+                for line in ("surveillance", "literature", "situation")]
+        session.add_all(rows)
+        await session.commit()
+        ids_by_line = {row.line: row.id for row in rows}
+    task = await enqueue(maker, service, full=full)
+    assert set(task.input_data["publish_dirty_ids"]) == {ids_by_line[line] for line in expected_lines}
+    assert task.input_data["content_only"] is json_enabled
+
+
+async def test_json_release_selects_surveillance_and_runs_beside_static_lane(release_db):
+    maker, service, _ = release_db
+    async with maker() as session:
+        surveillance = PublishDirty(line="surveillance", scope_key="US", source_task_uuid="source", marked_at=datetime.now(timezone.utc))
+        session.add_all([surveillance, PublishDirty(line="literature", scope_key="*", source_task_uuid="source", marked_at=datetime.now(timezone.utc)),
+            Task(task_uuid="site-running", task_type=TaskType.EXPORT_DATA,
+                 task_name="Site", status=TaskStatus.RUNNING, input_data={"content_only": True})])
+        await session.commit()
+        marker_id = surveillance.id
+    job = DataReleaseJobConfig(job_id="site-release", name="Site Release")
+    first = await service._enqueue_release_task(job, manual=True, trigger="test", trigger_task_uuid=None, data_only=True)
+    assert first["status"] == "queued"
+    async with maker() as session:
+        task = (await session.execute(select(Task).where(Task.task_uuid == first["task_uuid"]))).scalar_one()
+        assert task.input_data["publish_dirty_ids"] == [marker_id]
+        assert task.input_data["data_only"] is True
+        assert task.input_data["content_only"] is False
+        assert task.metadata_["data_only"] is True
+        assert task.input_data["incremental_country_codes"] == ["US"]
+        assert not task.input_data["include_cloudflare_deploy"]
+        assert not task.input_data["include_git_push"]
+        assert not task.input_data["raw_archive_enabled"]
+    second = await service._enqueue_release_task(job, manual=True, trigger="test", trigger_task_uuid=None, data_only=True)
+    assert second["status"] == "skipped"
+    assert second["task_uuid"] == first["task_uuid"]
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+async def test_situation_gate_freezes_selection_and_static_contract(release_db, monkeypatch, enabled):
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC",
+        surveillance_json_enabled=True, situation_json_enabled=enabled))
+    async with maker() as session:
+        rows = [PublishDirty(line=line, scope_key="US" if line == "surveillance" else "*",
+            source_task_uuid="source", marked_at=datetime.now(timezone.utc))
+            for line in ("surveillance", "situation", "literature")]
+        session.add_all(rows)
+        await session.commit()
+        ids = {row.line: row.id for row in rows}
+    task = await enqueue(maker, service, full=True)
+    assert task.input_data["situation_detached"] is enabled
+    assert set(task.input_data["publish_dirty_ids"]) == {ids["literature"]} | (set() if enabled else {ids["situation"]})
+
+
+async def test_situation_json_selects_exact_own_line_without_surveillance_scopes(release_db):
+    maker, service, _ = release_db
+    async with maker() as session:
+        rows = [PublishDirty(line=line, scope_key="US" if line == "surveillance" else "*",
+            source_task_uuid="source", marked_at=datetime.now(timezone.utc))
+            for line in ("surveillance", "situation", "literature")]
+        session.add_all(rows)
+        session.add(Task(task_uuid="site-safe", task_type=TaskType.EXPORT_DATA, task_name="Site",
+            status=TaskStatus.RETRYING, input_data={"content_only": True, "situation_detached": True}))
+        await session.commit()
+        selected_id = rows[1].id
+    result = await service._enqueue_release_task(DataReleaseJobConfig(job_id="site-release", name="Site"),
+        manual=False, trigger="upstream_completion", trigger_task_uuid=None, data_only=True, data_line="situation")
+    assert result["status"] == "queued"
+    async with maker() as session:
+        task = (await session.execute(select(Task).where(Task.task_uuid == result["task_uuid"]))).scalar_one()
+        assert task.input_data["publish_dirty_ids"] == [selected_id]
+        assert task.input_data["data_line"] == task.metadata_["data_line"] == "situation"
+        assert task.input_data["incremental_country_codes"] == []
+        assert task.input_data["continuation_dirty_ids"] == []
+
+
+@pytest.mark.parametrize("status", [TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.RETRYING])
+async def test_situation_waits_for_legacy_content_task_owning_its_dirty(release_db, status):
+    maker, service, _ = release_db
+    async with maker() as session:
+        session.add_all([PublishDirty(line="situation", scope_key="*", source_task_uuid="source",
+            marked_at=datetime.now(timezone.utc)), Task(task_uuid="old-content", task_type=TaskType.EXPORT_DATA,
+            task_name="Old content", status=status, input_data={"content_only": True})])
+        await session.commit()
+    result = await service._enqueue_release_task(DataReleaseJobConfig(job_id="site-release", name="Site"),
+        manual=False, trigger="upstream_completion", trigger_task_uuid=None, data_only=True, data_line="situation")
+    assert result["status"] == "skipped"
+    assert result["task_uuid"] == "old-content"
+
+
+@pytest.mark.parametrize("status", [TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.RETRYING])
+async def test_json_enqueue_waits_for_legacy_site_in_every_reserved_state(release_db, status):
+    maker, service, _ = release_db
+    async with maker() as session:
+        session.add_all([
+            PublishDirty(line="surveillance", scope_key="US", source_task_uuid="source", marked_at=datetime.now(timezone.utc)),
+            Task(task_uuid="legacy", task_type=TaskType.EXPORT_DATA, task_name="Legacy site",
+                 status=status, input_data={}),
+        ])
+        await session.commit()
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site"),
+        manual=True, trigger="test", trigger_task_uuid=None, data_only=True,
+    )
+    assert result["status"] == "skipped"
+    assert result["task_uuid"] == "legacy"
+
+
+@pytest.mark.parametrize("json_enabled,mode,expected", [
+    (False, {}, "skipped"), (True, {}, "queued"),
+    (False, {"reports_only": True}, "queued"),
+    (False, {"code_only": True}, "queued"),
+])
+async def test_legacy_site_waits_for_json_but_frozen_safe_modes_can_queue(release_db, monkeypatch, json_enabled, mode, expected):
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC", surveillance_json_enabled=json_enabled))
+    async with maker() as session:
+        session.add_all([
+            PublishDirty(line="literature", scope_key="*", source_task_uuid="source", marked_at=datetime.now(timezone.utc)),
+            Task(task_uuid="json", task_type=TaskType.EXPORT_DATA, task_name="JSON",
+                 status=TaskStatus.RETRYING, input_data={"data_only": True}),
+        ])
+        await session.commit()
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site"),
+        manual=True, trigger="test", trigger_task_uuid=None, **mode,
+    )
+    assert result["status"] == expected
+    if expected == "queued":
+        async with maker() as session:
+            task = (await session.execute(select(Task).where(Task.task_uuid == result["task_uuid"]))).scalar_one()
+        assert task.input_data["content_only"] is (json_enabled and not bool(mode))
+        assert not task.input_data["data_only"]
+
+
+async def test_empty_json_release_never_becomes_full_or_acknowledges_other_lines(release_db):
+    maker, service, _ = release_db
+    async with maker() as session:
+        session.add(PublishDirty(line="literature", scope_key="*", source_task_uuid="source", marked_at=datetime.now(timezone.utc)))
+        await session.commit()
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site Release"),
+        manual=True, trigger="test", trigger_task_uuid=None, data_only=True,
+    )
+    assert result["status"] == "skipped"
+    async with maker() as session:
+        assert list((await session.execute(select(Task))).scalars()) == []
+
+
+async def test_json_revalidates_exact_dirty_ids_after_waiting_for_queue_reservation(release_db, monkeypatch):
+    maker, service, _ = release_db
+    async with maker() as session:
+        marker = PublishDirty(line="surveillance", scope_key="US", source_task_uuid="source", marked_at=datetime.now(timezone.utc))
+        session.add(marker)
+        await session.commit()
+        marker_id = marker.id
+    entries = 0
+
+    @asynccontextmanager
+    async def database():
+        nonlocal entries
+        entries += 1
+        if entries == 2:
+            async with maker() as other_publisher:
+                row = await other_publisher.get(PublishDirty, marker_id)
+                row.published_at = datetime.now(timezone.utc)
+                await other_publisher.commit()
+        async with maker() as session:
+            yield session
+
+    monkeypatch.setattr(module, "get_database", database)
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site"),
+        manual=True, trigger="test", trigger_task_uuid=None, data_only=True,
+    )
+    assert result["reason"] == "no_pending_changes"
+    async with maker() as session:
+        assert list((await session.execute(select(Task))).scalars()) == []
+
+
+async def test_json_reconciliation_ignores_static_schedule_and_preserves_its_state(release_db, monkeypatch):
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(
+        enabled=False, surveillance_json_enabled=True, timezone="UTC", auto_failure_cooldown_minutes=0,
+    ))
+    monkeypatch.setattr(service, "load_jobs", AsyncMock(return_value=[
+        DataReleaseJobConfig(job_id="site-release", name="Site", auto_after_crawls=False, daily_time=None),
+    ]))
+    save = AsyncMock()
+    monkeypatch.setattr(module.schedule_state_repository, "save", save)
+    async with maker() as session:
+        session.add(PublishDirty(line="surveillance", scope_key="US", source_task_uuid="source", marked_at=datetime.now(timezone.utc)))
+        await session.commit()
+    await service.reconcile_pending_surveillance()
+    await service.reconcile_pending_surveillance()
+    async with maker() as session:
+        tasks = list((await session.execute(select(Task))).scalars())
+    assert len(tasks) == 1 and tasks[0].input_data["data_only"] is True
+    assert service._states == {}
+    save.assert_not_awaited()
+
+
+async def test_static_queue_can_start_while_json_channel_has_retry_reservation(release_db, monkeypatch):
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC", surveillance_json_enabled=True))
+    async with maker() as session:
+        session.add_all([
+            PublishDirty(line="literature", scope_key="*", source_task_uuid="source", marked_at=datetime.now(timezone.utc)),
+            Task(task_uuid="data-retry", task_type=TaskType.EXPORT_DATA, task_name="JSON retry",
+                 status=TaskStatus.RETRYING, input_data={"data_only": True}),
+        ])
+        await session.commit()
+    task = await enqueue(maker, service)
+    assert not task.input_data["data_only"]
+
+
+async def test_json_scheduler_poll_runs_when_static_schedule_is_disabled(monkeypatch):
+    import asyncio
+
+    service = DataReleaseService()
+    service._stop_event = asyncio.Event()
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(
+        enabled=False, surveillance_json_enabled=True, poll_interval_seconds=1,
+        reports_auto_publish_enabled=True,
+    ))
+    monkeypatch.setattr(service, "requeue_due_automatic_retries", AsyncMock())
+    monkeypatch.setattr(service, "reconcile_release_continuations", AsyncMock())
+    monkeypatch.setattr(service, "load_jobs", AsyncMock(return_value=[
+        DataReleaseJobConfig(job_id="site-release", name="Site", daily_time="00:00", auto_after_crawls=False),
+    ]))
+    monkeypatch.setattr(service, "trigger_job", AsyncMock())
+    monkeypatch.setattr(service, "reconcile_pending_reports", AsyncMock())
+
+    async def publish_data():
+        service._stop_event.set()
+
+    reconcile = AsyncMock(side_effect=publish_data)
+    monkeypatch.setattr(service, "reconcile_pending_surveillance", reconcile)
+    await service._run_loop()
+    reconcile.assert_awaited_once_with()
+    service.trigger_job.assert_not_awaited()
+    service.reconcile_pending_reports.assert_not_awaited()
+
+
+async def test_situation_poll_and_completion_hook_work_with_static_and_surveillance_disabled(release_db, monkeypatch):
+    maker, service, _ = release_db
+    service._storage_ready = True
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(enabled=False,
+        situation_json_enabled=True, surveillance_json_enabled=False, timezone="UTC", auto_failure_cooldown_minutes=0))
+    monkeypatch.setattr(service, "load_jobs", AsyncMock(return_value=[DataReleaseJobConfig(job_id="site-release", name="Site")]))
+    async with maker() as session:
+        row = PublishDirty(line="situation", scope_key="*", source_task_uuid="situation-source", marked_at=datetime.now(timezone.utc))
+        session.add(row)
+        await session.commit()
+    await service.maybe_trigger_after_task_completion("situation-source", TaskType.REFRESH_SITUATION_SOURCES)
+    await service.reconcile_pending_situation()  # missed hook/restart poll cannot duplicate it
+    async with maker() as session:
+        tasks = list((await session.execute(select(Task))).scalars())
+    assert len(tasks) == 1
+    assert tasks[0].input_data["data_line"] == "situation"
+
+
+async def test_invalid_surveillance_reconcile_does_not_stop_situation(monkeypatch):
+    service = DataReleaseService()
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(
+        surveillance_json_enabled=True, situation_json_enabled=True))
+    monkeypatch.setattr(service, "reconcile_pending_surveillance", AsyncMock(side_effect=ValueError("Unknown scope")))
+    monkeypatch.setattr(service, "reconcile_pending_situation", AsyncMock())
+    await service._reconcile_json_channels()
+    service.reconcile_pending_situation.assert_awaited_once_with()
+
+
+async def test_json_channels_alternate_without_consuming_continuation(release_db, monkeypatch):
+    maker, service, marker_id, parent_id = await _continuation_parent(release_db, monkeypatch, flags={"data_only": True})
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(enabled=False, surveillance_json_enabled=True,
+        situation_json_enabled=True, timezone="UTC", auto_failure_cooldown_minutes=0))
+    async with maker() as session:
+        session.add(PublishDirty(line="situation", scope_key="*", source_task_uuid="source", marked_at=datetime.now(timezone.utc)))
+        await session.commit()
+    await service.reconcile_release_continuations()
+    await service.reconcile_pending_surveillance()
+    await service.reconcile_pending_situation()
+    async with maker() as session:
+        tasks = list((await session.execute(select(Task).order_by(Task.id))).scalars())
+        assert len(tasks) == 2
+        assert tasks[1].input_data["data_line"] == "situation"
+        assert not (tasks[0].metadata_ or {}).get("release_continuation")
+        tasks[1].status = TaskStatus.COMPLETED
+        tasks[1].completed_at = datetime.now(timezone.utc)
+        await session.execute(module.PublishDirty.__table__.update().where(PublishDirty.line == "situation").values(published_at=datetime.now(timezone.utc)))
+        await session.commit()
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        child = (await session.execute(select(Task).where(Task.input_data["continuation_parent_task_uuid"].as_string() == "parent"))).scalar_one()
+        assert child.input_data["publish_dirty_ids"] == [marker_id]
+
+
+async def test_cooldown_is_independent_between_json_lines(release_db, monkeypatch):
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC", auto_failure_cooldown_minutes=60))
+    async with maker() as session:
+        session.add(Task(task_uuid="situation-failure", task_type=TaskType.EXPORT_DATA, task_name="Failed",
+            status=TaskStatus.FAILED, completed_at=datetime.now(timezone.utc),
+            input_data={"data_only": True, "data_line": "situation"}, metadata_={"release_job_id": "site-release"}))
+        await session.commit()
+    assert await service._release_failure_cooldown_reason("site-release", data_only=True) is None
+    assert await service._release_failure_cooldown_reason("site-release", data_only=True, data_line="situation")
+
+
+async def test_blocked_surveillance_does_not_starve_situation(release_db, monkeypatch):
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC",
+        surveillance_json_enabled=True, situation_json_enabled=True, auto_failure_cooldown_minutes=0))
+    async with maker() as session:
+        session.add_all([Country(code="IE", name="IE", name_en="IE", is_active=False),
+            PublishDirty(line="surveillance", scope_key="IE", source_task_uuid="blocked", marked_at=datetime.now(timezone.utc)),
+            Task(task_uuid="last-situation", task_type=TaskType.EXPORT_DATA, task_name="Situation",
+                status=TaskStatus.COMPLETED, input_data={"data_only": True, "data_line": "situation"})])
+        await session.commit()
+    assert not await service._yield_json_turn("site-release", "situation")
+
+
+@pytest.mark.parametrize("flags", [
+    {"full": True}, {"reports_only": True}, {"code_only": True},
+])
+async def test_json_mode_rejects_static_modes_before_loading_jobs(flags):
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        await DataReleaseService().trigger_job("site", manual=True, trigger="test", data_only=True, **flags)
+
+
+@pytest.mark.parametrize("failed_data_only,query_data_only", [(False, True), (True, False)])
+async def test_failure_cooldown_is_scoped_to_publication_channel(release_db, monkeypatch, failed_data_only, query_data_only):
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC", auto_failure_cooldown_minutes=60))
+    async with maker() as session:
+        session.add(Task(task_uuid="failed", task_type=TaskType.EXPORT_DATA, task_name="Failed",
+            status=TaskStatus.FAILED, completed_at=datetime.now(timezone.utc),
+            input_data={"data_only": failed_data_only}, metadata_={"release_job_id": "site-release"}))
+        await session.commit()
+    assert await service._release_failure_cooldown_reason("site-release", data_only=query_data_only) is None
+    assert await service._release_failure_cooldown_reason("site-release", data_only=failed_data_only)
+
+
 async def _continuation_parent(release_db, monkeypatch, *, flags=None):
     maker, service, _ = release_db
     service._storage_ready = True
@@ -123,6 +475,51 @@ async def _continuation_parent(release_db, monkeypatch, *, flags=None):
         session.add(parent)
         await session.commit()
         return maker, service, marker.id, parent.id
+
+
+async def test_json_continuation_keeps_channel_and_ignores_running_site(release_db, monkeypatch):
+    maker, service, marker_id, _parent_id = await _continuation_parent(
+        release_db, monkeypatch, flags={"data_only": True},
+    )
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(
+        enabled=True, surveillance_json_enabled=True, timezone="UTC", auto_failure_cooldown_minutes=0,
+    ))
+    async with maker() as session:
+        session.add(Task(task_uuid="site-busy", task_type=TaskType.EXPORT_DATA,
+            task_name="Site", status=TaskStatus.RUNNING, input_data={"content_only": True}))
+        await session.commit()
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        children = list((await session.execute(select(Task).where(
+            Task.input_data["continuation_parent_task_uuid"].as_string() == "parent",
+        ))).scalars())
+    assert len(children) == 1
+    assert children[0].input_data["data_only"] is True
+    assert children[0].input_data["publish_dirty_ids"] == [marker_id]
+
+
+@pytest.mark.parametrize("line", ["surveillance", "situation"])
+async def test_data_retry_reservation_requeues_beside_static_release(release_db, monkeypatch, line):
+    from datetime import timedelta
+
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(**{f"{line}_json_enabled": True}))
+    monkeypatch.setattr(module.task_manager, "add_workbook_entry", AsyncMock())
+    now = datetime.now(timezone.utc)
+    async with maker() as session:
+        session.add_all([
+            Task(task_uuid="site-busy", task_type=TaskType.EXPORT_DATA, task_name="Site",
+                 status=TaskStatus.RUNNING, input_data={"content_only": True, "situation_detached": True}),
+            Task(task_uuid="json-retry", task_type=TaskType.EXPORT_DATA, task_name="JSON",
+                 status=TaskStatus.RETRYING,
+                 input_data={"data_only": True, "data_line": line, "trigger": "upstream_completion", "manual_trigger": False},
+                 metadata_={"release_job_id": "site-release", "automatic_retry": {
+                     "status": "scheduled", "scheduled_attempts": 1,
+                     "next_attempt_at": (now - timedelta(seconds=1)).isoformat(),
+                 }}),
+        ])
+        await session.commit()
+    assert await service.requeue_due_automatic_retries(now=now) == ["json-retry"]
 
 
 @pytest.mark.parametrize("line", [None, "literature", "situation", "knowledge"])

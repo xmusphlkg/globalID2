@@ -3,11 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties } from 'react';
 import './situation.css';
+import { situationData } from '../../lib/situation-data';
 import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SeriesGlance, SiteIndex, SituationAlertRecord, SituationMapDataFile } from '../../utils/situationTypes.ts';
 import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts, deduplicatePoints, filterPoints, placeLabel, recencyOf, sortPoints, type AlertGroup, type Filters, type GraphRow, type Lane, type WindowKey } from './model.ts';
 import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, countsLine, diseaseName, formatCount, formatDay, formatSignedPercent, sourceLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
 import type { CanvasProps, RegionTint } from './SituationMapCanvas.tsx';
+import { useSurveillanceSummary } from '../public/SurveillanceSummary';
+import { surveillanceData } from '../../lib/surveillance-data.ts';
+import { currentSurveillanceSite } from './currentSurveillanceSite.ts';
 
 interface ArchiveLinks {
   weekly: string;
@@ -242,7 +246,7 @@ export default function SituationExplorer({
   asOf: initialAsOf,
   generatedAt: initialGeneratedAt,
   dataUrl,
-  site,
+  site: contentSite,
   links,
 }: Props) {
   const copy = COPY[locale];
@@ -256,6 +260,12 @@ export default function SituationExplorer({
   const [dataState, setDataState] = useState<DataState>('loading');
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selection, setSelection] = useState<Selection>(null);
+  const currentMeta = useSurveillanceSummary('/site-data/meta.json');
+  const [surveillanceSummaries, setSurveillanceSummaries] = useState<Record<string, Record<string, any>>>({});
+  const summaryRequests = useRef(new Set<string>());
+  const summaryMounted = useRef(true);
+  useEffect(() => { summaryMounted.current = true; return () => { summaryMounted.current = false; }; }, []);
+  const site = useMemo(() => currentSurveillanceSite(contentSite, currentMeta.data, surveillanceSummaries), [contentSite, currentMeta.data, surveillanceSummaries]);
   const [listMode, setListMode] = useState<ListMode>('auto');
   const [wide, setWide] = useState(true);
   const [outbreaks, setOutbreaks] = useState<Record<string, Remote>>({});
@@ -288,13 +298,10 @@ export default function SituationExplorer({
   useEffect(() => {
     let live = true;
     setDataState('loading');
-    fetch(dataUrl)
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json() as Promise<SituationMapDataFile>;
-      })
+    situationData.read<SituationMapDataFile>(dataUrl)
       .then(payload => {
         if (!live) return;
+        if (payload.schema_version !== 'gids.situation_alerts.v1' || !Array.isArray(payload.points)) throw new Error('Invalid situation map');
         const nextPoints = Array.isArray(payload.points) ? payload.points : [];
         const nextAsOf = payload.as_of || initialAsOf;
         setPoints(nextPoints);
@@ -341,6 +348,17 @@ export default function SituationExplorer({
 
   const visible = useMemo(() => deduplicatePoints(sortPoints(filterPoints(points, filters, asOf), asOf)), [points, filters, asOf]);
   const selected = selection?.kind === 'place' ? visible.find(point => point.alert_id === selection.id) ?? null : null;
+  const selectedDisease = selected?.disease_id;
+  useEffect(() => {
+    for (const rawId of new Set([filters.disease, selectedDisease].filter(Boolean))) {
+      const id = String(rawId).toUpperCase();
+      if (!/^D\d+$/.test(id) || summaryRequests.current.has(id)) continue;
+      summaryRequests.current.add(id);
+      surveillanceData.read<Record<string, any>>(`/site-data/diseases/${id.toLowerCase()}-summary.json`)
+        .then(summary => { if (summaryMounted.current) setSurveillanceSummaries(previous => ({ ...previous, [id]: summary })); })
+        .catch(() => summaryRequests.current.delete(id));
+    }
+  }, [filters.disease, selectedDisease]);
   const selectedCountryCode = selection?.kind === 'country'
     ? selection.code
     : selected?.country_code.toUpperCase() ?? '';
@@ -354,6 +372,7 @@ export default function SituationExplorer({
     () => visible.filter(point => point.disease_id && site.series[seriesKey(point.country_code, point.disease_id)]).length,
     [visible, site.series],
   );
+  const linksKnown = visible.every(point => !point.disease_id || surveillanceSummaries[String(point.disease_id).toUpperCase()]);
   const monitoringRows = useMemo(() => {
     const seen = new Set<string>();
     return monitoring.filter(product => {
@@ -368,11 +387,7 @@ export default function SituationExplorer({
     if (!outbreakId || requested.current.has(outbreakId)) return;
     requested.current.add(outbreakId);
     setOutbreaks(state => ({ ...state, [outbreakId]: 'loading' }));
-    fetch(OUTBREAK_URL(outbreakId))
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json() as Promise<OutbreakFile>;
-      })
+    situationData.read<OutbreakFile>(OUTBREAK_URL(outbreakId))
       .then(file => setOutbreaks(state => ({ ...state, [outbreakId]: file })))
       .catch(() => setOutbreaks(state => ({ ...state, [outbreakId]: 'error' })));
   }, [outbreakId]);
@@ -520,7 +535,7 @@ export default function SituationExplorer({
           <span><strong>{visible.length}</strong> {copy.placesToggle}</span>
           <span><strong>{activeOutbreaks}</strong> {copy.activeLabel}</span>
           <span><strong>{sourcesOk}/{sourceCount}</strong> {copy.source}</span>
-          <span>{copy.linked(linked, visible.length)}</span>
+          <span>{linksKnown ? copy.linked(linked, visible.length) : locale === 'zh' ? '选择地点查看监测背景' : locale === 'fr' ? 'Choisissez un lieu pour le contexte de surveillance' : 'Select a place for surveillance context'}</span>
           <time dateTime={generatedAt}>{copy.updated} {formatDay(generatedAt, locale)}</time>
         </p>
         <div className="sit-bar-links">

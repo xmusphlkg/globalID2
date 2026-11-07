@@ -26,6 +26,38 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.18.0',
+    date: '2026-11-07',
+    titleEn: 'Independent live data updates',
+    titleZh: '数据独立实时更新',
+    titleFr: 'Actualisation indépendante des données',
+    summaryEn: 'Surveillance corrections and reviewed Situation updates publish independently of website builds, with consistent data versions and automatic recovery.',
+    summaryZh: '监测数据修订与已审核的态势更新独立发布，无需等待站点重建，并保持数据版本一致与失败自动恢复。',
+    summaryFr: 'Les corrections de surveillance et les mises à jour Situation validées sont publiées indépendamment de la compilation du site, avec des versions cohérentes et une reprise automatique.',
+    sections: [
+      {
+        kind: 'new', labelEn: 'New', labelZh: '新增', labelFr: 'Nouveautés',
+        items: [{
+          en: 'New surveillance observations and reviewed Situation signals trigger their own data publication. Regular updates no longer wait for the daily website release.',
+          zh: '新增监测观测与已审核的态势信号触发独立数据发布，日常更新无需等待每日站点发布。',
+          fr: 'Les nouvelles observations de surveillance et les signaux Situation validés déclenchent leur propre publication, sans attendre la publication quotidienne du site.',
+        }],
+      },
+      {
+        kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations',
+        items: [{
+          en: 'Updates recalculate affected countries and diseases while reusing completed data. Each view keeps its summaries, charts and details on a consistent version.',
+          zh: '数据更新只重新计算受影响的国家和疾病，复用已完成数据；每个视图中的摘要、图表与详情保持版本一致。',
+          fr: 'Les actualisations recalculent les pays et maladies concernés et réutilisent les données déjà préparées. Les résumés, graphiques et détails de chaque vue restent sur une version cohérente.',
+        }, {
+          en: 'Publication failures retain the previous complete data version. Bounded retries and queue monitoring help recover delayed updates.',
+          zh: '发布失败时保留上一完整数据版本，通过有界重试与队列监测恢复延迟的更新。',
+          fr: 'En cas d’échec de publication, la version complète précédente reste disponible. Des tentatives limitées et le suivi des files facilitent la reprise des mises à jour retardées.',
+        }],
+      },
+    ],
+  },
+  {
     version: '0.17.5',
     date: '2026-11-06',
     titleEn: 'Faster incremental data publication',

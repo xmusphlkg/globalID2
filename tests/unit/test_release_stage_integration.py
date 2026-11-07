@@ -19,7 +19,7 @@ def release(tmp_path, monkeypatch):
     stored = SimpleNamespace(output_data=None)
     task = SimpleNamespace(id=1, task_uuid="stage-test", input_data={"release_job_id": "site-release"})
     manager = SimpleNamespace(add_workbook_entry=AsyncMock(), update_task_progress=AsyncMock())
-    database = SimpleNamespace(get=AsyncMock(return_value=stored), commit=AsyncMock())
+    database = SimpleNamespace(get=AsyncMock(return_value=stored), commit=AsyncMock(), execute=AsyncMock())
 
     @asynccontextmanager
     async def db():
@@ -111,7 +111,61 @@ def release(tmp_path, monkeypatch):
     service = Service()
     service.commands = []
     return SimpleNamespace(service=service, task=task, runtime=runtime, commit=commit, put=put, root=tmp_path,
-                           astro=astro, stored=stored, manager=manager, snapshot_state=snapshot_state)
+                           astro=astro, stored=stored, manager=manager, snapshot_state=snapshot_state, database=database)
+
+
+@pytest.mark.asyncio
+async def test_static_content_release_never_acknowledges_or_reprojects_surveillance(release):
+    r = release
+    r.task.input_data.update({"content_only": True, "full": True, "publish_dirty_ids": [7, 8]})
+    result = await execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert result["content_only"]
+    assert "Publish Partitioned Data Downloads" not in r.service.commands
+    r.commit.assert_not_awaited()
+    statement = r.database.execute.await_args.args[0]
+    assert "publish_dirty.line !=" in str(statement)
+
+
+async def test_migration_can_publish_without_dispatching_subscriptions(release, monkeypatch):
+    from src.services.data_release import subscription_reconciliation
+    dispatch = AsyncMock(side_effect=AssertionError("migration must not dispatch messages"))
+    monkeypatch.setattr(subscription_reconciliation, "dispatch_safely", dispatch)
+    release.service._env_value = lambda name, default="": "true" if name.endswith("_ENABLED") else default
+    release.task.input_data["suppress_subscription_dispatch"] = True
+    result = await execute_release_task(release.service, release.task, runtime=release.runtime)
+    assert result["pages_deployed"] is True
+    assert result["subscription_dispatch_suppressed"] is True
+    dispatch.assert_not_awaited()
+
+
+async def test_old_static_contract_cannot_acknowledge_situation_after_cutover(release):
+    release.service._config = lambda: SimpleNamespace(surveillance_json_enabled=True, situation_json_enabled=True)
+    release.task.input_data.update({"content_only": True, "publish_dirty_ids": [7, 8]})
+    with pytest.raises(RuntimeError, match="predates the independent Situation"):
+        await execute_release_task(release.service, release.task, runtime=release.runtime)
+    release.database.execute.assert_not_awaited()
+    release.commit.assert_not_awaited()
+
+
+async def test_detached_static_acknowledgement_excludes_both_data_channels(release):
+    release.service._config = lambda: SimpleNamespace(timezone="UTC", surveillance_json_enabled=True, situation_json_enabled=True)
+    release.task.input_data.update({"content_only": True, "situation_detached": True, "publish_dirty_ids": [7, 8]})
+    await execute_release_task(release.service, release.task, runtime=release.runtime)
+    release.commit.assert_not_awaited()
+    statement = release.database.execute.await_args.args[0]
+    sql = str(statement.compile(compile_kwargs={"literal_binds": True}))
+    assert "'surveillance'" in sql and "'situation'" in sql and "NOT IN" in sql
+
+
+@pytest.mark.asyncio
+async def test_runtime_templates_cannot_publish_before_data_channel_migration(release):
+    r = release
+    r.put(r.astro / "src/lib/surveillance-data.ts", "new runtime data contract")
+    with pytest.raises(RuntimeError, match="initialized JSON channel"):
+        await execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert r.service.commands == []
+    assert r.snapshot_state["count"] == 0
+    r.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio

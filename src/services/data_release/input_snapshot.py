@@ -35,14 +35,17 @@ async def generate_release_inputs(*, service, task, runtime, job, python_path,
             timeout_seconds=min(runtime.generate_timeout_seconds, 30 * 60),
         )
         await runtime.task_manager.update_task_progress(task.task_uuid, 22)
+        generation_command = service._generate_site_data_command(
+            python_path=python_path, download_url_base=download_url_base,
+            incremental_country_codes=input_data.get("incremental_country_codes") or [],
+            incremental_site=bool(input_data.get("incremental_site")),
+            country_scopes_exact=bool(input_data.get("country_scopes_exact")),
+        )
+        if input_data.get("content_only"):
+            generation_command.append("--content-only")
         await service._run_logged_command(
             task.task_uuid, title="Generate Site Data",
-            cmd=service._generate_site_data_command(
-                python_path=python_path, download_url_base=download_url_base,
-                incremental_country_codes=input_data.get("incremental_country_codes") or [],
-                incremental_site=bool(input_data.get("incremental_site")),
-                country_scopes_exact=bool(input_data.get("country_scopes_exact")),
-            ),
+            cmd=generation_command,
             cwd=runtime.root_dir,
             env={**export_env, "PYTHONUNBUFFERED": "1", "GLOBALID_RELEASE_FROM_OBSERVATIONS": "1"},
             metadata={"event": "generate_site_data", "release_job_id": job.job_id},

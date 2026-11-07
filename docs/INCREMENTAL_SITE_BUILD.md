@@ -1,5 +1,10 @@
 # Incremental site build
 
+Surveillance data updates now have an independent JSON publication path and do
+not invoke the build described here after migration. See
+[STATIC_SITE_AND_DYNAMIC_DATA.md](STATIC_SITE_AND_DYNAMIC_DATA.md). These build
+optimizations apply to template and static content publication.
+
 The first optimization stage keeps the existing static site and release gates.
 It reduces repeated rendering, cache writes and dependency parsing, and runs
 independent validators on multiple CPU cores.
@@ -415,6 +420,10 @@ steps from its critical path. These measurements do not establish end-to-end
 production refresh latency.
 
 ## 2026-11-06: audit facts and partition preparation (0.17.5)
+
+The renderer concurrency setting and benchmarks in this historical section
+predate the November 7 memory fix. The default is now zero prerender workers;
+see `DATA_RELEASE_RESILIENCE.md` for the current setting and its tradeoffs.
 
 The build now pins Astro 7.4.7 and project-local Node 22.23.4. npm scripts
 automatically use the local runtime; the release receipt records that runtime.

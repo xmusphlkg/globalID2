@@ -13,7 +13,7 @@ import statistics
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 
 from src.core.country_library import get_country_bootstrap_config
 from src.generation.site_series_projection import (
@@ -238,6 +238,7 @@ async def fetch_disease_export_layers(
     *,
     recorded_at_as_of: datetime | None = None,
     registry_tables_exist: bool | None = None,
+    disease_ids: set[str] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Return public projections and lossless source observations separately.
 
@@ -248,7 +249,8 @@ async def fetch_disease_export_layers(
     public_config = get_country_bootstrap_config(country_code)
     legacy_records = (
         await fetch_disease_records_direct(
-            session, country_code, use_population_table
+            session, country_code, use_population_table,
+            **({"disease_ids": disease_ids} if disease_ids is not None else {}),
         )
         if recorded_at_as_of is None
         and public_config.get("public_legacy_enabled", True) is not False
@@ -282,6 +284,7 @@ async def fetch_disease_export_layers(
         country_code,
         use_population_table,
         recorded_at_as_of=recorded_at_as_of,
+        **({"disease_ids": disease_ids} if disease_ids is not None else {}),
     )
     return (
         apply_disease_cutover_projection(
@@ -292,7 +295,7 @@ async def fetch_disease_export_layers(
 
 
 async def fetch_disease_records_direct(
-    session, country_code: str, use_population_table: bool
+    session, country_code: str, use_population_table: bool, *, disease_ids: set[str] | None = None,
 ) -> list[dict]:
     """Query legacy disease records using the standard disease code."""
     # Swiss IDD CHFL is a published Switzerland+Liechtenstein aggregate. The
@@ -336,8 +339,8 @@ async def fetch_disease_records_direct(
             "AND pr.year = EXTRACT(YEAR FROM dr.time)::int"
         )
 
-    rows = await session.execute(
-        text(f"""
+    disease_filter = " AND d.name IN :disease_ids" if disease_ids is not None else ""
+    statement = text(f"""
             SELECT
                 timezone('UTC', dr.time)::date AS "date",
                 to_char(timezone('UTC', dr.time), 'YYYY-MM') AS year_month,
@@ -389,10 +392,14 @@ async def fetch_disease_records_direct(
             {population_join}
             WHERE c.code = :code
             {geography_filter}
+            {disease_filter}
             ORDER BY timezone('UTC', dr.time)::date ASC, d.name
-            """),
-        {"code": country_code},
-    )
+            """)
+    params = {"code": country_code}
+    if disease_ids is not None:
+        statement = statement.bindparams(bindparam("disease_ids", expanding=True))
+        params["disease_ids"] = sorted(disease_ids)
+    rows = await session.execute(statement, params)
     result = []
     for row in rows:
         record = dict(row._mapping)
@@ -415,6 +422,7 @@ async def fetch_disease_series_records(
     use_population_table: bool,
     *,
     recorded_at_as_of: datetime | None = None,
+    disease_ids: set[str] | None = None,
 ) -> list[dict]:
     """Read registry facts, optionally reconstructing an ingestion-time version.
 
@@ -445,6 +453,7 @@ async def fetch_disease_series_records(
         else "NULLIF(dss.metadata::jsonb ->> 'projection_policy', '')"
     )
     reviewed_mapping_join = ""
+    reviewed_assertions_join = ""
     if use_reviewed_mapping:
         reviewed_mapping_join = """
             JOIN LATERAL (
@@ -485,6 +494,8 @@ async def fetch_disease_series_records(
                 source_category.id DESC
                 LIMIT 1
             ) category ON TRUE
+        """
+        reviewed_assertions_join = """
             JOIN disease_mapping_assertions_v3 mapping
               ON mapping.category_id = category.id
              AND mapping.assertion_status = 'approved'
@@ -498,6 +509,7 @@ async def fetch_disease_series_records(
               ON mapping_release.id = release_item.release_id
              AND mapping_release.status = 'active'
         """
+        reviewed_mapping_join += reviewed_assertions_join
     incidence_expr = "NULL::double precision"
     incidence_source_expr = "'missing_population'"
     population_join = ""
@@ -618,7 +630,132 @@ async def fetch_disease_series_records(
         else "NULL::text"
     )
 
+    candidate_prefix = ""
+    if use_reviewed_mapping and disease_ids is None:
+        # Category identity and precedence depend on source/definition/code/
+        # label, not the observation date. Resolve each distinct identity once
+        # instead of repeating the same LATERAL lookup for every history row.
+        # Mapping validity still applies per observation below. Materialize only
+        # export fields, excluding heavyweight raw provenance from this scan.
+        history_columns = (
+            ", dso.recorded_at, dso.recorded_history_complete"
+            if recorded_at_as_of is not None else ""
+        )
+        candidate_prefix = f"""
+            WITH export_observations AS MATERIALIZED (
+                SELECT dso.time, dso.series_code, dso.geography_key,
+                       dso.dimension_key, dso.dimensions, dso.metadata,
+                       dso.value, dso.unit, dso.quality_status, dso.suppressed,
+                       COALESCE(NULLIF(dso.dimensions->>'source_disease_code', ''),
+                                NULLIF(dso.metadata->>'local_code', ''),
+                                export_series.source_series_code) AS effective_source_code,
+                       lower(btrim(COALESCE(
+                           NULLIF(dso.dimensions->>'source_disease_label', ''),
+                           NULLIF(dso.metadata->>'local_label', ''),
+                           export_series.source_label))) AS effective_source_label
+                       {history_columns}
+                FROM {observation_relation}
+                JOIN disease_surveillance_series export_series
+                  ON export_series.series_code = dso.series_code
+                WHERE export_series.country_code = :code
+                  AND dso.geography_key = :geography_key
+                  AND dso.suppressed IS FALSE
+                  AND dso.value IS NOT NULL
+                  AND dso.unit = export_series.unit
+                  AND dso.quality_status <> 'rejected'
+            ), export_identities AS MATERIALIZED (
+                SELECT DISTINCT dso.series_code, dss.source_system,
+                       dss.definition_version, dso.effective_source_code,
+                       dso.effective_source_label
+                FROM export_observations dso
+                JOIN disease_surveillance_series dss ON dss.series_code = dso.series_code
+            ), export_categories AS MATERIALIZED (
+                SELECT identity.series_code, identity.effective_source_code,
+                       identity.effective_source_label, category.id
+                FROM export_identities identity
+                JOIN LATERAL (
+                    SELECT source_category.id
+                    FROM source_disease_categories source_category
+                    WHERE source_category.source_id = identity.source_system
+                      AND source_category.is_active IS TRUE
+                      AND (
+                        (source_category.definition_version = identity.definition_version
+                         AND source_category.source_code = identity.effective_source_code)
+                        OR (source_category.definition_version = 'source-current'
+                            AND source_category.source_code LIKE 'label:%'
+                            AND lower(btrim(source_category.canonical_source_label)) = identity.effective_source_label)
+                      )
+                    ORDER BY CASE
+                        WHEN source_category.definition_version = identity.definition_version
+                         AND source_category.source_code = identity.effective_source_code THEN 0
+                        ELSE 1
+                    END, source_category.id DESC
+                    LIMIT 1
+                ) category ON TRUE
+            )
+        """
+        observation_relation = "export_observations AS dso"
+        reviewed_mapping_join = """
+            JOIN export_categories category
+              ON category.series_code = dso.series_code
+             AND category.effective_source_code IS NOT DISTINCT FROM dso.effective_source_code
+             AND category.effective_source_label IS NOT DISTINCT FROM dso.effective_source_label
+        """ + reviewed_assertions_join
+    elif use_reviewed_mapping and disease_ids is not None:
+        # A target filter after the per-observation LATERAL category selection
+        # still resolves every unrelated observation first. Preselect a safe
+        # superset using active target mappings, then retain the original exact
+        # category ordering and target check below. Every original matching row
+        # satisfies this EXISTS condition, including newly registered sources.
+        candidate_prefix = f"""
+            WITH requested_categories AS MATERIALIZED (
+                    SELECT candidate_category.source_id, candidate_category.definition_version,
+                           candidate_category.source_code, candidate_category.canonical_source_label,
+                           candidate_mapping.valid_from AS mapping_valid_from,
+                           candidate_mapping.valid_to AS mapping_valid_to
+                    FROM source_disease_categories candidate_category
+                    JOIN disease_mapping_assertions_v3 candidate_mapping
+                      ON candidate_mapping.category_id = candidate_category.id
+                     AND candidate_mapping.assertion_status = 'approved'
+                     AND candidate_mapping.target_kind = 'concept'
+                     AND candidate_mapping.projection_policy = 'canonical'
+                     AND candidate_mapping.target_code IN :disease_ids
+                    JOIN disease_mapping_release_items_v3 candidate_item
+                      ON candidate_item.assertion_id = candidate_mapping.id
+                    JOIN disease_mapping_releases_v3 candidate_release
+                      ON candidate_release.id = candidate_item.release_id
+                     AND candidate_release.status = 'active'
+                    WHERE candidate_category.is_active IS TRUE
+            ), requested_observations AS MATERIALIZED (
+                SELECT dso.* FROM {observation_relation}
+                JOIN disease_surveillance_series candidate_series
+                  ON candidate_series.series_code = dso.series_code
+                WHERE candidate_series.country_code = :code
+                  AND dso.geography_key = :geography_key
+                  AND EXISTS (
+                    SELECT 1 FROM requested_categories candidate_category
+                    WHERE candidate_category.source_id = candidate_series.source_system
+                      AND (candidate_category.mapping_valid_from IS NULL OR dso.time::date >= candidate_category.mapping_valid_from)
+                      AND (candidate_category.mapping_valid_to IS NULL OR dso.time::date <= candidate_category.mapping_valid_to)
+                      AND (
+                        (candidate_category.definition_version = candidate_series.definition_version
+                         AND candidate_category.source_code = COALESCE(
+                           NULLIF(dso.dimensions->>'source_disease_code', ''),
+                           NULLIF(dso.metadata->>'local_code', ''), candidate_series.source_series_code))
+                        OR (candidate_category.definition_version = 'source-current'
+                            AND candidate_category.source_code LIKE 'label:%'
+                            AND lower(btrim(candidate_category.canonical_source_label)) = lower(btrim(COALESCE(
+                              NULLIF(dso.dimensions->>'source_disease_label', ''),
+                              NULLIF(dso.metadata->>'local_label', ''), candidate_series.source_label))))
+                      )
+                  )
+            )
+        """
+        observation_relation = "requested_observations AS dso"
+
+    disease_filter = f" AND {disease_id_expr} IN :disease_ids" if disease_ids is not None else ""
     statement = text(f"""
+            {candidate_prefix}
             SELECT
                 timezone('UTC', dso.time)::date AS "date",
                 to_char(timezone('UTC', dso.time), 'YYYY-MM') AS year_month,
@@ -687,6 +824,7 @@ async def fetch_disease_series_records(
             {population_join}
             WHERE dss.country_code = :code
               AND {disease_id_expr} IS NOT NULL
+              {disease_filter}
               AND dso.geography_key = :geography_key
               AND dso.suppressed IS FALSE
               AND dso.value IS NOT NULL
@@ -695,6 +833,9 @@ async def fetch_disease_series_records(
             ORDER BY dss.disease_id, dso.series_code,
                      timezone('UTC', dso.time)::date ASC
             """)
+    if disease_ids is not None:
+        statement = statement.bindparams(bindparam("disease_ids", expanding=True))
+        query_params["disease_ids"] = sorted(disease_ids)
     rows = _iter_query_rows(
         session,
         statement,

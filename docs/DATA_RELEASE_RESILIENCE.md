@@ -1,5 +1,84 @@
 # Data release automatic recovery
 
+## Independent surveillance channel (2026-11-07)
+
+The redesigned data path is described in [STATIC_SITE_AND_DYNAMIC_DATA.md](STATIC_SITE_AND_DYNAMIC_DATA.md).
+After its one-time migration, surveillance updates publish versioned browser
+JSON independently of Astro, Pages, Papers/Reports rendering and download
+formats. A synthetic single-observation D038 revision on a prepared real
+eight-region baseline took 3.903 seconds for local JSON export; this excludes network upload
+and final database acknowledgement. The historical site-release measurements
+below describe the previously coupled pipeline.
+
+## Country update latency and renderer memory (2026-11-07)
+
+The production task `440bd7d8-ec31-4d00-a4f8-8a34a0f17434` selected eight
+Japanese subdivisions. Its site-data command took 474.4 seconds, including
+287.4 seconds for database reads and projections and 101.4 seconds for
+partitioned downloads. Astro then failed after 634.4 seconds: the Node log
+shows a 6 GiB V8 heap exhaustion in `JSON.parse`. The task did not publish or
+acknowledge those selected changes. These are timings for the code running on
+November 6, before the later v0.17.5 commit, not a benchmark of current code.
+
+The preceding successful task, `99074217-6728-45da-9617-65ed2bf27bd3`, took
+2,763.3 seconds: site generation 462.3 seconds, Astro 1,009.1 seconds, Papers
+and Reports splitting 127.4 and 40.0 seconds, Papers R2 publication 322.7
+seconds, and Pages deployment 112.2 seconds. Those recorded stages do not sum
+to the total: the workbook also has about 6 minutes between Reports splitting
+and release identity, and 4.5 minutes between deployment and completion. Those
+intervals include receipt, digest, snapshot and finalization work, but lack
+individual timings; the exact contribution of each is not established.
+
+Selected jurisdictions still read their historical observations, construct
+country and disease projections, and reconcile affected cross-country download
+partitions. The pipeline then renders and validates shared site routes and
+reconciles independent destinations. Exact dirty scopes and reuse reduce work,
+but do not yet provide time-window-level SQL projection or independent
+country-only publication. Sequential bounded batches also add queue latency
+when more than eight scopes are pending. Cold caches, global template changes,
+research changes, and network transfer can increase elapsed time.
+
+At 09:12 China time on November 7, `site-release` was enabled for 02:00 UTC
+(10:00 China time) daily, with `auto_after_crawls` disabled; this configuration
+does not automatically start a publication after each collection. There were
+82 pending surveillance markers across 61 distinct scopes, including scopes
+that may be disabled. The failed November 6 task was terminal because Astro
+build failures are outside the external-transport automatic retry policy;
+its continuation was therefore not completed. These observations describe the
+configuration and queue at that time, not a recommended schedule change.
+
+Collection has a separate serialization bottleneck. All live dual writes and
+other disease mutations use the transaction-scoped advisory lock in
+`src/core/disease_mutation_lock.py`. On November 6, a US NNDSS task ran from
+21:15 to 22:27 China time. Its log shows 392,447 source observations passed to
+the series write and a quality check covering 1,508,374 historical observations;
+its series write ran from approximately 21:41 to 22:27. A Swedish ECDC task
+started at 21:50 but its 942-row series write did not begin until 22:27, after
+the US transaction. This timing is consistent with contention on the shared
+lock, although the logs do not independently record its wait duration. Do not
+remove the lock without replacing its cross-writer ordering and atomicity
+guarantees; large imports and global ontology operations can overlap keys.
+
+The research index was approximately 290 MiB on disk at investigation time;
+its parsed representation is larger. Parallel Astro prerender workers have
+independent module caches, and the sitemap formerly parsed a second copy in a
+worker. The default now disables parallel prerender workers and shares the
+generated-data reader with the sitemap. `GIDS_ASTRO_RENDER_WORKERS` remains an
+explicit opt-in; increasing it duplicates input and cache memory and must be
+benchmarked with the actual corpus and service memory budget. The existing
+per-process Node heap setting is not a limit on the entire service cgroup.
+Lower worker concurrency can increase cold render time. Verify production
+latency and peak memory after rollout; a local build does not prove the
+end-to-end release target is met.
+
+An isolated cold build using a copy of the November 7 generated inputs and a
+6 GiB Node old-space limit rendered all 27,780 pages in 659.8 seconds, including
+the sitemap that failed previously. The renderer's observed peak RSS was about
+12.5 GiB. The complete local build passed the performance, SEO and translation
+checks and cache promotion in 835.5 seconds; the cold performance audit alone
+took 93.6 seconds. These figures exclude database export, uploads and queue
+time; they are not an incremental-release benchmark.
+
 ## Bounded publication and stage recovery (unreleased)
 
 Migration `0026_publish_dirty_changes` adds nullable `publish_dirty.change_set`.

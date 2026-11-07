@@ -88,12 +88,13 @@ def _is_due(column: Any, now: datetime) -> Any:
 # --- 1. store ---
 
 
-async def store_notices(run: dict[str, Any], *, run_id: str) -> dict[str, int]:
+async def store_notices(run: dict[str, Any], *, run_id: str, task_uuid: str | None = None) -> dict[str, int]:
     """Upsert one collection envelope; returns new/updated/unchanged counts."""
 
     now = utc_now()
     counts = {"new": 0, "updated": 0, "unchanged": 0}
     per_source: dict[str, dict[str, int]] = {}
+    source_changed = False
     async with get_db() as db:
         for event in run.get("events") or []:
             published = event.get("published_date")
@@ -150,6 +151,11 @@ async def store_notices(run: dict[str, Any], *, run_id: str) -> dict[str, int]:
             row.last_seen_at = now
         for status in run.get("sources") or []:
             source_id = str(status.get("source_id"))
+            previous = (await db.execute(select(SituationSourceRun).where(
+                SituationSourceRun.source_id == source_id
+            ).order_by(SituationSourceRun.started_at.desc(), SituationSourceRun.id.desc()).limit(1))).scalar_one_or_none()
+            health = (str(status.get("status") or "ok"), int(status.get("event_count") or 0), status.get("error"))
+            source_changed |= previous is None or health != (previous.status, previous.fetched_count, previous.error)
             db.add(
                 SituationSourceRun(
                     run_id=run_id,
@@ -163,6 +169,9 @@ async def store_notices(run: dict[str, Any], *, run_id: str) -> dict[str, int]:
                     error=status.get("error"),
                 )
             )
+        if task_uuid and (counts["new"] or counts["updated"] or source_changed):
+            from src.services.ingestion.stages import mark_dirty
+            await mark_dirty(db, line="situation", scope_key="*", task_uuid=task_uuid)
     return counts
 
 
@@ -440,6 +449,18 @@ async def _release_extraction(claim: _ExtractionClaim) -> None:
         await db.execute(update(SituationNotice).where(claim.predicate()).values(ai_next_attempt_at=None))
 
 
+def _published_signature(extraction, alerts) -> tuple:
+    """Public facts only: attempts, timestamps and derived memberships do not publish."""
+    fields = ("alert_id", "notice_id", "source_id", "published_date", "disease_id", "disease_label",
+        "country_code", "admin_area", "status", "cases", "deaths", "count_basis", "as_of",
+        "quote", "summary_en", "summary_zh", "summary_fr")
+    from src.ai.peer_review import review_mode
+    metadata = tuple(getattr(extraction, key, None) for key in
+        ("document_type", "input_mode", "review_verdict", "prompt_version"))
+    metadata += (review_mode(extraction.author_model, extraction.reviewer_model) if extraction else None,)
+    return metadata, tuple(sorted(tuple(getattr(row, key) for key in fields) for row in alerts))
+
+
 async def extract_pending(
     complete: Completer | ReviewRoutePool,
     *,
@@ -447,6 +468,7 @@ async def extract_pending(
     source_ids: list[str] | None = None,
     concurrency: int = 1,
     new_completer: Callable[[], Completer] | None = None,
+    task_uuid: str | None = None,
 ) -> dict[str, int]:
     """Claim/read, wait without a session, then save each report in a short transaction.
 
@@ -594,11 +616,22 @@ async def extract_pending(
             if result.published:
                 # The new reading replaces the old one; a rejected reading never
                 # takes down alerts an earlier accepted reading published.
+                previous_extraction = next((item for item in row.extractions if item.status == "published"), None)
                 for previous in row.extractions:
                     if previous.status == "published":
                         previous.status = "superseded"
+                previous_alerts = list((await db.execute(select(SituationAlert).where(
+                    SituationAlert.notice_id == row.notice_id))).scalars())
+                new_alerts = build_alerts(row, payload)
+                changed = _published_signature(previous_extraction, previous_alerts) != _published_signature(extraction, new_alerts)
+                assignments = {alert.alert_id: alert.outbreak_id for alert in previous_alerts}
+                for alert in new_alerts:
+                    alert.outbreak_id = assignments.get(alert.alert_id)
                 await db.execute(delete(SituationAlert).where(SituationAlert.notice_id == row.notice_id))
-                extraction.alerts = build_alerts(row, payload)
+                extraction.alerts = new_alerts
+                if task_uuid and changed:
+                    from src.services.ingestion.stages import mark_dirty
+                    await mark_dirty(db, line="situation", scope_key="*", task_uuid=task_uuid)
                 row.ai_status = "extracted"
                 counts["published"] += 1
             else:
@@ -775,6 +808,18 @@ async def rebuild_outbreaks(*, since_days: int = HISTORY_SINCE_DAYS, as_of: date
             ),
             as_of=as_of,
         )
+        keys = ("outbreak_id", "disease_id", "disease_label", "first_published", "last_published",
+                "country_codes", "alert_count", "notice_count", "source_ids", "status")
+        derived = [{**cluster, "alert_count": len(cluster["alert_ids"]), "notice_count": len(cluster["notice_ids"])} for cluster in clusters]
+        existing = list((await db.execute(select(SituationOutbreak))).scalars())
+        memberships = dict((await db.execute(select(SituationAlert.alert_id, SituationAlert.outbreak_id))).all())
+        expected_memberships = dict.fromkeys(memberships)
+        for cluster in clusters:
+            expected_memberships.update(dict.fromkeys(cluster["alert_ids"], cluster["outbreak_id"]))
+        if ({row.outbreak_id: tuple(getattr(row, key) for key in keys) for row in existing}
+                == {row["outbreak_id"]: tuple(row[key] for key in keys) for row in derived}
+                and memberships == expected_memberships):
+            return len(clusters)
         await db.execute(update(SituationAlert).values(outbreak_id=None))
         await db.execute(delete(SituationOutbreak))
         for cluster in clusters:

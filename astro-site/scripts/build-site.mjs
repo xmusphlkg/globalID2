@@ -7,6 +7,7 @@ import { directoryFactsPath, directoryFactsVersion } from './directory-build-cac
 import { writeBuildRedirects } from './build-redirects.mjs';
 import { astroAssetCacheRoot, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, summarizeBuildPlan, writePending } from './research-build-cache.mjs';
 import { pageSourceSnapshot, planSitePages, pagePlanPath, sitePageCacheRoot, writePagePending } from './page-build-cache.mjs';
+import { preparePublicBuildInputs } from './public-build-inputs.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
 const settingsPath = resolve(projectRoot, 'data', 'system-settings.json');
@@ -103,7 +104,13 @@ writeFileSync(resolve(projectRoot, 'data/cache/site-build-plan-report.json'), JS
 
 const runAstro = (selectedPath, selectedPagePath) => {
   const started = performance.now();
-  const result = spawnSync(astroBinary, ['build'], {
+  const publicInputs = preparePublicBuildInputs({
+    publicRoot: resolve(import.meta.dirname, '..', 'public'),
+    stageRoot: resolve(projectRoot, 'data/cache/public-build-inputs', String(process.pid)),
+    external: process.env.GIDS_EXTERNAL_SURVEILLANCE_DATA === '1',
+  });
+  let result;
+  try { result = spawnSync(astroBinary, ['build'], {
     cwd: resolve(import.meta.dirname, '..'),
     env: {
       ...process.env,
@@ -111,11 +118,12 @@ const runAstro = (selectedPath, selectedPagePath) => {
       GIDS_SITE_DIRECTORY_FACTS: directoryFactsPath(),
       GIDS_SITE_DIRECTORY_VERSION: directoryFactsVersion(),
       PUBLIC_GA4_MEASUREMENT_ID: measurementId,
+      ...(publicInputs.staged ? { GIDS_BUILD_PUBLIC_DIR: publicInputs.publicDir } : {}),
       ...(selectedPath ? { GIDS_RESEARCH_BUILD_PLAN: selectedPath } : { GIDS_RESEARCH_BUILD_PLAN: '' }),
       GIDS_PAGE_BUILD_PLAN: selectedPagePath ?? '',
     },
     stdio: 'inherit',
-  });
+  }); } finally { publicInputs.cleanup(); }
   process.stdout.write(`[build-timing] Astro render ${elapsedSeconds(started)}s status=${result.status ?? 'error'}\n`);
   return result;
 };

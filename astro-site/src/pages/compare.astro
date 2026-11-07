@@ -1,30 +1,20 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CompareWorkspace from '../components/charts/CompareWorkspace';
-import { downloadCatalogue } from '../lib/downloads-data';
 import { diseaseIndex } from '../lib/seo-page-data';
 import { toSeoSlug } from '../lib/seo';
 import { localizedDiseaseName } from '../utils/diseaseNames';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
-const countriesByDisease = new Map(
-  (downloadCatalogue()?.diseases ?? []).map(entry => [entry.disease_id, entry.countries ?? []]),
-);
-const options = diseaseIndex.flatMap(disease => {
-  const countries = (countriesByDisease.get(disease.disease_id) ?? [])
-    .filter((country: { code?: string }) => /^[A-Z]{2}$/.test(String(country.code ?? ''))).length;
-  if (countries < 2) return [];
-  return [{
+const options = diseaseIndex.map(disease => ({
     id: disease.disease_id,
     slug: disease.slug,
     href: `${prefix}/diseases/${toSeoSlug(disease.slug) || disease.slug}/#downloads`,
     en: disease.name_en,
     zh: disease.name_zh,
-    fr: localizedDiseaseName({ disease_id: disease.disease_id, slug: disease.slug, name_en: disease.name_en, name_zh: disease.name_zh }, 'fr'),
-    countries,
-  }];
-}).sort((a, b) => b.countries - a.countries || a.en.localeCompare(b.en));
+    fr: localizedDiseaseName({ disease_id: disease.disease_id, slug: disease.slug, name_en: disease.name_en, name_zh: disease.name_zh, name_fr: disease.name_fr }, 'fr'),
+}));
 const title = locale === 'zh' ? '国家与疾病对比' : locale === 'fr' ? 'Comparer les pays et les maladies' : 'Compare countries and diseases';
 ---
 

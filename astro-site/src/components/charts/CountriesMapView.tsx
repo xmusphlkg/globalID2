@@ -2,6 +2,7 @@
 // pulse only when a sub-national feed is available. Coordinates for countries
 // are derived from the bundled world GeoJSON and the MIT-licensed flag-icons
 // country catalogue, so the map does not depend on a third-party tile service.
+import { useSurveillanceSummary } from '../public/SurveillanceSummary';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ChartResultActions from './ChartResultActions';
 import { pngFromCanvases } from './chartExport';
@@ -62,6 +63,7 @@ interface DotPos extends Marker {
 
 interface Props {
   metaCountries?: MetaCountry[];
+  dataUrl?: string;
   height?: number;
   initialLanguage?: 'en' | 'zh' | 'fr';
 }
@@ -189,7 +191,9 @@ function makeCountryPoints(worldGeoJson: any, metaByCode: Record<string, MetaCou
   return markers;
 }
 
-export default function CountriesMapView({ metaCountries = [], height = 450, initialLanguage = 'en' }: Props) {
+export default function CountriesMapView({ metaCountries: initialCountries = [], dataUrl = '/site-data/meta.json', height = 450, initialLanguage = 'en' }: Props) {
+  const publication = useSurveillanceSummary(dataUrl);
+  const metaCountries: MetaCountry[] = publication.data?.countries ?? initialCountries;
   const chartRef = useRef<any>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

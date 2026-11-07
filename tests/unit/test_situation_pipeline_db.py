@@ -316,7 +316,7 @@ async def test_failover_onto_one_model_is_retried_on_another_pair(db):
     assert pool.avoided == [set(), {"model-a"}]
 
 
-async def test_collection_runner_has_three_stages_and_dirty_without_export(db, monkeypatch):
+async def test_unchanged_collection_has_three_stages_without_dirty_or_export(db, monkeypatch):
     from uuid import uuid4
     from src.domain.collection import RunStage, PublishDirty, SourceArtifact
     from src.services.situation_notices import runner
@@ -335,11 +335,11 @@ async def test_collection_runner_has_three_stages_and_dirty_without_export(db, m
     await runner.run_situation(task_uuid=task_uuid, skip_ai=True)
     async with db() as session:
         stages = list((await session.execute(select(RunStage).where(RunStage.task_uuid == task_uuid))).scalars())
-        dirty = (await session.execute(select(PublishDirty))).scalar_one()
+        dirty = list((await session.execute(select(PublishDirty))).scalars())
     assert len(stages) == 3
     assert {stage.stage for stage in stages} == {"collect", "organize", "store"}
     assert all(stage.status == "completed" for stage in stages)
-    assert (dirty.line, dirty.scope_key, dirty.source_task_uuid) == ("situation", "*", task_uuid)
+    assert dirty == []
     assert not calls
 
 
@@ -727,7 +727,9 @@ async def test_runner_waits_for_extraction_and_records_partial_failure_before_st
         assert all(row.status == "completed" for row in stages.values())
         assert stages["organize"].metrics["failed"] == 1
         assert stages["organize"].metrics["published"] == 1
-        assert (await session.execute(select(PublishDirty))).scalar_one().source_task_uuid == task_uuid
+        markers = list((await session.execute(select(PublishDirty))).scalars())
+        assert len(markers) >= 2
+        assert all(row.source_task_uuid == task_uuid for row in markers)
 
     # Retrying the same parent only processes its failed report, with a new stage attempt.
     async with database_module.get_db() as session:

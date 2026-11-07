@@ -26,6 +26,8 @@ UNIT_NAMES=(
   globalid-population-refresh.timer
   globalid-br-subdivisions.service
   globalid-br-subdivisions.timer
+  globalid-realtime-data-monitor.service
+  globalid-realtime-data-monitor.timer
   globalid-notify-failure@.service
 )
 
@@ -38,7 +40,7 @@ Options:
   --user NAME         Linux user that should run the app services
   --group NAME        Linux group for the app services
   --project-dir PATH  Project root (default: current repository)
-  --enable            Enable the stack and official population/state-case timers at boot
+  --enable            Enable the stack, update timers and realtime-data monitor at boot
   --start             Start or restart the stack immediately
   --uninstall         Remove installed units and disable autostart
   --dry-run           Render unit files to a temp directory without installing
@@ -132,8 +134,8 @@ if [[ "$UNINSTALL_SERVICES" == "1" ]]; then
 
   systemctl stop globalid-stack.target >/dev/null 2>&1 || true
   systemctl disable globalid-stack.target >/dev/null 2>&1 || true
-  systemctl disable --now globalid-population-refresh.timer globalid-br-subdivisions.timer >/dev/null 2>&1 || true
-  systemctl stop globalid-population-refresh.service globalid-br-subdivisions.service >/dev/null 2>&1 || true
+  systemctl disable --now globalid-population-refresh.timer globalid-br-subdivisions.timer globalid-realtime-data-monitor.timer >/dev/null 2>&1 || true
+  systemctl stop globalid-population-refresh.service globalid-br-subdivisions.service globalid-realtime-data-monitor.service >/dev/null 2>&1 || true
 
   for unit_name in "${UNIT_NAMES[@]}"; do
     rm -f "$SYSTEMD_DIR/$unit_name"
@@ -185,12 +187,12 @@ fi
 systemctl daemon-reload
 
 if [[ "$ENABLE_SERVICES" == "1" ]]; then
-  systemctl enable globalid-stack.target globalid-population-refresh.timer globalid-br-subdivisions.timer
+  systemctl enable globalid-stack.target globalid-population-refresh.timer globalid-br-subdivisions.timer globalid-realtime-data-monitor.timer
 fi
 
 if [[ "$START_SERVICES" == "1" ]]; then
   systemctl restart globalid-stack.target
-  systemctl start globalid-population-refresh.timer globalid-br-subdivisions.timer
+  systemctl start globalid-population-refresh.timer globalid-br-subdivisions.timer globalid-realtime-data-monitor.timer
 fi
 
 echo "Installed GlobalID systemd units into $SYSTEMD_DIR"

@@ -62,6 +62,7 @@ def test_export_public_signature_remains_stable() -> None:
         "recorded_at_as_of",
         "incremental_site",
         "country_scopes_exact",
+        "content_only",
     ]
 
 

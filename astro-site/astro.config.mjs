@@ -8,12 +8,15 @@ if (!Number.isInteger(buildConcurrency) || buildConcurrency < 1 || buildConcurre
   throw new Error('GIDS_ASTRO_BUILD_CONCURRENCY must be an integer from 1 to 8');
 }
 
-const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 8);
+// Each parallel prerender worker has its own module cache and parses the full
+// research corpus. Keep a single shared cache unless explicitly configured.
+const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 0);
 if (!Number.isInteger(renderWorkers) || renderWorkers < 0 || renderWorkers > 32) {
   throw new Error('GIDS_ASTRO_RENDER_WORKERS must be an integer from 0 to 32');
 }
 export default defineConfig({
   experimental: { parallelPrerender: renderWorkers ? { workers: renderWorkers } : false },
+  ...(process.env.GIDS_BUILD_PUBLIC_DIR ? { publicDir: resolve(process.env.GIDS_BUILD_PUBLIC_DIR) } : {}),
   ...(process.env.GIDS_REPORTS_BUILD_DIR ? {
     srcDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'src'),
     publicDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'public'),

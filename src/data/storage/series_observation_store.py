@@ -15,7 +15,7 @@ from sqlalchemy import and_, case, func, or_, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
+from src.core.disease_mutation_lock import acquire_country_data_mutation_lock
 from src.domain import (
     DiseaseSeriesObservation,
     DiseaseSeriesObservationRevision,
@@ -900,6 +900,9 @@ class SeriesObservationStore:
             value_field=value_field,
             geography_key=geography_key,
         )
+        # Holding-series construction can insert or relocate facts. Acquire
+        # the partition before it, including direct storage/backfill callers.
+        await acquire_country_data_mutation_lock(db, country_code)
         holding_observations, holding_handled = await self._build_holding_observations(
             db,
             rows,
@@ -938,7 +941,6 @@ class SeriesObservationStore:
                 publication_changes=() if not rows else None,
             )
 
-        await acquire_disease_data_mutation_lock(db)
         requested_codes = {row["series_code"] for row in built.observations}
         existing = await db.execute(
             select(DiseaseSurveillanceSeries.series_code).where(
@@ -1634,6 +1636,9 @@ class SeriesObservationStore:
         earliest = min(_as_utc(row["time"]) for row in observations)
         latest = max(_as_utc(row["time"]) for row in observations)
         lower_bound = earliest - timedelta(days=policy.history_lookback_days)
+        # Quality checks compare identity, values and frequency. Historical raw
+        # provenance is never consulted (revision overrides apply to incoming
+        # rows), so do not transfer/decode millions of large JSON payloads here.
         result = await db.execute(
             select(
                 DiseaseSeriesObservation.time,
@@ -1643,7 +1648,6 @@ class SeriesObservationStore:
                 DiseaseSeriesObservation.value,
                 DiseaseSeriesObservation.suppressed,
                 DiseaseSeriesObservation.quality_status,
-                DiseaseSeriesObservation.raw_data,
                 DiseaseSeriesObservation.metadata_.label("metadata"),
             ).where(
                 DiseaseSeriesObservation.series_code.in_(requested_codes),

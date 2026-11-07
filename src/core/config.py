@@ -450,6 +450,24 @@ class AutomationSettings(_BaseEnvSettings):
 class DataReleaseSettings(_BaseEnvSettings):
     """静态站点数据发布与部署配置"""
 
+    surveillance_json_enabled: bool = Field(
+        default=False,
+        validation_alias="DATA_RELEASE__SURVEILLANCE_JSON_ENABLED",
+        description="启用独立监测JSON发布；先初始化数据并部署同源Worker，开启后再发布动态页面模板",
+    )
+
+    situation_json_enabled: bool = Field(
+        default=False,
+        validation_alias="DATA_RELEASE__SITUATION_JSON_ENABLED",
+        description="启用Situation独立JSON发布；先初始化数据与同源Worker，再启用更新触发和动态页面",
+    )
+
+    pages_data_worker_enabled: bool = Field(
+        default=False,
+        validation_alias="GIDS_PAGES_DATA_WORKER",
+        description="静态发布携带Pages同源数据Worker；用于未授予独立Workers Routes权限的部署",
+    )
+
     reports_auto_publish_enabled: bool = Field(
         default=False,
         validation_alias="DATA_RELEASE__REPORTS_AUTO_PUBLISH_ENABLED",

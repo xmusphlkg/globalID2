@@ -4,8 +4,9 @@ import echarts from '../../lib/echarts';
 import ChartResultActions from './ChartResultActions';
 import { pngFromCanvases } from './chartExport';
 import { loadDiseaseDataset, type DiseaseDataset, type DiseaseDatasetSeriesEntry } from './diseaseDataset';
+import { useSurveillanceSummary } from '../public/SurveillanceSummary';
+import { liveCompareDiseaseOptions, type CompareDiseaseOption } from './compareDiseaseOptions';
 
-type DiseaseOption = { id: string; slug: string; href?: string; en: string; zh: string; fr: string; countries: number };
 type Lang = 'en' | 'zh' | 'fr';
 const t = {
   en: { diseases: 'Diseases', countries: 'Countries', diseaseHint: 'Select up to two', countryHint: 'Select two to four', searchDiseases: 'Search diseases', searchCountries: 'Search countries', noMatches: 'No matches', available: 'reporting countries', results: 'Comparison results', unit: 'Measure', count: 'Reported cases', rate: 'Per 100k, where published', series: 'Comparison series', empty: 'Select a disease and at least two countries with published series.', missing: 'Rates appear only where a source publishes a usable population denominator.', note: 'Lines retain each source’s reporting period and case definition. Compare aligned dates and methods before interpreting differences.' },
@@ -47,11 +48,13 @@ function CompareResultChart({ id, title, names, option, lang, share, dataHref, r
   );
 }
 
-export default function CompareWorkspace({ diseases, language = 'en' }: { diseases: DiseaseOption[]; language?: Lang }) {
+export default function CompareWorkspace({ diseases: identities, language = 'en' }: { diseases: CompareDiseaseOption[]; language?: Lang }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
   const [unit, setUnit] = useState<'count' | 'rate'>('count');
   const [datasets, setDatasets] = useState<Record<string, DiseaseDataset>>({});
+  const publication = useSurveillanceSummary('/site-data/meta.json');
+  const diseases = useMemo(() => liveCompareDiseaseOptions(identities, publication.data?.disease_coverage, datasets), [identities, publication.data, datasets]);
   const [loading, setLoading] = useState(false);
   const [dark, setDark] = useState(false);
   const [compact, setCompact] = useState(false);
@@ -101,14 +104,16 @@ export default function CompareWorkspace({ diseases, language = 'en' }: { diseas
     return () => window.removeEventListener('resize', resize);
   }, []);
   useEffect(() => {
+    if (!publication.data && !publication.error) return;
+    const availableDiseases = liveCompareDiseaseOptions(identities, publication.data?.disease_coverage);
     const params = new URLSearchParams(location.search);
-    const ids = params.get('d')?.split(',').filter(id => diseases.some(d => d.id === id)).slice(0, 2) ?? [];
+    const ids = params.get('d')?.split(',').filter(id => identities.some(d => d.id === id)).slice(0, 2) ?? [];
     urlCountries.current = params.get('c')?.split(',').filter(code => /^[A-Z]{2}$/.test(code)).slice(0, 4) ?? [];
-    setSelected(ids.length ? ids : diseases.slice(0, 1).map(d => d.id));
+    setSelected(ids.length ? ids : availableDiseases.slice(0, 1).map(d => d.id));
     setCountries(urlCountries.current);
     setUnit(params.get('u') === 'rate' ? 'rate' : 'count');
     setReady(true);
-  }, [diseases]);
+  }, [identities, publication.data, publication.error]);
   useEffect(() => {
     if (!selected.length) return;
     let cancelled = false;
@@ -154,7 +159,7 @@ export default function CompareWorkspace({ diseases, language = 'en' }: { diseas
   return <div className="compare-workspace">
     <div className="compare-method-note"><span className="figure-kicker">{language === 'zh' ? '解读提示' : language === 'fr' ? 'Note méthodologique' : 'Interpretation note'}</span><p>{label.note}</p></div>
     <div className="compare-controls">
-      <fieldset className="compare-filter-panel"><legend>{label.diseases} <span>{selected.length}/2</span></legend><p className="compare-filter-hint">{label.diseaseHint}</p><input className="compare-search" type="search" aria-label={label.searchDiseases} placeholder={label.searchDiseases} value={diseaseQuery} onChange={event => setDiseaseQuery(event.target.value)} /><div className="compare-choice-list">{matchingDiseases.map(d => <label key={d.id} className={selected.includes(d.id) ? 'is-selected' : ''}><input type="checkbox" checked={selected.includes(d.id)} disabled={!selected.includes(d.id) && selected.length >= 2} onChange={() => toggleDisease(d.id)} /><span>{diseaseName(d.id)}</span><small>{d.countries} {label.available}</small></label>)}{!matchingDiseases.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
+      <fieldset className="compare-filter-panel"><legend>{label.diseases} <span>{selected.length}/2</span></legend><p className="compare-filter-hint">{label.diseaseHint}</p><input className="compare-search" type="search" aria-label={label.searchDiseases} placeholder={label.searchDiseases} value={diseaseQuery} onChange={event => setDiseaseQuery(event.target.value)} /><div className="compare-choice-list">{matchingDiseases.map(d => <label key={d.id} className={selected.includes(d.id) ? 'is-selected' : ''}><input type="checkbox" checked={selected.includes(d.id)} disabled={!selected.includes(d.id) && selected.length >= 2} onChange={() => toggleDisease(d.id)} /><span>{diseaseName(d.id)}</span><small>{d.countries ?? '—'} {label.available}</small></label>)}{!matchingDiseases.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
       <fieldset className="compare-filter-panel"><legend>{label.countries} <span>{countries.length}/4</span></legend><p className="compare-filter-hint">{label.countryHint}</p><input className="compare-search" type="search" aria-label={label.searchCountries} placeholder={label.searchCountries} value={countryQuery} onChange={event => setCountryQuery(event.target.value)} /><div className="compare-choice-list">{matchingCountries.map(([code, entry]) => <label key={code} className={countries.includes(code) ? 'is-selected' : ''}><input type="checkbox" checked={countries.includes(code)} disabled={!countries.includes(code) && countries.length >= 4} onChange={() => toggleCountry(code)} /><span>{placeName(entry)}</span><small>{code}</small></label>)}{!matchingCountries.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
     </div>
     <div className="compare-results-heading"><div><p className="figure-kicker">{label.results}</p><h2 className="figure-title">{selected.map(diseaseName).join(' / ') || label.results}</h2></div><label className="chart-measure">{label.unit}<select aria-label={label.unit} value={unit} onChange={event => setUnit(event.target.value === 'rate' ? 'rate' : 'count')}><option value="count">{label.count}</option><option value="rate">{label.rate}</option></select></label></div>
