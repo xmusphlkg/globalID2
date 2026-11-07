@@ -4,6 +4,8 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+- Knowledge catalogue quality assessment yields between diseases so realtime JSON publication, cancellation and worker heartbeats can progress during governance reconciliation without changing catalogue results.
+
 ## [0.18.0] - 2026-11-07
 
 ### Added
