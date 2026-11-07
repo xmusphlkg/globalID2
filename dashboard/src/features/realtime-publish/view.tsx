@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { StatusBadge, WorkspacePage } from "@/shared/ui";
 import { ApiError } from "@/lib/api";
+import { displayedTaskProgress } from "@/lib/task-progress";
 import { useAppStore } from "@/stores/app-store";
 import { useRealtimeAction, useRealtimeOverview, useRealtimePending, useRealtimeRuns, type RealtimeAction } from "./hooks";
 import {
@@ -49,6 +50,9 @@ function ChannelCard({ data, lang, text, busy, unavailable, control }: {
   const stale = monitor.stale || manifest.stale;
   const issues = monitor.issues ?? [];
   const critical = monitor.status === "critical" || issues.some(issue => issue.level === "critical");
+  const lastFailure = data.latest_failure?.completed_at ? Date.parse(data.latest_failure.completed_at) : NaN;
+  const lastSuccess = data.latest_success?.completed_at ? Date.parse(data.latest_success.completed_at) : NaN;
+  const hasLaterSuccess = Number.isFinite(lastFailure) && Number.isFinite(lastSuccess) && lastSuccess > lastFailure;
   const monitorLabel = critical ? "critical" : stale ? "snapshot_stale" : monitor.status === "ok" ? "healthy" : monitor.status === "warning" ? "warning" : "unknown";
   const monitorTone = critical ? "danger" : stale || monitor.status === "warning" ? "warning" : monitor.status === "ok" ? "success" : "neutral";
   return <section className="cc-panel" aria-labelledby={`rt-${channel}-title`}>
@@ -83,6 +87,7 @@ function ChannelCard({ data, lang, text, busy, unavailable, control }: {
       <h3 className="text-sm font-semibold">{text("queue")}</h3>
       <dl className="flex flex-wrap gap-x-5 gap-y-2 text-xs">{(["pending", "queued", "running", "retrying"] as const).map(status => <div key={status}><dt className="cc-muted">{text(status)}</dt><dd className="mt-1 font-semibold tabular-nums">{data.queue[status]}</dd></div>)}<div><dt className="cc-muted">{text("failed_24h")}</dt><dd className="mt-1 font-semibold tabular-nums">{data.failed_last_24h}</dd></div></dl>
       <dl className="space-y-2 text-xs">{([ ["current_run", data.current_run], ["latest_success", data.latest_success], ["latest_failure", data.latest_failure] ] as const).map(([label, run]) => <div key={label} className="flex flex-wrap justify-between gap-2"><dt className="cc-muted">{text(label)}</dt><dd>{run ? <TaskLink uuid={run.task_uuid}>{realtimeStatus(run.status, text)} · {realtimeDate(run.completed_at || run.started_at || run.created_at, lang)}</TaskLink> : text("none")}</dd></div>)}</dl>
+      {hasLaterSuccess && <p className="cc-muted text-xs">{text("failure_followed_by_success")}</p>}
     </div>
     <div className="space-y-2 border-t border-[var(--cc-border)] pt-3">
       <p className="cc-muted text-xs">{text("enabled_gate")}: {text(data.enabled ? "enabled" : "disabled_short")}</p>
@@ -107,7 +112,7 @@ function RunsTable({ items, lang, text }: { items: RealtimeRun[]; lang: Realtime
   if (!items.length) return <p className="cc-muted py-4 text-sm">{text("runs_empty")}</p>;
   return <div className="overflow-x-auto"><table className="cc-table"><thead><tr>{(["task", "status", "changes", "retries", "continuation", "timing"] as const).map(key => <th key={key} scope="col">{text(key)}</th>)}</tr></thead><tbody>{items.map(run => <tr key={run.task_uuid}>
     <td><TaskLink uuid={run.task_uuid}><span className="font-mono text-xs">{run.task_uuid}</span></TaskLink><p className="cc-muted mt-1 whitespace-nowrap text-xs">{realtimeDate(run.created_at, lang)}</p>{run.release_id && <p className="cc-muted mt-1 max-w-xs break-all font-mono text-xs">{run.release_id}</p>}</td>
-    <td><StatusBadge status={run.status}>{realtimeStatus(run.status, text)}</StatusBadge>{run.progress != null && Number.isFinite(run.progress) && <p className="cc-muted mt-1 text-xs">{Math.max(0, Math.min(100, run.progress))}%</p>}</td>
+    <td><StatusBadge status={run.status}>{realtimeStatus(run.status, text)}</StatusBadge>{displayedTaskProgress(run.status, run.progress) != null && Number.isFinite(displayedTaskProgress(run.status, run.progress)) && <p className="cc-muted mt-1 text-xs">{Math.max(0, Math.min(100, displayedTaskProgress(run.status, run.progress) ?? 0))}%</p>}</td>
     <td>{run.selected_change_count ?? "—"}{run.country_count != null && run.country_count > 0 && <p className="cc-muted mt-1 whitespace-nowrap text-xs">{text("countries")}: {run.country_count}</p>}</td>
     <td><p className="mb-2 text-xs">{realtimeRetryStatus(run.retry?.status, text)}</p><p className="text-xs">{text("attempts")}: {run.retry?.scheduled_attempts ?? 0} / {run.retry?.max_attempts ?? 0}</p><p className="cc-muted mt-1 text-xs">{text(run.retry?.exhausted ? "retry_exhausted" : run.retry?.retryable ? "retry_available" : "retry_not_available")}</p>{run.retry?.next_attempt_at && <p className="mt-1 text-xs">{text("next_attempt")}: {realtimeDate(run.retry.next_attempt_at, lang)}</p>}</td>
     <td>{run.continuation?.status && run.continuation.status !== "none" && <p className="mb-2 text-xs">{realtimeContinuationStatus(run.continuation.status, text)}</p>}<p className="text-xs">{(run.continuation?.remaining_count ?? 0) > 0 ? `${text("remaining")}: ${run.continuation?.remaining_count}` : text("no_remaining")}</p>{run.continuation?.task_uuid && <p className="mt-2 text-xs"><TaskLink uuid={run.continuation.task_uuid}>{text("followup_task")}</TaskLink></p>}</td>
@@ -188,6 +193,7 @@ export function RealtimePublishView() {
     </section>
     <section className="cc-panel" aria-labelledby="rt-runs-title" aria-busy={runs.isFetching}>
       <div className="flex flex-wrap items-end justify-between gap-3"><h2 id="rt-runs-title" className="text-base font-semibold">{text("runs_title")} · {text(channel)}</h2><label className="grid gap-1 text-sm"><span className="cc-muted text-xs">{text("task_status")}</span><select className="cc-input" value={runStatus} onChange={event => { setRunStatus(event.target.value); setRunPage(1); }}><option value="">{text("all_tasks")}</option><option value="pending,queued,running,retrying">{text("active_tasks")}</option><option value="failed">{text("failed")}</option><option value="completed">{text("completed")}</option></select></label></div>
+      <p className="cc-muted text-xs leading-5">{text("progress_hint")}</p>
       <Problem error={runs.error} text={text} />
       {runs.error && <button className="cc-button" disabled={runs.isFetching} onClick={() => void runs.refetch()}>{text("reload_runs")}</button>}
       {runs.isLoading && <p role="status" className="cc-muted">{text("loading")}</p>}

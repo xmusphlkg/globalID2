@@ -39,6 +39,7 @@ async def database(tmp_path, monkeypatch):
                 change_set={"version": 1, "precise": True, "disease_ids": ["D038"], "changes": []} if scope == "JP-25" else None))
         db.add_all([
             Task(task_uuid="surv-old", task_type=TaskType.EXPORT_DATA, task_name="Old JSON", status=TaskStatus.COMPLETED,
+                progress=65,
                 input_data={"data_only": True, "release_job_id": "site-release", "publish_dirty_ids": [1], "incremental_country_codes": ["JP-25"]},
                 output_data={"release_id": "data-surv-old", "manifest_sha256": "a" * 64},
                 created_at=NOW - timedelta(minutes=4), completed_at=NOW - timedelta(minutes=3)),
@@ -117,6 +118,7 @@ async def test_run_pages_isolate_legacy_json_and_never_expose_errors_or_static_t
     assert "static-secret" not in json.dumps(runs)
     older = await control.runs(database, "surveillance", page=2, page_size=1)
     assert older["items"][0]["task_uuid"] == "surv-old"
+    assert older["items"][0]["progress"] == 100
     situation = await control.runs(database, "situation", statuses=[TaskStatus.RETRYING])
     run = RealtimeRunOut.model_validate(situation["items"][0])
     assert run.retry.scheduled_attempts == 2 and run.continuation.remaining_count == 2
@@ -148,12 +150,28 @@ async def test_overview_reads_local_monitor_and_db_only_with_gate_pause_and_stal
     channel = result.channels["surveillance"]
     assert channel.enabled and channel.paused and not channel.effective_enabled and channel.manual_enabled
     assert channel.latest_success.task_uuid == "surv-old"
+    assert channel.latest_success.progress == 100
     assert channel.latest_failure.task_uuid == "surv-failed"
     assert channel.monitor.stale and channel.monitor.http_status == 200 and channel.monitor.sample_verified
     assert channel.manifest.stale and channel.manifest.sha256 == "b" * 64
     assert {item.code for item in channel.monitor.issues} == {"monitor_unknown_issue", "monitor_stale"}
     assert SECRET not in result.model_dump_json()
     assert result.channels["situation"].current_run.task_uuid == "situation-retry"
+
+
+async def test_cancelled_task_remains_in_history_without_being_called_a_failure(database, tmp_path, monkeypatch):
+    database.add(Task(task_uuid="surv-cancelled", task_type=TaskType.EXPORT_DATA,
+        task_name="Cancelled JSON", status=TaskStatus.CANCELLED, progress=40,
+        input_data={"data_only": True, "data_line": "surveillance"},
+        created_at=NOW + timedelta(minutes=3), completed_at=NOW + timedelta(minutes=3)))
+    await database.commit()
+    control = service(tmp_path)
+    monkeypatch.setattr(module, "collect_database_snapshot", AsyncMock(return_value=snapshot()))
+    overview = await control.overview(database, now=NOW + timedelta(minutes=5))
+    assert overview["channels"]["surveillance"]["latest_failure"]["task_uuid"] == "surv-failed"
+    history = await control.runs(database, "surveillance")
+    cancelled = next(item for item in history["items"] if item["task_uuid"] == "surv-cancelled")
+    assert cancelled["status"] == "cancelled" and cancelled["progress"] == 40
 
 
 @pytest.mark.parametrize("state,expected", [(None, "monitor_missing"), ("broken", "monitor_unreadable"), ("[]", "monitor_invalid")])

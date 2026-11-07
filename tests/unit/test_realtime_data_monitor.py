@@ -162,6 +162,59 @@ async def test_http_decodes_gzip_and_checks_actual_manifest_sha_and_object():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["connection", "503"])
+async def test_transient_http_failure_is_rechecked_and_reported_when_recovered(failure):
+    payload, body = manifest_fixture()
+    requests = []
+    def handler(request):
+        requests.append(request.url.path)
+        if len(requests) == 1:
+            if failure == "503":
+                return httpx.Response(503)
+            raise httpx.ConnectError("secret-token=do-not-print", request=request)
+        if request.url.path.endswith("/current.json"):
+            return httpx.Response(200, content=body)
+        return httpx.Response(200, content=payload)
+    result = await probe(handler)
+    assert result["available"] and result["sample_verified"]
+    assert result["attempts"] == 2 and len(requests) == 3
+    assert result["transient_errors"] == ["http_status" if failure == "503" else "http_unreachable"]
+    assert "secret" not in json.dumps(result)
+    database = db_state()
+    database["last_completed"].update(release_id=result["release_id"], manifest_sha256=result["manifest_sha256"])
+    report = evaluate_channel(database, result, now=NOW, thresholds=MonitorThresholds())
+    assert codes(report) == {"transient_http_recovered": "warning"}
+
+
+@pytest.mark.asyncio
+async def test_repeated_network_failure_remains_critical():
+    requests = []
+    def handler(request):
+        requests.append(request.url.path)
+        raise httpx.ConnectError("private error", request=request)
+    result = await probe(handler)
+    assert result["attempts"] == len(requests) == 2
+    assert result["error_code"] == "http_unreachable"
+    assert evaluate_channel(db_state(), result, now=NOW, thresholds=MonitorThresholds())["status"] == "critical"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["404", "corrupt"])
+async def test_permanent_status_and_checksum_errors_are_not_retried(failure):
+    payload, body = manifest_fixture()
+    requests = []
+    def handler(request):
+        requests.append(request.url.path)
+        if failure == "404":
+            return httpx.Response(404)
+        return httpx.Response(200, content=body if request.url.path.endswith("/current.json") else b"bad")
+    result = await probe(handler)
+    assert result["attempts"] == 1
+    assert len(requests) == (1 if failure == "404" else 2)
+    assert result["error_code"] == ("http_status" if failure == "404" else "object_checksum_mismatch")
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("failure,expected", [("404", "http_status"), ("invalid", "invalid_manifest"),
     ("corrupt", "object_checksum_mismatch"), ("large", "response_too_large"), ("unreachable", "http_unreachable")])
 async def test_public_probe_safe_failure_codes(failure, expected):
@@ -326,3 +379,17 @@ def test_invalid_cli_options_return_sanitized_error(capsys):
     from scripts import monitor_realtime_data as cli
     assert cli.main(["--timeout-seconds", "nan"]) == 2
     assert json.loads(capsys.readouterr().out)["error_code"] == "monitor_check_failed"
+
+
+@pytest.mark.parametrize("status,flag,expected", [
+    ("ok", True, 0), ("warning", False, 1), ("warning", True, 0), ("critical", True, 2),
+])
+def test_warning_exit_option_preserves_report_and_critical_failure(status, flag, expected, monkeypatch, capsys):
+    from scripts import monitor_realtime_data as cli
+    async def check(*args, **kwargs):
+        return {"status": status, "checked_at": NOW.isoformat(), "channels": {}}
+    async def dispose(): pass
+    monkeypatch.setattr(cli, "check_once", check)
+    monkeypatch.setattr(cli, "dispose_database", dispose)
+    assert cli.main(["--warning-exit-zero"] if flag else []) == expected
+    assert json.loads(capsys.readouterr().out)["status"] == status

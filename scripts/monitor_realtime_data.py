@@ -43,6 +43,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--watch", action="store_true", help="Continue until interrupted or duration expires")
     result.add_argument("--duration-seconds", type=float, help="Bound observation duration (also enables watch)")
     result.add_argument("--archive-dir", type=Path, help="Append UTC-dated NDJSON and atomic latest.json locally")
+    result.add_argument("--warning-exit-zero", action="store_true", help="Report warnings normally but return 0 (critical errors still fail)")
     result.add_argument("--timeout-seconds", type=float, default=10, help="Hard deadline for each HTTP channel probe and DB snapshot")
     result.add_argument("--object-limit-bytes", type=int, default=2 * 1024 * 1024)
     for key, default in vars(MonitorThresholds()).items():
@@ -140,7 +141,8 @@ def main(argv=None) -> int:
                 return await observe(args, thresholds)
             finally:
                 await dispose_database()
-        return asyncio.run(run())
+        status = asyncio.run(run())
+        return 0 if args.warning_exit_zero and status == LEVEL["warning"] else status
     except KeyboardInterrupt:
         return 130
     except Exception:

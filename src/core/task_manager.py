@@ -170,7 +170,7 @@ class TaskManager:
     ) -> Optional[Task]:
         """更新任务状态"""
         async with get_db() as db:
-            query = select(Task).where(Task.task_uuid == task_uuid)
+            query = select(Task).where(Task.task_uuid == task_uuid).with_for_update()
             result = await db.execute(query)
             task = result.scalar_one_or_none()
             
@@ -209,9 +209,9 @@ class TaskManager:
                     task.retry_count += 1
 
             if status == TaskStatus.COMPLETED:
-                from src.ai.task_progress import AI_TASK_TYPES, task_type_name
-
-                if task_type_name(task.task_type) in AI_TASK_TYPES and int(task.progress or 0) < 100:
+                # A successful task is complete regardless of the last stage's
+                # progress report. Failed/cancelled tasks retain their progress.
+                if int(task.progress or 0) < 100:
                     task.set_progress(100)
             
             await db.commit()
@@ -478,12 +478,18 @@ class TaskManager:
     ) -> Optional[Task]:
         """Update task progress to *percent* (0-100)."""
         async with get_db() as db:
-            query = select(Task).where(Task.task_uuid == task_uuid)
+            query = select(Task).where(Task.task_uuid == task_uuid).with_for_update()
             result = await db.execute(query)
             task = result.scalar_one_or_none()
 
             if not task:
                 return None
+
+            # Late callbacks must not overwrite the final task state. Locking
+            # this row together with status transitions makes that invariant
+            # hold regardless of which update reaches the database first.
+            if task.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED):
+                return task
 
             task.set_progress(percent)
             await db.commit()

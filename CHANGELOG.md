@@ -4,6 +4,13 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Fixed
+
+- Completed tasks now persist and display 100% progress, including older successful JSON publications; failed and cancelled tasks retain their actual progress. Late progress callbacks cannot overwrite terminal task progress.
+- Realtime publication separates cancelled tasks from failed-task history and explains when a later publication succeeded. Overview labels clarify that failures include history rather than only current incidents.
+- Public data monitoring retries one transient transport, 429 or server error within the existing total deadline. A recovered incident remains visible as a warning; persistent, integrity and other errors still alert normally. The 24-hour failure count uses the failure completion time.
+- The systemd monitoring check no longer reports a failed service for a warning-only result; the warning remains visible, and critical conditions and unexpected process errors still fail the check.
+
 ### Added
 
 - The control panel has a realtime publication workspace for Surveillance and Situation, with separate queue/backlog views, version and integrity receipts, task history, manual JSON publication and fresh retries. The site release center and shared task list identify JSON channels separately from template and report publication.

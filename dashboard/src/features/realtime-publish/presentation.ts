@@ -77,6 +77,7 @@ export function realtimeIssue(code: string, text: RealtimeText) {
     control_state_unavailable: "issue_control",
     public_pointer_unavailable: "issue_public",
     http_status: "issue_public",
+    transient_http_recovered: "issue_transient_http",
     object_checksum_mismatch: "issue_public",
     manifest_invalid: "issue_public",
   };

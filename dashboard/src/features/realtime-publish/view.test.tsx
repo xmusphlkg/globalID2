@@ -90,6 +90,43 @@ beforeEach(() => { vi.resetAllMocks(); useAppStore.setState({ lang: "en" }); });
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); });
 
 describe("realtime publication control panel", () => {
+  it("shows historical completed tasks as 100% without masking failed progress", async () => {
+    mockApi(overview(), { runs: () => page([
+      run({ task_uuid: "completed-old", status: "completed", progress: 65 }),
+      run({ task_uuid: "failed-old", status: "failed", progress: 65 }),
+    ]) });
+    show();
+    const completed = (await screen.findByText("completed-old")).closest("tr");
+    const failed = screen.getByText("failed-old").closest("tr");
+    expect(completed).toHaveTextContent("100%");
+    expect(failed).toHaveTextContent("65%");
+  });
+
+  it("distinguishes a historical failure from a later successful publication", async () => {
+    const state = overview();
+    state.channels.surveillance.latest_failure = run({ task_uuid: "old-failure", status: "failed",
+      completed_at: "2026-11-07T03:59:00Z" });
+    state.channels.surveillance.latest_success = run({ completed_at: "2026-11-07T04:00:09Z" });
+    state.channels.situation.latest_failure = null;
+    mockApi(state);
+    show();
+    const surveillance = await screen.findByRole("region", { name: "Surveillance" });
+    expect(within(surveillance).getByText("Latest failed task (history)")).toBeInTheDocument();
+    expect(within(surveillance).getByText(/A later publication completed successfully/)).toBeInTheDocument();
+    expect(within(surveillance).getByRole("link", { name: /Failed/ })).toHaveAttribute("href", "/publish/tasks?detail=old-failure");
+  });
+
+  it("does not imply recovery when the failure is more recent", async () => {
+    const state = overview();
+    state.channels.surveillance.latest_failure = run({ task_uuid: "new-failure", status: "failed",
+      completed_at: "2026-11-07T04:05:00Z" });
+    state.channels.situation.latest_failure = null;
+    mockApi(state);
+    show();
+    const surveillance = await screen.findByRole("region", { name: "Surveillance" });
+    expect(within(surveillance).queryByText(/A later publication completed successfully/)).not.toBeInTheDocument();
+  });
+
   it("separates automatic pause from the deployment switch and keeps paused manual publication available", async () => {
     const state = overview();
     state.channels.surveillance.paused = true;
@@ -280,4 +317,5 @@ it("never renders raw exception text or unknown monitoring codes", () => {
   expect(realtimeProblem(new Error("token=SECRET"), text)).not.toContain("SECRET");
   expect(realtimeIssue("upstream/path/token=SECRET", text)).toBe(text("issue_generic"));
   expect(realtimeIssue("automatic_publication_paused", text)).toContain("paused by an operator");
+  expect(realtimeIssue("transient_http_recovered", text)).toContain("recovered on retry");
 });

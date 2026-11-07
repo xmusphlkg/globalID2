@@ -18,6 +18,7 @@ from urllib.parse import quote
 from sqlalchemy import and_, case, cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 
+from src.ai.task_progress import displayed_progress
 from src.core.config import get_config
 from src.core.country_library import get_country_bootstrap_config
 from src.domain import Country, Task, TaskStatus
@@ -41,7 +42,7 @@ _MONITOR_ISSUES = {"database_unavailable", "pending_changes_delayed", "pending_s
     "running_task_delayed", "queued_task_delayed", "retry_schedule_missing", "retry_overdue",
     "active_task_sample_truncated", "latest_release_unsuccessful", "public_pointer_unavailable",
     "public_clock_ahead", "completed_release_receipt_missing", "public_completed_version_mismatch",
-    "http_timeout", "http_unreachable", "http_status", "response_too_large", "invalid_manifest",
+    "http_timeout", "http_unreachable", "http_status", "transient_http_recovered", "response_too_large", "invalid_manifest",
     "invalid_manifest_metadata", "sample_object_exceeds_limit", "object_checksum_mismatch"}
 _MONITOR_ISSUES.update({"automatic_publication_paused", "control_state_invalid", "control_state_unavailable"})
 
@@ -103,7 +104,8 @@ def project_run(row) -> dict:
         raise RealtimeControlError("invalid_realtime_task_identity", 503)
     status = getattr(row.status, "value", row.status)
     return {"task_uuid": identifier, "status": status if status in {item.value for item in TaskStatus} else "unknown",
-        "progress": min(100, _count(row.progress)), "created_at": iso(row.created_at),
+        "progress": displayed_progress(task_type="export_data", status=row.status, stored=_count(row.progress)),
+        "created_at": iso(row.created_at),
         "started_at": iso(row.started_at), "completed_at": iso(row.completed_at),
         "job_id": _identifier(data.get("release_job_id") or metadata.get("release_job_id")),
         "release_id": _identifier(output.get("release_id")), "manifest_sha256": _digest(output.get("manifest_sha256")),
@@ -219,7 +221,7 @@ class RealtimeControlService:
                 case((Task.status == TaskStatus.RUNNING, 0), (Task.status == TaskStatus.RETRYING, 1), else_=2),
                 Task.created_at.asc(), Task.id.asc()).limit(1))).first()
             latest = {}
-            for kind, statuses in (("latest_success", (TaskStatus.COMPLETED,)), ("latest_failure", (TaskStatus.FAILED, TaskStatus.CANCELLED))):
+            for kind, statuses in (("latest_success", (TaskStatus.COMPLETED,)), ("latest_failure", (TaskStatus.FAILED,))):
                 row = (await db.execute(select(*_TASK_FIELDS).where(*clauses, Task.status.in_(statuses)).order_by(
                     func.coalesce(Task.completed_at, Task.updated_at).desc(), Task.id.desc()).limit(1))).first()
                 latest[kind] = project_run(row) if row is not None else None

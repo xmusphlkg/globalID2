@@ -82,6 +82,12 @@ def task_channel_clause(channel: str):
     )
 
 
+def recent_failure_clause(now: datetime):
+    """Count failures by completion time, falling back for legacy rows."""
+    return and_(Task.status == TaskStatus.FAILED,
+        func.coalesce(Task.completed_at, Task.updated_at) >= now - timedelta(days=1))
+
+
 def classify_pending(groups, country_rows, *, channel: str, now: datetime) -> dict:
     """Apply the release planner's exact visibility and parent-expansion rules."""
     def summarize(selected):
@@ -155,7 +161,7 @@ async def collect_database_snapshot(db, *, now: datetime, channels=CHANNELS) -> 
                 "age_seconds": age(completed or updated, now), "release_id": _identifier(release_id),
                 "manifest_sha256": _digest(digest)}
         recent_failed = (await db.execute(select(func.count(Task.id)).where(
-            *clauses, Task.status == TaskStatus.FAILED, Task.updated_at >= now - timedelta(days=1),
+            *clauses, recent_failure_clause(now),
         ))).scalar_one()
         result[channel] = {**classify_pending(groups, countries, channel=channel, now=now),
             "queue": queue, "active": active, "active_sample_truncated": sum(queue.values()) > len(active),
@@ -193,6 +199,8 @@ async def probe_public_manifest(client, url: str, *, timeout_seconds: float = 10
                                 object_limit_bytes: int = 2 * 1024 * 1024) -> dict:
     """Verify decoded bytes (including gzip) without trusting ETag as SHA-256."""
     start = time.monotonic()
+    attempts = 0
+    transient_errors = []
     async def probe():
         validate_public_url(url)
         body, headers = await _read(client, url, limit=2 * 1024 * 1024)
@@ -213,8 +221,28 @@ async def probe_public_manifest(client, url: str, *, timeout_seconds: float = 10
             "logical_files": len(manifest["files"]), "immutable_objects": len(objects),
             "sample_verified": True, "sample_bytes": size,
             "pointer_cache_control": headers.get("cache-control", "")[:160]}
+
+    async def probe_with_retry():
+        nonlocal attempts
+        while True:
+            attempts += 1
+            try:
+                return await probe()
+            except httpx.TransportError as error:
+                code = "http_timeout" if isinstance(error, httpx.TimeoutException) else "http_unreachable"
+                if attempts >= 2:
+                    raise
+                transient_errors.append(code)
+            except _ProbeFailure as error:
+                retryable = error.code == "http_status" and error.http_status is not None and (
+                    error.http_status == 429 or 500 <= error.http_status <= 599)
+                if attempts >= 2 or not retryable:
+                    raise
+                transient_errors.append("http_status")
+            await asyncio.sleep(0.15)
+
     try:
-        result = await asyncio.wait_for(probe(), timeout=timeout_seconds)
+        result = await asyncio.wait_for(probe_with_retry(), timeout=timeout_seconds)
     except (asyncio.TimeoutError, httpx.TimeoutException):
         result = {"available": False, "error_code": "http_timeout"}
     except _ProbeFailure as error:
@@ -225,6 +253,9 @@ async def probe_public_manifest(client, url: str, *, timeout_seconds: float = 10
         result = {"available": False, "error_code": "http_unreachable"}
     except (ValueError, TypeError, KeyError):
         result = {"available": False, "error_code": "invalid_manifest"}
+    result["attempts"] = attempts
+    if transient_errors:
+        result["transient_errors"] = transient_errors
     result["elapsed_seconds"] = round(time.monotonic() - start, 3)
     return result
 
@@ -272,6 +303,8 @@ def evaluate_channel(database: dict | None, public: dict, *, now: datetime,
     if not public.get("available"):
         issue("critical", public.get("error_code", "public_pointer_unavailable"))
     else:
+        if public.get("transient_errors"):
+            issue("warning", "transient_http_recovered")
         generated = timestamp(public["generated_at"])
         if generated and (generated - now).total_seconds() > 300:
             issue("warning", "public_clock_ahead")

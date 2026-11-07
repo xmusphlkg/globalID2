@@ -32,8 +32,12 @@ object is chosen to keep a minute-by-minute check inexpensive. Manifest and
 sample reads have bounded response sizes and share a hard 10-second deadline
 per channel. The DB snapshot also has a 10-second deadline. Checks run
 concurrently; redirects fail visibly rather than silently probing another
-endpoint. API errors, connection strings, credentials and raw remote errors
-are not printed.
+endpoint. A transient transport failure, HTTP 429 or 5xx may be retried once if
+the same deadline permits. A successful retry reports `transient_http_recovered` as a
+warning and records the attempt count and safe error code; repeated failures
+remain critical. Invalid manifests, checksums, redirects and other 4xx responses
+are not retried. API errors, connection strings, credentials and raw remote
+errors are not printed.
 
 ## Health and exit codes
 
@@ -85,7 +89,10 @@ long-lived daily logs according to the host's retention policy.
 
 The one-minute systemd timer writes local journals and
 `logs/realtime-data-monitor/`. It has no `OnFailure` notification, email or
-Slack integration. The normal installer renders its templates:
+Slack integration. Its `--warning-exit-zero` option keeps warnings visible in
+the report while marking the check itself successful; critical conditions and
+unexpected process failures still cause the service to fail. The CLI retains
+the documented 0/1/2 exit codes by default. The normal installer renders its templates:
 
 ```bash
 scripts/install_systemd_services.sh --dry-run
