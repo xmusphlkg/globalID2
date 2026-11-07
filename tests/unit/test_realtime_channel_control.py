@@ -52,7 +52,7 @@ def test_pause_is_durable_isolated_and_private(tmp_path):
     json.dumps({"schema_version": True, "channels": {}}),
     json.dumps({"schema_version": 1, "channels": {
         "surveillance": {"paused": "false"}, "situation": {"paused": False}}}),
-    " " * (64 * 1024 + 1),
+    pytest.param(" " * (64 * 1024 + 1), id="oversized-state"),
 ])
 def test_invalid_state_fails_closed_without_mutation(tmp_path, payload):
     path = tmp_path / "controls.json"

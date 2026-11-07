@@ -26,7 +26,13 @@ from src.domain.collection import PublishDirty, RunStage, SourceArtifact
 from src.services.ingestion.stages import mark_dirty, next_attempt
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSIONS = ["0022_collection_stages", "0023_ai_work_items", "0024_collection_jsonb"]
+VERSIONS = [
+    "0022_collection_stages",
+    "0023_ai_work_items",
+    "0024_collection_jsonb",
+    "0025_report_period_types",
+    "0026_publish_dirty_changes",
+]
 
 
 def migration(name):
@@ -67,6 +73,13 @@ class MigrationTables:
 
     def create_table(self, name, *elements, **kwargs):
         return sa.Table(name, self.metadata, *elements, **kwargs)
+
+    def add_column(self, table, column):
+        self.metadata.tables[table].append_column(column)
+
+    def execute(self, statement):
+        # Report enum additions have no effect on the collection table metadata.
+        assert statement.startswith("ALTER TYPE reporttype ADD VALUE ")
 
     def create_index(self, name, table, columns, **kwargs):
         sa.Index(
@@ -114,6 +127,7 @@ def test_fresh_migrations_and_orm_match_types_defaults_indexes_and_checks(monkey
         (SourceArtifact, "metadata"),
         (AIWorkItem, "payload"),
         (AIWorkItem, "result"),
+        (PublishDirty, "change_set"),
     ],
 )
 def test_structured_columns_are_jsonb_in_postgresql_and_portable_json_in_sqlite(

@@ -21,7 +21,12 @@ test('unchanged copies preserve the cache inode and rewritten outputs cannot alt
   assert.equal(fingerprints.copy(source, target), true);
   const before = statSync(target, { bigint: true });
   assert.equal(fingerprints.copy(source, target), false);
-  assert.deepEqual(statSync(target, { bigint: true }), before);
+  const after = statSync(target, { bigint: true });
+  // Hashing may advance atime on relatime/strictatime filesystems. The cache
+  // identity and modification timestamps must still remain unchanged.
+  for (const field of ['dev', 'ino', 'size', 'mode', 'nlink', 'mtimeNs', 'ctimeNs']) {
+    assert.equal(after[field], before[field], field);
+  }
   writeFileSync(source, 'other');
   assert.equal(readFileSync(target, 'utf8'), 'first');
   assert.equal(fingerprints.copy(source, target), true);
