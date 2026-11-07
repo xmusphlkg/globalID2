@@ -10,6 +10,7 @@ import { shouldBuildPage } from '../../../../lib/page-build-plan';
 import {
   buildAlternatePaths,
   buildDatasetStructuredData,
+  clampSeoTitleWithSuffix,
 } from '../../../../lib/seo';
 import { localizedDiseaseName } from '../../../../utils/diseaseNames';
 import { localizedRegionName } from '../../../../utils/i18n';
@@ -75,7 +76,7 @@ const dataset = buildDatasetStructuredData({
   sourceUrls,
 });
 const seo = {
-  title: copy(`${diseaseNameEn} surveillance in ${countryNameEn} | GIDS`, `${countryNameZh}${diseaseNameZh}监测 | GIDS`, `Surveillance de ${diseaseNameFr} en ${countryNameFr} | GIDS`),
+  title: copy(`${diseaseNameEn} surveillance in ${countryNameEn} | GIDS`, `${countryNameZh}${diseaseNameZh}监测 | GIDS`, clampSeoTitleWithSuffix(`Surveillance de ${diseaseNameFr}`, `en ${countryNameFr} | GIDS`)),
   description: copy(`${diseaseNameEn} surveillance in ${countryNameEn}: latest published observations, official sources and downloadable data.`, `${countryNameZh}${diseaseNameZh}监测：最新已发布观测、官方来源与可下载数据。`, `Surveillance de ${diseaseNameFr} en ${countryNameFr} : observations publiées, sources officielles et données téléchargeables.`),
   locale,
   canonicalPath,
