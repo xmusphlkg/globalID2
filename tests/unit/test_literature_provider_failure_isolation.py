@@ -264,9 +264,11 @@ async def test_crossref_connect_failure_still_fails_the_whole_run(monkeypatch, t
     assert finished == [("failed", {"error": "ConnectError"})]
 
 
+@pytest.mark.parametrize("journal_failures", [0, 3])
 async def test_crossref_connect_failure_uses_pubmed_fallback_without_advancing_crossref_checkpoint(
     monkeypatch,
     tmp_path,
+    journal_failures,
 ):
     journals = tmp_path / "journals.json"
     journals.write_text(
@@ -305,6 +307,11 @@ async def test_crossref_connect_failure_uses_pubmed_fallback_without_advancing_c
             pass
 
         async def fetch_incremental(self, **_kwargs):
+            if journal_failures:
+                return CrossrefIncrementalResult(
+                    records=[],
+                    checkpoint={"source_errors": journal_failures},
+                )
             raise httpx.ConnectError("", request=httpx.Request("GET", "https://api.crossref.example/works"))
 
     class FallbackPubMed:
@@ -383,16 +390,18 @@ async def test_crossref_connect_failure_uses_pubmed_fallback_without_advancing_c
     result = await pipeline.execute()
 
     assert result["pubmed_core_fallback_used"] == 1
-    assert result["crossref_source_errors"] == 1
+    assert result["crossref_source_errors"] == max(1, journal_failures)
     assert result["through_indexed_at"] == "2026-08-01T00:00:00+00:00"
     assert finished[0][0] == "completed"
     assert finished[0][1]["checkpoint"]["strategy"] == "pubmed-fallback-no-crossref-advance-v1"
     assert finished[0][1]["source"].startswith("pubmed-fallback+pubmed")
 
 
+@pytest.mark.parametrize("journal_failures", [0, 2])
 async def test_full_pipeline_autopilot_cannot_publish_crossref_record_when_openalex_is_down(
     monkeypatch,
     tmp_path,
+    journal_failures,
 ):
     journals = tmp_path / "journals.json"
     taxonomy = tmp_path / "taxonomy.json"
@@ -441,10 +450,11 @@ async def test_full_pipeline_autopilot_cannot_publish_crossref_record_when_opena
                     "indexed": {"date-time": "2026-08-17T00:00:00Z"},
                 }],
                 checkpoint={
-                    "through_indexed_at": kwargs["until"].isoformat(),
+                    "through_indexed_at": kwargs["since" if journal_failures else "until"].isoformat(),
                     "records_seen": 1,
                     "records_returned": 1,
-                    "truncated": False,
+                    "truncated": bool(journal_failures),
+                    "source_errors": journal_failures,
                 },
             )
 
@@ -509,6 +519,10 @@ async def test_full_pipeline_autopilot_cannot_publish_crossref_record_when_opena
     result = await pipeline.execute()
 
     assert result["inserted"] == 1
+    assert result["crossref_source_errors"] == journal_failures
+    if journal_failures:
+        assert result["through_indexed_at"] == "2026-08-01T00:00:00+00:00"
+        assert result["source_truncated"] == 1
     assert result["published"] == 0
     assert result["requires_review"] == 1
     assert result["enrichment_errors"] == 1

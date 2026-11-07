@@ -98,6 +98,8 @@ idna==3.18
     #   anyio
     #   httpx
     #   requests
+ijson==3.6.0
+    # via -r requirements.in
 iniconfig==2.3.0
     # via pytest
 jinja2==3.1.6

@@ -638,7 +638,7 @@ class LiteratureSettings(_BaseEnvSettings):
         ge=1,
         le=100_000,
         description=(
-            "Flag a high distinct article/summary review backlog while bounded metadata catch-up continues"
+            "Pause accelerated catch-up when distinct actionable review articles plus the next batch reach this limit; normal sync continues"
         ),
     )
 

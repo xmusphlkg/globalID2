@@ -744,7 +744,9 @@ class LiteratureEnrichmentPipeline:
         if self.config.autopilot_enabled:
             from src.services.literature_automation_service import literature_automation_service
 
-            automation = await literature_automation_service.reconcile()
+            automation = await literature_automation_service.reconcile(
+                article_ids=[article.article_id for article in articles],
+            )
             # Summaries that passed the deterministic gate wait in ``review``;
             # the shared two-model peer review decides publication.
             from src.services.ai_content_governance_service import ai_content_governance_service

@@ -157,6 +157,38 @@ class PubMedClient(LiteratureHttpClient):
             },
         )
 
+    async def search_recent_page(
+        self, *, query: str, since: datetime, until: datetime,
+        max_records: int, cursor: str | int | None = None,
+    ):
+        """Page a fixed query, splitting windows above PubMed's 10,000 limit."""
+        from .search_page import SearchPage
+
+        offset = max(0, int(cursor or 0))
+        size = max(1, min(self.MAX_PAGE_SIZE, int(max_records)))
+        if offset >= 10000:
+            return SearchPage([], split_required=True)
+        size = min(size, 10000 - offset)
+        term = f"({query}) AND journal article[Publication Type]" if query else "journal article[Publication Type]"
+        async with httpx.AsyncClient(base_url=self.BASE_URL, follow_redirects=True, transport=self.transport) as client:
+            ids, searched, total = await self._search_ids(
+                client, term=term, since=since, until=until,
+                max_records=size, retstart=offset, strict=True,
+            )
+            if total is None:
+                raise ValueError("PubMed discovery count is unavailable")
+            if total < offset + searched:
+                raise ValueError("PubMed discovery count is inconsistent")
+            if total > 10000:
+                return SearchPage([], split_required=True)
+            records = await self._summaries(client, ids)
+        if len(records) != len(ids):
+            raise ValueError("PubMed discovery summaries are incomplete")
+        more = offset + searched < total
+        if more and not searched:
+            raise ValueError("PubMed discovery page did not advance")
+        return SearchPage(records, next_cursor=offset + searched if more else None)
+
     async def search_recent(
         self,
         *,
@@ -209,6 +241,7 @@ class PubMedClient(LiteratureHttpClient):
         until: datetime,
         max_records: int,
         retstart: int,
+        strict: bool = False,
     ) -> tuple[list[str], int, int | None]:
         ids: list[str] = []
         total: int | None = None
@@ -231,6 +264,16 @@ class PubMedClient(LiteratureHttpClient):
                 },
             )
             result = payload.get("esearchresult") or {}
+            if strict and (
+                not isinstance(result, dict)
+                or result.get("errorlist")
+                or result.get("ERROR")
+                or not str(result.get("count", "")).isdigit()
+                or not isinstance(result.get("idlist"), list)
+                or any(not str(value).isdigit() for value in result.get("idlist", []))
+                or len(result.get("idlist", [])) > retmax
+            ):
+                raise ValueError("Invalid PubMed discovery search page")
             if total is None:
                 try:
                     total = max(0, int(result.get("count") or 0))
