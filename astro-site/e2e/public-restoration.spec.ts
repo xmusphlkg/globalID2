@@ -23,7 +23,7 @@ function surveillance(version = 1) {
     'countries/jp.json': { country_code: 'JP', disease_series: { D038: series } },
     'countries/jp-source-series.json': { v: 1, series: {} },
     'diseases/d038-summary.json': { ...series, generated_at: '2026-11-07', country_count: 1, source_info: [{ country_code: 'JP', sources: [source, source] }], reporting_countries: [{ ...country, dates_tail: series.dates, cases_tail: series.cases, period_granularity: 'weekly', comparability: 'comparable' }] },
-    'diseases/d038.json': { disease_id: 'D038', country_series: { JP: { ...series, name_en: 'Japan', name_zh: '日本' } } },
+    'diseases/d038.json': { disease_id: 'D038', country_series: { JP: { ...series, name_en: 'Japan', name_zh: '日本', period_granularity: 'monthly', dates: ['2026-09-01', '2026-10-01'] } } },
   }, `restored-${version}`, '/site-data');
 }
 const schema_version = 'gids.situation_alerts.v1';
@@ -129,4 +129,14 @@ test('archives show named groups and adjacent periods while timelines stay lazy'
   await page.goto('/zh/situation/monthly/?month=2026-11');
   await expect(page.locator('main')).toContainText('本月');
   await expect(page.getByRole('link', { name: '全部月份', exact: true })).toBeVisible();
+});
+
+
+test('seasonality retains the selected country source and current data version', async ({ page }) => {
+  await mock(page);
+  await page.goto('/fr/diseases/influenza/');
+  await page.locator('#seasonality').scrollIntoViewIfNeeded();
+  await expect(page.locator('#seasonality select')).toContainText('Japon');
+  await expect(page.locator('#seasonality [data-source-label]')).toHaveAttribute('data-source-label', 'Official weekly source');
+  await expect(page.locator('#seasonality [data-surveillance-version]')).toHaveAttribute('data-surveillance-version', 'restored-1');
 });
