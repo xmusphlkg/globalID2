@@ -48,6 +48,10 @@ def iso_or_none(value) -> str | None:
 # including legacy national rows that predate the registered source series.
 _JP_SENTINEL_DISEASE_IDS = ("D136", "D138", "D139", "D141", "D143")
 
+# Broad precise updates otherwise repeat category resolution for nearly every
+# historical observation. Keep small target sets on the selective query path.
+_DENSE_REVIEWED_DISEASE_QUERY_THRESHOLD = 16
+
 
 def compact_report_metadata(
     metadata: dict | None, *, include_figures: bool = False
@@ -298,6 +302,8 @@ async def fetch_disease_records_direct(
     session, country_code: str, use_population_table: bool, *, disease_ids: set[str] | None = None,
 ) -> list[dict]:
     """Query legacy disease records using the standard disease code."""
+    if disease_ids is not None and not disease_ids:
+        return []
     # Swiss IDD CHFL is a published Switzerland+Liechtenstein aggregate. The
     # legacy table stored it against the CH country ID, so it must not fill a
     # CH-only public curve when a source-series period is absent.
@@ -429,6 +435,8 @@ async def fetch_disease_series_records(
     The as-of boundary is when this application recorded an observation state;
     upstream publication dates are not inferred from it.
     """
+    if disease_ids is not None and not disease_ids:
+        return []
     # Subdivision observations use a local geography key, while their source
     # series belongs to the parent country's registry.
     series_country_code = country_code.split("-", 1)[0]
@@ -631,12 +639,16 @@ async def fetch_disease_series_records(
     )
 
     candidate_prefix = ""
-    if use_reviewed_mapping and disease_ids is None:
+    if use_reviewed_mapping and (
+        disease_ids is None or len(disease_ids) >= _DENSE_REVIEWED_DISEASE_QUERY_THRESHOLD
+    ):
         # Category identity and precedence depend on source/definition/code/
         # label, not the observation date. Resolve each distinct identity once
         # instead of repeating the same LATERAL lookup for every history row.
         # Mapping validity still applies per observation below. Materialize only
         # export fields, excluding heavyweight raw provenance from this scan.
+        # Dense target sets share this path and retain the exact final target
+        # predicate; reading a broad scope never widens the returned diseases.
         history_columns = (
             ", dso.recorded_at, dso.recorded_history_complete"
             if recorded_at_as_of is not None else ""

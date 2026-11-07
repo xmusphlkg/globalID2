@@ -57,6 +57,40 @@ async def test_disease_scoped_series_query_filters_effective_reviewed_mapping(co
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("count,identity", [(15, False), (16, True), (32, True)])
+async def test_dense_reviewed_query_routes_at_threshold_without_widening_targets(count, identity):
+    requested = {f"D{number:03d}" for number in range(count)}
+    session = FakeSession(FakeRows([]))
+    assert await site_data_queries.fetch_disease_series_records(session, "JP-25", True, disease_ids=requested) == []
+    query, params = session.calls[0]
+    assert ("export_identities AS MATERIALIZED" in query) is identity
+    assert ("requested_categories AS MATERIALIZED" in query) is not identity
+    assert "AND mapping.target_code IN (__[POSTCOMPILE_disease_ids])" in query
+    assert params["disease_ids"] == sorted(requested)
+    assert params["population_code"] == "JP-25"
+    assert "mapping_release.status = 'active'" in query
+
+
+@pytest.mark.asyncio
+async def test_empty_disease_scope_returns_no_facts_without_issuing_sql():
+    session = FakeSession()
+    assert await site_data_queries.fetch_disease_series_records(session, "JP-25", True, disease_ids=set()) == []
+    assert await site_data_queries.fetch_disease_records_direct(session, "JP-25", True, disease_ids=set()) == []
+    assert session.calls == []
+
+
+@pytest.mark.asyncio
+async def test_dense_unreviewed_country_retains_its_registered_disease_filter():
+    requested = {f"D{number:03d}" for number in range(32)}
+    session = FakeSession(FakeRows([]))
+    await site_data_queries.fetch_disease_series_records(session, "CA", False, disease_ids=requested)
+    query, params = session.calls[0]
+    assert "export_identities" not in query and "requested_categories" not in query
+    assert "AND dss.disease_id IN (__[POSTCOMPILE_disease_ids])" in query
+    assert params["disease_ids"] == sorted(requested)
+
+
+@pytest.mark.asyncio
 async def test_disease_scoped_legacy_query_is_parameterized():
     session = FakeSession(FakeRows([]))
     assert await site_data_queries.fetch_disease_records_direct(session, "US", False, disease_ids={"D038"}) == []
@@ -561,7 +595,8 @@ async def _fixture_observation(db, *, key, series="SHARED", code="A", label="Ali
          "quality": quality, "unit": unit, "updated": datetime.fromisoformat(updated_at).replace(tzinfo=timezone.utc)})
 
 
-async def test_identity_resolution_matches_original_per_observation_precedence_and_cardinality(mapping_query_database):
+@pytest.mark.parametrize("target_count", [None, 16, 32])
+async def test_identity_resolution_matches_original_per_observation_precedence_and_cardinality(mapping_query_database, target_count):
     _, sessions = mapping_query_database
     async with sessions() as db:
         await _fixture_observation(db, key="exact-code-wins")
@@ -582,7 +617,8 @@ async def test_identity_resolution_matches_original_per_observation_precedence_a
             ("draft-mapping", {"code": "DRAFT"}), ("retired-release", {"code": "RETIRED"}),
         ]:
             await _fixture_observation(db, key=key, **overrides)
-        optimized = await site_data_queries.fetch_disease_series_records(db, "JP-25", False)
+        requested = {f"D{number:03d}" for number in range(1, target_count + 1)} if target_count else None
+        optimized = await site_data_queries.fetch_disease_series_records(db, "JP-25", False, disease_ids=requested)
         original = await site_data_queries.fetch_disease_series_records(db, "JP-25", False,
             disease_ids={f"D{number:03d}" for number in range(1, 13)})
         # The public ORDER BY does not order equal-time dimension siblings.
@@ -598,7 +634,8 @@ async def test_identity_resolution_matches_original_per_observation_precedence_a
         assert next(row for row in optimized if row["dimension_key"] == "null-code")["series_is_active"] is False
 
 
-async def test_identity_resolution_preserves_as_of_revision_and_current_fallback(mapping_query_database):
+@pytest.mark.parametrize("target_count", [None, 16, 32])
+async def test_identity_resolution_preserves_as_of_revision_and_current_fallback(mapping_query_database, target_count):
     from sqlalchemy import text
     _, sessions = mapping_query_database
     async with sessions() as db:
@@ -612,7 +649,9 @@ async def test_identity_resolution_preserves_as_of_revision_and_current_fallback
                 FROM disease_series_observations WHERE dimension_key='revised'"""),
                 {"value": value, "recorded": datetime.fromisoformat(recorded).replace(tzinfo=timezone.utc)})
         cutoff = datetime(2026, 1, 15, tzinfo=timezone.utc)
-        optimized = await site_data_queries.fetch_disease_series_records(db, "JP-25", False, recorded_at_as_of=cutoff)
+        requested = {f"D{number:03d}" for number in range(1, target_count + 1)} if target_count else None
+        optimized = await site_data_queries.fetch_disease_series_records(db, "JP-25", False,
+            recorded_at_as_of=cutoff, disease_ids=requested)
         original = await site_data_queries.fetch_disease_series_records(db, "JP-25", False,
             recorded_at_as_of=cutoff, disease_ids={f"D{number:03d}" for number in range(1, 13)})
         assert optimized == original
@@ -621,7 +660,8 @@ async def test_identity_resolution_preserves_as_of_revision_and_current_fallback
 
 
 @pytest.mark.parametrize("disjoint_sibling", [False, True])
-async def test_query_reordering_preserves_complete_country_and_lossless_source_arrays(mapping_query_database, disjoint_sibling):
+@pytest.mark.parametrize("target_count", [None, 16, 32])
+async def test_query_reordering_preserves_complete_country_and_lossless_source_arrays(mapping_query_database, disjoint_sibling, target_count):
     """Do not canonicalize/sort outputs: source arrays and dominant ties matter."""
     from sqlalchemy import text
     from src.generation.site_series_projection import apply_disease_cutover_projection
@@ -660,7 +700,8 @@ async def test_query_reordering_preserves_complete_country_and_lossless_source_a
                 # the same first/dominant choice as the original SQL order.
                 await _fixture_observation(db, key="all", series="MAIN_B", day=day,
                                            value=cases + 1, quality="provisional")
-        optimized = await site_data_queries.fetch_disease_series_records(db, "JP-25", False)
+        requested = {f"D{number:03d}" for number in range(1, target_count + 1)} if target_count else None
+        optimized = await site_data_queries.fetch_disease_series_records(db, "JP-25", False, disease_ids=requested)
         reference = await site_data_queries.fetch_disease_series_records(db, "JP-25", False,
             disease_ids={f"D{number:03d}" for number in range(1, 16)})
         catalogue = {code: {"name_en": code, "name_zh": code, "category": "Test", "slug": code.lower()}
@@ -687,6 +728,22 @@ async def test_query_reordering_preserves_complete_country_and_lossless_source_a
         assert rate["dates"] == []
         assert rate["data_layer"] == "source_observations_only"
         assert rate["source_series"][0]["values"] == [0.5, 0.5]
+
+
+@pytest.mark.parametrize("target_count", [0, 16, 32])
+async def test_dense_final_target_filter_excludes_a_resolved_unrequested_category(mapping_query_database, target_count):
+    _, sessions = mapping_query_database
+    async with sessions() as db:
+        await _fixture_observation(db, key="selected-exact")
+        await _fixture_observation(db, key="unrequested-label", code="C", day=2)
+        await _fixture_observation(db, key="selected-null-label", series="NULL_LABEL", code="X", label=None)
+        selected = {"D003", "D007"} if target_count else set()
+        requested = selected | {f"MISSING{number:03d}" for number in range(max(0, target_count - len(selected)))}
+        optimized = await site_data_queries.fetch_disease_series_records(db, "JP-25", False, disease_ids=requested)
+        reference = await site_data_queries.fetch_disease_series_records(db, "JP-25", False, disease_ids=selected)
+        assert optimized == reference
+        assert {row["disease_id"] for row in optimized} == selected
+        assert all(row["dimension_key"] != "unrequested-label" for row in optimized)
 
 
 @pytest.mark.asyncio

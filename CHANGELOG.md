@@ -14,6 +14,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Performance and correctness
 
+- Dense precise disease updates (16 or more target diseases) now use the distinct-source-identity query while retaining the exact target filter. On one read-only snapshot, JP-25's actual 68-disease update fell from 57.831 to 3.871 seconds (14.9×); all 38,856 normalized rows and the complete merged country projection matched exactly. Smaller target sets retain their selective query path.
 - Complete-country projection resolves each distinct source identity once, reducing JP-25 category lookups from 60,319 to 112. Paired read-only query measurements reduced source reading from about 49.25 to 5.09 seconds; five alternating pure-computation runs reduced median CPU from 3.959 to 2.757 seconds.
 - Eight-country full projection took 19.7 seconds; generating all 504 public JSON objects into empty output directories took 27.682 seconds. All public object hashes matched the preceding complete export. A synthetic precise correction took 4.608 seconds. These local measurements exclude network publication and acknowledgement.
 - Mapping activation invalidates old and new country scopes in the same transaction. Frozen publication candidates, conditional pointer writes and exact change-ID acknowledgement prevent stale retries from overwriting newer data or losing concurrent updates.
