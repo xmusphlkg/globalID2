@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { pick, type Language } from '../../lib/surveillance-presentation.ts';
-import '../download-dialog.css';
+import '../download-dialog-shell.css';
 
 const DownloadContents = lazy(() => import('./SurveillanceDownloadContents'));
 

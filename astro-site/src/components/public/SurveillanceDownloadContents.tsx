@@ -1,3 +1,4 @@
+import '../download-dialog.css';
 import { useEffect, useRef, useState } from 'react';
 import { mainSiteBase } from '../../lib/papers';
 import { coverage, number, pick, safeUrl, type Language, type Summary } from '../../lib/surveillance-presentation.ts';
