@@ -522,7 +522,7 @@ const diseaseSeo = {
 
         <section id="downloads" class="figure-panel scroll-mt-24">
           <h2 class="figure-title">{zh ? '下载与方法' : fr ? 'Téléchargement et méthodes' : 'Downloads and methods'}</h2>
-          <SurveillanceDiseaseSummary client:visible dataUrl={diseaseSummaryUrl} mode="downloads" language={locale} />
+          <SurveillanceDiseaseSummary client:load dataUrl={diseaseSummaryUrl} mode="downloads" language={locale} />
         </section>
 
         <div class="border-t border-[rgb(var(--border))/0.72] pt-4">

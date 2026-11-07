@@ -79,6 +79,7 @@ test('country restores contextual links, source cadence and separately dated dow
   await page.goto('/zh/countries/jp/');
   await expect(page.locator('#disease-directory a').first()).toHaveAttribute('href', '/zh/countries/jp/diseases/influenza/');
   await page.locator('#downloads').scrollIntoViewIfNeeded();
+  await page.locator('#downloads [data-download-modal-trigger]').click();
   await expect(page.getByTestId('download-archive')).toContainText('2026-10-01');
   await expect(page.locator('#downloads')).toContainText('每周');
   await expect(page.locator('#downloads [data-testid="surveillance-sources"] article')).toHaveCount(1);
@@ -86,6 +87,7 @@ test('country restores contextual links, source cadence and separately dated dow
   await page.getByLabel('文件格式', { exact: false }).selectOption('xlsx');
   await expect(page.locator('#downloads a[href$=".csv"]')).toHaveCount(0);
   await expect(page.locator('#downloads a[href$=".xlsx"]')).toHaveCount(1);
+  await page.keyboard.press('Escape');
   await page.locator('#international').scrollIntoViewIfNeeded();
   await expect(page.locator('.intl-panel-snapshot')).toContainText('本地快照');
   await expect(page.locator('.intl-panel-snapshot')).toContainText('-100%');
@@ -95,6 +97,17 @@ test('disease page keeps the selected disease when opening a country', async ({ 
   await mock(page);
   await page.goto('/zh/diseases/influenza/');
   await expect(page.locator('#coverage a[href="/zh/countries/jp/diseases/influenza/"]')).toHaveCount(1);
+});
+
+test('chart data action opens the lazy download dialog directly', async ({ page }) => {
+  await mock(page);
+  await page.goto('/zh/diseases/influenza/');
+  await page.locator('#seasonality').scrollIntoViewIfNeeded();
+  await page.locator('#seasonality select').waitFor();
+  await page.locator('#seasonality').getByRole('button', { name: '下载数据', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '选择数据下载' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('a[href$=".xlsx"]')).toHaveCount(1);
 });
 
 test('French country facts and disease names retain localization', async ({ page }) => {

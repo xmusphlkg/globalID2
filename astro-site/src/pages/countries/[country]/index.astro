@@ -307,7 +307,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
 
     <section id="downloads" class="figure-panel scroll-mt-24">
       <h2 class="figure-title">{zh ? '来源与下载' : fr ? 'Sources et téléchargements' : 'Sources and downloads'}</h2>
-      <SurveillanceSummary client:visible dataUrl={countrySummaryUrl} mode="downloads" language={locale} />
+      <SurveillanceSummary client:load dataUrl={countrySummaryUrl} mode="downloads" language={locale} />
     </section>
   </div>
 </ReportLayout>

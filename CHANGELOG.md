@@ -21,6 +21,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Added a multilingual website and data update history with monthly archives, channel filters, published coverage metrics and links to release notes. Successful acknowledged publication markers are projected into small JSON files by a separate minute timer, without rebuilding the site or blocking data publication.
 - Fixed stale events during month switches and independent refresh error handling. Failed refreshes retain known events, slow requests are bounded, and monthly records are validated before rendering.
 - Code-only releases recognize the hand-authored changelog and acknowledgements as source files while keeping generated data snapshots strictly unchanged; updating release notes no longer forces a data regeneration.
+- Restored the compact download dialog with date/format filters and scrollable file cards. The dialog code and per-scope catalogue load on demand; chart data actions open it directly, with archive dates kept separate from live curve updates.
 - Restored the homepage's real China/Japan influenza curves, country/disease navigation, download selection, source citations, subdivision shortcuts and weekly/monthly outbreak archives while retaining independent JSON updates. Per-article social cards remain disabled.
 
 ## [0.18.0] - 2026-11-07

@@ -10,6 +10,10 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
   const data = payload && mode === 'country-card' ? (payload.countries ?? []).find((row: Summary) => String(row.code).toUpperCase() === code?.toUpperCase()) : payload;
   const pick = (en: string, zh: string, fr: string) => language === 'zh' ? zh : language === 'fr' ? fr : en;
   const prefix = language === 'en' ? '' : `/${language}`;
+  if (mode === 'downloads') return <div className="space-y-4" data-surveillance-version={version}>
+    <SurveillanceDownloads dataUrl={dataUrl} language={language} />
+    {data && <SurveillanceSources data={data} language={language} />}
+  </div>;
   if (!data) return <div className="text-sm text-[rgb(var(--text-muted))]" role="status">
     {error ? <>{pick('Current data is unavailable.', '当前数据暂不可用。', 'Les données actuelles sont indisponibles.')} {mode !== 'country-card' && <button type="button" className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button>}</>
       : pick('Loading current data…', '正在加载最新数据…', 'Chargement des données actuelles…')}
@@ -73,7 +77,6 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
   }
   return <div className="space-y-4" data-surveillance-version={version}>
     <SurveillanceSources data={data} language={language} />
-    {mode === 'downloads' && <SurveillanceDownloads dataUrl={dataUrl} language={language} />}
     {revision}
   </div>;
 }

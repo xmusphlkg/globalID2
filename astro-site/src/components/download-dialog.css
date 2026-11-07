@@ -1,0 +1,74 @@
+  .download-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    isolation: isolate;
+    width: min(68rem, calc(100vw - 2rem));
+    max-height: min(86vh, 56rem);
+    margin: 0;
+    transform: translate(-50%, -50%);
+    overflow: hidden;
+    border: 1px solid rgb(var(--border) / .86);
+    border-radius: 0;
+    outline: none;
+    background: linear-gradient(180deg, rgb(var(--surface) / 1), rgb(var(--surface-raised) / .96));
+    color: rgb(var(--text));
+    padding: 0;
+    box-shadow: 0 30px 90px rgb(2 6 23 / .34);
+  }
+  .download-dialog::backdrop { background: rgb(2 6 23 / .72); backdrop-filter: blur(5px); }
+  .download-dialog__toolbar { position: sticky; top: 0; z-index: 2; border-bottom: 1px solid rgb(var(--border) / .72); background: linear-gradient(180deg, rgb(var(--surface) / 1), rgb(var(--surface-raised) / .92)); padding: 1rem 1.15rem .85rem; }
+  .download-dialog__toolbar::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, rgb(var(--color-brand) / .85), rgb(var(--color-accent) / .4), transparent 78%); pointer-events: none; }
+  .download-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+  .download-dialog__title { margin-top: .15rem; color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: 1.2rem; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; }
+  .download-dialog__note { max-width: 46rem; margin: .4rem 0 0; color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.45; }
+  .download-dialog__close { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .48); color: rgb(var(--text-muted)); cursor: pointer; font-size: 1.25rem; line-height: 1; transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
+  .download-dialog__close:hover { border-color: rgb(var(--color-brand) / .72); background: rgb(var(--bg-soft) / .82); color: rgb(var(--text-strong)); }
+  .download-dialog__close:focus-visible { outline: 2px solid rgb(var(--color-brand)); outline-offset: 2px; }
+  .download-dialog__filters { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(9rem, 14rem); align-items: end; gap: .65rem; margin-top: .75rem; }
+  .download-filter { display: grid; gap: .25rem; color: rgb(var(--text-faint)); font-size: .65rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+  .download-filter select { width: 100%; min-height: 2.15rem; border: 1px solid rgb(var(--border) / .78); border-radius: 0; outline: none; background: rgb(var(--surface-raised) / .54); color: rgb(var(--text-strong)); padding: .38rem 1.8rem .38rem .55rem; font-size: .78rem; font-weight: 600; text-transform: none; transition: border-color .18s ease, background-color .18s ease; }
+  .download-filter select:hover { border-color: rgb(var(--border-strong)); background: rgb(var(--bg-soft) / .72); }
+  .download-filter select:focus-visible { border-color: rgb(var(--color-brand)); box-shadow: 0 0 0 2px rgb(var(--color-brand) / .18); }
+  .download-dialog__body { max-height: calc(min(86vh, 56rem) - 8.7rem); overflow-y: auto; background: rgb(var(--background) / .22); padding: .8rem 1.15rem 1rem; scrollbar-color: rgb(var(--border-strong)) transparent; scrollbar-width: thin; }
+  .download-file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: .55rem; }
+  .download-file-item { display: flex; min-width: 0; flex-direction: column; gap: .4rem; border: 1px solid rgb(var(--border) / .74); border-radius: 0; background: linear-gradient(180deg, rgb(var(--surface) / .99), rgb(var(--surface-raised) / .62)); padding: .6rem; box-shadow: var(--paper-shadow); }
+  .download-file-item__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: .55rem; }
+  .download-file-item__heading h3 { overflow: hidden; color: rgb(var(--text-strong)); font-size: .88rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+  .download-file-item__heading p { margin-top: .1rem; color: rgb(var(--text-faint)); font-size: .64rem; font-variant-numeric: tabular-nums; }
+  .download-file-item__current { border: 1px solid rgb(var(--color-brand) / .38); background: rgb(var(--color-brand) / .08); padding: .08rem .32rem; color: rgb(var(--color-brand)); font-size: .58rem; font-weight: 700; text-transform: uppercase; }
+  .download-file-item__meta { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: .38rem; border-top: 1px solid rgb(var(--border) / .68); padding-top: .38rem; color: rgb(var(--text-muted)); font-size: .63rem; }
+  .download-file-item__meta span + span { border-left: 1px solid rgb(var(--border) / .68); padding-left: .38rem; }
+  .download-file-item__meta span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .download-file-item__raw { display: block; overflow: hidden; color: rgb(var(--text-faint)); font-size: .59rem; text-overflow: ellipsis; white-space: nowrap; }
+  .download-file-item__raw:hover { color: rgb(var(--color-brand)); }
+  .download-file-item__action { display: inline-flex; flex: 0 0 auto; align-items: center; gap: .28rem; border: 1px solid rgb(var(--color-brand) / .68); padding: .3rem .48rem; font-size: .66rem; font-weight: 700; white-space: nowrap; }
+  .download-file-item__action-icon { width: .82rem; height: .82rem; }
+  .download-file-item__action:disabled { cursor: wait; opacity: .55; }
+  .download-file-item__status:empty { display: none; }
+  .download-file-item__status { min-width: 0; color: rgb(var(--text-muted)); font-size: .65rem; }
+  .download-dialog__empty { padding: 2rem; text-align: center; color: rgb(var(--text-muted)); font-size: .85rem; }
+  [data-download-file][hidden], [data-download-empty][hidden] { display: none; }
+  @media (max-width: 800px) {
+    .download-dialog__filters { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .download-dialog { width: calc(100vw - 1rem); max-height: 92vh; }
+    .download-dialog__toolbar { padding: .8rem; }
+    .download-dialog__filters { grid-template-columns: 1fr 1fr; gap: .45rem; }
+    .download-dialog__body { max-height: calc(92vh - 8.2rem); padding: .6rem .8rem .8rem; }
+    .download-file-grid { grid-template-columns: 1fr; }
+  }
+
+html:has(.download-dialog[open]) { overflow: hidden; }
+.download-dialog--live[open] { display: flex; flex-direction: column; max-height: 90dvh; }
+.download-dialog--live .download-dialog__toolbar { flex: 0 0 auto; }
+.download-dialog__content { display: flex; flex-direction: column; min-height: 0; }
+.download-dialog--live .download-dialog__body { flex: 1; min-height: 0; max-height: none; }
+.download-dialog__selection { padding: 0 1.15rem .8rem; border-bottom: 1px solid rgb(var(--border)); }
+.download-dialog__snapshot { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin: .6rem 0 0; color: rgb(var(--text-muted)); font-size: .72rem; }
+.download-dialog__feedback { padding: 1rem; color: rgb(var(--text-muted)); font-size: .85rem; }
+.download-entry { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 1rem; }
+.download-entry p { max-width: 40rem; font-size: .8rem; color: rgb(var(--text-muted)); }
+.download-entry__button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: .4rem; padding: .6rem .8rem; border: 1px solid rgb(var(--border)); font-size: .8rem; font-weight: 700; }
+@media (max-width: 640px) { .download-dialog__selection { padding-inline: .8rem; } .download-entry { flex-wrap: wrap; } }

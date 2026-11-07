@@ -44,6 +44,10 @@ export const changelogReleases: ChangelogRelease[] = [
     }, {
       kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections',
       items: [{
+        en: 'Data downloads use the compact selection dialog again. File lists load only when opened, and archive dates remain distinct from live curve updates.',
+        zh: '数据下载恢复紧凑的选择弹窗，打开时才加载文件列表，并明确区分下载档案日期与实时曲线更新。',
+        fr: 'Les téléchargements retrouvent leur fenêtre de sélection compacte. Les listes de fichiers sont chargées à l’ouverture et les dates des archives restent distinctes des mises à jour des courbes.',
+      }, {
         en: 'Restored real influenza curves on the homepage, contextual country/disease links, download filters, chart sources and weekly/monthly outbreak archives while retaining independent data publication.',
         zh: '恢复首页真实流感曲线、国家与疾病关联跳转、下载筛选、图表来源和疫情周月归档，保留数据独立发布机制。',
         fr: 'Les courbes réelles de grippe, les liens entre pays et maladies, les filtres de téléchargement, les sources des graphiques et les archives hebdomadaires et mensuelles sont rétablis, avec une publication des données toujours indépendante.',
