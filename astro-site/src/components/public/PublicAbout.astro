@@ -306,7 +306,7 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
     </header>
 
     <div class="metrics">
-      <SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="home-indicators" language={locale} />
+      <SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="directory-indicators" language={locale} />
     </div>
     <div class="coverage-note"><SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="global-coverage" language={locale} /></div>
 

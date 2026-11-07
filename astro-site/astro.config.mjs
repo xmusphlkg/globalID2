@@ -100,6 +100,9 @@ export default defineConfig({
       rollupOptions: {
         output: {
           manualChunks(id) {
+            // Country and disease pages share source cards, downloads and chart
+            // citations. Keep their repeated UI copy in one cacheable asset.
+            if (/(?:SurveillanceDownloads|SurveillanceSources|RuntimeChartSource)\.tsx$/.test(id)) return 'surveillance-sources';
             // ECharts shares zrender across every feature registry. Keeping it
             // as a stable cacheable vendor chunk prevents the shared graph
             // from collapsing back into a >500 kB monolith.

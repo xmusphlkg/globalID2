@@ -30,7 +30,7 @@ def test_json_generation_pins_immutable_objects_and_keeps_old_snapshot(tmp_path)
     context = _context()
     logical = dynamic.write_surveillance_artifacts(context, state, public)
     first = dynamic.freeze_public_generation(public, state, logical, release_id="first", generated_at=context["generated_at"])
-    assert set(first["files"]) == {"meta.json", "site-status.json", "countries/ca.json", "countries/ca-source-series.json", "countries/ca-summary.json", "diseases/d001.json", "diseases/d001-summary.json"}
+    assert set(first["files"]) == {"meta.json", "site-status.json", "home-influenza.json", "countries/ca.json", "countries/ca-source-series.json", "countries/ca-summary.json", "diseases/d001.json", "diseases/d001-summary.json"}
     previous = {entry["url"]: (public / entry["url"]).read_bytes() for entry in first["files"].values()}
     summary = json.loads(previous[first["files"]["countries/ca-summary.json"]["url"]])
     assert summary["total_cases"] == 7
@@ -172,3 +172,61 @@ async def test_projection_code_change_cannot_promote_pointer_or_completion(tmp_p
         await dynamic.export_surveillance_data(state, public, release_id="interrupted")
     assert not (public / "current.json").exists()
     assert not (state / dynamic.COMPLETED_GENERATION).exists()
+
+
+def test_home_influenza_keeps_real_extrema_and_missing_values_with_bounded_size():
+    from datetime import date, timedelta
+    cases = [index % 9 for index in range(5000)]
+    cases[1234] = 100_000
+    cases[2500] = None
+    dates = [(date(2010, 1, 1) + timedelta(days=index)).isoformat() for index in range(5000)]
+    result = dynamic.home_influenza_series({"disease_series": {"D038": {"dates": dates, "cases": cases}}})
+    assert len(result["cases"]) <= 242
+    assert max(value for value in result["cases"] if value is not None) == 100_000
+    assert None in result["cases"]
+    assert result["date_range"] == {"start": dates[0], "end": dates[-1]}
+    assert all(cases[dates.index(day)] == value for day, value in zip(result["dates"], result["cases"]))
+    assert len(json.dumps(result).encode()) < 10_000
+
+
+def test_unrelated_updates_reuse_hero_without_reading_country_history(tmp_path, monkeypatch):
+    state, public = tmp_path / "private", tmp_path / "public"
+    context = _context()
+    dynamic.write_surveillance_artifacts(context, state, public)
+    before = (public / "home-influenza.json").read_bytes()
+    monkeypatch.setattr(dynamic, "_read", lambda path: (_ for _ in ()).throw(AssertionError(f"Unexpected history read: {path}")))
+    context["generated_at"] = "2026-02-01T00:00:00Z"
+    dynamic.write_surveillance_artifacts(context, state, public)
+    assert (public / "home-influenza.json").read_bytes() == before
+
+
+def test_home_updates_only_changed_country_and_removes_retired_series(tmp_path, monkeypatch):
+    state, public = tmp_path / "private", tmp_path / "public"
+    context = _context()
+    template = context["country_exports"][0]
+    context["countries_simple"] = [{"code": code, "data_available": True} for code in ("JP", "CN")]
+    context["country_exports"] = []
+    for code in ("JP", "CN"):
+        item = copy.deepcopy(template)
+        item["code"] = item["country_data"]["country_code"] = code
+        series = item["country_data"]["disease_series"].pop("D001")
+        series["disease_id"] = "D038"
+        item["country_data"]["disease_series"]["D038"] = series
+        context["country_exports"].append(item)
+    dynamic.write_surveillance_artifacts(context, state, public)
+    context["country_exports"][1]["unchanged_curve"] = True
+    context["country_exports"][0]["country_data"]["disease_series"]["D038"]["cases"] = [11]
+    original_read = dynamic._read
+    def small_reads_only(path):
+        assert path == public / "home-influenza.json", "Must reuse the other country's compressed curve"
+        return original_read(path)
+    monkeypatch.setattr(dynamic, "_read", small_reads_only)
+    dynamic.write_surveillance_artifacts(context, state, public)
+    hero = original_read(public / "home-influenza.json")["series"]
+    assert hero["JP"]["cases"] == [11] and hero["CN"]["cases"] == [7]
+    context["countries_simple"] = context["countries_simple"][:1]
+    context["country_exports"] = context["country_exports"][:1]
+    context["country_exports"][0]["unchanged_curve"] = True
+    context["retired_country_codes"] = ["CN"]
+    dynamic.write_surveillance_artifacts(context, state, public)
+    assert set(original_read(public / "home-influenza.json")["series"]) == {"JP"}

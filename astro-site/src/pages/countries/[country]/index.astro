@@ -1,6 +1,7 @@
 ---
 // src/pages/countries/[country]/index.astro — Country detail page
 import ReportLayout from '../../../layouts/ReportLayout.astro';
+import SurveillanceCountryContext from '../../../components/public/SurveillanceCountryContext';
 import SurveillanceSummary from '../../../components/public/SurveillanceSummary';
 import SurveillanceDirectory from '../../../components/public/SurveillanceDirectory';
 import ReportCard from '../../../components/ReportCard.astro';
@@ -10,7 +11,7 @@ import InternationalNoticePanel from '../../../components/InternationalNoticePan
 import EpidemicCurve from '../../../components/charts/EpidemicCurve';
 import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
 import ComparisonTable from '../../../components/charts/ComparisonTable';
-import { reportIndex } from '../../../lib/seo-page-data';
+import { reportIndex, countryDiseaseRouteIdentities } from '../../../lib/seo-page-data';
 import {
   buildCountryMetaDescription,
   buildDatasetDistributions,
@@ -63,6 +64,8 @@ const reports: any[] = (reportIndex as any[])
   .filter(r => r.country_code?.toLowerCase() === country)
   .slice(0, 6);
 const countryDownload: any = null;
+const diseaseRoutes = Object.fromEntries(countryDiseaseRouteIdentities().filter(row => row.code === country).map(row => [row.slug, localeHref(`/countries/${country}/diseases/${row.slug}/`)]));
+const reportCount = (reportIndex as any[]).filter(row => row.country_code?.toLowerCase() === country).length;
 
 const countryName = countryData?.country_name_en ?? countryData?.country_name ?? fallbackCountryCode;
 const countryNameZh = countryData?.country_name_zh ?? countryDownload?.name_zh ?? countryName;
@@ -214,7 +217,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     <section id="sources" class="figure-panel scroll-mt-24">
       <p class="figure-kicker">{zh ? '国家/地区简介' : fr ? 'Brief du pays/de la région' : 'Country/Region Brief'}</p>
       <h2 class="figure-title">{zh ? '如何解读本国家/地区监测画像。' : fr ? 'Comment interpréter ce profil de surveillance.' : 'How to interpret this surveillance profile.'}</h2>
-      <div class="mt-4"><SurveillanceSummary client:load dataUrl={countrySummaryUrl} mode="country-context" language={locale} /></div>
+      <div class="mt-4"><SurveillanceCountryContext client:load dataUrl={countrySummaryUrl} language={locale} /></div>
     </section>
 
     {childJurisdictions.length > 0 && (
@@ -223,17 +226,18 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
         <h2 class="figure-title">
           {zh ? `${countryNameZh}分省数据` : fr ? `Jeux de données infranationaux de ${countryNameFr}` : `${countryName} subnational datasets`}
         </h2>
+        <p class="figure-caption mt-2">{zh ? '分省序列独立展示，不与全国序列叠加，也不进入国家级排行和全球汇总。' : fr ? 'Les séries infranationales restent séparées des séries nationales, des classements et des totaux mondiaux.' : 'Subnational series remain separate from national series, rankings and global totals.'}</p>
         <div class="mt-5"><SurveillanceDirectory client:visible language={locale} parentCode={fallbackCountryCode} /></div>
       </section>
     )}
 
     <section id="indicators" class="figure-panel scroll-mt-24">
       <h2 class="figure-title">{zh ? '核心监测指标' : fr ? 'Indicateurs clés de surveillance' : 'Key surveillance indicators'}</h2>
-      <div class="mt-5"><SurveillanceSummary client:load dataUrl={countrySummaryUrl} mode="country-indicators" language={locale} /></div>
+      <div class="mt-5"><SurveillanceSummary client:load dataUrl={countrySummaryUrl} mode="country-indicators" language={locale} reportCount={reportCount} /></div>
     </section>
     <section id="disease-directory" class="figure-panel scroll-mt-24">
       <h2 class="figure-title">{zh ? '已追踪疾病画像' : fr ? 'Profils des maladies suivies' : 'Tracked disease profiles'}</h2>
-      <SurveillanceSummary client:load dataUrl={countrySummaryUrl} mode="country-diseases" language={locale} />
+      <SurveillanceSummary client:load dataUrl={countrySummaryUrl} mode="country-diseases" language={locale} routes={diseaseRoutes} />
     </section>
 
     <section id="trends" class="figure-panel scroll-mt-24">
@@ -303,7 +307,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
 
     <section id="downloads" class="figure-panel scroll-mt-24">
       <h2 class="figure-title">{zh ? '来源与下载' : fr ? 'Sources et téléchargements' : 'Sources and downloads'}</h2>
-      <SurveillanceSummary client:load dataUrl={countrySummaryUrl} mode="downloads" language={locale} />
+      <SurveillanceSummary client:visible dataUrl={countrySummaryUrl} mode="downloads" language={locale} />
     </section>
   </div>
 </ReportLayout>

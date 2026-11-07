@@ -1,8 +1,9 @@
 import { useSituationData } from './useSituationData';
+import NoticeSnapshots from './NoticeSnapshots';
 import { alertSummary, countryName, countsLine, diseaseName, formatDay, sourceLabel, STATUS_LABELS } from './noticeLabels';
 import type { Locale, SituationAlertRecord } from '../../utils/situationTypes';
 
-export default function RuntimeNoticePanel({ dataUrl, locale, limit = 8, mapHref, diseaseId }: {
+export default function RuntimeNoticePanel({ dataUrl, locale, limit = 8, mapHref, diseaseId, contextCodes = [] }: {
   dataUrl: string; locale: Locale; limit?: number; contextCodes?: string[]; mapHref?: string; diseaseId?: string;
 }) {
   const { data, version, error, retry } = useSituationData<{ alerts: SituationAlertRecord[] }>(dataUrl);
@@ -22,6 +23,7 @@ export default function RuntimeNoticePanel({ dataUrl, locale, limit = 8, mapHref
       {countsLine(alert, locale) && <p className="intl-panel-counts">{countsLine(alert, locale)}</p>}
       {alertSummary(alert, locale) && <p className="intl-panel-summary">{alertSummary(alert, locale)}</p>}
       {alert.quote && <blockquote className="intl-panel-quote">{alert.quote}</blockquote>}
+      <NoticeSnapshots alert={alert} locale={locale} contextCodes={contextCodes} />
     </li>)}</ul>
   </section>;
 }

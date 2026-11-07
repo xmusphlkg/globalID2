@@ -1,3 +1,4 @@
+import RuntimeChartSource from '../../RuntimeChartSource';
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { analyze, selectedSeries } from "../analysis/engine";
 import { useCatalog, type CatalogInput } from "../data/useCatalog";
@@ -74,6 +75,7 @@ interface WorkspaceProps extends Props {
 }
 function ExplorerWorkspace({
   catalog,
+  dataUrl,
   context,
   language: lang = "en",
   initialTask = "trend",
@@ -465,6 +467,7 @@ function ExplorerWorkspace({
           </details>
         </div>
       </div>
+      {!sourceMeta && dataUrl && <RuntimeChartSource dataUrl={dataUrl} language={lang} />}
       {sourceMeta && (
         <p className="surveillance-note">
           {sourceMeta.href && /^https?:\/\//i.test(sourceMeta.href) ? (

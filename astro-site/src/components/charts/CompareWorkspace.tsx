@@ -4,7 +4,7 @@ import echarts from '../../lib/echarts';
 import ChartResultActions from './ChartResultActions';
 import { pngFromCanvases } from './chartExport';
 import { loadDiseaseDataset, type DiseaseDataset, type DiseaseDatasetSeriesEntry } from './diseaseDataset';
-import { useSurveillanceSummary } from '../public/SurveillanceSummary';
+import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
 import { liveCompareDiseaseOptions, type CompareDiseaseOption } from './compareDiseaseOptions';
 
 type Lang = 'en' | 'zh' | 'fr';

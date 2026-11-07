@@ -13,6 +13,7 @@ const DATA_ROOT = resolve('./src/data');
 let indexableDiseaseCache: Array<Record<string, any>> | null = null;
 const countryDiseaseCandidateCache = new Map<number, CountryDiseaseCandidate[]>();
 let publishableReportCache: ReturnType<typeof buildPublishableReports> | null = null;
+let countryDiseaseRouteCache: Array<{ code: string; slug: string }> | null = null;
 
 export const siteMeta = metaRaw as Record<string, any>;
 export const diseaseIndex = diseasesRaw as Array<Record<string, any>>;
@@ -38,6 +39,12 @@ export function countryDiseaseCandidates(limit = 50): CountryDiseaseCandidate[] 
     countryDiseaseCandidateCache.set(limit, hydrateDirectoryCandidates(selectDirectoryCandidates(siteMeta.countries ?? [], loadCountryFacts, limit), loadCountry));
   }
   return countryDiseaseCandidateCache.get(limit) ?? [];
+}
+
+/** Navigation needs route identities, never the full historical series. */
+export function countryDiseaseRouteIdentities() {
+  return countryDiseaseRouteCache ??= selectDirectoryCandidates(siteMeta.countries ?? [], loadCountryFacts, 50)
+    .map(({ code, slug }) => ({ code, slug }));
 }
 
 export function publishableReports() {

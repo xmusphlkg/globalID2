@@ -74,6 +74,15 @@ async def test_json_snapshot_derives_groups_before_managed_rebuild_and_preserves
     assert len(ids) == 1 and None not in ids
     for outbreak_id in ids:
         assert f"outbreaks/{outbreak_id}.json" in manifest["files"]
+    weeks = [json.loads((public / descriptor["url"]).read_text())
+             for name, descriptor in manifest["files"].items()
+             if name.startswith("weekly/") and name != "weekly/index.json"]
+    assert weeks
+    for week in weeks:
+        summaries = {row["outbreak_id"]: row for row in week["outbreaks"]}
+        assert set(week["new_outbreaks"] + week["updated_outbreaks"]) <= summaries.keys()
+        assert all(row["disease_name_en"] and row["country_codes"] for row in summaries.values())
+        assert all("alerts" not in row for row in summaries.values())
     for descriptor in manifest["files"].values():
         body = (public / descriptor["url"]).read_bytes()
         assert hashlib.sha256(body).hexdigest() == descriptor["sha256"]

@@ -9,7 +9,7 @@ import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts
 import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, countsLine, diseaseName, formatCount, formatDay, formatSignedPercent, sourceLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
 import type { CanvasProps, RegionTint } from './SituationMapCanvas.tsx';
-import { useSurveillanceSummary } from '../public/SurveillanceSummary';
+import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
 import { surveillanceData } from '../../lib/surveillance-data.ts';
 import { currentSurveillanceSite } from './currentSurveillanceSite.ts';
 

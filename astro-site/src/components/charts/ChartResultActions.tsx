@@ -82,6 +82,7 @@ function ExitIcon() {
 
 function readAttr(shell: HTMLElement | null | undefined, name: string) {
   return shell?.getAttribute(name)?.trim()
+    || shell?.querySelector(`[${name}]`)?.getAttribute(name)?.trim()
     || shell?.closest(`[${name}]`)?.getAttribute(name)?.trim()
     || "";
 }
@@ -146,7 +147,7 @@ export default function ChartResultActions({
       setDataReady(false);
       return;
     }
-    setDataReady(Boolean(document.querySelector("[data-download-confirm-dialog]")));
+    setDataReady(Boolean(document.querySelector("[data-download-confirm-dialog], #downloads")));
   }, [showData]);
 
   async function toggleFullscreen() {
@@ -211,7 +212,11 @@ export default function ChartResultActions({
 
   function openData() {
     const dialog = document.querySelector("[data-download-confirm-dialog]");
-    if (!(dialog instanceof HTMLDialogElement) || dialog.open) return;
+    if (!(dialog instanceof HTMLDialogElement)) {
+      document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (dialog.open) return;
     for (const selector of ["[data-download-time-filter]", "[data-download-format-filter]"]) {
       const select = dialog.querySelector(selector);
       if (!(select instanceof HTMLSelectElement) || select.value === "all") continue;

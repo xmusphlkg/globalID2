@@ -133,7 +133,7 @@ const seo = {
     </div>
     <section id="downloads" class="figure-panel mt-6 scroll-mt-24">
       <h2 class="figure-title">{copy('Sources and downloads', '来源与下载', 'Sources et téléchargements')}</h2>
-      <SurveillanceSummary client:load dataUrl={`/site-data/countries/${code}-summary.json`} mode="downloads" language={locale} />
+      <SurveillanceSummary client:visible dataUrl={`/site-data/countries/${code}-summary.json`} mode="downloads" language={locale} />
     </section>
   </article>
 </ReportLayout>

@@ -1,7 +1,7 @@
 ---
 // src/pages/diseases/[disease].astro — Individual disease detail page
 import ReportLayout from '../../layouts/ReportLayout.astro';
-import SurveillanceSummary from '../../components/public/SurveillanceSummary';
+import SurveillanceDiseaseSummary from '../../components/public/SurveillanceDiseaseSummary';
 import PageAnchorNav from '../../components/PageAnchorNav.astro';
 import DiseaseResearchPanel from '../../components/research/DiseaseResearchPanel.astro';
 import InternationalNoticePanel from '../../components/InternationalNoticePanel.astro';
@@ -30,7 +30,7 @@ import {
   toSeoSlug,
 } from '../../lib/seo';
 import { shouldBuildPage } from '../../lib/page-build-plan';
-import { diseaseIndex, loadKnowledge, loadDiseaseDirectory } from '../../lib/seo-page-data';
+import { diseaseIndex, loadKnowledge, loadDiseaseDirectory, countryDiseaseRouteIdentities } from '../../lib/seo-page-data';
 
 export async function getStaticPaths() {
   return diseaseIndex.filter(d => shouldBuildPage(`disease:${d.disease_id}`)).map(d => {
@@ -184,6 +184,7 @@ const profileUnavailableMessageZh = knowledgeStatus === 'automating'
 const coverageStart: string | null = null;
 const coverageEnd: string | null = null;
 const snapshotContextCodes: string[] = [];
+const countryRoutes = Object.fromEntries(countryDiseaseRouteIdentities().filter(row => row.slug === disease).map(row => [row.code.toUpperCase(), localeHref(`/countries/${row.code}/diseases/${row.slug}/`)]));
 const preferredCountry: string | undefined = undefined;
 const diseaseDataUrl = `/site-data/diseases/${diseaseId.toLowerCase()}.json`;
 const diseaseNameEn = diseaseData?.name_en ?? disease ?? 'Disease';
@@ -465,7 +466,7 @@ const diseaseSeo = {
 
                 <article class="academic-note bg-transparent">
                   <div class="academic-meta-label">{zh ? '数据覆盖' : fr ? 'Couverture des données' : 'Data coverage'}</div>
-<div class="mt-3"><SurveillanceSummary client:load dataUrl={diseaseSummaryUrl} mode="disease-coverage" language={locale} /></div>
+<div class="mt-3"><SurveillanceDiseaseSummary client:load dataUrl={diseaseSummaryUrl} mode="disease-coverage" language={locale} /></div>
                 </article>
               </div>
             </div>
@@ -503,7 +504,7 @@ const diseaseSeo = {
               dataUrl={diseaseDataUrl}
               initialLanguage={locale}
             />
-            <SurveillanceSummary client:load dataUrl={diseaseSummaryUrl} mode="disease-countries" language={locale} />
+            <SurveillanceDiseaseSummary client:load dataUrl={diseaseSummaryUrl} mode="disease-countries" language={locale} routes={countryRoutes} />
         </section>
 
         <section id="seasonality" class="figure-panel scroll-mt-24">
@@ -521,7 +522,7 @@ const diseaseSeo = {
 
         <section id="downloads" class="figure-panel scroll-mt-24">
           <h2 class="figure-title">{zh ? '下载与方法' : fr ? 'Téléchargement et méthodes' : 'Downloads and methods'}</h2>
-          <SurveillanceSummary client:load dataUrl={diseaseSummaryUrl} mode="downloads" language={locale} />
+          <SurveillanceDiseaseSummary client:visible dataUrl={diseaseSummaryUrl} mode="downloads" language={locale} />
         </section>
 
         <div class="border-t border-[rgb(var(--border))/0.72] pt-4">

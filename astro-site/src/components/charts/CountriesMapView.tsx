@@ -2,7 +2,7 @@
 // pulse only when a sub-national feed is available. Coordinates for countries
 // are derived from the bundled world GeoJSON and the MIT-licensed flag-icons
 // country catalogue, so the map does not depend on a third-party tile service.
-import { useSurveillanceSummary } from '../public/SurveillanceSummary';
+import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ChartResultActions from './ChartResultActions';
 import { pngFromCanvases } from './chartExport';

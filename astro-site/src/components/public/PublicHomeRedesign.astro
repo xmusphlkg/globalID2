@@ -6,7 +6,8 @@ import { localizedRegionName } from '../../utils/i18n';
 import SituationMetrics from '../situation/SituationMetrics';
 import diseasesRaw from '../../data/diseases/index.json';
 import reportsRaw from '../../data/reports/index.json';
-import SurveillanceSummary from './SurveillanceSummary';
+import SurveillanceHomeSummary from './SurveillanceHomeSummary';
+import HomeInfluenza from './HomeInfluenza';
 
 interface Props { locale?: 'en' | 'zh' | 'fr'; }
 
@@ -139,72 +140,17 @@ const latestReports = (reportsRaw as any[]).slice(0, 3);
 const preferredDiseases = ['covid-19', 'cholera', 'dengue', 'measles', 'malaria', 'tuberculosis', 'hepatitis-a', 'pertussis'];
 const diseaseIndex = new Map((diseasesRaw as any[]).map(disease => [disease.slug, disease]));
 const featuredDiseases = preferredDiseases.map(slug => diseaseIndex.get(slug)).filter(Boolean);
-const sampleValues = (values: number[], count: number) => {
-  if (!values.length) return Array.from({ length: count }, () => 0);
-  const max = Math.max(...values, 1);
-  return Array.from({ length: count }, (_, index) => {
-    const position = index * (values.length - 1) / Math.max(1, count - 1);
-    const left = Math.floor(position);
-    const right = Math.min(values.length - 1, Math.ceil(position));
-    const ratio = position - left;
-    return ((values[left] ?? 0) * (1 - ratio) + (values[right] ?? 0) * ratio) / max;
-  });
-};
-const makeCurvePoints = (values: number[], options: { baseline: number; amplitude: number }) => {
-  const max = Math.max(...values, 1);
-  const samples = values.map(value => value / max);
-  return samples.map((value, index) => {
-    const x = 42 + index * (1356 / Math.max(1, samples.length - 1));
-    const y = options.baseline - value * options.amplitude;
-    return `${x.toFixed(1)},${Math.max(468, Math.min(742, y)).toFixed(1)}`;
-  }).join(' ');
-};
-const makeBars = (primary: number[], secondary: number[], count = 72) => {
-  const a = sampleValues(primary, count);
-  const b = sampleValues(secondary, count);
-  const baseline = 760;
-  return a.map((value, index) => {
-    const mixed = value * .68 + (b[index] ?? 0) * .32;
-    const height = 26 + mixed * 198;
-    const x = 78 + index * (1284 / Math.max(1, count - 1));
-    return { x: x.toFixed(1), y: (baseline - height).toFixed(1), width: '10', height: height.toFixed(1), index };
-  });
-};
-// Decorative waves are template artwork, independent of live surveillance.
-const japanInfluenza = Array.from({ length: 96 }, (_, index) => 1 + Math.sin(index / 5) ** 2 + Math.cos(index / 11) ** 2);
-const chinaInfluenza = Array.from({ length: 96 }, (_, index) => 1 + Math.cos(index / 7) ** 2 + Math.sin(index / 13) ** 2);
-const backgroundCurves = [
-  { className: 'curve-line-a', points: makeCurvePoints(japanInfluenza, { baseline: 724, amplitude: 246 }) },
-  { className: 'curve-line-b', points: makeCurvePoints(chinaInfluenza, { baseline: 738, amplitude: 224 }) },
-];
-const backgroundBars = makeBars(japanInfluenza, chinaInfluenza);
 const explorePaths = [
-  { href: href('/countries/'), index: '01', title: t.countryPath, text: t.countryPathText, stat: '→', metric: t.jurisdictions },
-  { href: href('/diseases/'), index: '02', title: t.diseasePath, text: t.diseasePathText, stat: '→', metric: t.diseases },
-  { href: href('/downloads/'), index: '03', title: t.downloadPath, text: t.downloadPathText, stat: '→', metric: t.sources },
-  { href: href('/research/'), index: '04', title: t.researchPath, text: t.researchPathText, stat: `${latestReports.length}`, metric: t.analysis },
+  { href: href('/countries/'), index: '01', title: t.countryPath, text: t.countryPathText, stat: 'countries', metric: t.jurisdictions },
+  { href: href('/diseases/'), index: '02', title: t.diseasePath, text: t.diseasePathText, stat: 'diseases', metric: t.diseases },
+  { href: href('/downloads/'), index: '03', title: t.downloadPath, text: t.downloadPathText, stat: 'sources', metric: t.sources },
+  { href: href('/research/'), index: '04', title: t.researchPath, text: t.researchPathText, stat: `${reportsRaw.length}`, metric: t.analysis },
 ];
 ---
 
 <div class:list={['public-home-redesign', zh && 'is-zh']}>
   <section class="home-hero">
-    <div class="curve-field" aria-hidden="true">
-      <svg viewBox="0 0 1440 760" preserveAspectRatio="none">
-        <g class="curve-bars">
-          {backgroundBars.map(bar => (
-            <rect style={`--i:${bar.index}`} x={bar.x} y={bar.y} width={bar.width} height={bar.height} />
-          ))}
-        </g>
-        <g class="curve-lines">
-          {backgroundCurves.map(curve => (
-            <polyline class:list={['curve-line', curve.className]} pathLength="1" points={curve.points} />
-          ))}
-        </g>
-      </svg>
-      <p class="curve-annotation">
-        <b>{zh ? '监测数据探索' : fr ? 'Explorer les données' : 'Explore surveillance data'}</b>
-      </p>
-    </div>
+    <HomeInfluenza client:load language={locale} />
     <div class="page-wrap hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">{t.eyebrow}</p>
@@ -241,10 +187,10 @@ const explorePaths = [
           </div>
           <span class="release-pill"><i></i>{t.updated}</span>
         </header>
-        <SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="home-indicators" language={locale} />
+        <SurveillanceHomeSummary client:load dataUrl="/site-data/meta.json" mode="home-indicators" language={locale} reportCount={reportsRaw.length} />
         <div class="source-board">
           <h3>{t.recentBoard}</h3>
-          <SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="recent-countries" language={locale} />
+          <SurveillanceHomeSummary client:load dataUrl="/site-data/meta.json" mode="recent-countries" language={locale} />
         </div>
         <p class="source-note">{t.sourceNote}</p>
         <a class="text-link console-link" href={href('/about/')}>{t.methods} <span aria-hidden="true">-&gt;</span></a>
@@ -282,7 +228,7 @@ const explorePaths = [
           <a class="path-card" href={path.href}>
             <span class="path-index">{path.index}</span>
             <span class="path-copy"><strong>{path.title}</strong><small>{path.text}</small></span>
-            <span class="path-stat"><b>{path.stat}</b><small>{path.metric}</small></span>
+            <span class="path-stat"><b>{path.index === '04' ? path.stat : <SurveillanceHomeSummary client:visible dataUrl="/site-data/meta.json" mode="home-count" metric={path.stat as 'countries' | 'diseases' | 'sources'} language={locale} />}</b><small>{path.metric}</small></span>
           </a>
         ))}
       </div>
@@ -296,7 +242,7 @@ const explorePaths = [
           <h2>{t.countryList}</h2>
           <a href={href('/countries/')}>{t.viewAll}</a>
         </div>
-        <SurveillanceSummary client:visible dataUrl="/site-data/meta.json" mode="country-links" language={locale} />
+        <SurveillanceHomeSummary client:visible dataUrl="/site-data/meta.json" mode="country-links" language={locale} />
       </div>
       <div>
         <div class="subheading">

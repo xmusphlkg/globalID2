@@ -5,7 +5,7 @@ const hash = (value: string | Buffer) => createHash('sha256').update(value).dige
 function publication(version: number) {
   const day = version === 1 ? '2026-11-07' : '2026-11-08';
   const alert = { alert_id: 'situation-update', outbreak_id: 'OB-runtime', notice_id: 'notice-runtime', source_id: 'official', source_label_en: 'Official source', agency_en: null, title_en: 'Reviewed report', url: 'https://example.test/report', disease_id: 'D038', disease_slug: 'influenza', disease_label: 'Influenza', disease_name_en: 'Influenza', country_code: 'JP', country_name_en: 'Japan', admin_area: null, status: 'ongoing', cases: version * 17, deaths: 0, count_basis: 'confirmed', as_of: day, published_date: day, quote: `Situation release ${version}.`, summary_en: `Reviewed update ${version}.`, ai: null };
-  const week = { schema_version: 'gids.situation_alerts.v1', period_key: '2026-W45', new_outbreaks: ['OB-runtime'], updated_outbreaks: [], new_places: version, alerts: version };
+  const week = { schema_version: 'gids.situation_alerts.v1', period_key: '2026-W45', new_outbreaks: ['OB-runtime'], updated_outbreaks: [], new_places: version, alerts: version, outbreaks: [{ outbreak_id: 'OB-runtime', disease_id: 'D038', disease_name_en: 'Influenza', disease_label: 'Influenza', country_codes: ['JP'], first_published: day }] };
   const entries = {
     'map-data.json': { schema_version: 'gids.situation_alerts.v1', generated_at: day, as_of: day, points: [alert], monitoring: [], active_outbreaks: version, sources_ok: 1, source_count: 1 },
     'outbreaks/OB-runtime.json': { schema_version: 'gids.situation_alerts.v1', outbreak_id: 'OB-runtime', disease_id: 'D038', disease_label: 'Influenza', disease_name_en: 'Influenza', first_published: day, last_published: day, country_codes: ['JP'], alert_count: 1, notice_count: 1, source_ids: ['official'], status: 'active', as_of: day, alerts: [alert] },
@@ -63,7 +63,7 @@ test('country notices, homepage metrics and previously unbuilt weekly periods fo
   await expect(page.locator('.situation-strip')).toContainText('2026-11-08');
   await page.goto('/situation/weekly/?period=2026-W45');
   await expect(page.locator('[data-situation-version="situation-2"]')).toContainText('2 alerts');
-  await page.getByText('Outbreak details', { exact: false }).click();
+  await page.locator('main details summary').filter({ hasText: 'Influenza' }).click();
   await expect(page.locator('[data-situation-version="situation-2"]')).toContainText('Situation release 2.');
 });
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import calendar
 import json
+import math
 import os
 import shutil
 import time
@@ -157,6 +158,36 @@ def disease_summary(data: dict, *, generated_at: str, countries: dict[str, dict]
     }
 
 
+def home_influenza_series(data: dict) -> dict | None:
+    """At most 242 original points, retaining bucket extrema and missing values."""
+    series = (data.get("disease_series") or {}).get("D038")
+    if not series:
+        series = next((row for row in (data.get("disease_series") or {}).values()
+                       if row.get("slug") == "influenza"), None)
+    if not series:
+        return None
+    dates, values = series.get("dates") or [], series.get("cases") or []
+    size = min(len(dates), len(values))
+    if not size:
+        return None
+    valid = lambda index: isinstance(values[index], (int, float)) and not isinstance(values[index], bool) and math.isfinite(values[index]) and values[index] >= 0
+    selected = {0, size - 1}
+    width = max(1, math.ceil(size / 80))
+    for start in range(0, size, width):
+        indexes = list(range(start, min(size, start + width)))
+        observed = [index for index in indexes if valid(index)]
+        if observed:
+            selected.update((min(observed, key=lambda index: values[index]), max(observed, key=lambda index: values[index])))
+        missing = next((index for index in indexes if not valid(index)), None)
+        if missing is not None:
+            selected.add(missing)
+    indexes = sorted(selected)
+    return {"dates": [dates[index] for index in indexes],
+            "cases": [values[index] if valid(index) else None for index in indexes],
+            "date_range": {"start": dates[0], "end": dates[size - 1]},
+            "period_granularity": series.get("period_granularity")}
+
+
 def write_surveillance_artifacts(context: dict, state_dir: Path, public_dir: Path, *, downloads: dict | None = None) -> list[str]:
     """Write only surveillance state and browser inputs, returning logical names."""
     for root in (state_dir, public_dir):
@@ -191,6 +222,29 @@ def write_surveillance_artifacts(context: dict, state_dir: Path, public_dir: Pat
         elif not (public_dir / paths[1]).is_file():
             data = _read(state_dir / paths[0])
             write_compact_json(public_dir / paths[1], disease_summary(data, generated_at=context["generated_at"], countries=countries, download=disease_downloads.get(item["disease_id"])))
+    # Other country updates reuse this small immutable object without reading
+    # Japan/China histories again. The hero never downloads full country bundles.
+    hero_path = public_dir / "home-influenza.json"
+    exports = {item["code"].upper(): item for item in context["country_exports"]}
+    changed = {code for code, item in exports.items() if not item.get("unchanged_curve")}
+    changed.update(context.get("retired_country_codes") or [])
+    if not hero_path.exists() or changed.intersection({"JP", "CN"}):
+        previous = _read(hero_path).get("series", {}) if hero_path.exists() else {}
+        hero = {}
+        for code in ("JP", "CN"):
+            if code not in countries:
+                continue
+            if code not in changed and code in previous:
+                hero[code] = previous[code]
+                continue
+            path = state_dir / "countries" / f"{code.lower()}.json"
+            data = exports.get(code, {}).get("country_data")
+            if data is not None or path.exists():
+                series = home_influenza_series(data if data is not None else _read(path))
+                if series:
+                    hero[code] = series
+        write_compact_json(hero_path, {"schema_version": 1, "series": hero})
+    logical.append("home-influenza.json")
     meta = {
         "schema_version": 1,
         "dataset_kind": "surveillance",

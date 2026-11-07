@@ -1,0 +1,14 @@
+.home-summary .asset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin: 0; padding: .85rem 1rem; border-bottom: 1px solid rgb(var(--border)); }
+.home-summary .asset-grid > div { padding: .7rem; background: rgb(var(--bg-soft) / .58); border: 1px solid rgb(var(--border) / .74); }
+.home-summary .asset-grid dt { font-size: .7rem; }
+.home-summary .asset-grid dd { margin: 0; font-size: 1.5rem; color: rgb(var(--text-strong)); }
+.home-summary > p { margin: .6rem 1rem; font-size: .7rem; }
+.home-recent { display: grid; }
+.home-recent > a, .home-countries > a { display: flex; gap: .7rem; align-items: center; padding: .8rem 0; border-bottom: 1px solid rgb(var(--border)); color: rgb(var(--text-strong)); text-decoration: none; }
+.home-recent > a > span, .home-countries > a > span { min-width: 0; flex: 1; }
+.home-recent strong, .home-countries strong { font-size: .85rem; }
+.home-recent small, .home-countries small { display: block; margin-top: .2rem; color: rgb(var(--text-muted)); font-size: .7rem; }
+.home-recent time { font-size: .7rem; color: rgb(var(--text-muted)); }
+.home-countries { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.home-countries > a { border: 1px solid rgb(var(--border)); padding: 1rem; }
+@media (max-width: 600px) { .home-countries { grid-template-columns: 1fr; } .home-recent > a { flex-wrap: wrap; } }

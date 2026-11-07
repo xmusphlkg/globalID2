@@ -48,6 +48,19 @@ async def _export(state_dir: Path, public_dir: Path, *, release_id: str) -> dict
         "sources_ok": sum(row["status"] == "ok" for row in sources["sources"]),
         "source_count": len(sources["sources"]),
     })
+    # Names and grouping belong in a small week payload; complete outbreak
+    # timelines remain lazy. A new week needs no template build.
+    outbreaks = {row["outbreak_id"]: row for row in mapping["outbreaks"]}
+    for path in (public_dir / "weekly").glob("*.json"):
+        if path.name == "index.json":
+            continue
+        week = read(str(path.relative_to(public_dir)))
+        ids = dict.fromkeys([*week.get("new_outbreaks", []), *week.get("updated_outbreaks", [])])
+        week["outbreaks"] = [{key: outbreaks[oid].get(key) for key in (
+            "outbreak_id", "disease_id", "disease_slug", "disease_label", "disease_name_en",
+            "disease_name_zh", "first_published", "country_codes",
+        )} for oid in ids if oid in outbreaks]
+        _write(path, week)
     logical = ["map.json", "map-data.json", "monitoring.json", "sources.json"]
     logical.extend(str(path.relative_to(public_dir)) for folder in
         ("outbreaks", "by-country", "by-disease", "weekly") for path in (public_dir / folder).glob("*.json"))
