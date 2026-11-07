@@ -173,3 +173,43 @@ keeps backlog counts and ages visible. It suppresses pending/retry age alarms
 caused by the pause while continuing to check HTTP, integrity, running/queued
 tasks and failed releases. Invalid Situation scopes are retained as blocked;
 only the global `*` marker belongs to its JSON snapshot contract.
+
+### Integration validation (2026-11-07)
+
+Implementation commit `59182f9` was pushed to `development` and loaded into the
+API, scheduler, worker and production dashboard. Backend integration checks
+passed 349 tests; the full dashboard suite passed 110 tests, TypeScript and the
+production build passed, and eight isolated desktop/mobile browser checks
+passed. OpenAPI regeneration produced no drift.
+
+Production API and dashboard-proxy checks returned HTTP 200 for the new
+overview, pending scopes and history, as well as the existing release summary.
+Both automatic channels remained enabled and unpaused, their publishable
+backlogs were zero, and the Ireland 15 blocked markers remained visible. The
+Surveillance baseline stayed valid at projection version `6cc7a566…`; this
+integration did not require a full data export. Verification artifacts are in
+`data/cache/build-verification/20261107-realtime-control-panel/`.
+
+The authenticated production browser also passed on desktop (1440 px) and
+mobile (393 px), using real API responses: both manifest versions and sampled
+integrity, Ireland's disabled-country reason, Situation history, completed JSON
+task details and the original publish center's realtime link. There were no
+page exceptions, failed API responses or document-width overflow. Validation
+performed only reads and session login; it did not publish, retry or change
+pause state. Viewport screenshots and the report are in `production-browser/`
+under the verification directory.
+
+The permanent browser fixture is `dashboard/playwright.realtime.config.ts`.
+It requires an isolated production dashboard on loopback port 3112 and
+intercepts every API call, including mutations. Build the dashboard, then start
+the isolated server in a separate terminal from the repository root:
+
+```bash
+GLOBALID_DASHBOARD_HOST=127.0.0.1 GLOBALID_DASHBOARD_PORT=3112 \
+  GLOBALID_DASHBOARD_RELEASES_RETAIN=0 API_PROXY_TARGET=http://127.0.0.1:1 \
+  DASHBOARD_PANEL_PASSWORD= DASHBOARD_API_KEY= scripts/run_dashboard_web_service.sh
+```
+
+Run `npx playwright test --config=playwright.realtime.config.ts` from
+`dashboard/`, then stop that test server. The configuration rejects nonlocal
+targets and does not start or reuse the production service on port 3000.
