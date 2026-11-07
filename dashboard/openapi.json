@@ -4555,6 +4555,81 @@
         "title": "DataResponse[PendingOut]",
         "type": "object"
       },
+      "DataResponse_RealtimeActionOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RealtimeActionOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[RealtimeActionOut]",
+        "type": "object"
+      },
+      "DataResponse_RealtimeControlOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RealtimeControlOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[RealtimeControlOut]",
+        "type": "object"
+      },
+      "DataResponse_RealtimeOverviewOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RealtimeOverviewOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[RealtimeOverviewOut]",
+        "type": "object"
+      },
+      "DataResponse_RealtimePendingPageOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RealtimePendingPageOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[RealtimePendingPageOut]",
+        "type": "object"
+      },
+      "DataResponse_RealtimeRunPageOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RealtimeRunPageOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[RealtimeRunPageOut]",
+        "type": "object"
+      },
       "DataResponse_RunOut_": {
         "properties": {
           "data": {
@@ -9038,12 +9113,22 @@
             "title": "Situation",
             "type": "boolean"
           },
+          "situation_json_enabled": {
+            "default": false,
+            "title": "Situation Json Enabled",
+            "type": "boolean"
+          },
           "surveillance": {
             "items": {
               "type": "string"
             },
             "title": "Surveillance",
             "type": "array"
+          },
+          "surveillance_json_enabled": {
+            "default": false,
+            "title": "Surveillance Json Enabled",
+            "type": "boolean"
           }
         },
         "required": [
@@ -9653,6 +9738,7 @@
         "type": "object"
       },
       "PublishRunCreate": {
+        "additionalProperties": false,
         "properties": {
           "code_only": {
             "default": false,
@@ -9734,6 +9820,1110 @@
           }
         },
         "title": "QualityStats",
+        "type": "object"
+      },
+      "RealtimeActionCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          }
+        },
+        "title": "RealtimeActionCreate",
+        "type": "object"
+      },
+      "RealtimeActionOut": {
+        "properties": {
+          "channel": {
+            "enum": [
+              "surveillance",
+              "situation"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Href"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Uuid"
+          }
+        },
+        "required": [
+          "channel",
+          "status"
+        ],
+        "title": "RealtimeActionOut",
+        "type": "object"
+      },
+      "RealtimeBacklogGroupsOut": {
+        "properties": {
+          "blocked": {
+            "$ref": "#/components/schemas/RealtimeBacklogOut"
+          },
+          "publishable": {
+            "$ref": "#/components/schemas/RealtimeBacklogOut"
+          },
+          "total": {
+            "$ref": "#/components/schemas/RealtimeBacklogOut"
+          }
+        },
+        "required": [
+          "total",
+          "publishable",
+          "blocked"
+        ],
+        "title": "RealtimeBacklogGroupsOut",
+        "type": "object"
+      },
+      "RealtimeBacklogOut": {
+        "properties": {
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "expanded_country_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expanded Country Count"
+          },
+          "oldest_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Age Seconds"
+          },
+          "oldest_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest At"
+          },
+          "scope_count": {
+            "default": 0,
+            "title": "Scope Count",
+            "type": "integer"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "title": "RealtimeBacklogOut",
+        "type": "object"
+      },
+      "RealtimeChannelOverviewOut": {
+        "properties": {
+          "backlog": {
+            "$ref": "#/components/schemas/RealtimeBacklogGroupsOut"
+          },
+          "channel": {
+            "enum": [
+              "surveillance",
+              "situation"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "control_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Error Code"
+          },
+          "control_updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Updated At"
+          },
+          "current_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RealtimeRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "effective_enabled": {
+            "title": "Effective Enabled",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "failed_last_24h": {
+            "default": 0,
+            "title": "Failed Last 24H",
+            "type": "integer"
+          },
+          "latest_failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RealtimeRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_success": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RealtimeRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/RealtimeManifestOut"
+          },
+          "manual_enabled": {
+            "title": "Manual Enabled",
+            "type": "boolean"
+          },
+          "monitor": {
+            "$ref": "#/components/schemas/RealtimeMonitorOut"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "queue": {
+            "$ref": "#/components/schemas/RealtimeQueueOut"
+          }
+        },
+        "required": [
+          "channel",
+          "enabled",
+          "paused",
+          "effective_enabled",
+          "manual_enabled",
+          "backlog",
+          "queue",
+          "manifest",
+          "monitor"
+        ],
+        "title": "RealtimeChannelOverviewOut",
+        "type": "object"
+      },
+      "RealtimeContinuationOut": {
+        "properties": {
+          "remaining_count": {
+            "default": 0,
+            "title": "Remaining Count",
+            "type": "integer"
+          },
+          "status": {
+            "default": "none",
+            "enum": [
+              "none",
+              "pending",
+              "queued",
+              "exhausted",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Uuid"
+          }
+        },
+        "title": "RealtimeContinuationOut",
+        "type": "object"
+      },
+      "RealtimeControlOut": {
+        "properties": {
+          "channel": {
+            "enum": [
+              "surveillance",
+              "situation"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "effective_enabled": {
+            "title": "Effective Enabled",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "channel",
+          "enabled",
+          "paused",
+          "effective_enabled"
+        ],
+        "title": "RealtimeControlOut",
+        "type": "object"
+      },
+      "RealtimeControlPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "paused"
+        ],
+        "title": "RealtimeControlPatch",
+        "type": "object"
+      },
+      "RealtimeIndependenceOut": {
+        "properties": {
+          "message": {
+            "default": "Realtime actions publish only JSON. Static HTML has its own release workflow. Pausing automatic publication keeps existing tasks and manual actions available.",
+            "title": "Message",
+            "type": "string"
+          },
+          "static_site_separate": {
+            "const": true,
+            "default": true,
+            "title": "Static Site Separate",
+            "type": "boolean"
+          }
+        },
+        "title": "RealtimeIndependenceOut",
+        "type": "object"
+      },
+      "RealtimeManifestOut": {
+        "properties": {
+          "available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "release_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Id"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "stale": {
+            "default": true,
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "title": "RealtimeManifestOut",
+        "type": "object"
+      },
+      "RealtimeMonitorIssueOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "warning",
+              "critical"
+            ],
+            "title": "Level",
+            "type": "string"
+          }
+        },
+        "required": [
+          "level",
+          "code"
+        ],
+        "title": "RealtimeMonitorIssueOut",
+        "type": "object"
+      },
+      "RealtimeMonitorOut": {
+        "properties": {
+          "age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Seconds"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "http_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Http Status"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/RealtimeMonitorIssueOut"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "sample_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Verified"
+          },
+          "stale": {
+            "default": true,
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "default": "unknown",
+            "enum": [
+              "ok",
+              "warning",
+              "critical",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "RealtimeMonitorOut",
+        "type": "object"
+      },
+      "RealtimeOverviewOut": {
+        "properties": {
+          "channels": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RealtimeChannelOverviewOut"
+            },
+            "propertyNames": {
+              "enum": [
+                "surveillance",
+                "situation"
+              ]
+            },
+            "title": "Channels",
+            "type": "object"
+          },
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "independence": {
+            "$ref": "#/components/schemas/RealtimeIndependenceOut"
+          }
+        },
+        "required": [
+          "checked_at",
+          "channels"
+        ],
+        "title": "RealtimeOverviewOut",
+        "type": "object"
+      },
+      "RealtimePendingOut": {
+        "properties": {
+          "affected_country_count": {
+            "default": 0,
+            "title": "Affected Country Count",
+            "type": "integer"
+          },
+          "age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Seconds"
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "inactive_country",
+                  "disabled_country",
+                  "unknown_country",
+                  "invalid_scope"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "channel": {
+            "enum": [
+              "surveillance",
+              "situation"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "disease_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Disease Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "marked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marked At"
+          },
+          "precise": {
+            "default": false,
+            "title": "Precise",
+            "type": "boolean"
+          },
+          "publishable": {
+            "title": "Publishable",
+            "type": "boolean"
+          },
+          "scope_key": {
+            "title": "Scope Key",
+            "type": "string"
+          },
+          "source_task_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Task Uuid"
+          }
+        },
+        "required": [
+          "id",
+          "channel",
+          "scope_key",
+          "publishable"
+        ],
+        "title": "RealtimePendingOut",
+        "type": "object"
+      },
+      "RealtimePendingPageOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RealtimePendingOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "total_pages": {
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total",
+          "total_pages"
+        ],
+        "title": "RealtimePendingPageOut",
+        "type": "object"
+      },
+      "RealtimeProblemOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "field_errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Errors"
+          },
+          "href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Href"
+          },
+          "instance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          },
+          "task_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Uuid"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "default": "about:blank",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "status",
+          "detail",
+          "code"
+        ],
+        "title": "RealtimeProblemOut",
+        "type": "object"
+      },
+      "RealtimeQueueOut": {
+        "properties": {
+          "pending": {
+            "default": 0,
+            "title": "Pending",
+            "type": "integer"
+          },
+          "queued": {
+            "default": 0,
+            "title": "Queued",
+            "type": "integer"
+          },
+          "retrying": {
+            "default": 0,
+            "title": "Retrying",
+            "type": "integer"
+          },
+          "running": {
+            "default": 0,
+            "title": "Running",
+            "type": "integer"
+          }
+        },
+        "title": "RealtimeQueueOut",
+        "type": "object"
+      },
+      "RealtimeRetryOut": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "permanent",
+                  "transient_external",
+                  "preflight",
+                  "non_external_stage",
+                  "unclassified_external",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "exhausted": {
+            "default": false,
+            "title": "Exhausted",
+            "type": "boolean"
+          },
+          "max_attempts": {
+            "default": 0,
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "scheduled_attempts": {
+            "default": 0,
+            "title": "Scheduled Attempts",
+            "type": "integer"
+          },
+          "status": {
+            "default": "none",
+            "enum": [
+              "none",
+              "not_scheduled",
+              "scheduled",
+              "queued",
+              "terminal",
+              "succeeded",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "RealtimeRetryOut",
+        "type": "object"
+      },
+      "RealtimeRunOut": {
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "continuation": {
+            "$ref": "#/components/schemas/RealtimeContinuationOut"
+          },
+          "country_count": {
+            "default": 0,
+            "title": "Country Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "href": {
+            "title": "Href",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "manifest_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Sha256"
+          },
+          "progress": {
+            "default": 0,
+            "title": "Progress",
+            "type": "integer"
+          },
+          "release_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Id"
+          },
+          "release_timing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RealtimeTimingOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retry": {
+            "$ref": "#/components/schemas/RealtimeRetryOut"
+          },
+          "selected_change_count": {
+            "default": 0,
+            "title": "Selected Change Count",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "queued",
+              "running",
+              "retrying",
+              "completed",
+              "failed",
+              "cancelled",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_uuid": {
+            "title": "Task Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_uuid",
+          "status",
+          "href"
+        ],
+        "title": "RealtimeRunOut",
+        "type": "object"
+      },
+      "RealtimeRunPageOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RealtimeRunOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "total_pages": {
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total",
+          "total_pages"
+        ],
+        "title": "RealtimeRunPageOut",
+        "type": "object"
+      },
+      "RealtimeTimingOut": {
+        "properties": {
+          "elapsed_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Seconds"
+          },
+          "export_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Seconds"
+          },
+          "publish_and_ack_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publish And Ack Seconds"
+          }
+        },
+        "title": "RealtimeTimingOut",
         "type": "object"
       },
       "RecentTaskOut": {
@@ -12305,6 +13495,26 @@
             "title": "Progress",
             "type": "integer"
           },
+          "publication_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "static",
+                  "surveillance_json",
+                  "situation_json",
+                  "unknown_json",
+                  "reports",
+                  "code",
+                  "raw_archive"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Kind"
+          },
           "report_id": {
             "anyOf": [
               {
@@ -12545,6 +13755,26 @@
             "default": 0,
             "title": "Progress",
             "type": "integer"
+          },
+          "publication_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "static",
+                  "surveillance_json",
+                  "situation_json",
+                  "unknown_json",
+                  "reports",
+                  "code",
+                  "raw_archive"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publication Kind"
           },
           "report_id": {
             "anyOf": [
@@ -21986,6 +23216,672 @@
         "summary": "Pending",
         "tags": [
           "Publish"
+        ]
+      }
+    },
+    "/api/v1/publish/realtime/overview": {
+      "get": {
+        "operationId": "overview_api_v1_publish_realtime_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RealtimeOverviewOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "Realtime Publishing"
+        ]
+      }
+    },
+    "/api/v1/publish/realtime/{channel}/control": {
+      "patch": {
+        "operationId": "control_api_v1_publish_realtime__channel__control_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "enum": [
+                "surveillance",
+                "situation"
+              ],
+              "title": "Channel",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RealtimeControlPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RealtimeControlOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Control",
+        "tags": [
+          "Realtime Publishing"
+        ]
+      }
+    },
+    "/api/v1/publish/realtime/{channel}/pending": {
+      "get": {
+        "operationId": "pending_api_v1_publish_realtime__channel__pending_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "enum": [
+                "surveillance",
+                "situation"
+              ],
+              "title": "Channel",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "eligibility",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "publishable",
+                "blocked"
+              ],
+              "title": "Eligibility",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RealtimePendingPageOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Pending",
+        "tags": [
+          "Realtime Publishing"
+        ]
+      }
+    },
+    "/api/v1/publish/realtime/{channel}/retry": {
+      "post": {
+        "operationId": "retry_api_v1_publish_realtime__channel__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "enum": [
+                "surveillance",
+                "situation"
+              ],
+              "title": "Channel",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RealtimeActionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RealtimeActionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealtimeProblemOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Retry",
+        "tags": [
+          "Realtime Publishing"
+        ]
+      }
+    },
+    "/api/v1/publish/realtime/{channel}/runs": {
+      "get": {
+        "operationId": "runs_api_v1_publish_realtime__channel__runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "enum": [
+                "surveillance",
+                "situation"
+              ],
+              "title": "Channel",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RealtimeRunPageOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Runs",
+        "tags": [
+          "Realtime Publishing"
+        ]
+      },
+      "post": {
+        "operationId": "start_api_v1_publish_realtime__channel__runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "enum": [
+                "surveillance",
+                "situation"
+              ],
+              "title": "Channel",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RealtimeActionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RealtimeActionOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealtimeProblemOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "Realtime Publishing"
         ]
       }
     },

@@ -29,6 +29,7 @@ import { t, type LangKey } from "@/lib/i18n";
 import { formatDateTime } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 import { scopedTaskTypes, taskTypesByScope, taskBelongsToScope, taskScopeHref, type TaskScope } from "@/features/operations/task-scope";
+import { publicationKindLabel } from "@/features/operations/publication-kind";
 
 const statusOptions = ["pending", "queued", "running", "retrying", "completed", "failed", "cancelled"];
 
@@ -138,6 +139,7 @@ export default function TasksPage({ scope = "collection" }: { scope?: TaskScope 
   );
   const { data: taskDetail, isFetching: detailLoading } = useTaskDetail(selectedUuid);
   const detailInScope = !taskDetail || taskBelongsToScope(taskDetail.task_type, scope) || (scope === "ai" && searchParams.get("historical") === "1" && !["export_data", ...taskTypesByScope.collection].includes(taskDetail.task_type));
+  const detailTask = selectedTask ?? (detailInScope ? taskDetail : undefined);
 
   const statusChartData = useMemo(() => {
     const rows = new Map<string, number>();
@@ -194,7 +196,7 @@ export default function TasksPage({ scope = "collection" }: { scope?: TaskScope 
         header: lang === "zh" ? "类型" : "Type",
         render: (task) => (
           <span className="whitespace-nowrap font-mono text-xs text-tremor-content dark:text-dark-tremor-content">
-            {taskLabel(lang, task.task_type)}
+            {publicationKindLabel(task.publication_kind, lang) ?? taskLabel(lang, task.task_type)}
           </span>
         ),
       },
@@ -477,13 +479,14 @@ export default function TasksPage({ scope = "collection" }: { scope?: TaskScope 
 
       <DetailDrawer
         open={Boolean(selectedUuid)}
-        title={selectedTask?.task_name ?? (lang === "zh" ? "任务详情" : "Task Detail")}
+        title={detailTask?.task_name ?? (lang === "zh" ? "任务详情" : "Task Detail")}
         subtitle={
-          selectedTask ? (
+          detailTask ? (
             <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <StatusBadge status={selectedTask.status}>{taskLabel(lang, selectedTask.status)}</StatusBadge>
-              <span className="break-all font-mono text-xs">{selectedTask.task_uuid}</span>
-              <span>{formatDateTime(selectedTask.created_at)}</span>
+              <StatusBadge status={detailTask.status}>{taskLabel(lang, detailTask.status)}</StatusBadge>
+              {detailTask.publication_kind && <span className="text-xs">{publicationKindLabel(detailTask.publication_kind, lang)}</span>}
+              <span className="break-all font-mono text-xs">{detailTask.task_uuid}</span>
+              <span>{formatDateTime(detailTask.created_at)}</span>
             </span>
           ) : null
         }

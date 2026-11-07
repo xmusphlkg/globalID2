@@ -125,3 +125,51 @@ release workflow, not to this monitor.
 
 The monitor never publishes, acknowledges changes, retries jobs or sends
 messages. Those actions remain explicit release operations.
+
+## Control panel
+
+Open **Publish → Realtime data** (`/publish/realtime`) for the independent
+Surveillance and Situation channels. Each channel shows its deployment gate,
+automatic scheduling state, publishable and blocked backlog, active task,
+latest successful release, recent failures, automatic retry and continuation.
+Manifest version, SHA-256, HTTP status and sampled integrity come from the
+one-minute monitor receipt. The panel displays its sampling time and marks a
+receipt older than 180 seconds as stale; refreshing the panel reads current
+queue state without launching additional Cloudflare probes.
+
+The control-plane API uses the existing dashboard authentication and
+`{ "data": ... }` response envelope:
+
+| Method | Path under `/api/v1` | Purpose |
+| --- | --- | --- |
+| GET | `/publish/realtime/overview` | Both channels, queue and monitor overview |
+| GET | `/publish/realtime/{channel}/pending` | Paginated pending markers and blocking reasons |
+| GET | `/publish/realtime/{channel}/runs` | Paginated JSON-only task history |
+| POST | `/publish/realtime/{channel}/runs` | Queue a bounded manual JSON publication |
+| POST | `/publish/realtime/{channel}/retry` | Select pending changes for a fresh manual retry |
+| PATCH | `/publish/realtime/{channel}/control` | Persist `{ "paused": true/false }` for automatic scheduling |
+
+`channel` is `surveillance` or `situation`. Manual publication and retry use the
+existing transactional queue, conflict reservations and exact marker selection.
+An empty or blocked backlog does not become a full rebuild. An existing retry
+reservation remains visible rather than being silently replaced. Task links
+open the shared release task detail at `/publish/tasks?detail=...`.
+
+Pausing stops new automatic enqueue, retry activation and continuation; it
+does not cancel queued/running tasks or prevent an explicit manual JSON run.
+Resume lets the normal scheduler reconcile retained markers. The environment
+deployment gates remain read-only: the panel cannot enable an uninitialized
+JSON channel. Static templates and report releases retain their own controls.
+
+Pause state is stored atomically with process locking in
+`data/realtime-publishing-control.json`, mode `0600`, and is read by the API,
+scheduler and worker across restarts. It is absent until the first operator
+change. An unreadable or malformed state pauses automatic scheduling and raises
+a control-state error; an explicit update recovers the selected channel while
+keeping the other channel paused. Include this file in operational backups.
+
+The monitor reports an intentional pause as `automatic_publication_paused` and
+keeps backlog counts and ages visible. It suppresses pending/retry age alarms
+caused by the pause while continuing to check HTTP, integrity, running/queued
+tasks and failed releases. Invalid Situation scopes are retained as blocked;
+only the global `*` marker belongs to its JSON snapshot contract.

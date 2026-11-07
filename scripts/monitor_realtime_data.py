@@ -22,6 +22,7 @@ with redirect_stderr(io.StringIO()):
     from sqlalchemy import text
     from src.core.config import get_config
     from src.core.database import dispose_database, get_engine, get_session_maker
+    from src.services.data_release.channel_control import get_realtime_controls
     from src.services.data_release.realtime_monitor import (
         CHANNELS, LEVEL, MonitorThresholds, assemble_report, collect_database_snapshot,
         probe_public_manifest, report_text, validate_public_url,
@@ -80,7 +81,7 @@ async def check_once(args, thresholds, *, client, database_reader=database_snaps
         timeout_seconds=args.timeout_seconds, object_limit_bytes=args.object_limit_bytes) for channel in channels))
     (database, error), *public = results
     return assemble_report(database, dict(zip(channels, public)), now=now,
-        thresholds=thresholds, database_error=error)
+        thresholds=thresholds, database_error=error, controls=get_realtime_controls())
 
 
 def archive_report(directory: Path, report: dict) -> None:

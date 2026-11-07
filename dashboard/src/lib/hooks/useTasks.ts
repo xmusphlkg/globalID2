@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, eventStreamUrl } from "@/lib/api";
+import type { PublicationKind } from "@/features/operations/publication-kind";
 
 export interface TaskItem {
   id: number;
   task_uuid: string;
   task_name: string;
   task_type: string;
+  publication_kind?: PublicationKind | null;
   status: string;
   priority: string;
   progress: number;

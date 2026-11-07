@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.collection import PublishDirty
+from src.core.config import get_config
 from src.services.data_release_service import data_release_service
 
 from ..deps import get_db
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/publish")
 
 @router.get("/pending", response_model=DataResponse[PendingOut])
 async def pending(db: AsyncSession = DB_DEPENDENCY):
+    config = get_config().data_release
     rows = (
         await db.execute(
             select(PublishDirty.line, PublishDirty.scope_key)
@@ -36,6 +38,8 @@ async def pending(db: AsyncSession = DB_DEPENDENCY):
             literature=bool(groups["literature"]),
             situation=bool(groups["situation"]),
             knowledge=groups["knowledge"],
+            surveillance_json_enabled=bool(config.surveillance_json_enabled),
+            situation_json_enabled=bool(config.situation_json_enabled),
         )
     )
 

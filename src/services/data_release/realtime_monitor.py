@@ -101,7 +101,9 @@ def classify_pending(groups, country_rows, *, channel: str, now: datetime) -> di
         blocked = [row for index, row in enumerate(groups, 1) if index not in selected]
         expanded_countries = len(plan["country_codes"])
     else:
-        accepted, blocked, expanded_countries = list(groups), [], 0
+        accepted = [row for row in groups if row[0] == "*"]
+        blocked = [row for row in groups if row[0] != "*"]
+        expanded_countries = 0
     blocked_summary = summarize(blocked)
     blocked_summary["scopes"] = [row[0] if re.fullmatch(r"[A-Z0-9-]{1,64}", row[0]) else "<invalid-scope>" for row in blocked[:100]]
     blocked_summary["scopes_truncated"] = len(blocked) > 100
@@ -228,19 +230,25 @@ async def probe_public_manifest(client, url: str, *, timeout_seconds: float = 10
 
 
 def evaluate_channel(database: dict | None, public: dict, *, now: datetime,
-                     thresholds: MonitorThresholds) -> dict:
+                     thresholds: MonitorThresholds, control: dict | None = None) -> dict:
     issues = []
     def issue(level, code):
         issues.append({"level": level, "code": code})
     def timed(seconds, warning, critical, code):
         if seconds is not None and seconds >= warning:
             issue("critical" if seconds >= critical else "warning", code)
+    paused = bool(control and control.get("paused"))
+    if control and control.get("error_code"):
+        issue("critical", control["error_code"])
+    elif paused:
+        issue("warning", "automatic_publication_paused")
     if database is None:
         issue("critical", "database_unavailable")
     else:
         pending = database["publishable_pending"]
-        timed(pending["oldest_age_seconds"], thresholds.pending_warning_seconds,
-            thresholds.pending_critical_seconds, "pending_changes_delayed")
+        if not paused:
+            timed(pending["oldest_age_seconds"], thresholds.pending_warning_seconds,
+                thresholds.pending_critical_seconds, "pending_changes_delayed")
         if database["blocked_pending"]["count"]:
             issue("warning", "pending_scopes_blocked")
         for task in database["active"]:
@@ -253,7 +261,7 @@ def evaluate_channel(database: dict | None, public: dict, *, now: datetime,
             elif task["status"] == "retrying":
                 if task["next_attempt_at"] is None:
                     issue("critical", "retry_schedule_missing")
-                else:
+                elif not paused:
                     timed(age(task["next_attempt_at"], now), thresholds.pending_warning_seconds,
                         thresholds.pending_critical_seconds, "retry_overdue")
         if database["active_sample_truncated"]:
@@ -279,13 +287,18 @@ def evaluate_channel(database: dict | None, public: dict, *, now: datetime,
                     issue("critical" if expected["age_seconds"] > thresholds.publication_grace_seconds else "warning",
                         "public_completed_version_mismatch")
     status = max((item["level"] for item in issues), key=LEVEL.get, default="ok")
-    return {"status": status, "issues": issues, "database": database, "public": public}
+    result = {"status": status, "issues": issues, "database": database, "public": public}
+    if control is not None:
+        result["control"] = control
+    return result
 
 
 def assemble_report(database: dict | None, public: dict, *, now: datetime,
-                    thresholds: MonitorThresholds, database_error: str | None = None) -> dict:
+                    thresholds: MonitorThresholds, database_error: str | None = None,
+                    controls: dict | None = None) -> dict:
     channels = {name: evaluate_channel(database.get(name) if database is not None else None,
-        payload, now=now, thresholds=thresholds) for name, payload in public.items()}
+        payload, now=now, thresholds=thresholds,
+        control=controls.get(name) if controls is not None else None) for name, payload in public.items()}
     report = {"schema_version": 1, "service": "realtime-data", "checked_at": iso(now),
         "status": max((value["status"] for value in channels.values()), key=LEVEL.get, default="ok"),
         "channels": channels}

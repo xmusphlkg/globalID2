@@ -4,6 +4,11 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Added
+
+- The control panel has a realtime publication workspace for Surveillance and Situation, with separate queue/backlog views, version and integrity receipts, task history, manual JSON publication and fresh retries. The site release center and shared task list identify JSON channels separately from template and report publication.
+- Automatic JSON publication can be paused per channel with durable cross-process state. Scheduler reconciliation, retries and continuation respect the pause; existing tasks and explicit manual runs remain available. Monitoring shows intentional pauses without treating their pending/retry age as an outage, while retaining integrity and execution alarms.
+
 ## [0.18.0] - 2026-11-07
 
 ### Added

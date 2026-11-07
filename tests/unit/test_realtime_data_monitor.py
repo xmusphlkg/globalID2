@@ -48,6 +48,48 @@ def test_idle_old_data_and_recovered_failures_do_not_alert():
     assert evaluate()["status"] == "ok"
 
 
+def test_intentional_pause_reports_backlog_without_false_automatic_delay_alerts():
+    db = db_state()
+    db["publishable_pending"].update(count=7, oldest_age_seconds=3600)
+    db["queue"]["retrying"] = 1
+    db["active"] = [{"status": "retrying", "task_uuid": "retry",
+        "next_attempt_at": (NOW - timedelta(hours=1)).isoformat()}]
+    result = evaluate_channel(db, public_state(), now=NOW, thresholds=MonitorThresholds(),
+        control={"paused": True, "updated_at": NOW.isoformat(), "error_code": None})
+    assert codes(result) == {"automatic_publication_paused": "warning"}
+    assert result["database"]["publishable_pending"]["count"] == 7
+
+
+@pytest.mark.parametrize("fault", ["public", "running", "control"])
+def test_pause_never_hides_integrity_running_or_control_failures(fault):
+    db, public = db_state(), public_state()
+    control = {"paused": True, "updated_at": None, "error_code": None}
+    if fault == "public":
+        public.update(manifest_sha256="b" * 64)
+    elif fault == "running":
+        db["active"] = [{"status": "running", "age_seconds": 3600, "task_uuid": "run"}]
+    else:
+        control["error_code"] = "control_state_invalid"
+    result = evaluate_channel(db, public, now=NOW, thresholds=MonitorThresholds(), control=control)
+    assert result["status"] == "critical"
+
+
+def test_report_applies_control_to_only_its_channel():
+    report = assemble_report({line: db_state() for line in ("surveillance", "situation")},
+        {line: public_state() for line in ("surveillance", "situation")},
+        now=NOW, thresholds=MonitorThresholds(), controls={"situation": {"paused": True}})
+    assert report["channels"]["situation"]["status"] == "warning"
+    assert report["channels"]["surveillance"]["status"] == "ok"
+
+
+def test_situation_monitor_matches_global_snapshot_selection_contract():
+    groups = [("*", 2, NOW, 0), ("legacy-source", 3, NOW, 0)]
+    result = classify_pending(groups, [], channel="situation", now=NOW)
+    assert result["pending"]["count"] == 5
+    assert result["publishable_pending"]["count"] == 2
+    assert result["blocked_pending"]["count"] == 3
+
+
 @pytest.mark.parametrize("seconds,expected", [(119, "ok"), (120, "warning"), (599, "warning"), (600, "critical")])
 def test_pending_age_thresholds(seconds, expected):
     db = db_state()

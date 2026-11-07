@@ -30,6 +30,7 @@ from src.domain.report import Report, ReportStatus
 from src.domain.collection import PublishDirty
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
+from src.services.data_release.channel_control import is_automatic_json_paused
 from src.services.data_release.public_changelog import (
     missing_public_changelog_versions,
     public_changelog_blocker,
@@ -102,7 +103,16 @@ def _release_conflict_clause(input_data: dict[str, Any]):
     if input_data.get("raw_archive_only"):
         return archive
     if input_data.get("data_only"):
-        return and_(~archive, or_(data, ~static_safe))
+        conflict = and_(~archive, or_(data, ~static_safe))
+        other = "surveillance" if _data_line(input_data) == "situation" else "situation"
+        if is_automatic_json_paused(other):
+            other_line = (Task.input_data["data_line"].as_string().is_distinct_from("situation")
+                          if other == "surveillance" else
+                          (Task.input_data["data_line"].as_string() == "situation").is_(True))
+            # A parked retry owns its own candidate, not the other channel's
+            # output directory. Queued/running work keeps the shared JSON slot.
+            conflict = and_(conflict, ~and_(Task.status == TaskStatus.RETRYING, data, other_line))
+        return conflict
     if input_data.get("reports_only") or input_data.get("code_only"):
         return and_(~archive, ~data)
     if input_data.get("content_only") or input_data.get("situation_detached"):
@@ -656,7 +666,10 @@ class DataReleaseService:
 
             for task in retrying:
                 input_data = dict(task.input_data or {})
-                if input_data.get("data_only") and not _data_enabled(self._config(), input_data):
+                if input_data.get("data_only") and (
+                    not _data_enabled(self._config(), input_data)
+                    or is_automatic_json_paused(_data_line(input_data))
+                ):
                     continue
                 metadata = dict(task.metadata_ or {})
                 retry = dict(metadata.get("automatic_retry") or {})
@@ -782,6 +795,9 @@ class DataReleaseService:
             if data_only:
                 # The JSON channel has its own queue/retry state. A poll must
                 # not postpone or overwrite the static job's daily schedule.
+                if not manual and is_automatic_json_paused(_data_line({"data_line": data_line})):
+                    return {"job_id": job_id, "status": "skipped", "task_uuid": None,
+                            "reason": "json_channel_paused"}
                 return await self._enqueue_release_task(
                     job, manual=manual, trigger=trigger,
                     trigger_task_uuid=trigger_task_uuid, data_only=True, data_line=data_line,
@@ -924,7 +940,10 @@ class DataReleaseService:
             return
         data = dict(parent.input_data or {})
         metadata = dict(parent.metadata_ or {})
-        if data.get("data_only") and not _data_enabled(self._config(), data):
+        if data.get("data_only") and (
+            not _data_enabled(self._config(), data)
+            or is_automatic_json_paused(_data_line(data))
+        ):
             return
         if any(data.get(flag) for flag in ("raw_archive_only", "reports_only", "code_only")):
             return
@@ -1056,6 +1075,8 @@ class DataReleaseService:
         """Recover committed dirty markers independently of site schedules."""
         if not _data_enabled(self._config(), {"data_line": line}):
             return
+        if is_automatic_json_paused(line):
+            return
         jobs = [job for job in await self.load_jobs() if job.enabled]
         if not jobs:
             return
@@ -1072,6 +1093,8 @@ class DataReleaseService:
         """Alternate ready channels so a country backlog cannot starve Situation."""
         other = "situation" if line == "surveillance" else "surveillance"
         if not _data_enabled(self._config(), {"data_line": other}):
+            return False
+        if is_automatic_json_paused(other):
             return False
         async with get_database() as db:
             waiting = list((await db.execute(select(PublishDirty).where(
@@ -1204,6 +1227,10 @@ class DataReleaseService:
             selection_query = select(PublishDirty).where(PublishDirty.published_at.is_(None))
             if data_only:
                 selection_query = selection_query.where(PublishDirty.line == data_line)
+                if data_line == "situation":
+                    # The Situation exporter attests one global snapshot. Keep
+                    # malformed/legacy scopes visible for operator review.
+                    selection_query = selection_query.where(PublishDirty.scope_key == "*")
             else:
                 if content_only:
                     selection_query = selection_query.where(PublishDirty.line != "surveillance")

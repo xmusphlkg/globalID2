@@ -96,6 +96,34 @@ async def enqueue(maker, service, *, full=False):
         ).scalar_one()
 
 
+@pytest.mark.parametrize("has_global", [False, True])
+async def test_situation_json_leaves_non_global_markers_for_operator_review(release_db, has_global):
+    maker, service, _ = release_db
+    async with maker() as session:
+        invalid = PublishDirty(line="situation", scope_key="legacy-source",
+            source_task_uuid="source", marked_at=datetime.now(timezone.utc))
+        valid = PublishDirty(line="situation", scope_key="*",
+            source_task_uuid="source", marked_at=datetime.now(timezone.utc))
+        session.add(invalid)
+        if has_global:
+            session.add(valid)
+        await session.commit()
+        invalid_id, valid_id = invalid.id, valid.id
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site Release"),
+        manual=False, trigger="upstream_completion", trigger_task_uuid=None,
+        data_only=True, data_line="situation")
+    if has_global:
+        async with maker() as session:
+            task = (await session.execute(select(Task).where(
+                Task.task_uuid == result["task_uuid"])) ).scalar_one()
+            assert task.input_data["publish_dirty_ids"] == [valid_id]
+    else:
+        assert result["reason"] == "no_publishable_changes"
+    async with maker() as session:
+        assert (await session.get(PublishDirty, invalid_id)).published_at is None
+
+
 @pytest.mark.parametrize("json_enabled,expected_lines", [
     (False, {"surveillance", "literature", "situation"}),
     (True, {"literature", "situation"}),

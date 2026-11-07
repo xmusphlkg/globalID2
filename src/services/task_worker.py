@@ -24,6 +24,7 @@ from src.core.config import get_config
 from src.domain import Task, TaskPriority, TaskStatus, TaskType
 from src.services.task_executor import execute_task, recover_interrupted_tasks_on_startup
 from src.services._lifecycle import safe_exception_summary
+from src.services.data_release.channel_control import is_automatic_json_paused
 from src.control_plane.events import control_plane_events
 from src.control_plane.runtime import runtime_registry
 from src.core.task_manager import task_manager
@@ -342,7 +343,7 @@ async def _claim_next_task_uuid(
                 select(Task.task_uuid, Task.task_type, nonexclusive_export.label("nonexclusive"),
                        raw_archive_only.label("raw_archive_only"), data_only.label("data_only"),
                        legacy_site.label("legacy_site"), situation_legacy_site.label("situation_legacy"),
-                       Task.input_data["data_line"].as_string().label("data_line")).where(
+                       Task.input_data["data_line"].as_string().label("data_line"), Task.status).where(
                     or_(
                         Task.status == TaskStatus.RUNNING,
                         and_(Task.status == TaskStatus.RETRYING, ~raw_archive_only),
@@ -351,7 +352,7 @@ async def _claim_next_task_uuid(
             )
         ).all()
         active_task_types = [
-            task_type for task_uuid, task_type, is_nonexclusive, _is_archive, _is_data, _is_legacy, _is_situation_legacy, _data_line in active_tasks
+            task_type for task_uuid, task_type, is_nonexclusive, _is_archive, _is_data, _is_legacy, _is_situation_legacy, _data_line, _status in active_tasks
             if not (task_type == TaskType.EXPORT_DATA and is_nonexclusive)
             and not (
                 task_type in COLLECTION_STORE_TASK_TYPES
@@ -396,22 +397,35 @@ async def _claim_next_task_uuid(
                 allowed = or_(allowed, and_(Task.task_type == TaskType.EXPORT_DATA, reports_only))
             query = query.where(allowed)
         if any(task_type == TaskType.EXPORT_DATA and is_archive
-               for _uuid, task_type, _nonexclusive, is_archive, _is_data, _is_legacy, _is_situation_legacy, _data_line in active_tasks):
+               for _uuid, task_type, _nonexclusive, is_archive, _is_data, _is_legacy, _is_situation_legacy, _data_line, _status in active_tasks):
             query = query.where(~raw_archive_only)
         active_data = [(line or "surveillance") for _uuid, task_type, _nonexclusive,
-            _is_archive, is_data, _is_legacy, _is_situation_legacy, line in active_tasks
+            _is_archive, is_data, _is_legacy, _is_situation_legacy, line, _status in active_tasks
             if task_type == TaskType.EXPORT_DATA and is_data]
         if active_data:
-            query = query.where(~data_only)
+            slot_owned = any(task_type == TaskType.EXPORT_DATA and is_data and
+                (status != TaskStatus.RETRYING or (line or "surveillance") not in {"surveillance", "situation"}
+                 or not is_automatic_json_paused(line or "surveillance"))
+                for _uuid, task_type, _nonexclusive, _is_archive, is_data, _is_legacy,
+                    _is_situation_legacy, line, status in active_tasks)
+            if slot_owned:
+                query = query.where(~data_only)
+            else:
+                # A paused, parked retry still reserves its own channel. It
+                # must not prevent the other JSON feed from using the slot.
+                if "surveillance" in active_data:
+                    query = query.where(~surveillance_data)
+                if "situation" in active_data:
+                    query = query.where(~situation_data)
             if "surveillance" in active_data:
                 query = query.where(~legacy_site)
             if "situation" in active_data:
                 query = query.where(~situation_legacy_site)
         if any(task_type == TaskType.EXPORT_DATA and is_legacy
-               for _uuid, task_type, _nonexclusive, _is_archive, _is_data, is_legacy, _is_situation_legacy, _line in active_tasks):
+               for _uuid, task_type, _nonexclusive, _is_archive, _is_data, is_legacy, _is_situation_legacy, _line, _status in active_tasks):
             query = query.where(~surveillance_data)
         if any(task_type == TaskType.EXPORT_DATA and is_situation_legacy
-               for _uuid, task_type, _nonexclusive, _is_archive, _is_data, _is_legacy, is_situation_legacy, _line in active_tasks):
+               for _uuid, task_type, _nonexclusive, _is_archive, _is_data, _is_legacy, is_situation_legacy, _line, _status in active_tasks):
             query = query.where(~situation_data)
         candidates = list((await db.execute(query)).scalars().all())
         if not candidates:

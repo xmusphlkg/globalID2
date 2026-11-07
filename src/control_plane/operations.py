@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.ai.task_progress import task_type_name
 from src.control_plane.ai_task_trace import progress_for_task, stage_counts, trace_for_task, work_counts
 from src.control_plane.events import control_plane_events
+from src.control_plane.publication_kind import publication_kind
 from src.control_plane.runtime import runtime_registry
 from src.core.source_scopes import canonicalize_task_source, validate_iceland_crawl_options
 from src.core.task_manager import task_manager
@@ -60,6 +61,7 @@ def _task_projection(
         "task_uuid": task.task_uuid,
         "task_name": task.task_name,
         "task_type": task.task_type,
+        "publication_kind": publication_kind(task.task_type, task.input_data),
         "status": task.status,
         "priority": task.priority,
         "progress": task.progress or 0,

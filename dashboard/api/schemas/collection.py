@@ -71,6 +71,8 @@ class LineOut(BaseModel):
 
 
 class PublishRunCreate(BaseModel):
+    model_config = {"extra": "forbid"}
+
     job_id: str = "site-release"
     full: bool = False
     reports_only: bool = False
@@ -82,3 +84,5 @@ class PendingOut(BaseModel):
     literature: bool
     situation: bool
     knowledge: list[str]
+    surveillance_json_enabled: bool = False
+    situation_json_enabled: bool = False

@@ -1291,6 +1291,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/publish/realtime/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_api_v1_publish_realtime_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/publish/realtime/{channel}/control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Control */
+        patch: operations["control_api_v1_publish_realtime__channel__control_patch"];
+        trace?: never;
+    };
+    "/api/v1/publish/realtime/{channel}/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pending */
+        get: operations["pending_api_v1_publish_realtime__channel__pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/publish/realtime/{channel}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry */
+        post: operations["retry_api_v1_publish_realtime__channel__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/publish/realtime/{channel}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Runs */
+        get: operations["runs_api_v1_publish_realtime__channel__runs_get"];
+        put?: never;
+        /** Start */
+        post: operations["start_api_v1_publish_realtime__channel__runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/publish/runs": {
         parameters: {
             query?: never;
@@ -4184,6 +4270,31 @@ export interface components {
             data: components["schemas"]["PendingOut"];
             meta?: components["schemas"]["ResponseMeta"];
         };
+        /** DataResponse[RealtimeActionOut] */
+        DataResponse_RealtimeActionOut_: {
+            data: components["schemas"]["RealtimeActionOut"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        /** DataResponse[RealtimeControlOut] */
+        DataResponse_RealtimeControlOut_: {
+            data: components["schemas"]["RealtimeControlOut"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        /** DataResponse[RealtimeOverviewOut] */
+        DataResponse_RealtimeOverviewOut_: {
+            data: components["schemas"]["RealtimeOverviewOut"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        /** DataResponse[RealtimePendingPageOut] */
+        DataResponse_RealtimePendingPageOut_: {
+            data: components["schemas"]["RealtimePendingPageOut"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        /** DataResponse[RealtimeRunPageOut] */
+        DataResponse_RealtimeRunPageOut_: {
+            data: components["schemas"]["RealtimeRunPageOut"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
         /** DataResponse[RunOut] */
         DataResponse_RunOut_: {
             data: components["schemas"]["RunOut"];
@@ -5705,8 +5816,18 @@ export interface components {
             literature: boolean;
             /** Situation */
             situation: boolean;
+            /**
+             * Situation Json Enabled
+             * @default false
+             */
+            situation_json_enabled: boolean;
             /** Surveillance */
             surveillance: string[];
+            /**
+             * Surveillance Json Enabled
+             * @default false
+             */
+            surveillance_json_enabled: boolean;
         };
         /** PipelineStageOut */
         PipelineStageOut: {
@@ -5998,6 +6119,399 @@ export interface components {
              * @default 0
              */
             zero_deaths_pct: number;
+        };
+        /** RealtimeActionCreate */
+        RealtimeActionCreate: {
+            /** Job Id */
+            job_id?: string | null;
+        };
+        /** RealtimeActionOut */
+        RealtimeActionOut: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "surveillance" | "situation";
+            /** Href */
+            href?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "skipped";
+            /** Task Uuid */
+            task_uuid?: string | null;
+        };
+        /** RealtimeBacklogGroupsOut */
+        RealtimeBacklogGroupsOut: {
+            blocked: components["schemas"]["RealtimeBacklogOut"];
+            publishable: components["schemas"]["RealtimeBacklogOut"];
+            total: components["schemas"]["RealtimeBacklogOut"];
+        };
+        /** RealtimeBacklogOut */
+        RealtimeBacklogOut: {
+            /**
+             * Count
+             * @default 0
+             */
+            count: number;
+            /** Expanded Country Count */
+            expanded_country_count?: number | null;
+            /** Oldest Age Seconds */
+            oldest_age_seconds?: number | null;
+            /** Oldest At */
+            oldest_at?: string | null;
+            /**
+             * Scope Count
+             * @default 0
+             */
+            scope_count: number;
+            /** Scopes */
+            scopes?: string[];
+        };
+        /** RealtimeChannelOverviewOut */
+        RealtimeChannelOverviewOut: {
+            backlog: components["schemas"]["RealtimeBacklogGroupsOut"];
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "surveillance" | "situation";
+            /** Control Error Code */
+            control_error_code?: string | null;
+            /** Control Updated At */
+            control_updated_at?: string | null;
+            current_run?: components["schemas"]["RealtimeRunOut"] | null;
+            /** Effective Enabled */
+            effective_enabled: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Failed Last 24H
+             * @default 0
+             */
+            failed_last_24h: number;
+            latest_failure?: components["schemas"]["RealtimeRunOut"] | null;
+            latest_success?: components["schemas"]["RealtimeRunOut"] | null;
+            manifest: components["schemas"]["RealtimeManifestOut"];
+            /** Manual Enabled */
+            manual_enabled: boolean;
+            monitor: components["schemas"]["RealtimeMonitorOut"];
+            /** Paused */
+            paused: boolean;
+            queue: components["schemas"]["RealtimeQueueOut"];
+        };
+        /** RealtimeContinuationOut */
+        RealtimeContinuationOut: {
+            /**
+             * Remaining Count
+             * @default 0
+             */
+            remaining_count: number;
+            /**
+             * Status
+             * @default none
+             * @enum {string}
+             */
+            status: "none" | "pending" | "queued" | "exhausted" | "unknown";
+            /** Task Uuid */
+            task_uuid?: string | null;
+        };
+        /** RealtimeControlOut */
+        RealtimeControlOut: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "surveillance" | "situation";
+            /** Effective Enabled */
+            effective_enabled: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Error Code */
+            error_code?: string | null;
+            /** Paused */
+            paused: boolean;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /** RealtimeControlPatch */
+        RealtimeControlPatch: {
+            /** Paused */
+            paused: boolean;
+        };
+        /** RealtimeIndependenceOut */
+        RealtimeIndependenceOut: {
+            /**
+             * Message
+             * @default Realtime actions publish only JSON. Static HTML has its own release workflow. Pausing automatic publication keeps existing tasks and manual actions available.
+             */
+            message: string;
+            /**
+             * Static Site Separate
+             * @default true
+             * @constant
+             */
+            static_site_separate: true;
+        };
+        /** RealtimeManifestOut */
+        RealtimeManifestOut: {
+            /** Available */
+            available?: boolean | null;
+            /** Generated At */
+            generated_at?: string | null;
+            /** Observed At */
+            observed_at?: string | null;
+            /** Release Id */
+            release_id?: string | null;
+            /** Sha256 */
+            sha256?: string | null;
+            /**
+             * Stale
+             * @default true
+             */
+            stale: boolean;
+        };
+        /** RealtimeMonitorIssueOut */
+        RealtimeMonitorIssueOut: {
+            /** Code */
+            code: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "warning" | "critical";
+        };
+        /** RealtimeMonitorOut */
+        RealtimeMonitorOut: {
+            /** Age Seconds */
+            age_seconds?: number | null;
+            /** Checked At */
+            checked_at?: string | null;
+            /** Http Status */
+            http_status?: number | null;
+            /** Issues */
+            issues?: components["schemas"]["RealtimeMonitorIssueOut"][];
+            /** Sample Verified */
+            sample_verified?: boolean | null;
+            /**
+             * Stale
+             * @default true
+             */
+            stale: boolean;
+            /**
+             * Status
+             * @default unknown
+             * @enum {string}
+             */
+            status: "ok" | "warning" | "critical" | "unknown";
+        };
+        /** RealtimeOverviewOut */
+        RealtimeOverviewOut: {
+            /** Channels */
+            channels: {
+                [key: string]: components["schemas"]["RealtimeChannelOverviewOut"];
+            };
+            /** Checked At */
+            checked_at: string;
+            independence?: components["schemas"]["RealtimeIndependenceOut"];
+        };
+        /** RealtimePendingOut */
+        RealtimePendingOut: {
+            /**
+             * Affected Country Count
+             * @default 0
+             */
+            affected_country_count: number;
+            /** Age Seconds */
+            age_seconds?: number | null;
+            /** Blocked Reason */
+            blocked_reason?: ("inactive_country" | "disabled_country" | "unknown_country" | "invalid_scope") | null;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "surveillance" | "situation";
+            /** Disease Ids */
+            disease_ids?: string[];
+            /** Id */
+            id: number;
+            /** Marked At */
+            marked_at?: string | null;
+            /**
+             * Precise
+             * @default false
+             */
+            precise: boolean;
+            /** Publishable */
+            publishable: boolean;
+            /** Scope Key */
+            scope_key: string;
+            /** Source Task Uuid */
+            source_task_uuid?: string | null;
+        };
+        /** RealtimePendingPageOut */
+        RealtimePendingPageOut: {
+            /** Items */
+            items: components["schemas"]["RealtimePendingOut"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Total Pages */
+            total_pages: number;
+        };
+        /** RealtimeProblemOut */
+        RealtimeProblemOut: {
+            /** Code */
+            code: string;
+            /** Detail */
+            detail: string;
+            /** Field Errors */
+            field_errors?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Href */
+            href?: string | null;
+            /** Instance */
+            instance?: string | null;
+            /** Request Id */
+            request_id?: string | null;
+            /** Status */
+            status: number;
+            /** Task Uuid */
+            task_uuid?: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @default about:blank
+             */
+            type: string;
+        };
+        /** RealtimeQueueOut */
+        RealtimeQueueOut: {
+            /**
+             * Pending
+             * @default 0
+             */
+            pending: number;
+            /**
+             * Queued
+             * @default 0
+             */
+            queued: number;
+            /**
+             * Retrying
+             * @default 0
+             */
+            retrying: number;
+            /**
+             * Running
+             * @default 0
+             */
+            running: number;
+        };
+        /** RealtimeRetryOut */
+        RealtimeRetryOut: {
+            /** Category */
+            category?: ("permanent" | "transient_external" | "preflight" | "non_external_stage" | "unclassified_external" | "unknown") | null;
+            /**
+             * Exhausted
+             * @default false
+             */
+            exhausted: boolean;
+            /**
+             * Max Attempts
+             * @default 0
+             */
+            max_attempts: number;
+            /** Next Attempt At */
+            next_attempt_at?: string | null;
+            /**
+             * Retryable
+             * @default false
+             */
+            retryable: boolean;
+            /**
+             * Scheduled Attempts
+             * @default 0
+             */
+            scheduled_attempts: number;
+            /**
+             * Status
+             * @default none
+             * @enum {string}
+             */
+            status: "none" | "not_scheduled" | "scheduled" | "queued" | "terminal" | "succeeded" | "unknown";
+        };
+        /** RealtimeRunOut */
+        RealtimeRunOut: {
+            /** Completed At */
+            completed_at?: string | null;
+            continuation?: components["schemas"]["RealtimeContinuationOut"];
+            /**
+             * Country Count
+             * @default 0
+             */
+            country_count: number;
+            /** Created At */
+            created_at?: string | null;
+            /** Href */
+            href: string;
+            /** Job Id */
+            job_id?: string | null;
+            /** Manifest Sha256 */
+            manifest_sha256?: string | null;
+            /**
+             * Progress
+             * @default 0
+             */
+            progress: number;
+            /** Release Id */
+            release_id?: string | null;
+            release_timing?: components["schemas"]["RealtimeTimingOut"] | null;
+            retry?: components["schemas"]["RealtimeRetryOut"];
+            /**
+             * Selected Change Count
+             * @default 0
+             */
+            selected_change_count: number;
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "queued" | "running" | "retrying" | "completed" | "failed" | "cancelled" | "unknown";
+            /** Task Uuid */
+            task_uuid: string;
+        };
+        /** RealtimeRunPageOut */
+        RealtimeRunPageOut: {
+            /** Items */
+            items: components["schemas"]["RealtimeRunOut"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Total Pages */
+            total_pages: number;
+        };
+        /** RealtimeTimingOut */
+        RealtimeTimingOut: {
+            /** Elapsed Seconds */
+            elapsed_seconds?: number | null;
+            /** Export Seconds */
+            export_seconds?: number | null;
+            /** Publish And Ack Seconds */
+            publish_and_ack_seconds?: number | null;
         };
         /** RecentTaskOut */
         RecentTaskOut: {
@@ -6959,6 +7473,8 @@ export interface components {
              * @default 0
              */
             progress: number;
+            /** Publication Kind */
+            publication_kind?: ("static" | "surveillance_json" | "situation_json" | "unknown_json" | "reports" | "code" | "raw_archive") | null;
             /** Report Id */
             report_id?: number | null;
             /** Started At */
@@ -7043,6 +7559,8 @@ export interface components {
              * @default 0
              */
             progress: number;
+            /** Publication Kind */
+            publication_kind?: ("static" | "surveillance_json" | "situation_json" | "unknown_json" | "reports" | "code" | "raw_archive") | null;
             /** Report Id */
             report_id?: number | null;
             /** Started At */
@@ -13513,6 +14031,480 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    overview_api_v1_publish_realtime_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_RealtimeOverviewOut_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    control_api_v1_publish_realtime__channel__control_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channel: "surveillance" | "situation";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RealtimeControlPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_RealtimeControlOut_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    pending_api_v1_publish_realtime__channel__pending_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                eligibility?: "all" | "publishable" | "blocked";
+            };
+            header?: never;
+            path: {
+                channel: "surveillance" | "situation";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_RealtimePendingPageOut_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    retry_api_v1_publish_realtime__channel__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channel: "surveillance" | "situation";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RealtimeActionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_RealtimeActionOut_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealtimeProblemOut"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    runs_api_v1_publish_realtime__channel__runs_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                status?: string | null;
+            };
+            header?: never;
+            path: {
+                channel: "surveillance" | "situation";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_RealtimeRunPageOut_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    start_api_v1_publish_realtime__channel__runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channel: "surveillance" | "situation";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RealtimeActionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_RealtimeActionOut_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealtimeProblemOut"];
                 };
             };
             /** @description Problem detail */
