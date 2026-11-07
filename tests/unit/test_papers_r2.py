@@ -8,7 +8,7 @@ from typing import Self
 
 import pytest
 
-from src.services.data_release import papers_r2
+from src.services.data_release import papers_bundle, papers_r2
 from src.services.data_release.papers_bundle import split_papers_bundle
 from src.services.data_release.papers_r2 import (
     R2PapersConfig,
@@ -16,6 +16,14 @@ from src.services.data_release.papers_r2 import (
     derive_r2_credentials_from_api_token,
     publish_papers_site,
 )
+
+
+@pytest.fixture(autouse=True)
+def enable_cards_for_publisher_scenarios(monkeypatch):
+    # Existing publisher integrity scenarios include PNGs. Disabled-mode
+    # coverage below explicitly overrides the production-default-off switch.
+    monkeypatch.setattr(papers_bundle, "research_social_cards_enabled", lambda: True)
+    monkeypatch.setattr(papers_r2, "research_social_cards_enabled", lambda: True)
 
 
 class _FakeResponse:
@@ -130,6 +138,28 @@ def test_incremental_papers_publish_uploads_then_skips_unchanged(tmp_path: Path)
     assert second.uploaded == 0
     assert second.unchanged >= 2
     assert second.removed == 0
+
+
+@pytest.mark.parametrize("already_uploaded", [False, True])
+def test_disabled_cards_skip_legacy_upload_and_preserve_existing_remote_cards(tmp_path, monkeypatch, already_uploaded):
+    papers = _seed_papers(tmp_path)
+    config = R2PapersConfig(account_id="acct", bucket="papers", access_key_id="key", secret_access_key="secret")
+    client = FakeR2()
+    if already_uploaded:
+        publish_papers_site(papers, config, client=client, verify_public=False)
+    monkeypatch.setattr(papers_r2, "research_social_cards_enabled", lambda: False)
+    # Even missing/corrupt old local card files are not read for publication.
+    (papers / "research/cards/slug.png").unlink()
+    result = publish_papers_site(papers, config, client=client, verify_public=False)
+    assert result.removed == 0
+    assert client.objects.get("research/cards/slug.png") == (b"png-bytes" if already_uploaded else None)
+    manifest = json.loads(client.objects["papers-manifest.json"])
+    assert manifest["article_social_cards_enabled"] is False
+    assert any(item["key"] == "research/cards/slug.png" for item in manifest["files"]) is already_uploaded
+    assert manifest["file_count"] == len(manifest["files"])
+    repeat = publish_papers_site(papers, config, client=client, verify_public=False)
+    assert repeat.uploaded == 0
+    assert repeat.removed == 0
 
 
 def test_papers_publish_removes_orphans_and_verifies_sample(tmp_path: Path) -> None:

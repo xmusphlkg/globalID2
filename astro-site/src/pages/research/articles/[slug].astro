@@ -8,6 +8,7 @@ import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/rese
 import { buildAlternatePaths, clampSeoDescription, clampSeoTitle, normalizeDiseaseHref } from '../../../lib/seo';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/diseaseNames';
 import { localizedRegionName, translateUi } from '../../../utils/i18n';
+import { researchSocialImage } from '../../../lib/research-publishing';
 
 export function getStaticPaths() {
   const plan = process.env.GIDS_RESEARCH_BUILD_PLAN
@@ -172,7 +173,7 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
     canonicalPath,
     alternatePaths: buildAlternatePaths(canonicalPath, locale),
     pageType: 'MedicalWebPage',
-    image: `/research/cards/${article.slug}.png`,
+    image: researchSocialImage(article.slug),
     noindex: !isIndexableEvidencePage,
     datePublished: article.published_at,
     dateModified: article.updated_at,

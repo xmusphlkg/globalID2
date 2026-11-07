@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from src.services.data_release import papers_bundle
 from src.services.data_release.papers_bundle import (
     assert_pages_budget,
     evaluate_pages_budget,
@@ -12,6 +13,11 @@ from src.services.data_release.papers_bundle import (
     rewrite_papers_html,
     split_papers_bundle,
 )
+
+
+@pytest.fixture(autouse=True)
+def enable_cards_for_bundle_scenarios(monkeypatch):
+    monkeypatch.setattr(papers_bundle, "research_social_cards_enabled", lambda: True)
 
 
 def test_papers_path_classification() -> None:
@@ -23,6 +29,22 @@ def test_papers_path_classification() -> None:
     assert not is_papers_relative_path("research/index.html")
     assert not is_papers_relative_path("site-data/countries/us.json")
     assert not is_papers_relative_path("_astro/BaseLayout.css")
+
+
+def test_disabled_cards_are_removed_from_legacy_build_and_staging(tmp_path, monkeypatch):
+    monkeypatch.setattr(papers_bundle, "research_social_cards_enabled", lambda: False)
+    dist, papers = tmp_path / "dist", tmp_path / "papers"
+    for root in (dist, papers):
+        (root / "research/cards").mkdir(parents=True)
+        (root / "research/cards/old.png").write_bytes(b"old-card")
+    (dist / "research/articles/paper").mkdir(parents=True)
+    (dist / "research/articles/paper/index.html").write_text('<meta property="og:image" content="https://globalinfectiousdisease.com/og-default.png">')
+    split_papers_bundle(dist, papers_dir=papers)
+    assert not (dist / "research/cards/old.png").exists()
+    assert not (papers / "research/cards/old.png").exists()
+    manifest = json.loads((papers / "papers-manifest.json").read_text())
+    assert all(not item["key"].startswith("research/cards/") for item in manifest["files"])
+    assert (papers / "research/articles/paper/index.html").exists()
 
 
 def test_papers_copy_transitive_assets_and_retain_previous_generation(tmp_path: Path) -> None:

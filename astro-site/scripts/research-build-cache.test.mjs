@@ -8,6 +8,12 @@ import { articlePaths, finalizeResearchSnapshot, mergeAstroAssetTree, planResear
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 
+test('disabled article cards are absent from generated and restored bundles', () => {
+  assert.equal(articlePaths('paper', true).some(path => path.startsWith('research/cards/')), false);
+  assert.equal(articlePaths('paper', true, true).includes('research/cards/paper.png'), true);
+  assert.equal(articlePaths('paper', false, true).some(path => path.startsWith('research/cards/')), false);
+});
+
 test('incremental finalization preserves unchanged cache files and repairs missing or changed bundles', t => {
   const root = mkdtempSync(join(tmpdir(), 'gids-finalize-reuse-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));

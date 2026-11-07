@@ -3,6 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameS
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileHash, fileFingerprints, gitSourceIdentities, sourceIdentity } from './file-fingerprints.mjs';
 import { createSourceDependencyFingerprinter } from './source-dependencies.mjs';
+import researchPublishing from '../../shared/research-publishing.json' with { type: 'json' };
 
 export const siteRoot = resolve(import.meta.dirname, '..');
 export const projectRoot = resolve(siteRoot, '..');
@@ -81,6 +82,7 @@ export function sharedFingerprint() {
     resolve(siteRoot, 'scripts', 'file-fingerprints.mjs'),
     resolve(siteRoot, 'scripts', 'source-dependencies.mjs'),
     resolve(siteRoot, 'scripts', 'public-build-inputs.mjs'),
+    resolve(projectRoot, 'shared', 'research-publishing.json'),
   ].filter(existsSync).sort();
   const digest = createHash('sha256');
   const identities = gitSourceIdentities(projectRoot);
@@ -100,13 +102,13 @@ export function sharedFingerprint() {
   return digest.digest('hex');
 }
 
-export function articlePaths(slug, indexable) {
+export function articlePaths(slug, indexable, socialCardsEnabled = researchPublishing.article_social_cards_enabled === true) {
   const paths = [
     `research/articles/${slug}/index.html`,
     `fr/research/articles/${slug}/index.html`,
     `zh/research/articles/${slug}/index.html`,
   ];
-  if (indexable) paths.push(`research/cards/${slug}.png`);
+  if (indexable && socialCardsEnabled) paths.push(`research/cards/${slug}.png`);
   return paths;
 }
 

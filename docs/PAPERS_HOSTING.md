@@ -33,6 +33,18 @@ for the object-key layout, publication, and cadence-based generation.
 
 ## Configuration
 
+Per-article sharing cards are temporarily disabled in
+`shared/research-publishing.json` (`article_social_cards_enabled: false`). Article
+pages use the main site's single `og-default.png` instead. The shared switch
+controls PNG generation, incremental build paths, bundle splitting and the R2
+upload boundary, including older staged bundles. It is included in build cache
+fingerprints so the next build replaces cached article metadata.
+
+Disabling cards does not delete existing R2 cards: prior manifest entries are
+retained for cached-page compatibility, without uploading their bodies again.
+Existing storage usage therefore does not immediately fall. Set the shared
+value to `true` and rebuild/publish to restore per-article cards.
+
 ```text
 DATA_RELEASE__PAGES_FILE_BUDGET=20000
 DATA_RELEASE__PAGES_FILE_WARN=18000

@@ -4,10 +4,12 @@ import { resolve } from 'node:path';
 import sharp from 'sharp';
 import researchRoutes from '../../../data/research/routes.json';
 import { renderResearchSocialCardSvg } from '../../../lib/research-social-card';
+import { researchSocialCardsEnabled } from '../../../lib/research-publishing';
 
 export const prerender = true;
 
 export function getStaticPaths() {
+  if (!researchSocialCardsEnabled) return [];
   const plan = process.env.GIDS_RESEARCH_BUILD_PLAN
     ? new Set(JSON.parse(readFileSync(process.env.GIDS_RESEARCH_BUILD_PLAN, 'utf8')).selected as string[])
     : null;
@@ -17,6 +19,7 @@ export function getStaticPaths() {
 }
 
 export const GET: APIRoute = async ({ props }) => {
+  if (!researchSocialCardsEnabled) return new Response(null, { status: 404 });
   const article: any = JSON.parse(readFileSync(resolve(`./src/data/research/articles/${props.slug}.json`), 'utf-8'));
   const svg = renderResearchSocialCardSvg({
     title: article.title,

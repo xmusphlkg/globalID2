@@ -37,7 +37,9 @@ def test_node_receipt_reuses_only_matching_strong_identity(tmp_path):
 
 
 @pytest.mark.parametrize('kind,relative', [('papers', 'research/cards/test.png'), ('reports', 'site-data/reports/test.json')])
-def test_partitions_preserve_identical_non_html_files(tmp_path, kind, relative):
+def test_partitions_preserve_identical_non_html_files(tmp_path, kind, relative, monkeypatch):
+    if kind == 'papers':
+        monkeypatch.setattr('src.services.data_release.papers_bundle.research_social_cards_enabled', lambda: True)
     source, target = tmp_path / 'dist', tmp_path / 'bundle'
     path = source / relative
     path.parent.mkdir(parents=True)

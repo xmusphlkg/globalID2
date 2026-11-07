@@ -14,11 +14,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .bundle_assets import copy_bundle_assets
 from .artifact_index import ArtifactIndex
-from .build_fingerprints import BuildFingerprints
 from .artifact_paths import artifact_files, relative_key
+from .build_fingerprints import BuildFingerprints
+from .bundle_assets import copy_bundle_assets
 from .bundle_html_workers import rewrite_changed_pages
+from .research_publishing import is_research_card, research_social_cards_enabled
 
 DEFAULT_MAIN_SITE_ORIGIN = "https://globalinfectiousdisease.com"
 DEFAULT_PAPERS_ORIGIN = "https://papers.globalinfectiousdisease.com"
@@ -380,8 +381,14 @@ def split_papers_bundle(
     pending_html = []
 
     moved: list[str] = []
+    cards_enabled = research_social_cards_enabled()
     for relative, path in artifact_files(dist_dir):
         if not is_papers_relative_path(relative):
+            continue
+        if not cards_enabled and is_research_card(relative):
+            # A reused/legacy build may still contain card PNGs. They belong
+            # in neither the Pages output nor the next R2 upload bundle.
+            path.unlink()
             continue
         destination = papers_dir / relative
         expected.add(destination)

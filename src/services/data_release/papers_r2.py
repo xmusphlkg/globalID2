@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
-import hashlib
+import fcntl
 import gzip
+import hashlib
 import hmac
-import json
 import io
+import json
 import re
 import time
-from contextlib import contextmanager
-from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
-import fcntl
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,8 +25,9 @@ from xml.etree import ElementTree
 
 import httpx
 
-from .papers_bundle import DEFAULT_PAPERS_ORIGIN, build_papers_manifest
 from .artifact_index import ArtifactIndex
+from .papers_bundle import DEFAULT_PAPERS_ORIGIN, build_papers_manifest
+from .research_publishing import is_research_card, research_social_cards_enabled
 
 MANIFEST_KEY = "papers-manifest.json"
 # Cloudflare R2 occasionally drops TLS mid-PUT on large incremental syncs.
@@ -626,6 +627,21 @@ def _publish_papers_site(
     local_files = [
         item for item in local_manifest.get("files") or [] if isinstance(item, dict)
     ]
+    cards_disabled = manifest_key == MANIFEST_KEY and not research_social_cards_enabled()
+    if cards_disabled:
+        # Enforce the switch even for bundles built before it was disabled.
+        local_files = [item for item in local_files if not is_research_card(str(item.get("key", "")))]
+        # Disabling new cards is not a request to delete existing R2 objects.
+        # Keep their manifest ownership and cached-page compatibility without
+        # reading their bodies or uploading them again.
+        retained_cards = [item for key, item in remote_by_key.items() if is_research_card(key)]
+        published_files = sorted([*local_files, *retained_cards], key=lambda item: str(item.get("key", "")))
+        local_manifest = {
+            **local_manifest,
+            "files": published_files,
+            "file_count": len(published_files),
+            "article_social_cards_enabled": False,
+        }
     local_by_key = {str(item["key"]): item for item in local_files if "key" in item}
 
     if not local_by_key:
@@ -757,6 +773,8 @@ def _publish_papers_site(
 
     removed = 0
     for key in sorted(set(remote_by_key) - set(local_by_key)):
+        if cards_disabled and is_research_card(key):
+            continue
         if key != manifest_key:
             active.delete_object(key)
             removed += 1
