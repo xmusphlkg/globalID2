@@ -143,7 +143,9 @@ def test_routes_omit_credentials_and_count_live_leases(monkeypatch):
     assert "secret" not in response.text and "api_key" not in response.text
 
 
-def test_publish_pending_groups_only_scopes():
+def test_publish_pending_groups_only_scopes(monkeypatch):
+    monkeypatch.setattr(publish, "get_config", lambda: SimpleNamespace(data_release=SimpleNamespace(
+        surveillance_json_enabled=True, situation_json_enabled=False)))
     rows = [("surveillance", "US"), ("literature", "*"), ("knowledge", "D001")]
     response = client(DB([Result(rows)])).get("/publish/pending")
     assert response.json()["data"] == {
@@ -151,6 +153,8 @@ def test_publish_pending_groups_only_scopes():
         "literature": True,
         "situation": False,
         "knowledge": ["D001"],
+        "surveillance_json_enabled": True,
+        "situation_json_enabled": False,
     }
 
 

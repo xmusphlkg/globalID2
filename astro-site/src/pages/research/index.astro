@@ -1,11 +1,12 @@
 ---
+import { readResearchIndex } from '../../lib/generated-site-data.ts';
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchArticleCard from '../../components/research/ResearchArticleCard.astro';
 import ResearchHotspotCharts from '../../components/research/ResearchHotspotCharts';
-import researchData from '../../data/research/index.json';
 import researchHotspotsData from '../../data/research/hotspots.json';
 import { buildResearchFeedDefinitions, filterResearchFeedArticles, toResearchFeedSlug, type ResearchFeedScope } from '../../lib/research-feed';
 import { buildAlternatePaths, normalizeDiseaseHref } from '../../lib/seo';
+import { absoluteSiteUrl, siteHref } from '../../lib/papers';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID, localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedRegionName, localizedResearchFacet, localizedResearchTopic, localizedStudyType, RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS, translateUi } from '../../utils/i18n';
 
@@ -20,7 +21,7 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 const localeHref = (href: string | null | undefined) => href && (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 
-const data: any = researchData;
+const data: any = readResearchIndex();
 const articles = (data.articles ?? []).filter((article: any) => (
   article.peer_review_status === 'peer_reviewed'
   || article.source_kind === 'historical_seed'
@@ -117,7 +118,7 @@ const itemList = {
     itemListElement: articles.slice(0, 100).map((article: any, index: number) => ({
       '@type': 'ListItem',
       position: index + 1,
-      url: new URL(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
+      url: absoluteSiteUrl(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
       name: article.title,
     })),
   },
@@ -271,7 +272,7 @@ const itemList = {
               {linkedArticles.length > 0
                 ? <ol>{linkedArticles.map((article: any) => <li>{article.detail_available === false
                   ? <div class="surveillance-research-nolink"><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></div>
-                  : <a href={`${prefix}/research/articles/${article.slug}/`}><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></a>}</li>)}</ol>
+                  : <a href={siteHref(`${prefix}/research/articles/${article.slug}/`)}><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></a>}</li>)}</ol>
                 : <p class="surveillance-research-empty">{pick('No public Research Radar article currently meets this relationship threshold.', '目前没有公开的 Research Radar 文献达到此关联阈值。')}</p>}
             </article>;
           })}
@@ -379,6 +380,7 @@ const itemList = {
 
   <script>
   import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
+    import { siteHref } from '../../lib/papers';
     import { readResearchFilterValues, writeResearchFilterValues, type ResearchFilterValues } from '../../lib/research-filter-url';
     const search = document.querySelector<HTMLInputElement>('#research-search');
     const disease = document.querySelector<HTMLSelectElement>('#research-disease');
@@ -532,7 +534,7 @@ const itemList = {
 
       const title = make('h3', 'research-card-title');
       const titleLink = document.createElement('a');
-      titleLink.href = `${routePrefix}/research/articles/${article.slug}/`;
+      titleLink.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
       titleLink.textContent = text(article.title);
       title.appendChild(titleLink);
       card.appendChild(title);
@@ -718,11 +720,11 @@ const itemList = {
 </ReportLayout>
 
 <style>
-  .research-page { width: min(88rem, calc(100% - 1.5rem)); margin: 0 auto; padding: 1.5rem 0 1rem; }
+  .research-page { width: min(var(--page-directory-width), calc(100% - var(--page-gutter))); margin: 0 auto; padding: var(--page-block-space) 0 3rem; }
   .research-hero { position: relative; isolation: isolate; overflow: hidden; padding: 0; }
   .research-hero::before { content: ''; position: absolute; z-index: -1; inset: 0 0 0 auto; width: min(38rem, 48vw); background: radial-gradient(circle at 70% 32%, rgb(var(--color-teal) / .12) 0 1px, transparent 2px 100%), radial-gradient(circle at 70% 32%, transparent 0 24%, rgb(var(--color-brand) / .07) 24.2% 24.6%, transparent 24.8%); background-size: 20px 20px, 100% 100%; mask-image: linear-gradient(90deg, transparent, #000 38%); opacity: .65; pointer-events: none; }
   .research-hero-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(19rem, .6fr); gap: clamp(1.75rem, 4vw, 3.5rem); align-items: center; padding: clamp(1.5rem, 3vw, 2.25rem); }
-  .research-hero .academic-title { margin-top: .38rem; font-size: clamp(2.7rem, 4.7vw, 4rem); line-height: 1; }
+  .research-hero .academic-title { margin-top: .38rem; font-size: var(--page-title-size); line-height: 1; }
   .research-lede { max-width: 48rem; margin-top: .8rem; font-size: clamp(.95rem, 1.25vw, 1.06rem); }
   .research-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; margin-top: 1.25rem; }
   .research-primary-link { display: inline-flex; min-height: 2.5rem; align-items: center; justify-content: center; background: rgb(var(--color-brand)); padding: 0 .95rem; color: #fff; font-size: .73rem; font-weight: 700; }
@@ -824,5 +826,5 @@ const itemList = {
   .empty-orbit { width: 3.5rem; height: 3.5rem; border: 1px solid rgb(var(--color-teal) / .45); box-shadow: inset 0 0 0 .8rem rgb(var(--color-teal) / .05); }
   @media (max-width: 1080px) { .featured-list, .curated-research-grid { grid-template-columns: 1fr; } .historical-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .research-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .search-field { grid-column: 1 / -1; border-bottom: 1px solid rgb(var(--border) / .62); } .research-filters > label:nth-child(even) { border-left: 0; } .research-filters > label:nth-child(n+4) { border-top: 1px solid rgb(var(--border) / .62); } }
   @media (max-width: 900px) { .research-hero-grid { grid-template-columns: 1fr; } .research-week { max-width: 34rem; } .feed-heading { grid-template-columns: 1fr; } .feed-all-link { justify-self: start; } .research-list { grid-template-columns: 1fr; } }
-  @media (max-width: 600px) { .research-page { width: min(100% - 1rem, 88rem); padding-top: 1rem; } .research-hero-grid { padding: 1.2rem; } .research-hero-actions { align-items: flex-start; flex-direction: column; } .research-primary-link { width: 100%; } .research-week dl { grid-template-columns: 1fr; } .research-week dl div, .research-week dl div:nth-child(odd), .research-week dl div:nth-child(n+3) { display: flex; align-items: center; justify-content: space-between; margin-top: 0; padding: .65rem 0; border-top: 1px solid rgb(var(--border) / .65); border-left: 0; } .research-week dl div:first-child { border-top: 0; } .research-week dt { min-height: 0; } .research-week dd { margin-top: 0; } .historical-list { grid-template-columns: 1fr; } .research-heading-split, .directory-heading { align-items: flex-start; flex-direction: column; } .directory-rows section { grid-template-columns: 1fr; gap: .4rem; } .feed-groups { grid-template-columns: 1fr; } .feed-all-link { width: 100%; justify-content: space-between; white-space: normal; } .research-filters { grid-template-columns: 1fr; } .research-filters > label { border-top: 1px solid rgb(var(--border) / .62); border-left: 0; } .research-filters > .search-field { grid-column: auto; border-top: 0; } .research-filters > .oa-filter { min-height: 3rem; justify-content: flex-start; } }
+  @media (max-width: 600px) { .research-page { width: min(var(--page-directory-width), calc(100% - var(--page-gutter))); padding-top: 1rem; } .research-hero-grid { padding: 1.2rem; } .research-hero-actions { align-items: flex-start; flex-direction: column; } .research-primary-link { width: 100%; } .research-week dl { grid-template-columns: 1fr; } .research-week dl div, .research-week dl div:nth-child(odd), .research-week dl div:nth-child(n+3) { display: flex; align-items: center; justify-content: space-between; margin-top: 0; padding: .65rem 0; border-top: 1px solid rgb(var(--border) / .65); border-left: 0; } .research-week dl div:first-child { border-top: 0; } .research-week dt { min-height: 0; } .research-week dd { margin-top: 0; } .historical-list { grid-template-columns: 1fr; } .research-heading-split, .directory-heading { align-items: flex-start; flex-direction: column; } .directory-rows section { grid-template-columns: 1fr; gap: .4rem; } .feed-groups { grid-template-columns: 1fr; } .feed-all-link { width: 100%; justify-content: space-between; white-space: normal; } .research-filters { grid-template-columns: 1fr; } .research-filters > label { border-top: 1px solid rgb(var(--border) / .62); border-left: 0; } .research-filters > .search-field { grid-column: auto; border-top: 0; } .research-filters > .oa-filter { min-height: 3rem; justify-content: flex-start; } }
 </style>

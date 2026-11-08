@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from datetime import date
 from typing import Any
 
 from .classification import CLASSIFICATION_VERSION
-from .health_check_utils import _check
+from .health_check_utils import _blocker_categories, _check
 from .health_snapshot import (
     HealthThresholds,
     ResearchRadarSnapshot,
@@ -97,35 +96,13 @@ def _article_checks(
     ]
 
 
-def _blocker_categories(blockers: Sequence[str]) -> dict[str, int]:
-    categories: Counter[str] = Counter()
-    patterns = (
-        ("bilingual", "bilingual_gate"),
-        ("classification", "classification"),
-        ("private fields", "private_data"),
-        ("integrity", "integrity"),
-        ("duplicate", "duplicate"),
-        ("peer-reviewed", "peer_review"),
-        ("preprint", "peer_review"),
-        ("signal", "surveillance_evidence"),
-        ("weekly brief", "weekly_brief"),
-        ("editorial", "editorial_gate"),
-        ("indexable", "editorial_gate"),
-        ("research domain", "classification"),
-    )
-    for blocker in blockers:
-        lowered = blocker.lower()
-        category = next((label for needle, label in patterns if needle in lowered), "other")
-        categories[category] += 1
-    return dict(sorted(categories.items()))
-
-
 def _release_checks(
     snapshot: ResearchRadarSnapshot,
     thresholds: HealthThresholds,
 ) -> list[dict[str, Any]]:
     payload = snapshot.release_payload
-    if not isinstance(payload, Mapping):
+    metrics = snapshot.release_metrics
+    if not isinstance(payload, Mapping) and not isinstance(metrics, Mapping):
         missing = {"read_status": snapshot.release_read_status, "article_count": 0}
         return [
             _check("public_bilingual_gate", "critical", missing),
@@ -133,25 +110,43 @@ def _release_checks(
             _check("release_freshness", "critical", {**missing, "age_hours": None}),
             _check("weekly_digest", "critical", {"read_status": snapshot.release_read_status}),
         ]
-    articles = [item for item in payload.get("articles") or [] if isinstance(item, Mapping)]
-    preprints = [item for item in payload.get("preprints") or [] if isinstance(item, Mapping)]
-    public = [*articles, *preprints]
-    bilingual = sum(
-        bool((item.get("summary") or {}).get("en"))
-        and bool((item.get("summary") or {}).get("zh"))
-        for item in public
-    )
-    bilingual_ratio = bilingual / len(public) if public else 0.0
+    if isinstance(metrics, Mapping):
+        public_count = _safe_int(metrics.get("article_count"))
+        bilingual = _safe_int(metrics.get("bilingual_count"))
+        preprint_count = _safe_int(metrics.get("preprint_count"))
+        integrity_alert_count = _safe_int(metrics.get("integrity_alert_count"))
+        blocker_count = _safe_int(metrics.get("blocker_count"))
+        blocker_categories = dict(metrics.get("blocker_categories") or {})
+        release_updated = metrics.get("last_updated")
+        latest_brief = metrics.get("latest_brief")
+        finding_count = _safe_int((latest_brief or {}).get("cited_finding_count"))
+    else:
+        articles = [item for item in payload.get("articles") or [] if isinstance(item, Mapping)]
+        preprints = [item for item in payload.get("preprints") or [] if isinstance(item, Mapping)]
+        public = [*articles, *preprints]
+        public_count = len(public)
+        bilingual = sum(
+            bool((item.get("summary") or {}).get("en"))
+            and bool((item.get("summary") or {}).get("zh"))
+            for item in public
+        )
+        blockers = validate_public_research_payload(dict(payload))
+        blocker_count = len(blockers)
+        blocker_categories = _blocker_categories(blockers)
+        preprint_count = len(preprints)
+        integrity_alert_count = len(payload.get("integrity_alerts") or [])
+        release_updated = payload.get("last_updated")
+        briefs = [item for item in payload.get("weekly_briefs") or [] if isinstance(item, Mapping)]
+        latest_brief = briefs[0] if briefs else None
+        finding_count = len((latest_brief or {}).get("cited_findings") or [])
+    bilingual_ratio = bilingual / public_count if public_count else 0.0
     bilingual_ok = (
-        len(public) >= thresholds.min_public_articles
+        public_count >= thresholds.min_public_articles
         and bilingual_ratio >= thresholds.min_bilingual_public_ratio
     )
-    blockers = validate_public_research_payload(dict(payload))
-    release_age = _age_hours(snapshot.collected_at, payload.get("last_updated"))
+    release_age = _age_hours(snapshot.collected_at, release_updated)
     release_fresh = release_age is not None and release_age <= thresholds.max_release_age_hours
 
-    briefs = [item for item in payload.get("weekly_briefs") or [] if isinstance(item, Mapping)]
-    latest_brief = briefs[0] if briefs else None
     brief_date: date | None = None
     if latest_brief and latest_brief.get("end_date"):
         try:
@@ -195,9 +190,9 @@ def _release_checks(
             "public_bilingual_gate",
             "pass" if bilingual_ok else "critical",
             {
-                "article_count": len(public),
+                "article_count": public_count,
                 "bilingual_count": bilingual,
-                "missing_bilingual_count": len(public) - bilingual,
+                "missing_bilingual_count": public_count - bilingual,
                 "bilingual_ratio": round(bilingual_ratio, 6),
             },
             {
@@ -207,12 +202,12 @@ def _release_checks(
         ),
         _check(
             "release_validator",
-            "pass" if len(blockers) <= thresholds.max_release_blockers else "critical",
+            "pass" if blocker_count <= thresholds.max_release_blockers else "critical",
             {
-                "blocker_count": len(blockers),
-                "blocker_categories": _blocker_categories(blockers),
-                "integrity_alert_count": len(payload.get("integrity_alerts") or []),
-                "preprint_count": len(preprints),
+                "blocker_count": blocker_count,
+                "blocker_categories": blocker_categories,
+                "integrity_alert_count": integrity_alert_count,
+                "preprint_count": preprint_count,
             },
             {"max_release_blockers": thresholds.max_release_blockers},
         ),
@@ -228,7 +223,7 @@ def _release_checks(
             {
                 "brief_present": latest_brief is not None,
                 "brief_age_days": digest_age,
-                "cited_finding_count": len((latest_brief or {}).get("cited_findings") or []),
+                "cited_finding_count": finding_count,
                 "brief_status": brief_status or "missing",
                 "human_reviewed": brief_status == "editorially_reviewed",
                 "ai_reviewed": brief_status == "ai_reviewed",

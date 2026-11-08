@@ -3019,6 +3019,10 @@ class DiseaseKnowledgeUpdateService:
 
         items: list[dict[str, Any]] = []
         for raw_disease in diseases:
+            # Quality/repair assessment is CPU work. Yield between diseases so
+            # JSON publication and heartbeat callbacks do not wait for the
+            # entire catalogue; cancellation also takes effect at this boundary.
+            await asyncio.sleep(0)
             disease = attach_profile_schema(
                 self._attach_ontology_profile_context(raw_disease)
             )

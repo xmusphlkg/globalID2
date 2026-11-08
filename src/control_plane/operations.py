@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.ai.task_progress import task_type_name
 from src.control_plane.ai_task_trace import progress_for_task, stage_counts, trace_for_task, work_counts
 from src.control_plane.events import control_plane_events
+from src.control_plane.publication_kind import publication_kind
 from src.control_plane.runtime import runtime_registry
 from src.core.source_scopes import canonicalize_task_source, validate_iceland_crawl_options
 from src.core.task_manager import task_manager
@@ -20,6 +21,7 @@ from src.services.crawl_task_service import crawl_task_service
 from src.services.data_release_service import data_release_service
 from src.services.literature_service import literature_service
 from src.services.situation_schedule_service import situation_schedule_service
+from src.services.report_schedule_service import report_schedule_service
 
 
 def _value(value: Any) -> str:
@@ -59,6 +61,7 @@ def _task_projection(
         "task_uuid": task.task_uuid,
         "task_name": task.task_name,
         "task_type": task.task_type,
+        "publication_kind": publication_kind(task.task_type, task.input_data),
         "status": task.status,
         "priority": task.priority,
         "progress": task.progress or 0,
@@ -298,6 +301,7 @@ class ScheduleApplicationService:
         "release": data_release_service,
         "literature": literature_service,
         "situation": situation_schedule_service,
+        "report": report_schedule_service,
     }
 
     @staticmethod
@@ -372,6 +376,8 @@ class ScheduleApplicationService:
             result = await data_release_service.trigger_job(job_id, manual=True, trigger="manual")
         elif kind == "situation":
             result = await situation_schedule_service.trigger_job(job_id, manual=True)
+        elif kind == "report":
+            result = await report_schedule_service.trigger_job(job_id, manual=True)
         elif job_id == literature_service.GAP_DISCOVERY_JOB_ID:
             result = await literature_service.trigger_gap_discovery(manual=True)
         elif job_id == literature_service.ENRICHMENT_JOB_ID:
@@ -410,6 +416,10 @@ class TaskOperationsService:
         description: str | None,
         input_data: dict[str, Any],
     ) -> Task | None:
+        if task_type == TaskType.GENERATE_REPORT:
+            from src.core.report_scope import require_report_country
+            country_code = require_report_country(country_code or input_data.get("country_code") or input_data.get("country"))
+            input_data = {**input_data, "country": country_code, "enable_review": True}
         country_id = None
         if country_code:
             country_id = (

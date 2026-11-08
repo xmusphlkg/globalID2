@@ -14,6 +14,7 @@ import json
 import random
 import tempfile
 from collections import defaultdict, deque
+from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -644,11 +645,40 @@ async def recover_expired_leases(*, now: datetime | None = None) -> int:
         return len(rows)
 
 
+async def release_leases_on_startup(*, now: datetime | None = None) -> int:
+    """Requeue every leased item. Call only while holding the worker singleton lease.
+
+    A restarted worker tracks none of its predecessor's in-flight calls, yet the
+    database still counts those leases against route permits until they expire.
+    A restart is not a model fault, so the attempt counter is left alone.
+    """
+    now = now or _now()
+    async with get_database() as db:
+        await _lock_reservation(db, "lease-recovery")
+        rows = (
+            (
+                await db.execute(
+                    select(AIWorkItem)
+                    .where(AIWorkItem.status == "leased")
+                    .with_for_update()
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for item in rows:
+            item.status = "queued"
+            item.lease_expires_at = None
+            item.route_key = None
+            item.available_at = now
+        return len(rows)
+
+
 async def claim_work(
     route: dict[str, Any],
     *,
     now: datetime | None = None,
-    alternatives: set[str] | None = None,
+    alternatives: set[str] | Mapping[str, list[str]] | None = None,
 ) -> AIWorkItem | None:
     """Atomically reserve a remaining route permit and highest-priority due item."""
     if not route.get("available_for_routing"):
@@ -685,7 +715,9 @@ async def claim_work(
                     AIWorkItem.id,
                     rank.label("priority_rank"),
                     AIWorkItem.created_at,
+                    AIWorkItem.capability,
                     AIWorkItem.payload["avoid_models"].label("avoid_models"),
+                    AIWorkItem.payload["last_failed_route"].label("last_failed_route"),
                 )
                 .where(*due)
                 .order_by(rank, AIWorkItem.created_at, AIWorkItem.id)
@@ -699,7 +731,11 @@ async def claim_work(
             if not page:
                 return None
             for candidate in page:
-                if not _route_accepts_work(key, candidate.avoid_models, alternatives):
+                if not _route_accepts_work(
+                    key, candidate.avoid_models,
+                    _capable_alternatives(alternatives, candidate.capability),
+                    candidate.last_failed_route,
+                ):
                     continue
                 # A different route may have leased this candidate after the
                 # metadata scan. Only the selected row is locked, and SKIP
@@ -716,7 +752,9 @@ async def claim_work(
                     )
                 ).scalar_one_or_none()
                 if item is None or not _route_accepts_work(
-                    key, item.payload.get("avoid_models"), alternatives
+                    key, item.payload.get("avoid_models"),
+                    _capable_alternatives(alternatives, item.capability),
+                    item.payload.get("last_failed_route"),
                 ):
                     continue
                 item.status = "leased"
@@ -730,18 +768,34 @@ async def claim_work(
             cursor = (last.priority_rank, last.created_at, last.id)
 
 
+def _capable_alternatives(
+    alternatives: set[str] | Mapping[str, list[str]] | None, capability: str,
+) -> set[str] | None:
+    """Only routes able to execute this work may justify deferring it."""
+    if isinstance(alternatives, Mapping):
+        return {key for key, capabilities in alternatives.items() if capability in capabilities}
+    return alternatives
+
+
 def _route_accepts_work(
-    key: str, avoid_models: list[str] | None, alternatives: set[str] | None
+    key: str, avoid_models: list[str] | None, alternatives: set[str] | None,
+    last_failed_route: str | None = None,
 ) -> bool:
     avoided = set(avoid_models or ())
-    if key not in avoided and key.split(":", 1)[-1] not in avoided:
-        return True
     # With one route, self-review can proceed. With another healthy route,
     # preserve the work for that route and keep scanning lower-priority items.
-    return not any(
+    alternative_available = any(
         other != key and other not in avoided and other.split(":", 1)[-1] not in avoided
         for other in (alternatives or set())
     )
+    if key in avoided or key.split(":", 1)[-1] in avoided:
+        return not alternative_available
+    # A single transient timeout may not open the route-wide circuit. On the
+    # next attempt, prefer a different currently idle and eligible route; do
+    # not stall when it is the only route or all alternatives are avoided.
+    if key == last_failed_route and alternative_available:
+        return False
+    return True
 
 
 class AIWorkDispatcher:
@@ -755,6 +809,9 @@ class AIWorkDispatcher:
         self.active: dict[int, asyncio.Task] = {}
         self.outcomes: dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
         self._tick_lock = asyncio.Lock()
+        # Set whenever a call ends, so the freed permit is refilled at once
+        # instead of at the next poll.
+        self._wake = asyncio.Event()
 
     async def _execute(self, item: AIWorkItem, route: dict[str, Any]) -> None:
         token = _DISPATCHING.set(True)
@@ -818,6 +875,10 @@ class AIWorkDispatcher:
                 current.route_key = None
                 if cooling or current.attempt < MAX_ATTEMPTS:
                     current.status = "queued"
+                    if not refused:
+                        payload = dict(current.payload or {})
+                        payload["last_failed_route"] = str(route.get("model_key") or "") or None
+                        current.payload = payload
                     # Route cooldown belongs to the route; another healthy route
                     # must be able to consume this item immediately.
                     current.available_at = _now()
@@ -835,6 +896,7 @@ class AIWorkDispatcher:
             if not refused:
                 self.outcomes[str(route.get("model_key"))].append(succeeded)
             _DISPATCHING.reset(token)
+            self._wake.set()
             if noted is not None and (
                 noted["status"] in {"succeeded", "failed"} or noted.get("record_error")
             ):
@@ -939,20 +1001,14 @@ class AIWorkDispatcher:
                 name=f"model-health-{probe.id}",
             )
             self.active[probe.id]._ai_lease_expires_at = probe.lease_expires_at
-        from .agents.base import BaseAgent
-
-        # The transport refuses a route under this process's local cooldown
-        # (set on a 429 or channel failure) even when the persisted state is
-        # already clear. Claiming it would fail the item instantly, requeue it,
-        # and claim it again in a tight loop while real permits sit idle.
+        # Admission comes only from Model Center route snapshots. Durable
+        # rate-limit and runtime circuits already clear available_for_routing.
+        loaded = await self.route_loader()
         routes = [
             r
-            for r in await self.route_loader()
+            for r in loaded
             if r.get("available_for_routing")
             and r.get("runtime_model_capacity", 0) > 0
-            and not BaseAgent._is_route_cooling_down(
-                str(r.get("model_key") or r.get("model_name") or "")
-            )
         ]
         if not routes:
             return 0
@@ -974,9 +1030,15 @@ class AIWorkDispatcher:
             if not any(weights):
                 break
             route = random.choices(routes, weights=weights)[0]
-            item = await claim_work(
-                route, alternatives={r["model_key"] for r in routes}
-            )
+            # An avoided route defers only to a route that has a free permit
+            # now. A full route is no alternative: waiting for it would leave
+            # this permit idle while the item sits queued.
+            idle = {
+                r["model_key"]: r.get("capabilities") or ["text"]
+                for r, weight in zip(routes, weights)
+                if weight > 0
+            }
+            item = await claim_work(route, alternatives=idle)
             if item is None:
                 routes.remove(route)
                 continue
@@ -989,6 +1051,19 @@ class AIWorkDispatcher:
             claimed += 1
         return claimed
 
+    async def _idle(self, stop_event: asyncio.Event, timeout: float = 0.5) -> None:
+        """Wait for a finished call, a stop request, or the poll interval."""
+        waiters = {
+            asyncio.create_task(self._wake.wait()),
+            asyncio.create_task(stop_event.wait()),
+        }
+        try:
+            await asyncio.wait(waiters, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for waiter in waiters:
+                waiter.cancel()
+            await asyncio.gather(*waiters, return_exceptions=True)
+
     async def run(self, stop_event: asyncio.Event) -> None:
         last_probe = 0.0
         try:
@@ -998,13 +1073,13 @@ class AIWorkDispatcher:
                     if now - last_probe >= 60:
                         await enqueue_runtime_probe()
                         last_probe = now
+                    # Cleared before the scan, so a call that ends during it
+                    # still triggers the next scan immediately.
+                    self._wake.clear()
                     await self.tick()
                 except Exception:
                     logger.exception("Model work dispatch scan failed")
-                try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=0.5)
-                except asyncio.TimeoutError:
-                    pass
+                await self._idle(stop_event)
         finally:
             for task in self.active.values():
                 task.cancel()

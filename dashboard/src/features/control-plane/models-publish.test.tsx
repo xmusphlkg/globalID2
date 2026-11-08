@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiFetch } from "@/lib/api";
@@ -54,15 +54,15 @@ describe("publication", () => {
     expect(await screen.findByText("Entire line")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Run preflight" }));
     expect(await screen.findByText("Hosting unavailable")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Publish site-release" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Publish static site" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Run preflight" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Publish site-release" })).toBeEnabled());
-    fireEvent.click(screen.getByLabelText("Full generation"));
-    fireEvent.click(screen.getByRole("button", { name: "Publish site-release" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Publish static site" })).toBeEnabled());
+    fireEvent.click(screen.getByLabelText("Rebuild static content"));
+    fireEvent.click(screen.getByRole("button", { name: "Publish static site" }));
     expect(await screen.findByRole("link", { name: "Open release run" })).toHaveAttribute("href", "/publish/tasks?detail=release-1");
-    expect(apiFetch).toHaveBeenCalledWith("/publish/runs", { method: "POST", body: JSON.stringify({ job_id: "site-release", full: true }) });
+    expect(apiFetch).toHaveBeenCalledWith("/publish/runs", { method: "POST", body: JSON.stringify({ job_id: "site-release", full: true, reports_only: false, code_only: false }) });
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/collection/runs/release-1"));
-    expect(screen.getByRole("button", { name: "Publish site-release" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Publish static site" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /collect|retry|download/i })).toBeNull();
   });
   it("recovers from a submission error, defaults to incremental and allows a failed run to be published again", async () => {
@@ -73,13 +73,113 @@ describe("publication", () => {
       return Promise.resolve({ task_uuid: "release-1", status: "failed" });
     });
     show(<PublishView />);
-    fireEvent.click(screen.getByRole("button", { name: "Publish site-release" }));
+    await screen.findByText("Entire line");
+    fireEvent.click(screen.getByRole("button", { name: "Publish static site" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Release unavailable");
-    fireEvent.click(screen.getByRole("button", { name: "Publish site-release" }));
-    expect(await screen.findByText("Publication failed. Pending changes remain available for another release.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Publish static site" }));
+    expect(await screen.findByText("Static publication failed. Its pending changes remain available for another release.")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByRole("button", { name: "Publish site-release" })).toBeEnabled();
-    expect(apiFetch).toHaveBeenCalledWith("/publish/runs", { method: "POST", body: JSON.stringify({ job_id: "site-release", full: false }) });
+    expect(screen.getByRole("button", { name: "Publish static site" })).toBeEnabled();
+    expect(apiFetch).toHaveBeenCalledWith("/publish/runs", { method: "POST", body: JSON.stringify({ job_id: "site-release", full: false, reports_only: false, code_only: false }) });
+  });
+  it("queues an isolated reports publication", async () => {
+    vi.mocked(apiFetch).mockImplementation((path) => {
+      if (path === "/publish/pending") return Promise.resolve(pending);
+      if (path === "/publish/runs") return Promise.resolve({ task_uuid: "reports-1", status: "queued" });
+      return Promise.resolve({ task_uuid: "reports-1", status: "running" });
+    });
+    show(<PublishView />);
+    fireEvent.click(screen.getByRole("button", { name: "Publish reports only" }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/publish/runs", {
+      method: "POST", body: JSON.stringify({ job_id: "site-release", full: false, reports_only: true, code_only: false }),
+    }));
+  });
+  it("publishes website code without combining pending data, full generation or report mode", async () => {
+    vi.mocked(apiFetch).mockImplementation((path) => {
+      if (path === "/publish/pending") return Promise.resolve(pending);
+      if (path === "/releases/site-release/checks?code_only=true") return Promise.resolve(checks);
+      if (path === "/publish/runs") return Promise.resolve({ task_uuid: "code-1", status: "queued" });
+      return Promise.resolve({ task_uuid: "code-1", status: "completed" });
+    });
+    show(<PublishView />);
+    expect(await screen.findByText("Entire line")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Rebuild static content"));
+    fireEvent.click(screen.getByRole("button", { name: "Publish website code" }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/publish/runs", {
+      method: "POST", body: JSON.stringify({ job_id: "site-release", full: false, reports_only: false, code_only: true }),
+    }));
+    expect(await screen.findByText("Website code update completed. Pending data changes remain queued.")).toBeInTheDocument();
+    expect(screen.getByText("Entire line")).toBeInTheDocument();
+  });
+  it("uses independent code checks even if a normal preflight is blocked by download publishing", async () => {
+    vi.mocked(apiFetch).mockImplementation((path) => Promise.resolve(path === "/publish/pending" ? pending
+      : path === "/releases/site-release/checks" ? { ...checks, overall_ready: false, blockers: ["Download repository unavailable"] }
+      : path === "/releases/site-release/checks?code_only=true" ? checks
+      : { task_uuid: "code-1", status: "running" }));
+    show(<PublishView />);
+    fireEvent.click(screen.getByRole("button", { name: "Run preflight" }));
+    expect(await screen.findByText("Download repository unavailable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publish static site" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Publish website code" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Publish website code" }));
+    expect(await screen.findByRole("link", { name: "Open release run" })).toBeInTheDocument();
+    expect(apiFetch).toHaveBeenCalledWith("/releases/site-release/checks?code_only=true", { timeoutMs: 120_000 });
+    expect(screen.getByRole("button", { name: "Publish website code" })).toBeDisabled();
+  });
+  it("shows code snapshot blockers, prevents submission and rechecks after recovery", async () => {
+    let hasPublishedSnapshot = false;
+    vi.mocked(apiFetch).mockImplementation((path) => Promise.resolve(path === "/publish/pending" ? pending
+      : path === "/releases/site-release/checks?code_only=true" ? { ...checks, overall_ready: hasPublishedSnapshot, blockers: hasPublishedSnapshot ? [] : ["Run a normal data release before publishing code"] }
+      : { task_uuid: "code-1", status: "running" }));
+    show(<PublishView />);
+    fireEvent.click(screen.getByRole("button", { name: "Publish website code" }));
+    expect(await screen.findByText("Run a normal data release before publishing code")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Website code preflight results" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publish website code" })).toBeDisabled();
+    expect(vi.mocked(apiFetch).mock.calls.some(([path]) => path === "/publish/runs")).toBe(false);
+    hasPublishedSnapshot = true;
+    fireEvent.click(screen.getByRole("button", { name: "Check website code update" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Publish website code" })).toBeEnabled());
+    expect(screen.queryByText("Run a normal data release before publishing code")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Publish website code" }));
+    expect(await screen.findByRole("link", { name: "Open release run" })).toBeInTheDocument();
+  });
+  it("keeps JSON-only pending work out of static counts and rebuild actions", async () => {
+    vi.mocked(apiFetch).mockResolvedValue({ surveillance: ["IE"], literature: false, situation: true,
+      knowledge: [], surveillance_json_enabled: true, situation_json_enabled: true });
+    show(<PublishView />);
+    expect(await screen.findByText("No pending changes for the static site.")).toBeInTheDocument();
+    const staticScopes = screen.getByRole("region", { name: "Static publication scopes" });
+    expect(within(staticScopes).queryByText("IE")).toBeNull();
+    expect(within(staticScopes).queryByText("Surveillance")).toBeNull();
+    expect(within(staticScopes).queryByText("Situation")).toBeNull();
+    expect(screen.getAllByText("JSON channel enabled")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "Real-time JSON publication" })).toHaveAttribute("href", "/publish/realtime");
+    expect(screen.getByRole("button", { name: "Publish static site" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Publish reports only" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Publish website code" })).toBeEnabled();
+    fireEvent.click(screen.getByLabelText("Rebuild static content"));
+    expect(screen.getByRole("button", { name: "Publish static site" })).toBeEnabled();
+    expect(vi.mocked(apiFetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+  });
+  it("preserves a disabled JSON line in its legacy static channel", async () => {
+    vi.mocked(apiFetch).mockResolvedValue({ surveillance: ["JP"], literature: false, situation: true,
+      knowledge: [], surveillance_json_enabled: true, situation_json_enabled: false });
+    show(<PublishView />);
+    await screen.findByText("Entire line");
+    const staticScopes = screen.getByRole("region", { name: "Static publication scopes" });
+    expect(within(staticScopes).queryByText("Surveillance")).toBeNull();
+    expect(within(staticScopes).getByText("Situation")).toBeInTheDocument();
+    expect(screen.getByText("Assigned to static site")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publish static site" })).toBeEnabled();
+  });
+  it("waits for pending channel routing before accepting a static update", async () => {
+    vi.mocked(apiFetch).mockRejectedValue(new ApiError(400, "Pending routing unavailable"));
+    show(<PublishView />);
+    expect(screen.getByRole("button", { name: "Publish static site" })).toBeDisabled();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Pending routing unavailable");
+    expect(screen.getByRole("button", { name: "Publish static site" })).toBeDisabled();
+    expect(vi.mocked(apiFetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
   });
   it("renders the same terminology in Chinese", async () => {
     useAppStore.setState({ lang: "zh" });
@@ -87,6 +187,7 @@ describe("publication", () => {
     show(<PublishView />);
     expect(await screen.findByText("整条数据线")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "执行预检" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "仅发布网站代码" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^发布$/ })).toBeInTheDocument();
   });
 });

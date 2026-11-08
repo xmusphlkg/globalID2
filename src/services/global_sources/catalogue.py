@@ -50,6 +50,18 @@ SOURCE_REGISTRY: dict[str, dict[str, Any]] = {
         "license": "CC BY 4.0 with attribution to ECDC",
         "license_zh": "CC BY 4.0，需注明来源为 ECDC",
     },
+    "ecdc_events": {
+        "source_id": "ecdc_events",
+        "label": {"en": "ECDC public health events", "zh": "欧洲疾控中心公共卫生事件"},
+        "agency": {"en": "European Centre for Disease Prevention and Control", "zh": "欧洲疾病预防控制中心"},
+        "homepage": "https://www.ecdc.europa.eu/en/public-health-events",
+        # No feed exists; the adapter pages the public listing, newest first.
+        "endpoint": "https://www.ecdc.europa.eu/en/public-health-events",
+        "cadence": {"en": "daily to weekly as events are updated", "zh": "随事件更新，每日至每周"},
+        "redistribution": "metadata_and_extract",
+        "license": "CC BY 4.0 with attribution to ECDC",
+        "license_zh": "CC BY 4.0，需注明来源为 ECDC",
+    },
     "who_wer": {
         "source_id": "who_wer",
         "label": {"en": "WHO Weekly Epidemiological Record", "zh": "世卫组织每周流行病学记录"},
@@ -91,11 +103,11 @@ SOURCE_REGISTRY: dict[str, dict[str, Any]] = {
     },
     "paho": {
         "source_id": "paho",
-        "label": {"en": "PAHO epidemiological alerts and updates", "zh": "泛美卫生组织流行病学警报与更新"},
+        "label": {"en": "PAHO IRIS surveillance newsletters", "zh": "泛美卫生组织 IRIS 监测周报"},
         "agency": {"en": "Pan American Health Organization", "zh": "泛美卫生组织"},
         "homepage": "https://www.paho.org/en/epidemiological-alerts-and-updates",
-        # www.paho.org returns 403 to unattended clients; PAHO's IRIS
-        # repository serves the same documents through the DSpace API.
+        # IRIS carries surveillance newsletters; the separate paho_alerts
+        # adapter covers outbreak alerts absent from this repository.
         "endpoint": "https://iris.paho.org/server/api/discover/search/objects",
         "cadence": {"en": "weekly to irregular", "zh": "每周至不定期"},
         "redistribution": "metadata_only",
@@ -103,6 +115,40 @@ SOURCE_REGISTRY: dict[str, dict[str, Any]] = {
         "license_zh": "再分发条款待核实；仅收录标题与链接",
     },
 }
+
+
+# Separate feeds have separate run health: a working newsletter repository must
+# not hide a failed outbreak-alert archive. Mirror provenance remains explicit.
+for _id, _en, _zh, _agency_en, _agency_zh, _home, _endpoint, _cadence in (
+    ("paho_alerts", "PAHO alerts and situation reports (ReliefWeb)", "泛美卫生组织警报与疫情报告（ReliefWeb）",
+     "Pan American Health Organization", "泛美卫生组织",
+     "https://www.paho.org/en/epidemiological-alerts-and-updates", "https://reliefweb.int/updates?search=source.exact%3A%22Pan%20American%20Health%20Organization%22", "irregular"),
+    ("who_afro", "WHO Africa outbreak bulletins", "世卫组织非洲区域疫情周报",
+     "WHO Regional Office for Africa", "世卫组织非洲区域办事处",
+     "https://www.afro.who.int/health-topics/disease-outbreaks/outbreaks-and-other-emergencies-updates", None, "weekly"),
+    ("who_searo", "WHO South-East Asia epidemiological bulletins", "世卫组织东南亚区域流行病学双周报",
+     "WHO Regional Office for South-East Asia", "世卫组织东南亚区域办事处",
+     "https://www.who.int/southeastasia/outbreaks-and-emergencies/surveillance-and-alert/sear-epi-bulletins", None, "fortnightly"),
+    ("who_emro", "WHO Eastern Mediterranean reports (ReliefWeb)", "世卫组织东地中海区域报告（ReliefWeb）",
+     "WHO Regional Office for the Eastern Mediterranean", "世卫组织东地中海区域办事处",
+     "https://www.emro.who.int/pandemic-epidemic-diseases/outbreaks/", "https://reliefweb.int/updates?search=source%3A%22World%20Health%20Organization%22%20AND%20title%3A%22Eastern%20Mediterranean%22", "weekly to monthly"),
+    ("who_euro", "WHO Europe Health Security Bulletin", "世卫组织欧洲区域卫生安全公报",
+     "WHO Regional Office for Europe", "世卫组织欧洲区域办事处",
+     "https://www.who.int/europe/emergencies/who-european-region-health-security-bulletin", None, "quarterly"),
+    ("who_sitreps", "WHO emergency situation reports", "世卫组织全球疫情形势报告",
+     "World Health Organization", "世界卫生组织",
+     "https://www.who.int/emergencies/situation-reports", None, "weekly to irregular"),
+):
+    SOURCE_REGISTRY[_id] = {
+        "source_id": _id, "label": {"en": _en, "zh": _zh},
+        "agency": {"en": _agency_en, "zh": _agency_zh},
+        "homepage": _home, "endpoint": _endpoint or _home,
+        "cadence": {"en": _cadence, "zh": {"irregular": "不定期", "weekly": "每周", "fortnightly": "每两周", "weekly to monthly": "每周至每月", "quarterly": "每季度", "weekly to irregular": "每周至不定期"}[_cadence]},
+        "redistribution": "metadata_only",
+        "license": "Original authority reports; metadata and links only in the feed",
+        "license_zh": "官方原始报告；采集目录仅保留元数据及链接",
+        **({"distribution": "UN OCHA ReliefWeb", "distribution_url": "https://reliefweb.int"} if _endpoint else {}),
+    }
 
 
 #: Extra phrases used when reading agency headlines, keyed by the catalogue's

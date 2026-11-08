@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 from collections import defaultdict
+from datetime import date, datetime
 
 from src.core.disease_cutover import get_disease_cutover_config
 from src.core.reporting_period import report_period_key, selected_series_granularity
@@ -73,6 +74,26 @@ def _series_is_case_count(record: dict) -> bool:
     return is_case_count_series(record)
 
 
+def _period_key_reader():
+    """Reuse reporting-calendar work within one immutable projection call."""
+    cache: dict[tuple, str] = {}
+
+    def read(value, granularity=None):
+        # Standard export rows use these immutable date types. Unusual direct
+        # callers retain report_period_key's original conversion behavior.
+        if type(value) not in {str, date, datetime, type(None)} or type(granularity) not in {str, type(None)}:
+            return report_period_key(value, granularity)
+        key = (type(value), value, granularity)
+        try:
+            return cache[key]
+        except KeyError:
+            result = report_period_key(value, granularity)
+            if len(cache) < 65536:
+                cache[key] = result
+            return result
+    return read
+
+
 def _source_series_details(records: list[dict]) -> list[dict]:
     """Build lossless, JSON-ready source-series payloads for one concept."""
 
@@ -87,7 +108,7 @@ def _source_series_details(records: list[dict]) -> list[dict]:
                     dimensions = json.loads(dimensions)
                 except (TypeError, ValueError):
                     dimensions = {}
-            dimensions_key = json.dumps(dimensions, sort_keys=True, separators=(",", ":"))
+            dimensions_key = "{}" if isinstance(dimensions, dict) and not dimensions else json.dumps(dimensions, sort_keys=True, separators=(",", ":"))
             by_series[(series_code, dimension_key, dimensions_key)].append(record)
 
     metadata_fields = (
@@ -121,9 +142,10 @@ def _source_series_details(records: list[dict]) -> list[dict]:
             identity = f"{dimension_key}:{dimensions_key}"
             digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:12]
             selection_key = f"{series_code}::{dimension_key}::{digest}"
-        dates = [item.get("date") for item in series_records if item.get("date")]
         dated_records = [item for item in series_records if item.get("date")]
+        dates = [item["date"] for item in dated_records]
         values = [_normalise_count(item.get("cases")) for item in dated_records]
+        incidence_rates = [_safe_float(item.get("incidence_rate")) for item in dated_records]
         point_quality_statuses = [
             str(item.get("quality_status") or item.get("data_quality") or "unknown")
             for item in dated_records
@@ -146,16 +168,11 @@ def _source_series_details(records: list[dict]) -> list[dict]:
                 "dimensions": dimensions if isinstance(dimensions, dict) else {},
                 "dates": dates,
                 "values": values,
-                "incidence_rates": [
-                    _safe_float(item.get("incidence_rate")) for item in dated_records
-                ],
+                "incidence_rates": incidence_rates,
                 "incidence_sources": [
                     item.get("incidence_rate_source") for item in dated_records
                 ],
-                "has_incidence_rates": any(
-                    _safe_float(item.get("incidence_rate")) is not None
-                    for item in dated_records
-                ),
+                "has_incidence_rates": any(value is not None for value in incidence_rates),
                 "population_values": [
                     _safe_float(item.get("population")) for item in dated_records
                 ],
@@ -194,7 +211,8 @@ def _trailing_provisional_from(
 
     provisional = {"provisional", "preliminary"}
     start: str | None = None
-    for date, status in reversed(list(zip(dates, quality_statuses))):
+    for index in range(min(len(dates), len(quality_statuses)) - 1, -1, -1):
+        date, status = dates[index], quality_statuses[index]
         if str(status or "").strip().lower() not in provisional:
             break
         start = date
@@ -210,8 +228,9 @@ def _representative_series_code(source_series: list[dict]) -> str:
     return next(iter(selection.selected_codes))
 
 
-def _projection_context(series_records: list[dict]) -> tuple[set[str], dict]:
-    source_series = _source_series_details(series_records)
+def _projection_context(series_records: list[dict], *, source_series: list[dict] | None = None) -> tuple[set[str], dict]:
+    if source_series is None:
+        source_series = _source_series_details(series_records)
     selection = select_series_projection(source_series)
     selected_codes = set(selection.selected_codes)
     period_granularity = selected_series_granularity(source_series, selected_codes)
@@ -264,17 +283,19 @@ def _projection_context(series_records: list[dict]) -> tuple[set[str], dict]:
     }
 
 
-def _collapse_selected_series_records(records: list[dict], context: dict) -> list[dict]:
+def _collapse_selected_series_records(records: list[dict], context: dict, *, period_key=report_period_key) -> list[dict]:
     """Collapse only the explicitly selected series to the legacy chart grain."""
 
     selected_codes = set(context.get("selected_series_codes") or [])
     period_granularity = context.get("period_granularity")
     selected = [r for r in records if r.get("series_code") in selected_codes]
     seen: set[tuple[str, str]] = set()
+    by_period: dict[str, list[dict]] = defaultdict(list)
     for record in selected:
+        period = period_key(record.get("date"), period_granularity)
         identity = (
             str(record.get("series_code") or ""),
-            report_period_key(record.get("date"), period_granularity),
+            period,
         )
         if identity in seen:
             raise RuntimeError(
@@ -282,13 +303,8 @@ def _collapse_selected_series_records(records: list[dict], context: dict) -> lis
                 f"{identity[0]} {identity[1]}"
             )
         seen.add(identity)
-
-    by_period: dict[str, list[dict]] = defaultdict(list)
-    for record in selected:
         if record.get("date"):
-            by_period[
-                report_period_key(record["date"], period_granularity)
-            ].append(record)
+            by_period[period].append(record)
 
     projected: list[dict] = []
     for period in sorted(by_period):
@@ -358,7 +374,7 @@ def _collapse_selected_series_records(records: list[dict], context: dict) -> lis
 
 
 def _attach_legacy_supplemental_metrics(
-    projected: list[dict], context: dict, legacy_records: list[dict]
+    projected: list[dict], context: dict, legacy_records: list[dict], *, period_key=report_period_key,
 ) -> dict:
     """Retain non-case legacy metrics without reintroducing case duplication."""
 
@@ -367,25 +383,23 @@ def _attach_legacy_supplemental_metrics(
     for record in legacy_records:
         if record.get("date"):
             legacy_by_period[
-                report_period_key(record["date"], period_granularity)
+                period_key(record["date"], period_granularity)
             ].append(record)
-    dates = sorted(str(record.get("date")) for record in legacy_records if record.get("date"))
+    ordered = sorted((record for record in legacy_records if record.get("date")), key=lambda item: str(item["date"]))
+    dates = [str(record["date"]) for record in ordered]
     context["supplemental_legacy_metrics"] = {
         "dates": dates,
         "deaths": [
             record.get("deaths") or 0
-            for record in sorted(legacy_records, key=lambda item: str(item.get("date") or ""))
-            if record.get("date")
+            for record in ordered
         ],
         "recoveries": [
             record.get("recoveries") or 0
-            for record in sorted(legacy_records, key=lambda item: str(item.get("date") or ""))
-            if record.get("date")
+            for record in ordered
         ],
         "mortality_rates": [
             record.get("mortality_rate")
-            for record in sorted(legacy_records, key=lambda item: str(item.get("date") or ""))
-            if record.get("date")
+            for record in ordered
         ],
     }
     safe_alignment = context.get("projection_policy") in {
@@ -402,8 +416,12 @@ def _attach_legacy_supplemental_metrics(
         ),
     }
     if safe_alignment:
+        if not legacy_records:
+            for record in projected:
+                record["deaths"] = record["recoveries"] = record["mortality_rate"] = None
+            return context
         for record in projected:
-            period = report_period_key(record.get("date"), period_granularity)
+            period = period_key(record.get("date"), period_granularity)
             candidates = legacy_by_period.get(period) or []
             exact = str(record.get("date") or "")
             legacy = [
@@ -489,13 +507,13 @@ def _partition_compatible_legacy_records(
 
 
 def _overlay_legacy_coverage_gaps(
-    projected: list[dict], context: dict, legacy_records: list[dict]
+    projected: list[dict], context: dict, legacy_records: list[dict], *, period_key=report_period_key,
 ) -> list[dict]:
     """Overlay registry facts by period without sacrificing legacy coverage."""
 
     period_granularity = context.get("period_granularity")
     registry_periods = {
-        report_period_key(r.get("date"), period_granularity)
+        period_key(r.get("date"), period_granularity)
         for r in projected
         if r.get("date")
     }
@@ -503,7 +521,7 @@ def _overlay_legacy_coverage_gaps(
     for record in legacy_records:
         if record.get("date"):
             legacy_by_period[
-                report_period_key(record["date"], period_granularity)
+                period_key(record["date"], period_granularity)
             ].append(record)
     legacy_periods = set(legacy_by_period)
     gap_periods = sorted(legacy_periods - registry_periods)
@@ -593,6 +611,8 @@ def apply_series_first_projection(
 ) -> list[dict]:
     """Overlay eligible registry facts without mixing or double counting layers."""
 
+    period_key = _period_key_reader()
+
     legacy_by_disease: dict[str, list[dict]] = defaultdict(list)
     for record in legacy_records:
         disease_id = str(record.get("disease_id") or "").strip()
@@ -622,10 +642,14 @@ def apply_series_first_projection(
     ):
         eligible = eligible_series.get(disease_id) or []
         if eligible:
-            _selected, context = _projection_context(eligible)
-            retained_source_series = _source_series_details(
-                all_series.get(disease_id) or eligible
-            )
+            if len(eligible) == len(all_series[disease_id]):
+                retained_source_series = _source_series_details(eligible)
+                _selected, context = _projection_context(eligible, source_series=retained_source_series)
+            else:
+                # Preserve the original validation order when hidden source
+                # facts differ: selecting the eligible view may itself fail.
+                _selected, context = _projection_context(eligible)
+                retained_source_series = _source_series_details(all_series[disease_id])
             context["source_series"] = retained_source_series
             context["available_series_count"] = len(retained_source_series)
             context["non_projection_series_codes"] = sorted(
@@ -640,16 +664,16 @@ def apply_series_first_projection(
                 # Typed source observations are exported separately.  A legacy
                 # flat row must not disguise the absence of a safe rollup.
                 continue
-            projected = _collapse_selected_series_records(eligible, context)
+            projected = _collapse_selected_series_records(eligible, context, period_key=period_key)
             legacy_candidates = legacy_by_disease.get(disease_id) or []
             compatible_legacy, blocked_legacy, incompatibility_reasons = (
                 _partition_compatible_legacy_records(context, legacy_candidates)
             )
             _attach_legacy_supplemental_metrics(
-                projected, context, compatible_legacy
+                projected, context, compatible_legacy, period_key=period_key,
             )
             overlaid = _overlay_legacy_coverage_gaps(
-                projected, context, compatible_legacy
+                projected, context, compatible_legacy, period_key=period_key,
             )
             context["coverage_policy"] = "compatible_source_period_overlay"
             context["legacy_gap_fill_blocked_count"] = len(blocked_legacy)
@@ -730,35 +754,46 @@ def apply_disease_cutover_projection(
         if policies[str(r.get("disease_id") or "").strip().upper()].read_mode != "legacy"
     ]
     accepted: list[dict] = []
+    checked_contexts: dict[tuple[str, int], tuple[dict, bool]] = {}
     for record in apply_series_first_projection(filtered_legacy, filtered_series):
         disease_id = str(record.get("disease_id") or "").strip().upper()
         policy = policies[disease_id]
         context = record.get("_series_context") or {}
-        selected_codes = set(context.get("selected_series_codes") or [])
-        blocked: list[str] = []
-        missing = sorted(set(policy.required_series) - selected_codes)
-        if missing:
-            blocked.append("missing_required_series:" + ",".join(missing))
-        if (
-            policy.allowed_projection_policy
-            and context.get("projection_policy")
-            != policy.allowed_projection_policy
-        ):
-            blocked.append(
-                "projection_policy_mismatch:"
-                f"expected={policy.allowed_projection_policy},"
-                f"actual={context.get('projection_policy')}"
-            )
-        context["cutover"] = {
-            "release_version": config.release_version,
-            "read_mode": policy.read_mode,
-            "shadow_compare": policy.shadow_compare,
-            "target_override": policy.target_override,
-            "required_series": list(policy.required_series),
-            "allowed_projection_policy": policy.allowed_projection_policy,
-            "blocked_reasons": blocked,
-        }
-        if policy.read_mode != "series_only" or not blocked:
+        key = (disease_id, id(context))
+        checked = checked_contexts.get(key)
+        if checked is None:
+            selected_codes = set(context.get("selected_series_codes") or [])
+            blocked: list[str] = []
+            missing = sorted(set(policy.required_series) - selected_codes)
+            if missing:
+                blocked.append("missing_required_series:" + ",".join(missing))
+            if (
+                policy.allowed_projection_policy
+                and context.get("projection_policy")
+                != policy.allowed_projection_policy
+            ):
+                blocked.append(
+                    "projection_policy_mismatch:"
+                    f"expected={policy.allowed_projection_policy},"
+                    f"actual={context.get('projection_policy')}"
+                )
+            context["cutover"] = {
+                "release_version": config.release_version,
+                "read_mode": policy.read_mode,
+                "shadow_compare": policy.shadow_compare,
+                "target_override": policy.target_override,
+                "required_series": list(policy.required_series),
+                "allowed_projection_policy": policy.allowed_projection_policy,
+                "blocked_reasons": blocked,
+            }
+            allowed = policy.read_mode != "series_only" or not blocked
+            # Retain the object reference as well as its id. Contexts are shared
+            # across periods of a disease, but distinct contexts must never be
+            # mistaken for one another after object-id reuse.
+            checked_contexts[key] = (context, allowed)
+        else:
+            allowed = checked[1]
+        if allowed:
             accepted.append(record)
     validate_series_first_projection(accepted)
     return accepted

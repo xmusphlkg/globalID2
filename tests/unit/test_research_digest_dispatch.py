@@ -68,11 +68,11 @@ def test_builds_bilingual_cited_weekly_campaign_without_recipient_data():
     assert payload["list_codes"] == ["research_digest"]
     assert payload["frequency"] == "weekly"
     assert payload["target_locales"] == ["en", "zh"]
-    assert payload["diseases"] == ["malaria"]
-    assert payload["countries"] == ["CN"]
-    assert payload["research_topics"] == ["surveillance"]
-    assert payload["study_types"] == ["systematic-review"]
-    assert payload["peer_review_statuses"] == ["peer-reviewed"]
+    assert payload["content_items"] == [{
+        "id": "lit-one", "countries": ["CN"], "diseases": ["malaria"],
+        "research_topics": ["surveillance"], "study_types": ["systematic-review"],
+        "peer_review_statuses": ["peer-reviewed"],
+    }]
     for locale in ("en", "zh"):
         markdown = payload["contents"][locale]["markdown"]
         assert "https://globalinfectiousdisease.com/research/articles/a-systematic-review/" in markdown
@@ -98,6 +98,12 @@ def test_rejects_ungrounded_or_non_bilingual_findings():
     thin_record["articles"][0]["content_tier"] = "metadata_only"
     with pytest.raises(dispatcher.DispatchError, match="not_public_bilingual_evidence"):
         dispatcher.build_campaign_payload(thin_record)
+
+
+def test_multilingual_published_evidence_satisfies_bilingual_digest():
+    brief = _brief()
+    brief["articles"][0]["content_tier"] = "quality_gated_multilingual_evidence"
+    assert len(dispatcher.build_campaign_payload(brief)["content_items"]) == 1
 
 
 def test_editorially_reviewed_brief_emits_only_the_validated_public_byline():
@@ -223,6 +229,8 @@ def test_apply_posts_once_with_bearer_and_emits_only_safe_campaign_projection(tm
 
     def opener(request, *, timeout):
         calls.append((request, timeout))
+        if request.full_url.endswith("/health"):
+            return _Response({"ok": True, "capabilities": {"research_content_items_v1": True}}, status=200)
         return _Response({
             "ok": True,
             "duplicate": False,
@@ -245,8 +253,8 @@ def test_apply_posts_once_with_bearer_and_emits_only_safe_campaign_projection(tm
     )
 
     assert result == 0
-    assert len(calls) == 1
-    request, timeout = calls[0]
+    assert len(calls) == 2
+    request, timeout = calls[1]
     assert request.full_url == "https://subscriptions.example.test/api/admin/notifications"
     assert request.get_header("Authorization") == f"Bearer {secret}"
     assert timeout == 15
@@ -292,6 +300,7 @@ def test_process_requires_apply_without_opening_network(tmp_path, capsys):
 def test_apply_and_process_uses_bounded_campaign_endpoint(tmp_path, capsys):
     calls = []
     responses = [
+        _Response({"ok": True, "capabilities": {"research_content_items_v1": True}}, status=200),
         _Response({
             "ok": True,
             "duplicate": True,
@@ -326,11 +335,30 @@ def test_apply_and_process_uses_bounded_campaign_endpoint(tmp_path, capsys):
 
     assert result == 0
     assert [call[0].full_url for call in calls] == [
+        "https://subscriptions.example.test/health",
         "https://subscriptions.example.test/api/admin/notifications",
         "https://subscriptions.example.test/api/admin/notifications/campaign-1/process",
     ]
-    assert json.loads(calls[1][0].data) == {"batch_size": 10}
+    assert json.loads(calls[2][0].data) == {"batch_size": 10}
     output = json.loads(capsys.readouterr().out)
     assert output["duplicate"] is True
     assert output["status"] == "sent"
     assert output["progress"]["sent"] == 1
+
+
+def test_apply_rejects_old_worker_before_creating_campaign(tmp_path, capsys):
+    methods = []
+
+    def opener(request, *, timeout):
+        methods.append(request.get_method())
+        return _Response({"ok": True}, status=200)
+
+    result = dispatcher.main(
+        ["--brief", str(_write_brief(tmp_path)), "--apply"],
+        environment={"RESEARCH_DIGEST_WORKER_URL": "https://subscriptions.example.test",
+                     "SUBSCRIPTIONS__ADMIN_API_TOKEN": "test-secret"},
+        opener=opener,
+    )
+    assert result == 2
+    assert methods == ["GET"]
+    assert "worker_research_content_items_capability_required" in capsys.readouterr().err

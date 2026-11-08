@@ -3,11 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties } from 'react';
 import './situation.css';
-import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SeriesGlance, SiteIndex, SituationAlertRecord } from '../../utils/situationTypes.ts';
-import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, filterPoints, placeLabel, recencyOf, sortPoints, type Filters, type GraphRow, type Lane, type WindowKey } from './model.ts';
+import { situationData } from '../../lib/situation-data';
+import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SeriesGlance, SiteIndex, SituationAlertRecord, SituationMapDataFile } from '../../utils/situationTypes.ts';
+import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts, deduplicatePoints, filterPoints, placeLabel, recencyOf, sortPoints, type AlertGroup, type Filters, type GraphRow, type Lane, type WindowKey } from './model.ts';
 import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, countsLine, diseaseName, formatCount, formatDay, formatSignedPercent, sourceLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
 import type { CanvasProps, RegionTint } from './SituationMapCanvas.tsx';
+import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
+import { surveillanceData } from '../../lib/surveillance-data.ts';
+import { currentSurveillanceSite } from './currentSurveillanceSite.ts';
 
 interface ArchiveLinks {
   weekly: string;
@@ -19,18 +23,16 @@ interface Props {
   locale: Locale;
   asOf: string;
   generatedAt: string;
-  points: MapPoint[];
+  /** Static JSON with markers and monitoring; kept off the HTML props for the gzip budget. */
+  dataUrl: string;
   site: SiteIndex;
-  monitoring: MonitoringProduct[];
-  activeOutbreaks: number;
-  sourcesOk: number;
-  sourceCount: number;
   links: ArchiveLinks;
 }
 
 type Selection = { kind: 'place'; id: string } | { kind: 'country'; code: string } | null;
 type ListMode = 'auto' | 'open' | 'closed';
 type Remote = OutbreakFile | 'loading' | 'error';
+type DataState = 'loading' | 'ready' | 'error';
 
 interface Option {
   id: string;
@@ -41,6 +43,49 @@ interface Option {
 const LIST_LIMIT = 300;
 const TIMELINE_PAGE = 30;
 const OUTBREAK_URL = (id: string) => `/situation/outbreaks/${encodeURIComponent(id)}.json`;
+
+function applyDeepLinks(
+  points: MapPoint[],
+  site: SiteIndex,
+  asOf: string,
+): { filters: Filters; selection: Selection } {
+  const params = new URLSearchParams(window.location.search);
+  const disease = diseaseIdFromQuery(params.get('disease') ?? '', site, points);
+  const countryRaw = (params.get('country') ?? '').toUpperCase();
+  const country = /^[A-Z]{2}$/.test(countryRaw) && (site.countries[countryRaw] || points.some(point => point.country_code.toUpperCase() === countryRaw))
+    ? countryRaw
+    : '';
+  const windowParam = params.get('window');
+  const nextWindow: WindowKey = windowParam === '7' || windowParam === '90' || windowParam === 'all' || windowParam === '30'
+    ? windowParam
+    : DEFAULT_FILTERS.window;
+  const place = params.get('place');
+  const outbreak = params.get('outbreak');
+  const match = place
+    ? points.find(point => point.alert_id === place) ?? null
+    : outbreak
+      ? sortPoints(points.filter(point => point.outbreak_id === outbreak), asOf)[0] ?? null
+      : null;
+  const filters: Filters = {
+    disease: disease || '',
+    country,
+    source: points.some(point => point.source_id === params.get('source')) ? params.get('source')! : '',
+    window: !windowParam && match && ageDays(match.published_date, asOf) > 30 ? 'all' : nextWindow,
+  };
+  const candidates = deduplicatePoints(sortPoints(filterPoints(points, filters, asOf), asOf));
+  const selected = match && (candidates.find(point => point.alert_id === match.alert_id)
+    ?? candidates.find(point => point.outbreak_id === match.outbreak_id
+      && point.country_code === match.country_code && point.admin_area === match.admin_area
+      && point.published_date === match.published_date));
+  return {
+    filters,
+    selection: selected
+      ? { kind: 'place', id: selected.alert_id }
+      : country
+        ? { kind: 'country', code: country }
+        : null,
+  };
+}
 
 function tally(points: MapPoint[], idOf: (point: MapPoint) => string | null, labelOf: (point: MapPoint) => string): Option[] {
   const counts = new Map<string, Option>();
@@ -60,6 +105,7 @@ function Select({ label, value, options, anyLabel, onChange }: { label: string; 
       <span>{label}</span>
       <select value={value} onChange={event => onChange(event.target.value)}>
         <option value="">{anyLabel}</option>
+        {value && !options.some(option => option.id === value) && <option value={value}>{value}</option>}
         {options.map(option => (
           <option key={option.id} value={option.id}>{option.label} ({option.count})</option>
         ))}
@@ -146,12 +192,12 @@ function GraphCell({ row, lanes, width }: { row: GraphRow<SituationAlertRecord>;
   );
 }
 
-function AlertItem({ alert, row, lanes, width, selected, featured, showPlace, locale }: { alert: SituationAlertRecord; row: GraphRow<SituationAlertRecord>; lanes: Lane[]; width: number; selected: boolean; featured: boolean; showPlace: boolean; locale: Locale }) {
+function AlertItem({ alert, row, lanes, width, selected, featured, showPlace, locale }: { alert: AlertGroup; row: GraphRow<SituationAlertRecord>; lanes: Lane[]; width: number; selected: boolean; featured: boolean; showPlace: boolean; locale: Locale }) {
   const copy = COPY[locale];
   const short = shortCounts(alert, locale);
   const summary = alertSummary(alert, locale);
   return (
-    <li className={`sit-alert${selected ? ' is-selected' : ''}`}>
+    <li className={`sit-alert${selected ? ' is-selected' : ''}`} data-alert-id={alert.alert_id} data-country={alert.country_code}>
       <GraphCell row={row} lanes={lanes} width={width} />
       <details open={featured}>
         <summary>
@@ -175,10 +221,12 @@ function AlertItem({ alert, row, lanes, width, selected, featured, showPlace, lo
           ) : (
             <p className="sit-muted">{copy.quoteWithheld}</p>
           )}
-          <p className="sit-links">
-            <a className="sit-source-link" href={alert.url} target="_blank" rel="noopener noreferrer">{copy.originalReport} ↗</a>
-            <span>{sourceLabel(alert, locale)}</span>
-          </p>
+          {alert.reports.filter((report, index, reports) => reports.findIndex(item => item.source_id === report.source_id && item.url === report.url) === index).map(report => (
+            <p className="sit-links" key={report.alert_id}>
+              <a className="sit-source-link" href={report.url} target="_blank" rel="noopener noreferrer">{copy.originalReport} ↗</a>
+              <span>{sourceLabel(report, locale)}</span>
+            </p>
+          ))}
         </div>
       </details>
     </li>
@@ -195,19 +243,29 @@ function diseaseIdFromQuery(value: string, site: SiteIndex, points: MapPoint[]):
 
 export default function SituationExplorer({
   locale,
-  asOf,
-  generatedAt,
-  points,
-  site,
-  monitoring,
-  activeOutbreaks,
-  sourcesOk,
-  sourceCount,
+  asOf: initialAsOf,
+  generatedAt: initialGeneratedAt,
+  dataUrl,
+  site: contentSite,
   links,
 }: Props) {
   const copy = COPY[locale];
+  const [asOf, setAsOf] = useState(initialAsOf);
+  const [generatedAt, setGeneratedAt] = useState(initialGeneratedAt);
+  const [points, setPoints] = useState<MapPoint[]>([]);
+  const [monitoring, setMonitoring] = useState<MonitoringProduct[]>([]);
+  const [activeOutbreaks, setActiveOutbreaks] = useState(0);
+  const [sourcesOk, setSourcesOk] = useState(0);
+  const [sourceCount, setSourceCount] = useState(0);
+  const [dataState, setDataState] = useState<DataState>('loading');
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selection, setSelection] = useState<Selection>(null);
+  const currentMeta = useSurveillanceSummary('/site-data/meta.json');
+  const [surveillanceSummaries, setSurveillanceSummaries] = useState<Record<string, Record<string, any>>>({});
+  const summaryRequests = useRef(new Set<string>());
+  const summaryMounted = useRef(true);
+  useEffect(() => { summaryMounted.current = true; return () => { summaryMounted.current = false; }; }, []);
+  const site = useMemo(() => currentSurveillanceSite(contentSite, currentMeta.data, surveillanceSummaries), [contentSite, currentMeta.data, surveillanceSummaries]);
   const [listMode, setListMode] = useState<ListMode>('auto');
   const [wide, setWide] = useState(true);
   const [outbreaks, setOutbreaks] = useState<Record<string, Remote>>({});
@@ -226,33 +284,6 @@ export default function SituationExplorer({
     const applyWide = () => setWide(query.matches);
     applyWide();
     query.addEventListener('change', applyWide);
-
-    const params = new URLSearchParams(window.location.search);
-    const disease = diseaseIdFromQuery(params.get('disease') ?? '', site, points);
-    const countryRaw = (params.get('country') ?? '').toUpperCase();
-    const country = /^[A-Z]{2}$/.test(countryRaw) && (site.countries[countryRaw] || points.some(point => point.country_code.toUpperCase() === countryRaw))
-      ? countryRaw
-      : '';
-    const windowParam = params.get('window');
-    const nextWindow: WindowKey = windowParam === '7' || windowParam === '90' || windowParam === 'all' || windowParam === '30'
-      ? windowParam
-      : DEFAULT_FILTERS.window;
-    const place = params.get('place');
-    const outbreak = params.get('outbreak');
-    const match = place
-      ? points.find(point => point.alert_id === place) ?? null
-      : outbreak
-        ? sortPoints(points.filter(point => point.outbreak_id === outbreak), asOf)[0] ?? null
-        : null;
-    setFilters({
-      disease: disease || '',
-      country: country && points.some(point => point.country_code.toUpperCase() === country) ? country : '',
-      source: '',
-      window: match && ageDays(match.published_date, asOf) > 30 ? 'all' : nextWindow,
-    });
-    if (match) setSelection({ kind: 'place', id: match.alert_id });
-    else if (country) setSelection({ kind: 'country', code: country });
-
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setSelection(null);
     };
@@ -262,9 +293,39 @@ export default function SituationExplorer({
       query.removeEventListener('change', applyWide);
       window.removeEventListener('keydown', onKey);
     };
-    // Deep links are read once, on arrival.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    let live = true;
+    setDataState('loading');
+    situationData.read<SituationMapDataFile>(dataUrl)
+      .then(payload => {
+        if (!live) return;
+        if (payload.schema_version !== 'gids.situation_alerts.v1' || !Array.isArray(payload.points)) throw new Error('Invalid situation map');
+        const nextPoints = Array.isArray(payload.points) ? payload.points : [];
+        const nextAsOf = payload.as_of || initialAsOf;
+        setPoints(nextPoints);
+        setMonitoring(Array.isArray(payload.monitoring) ? payload.monitoring : []);
+        setActiveOutbreaks(Number(payload.active_outbreaks) || 0);
+        setSourcesOk(Number(payload.sources_ok) || 0);
+        setSourceCount(Number(payload.source_count) || 0);
+        setAsOf(nextAsOf);
+        setGeneratedAt(payload.generated_at || initialGeneratedAt);
+        const deep = applyDeepLinks(nextPoints, site, nextAsOf);
+        setFilters(deep.filters);
+        setSelection(deep.selection);
+        setDataState('ready');
+      })
+      .catch(() => {
+        if (!live) return;
+        setDataState('error');
+      });
+    return () => {
+      live = false;
+    };
+    // Markers load once per page; deep links are applied when the payload arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataUrl]);
 
   useEffect(() => {
     if (skipWrite.current) {
@@ -276,6 +337,7 @@ export default function SituationExplorer({
     write('place', selection?.kind === 'place' ? selection.id : '');
     write('country', filters.country || (selection?.kind === 'country' ? selection.code : ''));
     write('disease', filters.disease);
+    write('source', filters.source);
     write('window', filters.window === DEFAULT_FILTERS.window ? '' : filters.window);
     url.searchParams.delete('outbreak');
     const next = `${url.pathname}${url.search}${url.hash}`;
@@ -284,21 +346,33 @@ export default function SituationExplorer({
     }
   }, [selection, filters]);
 
-  const visible = useMemo(() => sortPoints(filterPoints(points, filters, asOf), asOf), [points, filters, asOf]);
-  const selected = selection?.kind === 'place' ? points.find(point => point.alert_id === selection.id) ?? null : null;
+  const visible = useMemo(() => deduplicatePoints(sortPoints(filterPoints(points, filters, asOf), asOf)), [points, filters, asOf]);
+  const selected = selection?.kind === 'place' ? visible.find(point => point.alert_id === selection.id) ?? null : null;
+  const selectedDisease = selected?.disease_id;
+  useEffect(() => {
+    for (const rawId of new Set([filters.disease, selectedDisease].filter(Boolean))) {
+      const id = String(rawId).toUpperCase();
+      if (!/^D\d+$/.test(id) || summaryRequests.current.has(id)) continue;
+      summaryRequests.current.add(id);
+      surveillanceData.read<Record<string, any>>(`/site-data/diseases/${id.toLowerCase()}-summary.json`)
+        .then(summary => { if (summaryMounted.current) setSurveillanceSummaries(previous => ({ ...previous, [id]: summary })); })
+        .catch(() => summaryRequests.current.delete(id));
+    }
+  }, [filters.disease, selectedDisease]);
   const selectedCountryCode = selection?.kind === 'country'
     ? selection.code
     : selected?.country_code.toUpperCase() ?? '';
   const countryGlance = selectedCountryCode ? site.countries[selectedCountryCode] : undefined;
   const listOpen = listMode === 'open' || (listMode === 'auto' && wide);
 
-  const diseases = useMemo(() => tally(points, point => point.disease_id ?? point.disease_label, point => diseaseName(point, locale)), [points, locale]);
-  const countries = useMemo(() => tally(points, point => point.country_code, point => countryName(point, locale)), [points, locale]);
+  const diseases = useMemo(() => tally(deduplicatePoints(points), point => point.disease_id ?? point.disease_label, point => diseaseName(point, locale)), [points, locale]);
+  const countries = useMemo(() => tally(deduplicatePoints(points), point => point.country_code, point => countryName(point, locale)), [points, locale]);
   const sources = useMemo(() => tally(points, point => point.source_id, point => sourceLabel(point, locale)), [points, locale]);
   const linked = useMemo(
     () => visible.filter(point => point.disease_id && site.series[seriesKey(point.country_code, point.disease_id)]).length,
     [visible, site.series],
   );
+  const linksKnown = visible.every(point => !point.disease_id || surveillanceSummaries[String(point.disease_id).toUpperCase()]);
   const monitoringRows = useMemo(() => {
     const seen = new Set<string>();
     return monitoring.filter(product => {
@@ -313,18 +387,18 @@ export default function SituationExplorer({
     if (!outbreakId || requested.current.has(outbreakId)) return;
     requested.current.add(outbreakId);
     setOutbreaks(state => ({ ...state, [outbreakId]: 'loading' }));
-    fetch(OUTBREAK_URL(outbreakId))
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json() as Promise<OutbreakFile>;
-      })
+    situationData.read<OutbreakFile>(OUTBREAK_URL(outbreakId))
       .then(file => setOutbreaks(state => ({ ...state, [outbreakId]: file })))
       .catch(() => setOutbreaks(state => ({ ...state, [outbreakId]: 'error' })));
   }, [outbreakId]);
 
   const remote = outbreakId ? outbreaks[outbreakId] : undefined;
   const file = remote && typeof remote === 'object' ? remote : null;
-  const timeline = file?.alerts ?? [];
+  const timeline = useMemo(
+    () => deduplicateAlerts(filterPoints(file?.alerts ?? [], filters, asOf), selected?.alert_id),
+    [file, filters, asOf, selected?.alert_id],
+  );
+  const outbreakAlertCount = useMemo(() => deduplicateAlerts(file?.alerts ?? []).length, [file]);
   const placesInOutbreak = useMemo(() => {
     const seen = new Map<string, SituationAlertRecord>();
     for (const alert of timeline) {
@@ -353,7 +427,20 @@ export default function SituationExplorer({
   const rowLimit = Math.max((outbreakId ? timelineShown[outbreakId] : 0) || TIMELINE_PAGE, headlineIndex + 1);
   const visibleRows = graph.rows.slice(0, rowLimit);
 
-  const set = <K extends keyof Filters>(key: K, value: Filters[K]) => setFilters(state => ({ ...state, [key]: value }));
+  const applyFilters = (next: Filters) => {
+    setFilters(next);
+    setTimelineShown({});
+    if (selection?.kind === 'place') {
+      const candidates = deduplicatePoints(sortPoints(filterPoints(points, next, asOf), asOf));
+      const target = candidates.find(point => point.alert_id === selection.id)
+        ?? candidates.find(point => point.outbreak_id === selected?.outbreak_id)
+        ?? candidates[0];
+      setSelection(target ? { kind: 'place', id: target.alert_id } : null);
+    } else if (selection?.kind === 'country') {
+      setSelection(next.country ? { kind: 'country', code: next.country } : null);
+    }
+  };
+  const set = <K extends keyof Filters>(key: K, value: Filters[K]) => applyFilters({ ...filters, [key]: value });
   const closeListOnNarrow = () => {
     if (window.matchMedia('(max-width: 899px)').matches) setListMode('closed');
   };
@@ -362,6 +449,8 @@ export default function SituationExplorer({
     closeListOnNarrow();
   };
   const selectCountry = (code: string) => {
+    setFilters(state => ({ ...state, country: code.toUpperCase() }));
+    setTimelineShown({});
     setSelection({ kind: 'country', code: code.toUpperCase() });
     closeListOnNarrow();
   };
@@ -415,11 +504,25 @@ export default function SituationExplorer({
       && (!filters.disease || (point.disease_id ?? point.disease_label) === filters.disease)
       && (!filters.source || point.source_id === filters.source))
     : [];
-  const countryAlerts = sortPoints(
+  const countryAlerts = deduplicatePoints(sortPoints(
     filterPoints(countryPool, { ...filters, country: '', disease: '', source: '' }, asOf),
     asOf,
+  ));
+  const countryHasOlder = filters.window !== 'all' && countryPool.some(point => ageDays(point.published_date, asOf) > Number(filters.window));
+
+  const filterControls = (
+    <div className="sit-filter-grid">
+      <Select label={copy.disease} value={filters.disease} options={diseases} anyLabel={copy.any} onChange={value => set('disease', value)} />
+      <Select label={copy.country} value={filters.country} options={countries} anyLabel={copy.any} onChange={value => set('country', value)} />
+      <Select label={copy.source} value={filters.source} options={sources} anyLabel={copy.any} onChange={value => set('source', value)} />
+      <label className="sit-field">
+        <span>{copy.window}</span>
+        <select value={filters.window} onChange={event => set('window', event.target.value as WindowKey)}>
+          {windows.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+      </label>
+    </div>
   );
-  const countryHasOlder = countryPool.length > countryAlerts.length && filters.window !== 'all';
 
   return (
     <div className="sit-stage" data-list={listMode === 'auto' ? undefined : listMode}>
@@ -432,7 +535,7 @@ export default function SituationExplorer({
           <span><strong>{visible.length}</strong> {copy.placesToggle}</span>
           <span><strong>{activeOutbreaks}</strong> {copy.activeLabel}</span>
           <span><strong>{sourcesOk}/{sourceCount}</strong> {copy.source}</span>
-          <span>{copy.linked(linked, visible.length)}</span>
+          <span>{linksKnown ? copy.linked(linked, visible.length) : locale === 'zh' ? '选择地点查看监测背景' : locale === 'fr' ? 'Choisissez un lieu pour le contexte de surveillance' : 'Select a place for surveillance context'}</span>
           <time dateTime={generatedAt}>{copy.updated} {formatDay(generatedAt, locale)}</time>
         </p>
         <div className="sit-bar-links">
@@ -445,7 +548,11 @@ export default function SituationExplorer({
 
       <div className="sit-map-wrap">
         <section className="sit-map" aria-label={copy.mapLabel}>
-          {Canvas ? (
+          {dataState === 'error' ? (
+            <p className="sit-note" role="status">{copy.dataFailed}</p>
+          ) : dataState !== 'ready' ? (
+            <p className="sit-note" role="status">{copy.mapLoading}</p>
+          ) : Canvas ? (
             <Canvas
               points={visible}
               asOf={asOf}
@@ -466,19 +573,9 @@ export default function SituationExplorer({
         <aside className="sit-panel sit-list" aria-label={copy.filters}>
           <div className="sit-panel-head">
             <h2>{copy.filters}</h2>
-            <button type="button" className="sit-reset" disabled={!filtersActive} onClick={() => setFilters(DEFAULT_FILTERS)}>{copy.reset}</button>
+            <button type="button" className="sit-reset" disabled={!filtersActive} onClick={() => applyFilters(DEFAULT_FILTERS)}>{copy.reset}</button>
           </div>
-          <div className="sit-filter-grid">
-            <Select label={copy.disease} value={filters.disease} options={diseases} anyLabel={copy.any} onChange={value => set('disease', value)} />
-            <Select label={copy.country} value={filters.country} options={countries} anyLabel={copy.any} onChange={value => set('country', value)} />
-            <Select label={copy.source} value={filters.source} options={sources} anyLabel={copy.any} onChange={value => set('source', value)} />
-            <label className="sit-field">
-              <span>{copy.window}</span>
-              <select value={filters.window} onChange={event => set('window', event.target.value as WindowKey)}>
-                {windows.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-          </div>
+          {filterControls}
           {filters.country && (
             <button type="button" className="sit-text-btn" onClick={() => selectCountry(filters.country)}>{copy.countryDossier}</button>
           )}
@@ -563,7 +660,7 @@ export default function SituationExplorer({
                   <>
                     <span>{copy.firstReported} <time dateTime={file.first_published}>{formatDay(file.first_published, locale)}</time></span>
                     <span>{copy.updated} <time dateTime={file.last_published}>{formatDay(file.last_published, locale)}</time></span>
-                    <span>{copy.alertsCount(file.alert_count)}</span>
+                    <span>{copy.alertsCount(outbreakAlertCount)}</span>
                   </>
                 ) : (
                   <span>{copy.updated} <time dateTime={selected.published_date}>{formatDay(selected.published_date, locale)}</time></span>
@@ -579,8 +676,8 @@ export default function SituationExplorer({
                       <li key={`${alert.country_code}:${alert.admin_area ?? ''}`}>
                         <button type="button" className={alert.country_code === selected.country_code && (alert.admin_area ?? '') === (selected.admin_area ?? '') ? 'is-selected' : ''} onClick={() => {
                           const samePlace = (point: MapPoint) => point.outbreak_id === selected.outbreak_id && point.country_code === alert.country_code;
-                          const target = points.find(point => samePlace(point) && (point.admin_area ?? '') === (alert.admin_area ?? ''))
-                            ?? points.find(samePlace);
+                          const target = visible.find(point => samePlace(point) && (point.admin_area ?? '') === (alert.admin_area ?? ''))
+                            ?? visible.find(samePlace);
                           if (target) selectPlace(target.alert_id);
                         }}>
                           {placeLabel(alert, countryName(alert, locale))}
@@ -592,9 +689,11 @@ export default function SituationExplorer({
               )}
               {remote === 'loading' && <p className="sit-muted" role="status">{copy.mapLoading}</p>}
               {remote === 'error' && <p className="sit-muted" role="status">{copy.timelineFailed}</p>}
-              {timeline.length > 0 && (
+              {file && (
                 <section className="sit-timeline-wrap" aria-labelledby="sit-timeline-heading">
-                  <h3 id="sit-timeline-heading">{copy.detailHeading}</h3>
+                  <h3 id="sit-timeline-heading">{copy.detailHeading} <small>{copy.alertsCount(timeline.length)}</small></h3>
+                  {filterControls}
+                  {timeline.length === 0 && <p className="sit-muted">{copy.noResults}</p>}
                   {graph.lanes.length > 1 && (
                     <ul className="sit-lanes">
                       {graph.lanes.map((lane, index) => (

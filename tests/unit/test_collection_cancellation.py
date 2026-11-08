@@ -67,3 +67,32 @@ async def test_cancelled_collection_leaves_failed_stage_without_dirty(monkeypatc
             assert finish.await_args.args[1] == "failed"
     finally:
         await engine.dispose()
+
+
+async def test_literature_capture_cleanup_preserves_active_cancellation(monkeypatch):
+    from src.literature.pipeline import LiteraturePipeline
+    from src.services.ingestion import capture
+
+    identity = str(uuid4())
+    stage = SimpleNamespace(
+        task_uuid=identity, attempt=1, transition=AsyncMock(), finish=AsyncMock(),
+    )
+    monkeypatch.setattr(stages.StageRun, "start", AsyncMock(return_value=stage))
+    pipeline = LiteraturePipeline(SimpleNamespace())
+    monkeypatch.setattr(pipeline, "_resolve_start", AsyncMock(return_value=(datetime.now(timezone.utc), None)))
+    monkeypatch.setattr(pipeline, "_create_run", AsyncMock())
+    finish = AsyncMock()
+    monkeypatch.setattr(pipeline, "_finish_run", finish)
+
+    async def interrupted(*args):
+        # Reproduce a cancellation observed by capture just before worker
+        # shutdown; cleanup must not replace it with a persistence error.
+        capture._current.get().error = asyncio.CancelledError()
+        raise asyncio.CancelledError()
+
+    monkeypatch.setattr(pipeline, "_supersede_earlier_running_runs", interrupted)
+    task = SimpleNamespace(task_uuid=identity)
+    with pytest.raises(asyncio.CancelledError):
+        await pipeline.execute(task)
+    assert finish.await_args.args[1] == "failed"
+    assert not capture.is_capturing()

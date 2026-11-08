@@ -34,6 +34,7 @@ def test_missing_only_ci_fixture_supports_clean_build_and_performance_gate(
 ) -> None:
     site = tmp_path / "astro-site"
     shutil.copytree(ASTRO, site, ignore=_clean_checkout_ignore)
+    shutil.copytree(ROOT / "shared", tmp_path / "shared")
     source_data = site / "src" / "data"
     source_data.mkdir(parents=True)
     for filename in ("acknowledgements.ts", "changelog.ts"):

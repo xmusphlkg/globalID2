@@ -2,8 +2,7 @@
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { hasCountryDataSnapshot } from '../lib/country-coverage.ts';
-import { countryDiseaseCandidates, diseaseIndex, loadCountry, siteMeta } from '../lib/seo-page-data.ts';
+import { diseaseIndex, siteMeta } from '../lib/seo-page-data.ts';
 import { buildSituationSite, type CountryInput, type DiseaseInput } from '../components/situation/site.ts';
 import type { SiteIndex } from './situationTypes.ts';
 
@@ -58,12 +57,9 @@ function extractCatalogue(
   if (cached) return cached;
 
   const facets = readResearchFacets();
-  let curveKeys: string[] = [];
-  try {
-    curveKeys = countryDiseaseCandidates(50).map(item => `${item.code}:${item.slug}`);
-  } catch {
-    curveKeys = [];
-  }
+  // Live observation glances are joined in the browser from the pinned data
+  // publication. Static content contains identities and research links only.
+  const curveKeys: string[] = [];
 
   const countries: CountryInput[] = [];
   const seen = new Set<string>();
@@ -72,27 +68,17 @@ function extractCatalogue(
     const code = String(meta.code ?? '').toUpperCase();
     if (!/^[A-Z]{2}$/.test(code) || seen.has(code)) continue;
     seen.add(code);
-    const record = loadCountry(code);
-    const series: CountryInput['series'] = {};
-    const bundle = (record?.disease_series ?? {}) as Record<string, { cases?: Array<number | null>; dates?: string[]; slug?: string }>;
-    for (const [id, entry] of Object.entries(bundle)) {
-      const diseaseId = id.toUpperCase();
-      if (!wanted.has(diseaseId) || !entry) continue;
-      series[diseaseId] = { cases: entry.cases, dates: entry.dates, slug: entry.slug };
-    }
     const named = alerts.get(code);
-    const range = meta.date_range as { end?: string | null } | null | undefined;
     const research = facets.countries.get(code);
     countries.push({
       code,
       name_en: String(meta.name_en ?? meta.name ?? named?.name_en ?? code),
       name_zh: (meta.name_zh as string | null | undefined) ?? named?.name_zh ?? null,
-      diseaseCount: Number(meta.disease_count ?? 0),
-      latestDate: typeof range?.end === 'string' ? range.end : null,
-      page: hasCountryDataSnapshot(meta),
+      diseaseCount: 0,
+      page: true,
       researchCount: research?.count ?? 0,
       researchUrl: research?.url ?? null,
-      series,
+      series: {},
     });
   }
 

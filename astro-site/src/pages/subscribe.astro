@@ -76,6 +76,10 @@ const subscriptionOptionsUrl = import.meta.env.DEV
             <span class="subscribe-service-badge">{pick('Official GIDS service', 'GIDS 官方服务')}</span>
           </div>
 
+          <p id="subscription-pilot-notice" class="subscribe-status" role="status" hidden>
+            {pick('The subscription service is being tested with the administrator mailbox. Public delivery is not open yet.', '订阅服务目前仅向管理员邮箱试运行，尚未开放公众投递。', 'Le service est en cours de test avec la boîte administrateur. Les envois publics ne sont pas encore ouverts.')}
+          </p>
+
           <div class="subscribe-field">
             <label for="subscriber-email">{pick('Email address', '邮箱地址')}</label>
             <input
@@ -90,17 +94,10 @@ const subscriptionOptionsUrl = import.meta.env.DEV
             />
           </div>
 
-          <div class="subscribe-grid">
-            <fieldset class="subscribe-field">
-              <legend>{pick('Language', '语言')}</legend>
-              <div class="subscribe-segmented" id="locale-options"></div>
-            </fieldset>
-
-            <fieldset class="subscribe-field">
-              <legend>{pick('Frequency', '频率')}</legend>
-              <div class="subscribe-segmented" id="frequency-options"></div>
-            </fieldset>
-          </div>
+          <fieldset class="subscribe-field">
+            <legend>{pick('Language', '语言')}</legend>
+            <div class="subscribe-segmented" id="locale-options"></div>
+          </fieldset>
 
           <fieldset class="subscribe-field">
               <legend>{pick('Updates to receive', '接收内容')}</legend>
@@ -172,6 +169,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
               <span>{pick('Subscribe', '提交订阅')}</span>
             </button>
             <p>{pick('We only send the updates you choose. You can unsubscribe in any email.', '我们只发送你选择的更新；你可以在任意邮件中退订。')}</p>
+            <p><a href={`${subscriptionsApiBase}/api/subscriptions/manage`}>{pick('Manage an existing subscription', '管理已有订阅', 'Gérer un abonnement existant')}</a></p>
           </div>
         </form>
       </div>
@@ -214,13 +212,13 @@ const subscriptionOptionsUrl = import.meta.env.DEV
       const emailInput = document.getElementById('subscriber-email');
       const submitButton = document.getElementById('subscription-submit');
       const statusEl = document.getElementById('subscription-status');
+      const pilotNotice = document.getElementById('subscription-pilot-notice');
       const modal = document.getElementById('subscription-modal');
       const modalMessage = document.getElementById('subscription-modal-message');
       const resendButton = document.getElementById('subscription-resend');
       const resendStatus = document.getElementById('subscription-resend-status');
       const allCountries = document.getElementById('all-countries');
       const localeOptions = document.getElementById('locale-options');
-      const frequencyOptions = document.getElementById('frequency-options');
       const listOptions = document.getElementById('list-options');
       const countryOptions = document.getElementById('country-options');
       const diseaseOptions = document.getElementById('disease-options');
@@ -249,8 +247,10 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           missingList: 'Select at least one subscription list.',
           missingConsent: 'Accept the service terms before subscribing.',
           submitting: 'Submitting subscription...',
-          received: 'Subscription received. A confirmation email will be sent by GIDS Alerts. Please keep the sender trusted so future updates can reach you.',
+          received: 'Your request was received. If a confirmation email can be delivered, please check your inbox. If it does not arrive, try again later.',
           emailSent: 'Subscription received. We sent a confirmation email from GIDS Alerts. Please keep the sender trusted so future updates can reach you.',
+          emailQueued: 'Subscription received. A confirmation email is queued for delivery; please check your inbox later.',
+          pilotOnly: 'The subscription service is currently available only to the administrator mailbox during the pilot.',
           failed: 'Subscription failed. Please try again in a moment.',
           network: 'Network error while contacting the subscription service.',
           optionsLoading: 'Loading subscription choices...',
@@ -261,14 +261,19 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           resendSending: 'Requesting another confirmation email...',
           resendDone: 'Confirmation request sent again.',
           resendUnavailable: 'Confirmation delivery is not connected yet. Your subscription request is still saved.',
+          confirmationFailed: 'We could not send the confirmation email. Your selections are still here; please try again later.',
+          weekly: 'Weekly', instant: 'When an alert is published',
+          unavailable: 'Temporarily unavailable',
         },
         zh: {
           missingEmail: '请输入有效的邮箱地址。',
           missingList: '请至少选择一个订阅列表。',
           missingConsent: '请先接受服务协议。',
           submitting: '正在提交订阅...',
-          received: '订阅已收到。确认邮件将由 GIDS Alerts 发送。请将该发件人加入信任列表，帮助后续更新顺利送达。',
+          received: '订阅请求已收到。如确认邮件可以投递，请查收邮箱；如果未收到，请稍后重试。',
           emailSent: '订阅已收到。我们已通过 GIDS Alerts 发送确认邮件。请将该发件人加入信任列表，帮助后续更新顺利送达。',
+          emailQueued: '订阅已收到，确认邮件正在排队等待发送，请稍后查收。',
+          pilotOnly: '订阅服务目前仅向管理员邮箱试运行。',
           failed: '订阅提交失败，请稍后再试。',
           network: '连接订阅服务时发生网络错误。',
           optionsLoading: '正在加载订阅选项...',
@@ -279,14 +284,19 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           resendSending: '正在请求再次发送确认邮件...',
           resendDone: '确认邮件请求已再次发送。',
           resendUnavailable: '确认邮件投递尚未接入。你的订阅请求仍已保存。',
+          confirmationFailed: '确认邮件未能发送。你的选择仍保留在页面上，请稍后重试。',
+          weekly: '每周', instant: '发布提醒时',
+          unavailable: '暂未开放',
         },
         fr: {
           missingEmail: 'Saisissez une adresse e-mail valide.',
           missingList: 'Sélectionnez au moins une liste d’abonnement.',
           missingConsent: 'Acceptez les conditions du service avant de vous abonner.',
           submitting: 'Envoi de l’abonnement…',
-          received: 'Abonnement reçu. Un e-mail de confirmation sera envoyé par GIDS Alerts. Ajoutez cet expéditeur à votre liste blanche.',
+          received: 'Demande reçue. Si un e-mail de confirmation peut être envoyé, consultez votre boîte de réception. Sinon, réessayez plus tard.',
           emailSent: 'Abonnement reçu. Un e-mail de confirmation a été envoyé par GIDS Alerts. Ajoutez cet expéditeur à votre liste blanche.',
+          emailQueued: 'Abonnement reçu. Un e-mail de confirmation est en attente d’envoi ; consultez votre boîte de réception plus tard.',
+          pilotOnly: 'Pendant la phase pilote, le service est réservé à la boîte administrateur.',
           failed: 'Échec de l’abonnement. Réessayez dans un instant.',
           network: 'Erreur réseau lors du contact avec le service d’abonnement.',
           optionsLoading: 'Chargement des options d’abonnement…',
@@ -297,6 +307,9 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           resendSending: 'Demande d’un nouvel e-mail de confirmation…',
           resendDone: 'Demande de confirmation renvoyée.',
           resendUnavailable: 'La livraison de confirmation n’est pas encore connectée. Votre demande est enregistrée.',
+          confirmationFailed: 'L’e-mail de confirmation n’a pas pu être envoyé. Vos choix sont conservés ; réessayez plus tard.',
+          weekly: 'Chaque semaine', instant: 'Lors de la publication d’une alerte',
+          unavailable: 'Temporairement indisponible',
         },
       };
 
@@ -391,15 +404,19 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           const body = document.createElement('span');
           const title = document.createElement('strong');
           const detail = document.createElement('small');
+          const schedule = document.createElement('small');
           label.className = 'subscribe-check';
           input.type = 'checkbox';
           input.name = 'list_codes';
           input.value = item.code;
-          input.defaultChecked = index === 0 || item.code === 'reports';
-          input.checked = hasSelection ? selected.has(item.code) : input.defaultChecked;
+          input.disabled = item.available === false;
+          input.defaultChecked = !input.disabled && (index === 0 || item.code === 'reports');
+          input.checked = !input.disabled && (hasSelection ? selected.has(item.code) : input.defaultChecked);
           title.textContent = labelFor(item);
           detail.textContent = descriptionFor(item);
-          body.append(title, detail);
+          const frequency = item.code === 'alerts' ? 'instant' : 'weekly';
+          schedule.textContent = input.disabled ? copy[currentLang()].unavailable : copy[currentLang()][frequency];
+          body.append(title, detail, schedule);
           label.append(input, body);
           listOptions.append(label);
         });
@@ -441,8 +458,8 @@ const subscriptionOptionsUrl = import.meta.env.DEV
         if (diseaseSearch) {
         diseaseSearch.setAttribute('placeholder', currentLang() === 'zh' ? '搜索疾病' : currentLang() === 'fr' ? 'Rechercher une maladie' : 'Search diseases');
         }
-        renderRadioOptions(localeOptions, 'locale', optionState.locales, currentLang());
-        renderRadioOptions(frequencyOptions, 'frequency', optionState.frequencies, 'weekly');
+        const emailLocale = optionState.locales.some((item) => item.value === currentLang()) ? currentLang() : 'en';
+        renderRadioOptions(localeOptions, 'locale', optionState.locales, emailLocale);
         renderListOptions();
         renderChipOptions(countryOptions, 'countries', optionState.countries, Boolean(allCountries?.checked));
         renderDiseaseOptions();
@@ -490,6 +507,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           optionState.researchTopics = Array.isArray(result.filters?.research_topic) ? result.filters.research_topic : [];
           optionState.studyTypes = Array.isArray(result.filters?.study_type) ? result.filters.study_type : [];
           optionState.peerReviewStatuses = Array.isArray(result.filters?.peer_review_status) ? result.filters.peer_review_status : [];
+          if (pilotNotice) pilotNotice.hidden = result.pilot_mode !== true;
           renderAllOptions();
           applyRequestedTopic();
           if (statusEl && statusEl.dataset.type === 'pending') statusEl.hidden = true;
@@ -554,7 +572,8 @@ const subscriptionOptionsUrl = import.meta.env.DEV
         const payload = {
           email,
           locale: String(data.get('locale') || lang),
-          frequency: String(data.get('frequency') || 'weekly'),
+          consent: true,
+          list_frequencies: Object.fromEntries(listCodes.map((code) => [code, code === 'alerts' ? 'instant' : 'weekly'])),
           list_codes: listCodes,
           countries: selectedCountries,
           diseases: Array.from(new Set(checkedDiseases)),
@@ -578,20 +597,26 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           const result = await response.json().catch(() => ({}));
 
           if (!response.ok || result.error) {
-            setStatus('error', result.error === 'rate_limited' ? messages.rateLimited : (result.error || messages.failed));
+            setStatus('error', result.error === 'rate_limited' ? messages.rateLimited : result.error === 'subscription_pilot_only' ? messages.pilotOnly : (result.error || messages.failed));
             return;
           }
 
           lastSubmittedPayload = payload;
           const emailStatus = result?.email?.status || result?.notification?.status || '';
           const emailReason = result?.email?.reason || result?.notification?.reason || '';
+          if (emailStatus === 'failed' || (emailStatus === 'skipped' && emailReason !== 'confirmation_rate_limited')) {
+            setStatus('error', messages.confirmationFailed);
+            return;
+          }
           const successMessage = emailReason === 'confirmation_rate_limited'
             ? messages.emailRateLimited
-            : emailStatus === 'sent' || emailStatus === 'queued'
+            : emailStatus === 'sent'
             ? messages.emailSent
+            : emailStatus === 'queued'
+            ? messages.emailQueued
             : messages.received;
           setStatus('success', successMessage);
-          window.gtag?.('event', 'subscription_complete');
+          window.gtag?.('event', 'subscription_request_submitted');
           showModal(successMessage);
           form.reset();
           selectedDiseases.clear();
@@ -623,7 +648,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           });
           const result = await response.json().catch(() => ({}));
           if (!response.ok || result.error) {
-            if (resendStatus) resendStatus.textContent = result.error === 'rate_limited' ? messages.rateLimited : (result.error || messages.failed);
+            if (resendStatus) resendStatus.textContent = result.error === 'rate_limited' ? messages.rateLimited : result.error === 'subscription_pilot_only' ? messages.pilotOnly : (result.error || messages.failed);
             return;
           }
           const emailStatus = result?.email?.status || result?.notification?.status || '';
@@ -631,8 +656,12 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           if (resendStatus) {
             resendStatus.textContent = emailReason === 'confirmation_rate_limited'
               ? messages.emailRateLimited
-              : emailStatus === 'sent' || emailStatus === 'queued'
+              : emailStatus === 'pending'
+              ? messages.received
+              : emailStatus === 'sent'
               ? messages.resendDone
+              : emailStatus === 'queued'
+              ? messages.emailQueued
               : messages.resendUnavailable;
           }
         } catch (error) {
@@ -680,8 +709,8 @@ const subscriptionOptionsUrl = import.meta.env.DEV
 
 .subscribe-form {
   border: 1px solid rgb(var(--border) / 0.82);
-  background: linear-gradient(180deg, rgb(var(--surface) / 0.98), rgb(var(--surface-raised) / 0.74));
-  box-shadow: 0 28px 70px rgb(2 6 23 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.1);
+  background: rgb(var(--surface));
+  box-shadow: none;
   padding: clamp(1.25rem, 3vw, 2rem);
 }
 
@@ -833,6 +862,11 @@ const subscriptionOptionsUrl = import.meta.env.DEV
 .subscribe-check strong,
 .subscribe-check small {
   display: block;
+}
+
+.subscribe-check:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .subscribe-check strong {
@@ -990,8 +1024,8 @@ const subscriptionOptionsUrl = import.meta.env.DEV
   position: relative;
   width: min(100%, 560px);
   border: 1px solid rgb(var(--border) / 0.86);
-  background: linear-gradient(180deg, rgb(var(--surface) / 1), rgb(var(--surface-raised) / 0.96));
-  box-shadow: 0 30px 90px rgb(2 6 23 / 0.34);
+  background: rgb(var(--surface));
+  box-shadow: 0 8px 24px rgb(var(--ring-offset) / .18);
   padding: clamp(1.25rem, 4vw, 2rem);
 }
 

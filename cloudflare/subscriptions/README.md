@@ -41,7 +41,7 @@ SUBSCRIPTIONS__REMOTE_ENVIRONMENT=production
 SUBSCRIPTIONS__PENDING_EXPIRY_DAYS=14
 SUBSCRIPTIONS__SUBMISSION_RATE_LIMIT_PER_HOUR=30
 SUBSCRIPTIONS__CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES=2
-SUBSCRIPTIONS__SITUATION_ALERT_BATCH_SIZE=20
+SUBSCRIPTIONS__SITUATION_ALERT_BATCH_SIZE=3
 SUBSCRIPTIONS__SITUATION_ALERT_MAX_ATTEMPTS=5
 SUBSCRIPTIONS__SITUATION_ALERT_RETENTION_DAYS=180
 SUBSCRIPTIONS__SITUATION_ALERT_AUTOMATED_POLICY_ENABLED=false
@@ -49,6 +49,12 @@ SUBSCRIPTIONS__SITUATION_PUBLIC_ORIGINS=https://globalinfectiousdisease.com
 SUBSCRIPTIONS__MAINTENANCE_CRON=*/5 * * * *
 SUBSCRIPTIONS__LOG_SAMPLING_RATE=1
 SUBSCRIPTIONS__TRACE_SAMPLING_RATE=0.05
+SUBSCRIPTIONS__REPORT_DIGEST_ENABLED=false
+SUBSCRIPTIONS__REPORT_DIGEST_START_WEEK=
+SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED=false
+SUBSCRIPTIONS__RESEARCH_DIGEST_START_WEEK=
+SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED=false
+SUBSCRIPTIONS__NOTICE_ALERTS_START_DATE=
 ```
 
 Use the helper below for all subscription Worker commands:
@@ -161,6 +167,112 @@ delivery failures map to `deferred`.
 Events are idempotent by `provider` + `event_id`. Delivery aggregates and acceptance rate
 are available from the protected `GET /api/admin/stats` endpoint.
 
+### Optional Amazon SES / SNS feedback adapter
+
+The SES SMTP adapter understands Amazon's `250 Ok <message-id>` response.
+An optional SNS webhook is included but **disabled by default**:
+
+```env
+SUBSCRIPTIONS__SES_SNS_FEEDBACK_ENABLED=false
+SUBSCRIPTIONS__SES_SNS_TOPIC_ARN=
+SUBSCRIPTIONS__SMTP_SES_CONFIGURATION_SET=
+```
+
+Apply migration `0015_ses_feedback_pending.sql` before deploying this code.
+To enable later, provide one exact topic ARN in the same AWS region as SES,
+set the flag to `true`, and redeploy the Worker. The SNS HTTPS endpoint is
+`https://subscriptions.globalinfectiousdisease.com/api/internal/ses-sns-feedback`.
+It checks the configured exact TopicArn, SNS canonical RSA signature and SNS
+signing certificate obtained over HTTPS from the SNS hostname in the topic's
+region. Redirects, other hosts, unexpected certificate paths, and oversized
+bodies are rejected. Signature versions 1 and 2 are verified; configure SNS
+to use version 2 (SHA-256) where possible. A valid subscription confirmation
+is followed only when its signed HTTPS URL points to that same regional SNS
+endpoint with matching topic and token. Restrict the SNS topic's publish policy
+to the intended SES source and AWS account; an authorized SNS publisher can
+create messages trusted as events by this endpoint.
+
+Set `SUBSCRIPTIONS__SMTP_SES_CONFIGURATION_SET` only to an existing approved
+SES configuration set with an SNS event destination. It adds
+`X-SES-CONFIGURATION-SET` and a `gids-delivery` UUID tag to SMTP mail. An
+`X-GIDS-Delivery-ID` header is also emitted when an internal UUID is present;
+if using SES identity notifications instead, enable inclusion of original
+headers so early callbacks can correlate. These values never contain email
+addresses or authentication secrets. Configure SNS for Delivery, Bounce,
+Complaint and DeliveryDelay events. Permanent bounces and complaints suppress
+the contact; transient/undetermined bounces and delivery delays do not.
+
+After signature validation, an event arriving before the SMTP receipt is
+matched by UUID tag/header or stored as bounded non-personal fields in D1.
+The separately budgeted feedback task reconciles one due unmatched event per
+Cron tick, backs off when still unmatched and expires it after 30 days with an
+operator log event. It never stores raw SNS bodies or recipient addresses.
+Historical messages without a tag/header and without a stored SES message ID
+cannot be correlated automatically. SNS message IDs and the delivery-event
+ledger make retries idempotent. Enabling this adapter does not create AWS
+topics, policies, identities, configuration sets, subscriptions or destinations;
+those must be configured and tested separately with an operator-controlled inbox.
+
+#### Prepare and connect the dedicated AWS feedback resources
+
+`scripts/setup-ses-feedback.py` prepares a dedicated topic and SES configuration
+set in `ap-southeast-1`, matching the existing SES SMTP endpoint. It uses AWS CLI
+v2 and the normal AWS credential provider chain; never put credentials into
+source control, command arguments, or chat. The script does not send mail,
+change the recipient whitelist, or enable full delivery. Existing resources
+with conflicting policies, event destinations, or extra topic subscribers are
+rejected rather than overwritten. It sets SNS signature version 2 and limits
+SES publishing to this account and this exact configuration set.
+Ensure the AWS CLI identity belongs to the same AWS account that owns the
+existing SES SMTP sender; a correctly configured topic in a different account
+will not collect its mail events. The resource policy follows the
+[AWS SES SNS event-destination guidance](https://docs.aws.amazon.com/ses/latest/dg/event-publishing-add-event-destination-sns.html).
+
+The AWS identity needs `sns:ListTopics`, `sns:CreateTopic`,
+`sns:GetTopicAttributes`, `sns:SetTopicAttributes`,
+`sns:ListSubscriptionsByTopic`, `sns:Subscribe`,
+`ses:ListConfigurationSets`, `ses:CreateConfigurationSet`,
+`ses:GetConfigurationSetEventDestinations`, and
+`ses:CreateConfigurationSetEventDestination`. Configure IAM resources and
+conditions to restrict access to the dedicated topic and configuration set;
+list operations require the appropriate account-level scope. The script also
+calls `sts:GetCallerIdentity` to identify the account. AWS CLI v2 and valid
+credentials are prerequisites, not the SMTP username and password.
+
+Run these stages from the repository root, preserving the current pilot mode:
+
+1. `venv/bin/python cloudflare/subscriptions/scripts/setup-ses-feedback.py provision`.
+   Record the exact topic ARN it prints. This creates or verifies the SNS topic,
+   its SES-only source policy, SES configuration set and four event types.
+2. In the ignored deployment environment, set
+   `SUBSCRIPTIONS__SES_SNS_FEEDBACK_ENABLED=true` and the exact printed
+   `SUBSCRIPTIONS__SES_SNS_TOPIC_ARN`. Leave
+   `SUBSCRIPTIONS__SMTP_SES_CONFIGURATION_SET` empty for now. Deploy the Worker
+   with the existing guarded Wrangler helper, retaining
+   `SUBSCRIPTIONS__DELIVERY_MODE=pilot`. Ensure the SNS HTTPS endpoint is not
+   blocked by a firewall challenge; SNS cannot solve interactive challenges.
+3. Run `venv/bin/python cloudflare/subscriptions/scripts/setup-ses-feedback.py subscribe`.
+   SNS sends a signed confirmation to the Worker. Rerun the command to check
+   that the subscription is confirmed; investigate Worker and firewall logs if
+   it remains pending. Do not enable the configuration set while confirmation
+   is pending, because event delivery would be incomplete. The signed confirmation
+   URL is handled by the Worker without AWS credentials, following the
+   [SNS confirmation flow](https://docs.aws.amazon.com/sns/latest/dg/SendMessageToHttp.confirm.html).
+4. Set `SUBSCRIPTIONS__SMTP_SES_CONFIGURATION_SET` to the printed configuration
+   set name and redeploy the Worker, still in pilot mode. Send one controlled
+   message to the authorized administrator inbox and confirm that its delivery
+   event appears in the protected delivery ledger. Test bounce and complaint
+   handling using SES mailbox simulator addresses only in a separate isolated
+   test environment where they are explicitly allowlisted; never add simulator
+   addresses to the production administrator whitelist. Monitor Worker errors
+   and SNS delivery failures. A successful SMTP response alone does not prove
+   that the SNS callback arrived.
+
+These steps require live AWS authorization and a signed SNS notification to
+validate end to end. Until then the feedback integration remains disabled;
+messages sent before the configuration set is active do not gain feedback
+retroactively.
+
 ### Optional Cloudflare Queue acceleration
 
 The verified Situation alert path always writes to a D1 outbox before returning.
@@ -247,21 +359,25 @@ enabling an upstream dispatcher. Roll back Worker code with
 
 ## Custom Domain Security
 
-If `SUBSCRIPTIONS__PUBLIC_BASE_URL` uses a custom domain such as
-`https://subscriptions.globalinfectiousdisease.com`, make sure Cloudflare security rules do not challenge API requests.
+The Cron task uses same-domain authenticated POSTs with
+`User-Agent: GIDS-Release-Verifier/1.0`. An SNS webhook has an AWS-controlled
+user agent. Before enabling either in production, verify that the exact
+Custom Domain paths are reachable without an interactive security challenge:
+test the five `/api/internal/scheduled/*` paths with the admin bearer in staging
+and the SNS webhook with an AWS-signed staging notification. An authenticated
+scheduled request processes real queued jobs, so inspect the target environment
+and queue before invoking it. Verify separately that
+unauthorized Cron requests fail and forged SNS requests are rejected by the
+Worker. Check Cloudflare security events, structured
+`subscription_scheduled_task_failed` and `ses_sns_feedback_rejected` logs, SNS
+delivery failure metrics, and queue age for 403/5xx responses.
 
-Recommended dashboard rule:
-
-```text
-Expression:
-(http.host eq "subscriptions.globalinfectiousdisease.com" and
- (http.request.uri.path eq "/health" or starts_with(http.request.uri.path, "/api/")))
-
-Action:
-Skip challenge/WAF/Bot protections for this API hostname and paths.
-```
-
-If `Skip` is not available on the current plan, use a Configuration Rule for this hostname and set Security Level to `Essentially Off`, with Browser Integrity Check disabled. Keep this scoped only to `subscriptions.globalinfectiousdisease.com`.
+If a rule challenges legitimate server-to-server requests, first identify the
+specific offending rule and apply the narrowest possible exception to the
+affected exact hostname, path and rule. Keep other WAF and bot protections in
+place; do not disable security for the entire hostname or `/api/` subtree.
+Do not rely on a user-agent string for authorization: Cron still requires its
+bearer secret and SNS requires the exact topic and cryptographic signature.
 
 ## API
 
@@ -278,6 +394,7 @@ curl -X POST "$WORKER_URL/api/subscriptions" \
   -H "content-type: application/json" \
   -d '{
     "email": "reader@example.com",
+    "consent": true,
     "locale": "en",
     "frequency": "weekly",
     "list_codes": ["reports"],
@@ -286,14 +403,16 @@ curl -X POST "$WORKER_URL/api/subscriptions" \
   }'
 ```
 
-When SMTP is configured, the API sends a confirmation email immediately after
-the D1 write succeeds. The response includes an `email` object:
+The API persists a pending change and confirmation outbox entry. An immediate
+background attempt is followed by Cron recovery where needed. The generic
+response does not reveal whether an address exists or whether SMTP accepted
+the message; it does not mean that the subscription is already active:
 
 ```json
 {
   "ok": true,
   "email": {
-    "status": "sent",
+    "status": "pending",
     "provider": "smtp"
   }
 }
@@ -306,6 +425,7 @@ curl -X POST "$WORKER_URL/api/subscriptions" \
   -H "content-type: application/json" \
   -d '{
     "email": "reader@example.com",
+    "consent": true,
     "locale": "zh",
     "frequency": "weekly",
     "list_codes": ["research_digest"],
@@ -390,23 +510,61 @@ venv/bin/python3 scripts/automation/dispatch_research_digest.py \
   --strict-config --apply --process --batch-size 20 --max-batches 500
 ```
 
-The same command can be placed after research release validation in a scheduler
-or publishing workflow. The campaign key is
+### Weekly report digest
+
+The report release pipeline can dispatch newly observed, verified public
+reports to `reports` and `weekly_digest` as separate campaigns. Enable it on
+the release host only after verifying the public R2 report manifest, Worker
+credentials, and a persistent shared release outbox:
+
+```env
+SUBSCRIPTIONS__REPORT_DIGEST_ENABLED=true
+SUBSCRIPTIONS__REPORT_DIGEST_START_WEEK=2026-W46
+```
+
+Choose a future ISO start week explicitly. The first successful observation
+only establishes a baseline and does not mail the existing catalogue. Once a
+full UTC week has completed, the next successful report or main-site release
+can create that week's campaign; releases must continue for pending outbox
+records to be retried. Subscriber targeting uses report metadata; verify the
+public reports manifest and content before enabling it.
+
+### Automatic research dispatch
+
+The release pipeline can instead dispatch the most recently completed ISO week
+after the exact release manifest is visible on the public site:
+
+```env
+SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED=true
+SUBSCRIPTIONS__RESEARCH_DIGEST_START_WEEK=2026-W46
+```
+
+Set the start week deliberately: only that week and subsequent completed weeks
+are eligible; the pipeline never backfills older issues. The Worker must expose
+the `research_content_items_v1` health capability. Public-only immutable
+outbox records live under `exports/subscription-outbox/research/` on the
+release host. Pending records are retried on a later release; this local
+outbox requires persistent storage and a single shared filesystem for all
+release workers. Run a regular release to drain it, and monitor release errors.
+The campaign key is
 `research-digest:YYYY-Www:r1`: an exact replay returns the original campaign
 without duplicating deliveries, while changed content under that key fails with
 HTTP 409. For an intentional corrected resend, review the new content and pass
 `--revision r2` (then `r3`, and so on). The generated campaign is restricted to
 active `research_digest` subscriptions whose frequency is exactly `weekly`, and
-retains topic, disease, country, study-type, and peer-review preference matching.
-Failed deliveries are terminal in the current campaign; do not silently retry
-them. Correct the configuration or content, use a reviewed new revision, and
-queue a new campaign.
+matches each subscriber against at least one individual cited article across
+their topic, disease, country, study-type, and peer-review preferences. The
+body is the full issue, not an individually trimmed digest. Explicit SMTP 4xx
+rejections may retry; ambiguous outcomes are marked unknown for reconciliation.
+Never resend a whole campaign merely because a subset failed.
 
 ### Verified Situation alert webhook
 
-`POST /api/internal/situation-alerts` is the only automatic alert-ingest route.
-It accepts only a published Situation report with a passed or warning-only
-degraded gate and an analyzed `alert`/`strong` signal. A verified signal must
+`POST /api/internal/situation-alerts` accepts the current
+`official-notice-alert.v1` event described below. It also retains the legacy
+`situation-alert.v1` contract for already integrated callers. The legacy
+contract accepts only a published Situation report with a passed or warning-only
+degraded gate and an analyzed `alert`/`strong` signal. A legacy signal must
 use one of two auditable paths:
 
 - `verification_basis=automated_policy` is accepted only for
@@ -494,46 +652,35 @@ the published/analyzed/verified Situation contract; use `reports` or
 
 #### Production dispatch boundary
 
-The upstream release dispatcher is
-`scripts/automation/dispatch_situation_alerts.py`. It sends analyst-reviewed
-signals and fully structured `tiered_auto_v3.2` decisions. Legacy or malformed
-automated policies fail before any request is sent. The Worker-side
-`SITUATION_ALERT_AUTOMATED_POLICY_ENABLED` flag is an independent deployment
-kill switch and must remain false until the corresponding canary/live rollout
-is approved; enabling either side alone is insufficient.
+The current upstream is `src/services/data_release/notice_subscription.py`.
+After the exact Pages release manifest is visible, it stages the public
+official-notice records in a local durable outbox and sends them to the same
+Worker endpoint under the separate `official-notice-alert.v1` schema. It does
+not invent legacy statistical fields. It selects only published records whose
+cross-model review verdict is `accept`, with event status new, imported,
+ongoing, or ended. Status is included in the email as reported by the source.
 
-Configure the upstream release environment, not browser-visible build
-variables:
+Both automatic delivery paths are disabled by default. On the persistent
+release host configure an explicit start date and the same dedicated ingest
+secret as the Worker:
 
 ```env
-SITUATION_ALERT_WORKER_URL=https://subscriptions.globalinfectiousdisease.com
-SITUATION_PUBLIC_REPORT_URL=https://globalinfectiousdisease.com/situation/
-SITUATION_ALERT_INGEST_TOKEN=the-same-dedicated-ingest-secret-held-by-the-worker
-SITUATION_ALERT_TIMEOUT_SECONDS=15
-SITUATION_ALERT_DISPATCH_STRICT=true
+SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED=true
+SUBSCRIPTIONS__NOTICE_ALERTS_START_DATE=2026-11-04
+SUBSCRIPTIONS__SITUATION_ALERT_INGEST_TOKEN=...
+SUBSCRIPTIONS__PUBLIC_BASE_URL=https://subscriptions.globalinfectiousdisease.com
+GIDS_PUBLIC_BASE_URL=https://globalinfectiousdisease.com
 ```
 
-`SITUATION_ALERT_WORKER_URL` must be a clean HTTPS origin. The dispatcher adds
-`/api/internal/situation-alerts`; URLs containing credentials, query strings,
-fragments, or another path are rejected. The public report URL and every
-evidence URL must also use HTTPS. The bearer token is read from the environment
-only and is never included in command arguments or error details.
-
-After a production Pages deployment has been verified, dispatch the exact
-report from that deployed artifact:
-
-```bash
-venv/bin/python scripts/automation/dispatch_situation_alerts.py \
-  --report astro-site/dist/site-data/situation/v3/latest.json
-```
-
-One request is made per eligible analyst-reviewed signal. Its idempotency key
-is a stable SHA-256 digest of `report_id` and `signal_id`, so replaying a release
-is safe. HTTP, timeout, response-contract, or signal-contract failure exits
-non-zero. Missing endpoint, public URL, or token exits successfully with an
-explicit `configuration_missing` skip in non-strict environments; setting
-`SITUATION_ALERT_DISPATCH_STRICT=true` (or passing `--strict-config`) makes the
-same condition fail the release.
+Only records dated on or after the activation date and within the last seven
+days are admitted as new. At most 100 new records are admitted per release;
+larger sets fail for review. Pending records remain recoverable across weeks
+if their content is still present in the deployed export. Replaying an accepted
+event does not expand its original recipient set. The Worker health capability
+`official_notice_alert_v1` must be present before sending. Public-only outbox
+files in `exports/subscription-outbox/official-notices/` require persistent,
+shared release-host storage; they are retried on a later release. SMTP delivery
+is asynchronous through the Worker outbox and Cron.
 
 Inspect alert progress, verification basis, and policy version without
 returning recipient addresses or reviewer IDs:
@@ -586,20 +733,43 @@ country and disease options when the subscription D1 settings are present.
 
 ## Notes
 
-- Subscriptions start as `pending` and become `active` when the recipient clicks the signed confirmation link.
+- Subscriptions start as `pending` and become `active` only when the recipient submits the signed confirmation form. GET requests merely display the form, so automated mail link previews do not change consent.
 - Confirmation email attempts are recorded in `transactional_email_deliveries`.
 - Pending subscriptions older than `SUBSCRIPTIONS__PENDING_EXPIRY_DAYS` are marked `expired` by the maintenance task.
 - Subscription attempts are rate-limited per IP, and confirmation emails are rate-limited per contact to reduce abuse.
 - For local testing only, set `SUBSCRIPTIONS__DEBUG_RETURN_TOKENS=true` in `.env`; the subscribe API will then return confirmation URLs.
+
+Only enabled content pipelines appear as available choices. Enable each
+`SUBSCRIPTIONS__*_ENABLED` setting together with its activation watermark on
+the release host, and redeploy the Worker with that same configuration so the
+public options and server-side validation agree. New subscriptions support
+English and Chinese, weekly report/research digests, and instant notice alerts;
+existing unsupported historical frequencies are preserved rather than silently
+changed. A delivery marked `unknown` requires provider feedback or operator
+investigation and is not automatically retried.
+
+Readers can request a short-lived, email-delivered management link at
+`/api/subscriptions/manage` to edit one list, pause/resume it, or unsubscribe
+all email updates. Management tokens have a separate purpose and are revoked
+when a subscription is confirmed again or unsubscribed. Management-link
+requests return a generic response immediately and send in the background;
+unlike confirmation jobs, a management-link request is not durably retried if
+the invocation is interrupted, so readers can request another link.
+
+Each Cron tick dispatches maintenance, confirmation, campaign, and Situation
+work through separate authenticated same-origin internal requests; this keeps
+their D1 query budgets independent. The custom domain and admin token must be
+reachable from the Worker, and WAF rules must not challenge these API routes.
+Each confirmation invocation drains at most one queued email, each campaign
+batch at most five, and each Situation batch at most three; a backlog therefore
+may take multiple five-minute ticks. The optional Queue consumer handles one
+message per invocation. Monitor task-failure logs and queue age, and adjust the
+architecture rather than raising batch limits past D1's per-invocation budget.
 - Empty filters mean "all". For example, a subscription with no country filters receives all countries.
-- Situation email failures retry after approximately 1 minute, 5 minutes, 30
-  minutes, 2 hours, and 6 hours by default. After
-  `SUBSCRIPTIONS__SITUATION_ALERT_MAX_ATTEMPTS`, the D1 delivery is marked
-  `dead_letter`; a configured Cloudflare Queue also uses its separate DLQ.
-- Delivery is at-least-once. Event and recipient idempotency prevent ordinary
-  webhook or Queue replays from duplicating messages; a rare Worker failure
-  after SMTP accepts a message but before D1 records success can still cause a
-  retry. The SMTP provider message log should be used to reconcile that case.
+- Explicit SMTP 4xx rejections are retried with backoff up to
+  `SUBSCRIPTIONS__SITUATION_ALERT_MAX_ATTEMPTS`; 5xx is terminal. Ambiguous
+  timeouts and expired claims become `unknown` and are not silently retried.
+  Reconcile these using the provider message log and delivery callbacks.
 - Unsubscribing immediately marks pending/retrying Situation deliveries as
   skipped. A delivery already handed to SMTP cannot be recalled.
 - Queue messages, logs, and admin alert-list responses contain no email address.
@@ -607,6 +777,16 @@ country and disease options when the subscription D1 settings are present.
   Completed Situation alert payloads and their transactional delivery records
   are removed after `SUBSCRIPTIONS__SITUATION_ALERT_RETENTION_DAYS` (180 by
   default).
-- Situation alert wording deliberately describes verified statistical
-  surveillance signals, states whether verification came from analyst review
-  or `tiered_auto_v3.2`, and does not infer a public-health risk rating.
+- Official-notice wording describes the published notice and its status;
+  legacy statistical-signal wording retains its original verification basis.
+  Neither asserts a public-health risk rating.
+
+### 管理员试运行
+
+`SUBSCRIPTIONS__DELIVERY_MODE` 默认是 `pilot`；Worker 在 SMTP 发送前以及队列领取前限制收件人，只有 secret `PILOT_RECIPIENTS` 中的管理员邮箱可收信。缺少配置或配置不匹配时默认不发送。同步现有的 `AUTOMATION__ADMIN_EMAILS_RAW` 到这个独立 secret（无需改动其他 secret）：
+
+```bash
+SUBSCRIPTIONS__ALLOW_SECRET_SYNC=production ./scripts/wrangler-env.sh sync-pilot production
+```
+
+修改管理员通知邮箱后需要重新同步。公开 options 的 `pilot_mode` 和 health 的 `delivery_mode` 显示当前模式，但不公开邮箱。试运行期间非管理员不能新建订阅，也不会收到管理邮件；已经排队的非管理员历史投递会保留到全量模式。试运行新建的通知只为管理员建立投递记录，自动任务使用 `pilot:` 幂等键及独立水位，后续正式运行不会复用试运行任务。仅在试运行通过并明确决定开放后，将 `SUBSCRIPTIONS__DELIVERY_MODE` 显式设为 `full` 并部署；切换前检查待恢复的历史队列和自动任务水位。

@@ -1,3 +1,6 @@
+import { openPageAuditCache } from './page-audit-cache.mjs';
+import { createHash } from 'node:crypto';
+import { openGzipSizeCache } from './gzip-size-cache.mjs';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { brotliCompressSync, gzipSync } from 'node:zlib';
 import { basename, join, relative, resolve } from 'node:path';
@@ -13,9 +16,10 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxOrdinaryRouteCompressedAssetsBytes: 300_000,
   // Raised from 100KB (2026-08-23): the multilingual Research Radar graph page
   // carries enough static graph metadata to sit just over the old cap.
-  // Situation map pages stay inside this cap by embedding markers only.
-  // Embedding full alert prose measured /zh/situation/index.html at 128,703
-  // gzip bytes on 2026-10-30 and is not the generated shape.
+  // Situation map pages stay inside this cap by fetching markers from
+  // /situation/map-data.json. Embedding the three-year marker set (1412 points)
+  // plus monitoring measured /zh/situation/index.html at 139,777 gzip bytes on
+  // 2026-11-02 and is not the generated shape.
   maxPageHtmlGzipBytes: 115_000,
   maxAverageHtmlBytes: 105_000,
   // Use both a fixed site floor and a compressed per-page ceiling. The 18.7KB
@@ -60,7 +64,7 @@ function addJavaScriptDependencies(assetName, assets, selected) {
   }
 }
 
-export function auditPerformance(distDirectory, budgetOverrides = {}) {
+export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCache, pageCache } = {}) {
   const dist = resolve(distDirectory);
   const assetDirectory = join(dist, '_astro');
   const budgets = { ...DEFAULT_PERFORMANCE_BUDGETS, ...budgetOverrides };
@@ -70,13 +74,14 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
     return { passed: false, errors: [`Missing build asset directory: ${assetDirectory}`], budgets };
   }
 
+  const gzipSize = bytes => gzipCache ? gzipCache.measure(bytes) : gzipSync(bytes, { level: 9 }).length;
   const assets = new Map();
   for (const entry of readdirSync(assetDirectory, { withFileTypes: true })) {
     if (!entry.isFile()) continue;
     const bytes = readFileSync(join(assetDirectory, entry.name));
     assets.set(entry.name, {
       rawBytes: bytes.length,
-      gzipBytes: gzipSync(bytes, { level: 9 }).length,
+      gzipBytes: gzipSize(bytes),
       text: entry.name.endsWith('.js') ? bytes.toString('utf8') : '',
     });
   }
@@ -134,21 +139,33 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
   let totalHtmlBytes = 0;
   let totalHtmlGzipBytes = 0;
 
+  const graphs = new Map();
+  const extract = bytes => {
+    const html = bytes.toString('utf8');
+    const names = new Set();
+    for (const match of html.matchAll(/(?:component-url|renderer-url)="\/_astro\/([^"?]+\.js)"/g)) names.add(match[1]);
+    for (const match of html.matchAll(/(?:src|href)="\/_astro\/([^"?]+\.(?:js|css))[^"?]*"/g)) names.add(match[1]);
+    // RegExp captures can retain the entire HTML backing string. Persist only
+    // detached asset names, otherwise a catalogue cache keeps gigabytes alive.
+    return { rawBytes: bytes.length, gzipBytes: gzipSize(bytes),
+      assets: [...names].map(name => Buffer.from(name, 'utf8').toString('utf8')).sort() };
+  };
   for (const page of pages) {
-    const htmlBytes = readFileSync(page);
-    const html = htmlBytes.toString('utf8');
-    totalHtmlBytes += htmlBytes.length;
-    const pageHtmlGzipBytes = gzipSync(htmlBytes, { level: 9 }).length;
+    const facts = pageCache ? pageCache.read(page, extract) : extract(readFileSync(page));
+    totalHtmlBytes += facts.rawBytes;
+    const pageHtmlGzipBytes = facts.gzipBytes;
     totalHtmlGzipBytes += pageHtmlGzipBytes;
     const routePath = `/${relative(dist, page).replaceAll('\\', '/')}`;
     if (pageHtmlGzipBytes > largestPageHtml.gzipBytes) largestPageHtml = { path: routePath, gzipBytes: pageHtmlGzipBytes };
-    const selected = new Set();
-    for (const match of html.matchAll(/(?:component-url|renderer-url)="\/_astro\/([^"?]+\.js)"/g)) {
-      addJavaScriptDependencies(match[1], assets, selected);
-    }
-    for (const match of html.matchAll(/(?:src|href)="\/_astro\/([^"?]+\.(?:js|css))[^"?]*"/g)) {
-      if (match[1].endsWith('.js')) addJavaScriptDependencies(match[1], assets, selected);
-      else if (assets.has(match[1])) selected.add(match[1]);
+    const graphKey = JSON.stringify(facts.assets);
+    let selected = graphs.get(graphKey);
+    if (!selected) {
+      selected = new Set();
+      for (const name of facts.assets) {
+        if (name.endsWith('.js')) addJavaScriptDependencies(name, assets, selected);
+        else if (assets.has(name)) selected.add(name);
+      }
+      graphs.set(graphKey, selected);
     }
     const gzipBytes = [...selected].reduce((sum, name) => sum + (assets.get(name)?.gzipBytes ?? 0), 0);
     if (gzipBytes > largestRoute.gzipBytes) {
@@ -238,7 +255,14 @@ function runCli() {
   const dist = distIndex >= 0 && process.argv[distIndex + 1]
     ? process.argv[distIndex + 1]
     : resolve(import.meta.dirname, '..', 'dist');
-  const result = auditPerformance(dist);
+  const gzipCache = openGzipSizeCache(resolve(import.meta.dirname, '../../data/cache/build-gzip-sizes.json'));
+  const version = createHash('sha256').update(readFileSync(new URL(import.meta.url))).update(process.versions.zlib).digest('hex');
+  const pageCache = openPageAuditCache(resolve(import.meta.dirname, '../../data/cache/performance-page-facts.json'), version);
+  const result = auditPerformance(dist, {}, { gzipCache, pageCache });
+  pageCache.save();
+  result.pageFacts = pageCache.stats;
+  gzipCache.save();
+  result.compressionCache = gzipCache.stats;
   const label = result.passed ? 'PASS' : 'FAIL';
   process.stdout.write(`[performance-budget] ${label} ${JSON.stringify(result)}\n`);
   if (!result.passed) process.exitCode = 1;

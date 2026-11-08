@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 from src.services.global_sources.collection import DEFAULT_SINCE_DAYS  # noqa: E402
 from src.services.situation_notices.export import DEFAULT_OUTPUT_DIR  # noqa: E402
 from src.services.situation_notices.runner import export_situation  # noqa: E402
+from src.services.global_sources.catalogue import SOURCE_REGISTRY  # noqa: E402
 
 
 async def _enqueue_refresh(args) -> dict:
@@ -27,6 +28,7 @@ async def _enqueue_refresh(args) -> dict:
         input_data={"since_days": args.since_days, "don_limit": args.don_limit,
                     "document_limit": args.document_limit, "ai_limit": args.ai_limit,
                     "skip_ai": args.skip_ai, "fetch": not args.no_fetch,
+                    "sources": args.sources,
                     "require_cross_model": args.require_cross_model},
     )
     await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED)
@@ -36,6 +38,7 @@ async def _enqueue_refresh(args) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the alert-based Situation pipeline")
     parser.add_argument("--since-days", type=int, default=DEFAULT_SINCE_DAYS)
+    parser.add_argument("--sources", nargs="+", choices=tuple(SOURCE_REGISTRY), help="Only refresh these authority feeds")
     parser.add_argument("--don-limit", type=int, default=200)
     parser.add_argument("--document-limit", type=int, default=40, help="Report bodies downloaded per run")
     parser.add_argument("--ai-limit", type=int, default=30, help="Reports read by the models per run")

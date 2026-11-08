@@ -27,6 +27,9 @@ for (const path of sourceFiles) {
   if (/Source Serif 4|Source Sans 3|Newsreader|JetBrains Mono/.test(source)) {
     failures.push(`${label} references a removed typeface`);
   }
+  if (/font-family:\s*var\(--font-serif\s*,/.test(source)) {
+    failures.push(`${label} uses the undefined legacy --font-serif variable; use --font-interface`);
+  }
   if (/['"]IBM Plex Sans['"],\s*(?:ui-serif,\s*Georgia,\s*)?serif/.test(source)) {
     failures.push(`${label} gives IBM Plex Sans a serif fallback`);
   }

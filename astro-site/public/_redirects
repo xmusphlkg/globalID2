@@ -1,6 +1,13 @@
 # Cloudflare Pages redirect rules
 # https://developers.cloudflare.com/pages/configuration/redirects/
 
+# Research article pages, cards, and research site-data live on the papers host.
+/research/articles/*  https://papers.globalinfectiousdisease.com/research/articles/:splat  301
+/zh/research/articles/*  https://papers.globalinfectiousdisease.com/zh/research/articles/:splat  301
+/fr/research/articles/*  https://papers.globalinfectiousdisease.com/fr/research/articles/:splat  301
+/research/cards/*  https://papers.globalinfectiousdisease.com/research/cards/:splat  301
+/site-data/research/*  https://papers.globalinfectiousdisease.com/site-data/research/:splat  301
+
 # Legacy disease slugs emitted before URL normalization. Keep these exact
 # redirects so existing links and indexed URLs preserve their authority.
 /diseases/erythema-infectiosum-(fifth-disease)/  /diseases/erythema-infectiosum-fifth-disease/  301

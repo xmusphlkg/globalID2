@@ -1,0 +1,16 @@
+[Unit]
+Description=Reconcile public data update feed
+After=globalid-docker.service
+
+[Service]
+Type=oneshot
+User=__RUN_AS_USER__
+Group=__RUN_AS_GROUP__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=-__PROJECT_DIR__/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=__PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/publish_public_updates.py
+TimeoutStartSec=180
+UMask=0077
+StandardOutput=journal
+StandardError=journal

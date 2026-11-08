@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import { loadCountryDataset, type CountryDatasetSeriesEntry } from './countryDataset';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { siteHref } from '../../lib/papers';
+
+const ReportEvidenceFigures = lazy(() => import('./ReportEvidenceFigures'));
 
 type Lang = 'zh' | 'en' | 'fr';
 type AnyRecord = Record<string, any>;
@@ -78,13 +81,13 @@ function MarkdownBlock({ content }: { content: string }) {
 }
 
 function fmtNumber(value: unknown, lang: Lang = 'en'): string {
-  const parsed = typeof value === 'number' ? value : Number(value);
+  const parsed = value == null || value === '' ? NaN : Number(value);
   if (!Number.isFinite(parsed)) return '—';
   return parsed.toLocaleString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US');
 }
 
 function percent(value: unknown, lang: Lang = 'en'): string {
-  const parsed = typeof value === 'number' ? value : Number(value);
+  const parsed = value == null || value === '' ? NaN : Number(value);
   if (!Number.isFinite(parsed)) return '—';
   return new Intl.NumberFormat(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
     style: 'percent',
@@ -93,7 +96,7 @@ function percent(value: unknown, lang: Lang = 'en'): string {
 }
 
 function changePct(value: unknown, lang: Lang = 'en'): string {
-  const parsed = typeof value === 'number' ? value : Number(value);
+  const parsed = value == null || value === '' ? NaN : Number(value);
   if (!Number.isFinite(parsed)) return '—';
   const digits = Math.abs(parsed) >= 10 ? 0 : 1;
   const formatted = parsed.toLocaleString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
@@ -125,6 +128,7 @@ function sectionLabel(value: unknown, lang: Lang): string {
   const key = String(value || '');
   const labels: Record<string, Record<Lang, string>> = {
     decision_summary: { zh: '当前判断', en: 'Current judgement', fr: 'Évaluation actuelle' },
+    peer_reviewed_interpretation: { zh: 'AI 同行评审解读', en: 'Peer-reviewed AI interpretation', fr: 'Interprétation IA évaluée par les pairs' },
     priority_actions: { zh: '建议动作', en: 'Priority actions', fr: 'Actions prioritaires' },
     signal_evidence: { zh: '关键证据', en: 'Signal evidence', fr: 'Preuves relatives aux signaux' },
     disease_context: { zh: '疾病背景', en: 'Disease context', fr: 'Contexte des maladies' },
@@ -177,7 +181,7 @@ function trendBackgroundClass(row: AnyRecord): string {
 }
 
 function changeClass(value: unknown): string {
-  const parsed = typeof value === 'number' ? value : Number(value);
+  const parsed = value == null || value === '' ? NaN : Number(value);
   if (!Number.isFinite(parsed)) return 'text-[rgb(var(--text-muted))]';
   if (parsed >= 50) return 'text-red-700 dark:text-red-300';
   if (parsed > 0) return 'text-orange-700 dark:text-orange-300';
@@ -186,7 +190,7 @@ function changeClass(value: unknown): string {
 }
 
 function directionFromChange(value: unknown): string {
-  const parsed = typeof value === 'number' ? value : Number(value);
+  const parsed = value == null || value === '' ? NaN : Number(value);
   if (!Number.isFinite(parsed)) return 'watch';
   if (parsed > 0) return 'up';
   if (parsed < 0) return 'down';
@@ -194,15 +198,13 @@ function directionFromChange(value: unknown): string {
 }
 
 function attentionScore(value: unknown): string {
-  const parsed = typeof value === 'number' ? value : Number(value);
+  const parsed = value == null || value === '' ? NaN : Number(value);
   if (!Number.isFinite(parsed)) return '—';
   return parsed.toFixed(0);
 }
 
 function numericSeries(value: unknown): number[] {
-  return Array.isArray(value)
-    ? value.map((item) => Number(item || 0)).filter((item) => Number.isFinite(item))
-    : [];
+  return Array.isArray(value) && value.every((item) => typeof item === 'number' && Number.isFinite(item)) ? value : [];
 }
 
 function primaryCaseSeries(record: SparklineSeriesEntry | undefined): number[] {
@@ -235,7 +237,7 @@ function aggregateCurveByPeriod(record: SparklineSeriesEntry | undefined, period
 
 function currentYearCumulativeCases(record: SparklineSeriesEntry | undefined): number | null {
   if (!record) return null;
-  const explicit = Number(record.current_year_cumulative_cases);
+  const explicit = record.current_year_cumulative_cases == null ? NaN : Number(record.current_year_cumulative_cases);
   if (Number.isFinite(explicit)) return explicit;
 
   const annual = numericSeries(record.annual_cases);
@@ -588,9 +590,9 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
                   <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">#</th>
                   <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">{ui(lang, 'Disease', '疾病目录', 'Maladie')}</th>
                   <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">{ui(lang, 'Attention band', '监测关注级', 'Niveau d’attention')}</th>
-                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'Cases (MoM)', '病例（环比）', 'Cas (mensuel)')}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'Latest cases (change)', '最新期病例（较上期）', 'Derniers cas (variation)')}</th>
                   <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'Period cases', '报告期病例', 'Cas sur la période')}</th>
-                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'YTD cumulative', '年累计病例', 'Cumul annuel')}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'Latest year in window', '窗口内本年病例', 'Dernière année de la fenêtre')}</th>
                   <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'YoY', '同比', 'Variation annuelle')}</th>
                 </tr>
               </thead>
@@ -610,7 +612,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
                   const ytdCases = currentYearCumulativeCases(rowSeries);
                   const diseaseName = lang === 'zh' ? (row.name_zh || row.name_en) : lang === 'fr' ? localizedDiseaseName({ disease_id: diseaseId, name_en: row.name_en, name_zh: row.name_zh, name_fr: row.name_fr }, 'fr') : (row.name_en || row.name_zh);
                   const href = countryCode && reportId && row.slug
-                    ? `${localePrefix}/countries/${countryCode}/reports/${reportId}/${row.slug}/`
+                    ? siteHref(`${localePrefix}/countries/${countryCode}/reports/${reportId}/${row.slug}/`)
                     : undefined;
                   return (
                     <tr key={`${row.disease_id || index}`} className="align-top hover:bg-[rgb(var(--bg-soft)/.7)]">
@@ -686,6 +688,9 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
           <div className="mt-5">
             <MarkdownBlock content={localized(section.body, lang)} />
           </div>
+          {asArray(section.figures).length > 0 && <Suspense fallback={<div className="min-h-[340px]" />}>
+            <ReportEvidenceFigures figures={asArray(section.figures)} data={asRecord(document.figure_data)} lang={lang} sectionType={String(section.type)} />
+          </Suspense>}
         </section>
       ))}
     </div>

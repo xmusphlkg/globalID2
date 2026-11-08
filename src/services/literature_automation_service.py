@@ -9,14 +9,15 @@ editorial decisions always win and are never rewritten by this service.
 from __future__ import annotations
 
 import asyncio
+import re
+import uuid
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import re
-from typing import Any, Literal, Mapping
-import uuid
+from typing import Any, Literal
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Load
 
 from src.core.config import get_config
@@ -36,7 +37,6 @@ from src.literature.enrichment import (
     canonical_summary_fingerprint,
     source_fingerprint,
 )
-
 
 POLICY_VERSION = "research-radar-autopilot.v1"
 AUTOPILOT_ACTOR = "research-radar-autopilot"
@@ -65,8 +65,10 @@ _POLICY_OVERRIDE_FIELDS = frozenset({"autopilot_article_min_score"})
 _SCORED_REASON = re.compile(r"^(?:discovery score|summary quality)\s+[0-9.]+")
 
 
-def _link_reconciliation_statement(*, after_id: int = 0, batch_size: int = 100):
-    return (
+def _link_reconciliation_statement(
+    *, after_id: int = 0, batch_size: int = 100, article_ids: tuple[str, ...] | None = None,
+):
+    statement = (
         select(LiteratureSignalArticleLink, LiteratureArticle)
         .join(
             LiteratureArticle,
@@ -92,10 +94,24 @@ def _link_reconciliation_statement(*, after_id: int = 0, batch_size: int = 100):
         .order_by(LiteratureSignalArticleLink.id)
         .limit(batch_size)
     )
+    if article_ids is not None:
+        # Read every link for a touched gap so an untouched, published article
+        # can still keep that gap covered. Only scoped links are mutated below.
+        touched_gaps = select(LiteratureSignalArticleLink.gap_id).where(
+            LiteratureSignalArticleLink.article_id.in_(article_ids),
+            LiteratureSignalArticleLink.gap_id.is_not(None),
+        ).correlate(None)
+        statement = statement.where(or_(
+            LiteratureSignalArticleLink.article_id.in_(article_ids),
+            LiteratureSignalArticleLink.gap_id.in_(touched_gaps),
+        ))
+    return statement
 
 
-def _article_reconciliation_statement(*, after_id: int = 0, batch_size: int = 100):
-    return (
+def _article_reconciliation_statement(
+    *, after_id: int = 0, batch_size: int = 100, article_ids: tuple[str, ...] | None = None,
+):
+    statement = (
         select(LiteratureArticle)
         .options(
             Load(LiteratureArticle).load_only(
@@ -122,10 +138,13 @@ def _article_reconciliation_statement(*, after_id: int = 0, batch_size: int = 10
         .order_by(LiteratureArticle.id)
         .limit(batch_size)
     )
+    return statement.where(LiteratureArticle.article_id.in_(article_ids)) if article_ids is not None else statement
 
 
-def _summary_reconciliation_statement(*, after_id: int = 0, batch_size: int = 100):
-    return (
+def _summary_reconciliation_statement(
+    *, after_id: int = 0, batch_size: int = 100, article_ids: tuple[str, ...] | None = None,
+):
+    statement = (
         select(LiteratureSummary, LiteratureArticle)
         .join(
             LiteratureArticle,
@@ -150,10 +169,13 @@ def _summary_reconciliation_statement(*, after_id: int = 0, batch_size: int = 10
         .order_by(LiteratureSummary.id)
         .limit(batch_size)
     )
+    return statement.where(LiteratureSummary.article_id.in_(article_ids)) if article_ids is not None else statement
 
 
-def _english_summary_fingerprint_statement(*, after_id: int = 0, batch_size: int = 100):
-    return (
+def _english_summary_fingerprint_statement(
+    *, after_id: int = 0, batch_size: int = 100, article_ids: tuple[str, ...] | None = None,
+):
+    statement = (
         select(
             LiteratureSummary.id,
             LiteratureSummary.article_id,
@@ -167,6 +189,7 @@ def _english_summary_fingerprint_statement(*, after_id: int = 0, batch_size: int
         .order_by(LiteratureSummary.id)
         .limit(batch_size)
     )
+    return statement.where(LiteratureSummary.article_id.in_(article_ids)) if article_ids is not None else statement
 
 
 async def _configure_transaction_limits(
@@ -217,7 +240,10 @@ def _diagnostic_reason(decision: AutomationDecision) -> str:
     reason = decision.reasons[0] if decision.reasons else "no reason recorded"
     if _SCORED_REASON.match(reason):
         if reason.startswith("discovery score") and "below" in reason:
-            reason = "discovery score is below the automatic exclusion gate"
+            if "exclusion gate" in reason:
+                reason = "discovery score is below the automatic exclusion gate"
+            else:
+                reason = "discovery score is below the automatic publication gate"
         elif reason.startswith("summary quality") and "below" in reason:
             reason = "summary quality is below the automatic gate"
         elif reason.startswith("summary quality"):
@@ -455,12 +481,32 @@ def decide_article(
                 f"disease confidence {max_disease_confidence:.2f}",
             ))
         return AutomationDecision("publish", tuple(reasons))
-    if score < config.autopilot_article_exclude_below_score:
+    if score < config.autopilot_article_exclude_below_score and max_disease_confidence <= 0.0:
         return AutomationDecision(
             "exclude",
-            (f"discovery score {score:.3f} is below the automatic exclusion gate",),
+            (f"discovery score {score:.3f} is below the automatic exclusion gate and article has no disease link",),
+        )
+    if score < config.autopilot_article_exclude_below_score:
+        return AutomationDecision(
+            "hold",
+            (f"discovery score {score:.3f} is below the automatic publication gate; AI review decides",),
         )
     return AutomationDecision("hold", ("article relevance is inside the exception-review band",))
+
+
+def _is_parent_archived_summary(summary: Any) -> bool:
+    """Only a parent-caused archive may be automatically restored.
+
+    An AI archive can retain a previous parent-related gate, so its explicit
+    governance decision takes precedence over that historical marker.
+    """
+    metadata = summary.generation_metadata or {}
+    governance = metadata.get("ai_content_governance") or {}
+    return (
+        summary.status == "archived"
+        and metadata.get("publication_gate") in {"parent-article-excluded", "awaiting-article-decision"}
+        and governance.get("decision") not in {"archive", "reject"}
+    )
 
 
 def decide_summary(
@@ -479,9 +525,17 @@ def decide_summary(
     ):
         return AutomationDecision("hold", ("summary is already published",))
     if article.publication_status == "excluded":
-        return AutomationDecision("archive", ("parent article is excluded",))
+        # An excluded parent already keeps this summary off the public site; do
+        # not archive it permanently, because the article can be reopened. Use
+        # defer so the reconciler leaves a review-status summary alone and moves
+        # any already-archived summary back to review when the article is later
+        # reopened.  The old archive path is restored by
+        # restore_parent_excluded_summaries for rows archived before this change.
+        return AutomationDecision("defer", ("article decision is not final for public release",))
     if article.publication_status != "published":
         return AutomationDecision("defer", ("article decision is not final for public release",))
+    if summary.status == "archived" and not _is_parent_archived_summary(summary):
+        return AutomationDecision("hold", ("summary was archived independently of the parent article",))
     if summary.generated_by != "literature-evidence-agent":
         return AutomationDecision("hold", ("summary was not produced by the evidence agent",))
     quality = float(summary.quality_score or 0.0)
@@ -579,6 +633,88 @@ def _audit_payload(decision: AutomationDecision, *, at: datetime, config: Any) -
     }
 
 
+_PARENT_EXCLUDED_GATE = "parent-article-excluded"
+# Archived summaries a deferred parent may bring back: archived because of the
+# parent, not judged on their own content.
+
+
+async def restore_parent_excluded_summaries(
+    db: Any,
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Restore archived summaries whose archive was caused by the parent exclusion.
+
+    Finds LiteratureSummary rows that:
+    - have status "archived"
+    - were archived because the parent article was excluded
+      (generation_metadata["publication_gate"] == "parent-article-excluded")
+    - whose parent article now has publication_status "review" or "published"
+
+    Moves matching summaries back to "review", writes an audit note, and
+    returns counts.  With dry_run=True, changes nothing.
+
+    Never restores summaries archived by AI review, an editor, or any other
+    reason.
+    """
+    at = _now()
+    candidates = 0
+    restored = 0
+    by_parent_status: dict[str, int] = {}
+
+    archived_summaries = (
+        await db.execute(
+            select(LiteratureSummary, LiteratureArticle)
+            .join(
+                LiteratureArticle,
+                LiteratureArticle.article_id == LiteratureSummary.article_id,
+            )
+            .where(
+                LiteratureSummary.status == "archived",
+                LiteratureArticle.publication_status.in_(("review", "published")),
+            )
+        )
+    ).all()
+
+    for summary, article in archived_summaries:
+        gate = (summary.generation_metadata or {}).get("publication_gate")
+        if gate != _PARENT_EXCLUDED_GATE or not _is_parent_archived_summary(summary):
+            # Archived for a different reason (AI review, editor, quality gate);
+            # never restore these.
+            continue
+        candidates += 1
+        parent_status = article.publication_status
+        by_parent_status[parent_status] = by_parent_status.get(parent_status, 0) + 1
+        if dry_run:
+            continue
+        summary.status = "review"
+        summary.generation_metadata = {
+            **(summary.generation_metadata or {}),
+            "publication_gate": "restored-from-parent-exclusion",
+            "autopilot_restore": {
+                "restored_at": at.isoformat(),
+                "actor": AUTOPILOT_ACTOR,
+                "policy_version": POLICY_VERSION,
+                "reason": (
+                    f"parent article moved to {parent_status}; "
+                    "summary restored from parent-exclusion archive"
+                ),
+                "previous_gate": _PARENT_EXCLUDED_GATE,
+            },
+        }
+        restored += 1
+
+    if not dry_run and restored:
+        await db.flush()
+
+    return {
+        "dry_run": dry_run,
+        "candidates": candidates,
+        "restored": restored,
+        "by_parent_status": by_parent_status,
+    }
+
+
 class LiteratureAutomationService:
     async def reconcile(
         self,
@@ -592,8 +728,25 @@ class LiteratureAutomationService:
         expected_plan_sha256: str | None = None,
         max_projected_backlog: int = 500,
         max_changes: int = 5000,
+        article_ids: list[str] | tuple[str, ...] | None = None,
     ) -> dict[str, Any]:
+        # None is an explicit full-corpus maintenance run. An empty collection
+        # is a no-op, never an accidental request to reconcile the whole store.
+        scope_article_ids = (
+            tuple(sorted({str(value).strip() for value in article_ids if str(value).strip()}))
+            if article_ids is not None else None
+        )
         config = _effective_config(get_config().literature, policy_overrides)
+        if scope_article_ids == ():
+            return {
+                "enabled": config.autopilot_enabled,
+                "dry_run": dry_run,
+                "policy_version": POLICY_VERSION,
+                "scope": "articles",
+                "scope_article_count": 0,
+                "changed": 0,
+                "status": "not_required",
+            }
         if not config.autopilot_enabled and not dry_run:
             return {"enabled": False, "dry_run": False, "policy_version": POLICY_VERSION, "changed": 0}
         effective_batch_size = int(
@@ -629,11 +782,12 @@ class LiteratureAutomationService:
                 "expected_plan_sha256": expected_plan_sha256,
                 "max_projected_backlog": max_projected_backlog,
                 "max_changes": max_changes,
+                **({"article_ids": list(scope_article_ids)} if scope_article_ids is not None else {}),
             })
             return {"enabled": True, "dry_run": False, "status": "queued", "task_uuid": task.task_uuid, "changed": 0}
         if expected_plan_sha256 and not dry_run:
             from src.literature.governance import governance_plan
-            preview = await self.reconcile(dry_run=True, policy_overrides=policy_overrides, diagnostics=True, batch_size=batch_size, statement_timeout_seconds=statement_timeout_seconds, lock_timeout_seconds=lock_timeout_seconds)
+            preview = await self.reconcile(dry_run=True, policy_overrides=policy_overrides, diagnostics=True, batch_size=batch_size, statement_timeout_seconds=statement_timeout_seconds, lock_timeout_seconds=lock_timeout_seconds, article_ids=scope_article_ids)
             plan = governance_plan(preview, max_projected_backlog=max_projected_backlog)
             if plan["plan_sha256"] != expected_plan_sha256:
                 raise ValueError("Confirmed governance plan changed before worker execution")
@@ -653,6 +807,7 @@ class LiteratureAutomationService:
                     statement_timeout_seconds=effective_statement_timeout,
                     lock_timeout_seconds=effective_lock_timeout,
                     source_task_uuid=parent.task_uuid if parent else None,
+                    article_ids=scope_article_ids,
                 ),
                 max_retries=config.persistence_deadlock_max_retries,
                 base_delay_seconds=config.persistence_deadlock_retry_base_seconds,
@@ -669,10 +824,13 @@ class LiteratureAutomationService:
         statement_timeout_seconds: int,
         lock_timeout_seconds: int,
         source_task_uuid: str | None = None,
+        article_ids: tuple[str, ...] | None = None,
     ) -> dict[str, Any]:
         if not dry_run and not source_task_uuid:
             raise RuntimeError("Literature governance writes require a worker task")
         at = _now()
+        scope_article_ids = article_ids
+        scope_set = set(scope_article_ids) if scope_article_ids is not None else None
         counts = {
             "articles_published": 0,
             "articles_excluded": 0,
@@ -719,6 +877,7 @@ class LiteratureAutomationService:
                         _link_reconciliation_statement(
                             after_id=link_cursor,
                             batch_size=batch_size,
+                            article_ids=scope_article_ids,
                         )
                     )
                 ).all()
@@ -728,7 +887,9 @@ class LiteratureAutomationService:
                 for link, article in links_with_articles:
                     linked_article_status[article.article_id] = article.publication_status
                     effective = link.status
-                    if link.status in {"review", "deprioritized"}:
+                    if link.status in {"review", "deprioritized"} and (
+                        scope_set is None or article.article_id in scope_set
+                    ):
                         decision = decide_evidence_link(link, article, config, now=at)
                         record_reason("links", decision)
                         if decision.action == "confirm":
@@ -781,6 +942,7 @@ class LiteratureAutomationService:
                         _article_reconciliation_statement(
                             after_id=article_cursor,
                             batch_size=batch_size,
+                            article_ids=scope_article_ids,
                         )
                     )
                 ).scalars().all()
@@ -900,6 +1062,7 @@ class LiteratureAutomationService:
                         _english_summary_fingerprint_statement(
                             after_id=english_summary_cursor,
                             batch_size=batch_size,
+                            article_ids=scope_article_ids,
                         )
                     )
                 ).all()
@@ -918,6 +1081,7 @@ class LiteratureAutomationService:
                         _summary_reconciliation_statement(
                             after_id=summary_cursor,
                             batch_size=batch_size,
+                            article_ids=scope_article_ids,
                         )
                     )
                 ).all()
@@ -966,12 +1130,29 @@ class LiteratureAutomationService:
                             }
                     elif decision.action == "defer":
                         counts["summaries_deferred"] += 1
-                        if summary.status == "archived":
+                        gate = (summary.generation_metadata or {}).get("publication_gate")
+                        # Only summaries archived because of the parent come back; an
+                        # AI rejection or quality archive stays final.
+                        restore = _is_parent_archived_summary(summary)
+                        reopen = summary.status == "published" and bool(
+                            (summary.generation_metadata or {}).get("autopilot")
+                        )
+                        if restore:
                             counts["summaries_restored"] += 1
-                        elif summary.status == "published" and (summary.generation_metadata or {}).get("autopilot"):
+                        elif reopen:
                             counts["summaries_reopened"] += 1
+                        if summary.status == "archived" and not restore:
+                            continue
+                        if (
+                            not restore
+                            and not reopen
+                            and summary.status == "review"
+                            and gate == "awaiting-article-decision"
+                        ):
+                            # Already waiting: rewriting the audit each cycle only churns updated_at.
+                            continue
                         if not dry_run:
-                            if summary.status in {"archived", "published"}:
+                            if restore or reopen:
                                 summary.status = "review"
                             summary.generation_metadata = {
                                 **(summary.generation_metadata or {}),
@@ -981,13 +1162,18 @@ class LiteratureAutomationService:
                     elif summary.status == "review":
                         counts["summary_exceptions"] += 1
                     elif (summary.generation_metadata or {}).get("autopilot"):
-                        counts["summaries_reopened"] += 1
+                        # A published summary that no longer passes a quality
+                        # gate stays public. It is flagged for review instead of
+                        # being withdrawn; the parent-article check above is the
+                        # only path that takes a published summary down.
                         counts["summary_exceptions"] += 1
-                        if not dry_run:
-                            summary.status = "review"
+                        previous = (summary.generation_metadata or {}).get("autopilot_revalidation")
+                        unchanged = isinstance(previous, dict) and previous.get("reasons") == list(
+                            decision.reasons
+                        )
+                        if not dry_run and not unchanged:
                             summary.generation_metadata = {
                                 **(summary.generation_metadata or {}),
-                                "publication_gate": "automatic-revalidation-failed",
                                 "autopilot_revalidation": _audit_payload(
                                     decision, at=at, config=config
                                 ),
@@ -1002,11 +1188,14 @@ class LiteratureAutomationService:
                 for article in unique_articles.values():
                     db.expunge(article)
 
+            gap_statement = select(LiteratureEvidenceGap).where(
+                LiteratureEvidenceGap.status.notin_(("dismissed", "inactive"))
+            )
+            if scope_article_ids is not None:
+                gap_statement = gap_statement.where(LiteratureEvidenceGap.gap_id.in_(links_by_gap))
             gaps = (
                 await db.execute(
-                    select(LiteratureEvidenceGap).where(
-                        LiteratureEvidenceGap.status.notin_(("dismissed", "inactive"))
-                    )
+                    gap_statement
                 )
             ).scalars().all()
             for gap in gaps:
@@ -1065,12 +1254,17 @@ class LiteratureAutomationService:
                 run_uuid = str(uuid.uuid4())
                 db.add(LiteratureIngestRun(
                     run_uuid=run_uuid,
-                    source="research-radar-autopilot",
+                    source="research-radar-autopilot-scoped" if scope_article_ids is not None else "research-radar-autopilot",
                     status="completed",
                     started_at=at,
                     completed_at=_now(),
                     through_indexed_at=at,
-                    checkpoint={"policy_version": POLICY_VERSION, "mode": "apply"},
+                    checkpoint={
+                        "policy_version": POLICY_VERSION,
+                        "mode": "apply",
+                        "scope": "articles" if scope_article_ids is not None else "all",
+                        "scope_article_count": len(scope_article_ids) if scope_article_ids is not None else None,
+                    },
                     counts={**counts, "changed": changed},
                 ))
             else:
@@ -1083,6 +1277,8 @@ class LiteratureAutomationService:
             "enabled": config.autopilot_enabled,
             "dry_run": dry_run,
             "policy_version": POLICY_VERSION,
+            "scope": "articles" if scope_article_ids is not None else "all",
+            "scope_article_count": len(scope_article_ids) if scope_article_ids is not None else None,
             "effective_article_min_score": float(config.autopilot_article_min_score),
             "reconcile_batch_size": batch_size,
             "statement_timeout_seconds": statement_timeout_seconds,
@@ -1238,4 +1434,5 @@ __all__ = [
     "decide_evidence_link",
     "decide_summary",
     "literature_automation_service",
+    "restore_parent_excluded_summaries",
 ]

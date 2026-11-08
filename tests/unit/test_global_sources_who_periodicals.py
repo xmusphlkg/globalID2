@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import httpx
+
 from src.services.global_sources.who_periodicals import (
     WER_API_URL,
     WPRO_TOPIC_URLS,
+    fetch_wer,
     normalize_wer_item,
     normalize_wer_payload,
     normalize_wpro,
@@ -83,6 +86,42 @@ WER_ARTICLE = {
     "ItemDefaultUrl": "/who-wer10140-285-289",
     "UrlName": "who-wer10140-285-289",
 }
+
+
+def test_wer_keeps_paging_when_a_full_page_mostly_fails_the_title_filter():
+    class Client:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def get(self, url, params=None, timeout=None):
+            self.calls += 1
+            if self.calls == 1:
+                values = [WER_ARTICLE] + [
+                    {
+                        "Id": f"policy-{index}",
+                        "Title": "Meetings of the advisory committee",
+                        "PublicationDate": "2026-10-01T00:00:00Z",
+                        "ItemDefaultUrl": f"/who-wer-policy-{index}",
+                        "UrlName": f"who-wer-policy-{index}",
+                    }
+                    for index in range(99)
+                ]
+            else:
+                values = [
+                    {
+                        "Id": "leprosy",
+                        "Title": "Global leprosy update, 2024",
+                        "PublicationDate": "2024-09-16T00:00:00Z",
+                        "ItemDefaultUrl": "/who-wer-leprosy-1-9",
+                        "UrlName": "who-wer-leprosy",
+                    }
+                ]
+            return httpx.Response(200, json={"value": values}, request=httpx.Request("GET", url))
+
+    client = Client()
+    events = fetch_wer(since="2023-11-01", client=client)
+    assert client.calls == 2
+    assert {event["native_id"] for event in events} == {WER_ARTICLE["Id"], "leprosy"}
 
 
 def test_wer_reads_dated_articles_from_the_publications_hub():

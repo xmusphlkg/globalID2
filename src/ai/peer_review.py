@@ -121,16 +121,24 @@ def parse_json_object(text: str) -> dict[str, Any]:
     if cleaned.startswith("```"):
         cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.I)
         cleaned = re.sub(r"\s*```$", "", cleaned)
-    start, end = cleaned.find("{"), cleaned.rfind("}")
-    if start < 0 or end <= start:
+    if "{" not in cleaned:
         raise AIOutputError("model reply did not contain a JSON object")
-    try:
-        payload = json.loads(cleaned[start : end + 1])
-    except json.JSONDecodeError as exc:
-        raise AIOutputError(f"model reply was not valid JSON: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise AIOutputError("model reply must be a JSON object")
-    return payload
+    # Decode from each opening brace instead of slicing to the last closing
+    # brace: prose or a second object after the payload must not corrupt it.
+    decoder = json.JSONDecoder()
+    first_error: json.JSONDecodeError | None = None
+    position = cleaned.find("{")
+    while position >= 0:
+        try:
+            payload, _ = decoder.raw_decode(cleaned, position)
+        except json.JSONDecodeError as exc:
+            first_error = first_error or exc
+            position = cleaned.find("{", position + 1)
+            continue
+        if isinstance(payload, dict):
+            return payload
+        position = cleaned.find("{", position + 1)
+    raise AIOutputError(f"model reply was not valid JSON: {first_error}")
 
 
 def clean_text(value: Any, limit: int) -> str | None:

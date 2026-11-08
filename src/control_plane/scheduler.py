@@ -15,6 +15,7 @@ from src.services.data_release_service import data_release_service
 from src.services.disease_mapping_automation_service import disease_mapping_automation_service
 from src.services.literature_service import literature_service
 from src.services.situation_schedule_service import situation_schedule_service
+from src.services.report_schedule_service import report_schedule_service
 from src.services.knowledge_automation_service import knowledge_automation_service
 from src.services.idle_backlog_service import idle_backlog_service
 
@@ -108,10 +109,12 @@ async def run_scheduler() -> None:
         await knowledge_automation_service.start()
         await idle_backlog_service.start()
         await situation_schedule_service.start()
+        await report_schedule_service.start()
         await control_plane_events.publish("runtime.started", resource_type="runtime", resource_id=instance_id)
         await stop_event.wait()
     finally:
         await situation_schedule_service.stop()
+        await report_schedule_service.stop()
         await idle_backlog_service.stop()
         await knowledge_automation_service.stop()
         await literature_service.stop()

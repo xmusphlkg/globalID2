@@ -1,6 +1,6 @@
 /** Pure map logic: recency, filtering, ordering and placement. Kept free of React and Node so it is unit-testable. */
 
-import type { MapPoint } from '../../utils/situationTypes.ts';
+import type { MapPoint, SituationAlertRecord } from '../../utils/situationTypes.ts';
 
 type FilterablePoint = {
   alert_id: string;
@@ -57,8 +57,62 @@ export function filterPoints<T extends FilterablePoint>(points: T[], filters: Fi
     if (filters.disease && (point.disease_id ?? point.disease_label) !== filters.disease) return false;
     if (filters.country && point.country_code !== filters.country) return false;
     if (filters.source && point.source_id !== filters.source) return false;
-    return !(ageDays(point.published_date, asOf) > limit);
+    const age = ageDays(point.published_date, asOf);
+    return Number.isFinite(age) && age >= 0 && age <= limit;
   });
+}
+
+const normalized = (value: string | null | undefined) => (value ?? '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+
+/** A marker represents a place in an outbreak, even if several feeds repeat it. */
+export function deduplicatePoints(points: MapPoint[]): MapPoint[] {
+  const seen = new Set<string>();
+  const ids = new Set<string>();
+  return points.filter(point => {
+    const key = JSON.stringify([
+      point.outbreak_id || point.alert_id, point.disease_id || normalized(point.disease_label),
+      point.country_code, normalized(point.admin_area), point.published_date, point.status,
+    ]);
+    if (ids.has(point.alert_id) || seen.has(key)) return false;
+    ids.add(point.alert_id);
+    seen.add(key);
+    return true;
+  });
+}
+
+export type AlertGroup = SituationAlertRecord & { reports: SituationAlertRecord[] };
+
+/**
+ * Merge repeated reports only with matching place, publication day and facts.
+ * Without figures, require the same nonempty quote or report identity. Keep
+ * every source for attribution, and filter before grouping so source facets work.
+ */
+export function deduplicateAlerts(alerts: SituationAlertRecord[], preferredId?: string): AlertGroup[] {
+  const groups = new Map<string, AlertGroup>();
+  const ids = new Set<string>();
+  for (const alert of alerts) {
+    if (ids.has(alert.alert_id)) continue;
+    ids.add(alert.alert_id);
+    const evidence = alert.cases != null || alert.deaths != null
+      ? ['figures', alert.cases, alert.deaths]
+      : alert.quote?.trim()
+        ? ['quote', normalized(alert.quote)]
+        : ['report', alert.notice_id || alert.url || alert.alert_id];
+    const key = JSON.stringify([
+      alert.outbreak_id || alert.notice_id || alert.alert_id,
+      alert.disease_id || normalized(alert.disease_label), alert.country_code,
+      normalized(alert.admin_area), alert.published_date, alert.status,
+      alert.as_of, alert.count_basis, evidence,
+    ]);
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, { ...alert, reports: [alert] });
+    } else {
+      const reports = [...existing.reports, alert];
+      groups.set(key, { ...(alert.alert_id === preferredId ? alert : existing), reports });
+    }
+  }
+  return [...groups.values()];
 }
 
 /** Points updated in the last 7 days first, then newest first. */

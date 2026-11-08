@@ -316,6 +316,117 @@ def test_tw_csv_retry_budget_is_not_multiplied_by_session_adapter():
         assert adapter.max_retries.total == 0
 
 
+def test_tw_csv_outage_cools_down_then_probes_and_recovers(monkeypatch):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler, CSV_TRANSPORT_COOLDOWN_SECONDS
+
+    crawler = TaiwanNIDSSCrawler()
+    disease = TWDiseaseSource("061", "登革熱", "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv", "")
+    now = [100.0]
+    calls = []
+    monkeypatch.setattr("src.data.crawlers.tw.time.sleep", lambda *_: None)
+    monkeypatch.setattr("src.data.crawlers.tw.time.monotonic", lambda: now[0])
+
+    response = requests.Response()
+    response.status_code = 200
+    response._content = b"valid source"
+
+    def request(_url):
+        calls.append(now[0])
+        if len(calls) <= 3:
+            raise requests.ConnectionError("connection reset")
+        return response
+
+    monkeypatch.setattr(crawler, "_get_csv_response", request)
+    assert crawler.download_csv_bytes(disease) is None
+    assert crawler.csv_transport_cooling_down()
+    assert crawler.download_csv_bytes(disease) is None and len(calls) == 3
+    now[0] += CSV_TRANSPORT_COOLDOWN_SECONDS
+    assert crawler.download_csv_bytes(disease) == b"valid source"
+    assert not crawler.csv_transport_cooling_down()
+    assert len(calls) == 4
+
+
+def test_tw_certificate_error_does_not_open_transient_csv_circuit(monkeypatch):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+
+    crawler = TaiwanNIDSSCrawler()
+    disease = TWDiseaseSource("061", "登革熱", "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv", "")
+    monkeypatch.setattr("src.data.crawlers.tw.time.sleep", lambda *_: None)
+    def fail(_url):
+        raise requests.exceptions.SSLError("certificate verify failed: hostname mismatch")
+    monkeypatch.setattr(crawler, "_get_csv_response", fail)
+    assert crawler.download_csv_bytes(disease) is None
+    assert not crawler.csv_transport_cooling_down()
+
+
+def test_tw_csv_records_final_https_redirect_url(monkeypatch):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+
+    crawler = TaiwanNIDSSCrawler()
+    disease = TWDiseaseSource("061", "登革熱", "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv", "")
+    response = requests.Response()
+    response.status_code = 200
+    response._content = b"csv"
+    response.url = "https://od.cdc.gov.tw/eic/redirected.csv"
+    monkeypatch.setattr("src.data.crawlers.tw.time.sleep", lambda *_: None)
+    monkeypatch.setattr(crawler.session, "request", lambda *args, **kwargs: response)
+    assert crawler.download_csv_bytes(disease) == b"csv"
+    assert crawler.last_csv_transport_url == response.url
+
+
+def test_tw_csv_records_http_fallback_and_clears_failed_request(monkeypatch):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+
+    crawler = TaiwanNIDSSCrawler()
+    disease = TWDiseaseSource("061", "登革熱", "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv", "")
+    response = requests.Response()
+    response.status_code = 200
+    response._content = b"csv"
+    calls = []
+    state = {"fail": False}
+    monkeypatch.setattr("src.data.crawlers.tw.time.sleep", lambda *_: None)
+
+    def request(method, url, **kwargs):
+        calls.append(url)
+        if state["fail"]:
+            raise requests.ConnectionError("unavailable")
+        if url.startswith("https:"):
+            assert kwargs["verify"] is True
+            raise requests.exceptions.SSLError("unexpected eof while reading")
+        response.url = url
+        return response
+
+    monkeypatch.setattr(crawler.session, "request", request)
+    assert crawler.download_csv_bytes(disease) == b"csv"
+    assert crawler.last_csv_transport_url == "http://od.cdc.gov.tw/eic/Age_County_Gender_061.csv"
+    state["fail"] = True
+    assert crawler.download_csv_bytes(disease) is None
+    assert crawler.last_csv_transport_url is None
+    assert crawler.download_csv_bytes(disease) is None  # During cooldown, no stale URL.
+    assert crawler.last_csv_transport_url is None
+
+
+def test_tw_csv_records_https_after_http_failure(monkeypatch):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+
+    crawler = TaiwanNIDSSCrawler()
+    crawler._http_fallback_hosts.add("od.cdc.gov.tw")
+    disease = TWDiseaseSource("061", "登革熱", "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv", "")
+    response = requests.Response()
+    response.status_code = 200
+    response._content = b"csv"
+    response.url = disease.monthly_csv_url
+    monkeypatch.setattr("src.data.crawlers.tw.time.sleep", lambda *_: None)
+    def request(method, url, **kwargs):
+        if url.startswith("http:"):
+            raise requests.ConnectionError("HTTP disconnected")
+        assert kwargs["verify"] is True
+        return response
+    monkeypatch.setattr(crawler.session, "request", request)
+    assert crawler.download_csv_bytes(disease) == b"csv"
+    assert crawler.last_csv_transport_url == disease.monthly_csv_url
+
+
 def test_tw_nidss_crawl_continues_when_one_disease_fails(tmp_path, monkeypatch):
     from src.data.crawlers.tw import TaiwanNIDSSCrawler
 

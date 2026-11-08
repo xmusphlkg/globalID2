@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import Text, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.ai.task_progress import displayed_progress
 from src.control_plane.runtime import runtime_registry
 from src.control_plane.system_resources import proxy_location, system_resources
 from src.domain import AutomationJob, DataReleaseJob, Task, TaskStatus, TaskType
@@ -104,7 +105,7 @@ class ControlPlaneOverviewService:
                 "name": task.task_name,
                 "type": _enum_value(task.task_type),
                 "status": _enum_value(task.status),
-                "progress": int(task.progress or 0),
+                "progress": displayed_progress(task_type=task.task_type, status=task.status, stored=task.progress),
                 "created_at": task.created_at,
                 "last_error": task.last_error,
             }

@@ -6,6 +6,7 @@ decoupling it from the CLI layer in main.py.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from dataclasses import dataclass, replace
@@ -20,7 +21,7 @@ from src.core import get_database, get_logger
 from src.core.country_library import get_country_bootstrap_config
 from src.core.country_library import SUBDIVISION_REGISTRY
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
-from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
+from src.core.disease_mutation_lock import acquire_country_data_mutation_lock
 from src.core.task_manager import task_manager
 from src.data.crawlers.au import AU_STATE_SUBDIVISIONS
 from src.data.storage import (
@@ -246,8 +247,67 @@ class CrawlService:
         rows,
         *,
         series_rows=None,
+        _bounded_batch=False,
+        _jp_holding_profiles=None,
     ):
         """Persist lossless source-series facts without a legacy projection."""
+
+        # Discovery and dynamic holding-series creation also write registry
+        # tables. Protect them before the first such write, including callers
+        # that intentionally bypass the legacy projection.
+        await acquire_country_data_mutation_lock(
+            db, str(getattr(updater, "series_country_code", "") or updater.country_code)
+        )
+
+        # The IDWR cache contains millions of rows. Building normalized
+        # observations and holding-series payloads for the entire history at
+        # once can exhaust the worker's memory. Keep the enclosing transaction
+        # and mutation lock, but bound the intermediate objects for each batch.
+        source_rows = rows if series_rows is None else series_rows
+        if (
+            not _bounded_batch
+            and str(getattr(updater, "series_country_code", "")).upper() == "JP"
+            and len(source_rows) > 10000
+        ):
+            source_id = getattr(updater, "ontology_source_id", None) or "SRC_JP_NIID"
+            profiles = await asyncio.to_thread(
+                SeriesObservationStore()._jp_mixed_holding_profiles,
+                source_rows, "JP", source_id, "Cases",
+            )
+            totals = None
+            fields = (
+                "upserted", "skipped_unmatched", "skipped_ambiguous",
+                "skipped_invalid", "skipped_registry_not_synced",
+                "skipped_unregistered", "skipped_missing", "holding_observations",
+            )
+            offset = 0
+            while offset < len(source_rows):
+                end = min(offset + 10000, len(source_rows))
+                # JP rows are sorted by reporting week. Keep a week together
+                # for cross-series quality checks; bound unusually large weeks.
+                if end < len(source_rows):
+                    boundary = (source_rows[end - 1].get("MMWRYear"), source_rows[end - 1].get("MMWRWeek"))
+                    if all(boundary):
+                        while end < min(offset + 20000, len(source_rows)) and (source_rows[end].get("MMWRYear"), source_rows[end].get("MMWRWeek")) == boundary:
+                            end += 1
+                batch = source_rows[offset:end]
+                result = await CrawlService._save_series_rows(
+                    db, updater, batch, _bounded_batch=True,
+                    _jp_holding_profiles=profiles,
+                )
+                if totals is None:
+                    totals = result
+                else:
+                    totals = replace(totals, **{
+                        field: getattr(totals, field, 0) + getattr(result, field, 0)
+                        for field in fields
+                    }, publication_changes=(
+                        totals.publication_changes + result.publication_changes
+                        if totals.publication_changes is not None
+                        and result.publication_changes is not None else None
+                    ))
+                offset = end
+            return totals
 
         quality_policy = CrawlService._series_quality_policy(updater)
         country_code = str(getattr(updater, "country_code", "") or "").upper()
@@ -284,7 +344,8 @@ class CrawlService:
                 disease_mapping_registry_service,
             )
 
-            source_series_rows = series_store.enrich_registry_identities(
+            source_series_rows = await asyncio.to_thread(
+                series_store.enrich_registry_identities,
                 source_series_rows,
                 series_country_code,
                 source_id=source_id,
@@ -305,7 +366,8 @@ class CrawlService:
         skipped_unregistered = 0
         skipped_missing = 0
         if bool(getattr(updater, "series_registered_rows_only", False)):
-            selection = series_store.select_registry_rows(
+            selection = await asyncio.to_thread(
+                series_store.select_registry_rows,
                 source_series_rows,
                 series_country_code,
                 source_id=source_id,
@@ -368,6 +430,7 @@ class CrawlService:
                 source_id=source_id,
                 geography_key=geography_key,
                 quality_policy=quality_policy,
+                **({"jp_holding_profiles": _jp_holding_profiles} if _jp_holding_profiles is not None else {}),
             )
         except SeriesObservationQualityError as exc:
             logger.error(
@@ -383,6 +446,10 @@ class CrawlService:
                 series_result,
                 skipped_unregistered=skipped_unregistered,
                 skipped_missing=skipped_missing,
+                publication_changes=(
+                    series_result.publication_changes
+                    if not (skipped_unregistered or skipped_missing) else None
+                ),
             )
         else:
             # Test doubles and compatibility stores may return a namespace.
@@ -428,14 +495,15 @@ class CrawlService:
         db_latest_date,
         source_latest_date,
         force: bool,
+        publication_results: list | None = None,
     ):
         """Persist legacy projections and lossless source-series facts atomically."""
 
-        # Take the shared mutex before staging the legacy side of the dual
-        # write. SeriesObservationStore takes the same transaction lock again;
-        # doing it here preserves one global lock order and avoids a migration
-        # waiting on legacy rows while this transaction waits on the mutex.
-        await acquire_disease_data_mutation_lock(db)
+        # The country partition covers the complete dual-write transaction;
+        # maintenance is excluded by its shared outer gate.
+        await acquire_country_data_mutation_lock(
+            db, str(getattr(updater, "series_country_code", "") or updater.country_code)
+        )
         import_result = await updater.import_rows(
             db,
             rows,
@@ -449,6 +517,21 @@ class CrawlService:
             rows,
             series_rows=series_rows,
         )
+        # Public curves still attach legacy supplemental metrics. A complete
+        # case-series comparison cannot prove that deaths/recoveries or rates
+        # did not change on the legacy side (including clearing a prior value).
+        supplemental_keys = {
+            "Deaths", "deaths", "Recoveries", "recoveries",
+            "MortalityRate", "mortality_rate", "RecoveryRate", "recovery_rate",
+        }
+        if (
+            int(getattr(import_result, "inserted_or_updated", 0) or 0) > 0
+            and any(supplemental_keys.intersection(row) for row in rows)
+            and isinstance(series_result, SeriesObservationSaveResult)
+        ):
+            series_result = replace(series_result, publication_changes=None)
+        if publication_results is not None:
+            publication_results.append(series_result)
         # Source-native integrations can intentionally have no legacy disease
         # projection.  Surface their successfully persisted fact count to the
         # task/control-plane result instead of incorrectly reporting zero.
@@ -788,7 +871,9 @@ class CrawlService:
         """Run the source through durable collection stages."""
         from src.services.ingestion.countries import jp
         from src.services.ingestion.runner import run_surveillance
-        return await run_surveillance(self, task=task, updater=updater, connector=jp, source=source, force=force, process=process, connector_options={"output_csv": updater.output_csv, "force": force, "fill_missing": fill_missing})
+        config = get_country_bootstrap_config("JP").get("crawler_config", {})
+        recent_weeks = max(1, int(config.get("incremental_cache_weeks", 12)))
+        return await run_surveillance(self, task=task, updater=updater, connector=jp, source=source, force=force, process=process, connector_options={"output_csv": updater.output_csv, "force": force, "fill_missing": fill_missing, "incremental_cache_weeks": recent_weeks})
 
 
     async def _execute_configured_monthly(self, country_code: str, **kwargs) -> CrawlResult:
@@ -804,7 +889,34 @@ class CrawlService:
         if kwargs["fill_missing"] and not config.supports_fill_missing:
             raise ValueError(f"{country_code} publishes a complete snapshot; fill_missing is not supported")
         updater, task = kwargs["updater"], kwargs["task"]
-        months = await _months_to_fetch(config, updater, fill_missing=kwargs["fill_missing"], force=kwargs["force"], get_database=get_database)
+        task_input = task.input_data or {}
+        if country_code == "TW":
+            now = datetime.now()
+            current = (now.year, now.month)
+            recent = updater._default_recent_months(as_of=now.date())
+            scheduled = bool(task_input.get("scheduled_trigger")) and not bool(task_input.get("manual_trigger"))
+            if kwargs["fill_missing"] and not scheduled:
+                raw_start = task_input.get("start_year")
+                if raw_start is not None:
+                    try:
+                        start_year = int(raw_start)
+                    except (TypeError, ValueError) as exc:
+                        raise ValueError("TW start_year must be a valid year") from exc
+                    if not config.start_year <= start_year <= now.year:
+                        raise ValueError(f"TW start_year must be between {config.start_year} and {now.year}")
+                    config = replace(config, start_year=start_year)
+                planned = await _months_to_fetch(config, updater, fill_missing=True, force=kwargs["force"], get_database=get_database)
+                historical = sorted({month for month in planned if month not in recent and (updater.include_current_month or month < current)})
+                batch = historical[:12]
+                months = sorted(set(recent) | set(batch))
+                if len(historical) > len(batch):
+                    logger.warning("TW manual historical backfill limited to %s months; %s country-level missing months remain unverified", len(batch), len(historical) - len(batch))
+            else:
+                months = recent
+                if scheduled and kwargs["fill_missing"]:
+                    logger.warning("TW scheduled refresh covers only the recent revision window; historical gaps remain unverified and require an explicit backfill")
+        else:
+            months = await _months_to_fetch(config, updater, fill_missing=kwargs["fill_missing"], force=kwargs["force"], get_database=get_database)
         options = {"months": months, "output_csv": updater.output_csv}
         if country_code == "AU":
             options.update(country_code=updater.country_code, include_current_month=updater.include_current_month, refresh_recent_months=updater.refresh_recent_months)

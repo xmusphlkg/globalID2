@@ -101,7 +101,69 @@ The dashboard under `dashboard/` is the current operational UI. Typical pages in
 
 ### 4. Astro static site
 
-The Astro site under `astro-site/` consumes JSON generated from the database by `scripts/generate_site_data.py`. It is suited for static publishing workflows such as Cloudflare Pages.
+The Astro site under `astro-site/` consumes JSON snapshots generated from PostgreSQL by `scripts/generate_site_data.py`. It builds static English, Chinese, and French pages, with React/ECharts components loading static JSON for interactive charts and maps. Public surveillance pages do not query the operational database at request time.
+
+### Public-site architecture
+
+```mermaid
+flowchart LR
+  A[Official data sources] --> B[Python ingestion, normalization and review]
+  B --> C[(PostgreSQL)]
+  D[Next.js dashboard / FastAPI] --> E[Data Release task]
+  C --> E
+  E --> F[Generate JSON snapshots and build Astro]
+  E --> G[GitHub download repository<br/>CSV / JSON / XLSX]
+  E --> H[Raw source archive repository]
+  F --> I[Cloudflare Pages main site]
+  F --> J[R2 Papers site<br/>Article HTML, cards and research data]
+  F --> M[R2 Reports site<br/>Directory and country report archive]
+  I --> K[Subscription page]
+  K --> L[Cloudflare Worker + D1]
+```
+
+| Public channel | Content | Destination |
+| --- | --- | --- |
+| Main site | Countries, diseases, reports, Situation, research indexes, and shared assets | Cloudflare Pages at `globalinfectiousdisease.com` |
+| Papers site | Research article pages, social cards, and `site-data/research/*` | R2 at `papers.globalinfectiousdisease.com` |
+| Reports site | Country report pages, `robots.txt`, and sitemap | R2 bucket custom domain at `reports.globalinfectiousdisease.com` |
+| Data downloads | Time-partitioned CSV/JSON/XLSX files and their manifest | Dedicated GitHub data repository, `main` branch |
+| Subscriptions | Subscription API and subscriber storage | Cloudflare Worker and D1 at `subscriptions.globalinfectiousdisease.com` |
+
+The release task generates data, builds and validates Astro, then splits the
+papers and reports bundles from the main-site artifact. It publishes the enabled
+download, raw-archive, and R2 channels before verifying the reports host and
+deploying Pages. Raw archiving is a separate retention channel; the diagram
+shows data flow rather than execution order. Public data freshness depends on
+completion of this release workflow. See [Reports hosting](docs/REPORTS_HOSTING.md)
+for R2 hosting and the automatic country-report schedule.
+Papers and Reports bundles include their referenced build assets and transitive
+dependencies. R2 uploads those assets before HTML and retains the preceding
+generation for cached pages. Legacy Papers bundles that still reference main-site
+build assets require a verified compatibility deployment before publication.
+
+Incremental publishing uses scoped data exports, deterministic download files,
+cached article, research collection, country and disease rendering, cached
+compression sizes, reusable rewritten paper HTML,
+and pooled R2 uploads
+with up to 32 concurrent transfers. Interrupted R2 uploads resume from actual
+remote object checksums. Validated release candidates retain their frozen curve
+projection so compatible retries can skip generation and rendering. Release
+timings record the 10-minute target; initial cache population and bulk uploads
+are tracked separately from ordinary incremental runs.
+Related-paper scoring precomputes article metadata, selects candidates through
+disease/topic indexes, and generates explanations only for the final matches.
+Unchanged recommendation inputs reuse a checksummed projection while fresh
+surveillance links are attached separately.
+The shared disease-name lookup uses a fixed order so article ranking changes
+do not invalidate every cached article page.
+Browser research data uses order-preserving, content-addressed shards so a small
+record change does not shift every later shard. Shards upload before their root
+indexes, and retired shard URLs remain available for at least 48 hours.
+
+See [Papers hosting](docs/PAPERS_HOSTING.md),
+[data versioning](docs/DATA_VERSIONING.md), and
+[public downloads](docs/PUBLIC_DATA_DOWNLOADS.md) for publishing details. See
+[release recovery](docs/DATA_RELEASE_RESILIENCE.md) for retry and timing behavior.
 
 ## Requirements
 

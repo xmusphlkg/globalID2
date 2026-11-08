@@ -12,11 +12,28 @@ import {
 import {
   STATIC_SITEMAP_PATHS,
   buildSitemapEntries,
+  buildSitemapGroups,
+  buildReportsSitemapEntries,
   renderSitemapXml,
   type SitemapMeta,
   type SitemapReport,
 } from './sitemap-entries.ts';
 import { toSeoSlug } from './seo.ts';
+
+test('isolated reports sitemap matches the full sitemap without reading country data', () => {
+  const options = {
+    meta: { generated_at: '2026-11-05', countries: [{ code: 'JP', data_available: true }] },
+    reports: [{ id: 1, country_code: 'JP', schema_version: 'report_v4.0' }],
+    loadReport: () => ({ id: 1, country_code: 'JP', report_document_v4: { disease_directory: [{ slug: 'influenza' }] } }),
+  };
+  const full = buildSitemapGroups({ ...options, diseases: [] }).reports;
+  const isolated = buildReportsSitemapEntries({
+    ...options,
+    meta: { generated_at: options.meta.generated_at, get countries(): never { throw new Error('Surveillance data loaded'); } },
+  });
+  assert.deepEqual(isolated, full);
+  assert.ok(isolated.some(entry => entry.path === '/countries/jp/reports/1/influenza/'));
+});
 
 test('builds only publishable static, country, disease, and report URLs', () => {
   const details = new Map<string, unknown>([
@@ -78,6 +95,7 @@ test('builds only publishable static, country, disease, and report URLs', () => 
     ...localizedStaticPaths,
     ...localized('/diseases/influenza/'),
     ...localized('/countries/jp/'),
+    ...localized('/reports/'),
     ...localized('/countries/jp/reports/'),
     ...localized('/countries/jp/reports/10/'),
     ...localized('/countries/jp/reports/10/influenza/'),
@@ -255,6 +273,8 @@ test('current generated data matches the Astro static-route intent', () => {
     reports,
     id => details.get(id) ?? null,
   );
+  expectedPaths.add('/reports/');
+  expectedPaths.add('/zh/reports/');
   for (const country of reportArchiveCountries(publishableReports)) {
     expectedPaths.add(`/countries/${country}/reports/`); expectedPaths.add(`/zh/countries/${country}/reports/`);
   }

@@ -1,3 +1,5 @@
+import { absoluteSiteUrl } from './papers.ts';
+
 export type JsonLdNode = Record<string, unknown>;
 
 export type SeoLocale = 'en' | 'zh' | 'fr';
@@ -71,6 +73,16 @@ export function clampSeoTitle(value: unknown, limit = SEO_TITLE_LIMIT): string {
   const wordBoundary = text.lastIndexOf(' ', limit - 1);
   const boundary = punctuationBoundary >= 36 ? punctuationBoundary : wordBoundary;
   return `${text.slice(0, boundary >= 36 ? boundary : limit - 1).trimEnd()}…`;
+}
+
+/** Shorten the subject while retaining the complete place and site suffix. */
+export function clampSeoTitleWithSuffix(subject: unknown, suffix: unknown, limit = SEO_TITLE_LIMIT): string {
+  const text = normalizeSeoText(subject);
+  const ending = normalizeSeoText(suffix);
+  if (!ending) return clampSeoTitle(text, limit);
+  const subjectLimit = limit - ending.length - 1;
+  if (subjectLimit < 2) throw new RangeError('SEO title suffix leaves no room for its subject');
+  return `${clampSeoTitle(text, subjectLimit)} ${ending}`;
 }
 
 export function isIndexableResearchCollection(itemCount: unknown): boolean {
@@ -202,7 +214,7 @@ export function buildBreadcrumbStructuredData(input: {
     '@type': 'ListItem',
     position: index + 1,
     name: normalizeSeoText(item.label),
-    item: new URL(
+    item: absoluteSiteUrl(
       item.href || (index === allItems.length - 1 ? input.currentPath : '/'),
       input.siteOrigin,
     ).toString(),

@@ -10,12 +10,40 @@ import {
   buildSeoTitle,
   clampSeoDescription,
   clampSeoTitle,
+  clampSeoTitleWithSuffix,
   formatYearRange,
   isIndexableDisease,
   isIndexableResearchCollection,
   normalizeDiseaseHref,
   toSeoSlug,
 } from './seo.ts';
+
+test('French country disease titles retain real country suffixes within the production title limit', () => {
+  for (const [disease, country] of [
+    ['Infection à Chlamydia trachomatis', 'Royaume-Uni'],
+    ['Infection respiratoire par virus syncytial', 'Japon'],
+  ]) {
+    const subject = `Surveillance de ${disease}`;
+    const suffix = `en ${country} | GIDS`;
+    assert.ok([...`${subject} ${suffix}`].length > 70, 'fixture reproduces a production SEO failure');
+    const title = clampSeoTitleWithSuffix(subject, suffix);
+    assert.ok([...title].length <= 70);
+    assert.ok(title.startsWith('Surveillance de '));
+    assert.ok(title.endsWith(` ${suffix}`));
+  }
+});
+
+test('shortened titles for the same disease remain distinct across countries', () => {
+  const subject = 'Surveillance de Infection respiratoire par virus syncytial';
+  const countries = ['Royaume-Uni', 'Japon', 'Allemagne'];
+  const titles = countries.map(country => clampSeoTitleWithSuffix(subject, `en ${country} | GIDS`));
+  assert.equal(new Set(titles).size, countries.length);
+  for (const [index, title] of titles.entries()) {
+    assert.ok([...title].length <= 70);
+    assert.ok(title.endsWith(`en ${countries[index]} | GIDS`));
+  }
+  assert.equal(clampSeoTitleWithSuffix('Surveillance de Grippe', 'en Japon | GIDS'), 'Surveillance de Grippe en Japon | GIDS');
+});
 
 test('normalizes legacy disease slugs in research links and leaves other hrefs alone', () => {
   assert.equal(

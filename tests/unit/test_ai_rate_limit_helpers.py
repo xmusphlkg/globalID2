@@ -2,6 +2,9 @@ from types import SimpleNamespace
 
 from src.ai.model_center import (
     _effective_route_check_status,
+    _health_check_failure_status,
+    _legacy_transient_probe_unavailable,
+    _runtime_failure_kind,
     extract_retry_after_seconds,
     is_model_channel_failure,
     is_provider_authentication_error,
@@ -96,6 +99,15 @@ def test_extract_retry_after_seconds_parses_chinese_message() -> None:
     assert extract_retry_after_seconds(error) == 12
 
 
+def test_extract_retry_after_seconds_parses_pool_resume_message() -> None:
+    error = DummyRateLimitError(
+        "Error code: 429 - every usable account in realm 'cn' is cooling the upstream hy3 window; "
+        "the pool resumes in 6050s"
+    )
+
+    assert extract_retry_after_seconds(error) == 6050
+
+
 def test_is_model_unavailable_error_detects_model_not_found_code() -> None:
     error = DummyRateLimitError(
         "Error code: 404 - {'error': {'message': 'The model `hunyuan-standard` does not exist or you do not have access to it.', 'code': 'model_not_found'}}",
@@ -133,6 +145,21 @@ def test_is_model_unavailable_error_does_not_mask_channel_failure() -> None:
     )
 
     assert is_model_unavailable_error(error) is False
+
+
+def test_new_api_503_missing_channel_is_transient() -> None:
+    error = DummyRateLimitError(
+        "Error code: 503 - {'error': {'code': 'model_not_found', "
+        "'message': 'No available channel for model hy3 under group default (distributor)', "
+        "'type': 'new_api_error'}}",
+        status_code=503,
+    )
+
+    assert is_model_channel_failure(error) is True
+    assert is_model_unavailable_error(error) is False
+    assert _health_check_failure_status(error) == "probe_failed"
+    assert _runtime_failure_kind(error) == "upstream"
+    assert _legacy_transient_probe_unavailable(str(error)) is True
 
 
 def test_is_model_channel_failure_detects_get_channel_failed_code() -> None:

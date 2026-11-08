@@ -1,26 +1,35 @@
 """Transaction policies: destructive replacement belongs to its source only."""
-from src.services.ingestion.stages import mark_dirty
-from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
+from src.services.ingestion.stages import mark_dirty, mark_observation_changes_dirty
+from src.core.disease_mutation_lock import acquire_country_data_mutation_lock
 
 
 class UpdaterCommitStrategy:
     async def commit(self, db, *, service, updater, fetched, force, task_uuid, **kwargs):
         latest = await updater.get_db_latest_date(db)
+        publication_results = []
         result = await service._import_rows_with_series(
             db, updater, fetched.rows,
             series_rows=getattr(fetched, "series_rows", None),
             db_latest_date=latest,
             source_latest_date=getattr(fetched, "latest_date", None) or getattr(fetched, "source_latest_date", None),
             force=force,
+            publication_results=publication_results,
         )
-        await mark_dirty(db, line="surveillance", scope_key=updater.country_code, task_uuid=task_uuid)
+        await mark_observation_changes_dirty(
+            db, result=publication_results[0] if publication_results else None,
+            scope_key=updater.country_code, task_uuid=task_uuid,
+            conservative=bool(kwargs.get("publication_window_replaced", False)),
+        )
         return result
 
 
 class EcdcWindowCommitStrategy(UpdaterCommitStrategy):
     async def commit(self, db, *, updater, start_year, **kwargs):
-        await acquire_disease_data_mutation_lock(db)
-        await updater.delete_authoritative_window(db, start_year=start_year)
+        await acquire_country_data_mutation_lock(db, updater.country_code)
+        deleted = await updater.delete_authoritative_window(db, start_year=start_year)
+        # History cannot represent withdrawals; do not infer a no-op from a
+        # reinsert after destructive replacement (including an empty response).
+        kwargs["publication_window_replaced"] = deleted is None or deleted != 0
         return await super().commit(db, updater=updater, **kwargs)
 
 
@@ -28,8 +37,9 @@ class CanadaCndssWindowCommitStrategy(UpdaterCommitStrategy):
     async def commit(self, db, *, updater, start_year, **kwargs):
         if updater.country_code != "CA":
             raise ValueError("CNDSS replacement is restricted to national Canada")
-        await acquire_disease_data_mutation_lock(db)
-        await updater.delete_authoritative_window(db, start_year=start_year)
+        await acquire_country_data_mutation_lock(db, updater.country_code)
+        deleted = await updater.delete_authoritative_window(db, start_year=start_year)
+        kwargs["publication_window_replaced"] = deleted is None or deleted != 0
         return await super().commit(db, updater=updater, **kwargs)
 
 

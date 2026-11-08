@@ -1,15 +1,13 @@
 ---
-import CountryCard from '../CountryCard.astro';
+import { siteHref } from '../../lib/papers';
 import CountryFlag from '../CountryFlag.astro';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedRegionName } from '../../utils/i18n';
-import { hasCountryDataSnapshot } from '../../lib/country-coverage';
-import { readSituationMap } from '../../utils/international';
-import metaRaw from '../../data/meta.json';
+import SituationMetrics from '../situation/SituationMetrics';
 import diseasesRaw from '../../data/diseases/index.json';
 import reportsRaw from '../../data/reports/index.json';
-import japanDataRaw from '../../data/countries/jp.json';
-import chinaDataRaw from '../../data/countries/cn.json';
+import SurveillanceHomeSummary from './SurveillanceHomeSummary';
+import HomeInfluenza from './HomeInfluenza';
 
 interface Props { locale?: 'en' | 'zh' | 'fr'; }
 
@@ -124,7 +122,6 @@ const t = zh ? {
   curveLabel: 'Japan influenza · China influenza',
 };
 
-const meta = metaRaw as any;
 // French is the shared interface language for France and Canada. Keep source
 // names and disease names intact, while translating the surrounding controls.
 if (fr) Object.assign(t, {
@@ -139,138 +136,21 @@ if (fr) Object.assign(t, {
   explore: 'Commencer l’exploration', exploreTitle: 'Accéder aux preuves de santé publique comme à un catalogue de données', exploreText: 'Choisissez un pays, une maladie ou une étude, puis suivez les liens vers les sources, les tendances et les téléchargements.',
   countryPath: 'Explorer par lieu', countryPathText: 'Consultez la couverture, les sources, les maladies et la période de chaque pays ou région.', diseasePath: 'Explorer par maladie', diseasePathText: 'Comparez la couverture d’une même maladie entre les différentes sources.', downloadPath: 'Réutiliser directement', downloadPathText: 'Téléchargez les jeux de données publics et vérifiez les champs et limites avant citation.', researchPath: 'Relier la recherche', researchPathText: 'Interprétez les signaux de surveillance à la lumière des données publiées.', countryList: 'Pays les mieux couverts', common: 'Maladies courantes', viewAll: 'Tout voir', analysis: 'Analyses publiées', latest: 'Derniers rapports de surveillance', research: 'Parcourir les preuves', openReport: 'Ouvrir le rapport', unavailable: 'Indisponible', empty: 'Aucun rapport public disponible.', curveLabel: 'Grippe au Japon · grippe en Chine',
 });
-const jurisdictions = (meta.countries ?? []).filter(hasCountryDataSnapshot);
-// Headline totals and rankings use one comparable national layer. Subnational
-// datasets remain available from their parent country pages.
-const countries = jurisdictions.filter((country: any) => (
-  country.location_type !== 'subdivision' && !country.parent_code
-));
 const latestReports = (reportsRaw as any[]).slice(0, 3);
 const preferredDiseases = ['covid-19', 'cholera', 'dengue', 'measles', 'malaria', 'tuberculosis', 'hepatitis-a', 'pertussis'];
 const diseaseIndex = new Map((diseasesRaw as any[]).map(disease => [disease.slug, disease]));
 const featuredDiseases = preferredDiseases.map(slug => diseaseIndex.get(slug)).filter(Boolean);
-const featuredCountries = [...countries]
-  .sort((a: any, b: any) => Number(b.record_count ?? b.total_cases ?? 0) - Number(a.record_count ?? a.total_cases ?? 0))
-  .slice(0, 6);
-const recentlyUpdatedCountries = [...countries]
-  .sort((a: any, b: any) => String(b.date_range?.end ?? '').localeCompare(String(a.date_range?.end ?? '')))
-  .slice(0, 4);
-const sourceNames = new Set<string>();
-for (const country of countries) {
-  for (const source of country.source_info?.sources ?? []) {
-    if (source?.label) sourceNames.add(source.label);
-  }
-}
-// The Situation strip reads the alert export: places with news, active
-// outbreaks, and how many authorities contributed.
-const situationMap = readSituationMap();
-const situation = situationMap && situationMap.point_count > 0
-  ? {
-      asOf: situationMap.as_of ?? situationMap.generated_at,
-      noticeCount: situationMap.point_count,
-      activeEvents: situationMap.outbreaks.filter(outbreak => outbreak.status === 'active').length,
-      sourcesOk: situationMap.facets.sources.length,
-    }
-  : null;
-const dataThrough = meta.generated_at;
-const formatCadence = (value?: string) => {
-  const key = String(value ?? '').trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
-  const labels: Record<string, [string, string, string]> = {
-    daily: ['Daily', '每日', 'Quotidienne'],
-    weekly: ['Weekly', '每周', 'Hebdomadaire'],
-    monthly: ['Monthly', '每月', 'Mensuelle'],
-    quarterly: ['Quarterly', '每季度', 'Trimestrielle'],
-    annual: ['Annual', '每年', 'Annuelle'],
-    yearly: ['Annual', '每年', 'Annuelle'],
-    mixed_weekly_annual: ['Weekly and annual', '周报与年报', 'Hebdomadaire et annuelle'],
-    weekly_and_annual: ['Weekly and annual', '周报与年报', 'Hebdomadaire et annuelle'],
-  };
-  if (!value) return t.unavailable;
-  return labels[key]?.[zh ? 1 : fr ? 2 : 0] ?? value;
-};
-const formatDate = (value?: string) => {
-  if (!value) return t.unavailable;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? t.unavailable
-    : date.toLocaleDateString(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', { year: 'numeric', month: zh ? 'numeric' : 'short', day: 'numeric', timeZone: 'UTC' });
-};
-const assetMetrics = [
-  { label: t.jurisdictions, value: String(countries.length) },
-  { label: t.diseases, value: String(meta.total_diseases ?? t.unavailable) },
-  { label: t.sources, value: String(sourceNames.size) },
-  { label: t.analysis, value: String(latestReports.length) },
-];
-const numericCases = (series: any) => (series?.cases ?? [])
-  .map((value: unknown) => Number(value))
-  .filter((value: number) => Number.isFinite(value) && value >= 0);
-const sampleValues = (values: number[], count: number) => {
-  if (!values.length) return Array.from({ length: count }, () => 0);
-  const max = Math.max(...values, 1);
-  return Array.from({ length: count }, (_, index) => {
-    const position = index * (values.length - 1) / Math.max(1, count - 1);
-    const left = Math.floor(position);
-    const right = Math.min(values.length - 1, Math.ceil(position));
-    const ratio = position - left;
-    return ((values[left] ?? 0) * (1 - ratio) + (values[right] ?? 0) * ratio) / max;
-  });
-};
-const makeCurvePoints = (values: number[], options: { baseline: number; amplitude: number }) => {
-  const max = Math.max(...values, 1);
-  const samples = values.map(value => value / max);
-  return samples.map((value, index) => {
-    const x = 42 + index * (1356 / Math.max(1, samples.length - 1));
-    const y = options.baseline - value * options.amplitude;
-    return `${x.toFixed(1)},${Math.max(468, Math.min(742, y)).toFixed(1)}`;
-  }).join(' ');
-};
-const makeBars = (primary: number[], secondary: number[], count = 72) => {
-  const a = sampleValues(primary, count);
-  const b = sampleValues(secondary, count);
-  const baseline = 760;
-  return a.map((value, index) => {
-    const mixed = value * .68 + (b[index] ?? 0) * .32;
-    const height = 26 + mixed * 198;
-    const x = 78 + index * (1284 / Math.max(1, count - 1));
-    return { x: x.toFixed(1), y: (baseline - height).toFixed(1), width: '10', height: height.toFixed(1), index };
-  });
-};
-// The hero background is generated from real public surveillance series, then
-// normalized to an abstract visual layer so it does not imply comparable counts.
-const japanInfluenza = numericCases((japanDataRaw as any).disease_series?.D038);
-const chinaInfluenza = numericCases((chinaDataRaw as any).disease_series?.D038);
-const backgroundCurves = [
-  { className: 'curve-line-a', points: makeCurvePoints(japanInfluenza, { baseline: 724, amplitude: 246 }) },
-  { className: 'curve-line-b', points: makeCurvePoints(chinaInfluenza, { baseline: 738, amplitude: 224 }) },
-];
-const backgroundBars = makeBars(japanInfluenza, chinaInfluenza);
 const explorePaths = [
-  { href: href('/countries/'), index: '01', title: t.countryPath, text: t.countryPathText, stat: `${countries.length}`, metric: t.jurisdictions },
-  { href: href('/diseases/'), index: '02', title: t.diseasePath, text: t.diseasePathText, stat: `${meta.total_diseases ?? t.unavailable}`, metric: t.diseases },
-  { href: href('/downloads/'), index: '03', title: t.downloadPath, text: t.downloadPathText, stat: String(sourceNames.size), metric: t.sources },
-  { href: href('/research/'), index: '04', title: t.researchPath, text: t.researchPathText, stat: `${latestReports.length}`, metric: t.analysis },
+  { href: href('/countries/'), index: '01', title: t.countryPath, text: t.countryPathText, stat: 'countries', metric: t.jurisdictions },
+  { href: href('/diseases/'), index: '02', title: t.diseasePath, text: t.diseasePathText, stat: 'diseases', metric: t.diseases },
+  { href: href('/downloads/'), index: '03', title: t.downloadPath, text: t.downloadPathText, stat: 'sources', metric: t.sources },
+  { href: href('/research/'), index: '04', title: t.researchPath, text: t.researchPathText, stat: `${reportsRaw.length}`, metric: t.analysis },
 ];
 ---
 
 <div class:list={['public-home-redesign', zh && 'is-zh']}>
   <section class="home-hero">
-    <div class="curve-field" aria-hidden="true">
-      <svg viewBox="0 0 1440 760" preserveAspectRatio="none">
-        <g class="curve-bars">
-          {backgroundBars.map(bar => (
-            <rect style={`--i:${bar.index}`} x={bar.x} y={bar.y} width={bar.width} height={bar.height} />
-          ))}
-        </g>
-        <g class="curve-lines">
-          {backgroundCurves.map(curve => (
-            <polyline class:list={['curve-line', curve.className]} pathLength="1" points={curve.points} />
-          ))}
-        </g>
-      </svg>
-      <p class="curve-annotation">
-        <b>{t.curveLabel}</b>
-      </p>
-    </div>
+    <HomeInfluenza client:load language={locale} />
     <div class="page-wrap hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">{t.eyebrow}</p>
@@ -307,26 +187,10 @@ const explorePaths = [
           </div>
           <span class="release-pill"><i></i>{t.updated}</span>
         </header>
-        <dl class="asset-grid">
-          {assetMetrics.map((metric, index) => <div style={`--i:${index}`}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
-        </dl>
-        <div class="release-meta">
-          <span>{t.sources}: <strong>{sourceNames.size}</strong></span>
-          <span>{t.through}: <strong>{formatDate(dataThrough)}</strong></span>
-        </div>
+        <SurveillanceHomeSummary client:load dataUrl="/site-data/meta.json" mode="home-indicators" language={locale} reportCount={reportsRaw.length} />
         <div class="source-board">
           <h3>{t.recentBoard}</h3>
-          {recentlyUpdatedCountries.slice(0, 3).map((country: any) => {
-            const name = zh ? country.name_zh ?? country.name : country.name_en ?? country.name;
-            const source = country.source_info?.sources?.[0];
-            return (
-              <a href={href(`/countries/${String(country.code).toLowerCase()}/`)}>
-                <CountryFlag code={country.code} name={name} sizeClass="w-8 h-6" />
-                <span><strong>{name}</strong><small>{source?.cadence ? `${t.cadence}: ${formatCadence(source.cadence)}` : source?.type ?? t.unavailable}</small></span>
-                <time datetime={country.date_range?.end ?? ''}>{formatDate(country.date_range?.end)}</time>
-              </a>
-            );
-          })}
+          <SurveillanceHomeSummary client:load dataUrl="/site-data/meta.json" mode="recent-countries" language={locale} />
         </div>
         <p class="source-note">{t.sourceNote}</p>
         <a class="text-link console-link" href={href('/about/')}>{t.methods} <span aria-hidden="true">-&gt;</span></a>
@@ -334,23 +198,17 @@ const explorePaths = [
     </div>
   </section>
 
-  {situation && (
     <section class="situation-strip">
       <div class="page-wrap situation-grid">
         <div>
-          <p class="eyebrow">{t.review} · {formatDate(situation.asOf ?? undefined)}</p>
+          <p class="eyebrow">{t.review} · <SituationMetrics client:load mode="date" locale={locale} /></p>
           <h2>{t.attention}</h2>
           <p>{t.reviewText}</p>
         </div>
-        <dl>
-          <div><dt>{t.events}</dt><dd>{situation.noticeCount}</dd></div>
-          <div><dt>{t.signals}</dt><dd>{situation.activeEvents}</dd></div>
-          <div><dt>{t.reviewed}</dt><dd>{situation.sourcesOk}</dd></div>
-        </dl>
+        <SituationMetrics client:load locale={locale} />
         <a href={href('/situation/')}>{t.fullReview} <span aria-hidden="true">-&gt;</span></a>
       </div>
     </section>
-  )}
 
   <section class="home-section browse-section">
     <div class="page-wrap">
@@ -370,7 +228,7 @@ const explorePaths = [
           <a class="path-card" href={path.href}>
             <span class="path-index">{path.index}</span>
             <span class="path-copy"><strong>{path.title}</strong><small>{path.text}</small></span>
-            <span class="path-stat"><b>{path.stat}</b><small>{path.metric}</small></span>
+            <span class="path-stat"><b>{path.index === '04' ? path.stat : <SurveillanceHomeSummary client:visible dataUrl="/site-data/meta.json" mode="home-count" metric={path.stat as 'countries' | 'diseases' | 'sources'} language={locale} />}</b><small>{path.metric}</small></span>
           </a>
         ))}
       </div>
@@ -382,13 +240,9 @@ const explorePaths = [
       <div>
         <div class="subheading">
           <h2>{t.countryList}</h2>
-          <a href={href('/countries/')}>{t.viewAll} {countries.length}</a>
+          <a href={href('/countries/')}>{t.viewAll}</a>
         </div>
-        <div class="country-grid">
-          {featuredCountries.map((country: any) => (
-            <CountryCard code={country.code} name={country.name} nameZh={country.name_zh} nameFr={country.name_fr ?? localizedRegionName('fr', country.code, { en: country.name })} totalCases={country.total_cases} totalDeaths={country.total_deaths} diseaseCount={country.disease_count} dateRange={country.date_range} locationType={country.location_type} locale={locale} />
-          ))}
-        </div>
+        <SurveillanceHomeSummary client:visible dataUrl="/site-data/meta.json" mode="country-links" language={locale} />
       </div>
       <div>
         <div class="subheading">
@@ -422,7 +276,7 @@ const explorePaths = [
             const code = String(report.country_code ?? '').toLowerCase();
             const name = zh ? report.country_name_zh ?? report.country_name_en ?? report.country_name ?? report.country_code : fr ? (report.country_name_fr ?? localizedRegionName('fr', report.country_code, { en: report.country_name_en ?? report.country_name })) : report.country_name_en ?? report.country_name ?? report.country_code;
             return (
-              <a href={href(`/countries/${code}/reports/${report.id}/`)}>
+              <a href={siteHref(href(`/countries/${code}/reports/${report.id}/`))}>
                 <CountryFlag code={report.country_code} name={name} sizeClass="w-9 h-7" />
                 <span><strong>{name}</strong><small>{report.period_start} - {report.period_end}</small></span>
                 <b>{t.openReport} <span aria-hidden="true">-&gt;</span></b>

@@ -141,6 +141,7 @@ def fetch_wer(
         conditions.append(f"PublicationDate gt {since_value}")
     events: list[dict[str, Any]] = []
     seen: set[str] = set()
+    seen_raw: set[str] = set()
     skip = 0
     while len(events) < target:
         top = min(WER_PAGE_SIZE, target - len(events))
@@ -152,15 +153,22 @@ def fetch_wer(
         }
         if skip:
             params["$skip"] = str(skip)
-        response = fetch(WER_API_URL, params=params, client=client)
-        page = normalize_wer_payload(response.json())
+        payload = fetch(WER_API_URL, params=params, client=client).json()
+        raw = payload.get("value") if isinstance(payload, dict) else None
+        raw_rows = raw if isinstance(raw, list) else []
+        raw_ids = [str(item.get("Id") or item.get("UrlName") or "") for item in raw_rows if isinstance(item, dict)]
+        # Stop on the raw page, not the disease-filtered one.  A page of policy
+        # articles used to look "short" and hide every older disease article.
+        if raw_ids and set(raw_ids) <= seen_raw:
+            break
+        seen_raw.update(raw_ids)
+        page = normalize_wer_payload(payload if isinstance(payload, dict) else {})
         new = [event for event in page if event["native_id"] not in seen]
         for event in new:
             seen.add(event["native_id"])
         events.extend(new)
         skip += WER_PAGE_SIZE
-        # A short (or empty) page means the source is exhausted.
-        if len(page) < top or not page:
+        if len(raw_rows) < top:
             break
     events.sort(key=lambda row: row["published_date"] or "", reverse=True)
     return events[:target]

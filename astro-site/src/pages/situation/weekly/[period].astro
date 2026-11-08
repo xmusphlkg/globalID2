@@ -1,141 +1,30 @@
 ---
-/**
- * One ISO week as text: the sentence "what changed" plus the outbreaks that were
- * new or updated, each with that week's alerts. Same data as the map's weekly diff.
- */
 import ReportLayout from '../../../layouts/ReportLayout.astro';
+import SituationArchive from '../../../components/situation/SituationArchive';
 import { buildAlternatePaths, type SeoDocument } from '../../../lib/seo';
-import {
-  COPY,
-  STATUS_LABELS,
-  alertSummary,
-  countsLine,
-  countryName,
-  diseaseName,
-  formatDay,
-  sourceLabel,
-} from '../../../components/situation/labels';
-import { weeklyDiff } from '../../../components/situation/text';
-import { listWeeks, readSituationMap, readWeek, weekAlerts } from '../../../utils/international';
-import { translateUi } from '../../../utils/i18n';
+import { listWeeks } from '../../../utils/international';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 
 export function getStaticPaths() {
-  // Oldest first so "previous" and "next" read naturally.
-  const periods = listWeeks().map(week => week.period_key).reverse();
-  return periods.map((period, index) => ({
-    params: { period },
-    props: { reportPeriod: period, locale: 'en', previous: periods[index - 1], next: periods[index + 1] },
-  }));
+  return listWeeks().map(week => week.period_key).map(period => ({
+    params: { period }, props: { reportPeriod: period, locale: 'en' },
+  })).filter(entry => shouldBuildPage(`situation-week:${entry.params.period}`));
 }
-
-const { reportPeriod, previous, next, locale = 'en' } = Astro.props as { reportPeriod?: string; previous?: string; next?: string; locale?: 'en' | 'zh' | 'fr' };
+const { reportPeriod, locale = 'en' } = Astro.props as { reportPeriod?: string; locale?: 'en' | 'zh' | 'fr' };
 const period = reportPeriod ?? String(Astro.params.period ?? '');
-const zh = locale === 'zh';
-const fr = locale === 'fr';
-const prefix = zh ? '/zh' : fr ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
-const week = readWeek(period);
-if (!week) return Astro.redirect(`${prefix}/situation/weekly/`, 302);
-
-const map = readSituationMap();
-const outbreakById = new Map((map?.outbreaks ?? []).map(outbreak => [outbreak.outbreak_id, outbreak]));
-const section = (ids: string[]) =>
-  ids
-    .map(id => ({ outbreak: outbreakById.get(id), alerts: weekAlerts(id, period) }))
-    .filter(group => group.outbreak && group.alerts.length > 0);
-const fresh = section(week.new_outbreaks);
-const updated = section(week.updated_outbreaks);
-const copy = COPY[locale];
-
+const prefix = locale === 'en' ? '' : `/${locale}`;
+const pick = (en: string, zh: string, fr: string) => locale === 'zh' ? zh : locale === 'fr' ? fr : en;
 const title = pick(`Situation changes ${period}`, `${period} 态势变化`, `Changements de situation ${period}`);
-const description = weeklyDiff(week, locale);
+const description = pick('Reviewed official outbreak alerts and changes for this reporting period.', '该报告期已审核的官方疫情警报与变化。', 'Alertes officielles relues et changements pour cette période.');
 const canonicalPath = `${prefix}/situation/weekly/${period}/`;
-const seo: SeoDocument = {
-  title: `${title} | GIDS`,
-  description,
-  canonicalPath,
-  locale,
-  alternatePaths: buildAlternatePaths(canonicalPath, locale),
-  pageType: 'Report',
-  datePublished: map?.generated_at ?? null,
-  dateModified: map?.generated_at ?? null,
-};
-const groups = [
-  { id: 'new', heading: pick('New outbreaks', '新增疫情', 'Nouvelles flambées'), rows: fresh },
-  { id: 'updated', heading: pick('Outbreaks with updates', '有更新的疫情', 'Flambées mises à jour'), rows: updated },
-];
+const seo: SeoDocument = { title: `${title} | GIDS`, description, canonicalPath, locale, alternatePaths: buildAlternatePaths(canonicalPath, locale), pageType: 'Report' };
 ---
-
-<ReportLayout title={title} description={description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation map', '态势地图', 'Carte de situation'), href: `${prefix}/situation/` }, { label: pick('Weekly changes', '每周变化', 'Changements hebdomadaires'), href: `${prefix}/situation/weekly/` }, { label: period }]}>
-  <div class="week max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-    <nav class="week-nav" aria-label={pick('Adjacent weeks', '相邻周', 'Semaines adjacentes')}>
-      {previous ? <a href={`${prefix}/situation/weekly/${previous}/`}>← {previous}</a> : <span />}
-      <a href={`${prefix}/situation/weekly/`}>{pick('All weeks', '全部周', 'Toutes les semaines')}</a>
-      {next ? <a href={`${prefix}/situation/weekly/${next}/`}>{next} →</a> : <span />}
-    </nav>
-
-    <h1 class="week-title">{title}</h1>
-    <p class="lead">{description}</p>
-
-    {groups.map(group => group.rows.length > 0 && (
-      <section aria-labelledby={`week-${group.id}`}>
-        <h2 id={`week-${group.id}`}>{group.heading} <small>{group.rows.length}</small></h2>
-        <ul class="outbreaks">
-          {group.rows.map(({ outbreak, alerts }) => (
-            <li>
-              <h3>
-                <a href={`${prefix}/situation/?outbreak=${encodeURIComponent(outbreak!.outbreak_id)}`}>{diseaseName(outbreak!, locale)}</a>
-                <small>{copy.firstReported} {formatDay(outbreak!.first_published, locale)}</small>
-              </h3>
-              <ul class="alerts">
-                {alerts.map(alert => (
-                  <li>
-                    <p class="head">
-                      <strong>{alert.admin_area ? `${alert.admin_area}, ` : ''}{countryName(alert, locale)}</strong>
-                      <span class={`status status-${alert.status}`}>{STATUS_LABELS[alert.status][locale]}</span>
-                      <time datetime={alert.published_date}>{formatDay(alert.published_date, locale)}</time>
-                    </p>
-                    {countsLine(alert, locale) && <p class="counts">{countsLine(alert, locale)}</p>}
-                    {alertSummary(alert, locale) && <p class="summary">{alertSummary(alert, locale)}</p>}
-                    {alert.quote && <blockquote>{alert.quote}</blockquote>}
-                    <p class="links"><a href={alert.url} target="_blank" rel="noopener noreferrer">{copy.originalReport}</a> <span>{sourceLabel(alert, locale)}</span></p>
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      </section>
-    ))}
-    {fresh.length === 0 && updated.length === 0 && (
-      <p class="empty">{pick('No alert detail is available for this week.', '本周没有可展示的警报明细。', 'Aucun détail d’alerte disponible pour cette semaine.')}</p>
-    )}
-  </div>
+<ReportLayout title={title} description={description} initialLanguage={locale} seo={seo} breadcrumbs={[
+  { label: pick('Situation map', '态势地图', 'Carte de situation'), href: `${prefix}/situation/` },
+  { label: pick('Weekly changes', '每周变化', 'Changements hebdomadaires'), href: `${prefix}/situation/weekly/` }, { label: period },
+]}>
+  <article class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+    <h1 class="academic-title">{title}</h1>
+    <SituationArchive client:load locale={locale} mode="weekly" period={period} />
+  </article>
 </ReportLayout>
-
-<style>
-  .week { display: grid; gap: 1.4rem; padding-block: 2rem 4rem; }
-  .week-title { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.1; margin: 0; }
-  .lead { color: rgb(var(--text-muted)); line-height: 1.6; margin: 0; }
-  .week-nav { display: flex; justify-content: space-between; gap: .5rem; font-size: .75rem; font-weight: 700; }
-  .week-nav a { color: rgb(var(--color-teal)); text-decoration: none; }
-  h2 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: 1.2rem; margin: 0 0 .7rem; }
-  h2 small, h3 small { color: rgb(var(--text-faint)); font-size: .72rem; font-weight: 500; margin-left: .5rem; }
-  h3 { font-size: .98rem; margin: 0 0 .5rem; }
-  h3 a { color: rgb(var(--text-strong)); text-decoration: none; }
-  h3 a:hover { color: rgb(var(--color-teal)); text-decoration: underline; }
-  ul { list-style: none; margin: 0; padding: 0; }
-  .outbreaks { display: grid; gap: 1.1rem; }
-  .alerts { display: grid; gap: .8rem; }
-  .alerts li { border-left: 2px solid rgb(var(--color-teal)); padding-left: .75rem; }
-  .head { align-items: baseline; color: rgb(var(--text-faint)); display: flex; flex-wrap: wrap; font-size: .74rem; gap: .5rem; margin: 0; }
-  .head strong { color: rgb(var(--text-strong)); }
-  .status { border: 1px solid rgb(var(--border)); font-size: .64rem; font-weight: 750; padding: .05rem .4rem; }
-  .status-new { border-color: #e0483d; color: #e0483d; }
-  .counts { color: rgb(var(--text-strong)); font-family: ui-monospace, monospace; font-size: .76rem; margin: .25rem 0 0; }
-  .summary { color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.55; margin: .3rem 0 0; }
-  blockquote { border-left: 3px solid rgb(var(--border)); color: rgb(var(--text-strong)); font-size: .8rem; font-style: italic; line-height: 1.55; margin: .4rem 0 0; padding: .1rem .7rem; }
-  .links { color: rgb(var(--text-faint)); font-size: .68rem; margin: .35rem 0 0; }
-  .links a { color: rgb(var(--color-teal)); font-weight: 700; margin-right: .6rem; }
-  .empty { color: rgb(var(--text-faint)); }
-</style>

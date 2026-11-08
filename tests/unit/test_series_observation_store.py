@@ -19,12 +19,12 @@ from src.domain import DiseaseSurveillanceSeries, SourceDiseaseCategory
 
 @pytest.fixture(autouse=True)
 def _stub_shared_mutation_lock(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _noop(_db) -> None:
+    async def _noop(_db, _country_code) -> None:
         return None
 
     monkeypatch.setattr(
         "src.data.storage.series_observation_store."
-        "acquire_disease_data_mutation_lock",
+        "acquire_country_data_mutation_lock",
         _noop,
     )
 
@@ -45,6 +45,30 @@ def _quality_observation(
         "unit": "count",
         "suppressed": False,
         "metadata": {"frequency": frequency},
+    }
+
+
+def test_quality_history_does_not_need_raw_provenance_to_detect_destructive_refresh():
+    """Compact database history retains the same blocking quality decisions."""
+    store = SeriesObservationStore()
+    history = []
+    incoming = []
+    for number in range(6):
+        code = f"SER_ZZ_{number}"
+        for month in (1, 2, 3):
+            history.append({
+                **_quality_observation(code, f"2025-{month:02d}-01", 10),
+                "raw_data": {"source_artifact": "large-historical-payload", "AuthoritativeRevision": True},
+            })
+        incoming.append(_quality_observation(code, "2025-03-01", 0))
+    full = store.assess_quality(incoming, country_code="ZZ", existing_observations=history)
+    compact = store.assess_quality(
+        incoming, country_code="ZZ",
+        existing_observations=[{key: value for key, value in row.items() if key != "raw_data"} for row in history],
+    )
+    assert compact.to_dict() == full.to_dict()
+    assert {issue.code for issue in compact.issues} >= {
+        "cross_series_zero_overwrites_positive", "single_series_positive_overwritten_by_zero",
     }
 
 
@@ -592,6 +616,20 @@ def test_quality_guard_keeps_an_isolated_reported_zero() -> None:
     )
 
     assert not any("zero" in issue.code for issue in report.issues)
+
+
+def test_japan_mixed_holding_profiles_span_write_batches() -> None:
+    store = SeriesObservationStore()
+    common = {
+        "MMWRYear": "2026", "MMWRWeek": "40", "Cases": "4",
+        "RawDiseaseLabel": "Unmapped test condition", "SourceDiseaseCode": "test-condition",
+    }
+    all_case = {**common, "SurveillanceType": "all_case"}
+    sentinel = {**common, "SurveillanceType": "sentinel"}
+    assert store._jp_mixed_holding_profiles([all_case], "JP", "SRC_JP_NIID", "Cases") == {}
+    profiles = store._jp_mixed_holding_profiles([all_case, sentinel], "JP", "SRC_JP_NIID", "Cases")
+    assert len(profiles) == 1
+    assert set(next(iter(profiles.values()))) == {"all_case", "sentinel"}
 
 
 def test_quality_guard_quarantines_cross_series_all_zero_tail() -> None:
@@ -1372,12 +1410,12 @@ async def test_save_rows_builds_metadata_safe_postgresql_upsert(
     db = FakeDB()
     locked_sessions = []
 
-    async def acquire_lock(session) -> None:
+    async def acquire_lock(session, country_code) -> None:
         locked_sessions.append(session)
 
     monkeypatch.setattr(
         "src.data.storage.series_observation_store."
-        "acquire_disease_data_mutation_lock",
+        "acquire_country_data_mutation_lock",
         acquire_lock,
     )
     result = await SeriesObservationStore().save_rows(

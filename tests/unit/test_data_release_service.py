@@ -637,9 +637,9 @@ async def test_release_preflight_checks_direct_download_repo_when_enabled(
     worktree_paths.append("CHANGELOG.md")
     dirty_checks = await service.integration_checks("site-release")
 
-    assert dirty_checks["overall_ready"] is False
+    assert dirty_checks["overall_ready"] is True
     assert dirty_checks["git"]["dirty_blocking_paths"] == ["CHANGELOG.md"]
-    assert any("worktree is not clean" in item for item in dirty_checks["blockers"])
+    assert not any("worktree" in item for item in dirty_checks["blockers"])
 
     # The weekly AI review registry is an atomically-updated runtime artifact;
     # it must not block the release, but remains visible in the audit payload.
@@ -718,6 +718,18 @@ async def test_release_preflight_does_not_invent_production_branch_blocker_on_cl
     monkeypatch.setattr(service, "_tracked_generated_paths", no_paths)
     monkeypatch.setattr(service, "_download_repo_check", direct_repo_check)
     monkeypatch.setattr(service, "_raw_archive_check", raw_archive_check)
+    # Keep the R2 probe off the network so the result does not depend on the
+    # operator's .env.
+    monkeypatch.setattr(
+        service,
+        "_r2_papers_check",
+        lambda **_kwargs: {"payload": {"configured": True}, "blockers": []},
+    )
+    monkeypatch.setattr(
+        service,
+        "_r2_reports_check",
+        lambda **_kwargs: {"payload": {"configured": True}, "blockers": []},
+    )
     monkeypatch.setattr(service, "_download_repo_url", lambda: "git@example/data.git")
     monkeypatch.setattr(
         service,

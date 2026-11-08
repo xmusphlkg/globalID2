@@ -8,9 +8,14 @@ export interface SmtpConfig {
   fromEmail: string;
   fromName: string;
   useTls: boolean;
+  configurationSet?: string;
+  deliveryMode?: string;
+  pilotRecipients?: string;
 }
 
 export interface SmtpEnvironment {
+  DELIVERY_MODE?: string;
+  PILOT_RECIPIENTS?: string;
   SMTP_HOST?: string;
   SMTP_PORT?: string;
   SMTP_USERNAME?: string;
@@ -18,6 +23,7 @@ export interface SmtpEnvironment {
   SMTP_FROM_EMAIL?: string;
   SMTP_FROM_NAME?: string;
   SMTP_USE_TLS?: string;
+  SMTP_SES_CONFIGURATION_SET?: string;
 }
 
 export function smtpConfig(env: SmtpEnvironment): SmtpConfig | null {
@@ -28,7 +34,9 @@ export function smtpConfig(env: SmtpEnvironment): SmtpConfig | null {
   const fromEmail = normalizeEmail(valueAsString(env.SMTP_FROM_EMAIL));
   const fromName = boundedText(valueAsString(env.SMTP_FROM_NAME), "GIDS Alerts", 80);
   const useTls = valueAsString(env.SMTP_USE_TLS).toLowerCase() !== "false";
+  const configurationSet = valueAsString(env.SMTP_SES_CONFIGURATION_SET);
 
-  if (!host || !Number.isFinite(port) || port <= 0 || !username || !password || !fromEmail) return null;
-  return { host, port, username, password, fromEmail, fromName, useTls };
+  if (!host || !Number.isFinite(port) || port <= 0 || !username || !password || !fromEmail ||
+      (configurationSet && !/^[A-Za-z0-9_-]{1,64}$/.test(configurationSet))) return null;
+  return { host, port, username, password, fromEmail, fromName, useTls, ...(env.DELIVERY_MODE ? { deliveryMode: env.DELIVERY_MODE } : {}), ...(env.PILOT_RECIPIENTS ? { pilotRecipients: env.PILOT_RECIPIENTS } : {}), ...(configurationSet ? { configurationSet } : {}) };
 }

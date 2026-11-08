@@ -75,6 +75,12 @@ async def get_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
 async def create_task(body: TaskCreateRequest, db: AsyncSession = Depends(get_db)):
     task_type = parse_enum_member(TaskType, body.task_type, "task_type")
     priority = parse_enum_member(TaskPriority, body.priority, "priority")
+    if task_type == TaskType.GENERATE_REPORT:
+        from src.core.report_scope import require_report_country
+        try:
+            require_report_country(body.country_code or (body.input_data or {}).get("country_code") or (body.input_data or {}).get("country"))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
     task = await TaskOperationsService(db).create(
         task_type=task_type,
         task_name=body.task_name,

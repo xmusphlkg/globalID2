@@ -10,11 +10,18 @@ surveillance observations.
 1. The `sync_literature` task reads Crossref records by index date from the 31
    journal registry entries in `configs/literature/journals.json`. A stable
    timestamp-boundary resume token prevents capped runs from replaying or
-   starving records that share the same Crossref index time. A separate capped,
+   starving records that share the same Crossref index time. Any failed journal
+   stream holds the shared watermark at the previous boundary, including its
+   previously committed record IDs; successful records can still be stored and
+   replayed idempotently. Journal failures are included in the source error count.
+   A separate capped,
    rotating controlled-query plan searches disease aliases, named pathogens,
    MeSH terms, vaccines, and antimicrobial-resistance terms in Crossref and
-   Europe PMC; its nested checkpoint prevents a large vocabulary from making a
-   single run unbounded. PubMed E-utilities supplies a bounded secondary
+   Europe PMC; its v2 checkpoint keeps a separate fixed publication-date window
+   and page cursor for every query/provider pair. Rotation does not advance an
+   unvisited query's start time. Failed requests keep their window, capped pages
+   resume with identical parameters, and historical windows advance in bounded
+   date slices (up to 30 days apart). PubMed E-utilities supplies a bounded secondary
    biomedical search path and can fall back for the curated journal registry
    when the Crossref core sync is temporarily unavailable, without advancing
    the Crossref index-date checkpoint.
@@ -44,6 +51,24 @@ surveillance observations.
    `astro-site/src/data/research`. Metadata-only records remain withheld rather
    than creating thin indexable pages. A fail-closed release validator runs
    before files cross the public boundary.
+
+Ordinary sync and enrichment runs reconcile only their affected article IDs,
+including the articles' summaries and evidence relationships. A touched evidence
+gap still considers all its links, so unrelated published evidence can keep it
+covered. Scoped governance has a separate audit source and never masquerades as
+a full-corpus backlog snapshot. Explicit maintenance runs retain full-corpus
+reconciliation; an empty article scope is a no-op.
+
+Controlled discovery's old v1 checkpoint cannot prove historical coverage. An
+upgrade preserves rotation and reports `legacy_coverage_unknown`; an explicit
+task `since` resets the discovery windows for a deliberate historical scan.
+Select only `sources=["controlled-query"]` for that scan so the live Crossref
+watermark is carried unchanged.
+PubMed date windows above 10,000 results are split; a single day above that cap
+is reported as an error and does not advance. Publication-date filters do not
+guarantee coverage of records indexed late or changed upstream, so periodic
+historical rescans may still be needed. This discovery path is not a claim of
+complete publisher coverage.
 
 ## Evidence enrichment and knowledge graph
 
@@ -377,7 +402,12 @@ does not stop completely. Task results expose only integer
 `catch_up_next_action_code` values; titles, IDs, and error text are never
 included. Because equality is fail-closed, catch-up resumes only when the
 observed backlog is strictly below `limit - max_records_per_run`. The configured
-limit must therefore exceed one maximum batch.
+limit must therefore exceed one maximum batch to allow acceleration. An equal
+or smaller limit leaves normal sync enabled and reports
+`configure_catch_up_backlog_headroom`, rather than asking operators to reduce
+the backlog below zero. `catch_up_backlog_counting_basis` explicitly identifies
+the distinct-article count; the health report's overall exception backlog counts
+article, summary and link work items separately and is not the same measure.
 
 The earlier `next_run_at` is stored in `scheduled_job_states`. Scheduler startup
 loads that timestamp and an overdue run remains due immediately after a restart.
@@ -400,6 +430,41 @@ healthy: source watermark lag remains the authoritative freshness SLO. If repeat
 reduce the remaining index span, stop automatic catch-up and investigate
 Crossref errors, worker duration, enrichment throttles, or an abnormal source
 volume increase before changing limits.
+
+### Repair historical journal failures
+
+Older runs could persist journal errors while advancing the global Crossref
+watermark. Inspect their exact failed ISSNs and requested windows without network
+requests or database writes:
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/replay_literature_journal_failures.py --days 7
+```
+
+After the updated worker is running, queue one bounded page for a chosen key:
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/replay_literature_journal_failures.py \
+  --days 7 --apply --replay-key <key-from-plan>
+```
+
+This uses the worker's `literature_replay` operation, the configured record cap,
+ordinary metadata/classification gates and transactional dirty markers. Each
+window has its own `literature-crossref-replay` audit source and checkpoint;
+neither its source label nor its cursor is eligible as the live Crossref cursor.
+Only failed journals in the configured registry are queried. Unrelated sources
+and payload compaction are skipped. Re-run the plan after the task completes;
+if `complete` is false, the same command resumes the next page. Active identical
+operations attach to the existing task, and an already complete window is a
+no-op. Do not run multiple CLI invocations concurrently: generic enqueue
+deduplication does not provide a database uniqueness guarantee.
+
+The plan excludes new runs that explicitly held their watermark for source
+errors, since normal synchronization already retries those. Increase `--days`
+when resuming an older window. A replay covers the provider's current index for
+the requested interval; records reindexed since the historical failure may now
+be encountered by ordinary synchronization instead. Completion is evidence that
+the window was traversed, not a reconstruction of an immutable historical feed.
 
 ### Optional publisher Online First feeds
 

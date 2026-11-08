@@ -54,6 +54,7 @@ node_modules/
 /dashboard/tmp-app/
 
 # Frontend test and build artifacts
+/astro-site/.subscription-build-*/
 coverage/
 test-results/
 playwright-report/
@@ -89,6 +90,7 @@ pnpm-debug.log*
 /astro-site/src/data/reports/
 /astro-site/src/data/research/
 /astro-site/src/data/situation/
+/astro-site/src/data/_release-projection/
 
 # Runtime data, including data/raw/<line>/<task_uuid>/<attempt>/ artifacts.
 # Contract fixtures in tests/fixtures/ingestion/ must remain versioned.

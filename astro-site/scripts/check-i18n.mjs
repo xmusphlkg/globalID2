@@ -1,3 +1,4 @@
+import { visibleText, visibleTranslationPlaceholders } from './html-visible-text.mjs';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -36,6 +37,28 @@ for (const [catalogue, entries] of Object.entries({ STUDY_TYPE_LABELS, RESEARCH_
       }
     }
   }
+}
+// The French research graph fail-closes on any classifier label missing from
+// these catalogues. Taxonomy is absent from the astro-site-only CI fixture.
+const taxonomyPath = resolve(import.meta.dirname, '../../configs/literature/taxonomy.json');
+if (existsSync(taxonomyPath)) {
+  const taxonomy = JSON.parse(readFileSync(taxonomyPath, 'utf8'));
+  const requireLabels = (catalogue, labels, values) => {
+    for (const value of values) {
+      if (!value || labels[value]) continue;
+      fail(`${catalogue} is missing classifier label ${JSON.stringify(value)}`);
+    }
+  };
+  requireLabels('RESEARCH_FACET_LABELS', RESEARCH_FACET_LABELS, [
+    ...Object.values(taxonomy.pathogen_types ?? {}).map((item) => item.label),
+    ...Object.values(taxonomy.populations ?? {}).map((item) => item.label),
+  ]);
+  requireLabels('RESEARCH_TOPIC_LABELS', RESEARCH_TOPIC_LABELS, Object.keys(taxonomy.topics ?? {}));
+  requireLabels('STUDY_TYPE_LABELS', STUDY_TYPE_LABELS, [
+    ...Object.keys(taxonomy.study_types ?? {}),
+    'Journal article',
+    'Preprint',
+  ]);
 }
 for (const [source, translation] of Object.entries(FR_UI)) {
   if (!source.trim() || !translation.trim()) fail(`empty French UI entry for ${JSON.stringify(source)}`);
@@ -77,7 +100,7 @@ const sourceChecks = [
   },
   {
     path: 'src/components/public/PublicCopyright.astro',
-    required: ['Missing French copyright translation', "const fr = locale === 'fr'", "'18 août 2026'"],
+    required: ['Missing French copyright translation', "const fr = locale === 'fr'", "'Dernière mise à jour'"],
     forbidden: [],
   },
   {
@@ -87,7 +110,7 @@ const sourceChecks = [
   },
   {
     path: 'src/components/charts/ReportV4Panel.tsx',
-    required: ["Traduction française en attente.", "fr: 'Évaluation actuelle'", "'Cas (mensuel)'"],
+    required: ["Traduction française en attente.", "fr: 'Évaluation actuelle'", "'Cas sur la période'"],
     forbidden: ['return typeof value === \'string\' ? value : fallback;', 'const zh = record.zh;'],
   },
   {
@@ -138,15 +161,6 @@ if (report50) {
     }
   }
 }
-const visibleText = (html) => html
-  .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
-  .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
-  .replace(/<[^>]+>/g, ' ')
-  .replaceAll('&amp;', '&')
-  .replaceAll('&#39;', "'")
-  .replaceAll('&quot;', '"')
-  .replace(/\s+/g, ' ')
-  .trim();
 
 const walkHtml = (directory) => {
   if (!existsSync(directory)) return [];
@@ -192,16 +206,9 @@ if (process.argv.includes('--dist')) {
     }
   }
 
-  const pendingMarkers = [
-    'Traduction française en attente',
-    'Translation pending.',
-  ];
   for (const fullPath of walkHtml(resolve('dist/fr'))) {
-    const text = visibleText(readFileSync(fullPath, 'utf8'));
-    for (const marker of pendingMarkers) {
-      if (text.includes(marker)) {
-        fail(`${fullPath.replace(`${resolve('dist')}/`, '')} contains visible French translation placeholder: ${marker}`);
-      }
+    for (const marker of visibleTranslationPlaceholders(readFileSync(fullPath, 'utf8'))) {
+      fail(`${fullPath.replace(`${resolve('dist')}/`, '')} contains visible French translation placeholder: ${marker}`);
     }
   }
 }

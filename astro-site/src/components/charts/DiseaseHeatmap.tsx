@@ -1,3 +1,4 @@
+import RuntimeChartSource from './RuntimeChartSource';
 // src/components/charts/DiseaseHeatmap.tsx
 // OWID-style heatmap with ECharts rendering, adaptive width, and scrollable disease axis.
 
@@ -594,6 +595,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
       )}
       table={renderTable}
       sourceMeta={sourceMeta}
+      notes={!sourceMeta && dataUrl ? <RuntimeChartSource dataUrl={dataUrl} language={lang} /> : undefined}
       pngFilename="gids-seasonal-heatmap.png"
     />
   );

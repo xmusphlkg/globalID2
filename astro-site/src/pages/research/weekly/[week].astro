@@ -1,13 +1,16 @@
 ---
 import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
-import researchData from '../../../data/research/index.json';
+import researchData from '../../../data/research/routes.json';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 import { localizedRegionName, localizedResearchTopic } from '../../../utils/i18n';
+import { siteHref } from '../../../lib/papers';
 
 export function getStaticPaths() {
-  return ((researchData as any).facets?.weeks ?? []).map((facet: any) => ({ params: { week: facet.week }, props: { facet, week: facet.week, locale: 'en' } }));
+  return ((researchData as any).facets?.weeks ?? []).filter((facet: any) => shouldBuildPage(`research:weekly:${facet.week}`)).map((facet: any) => ({ params: { week: facet.week }, props: { facet, week: facet.week, locale: 'en' } }));
 }
 
 interface Props { facet?: any; week?: string; locale?: 'en' | 'zh' | 'fr' }
@@ -19,7 +22,12 @@ const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 const file = resolve(`./src/data/research/weekly/${facet.week}.json`);
-const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [], top_topics: [] };
+const payloadBytes = existsSync(file) ? readFileSync(file) : null;
+const payload = payloadBytes ? JSON.parse(payloadBytes.toString('utf-8')) : { articles: [], top_topics: [] };
+// Records which exact public brief data produced this locale's built page.
+// The subscription dispatcher checks both en and zh pages against it before
+// sending any content; source exports can change independently after build.
+const payloadSha256 = payloadBytes ? createHash('sha256').update(payloadBytes).digest('hex') : '';
 const description = `A source-grounded weekly Research Radar brief for publications dated ${payload.start_date ?? facet.start_date} through ${payload.end_date ?? facet.end_date}.`;
 const descriptionZh = `基于来源的 Research Radar 周报，覆盖 ${payload.start_date ?? facet.start_date} 至 ${payload.end_date ?? facet.end_date} 期间发表的文献。`;
 const descriptionFr = `Brief hebdomadaire du Radar de recherche fondé sur les sources, couvrant les publications du ${payload.start_date ?? facet.start_date} au ${payload.end_date ?? facet.end_date}.`;
@@ -76,7 +84,7 @@ const frenchGeography = (item: any) => localizedRegionName('fr', item.code, { en
   clientCollectionValue={facet.week}
   locale={locale}
 >
-  <section slot="context" class="card weekly-context">
+  <section slot="context" class="card weekly-context" data-research-brief-sha256={payloadSha256}>
     <p class="academic-kicker">{zh ? '本周概览' : fr ? 'Aperçu de la semaine' : 'Week at a glance'}</p>
     <div class="weekly-grid"><div><strong>{payload.disease_count ?? 0}</strong><span>{zh ? '种疾病' : fr ? 'maladies' : 'diseases'}</span></div><div><strong>{payload.country_count ?? 0}</strong><span>{zh ? '个国家和地区' : fr ? 'pays et régions' : 'countries & regions'}</span></div><div class="weekly-topics"><span>{zh ? '主要主题' : fr ? 'Thèmes principaux' : 'Leading topics'}</span><p>{(payload.top_topics ?? []).map((topic: string) => fr ? localizedResearchTopic('fr', topic) : topic).join(' · ') || '—'}</p></div></div>
     <p class="weekly-note">{zh ? '本简报汇总发表元数据和分类关系，不是风险评估，也不代表疾病发病情况发生变化。' : fr ? 'Ce brief résume les métadonnées de publication et les liens de classification. Il ne constitue pas une évaluation du risque ni une affirmation sur l’incidence des maladies.' : 'This brief summarizes publication metadata and classifier links. It is not a risk assessment or a claim about changes in disease incidence.'}</p>
@@ -105,7 +113,7 @@ const frenchGeography = (item: any) => localizedRegionName('fr', item.code, { en
     <section slot="context" class="card weekly-evidence-section">
       <p class="academic-kicker">{zh ? '有引用的证据' : fr ? 'Preuves citées' : 'Cited evidence'}</p>
       <h2>{zh ? '本周来源层面发现' : fr ? 'Résultats au niveau des sources cette semaine' : 'Source-level findings this week'}</h2>
-      <ol>{citedFindings.map((finding: any) => <li><a href={finding.source_url}><strong>{finding.title}</strong><p>{zh ? finding.finding_zh ?? finding.finding_en : fr ? (finding.finding_fr || 'Synthèse française en cours d’enrichissement par le Centre de modèles.') : finding.finding_en}</p><span>{finding.doi ? `DOI ${finding.doi}` : (zh ? 'GIDS 证据记录' : fr ? 'Référence GIDS' : 'GIDS evidence record')} →</span></a></li>)}</ol>
+      <ol>{citedFindings.map((finding: any) => <li><a href={siteHref(finding.source_url)}><strong>{finding.title}</strong><p>{zh ? finding.finding_zh ?? finding.finding_en : fr ? (finding.finding_fr || 'Synthèse française en cours d’enrichissement par le Centre de modèles.') : finding.finding_en}</p><span>{finding.doi ? `DOI ${finding.doi}` : (zh ? 'GIDS 证据记录' : fr ? 'Référence GIDS' : 'GIDS evidence record')} →</span></a></li>)}</ol>
     </section>
   )}
 

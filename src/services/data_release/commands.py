@@ -40,6 +40,7 @@ def build_generate_site_data_command(
     download_url_base: str,
     incremental_country_codes: list[str] | tuple[str, ...] | None = None,
     incremental_site: bool = False,
+    country_scopes_exact: bool = False,
 ) -> list[str]:
     """Generate site assets and partitioned CSV/JSON/XLSX downloads locally."""
 
@@ -55,6 +56,8 @@ def build_generate_site_data_command(
             command.extend(["--incremental-country", normalized])
     if incremental_site:
         command.append("--incremental-site")
+    if country_scopes_exact:
+        command.append("--exact-country-scopes")
     return command
 
 
@@ -115,3 +118,78 @@ def build_publish_raw_archive_command(
         str(git_timeout_seconds),
         "--push",
     ]
+
+
+def build_split_papers_bundle_command(
+    *,
+    python_path: Path,
+    dist_dir: Path,
+    papers_dir: Path,
+    main_origin: str,
+    papers_origin: str,
+    pages_file_budget: int,
+    pages_file_warn: int,
+) -> list[str]:
+    """Slim Astro dist for Pages and stage the papers R2 bundle."""
+
+    return [
+        str(python_path),
+        "scripts/split_papers_bundle.py",
+        "--dist-dir",
+        str(dist_dir),
+        "--papers-dir",
+        str(papers_dir),
+        "--main-origin",
+        main_origin,
+        "--papers-origin",
+        papers_origin,
+        "--pages-file-budget",
+        str(pages_file_budget),
+        "--pages-file-warn",
+        str(pages_file_warn),
+    ]
+
+
+def build_publish_papers_r2_command(
+    *,
+    python_path: Path,
+    source_dir: Path,
+) -> list[str]:
+    """Incrementally publish the papers bundle to Cloudflare R2."""
+
+    return [
+        str(python_path),
+        "scripts/publish_papers_r2.py",
+        "--source-dir",
+        str(source_dir),
+        "--skip-public-verify",
+    ]
+
+
+def build_split_reports_bundle_command(
+    *,
+    python_path: Path,
+    dist_dir: Path,
+    reports_dir: Path,
+    main_origin: str,
+    reports_origin: str,
+    pages_file_budget: int,
+    pages_file_warn: int,
+) -> list[str]:
+    return [
+        str(python_path), "scripts/split_reports_bundle.py",
+        "--dist-dir", str(dist_dir),
+        "--reports-dir", str(reports_dir),
+        "--main-origin", main_origin,
+        "--reports-origin", reports_origin,
+        "--pages-file-budget", str(pages_file_budget),
+        "--pages-file-warn", str(pages_file_warn),
+    ]
+
+
+def build_publish_reports_r2_command(*, python_path: Path, source_dir: Path) -> list[str]:
+    return [str(python_path), "scripts/publish_reports_r2.py", "--source-dir", str(source_dir), "--skip-public-verify"]
+
+
+def build_verify_reports_host_command(*, python_path: Path, reports_dir: Path, reports_origin: str) -> list[str]:
+    return [str(python_path), "scripts/verify_reports_host.py", "--source-dir", str(reports_dir), "--reports-origin", reports_origin]

@@ -295,17 +295,11 @@ class AISettings(_BaseEnvSettings):
     cache_ttl: int = Field(default=168, description="缓存过期时间（小时）")
     enable_rate_limiting: bool = Field(default=True, description="是否启用限流")
     rate_limit: int = Field(default=50, description="每分钟请求限制")
-    rate_limit_cooldown_seconds: int = Field(default=300, gt=0, description="命中429/额度限制后的冷却秒数")
+    rate_limit_cooldown_seconds: int = Field(default=10, gt=0, description="命中429/额度限制后的冷却秒数（连续限流时递增的上限）")
     rate_limit_wait_cap_seconds: int = Field(
         default=900,
         gt=0,
         description="限流恢复阶段单次最大等待秒数（建议大于等于冷却时间）",
-    )
-    rate_limit_recovery_max_rounds: int = Field(
-        default=4,
-        ge=0,
-        le=20,
-        description="当全部候选因限流失败时，允许的恢复重试轮数",
     )
     route_cache_ttl_seconds: int = Field(default=15, gt=0, description="模型中心运行时路由缓存秒数")
     prompt_auto_reload: bool = Field(
@@ -456,6 +450,34 @@ class AutomationSettings(_BaseEnvSettings):
 class DataReleaseSettings(_BaseEnvSettings):
     """静态站点数据发布与部署配置"""
 
+    surveillance_json_enabled: bool = Field(
+        default=False,
+        validation_alias="DATA_RELEASE__SURVEILLANCE_JSON_ENABLED",
+        description="启用独立监测JSON发布；先初始化数据并部署同源Worker，开启后再发布动态页面模板",
+    )
+
+    situation_json_enabled: bool = Field(
+        default=False,
+        validation_alias="DATA_RELEASE__SITUATION_JSON_ENABLED",
+        description="启用Situation独立JSON发布；先初始化数据与同源Worker，再启用更新触发和动态页面",
+    )
+
+    pages_data_worker_enabled: bool = Field(
+        default=False,
+        validation_alias="GIDS_PAGES_DATA_WORKER",
+        description="静态发布携带Pages同源数据Worker；用于未授予独立Workers Routes权限的部署",
+    )
+
+    reports_auto_publish_enabled: bool = Field(
+        default=False,
+        validation_alias="DATA_RELEASE__REPORTS_AUTO_PUBLISH_ENABLED",
+        description="报告生成完成后自动发布报告，并在发布队列空闲时补触发",
+    )
+    batch_max_countries: int = Field(
+        default=8, ge=1, le=500,
+        validation_alias="DATA_RELEASE__BATCH_MAX_COUNTRIES",
+        description="一次增量发布的国家/地区预算；旧父级标记作为完整依赖组发布",
+    )
     enabled: bool = Field(default=True, description="是否启用 data release 调度")
     timezone: str = Field(default="UTC", description="默认 data release 调度时区")
     poll_interval_seconds: int = Field(default=30, ge=5, description="data release 轮询间隔秒数")
@@ -496,6 +518,75 @@ class DataReleaseSettings(_BaseEnvSettings):
     default_commit_message_template: str = Field(
         default="chore(data-release): publish site data {timestamp}",
         description="默认发布提交消息模板",
+    )
+    pages_file_budget: int = Field(
+        default=20_000,
+        ge=1_000,
+        le=100_000,
+        validation_alias="DATA_RELEASE__PAGES_FILE_BUDGET",
+        description="Cloudflare Pages 主站部署允许的最大文件数",
+    )
+    pages_file_warn: int = Field(
+        default=18_000,
+        ge=1_000,
+        le=100_000,
+        validation_alias="DATA_RELEASE__PAGES_FILE_WARN",
+        description="Cloudflare Pages 主站文件数告警阈值",
+    )
+    r2_papers_enabled: bool = Field(
+        default=True,
+        validation_alias="DATA_RELEASE__R2_PAPERS_ENABLED",
+        description="是否在站点发布时同步 papers 子域到 R2",
+    )
+    r2_papers_bucket: str = Field(
+        default="globalid-papers",
+        validation_alias="R2_PAPERS_BUCKET",
+        description="Research 长尾页面所在的 R2 bucket",
+    )
+    r2_papers_public_base_url: str = Field(
+        default="https://papers.globalinfectiousdisease.com",
+        validation_alias="R2_PAPERS_PUBLIC_BASE_URL",
+        description="papers 子域公开 base URL",
+    )
+    r2_reports_enabled: bool = Field(
+        default=True,
+        validation_alias="DATA_RELEASE__R2_REPORTS_ENABLED",
+        description="是否在站点发布时同步 reports 子域到独立 R2 bucket",
+    )
+    r2_reports_bucket: str = Field(
+        default="globalid-reports",
+        validation_alias="R2_REPORTS_BUCKET",
+        description="国家周期报告页面所在的 R2 bucket",
+    )
+    r2_reports_public_base_url: str = Field(
+        default="https://reports.globalinfectiousdisease.com",
+        validation_alias="R2_REPORTS_PUBLIC_BASE_URL",
+        description="reports 子域公开 base URL",
+    )
+    r2_access_key_id: str = Field(
+        default="",
+        validation_alias="R2_ACCESS_KEY_ID",
+        description="R2 S3 API access key id",
+    )
+    r2_secret_access_key: str = Field(
+        default="",
+        validation_alias="R2_SECRET_ACCESS_KEY",
+        description="R2 S3 API secret access key",
+    )
+    r2_endpoint_url: str = Field(
+        default="",
+        validation_alias="R2_ENDPOINT_URL",
+        description="Optional R2 S3 endpoint override",
+    )
+    r2_account_id: str = Field(
+        default="",
+        validation_alias="R2_ACCOUNT_ID",
+        description="Optional R2 account id override; defaults to CLOUDFLARE_ACCOUNT_ID",
+    )
+    main_site_origin: str = Field(
+        default="https://globalinfectiousdisease.com",
+        validation_alias="DATA_RELEASE__MAIN_SITE_ORIGIN",
+        description="主站绝对 origin，用于 papers HTML 根路径改写",
     )
 
 
@@ -547,7 +638,7 @@ class LiteratureSettings(_BaseEnvSettings):
         ge=1,
         le=100_000,
         description=(
-            "Flag a high distinct article/summary review backlog while bounded metadata catch-up continues"
+            "Pause accelerated catch-up when distinct actionable review articles plus the next batch reach this limit; normal sync continues"
         ),
     )
 
@@ -733,7 +824,7 @@ class LiteratureSettings(_BaseEnvSettings):
         default=False,
         description="Send any eligible abstract to an external model route, regardless of open-access status",
     )
-    ai_model_request_timeout_seconds: int = Field(default=35, ge=10, le=600)
+    ai_model_request_timeout_seconds: int = Field(default=420, ge=10, le=600)
     ai_wait_for_model_recovery: bool = Field(
         default=True,
         description="Wait once for Model Center route recovery before failing literature AI enrichment",
@@ -849,6 +940,38 @@ class ReportSettings(BaseSettings):
         alias="MAX_PARALLEL_TASKS",
         description="AI并行任务数"
     )
+    schedule_enabled: bool = Field(
+        default=True,
+        validation_alias="REPORT_SCHEDULE_ENABLED",
+        description="是否根据日本试点监测数据的更新频率自动生成周期报告",
+    )
+    schedule_poll_interval_seconds: int = Field(
+        default=900,
+        ge=60,
+        le=86400,
+        validation_alias="REPORT_SCHEDULE_POLL_INTERVAL_SECONDS",
+        description="检查新完整报告周期的间隔秒数",
+    )
+    schedule_max_tasks_per_tick: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        validation_alias="REPORT_SCHEDULE_MAX_TASKS_PER_TICK",
+        description="每轮自动排入队列的报告数量上限",
+    )
+    schedule_max_active_tasks: int = Field(
+        default=6,
+        ge=1,
+        le=50,
+        validation_alias="REPORT_SCHEDULE_MAX_ACTIVE_TASKS",
+        description="同时处于排队、运行或重试状态的自动报告任务上限",
+    )
+    schedule_min_records: int = Field(
+        default=1,
+        ge=1,
+        validation_alias="REPORT_SCHEDULE_MIN_RECORDS",
+        description="报告周期内至少需要的旧版生成器记录数",
+    )
 
 
 class CrawlerSettings(BaseSettings):
@@ -877,7 +1000,7 @@ class TaskWorkerSettings(_BaseEnvSettings):
         description="任务 worker 最大并发数",
     )
     general_concurrency: int = Field(
-        default=6,
+        default=12,
         validation_alias="TASK_WORKER_GENERAL_CONCURRENCY",
         ge=1,
         le=64,

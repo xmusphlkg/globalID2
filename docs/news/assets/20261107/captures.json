@@ -1,0 +1,268 @@
+{
+  "article": "GIDS公众号宣传稿_优化版.html",
+  "purpose": "微信公众号图文宣传稿",
+  "publication_notes": [
+    "正文使用内联样式，不依赖脚本或外部CSS。",
+    "图片为本地相对路径，发布前需将PNG/GIF上传公众号并替换图片。",
+    "阅读原文地址设置为 https://globalinfectiousdisease.com/zh/ 。"
+  ],
+  "verified_public_metrics": {
+    "verified_on": "2026-11-08",
+    "latest_reporting_date": "2026-11-01",
+    "records": 4457224,
+    "national_datasets": 42,
+    "subdivision_datasets": 252,
+    "disease_entries": 239,
+    "public_research_articles": 6669,
+    "surveillance_release_id": "data-5c09b46f-a1bc-49db-872b-c61a861a0dd8",
+    "surveillance_snapshot": "https://globalinfectiousdisease.com/site-data/objects/0efc82246ea87fa2b196ed85c2420fe4da4a08171430d4dabc09a60cf444581d.json",
+    "research_url": "https://globalinfectiousdisease.com/zh/research/",
+    "official_sources": 49,
+    "research_updated_on": "2026-11-07"
+  },
+  "traffic_metrics": {
+    "status": "Queried read-only from Cloudflare GraphQL Analytics HTTP requests overview; figures are adaptively sampled estimates.",
+    "dataset": "httpRequestsOverviewAdaptiveGroups",
+    "pageviews": 454040,
+    "visits": 408670,
+    "requests": 1230550,
+    "country_region_count": 166,
+    "country_count_basis": "Distinct identifiable location codes with positive HTTP requests, excluding special codes such as T1.",
+    "window_start": "2026-10-09T01:02:00Z",
+    "window_end": "2026-11-08T01:02:00Z",
+    "average_sample_interval": 10.48892336279716,
+    "country_pageviews": {
+      "US": 245710,
+      "SG": 24220,
+      "BR": 22060,
+      "FR": 20710,
+      "CN": 16820,
+      "IL": 9820,
+      "DE": 9480,
+      "VN": 6220,
+      "AR": 5620,
+      "GB": 5440,
+      "MX": 5170,
+      "NL": 5030,
+      "HK": 4780,
+      "BD": 4330,
+      "IN": 3730,
+      "JP": 3650,
+      "CO": 3380,
+      "CA": 3150,
+      "PK": 2720,
+      "ZA": 2550,
+      "CL": 2180,
+      "MA": 1890,
+      "ID": 1780,
+      "AU": 1370,
+      "KE": 1030,
+      "NG": 860
+    }
+  },
+  "assets": [
+    {
+      "file": "gids-compare-motion.gif",
+      "url": "https://globalinfectiousdisease.com/zh/compare/?d=D028&c=JP,US&u=count",
+      "captured_at": "2026-11-07T07:34:37.868Z",
+      "viewport": {
+        "width": 1280,
+        "height": 820
+      },
+      "selector": ".compare-chart",
+      "frames": 18,
+      "frame_duration_ms": 125,
+      "actions": [
+        8,
+        20,
+        32,
+        44,
+        56,
+        68
+      ],
+      "note": "Live browser frames; no replacement data or reconstructed UI.",
+      "used_in_article": true,
+      "width": 960,
+      "height": 373,
+      "format": "GIF",
+      "duration_ms": 9000,
+      "encoding": "Continuous browser captures encoded as GIF at 8 fps; width limited to 960 px.",
+      "bytes": 123829,
+      "sha256": "ce5715f0e13202a562e3e03ba934461940da14689793b0b1bd734b1649642938"
+    },
+    {
+      "file": "gids-downloads.png",
+      "url": "https://globalinfectiousdisease.com/zh/downloads/",
+      "captured_at": "2026-11-07T07:24:41.030Z",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "device_scale_factor": 1.5,
+      "selector": null,
+      "errors": [],
+      "used_in_article": true,
+      "width": 2160,
+      "height": 1440,
+      "format": "PNG",
+      "bytes": 212601,
+      "sha256": "7c76288158e61687d11d8c312e10b4e21bed831a15ec4656b53b07000b42cd87"
+    },
+    {
+      "file": "gids-home-motion.gif",
+      "url": "https://globalinfectiousdisease.com/zh/",
+      "captured_at": "2026-11-08T01:27:49Z",
+      "viewport": {
+        "width": 1280,
+        "height": 820
+      },
+      "frames": 45,
+      "note": "官网真实页面截图；播放速度按采集间隔近似。",
+      "used_in_article": true,
+      "width": 960,
+      "height": 615,
+      "format": "GIF",
+      "duration_ms": 12000,
+      "encoding": "官网页面连续截图，4 fps，宽度 960 px。",
+      "bytes": 4427175,
+      "sha256": "edf6b4a86d611002b118e819b31c06f98c83f856416bddf2d60940f60437324f",
+      "locale": "zh",
+      "frames_captured": 48
+    },
+    {
+      "file": "gids-research.png",
+      "url": "https://globalinfectiousdisease.com/zh/research/",
+      "captured_at": "2026-11-07T07:24:38.099Z",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "device_scale_factor": 1.5,
+      "selector": null,
+      "errors": [],
+      "used_in_article": true,
+      "width": 2160,
+      "height": 1440,
+      "format": "PNG",
+      "bytes": 226275,
+      "sha256": "13f7da6e7a687884f9ad6cd2eb26d90937de0a042d6b3155a303705b04ecff33"
+    },
+    {
+      "file": "gids-situation-detail.png",
+      "url": "https://globalinfectiousdisease.com/zh/situation/?place=247c0aa74bdb8f82",
+      "captured_at": "2026-11-07T07:35:00.958Z",
+      "viewport": {
+        "width": 1280,
+        "height": 820
+      },
+      "used_in_article": true,
+      "width": 1280,
+      "height": 820,
+      "format": "PNG",
+      "bytes": 258380,
+      "sha256": "216ac69cb7b3dba147d02648938696b3f04f0f42ab82e8b947afa73492bd06a1"
+    },
+    {
+      "file": "gids-situation-motion.gif",
+      "url": "https://globalinfectiousdisease.com/zh/situation/?place=247c0aa74bdb8f82",
+      "captured_at": "2026-11-07T07:35:00.958Z",
+      "viewport": {
+        "width": 1280,
+        "height": 820
+      },
+      "selector": null,
+      "frames": 80,
+      "frame_duration_ms": 125,
+      "actions": [
+        12,
+        28,
+        52,
+        64
+      ],
+      "note": "Live browser frames; no replacement data or reconstructed UI.",
+      "used_in_article": true,
+      "width": 960,
+      "height": 615,
+      "format": "GIF",
+      "duration_ms": 10000,
+      "encoding": "Continuous browser captures encoded as GIF at 8 fps; width limited to 960 px.",
+      "bytes": 1888265,
+      "sha256": "cb1c5913ebdc401897d9064b31faa6a839f114c5abecc6cc0bed13ab13e8a885"
+    },
+    {
+      "file": "gids-home-en-motion.gif",
+      "url": "https://globalinfectiousdisease.com/",
+      "captured_at": "2026-11-08T01:28:06Z",
+      "viewport": {
+        "width": 1280,
+        "height": 820
+      },
+      "locale": "en",
+      "note": "官网真实页面截图；播放速度按采集间隔近似。",
+      "width": 960,
+      "height": 615,
+      "format": "GIF",
+      "frames": 46,
+      "duration_ms": 12000,
+      "used_in_article": true,
+      "encoding": "官网页面连续截图，4 fps，宽度 960 px。",
+      "bytes": 4752521,
+      "sha256": "5a77c25f8207461afc1264ee528fb5dd647dad42a601a50453f44f9de2826e3c",
+      "frames_captured": 48
+    },
+    {
+      "file": "gids-home-fr-motion.gif",
+      "url": "https://globalinfectiousdisease.com/fr/",
+      "captured_at": "2026-11-08T01:28:23Z",
+      "viewport": {
+        "width": 1280,
+        "height": 820
+      },
+      "locale": "fr",
+      "note": "官网真实页面截图；播放速度按采集间隔近似。",
+      "width": 960,
+      "height": 615,
+      "format": "GIF",
+      "frames": 44,
+      "duration_ms": 12000,
+      "used_in_article": true,
+      "encoding": "官网页面连续截图，4 fps，宽度 960 px。",
+      "bytes": 4927203,
+      "sha256": "81f211f96d6c0a866d68adc9c431732877c23e44ef6a4454047b99918f6749fc",
+      "frames_captured": 48
+    },
+    {
+      "file": "gids-subscribe.png",
+      "url": "https://globalinfectiousdisease.com/zh/subscribe/",
+      "captured_at": "2026-11-07T13:52:18.882Z",
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "device_scale_factor": 1.5,
+      "capture": "订阅表单中的邮箱、语言、接收内容和部分国家选项",
+      "clip": {
+        "x": 681,
+        "y": 323,
+        "width": 647,
+        "height": 648
+      },
+      "width": 971,
+      "height": 972,
+      "format": "PNG",
+      "used_in_article": true,
+      "bytes": 79185,
+      "sha256": "1caddb2edfb0f5185248d22007291c601ffa232923374c295ea5e17daee86fc6"
+    },
+    {
+      "file": "cloudflare-geo.png",
+      "source": "用户提供的 Cloudflare 地理分布截图，截图未显示具体统计时间",
+      "width": 1101,
+      "height": 891,
+      "format": "PNG",
+      "used_in_article": true,
+      "bytes": 109735,
+      "sha256": "ab6cd979851b27b9eee43deab2e011fc972f726fed55506f5ec56d0285a7cc5f"
+    }
+  ]
+}

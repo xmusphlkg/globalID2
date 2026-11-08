@@ -2,182 +2,68 @@
 
 from __future__ import annotations
 
-import csv
-from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
-from dataclasses import dataclass
-from datetime import date, datetime
+import copy
 import hashlib
-from io import BytesIO, StringIO
 import json
 import multiprocessing
 import os
-from pathlib import Path
 import shutil
+import subprocess
 import time
-from typing import Any
-from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
+from datetime import date
+from pathlib import Path
 
-from openpyxl import Workbook
-
-from src.services.disease_series_policy import is_case_count_series
-from src.services import disease_series_policy
-
-
-DOWNLOAD_FIELDS = [
-    "dataset_kind",
-    "dataset_id",
-    "dataset_slug",
-    "dataset_name",
-    "record_kind",
-    "country_code",
-    "country_name",
-    "disease_id",
-    "disease_name_en",
-    "disease_name_zh",
-    "category",
-    "date",
-    "year_month",
-    "value",
-    "cases",
-    "weekly_equiv_cases",
-    "deaths",
-    "incidence_rate_per_100k",
-    "incidence_rate_source",
-    "mortality_rate",
-    "series_code",
-    "source_series_code",
-    "source_system",
-    "source_label",
-    "metric_type",
-    "reporting_basis",
-    "temporal_granularity",
-    "unit",
-    "geography_key",
-    "dimension_key",
-    "mapping_relation",
-    "comparability",
-    "aggregation_policy",
-    "availability_status",
-    "missing_value_policy",
-    "definition_version",
-    "case_definition",
-    "case_definition_uri",
-    "quality_status",
-    "is_selected_series",
-    "data_layer",
-    "projection_policy",
-    "coverage_status",
-    "loss_risk",
-    "selected_series_codes",
-    "available_series_count",
-    "provenance_note",
-    "primary_source_scope",
-    "primary_source_label",
-    "primary_source_url",
-    "primary_source_type",
-    "source_scopes",
-    "source_labels",
-    "source_urls",
-    "source_types",
-]
-
-SOURCE_SERIES_FIELDS = (
-    "source_series_code",
-    "source_system",
-    "source_label",
-    "metric_type",
-    "reporting_basis",
-    "temporal_granularity",
-    "unit",
-    "geography_key",
-    "dimension_key",
-    "mapping_relation",
-    "comparability",
-    "aggregation_policy",
-    "availability_status",
-    "missing_value_policy",
-    "definition_version",
-    "case_definition",
-    "case_definition_uri",
+from src.generation.direct_download import (
+    disease_merge,
+    formats,
+    rows,
+    runtime,
+    windows,
 )
+from src.generation.direct_download.disease_merge import (
+    _merge_existing_disease_rows,
+    _read_disease_baseline_json,  # noqa: F401 - compatibility re-export
+)
+from src.generation.direct_download.formats import (
+    _XLSX_TIMESTAMP,  # noqa: F401 - compatibility re-export
+    DOWNLOAD_FIELDS,
+    _csv_bytes,
+    _json_bytes,
+    _xlsx_bytes,
+    _xlsx_cell,  # noqa: F401 - compatibility re-export
+)
+from src.generation.direct_download.rows import (
+    SOURCE_SERIES_FIELDS,  # noqa: F401 - compatibility re-export
+    _projection_provenance_columns,  # noqa: F401 - compatibility re-export
+    _require_lossless_download_series,  # noqa: F401 - compatibility re-export
+    _sort_rows,  # noqa: F401 - compatibility re-export
+    _source_columns,  # noqa: F401 - compatibility re-export
+    _source_observation_rows,  # noqa: F401 - compatibility re-export
+    build_country_download_rows,
+    build_disease_download_rows,
+)
+from src.generation.direct_download.runtime import (
+    _default_export_workers,
+    _read_cgroup_memory_limit_bytes,
+)
+from src.generation.direct_download.windows import (
+    BRIDGE_WINDOW_END,  # noqa: F401 - compatibility re-export
+    BRIDGE_WINDOW_START,  # noqa: F401 - compatibility re-export
+    ROLLING_WINDOW_START,
+    ROLLING_WINDOW_YEARS,  # noqa: F401 - compatibility re-export
+    SPECIAL_WINDOW_END,  # noqa: F401 - compatibility re-export
+    SPECIAL_WINDOW_START,  # noqa: F401 - compatibility re-export
+    PartitionSpec,
+    _window_for_year,  # noqa: F401 - compatibility re-export
+    partition_rows,
+)
+from src.generation.site_data_writer import _write_if_changed
+from src.services import disease_series_policy
 
 PUBLIC_FORMATS = ("csv", "json", "xlsx")
 GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024
 DEFAULT_TARGET_FILE_BYTES = 90 * 1024 * 1024
-SPECIAL_WINDOW_START = 2020
-SPECIAL_WINDOW_END = 2025
-BRIDGE_WINDOW_START = 2026
-BRIDGE_WINDOW_END = 2029
-ROLLING_WINDOW_START = 2030
-ROLLING_WINDOW_YEARS = 5
-_XLSX_TIMESTAMP = (2000, 1, 1, 0, 0, 0)
-
-
-def _read_cgroup_memory_limit_bytes(
-    *,
-    cgroup_root: Path | None = None,
-    membership_path: Path | None = None,
-) -> int | None:
-    """Return the tightest cgroup memory guardrail for this process.
-
-    A systemd service usually runs below a child cgroup, while the cgroup v2
-    mount root remains unlimited.  Reading only ``/sys/fs/cgroup/memory.*``
-    therefore misses the service's actual ``memory.high`` limit and can make
-    a memory-heavy export choose too many workers.
-    """
-    cgroup_root = cgroup_root or Path("/sys/fs/cgroup")
-    membership_path = membership_path or Path("/proc/self/cgroup")
-    roots = [cgroup_root]
-    try:
-        for line in membership_path.read_text(encoding="utf-8").splitlines():
-            hierarchy, controllers, relative_path = line.split(":", 2)
-            if hierarchy != "0" or controllers:
-                continue
-            normalized = relative_path.strip().lstrip("/")
-            if normalized:
-                roots.insert(0, cgroup_root / normalized)
-            break
-    except (OSError, ValueError):
-        pass
-
-    candidates = tuple(
-        root / setting
-        for root in roots
-        for setting in ("memory.high", "memory.max")
-    )
-    values: list[int] = []
-    for path in candidates:
-        try:
-            raw = path.read_text(encoding="utf-8").strip()
-        except OSError:
-            continue
-        if not raw or raw == "max":
-            continue
-        try:
-            values.append(int(raw))
-        except ValueError:
-            continue
-    return min(values) if values else None
-
-
-def _default_export_workers(cpu_count: int | None, memory_limit_bytes: int | None) -> int:
-    """Scale partition workers by CPU and the cgroup memory guardrail.
-
-    Unknown memory stays at 4. A known limit keeps 1 worker through 4 GiB and
-    2 through 8 GiB. Above that, add one worker per 2 GiB, capped at 8, so a
-    16 GiB worker cgroup uses 6 cores while the parent still holds the curves.
-    """
-    cpus = max(1, cpu_count or 1)
-    if not memory_limit_bytes:
-        return min(4, cpus)
-
-    gib = 1024 * 1024 * 1024
-    if memory_limit_bytes <= 4 * gib:
-        return 1
-    if memory_limit_bytes <= 8 * gib:
-        return min(2, cpus)
-    grown = 2 + (memory_limit_bytes - 8 * gib) // (2 * gib)
-    return min(cpus, grown, 8)
 
 
 DEFAULT_EXPORT_WORKERS = _default_export_workers(os.cpu_count(), _read_cgroup_memory_limit_bytes())
@@ -186,7 +72,11 @@ DEFAULT_EXPORT_WORKERS = _default_export_workers(os.cpu_count(), _read_cgroup_me
 def _projection_code_sha256() -> str:
     """Invalidate dataset reuse whenever download projection rules change."""
     digest = hashlib.sha256()
-    for source in (Path(__file__), Path(disease_series_policy.__file__)):
+    for source in (
+        Path(__file__),
+        Path(disease_series_policy.__file__),
+        *(Path(module.__file__) for module in (rows, windows, disease_merge, runtime, formats)),
+    ):
         digest.update(source.read_bytes())
     return digest.hexdigest()
 
@@ -229,6 +119,7 @@ def _entry_files_available(
     path_id: str,
     *,
     verify_hash: bool = True,
+    trusted_paths: set[str] | None = None,
 ) -> bool:
     """Require every reused part to exist at its declared path and size.
 
@@ -237,7 +128,7 @@ def _entry_files_available(
     """
     parts = entry.get("parts") or []
     if not parts:
-        return False
+        return bool(entry) and entry.get("record_count") == 0 and isinstance(entry.get("parts"), list)
     prefix = f"{directory}/{path_id}/"
     for part in parts:
         files = part.get("files") or {}
@@ -250,9 +141,35 @@ def _entry_files_available(
             path = output_dir / relative
             if not path.is_file() or path.stat().st_size != file_meta.get("bytes"):
                 return False
-            if verify_hash and _file_sha256(path) != file_meta.get("sha256"):
+            if verify_hash and relative not in (trusted_paths or ()) and _file_sha256(path) != file_meta.get("sha256"):
                 return False
     return True
+
+
+def _git_unchanged_paths(output_dir: Path) -> set[str]:
+    """Reuse committed bytes only while their declared checksums also match."""
+    if not (output_dir / ".git").exists():
+        return set()
+    try:
+        def git(*args):
+            return subprocess.run(
+                ["git", *args], cwd=output_dir, check=True,
+                capture_output=True, text=True,
+            ).stdout
+        tracked = set(git("ls-files", "-z", "--", "countries", "diseases").split("\0"))
+        changed = set(git("diff", "HEAD", "--name-only", "--no-renames", "-z", "--", "countries", "diseases").split("\0"))
+        def assets(manifest):
+            return {
+                item["relative_path"]: (item["bytes"], item["sha256"])
+                for entry in [*manifest.get("countries", []), *manifest.get("diseases", [])]
+                for part in entry.get("parts", [])
+                for item in part.get("files", {}).values()
+            }
+        committed = assets(json.loads(git("show", "HEAD:manifest.json")))
+        current = assets(json.loads((output_dir / "manifest.json").read_text()))
+        return {path for path in tracked - changed - {""} if path in committed and committed[path] == current.get(path)}
+    except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError):
+        return set()
 
 
 def _process_pool_context() -> multiprocessing.context.BaseContext:
@@ -260,17 +177,6 @@ def _process_pool_context() -> multiprocessing.context.BaseContext:
         return multiprocessing.get_context("forkserver")
     except ValueError:
         return multiprocessing.get_context()
-
-
-@dataclass(frozen=True)
-class PartitionSpec:
-    """One stable calendar window used as a public file name."""
-
-    key: str
-    start: date
-    end: date
-    label: str
-    is_current: bool = False
 
 
 def _download_url(base_url: str, relative_path: str) -> str:
@@ -289,331 +195,6 @@ def _file_sha256(path: Path) -> str:
         while chunk := source.read(1024 * 1024):
             digest.update(chunk)
     return digest.hexdigest()
-
-
-def _source_columns(source_info: dict) -> dict:
-    sources = source_info.get("sources") or []
-    return {
-        "primary_source_scope": source_info.get("primary_scope"),
-        "primary_source_label": source_info.get("primary_label"),
-        "primary_source_url": source_info.get("primary_url"),
-        "primary_source_type": source_info.get("primary_type"),
-        "source_scopes": "; ".join(
-            source.get("scope") or "" for source in sources if source.get("scope")
-        ),
-        "source_labels": "; ".join(
-            source.get("label") or "" for source in sources if source.get("label")
-        ),
-        "source_urls": "; ".join(
-            source.get("url") or "" for source in sources if source.get("url")
-        ),
-        "source_types": "; ".join(
-            source.get("type") or "" for source in sources if source.get("type")
-        ),
-    }
-
-
-def _projection_provenance_columns(
-    series: dict,
-    source_series: dict | None = None,
-) -> dict:
-    selected_codes = [
-        str(code) for code in series.get("selected_series_codes") or []
-    ]
-    data_provenance = series.get("data_provenance") or {}
-    columns = {
-        "series_code": (
-            source_series.get("series_code")
-            if source_series
-            else (selected_codes[0] if len(selected_codes) == 1 else None)
-        ),
-        "is_selected_series": (
-            source_series.get("series_code") in selected_codes
-            if source_series else None
-        ),
-        "data_layer": series.get("data_layer"),
-        "projection_policy": series.get("projection_policy"),
-        "coverage_status": series.get("coverage_status"),
-        "loss_risk": series.get("loss_risk"),
-        "selected_series_codes": "; ".join(selected_codes),
-        "available_series_count": series.get("available_series_count") or 0,
-        "provenance_note": data_provenance.get("note_en"),
-    }
-    if source_series:
-        columns.update(
-            {field: source_series.get(field) for field in SOURCE_SERIES_FIELDS}
-        )
-        quality_statuses = source_series.get("quality_statuses") or []
-        columns["quality_status"] = "; ".join(
-            str(value) for value in quality_statuses if value
-        )
-    else:
-        columns["temporal_granularity"] = series.get("period_granularity")
-    return columns
-
-
-def _source_observation_rows(
-    series: dict,
-    base_columns: dict,
-    source_columns: dict,
-) -> list[dict]:
-    rows: list[dict] = []
-    for source_series in series.get("source_series") or []:
-        dates = source_series.get("dates") or []
-        values = source_series.get("values") or []
-        granularity = str(source_series.get("temporal_granularity") or "").lower()
-        for index, value_date in enumerate(dates):
-            value = values[index] if index < len(values) else None
-            case_value = value if is_case_count_series(source_series) else None
-            rows.append(
-                {
-                    **base_columns,
-                    "record_kind": "source_series_observation",
-                    "date": value_date,
-                    "year_month": value_date[:7] if value_date else None,
-                    "value": value,
-                    "cases": case_value,
-                    "weekly_equiv_cases": (
-                        float(value)
-                        if granularity == "weekly" and case_value is not None
-                        else None
-                    ),
-                    "deaths": None,
-                    "incidence_rate_per_100k": None,
-                    "incidence_rate_source": None,
-                    "mortality_rate": None,
-                    **_projection_provenance_columns(series, source_series),
-                    **source_columns,
-                }
-            )
-    return rows
-
-
-def build_country_download_rows(country_data: dict, source_info: dict) -> list[dict]:
-    """Flatten a country projection without release-volatile fields."""
-
-    rows: list[dict] = []
-    source_columns = _source_columns(source_info)
-    dataset_id = str(country_data.get("country_code") or "").lower()
-    for series in (country_data.get("disease_series") or {}).values():
-        base_columns = {
-            "dataset_kind": "country",
-            "dataset_id": dataset_id,
-            "dataset_slug": dataset_id,
-            "dataset_name": country_data.get("country_name"),
-            "country_code": country_data.get("country_code"),
-            "country_name": country_data.get("country_name"),
-            "disease_id": series.get("disease_id"),
-            "disease_name_en": series.get("name_en"),
-            "disease_name_zh": series.get("name_zh"),
-            "category": series.get("category"),
-        }
-        rows.extend(
-            _source_observation_rows(series, base_columns, source_columns)
-        )
-        dates = series.get("dates") or []
-        cases = series.get("cases") or []
-        weekly_equiv = series.get("weekly_equiv_cases") or []
-        deaths = series.get("deaths") or []
-        incidence_rates = series.get("incidence_rates") or []
-        incidence_sources = series.get("incidence_sources") or []
-        mortality_rates = series.get("mortality_rates") or []
-        for index, value_date in enumerate(dates):
-            rows.append(
-                {
-                    **base_columns,
-                    "record_kind": "public_projection",
-                    "date": value_date,
-                    "year_month": value_date[:7] if value_date else None,
-                    "cases": cases[index] if index < len(cases) else 0,
-                    "value": cases[index] if index < len(cases) else 0,
-                    "weekly_equiv_cases": (
-                        weekly_equiv[index] if index < len(weekly_equiv) else None
-                    ),
-                    "deaths": deaths[index] if index < len(deaths) else 0,
-                    "incidence_rate_per_100k": (
-                        incidence_rates[index] if index < len(incidence_rates) else None
-                    ),
-                    "incidence_rate_source": (
-                        incidence_sources[index] if index < len(incidence_sources) else None
-                    ),
-                    "mortality_rate": (
-                        mortality_rates[index] if index < len(mortality_rates) else None
-                    ),
-                    **_projection_provenance_columns(series),
-                    **source_columns,
-                }
-            )
-    return _sort_rows(rows)
-
-
-def build_disease_download_rows(
-    disease_data: dict,
-    source_info_by_country: dict[str, dict],
-    country_name_by_code: dict[str, str],
-) -> list[dict]:
-    """Flatten a disease projection without release-volatile fields."""
-
-    rows: list[dict] = []
-    dataset_id = disease_data.get("disease_id")
-    for country_code, series in (disease_data.get("country_series") or {}).items():
-        dates = series.get("dates") or []
-        cases = series.get("cases") or []
-        weekly_equiv = series.get("weekly_equiv_cases") or []
-        deaths = series.get("deaths") or []
-        incidence_rates = series.get("incidence_rates") or []
-        incidence_sources = series.get("incidence_sources") or []
-        source_columns = _source_columns(
-            source_info_by_country.get(country_code, {"sources": []})
-        )
-        base_columns = {
-            "dataset_kind": "disease",
-            "dataset_id": dataset_id,
-            "dataset_slug": disease_data.get("slug"),
-            "dataset_name": disease_data.get("name_en"),
-            "country_code": country_code,
-            "country_name": country_name_by_code.get(country_code),
-            "disease_id": dataset_id,
-            "disease_name_en": disease_data.get("name_en"),
-            "disease_name_zh": disease_data.get("name_zh"),
-            "category": disease_data.get("category"),
-        }
-        rows.extend(
-            _source_observation_rows(series, base_columns, source_columns)
-        )
-        for index, value_date in enumerate(dates):
-            rows.append(
-                {
-                    **base_columns,
-                    "record_kind": "public_projection",
-                    "date": value_date,
-                    "year_month": value_date[:7] if value_date else None,
-                    "cases": cases[index] if index < len(cases) else 0,
-                    "value": cases[index] if index < len(cases) else 0,
-                    "weekly_equiv_cases": (
-                        weekly_equiv[index] if index < len(weekly_equiv) else None
-                    ),
-                    "deaths": deaths[index] if index < len(deaths) else 0,
-                    "incidence_rate_per_100k": (
-                        incidence_rates[index] if index < len(incidence_rates) else None
-                    ),
-                    "incidence_rate_source": (
-                        incidence_sources[index] if index < len(incidence_sources) else None
-                    ),
-                    "mortality_rate": None,
-                    **_projection_provenance_columns(series),
-                    **source_columns,
-                }
-            )
-    return _sort_rows(rows)
-
-
-def _sort_rows(rows: list[dict]) -> list[dict]:
-    return sorted(
-        rows,
-        key=lambda row: (
-            str(row.get("date") or ""),
-            str(row.get("country_code") or ""),
-            str(row.get("disease_id") or ""),
-            str(row.get("record_kind") or ""),
-            str(row.get("series_code") or ""),
-        ),
-    )
-
-
-def _window_for_year(year: int, latest_year: int) -> PartitionSpec:
-    if year < SPECIAL_WINDOW_START:
-        start_year = year - (year % 5)
-        end_year = start_year + 4
-    elif year <= SPECIAL_WINDOW_END:
-        start_year = SPECIAL_WINDOW_START
-        end_year = SPECIAL_WINDOW_END
-    elif year <= BRIDGE_WINDOW_END:
-        start_year = BRIDGE_WINDOW_START
-        end_year = BRIDGE_WINDOW_END
-    else:
-        start_year = year - (year % ROLLING_WINDOW_YEARS)
-        end_year = start_year + ROLLING_WINDOW_YEARS - 1
-
-    current = start_year <= latest_year <= end_year
-    label = f"{start_year}–now" if current else f"{start_year}–{end_year}"
-    return PartitionSpec(
-        key=f"{start_year}-{end_year}",
-        start=date(start_year, 1, 1),
-        end=date(end_year, 12, 31),
-        label=label,
-        is_current=current,
-    )
-
-
-def partition_rows(rows: list[dict]) -> list[tuple[PartitionSpec, list[dict]]]:
-    """Group rows into stable historical windows and one current window."""
-
-    valid_rows = [row for row in rows if str(row.get("date") or "")[:4].isdigit()]
-    if not valid_rows:
-        return []
-    latest_year = max(int(str(row["date"])[:4]) for row in valid_rows)
-    grouped: dict[str, tuple[PartitionSpec, list[dict]]] = {}
-    for row in valid_rows:
-        spec = _window_for_year(int(str(row["date"])[:4]), latest_year)
-        grouped.setdefault(spec.key, (spec, []))[1].append(row)
-    return sorted(grouped.values(), key=lambda item: item[0].start, reverse=True)
-
-
-def _csv_bytes(rows: list[dict]) -> bytes:
-    stream = StringIO(newline="")
-    writer = csv.DictWriter(stream, fieldnames=DOWNLOAD_FIELDS, lineterminator="\n")
-    writer.writeheader()
-    writer.writerows(
-        {field: row.get(field) for field in DOWNLOAD_FIELDS} for row in rows
-    )
-    return stream.getvalue().encode("utf-8")
-
-
-def _json_bytes(metadata: dict, rows: list[dict]) -> bytes:
-    return json.dumps(
-        {"metadata": metadata, "records": rows},
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-
-
-def _xlsx_cell(value: Any) -> Any:
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-    return value
-
-
-def _xlsx_bytes(metadata: dict, rows: list[dict]) -> bytes:
-    workbook = Workbook(write_only=True)
-    fixed = datetime(*_XLSX_TIMESTAMP)
-    workbook.properties.created = fixed
-    workbook.properties.modified = fixed
-    records_sheet = workbook.create_sheet("records")
-    records_sheet.append(DOWNLOAD_FIELDS)
-    for row in rows:
-        records_sheet.append([_xlsx_cell(row.get(field)) for field in DOWNLOAD_FIELDS])
-    metadata_sheet = workbook.create_sheet("metadata")
-    metadata_sheet.append(["field", "value"])
-    for key in sorted(metadata):
-        metadata_sheet.append([key, _xlsx_cell(metadata[key])])
-
-    original = BytesIO()
-    workbook.save(original)
-    original.seek(0)
-    canonical = BytesIO()
-    with ZipFile(original, "r") as source_zip, ZipFile(
-        canonical, "w", compression=ZIP_DEFLATED, compresslevel=9
-    ) as target_zip:
-        for name in sorted(source_zip.namelist()):
-            source_info = source_zip.getinfo(name)
-            target_info = ZipInfo(name, date_time=_XLSX_TIMESTAMP[:6])
-            target_info.compress_type = ZIP_DEFLATED
-            target_info.external_attr = source_info.external_attr
-            target_info.create_system = source_info.create_system
-            target_zip.writestr(target_info, source_zip.read(name))
-    return canonical.getvalue()
 
 
 def _row_provenance_counts(rows: list[dict]) -> dict:
@@ -665,15 +246,6 @@ def _partition_metadata(dataset: dict, spec: PartitionSpec, rows: list[dict]) ->
             if projection_rows
             else "source_series_observation"
         ),
-    }
-
-
-def _partition_bytes(dataset: dict, spec: PartitionSpec, rows: list[dict]) -> dict[str, bytes]:
-    metadata = _partition_metadata(dataset, spec, rows)
-    return {
-        "csv": _csv_bytes(rows),
-        "json": _json_bytes(metadata, rows),
-        "xlsx": _xlsx_bytes(metadata, rows),
     }
 
 
@@ -748,22 +320,22 @@ def _bounded_partition_artifacts(
     spec: PartitionSpec,
     rows: list[dict],
     max_file_bytes: int,
+    *,
+    json_content: bytes | None = None,
 ) -> list[tuple[PartitionSpec, list[dict], dict[str, bytes]]]:
-    artifacts = _partition_bytes(dataset, spec, rows)
-    if max(len(content) for content in artifacts.values()) < max_file_bytes:
-        return [(spec, rows, artifacts)]
+    # JSON is normally the largest representation. Reject an oversized parent
+    # before spending time constructing CSV and an XLSX workbook for it.
+    artifacts = {"json": json_content if json_content is not None else _json_bytes(_partition_metadata(dataset, spec, rows), rows)}
+    if len(artifacts["json"]) < max_file_bytes:
+        artifacts["csv"] = _csv_bytes(rows)
+        if len(artifacts["csv"]) < max_file_bytes:
+            artifacts["xlsx"] = _xlsx_bytes(_partition_metadata(dataset, spec, rows), rows)
+            if len(artifacts["xlsx"]) < max_file_bytes:
+                return [(spec, rows, artifacts)]
     left, right = _split_spec(spec, rows)
     return _bounded_partition_artifacts(dataset, *left, max_file_bytes) + _bounded_partition_artifacts(
         dataset, *right, max_file_bytes
     )
-
-
-def _write_if_changed(path: Path, content: bytes) -> bool:
-    if path.exists() and path.read_bytes() == content:
-        return False
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
-    return True
 
 
 def _remove_stale_files(root: Path, expected: set[Path]) -> int:
@@ -779,6 +351,55 @@ def _remove_stale_files(root: Path, expected: set[Path]) -> int:
     return removed
 
 
+def _planned_partition_rows(
+    rows: list[dict], existing_parts: dict[str, dict]
+) -> list[tuple[PartitionSpec, list[dict]]]:
+    """Keep existing calendar subdivisions instead of rebuilding their parent.
+
+    Reuse only a complete, non-overlapping cover of a stable base window. Old
+    single-date row chunks and malformed manifests fall back to normal splitting;
+    they cannot safely assign new/deleted observations by calendar bounds.
+    """
+    planned = []
+    for base, base_rows in partition_rows(rows):
+        children = []
+        for part in existing_parts.values():
+            try:
+                start = date.fromisoformat(part["window"]["start"])
+                end = date.fromisoformat(part["window"]["end"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if (base.start <= start <= end <= base.end
+                    and part.get("id") == f"{start.isoformat()}_{end.isoformat()}"):
+                children.append((start, end, part))
+        children.sort(key=lambda child: (child[0], child[1]))
+        cursor = base.start.toordinal()
+        for start, end, _ in children:
+            if start.toordinal() != cursor:
+                break
+            cursor = end.toordinal() + 1
+        else:
+            if len(children) > 1 and cursor == base.end.toordinal() + 1:
+                buckets = [[] for _ in children]
+                # Binary search avoids scanning all observations for each part.
+                from bisect import bisect_left
+                ends = [end.isoformat() for _, end, _ in children]
+                for row in base_rows:
+                    buckets[bisect_left(ends, str(row["date"])[:10])].append(row)
+                for (start, end, part), part_rows in zip(children, buckets):
+                    if not part_rows:
+                        continue
+                    current = base.is_current and end == base.end
+                    planned.append((PartitionSpec(
+                        key=part["id"], start=start, end=end,
+                        label=f"{start.isoformat()} – {'now' if current else end.isoformat()}",
+                        is_current=current,
+                    ), part_rows))
+                continue
+        planned.append((base, base_rows))
+    return planned
+
+
 def _dataset_parts(
     *,
     dataset: dict,
@@ -788,12 +409,15 @@ def _dataset_parts(
     max_file_bytes: int,
     expected_paths: set[Path],
     existing_parts: dict[str, dict],
+    trusted_paths: set[str] | None = None,
+    counters: dict[str, int] | None = None,
 ) -> tuple[list[dict], int]:
     parts: list[dict] = []
     changed = 0
-    for base_spec, base_rows in partition_rows(rows):
+    for base_spec, base_rows in _planned_partition_rows(rows, existing_parts):
         base_metadata = _partition_metadata(dataset, base_spec, base_rows)
-        base_content_sha = _sha256(_json_bytes(base_metadata, base_rows))
+        base_json = _json_bytes(base_metadata, base_rows)
+        base_content_sha = _sha256(base_json)
         existing = existing_parts.get(base_spec.key)
         existing_files = (existing or {}).get("files") or {}
         can_reuse = bool(
@@ -801,20 +425,24 @@ def _dataset_parts(
             and existing.get("content_sha256") == base_content_sha
             and set(existing_files) == set(PUBLIC_FORMATS)
         )
-        for format_name in PUBLIC_FORMATS:
+        for format_name in PUBLIC_FORMATS if can_reuse else ():
             file_meta = existing_files.get(format_name) or {}
             relative_path = str(file_meta.get("relative_path") or "")
             path = output_dir / relative_path
             if (
                 not relative_path
+                or relative_path != f"{dataset['directory']}/{dataset['path_id']}/{base_spec.key}.{format_name}"
                 or not path.is_file()
                 or path.stat().st_size != int(file_meta.get("bytes") or -1)
                 or path.stat().st_size >= max_file_bytes
-                or _file_sha256(path) != str(file_meta.get("sha256") or "")
+                or (relative_path not in (trusted_paths or ())
+                    and _file_sha256(path) != str(file_meta.get("sha256") or ""))
             ):
                 can_reuse = False
                 break
         if can_reuse:
+            if counters is not None:
+                counters["reused_partitions"] += 1
             dates = [str(row["date"]) for row in base_rows]
             files: dict[str, dict] = {}
             for format_name in PUBLIC_FORMATS:
@@ -853,8 +481,11 @@ def _dataset_parts(
             base_spec,
             base_rows,
             max_file_bytes,
+            json_content=base_json,
         )
         for spec, part_rows, artifacts in bounded:
+            if counters is not None:
+                counters["rebuilt_partitions"] += 1
             files: dict[str, dict] = {}
             for format_name in PUBLIC_FORMATS:
                 relative_path = (
@@ -905,10 +536,12 @@ def _build_dataset_parts_task(
     download_url_base: str,
     max_file_bytes: int,
     existing_parts: dict[str, dict],
+    trusted_paths: set[str] | None = None,
 ) -> dict:
     """Build one dataset tree independently so changed partitions can overlap."""
 
     expected_paths: set[Path] = set()
+    counters = {"reused_partitions": 0, "rebuilt_partitions": 0}
     parts, changed = _dataset_parts(
         dataset=dataset,
         rows=rows,
@@ -917,6 +550,8 @@ def _build_dataset_parts_task(
         max_file_bytes=max_file_bytes,
         expected_paths=expected_paths,
         existing_parts=existing_parts,
+        trusted_paths=trusted_paths,
+        counters=counters,
     )
     return {
         "kind": kind,
@@ -926,6 +561,7 @@ def _build_dataset_parts_task(
         "parts": parts,
         "changed": changed,
         "paths": expected_paths,
+        **counters,
     }
 
 
@@ -935,6 +571,7 @@ def _build_country_parts_task(
     download_url_base: str,
     max_file_bytes: int,
     existing_parts: dict[str, dict],
+    trusted_paths: set[str] | None = None,
 ) -> dict:
     code = country_export["code"]
     path_id = code.lower()
@@ -957,6 +594,7 @@ def _build_country_parts_task(
         download_url_base=download_url_base,
         max_file_bytes=max_file_bytes,
         existing_parts=existing_parts,
+        trusted_paths=trusted_paths,
     )
     result["source_info"] = country_export["source_info"]
     return result
@@ -970,6 +608,8 @@ def _build_disease_parts_task(
     download_url_base: str,
     max_file_bytes: int,
     existing_parts: dict[str, dict],
+    trusted_paths: set[str] | None = None,
+    changed_country_codes: set[str] | None = None,
 ) -> dict:
     did = disease_export["disease_id"]
     path_id = did.lower()
@@ -982,11 +622,23 @@ def _build_disease_parts_task(
         "slug": disease_data.get("slug"),
         "name": disease_data.get("name_en"),
     }
+    fresh_data = disease_data
+    if changed_country_codes is not None:
+        fresh_data = {**disease_data, "country_series": {
+            code: series for code, series in (disease_data.get("country_series") or {}).items()
+            if code in changed_country_codes
+        }}
     rows = build_disease_download_rows(
-        disease_data,
+        fresh_data,
         country_sources_by_code,
         country_names,
     )
+    legacy_count = 0
+    if changed_country_codes is not None:
+        rows, legacy_count = _merge_existing_disease_rows(
+            disease_data, rows, changed_country_codes=changed_country_codes,
+            country_names=country_names, output_dir=output_dir, existing_parts=existing_parts,
+        )
     result = _build_dataset_parts_task(
         kind="disease",
         dataset=dataset,
@@ -995,12 +647,37 @@ def _build_disease_parts_task(
         download_url_base=download_url_base,
         max_file_bytes=max_file_bytes,
         existing_parts=existing_parts,
+        trusted_paths=trusted_paths,
     )
-    result["country_codes"] = sorted(
-        (disease_data.get("country_series") or {}).keys()
-    )
+    result["country_codes"] = sorted({row["country_code"] for row in rows})
     result["source_info"] = disease_data.get("source_info") or []
+    result["preserved_legacy_projection_rows"] = legacy_count
     return result
+
+
+def _disease_dependency_sha256(
+    item: dict, existing: dict, country_entries: dict, country_fingerprints: dict,
+    country_names: dict, country_sources: dict, *, projection_code: str, max_file_bytes: int,
+) -> str:
+    """Fingerprint country inputs, never the previous disease output itself."""
+    data = item["disease_data"]
+    codes = set((data.get("country_series") or {}).keys())
+    codes.update(str(country["code"]) for country in existing.get("countries", []) if country.get("code"))
+    codes &= set(country_names)
+    dependencies = {}
+    for code in sorted(codes):
+        entry = country_entries.get(code.lower()) or {}
+        fingerprint = country_fingerprints.get(code.lower()) or entry.get("input_sha256")
+        if not fingerprint:
+            fingerprint = {part.get("id"): {
+                "content_sha256": part.get("content_sha256"),
+                "files": {name: file.get("sha256") for name, file in (part.get("files") or {}).items()},
+            } for part in entry.get("parts") or []}
+        dependencies[code] = {"input": fingerprint, "name": country_names.get(code), "source_info": country_sources.get(code)}
+    return _input_sha256({
+        "contract": "disease-country-inputs-v1", "countries": dependencies,
+        "metadata": {key: data.get(key) for key in ("disease_id", "slug", "name_en", "name_zh", "category", "source_info")},
+    }, projection_code=projection_code, max_file_bytes=max_file_bytes)
 
 
 def build_direct_download_files(
@@ -1062,8 +739,11 @@ def build_direct_download_files(
         str(entry.get("disease_id")): entry for entry in existing_manifest.get("diseases") or []
     }
     projection_code = _projection_code_sha256()
+    trusted_paths = _git_unchanged_paths(output_dir)
+    verified_paths = set(trusted_paths)
     country_fingerprints: dict[str, str] = {}
     disease_fingerprints: dict[str, str] = {}
+    disease_dependencies: dict[str, str] = {}
     requested_country_codes = {str(code).strip().upper() for code in changed_country_codes or ()}
     requested_disease_ids = {str(disease_id).strip() for disease_id in changed_disease_ids or ()}
     selected_country_codes: set[str] = set()
@@ -1081,10 +761,9 @@ def build_direct_download_files(
                 path_id,
                 verify_hash=False,
             ):
-                print(
-                    f"  Download files for unchanged country {code} are missing; "
-                    "left until its published curve changes",
-                    flush=True,
+                raise RuntimeError(
+                    f"Cannot reuse downloads for unchanged country {code}: files are missing or invalid. "
+                    f"Refresh country scope {code} (or run a full data export) before publishing."
                 )
             if index % 25 == 0 or index == len(country_exports):
                 print(
@@ -1092,10 +771,12 @@ def build_direct_download_files(
                     flush=True,
                 )
             continue
-        available = _entry_files_available(existing, output_dir, "countries", path_id)
+        available = _entry_files_available(existing, output_dir, "countries", path_id, trusted_paths=trusted_paths)
+        if available:
+            verified_paths.update(file["relative_path"] for part in existing["parts"] for file in part["files"].values())
         if changed_country_codes is None or code in requested_country_codes or not available:
             fingerprint = _input_sha256(
-                {"country_data": item["country_data"], "source_info": item["source_info"]},
+                {"country_data": item["country_data"], "country_name": item["country_name"], "source_info": item["source_info"]},
                 projection_code=projection_code,
                 max_file_bytes=max_file_bytes,
             )
@@ -1119,10 +800,10 @@ def build_direct_download_files(
                 path_id,
                 verify_hash=False,
             ):
-                print(
-                    f"  Download files for unchanged disease {disease_id} are missing; "
-                    "left until a published curve for it changes",
-                    flush=True,
+                raise RuntimeError(
+                    f"Cannot reuse downloads for unchanged disease {disease_id}: files are missing or invalid. "
+                    f"Refresh country scopes contributing to disease {disease_id} "
+                    "(or run a full data export) before publishing."
                 )
             if index % 25 == 0 or index == len(disease_exports):
                 print(
@@ -1130,10 +811,18 @@ def build_direct_download_files(
                     flush=True,
                 )
             continue
-        available = _entry_files_available(existing, output_dir, "diseases", path_id)
+        available = _entry_files_available(existing, output_dir, "diseases", path_id, trusted_paths=trusted_paths)
+        if available:
+            verified_paths.update(file["relative_path"] for part in existing["parts"] for file in part["files"].values())
         if changed_disease_ids is None or disease_id in requested_disease_ids or not available:
+            dependency = _disease_dependency_sha256(
+                item, existing, existing_country_entries, country_fingerprints,
+                country_names, context["country_sources_by_code"],
+                projection_code=projection_code, max_file_bytes=max_file_bytes,
+            )
+            disease_dependencies[disease_id] = dependency
             country_codes = (item["disease_data"].get("country_series") or {}).keys()
-            fingerprint = _input_sha256(
+            fingerprint = dependency if changed_country_codes is not None else _input_sha256(
                 {
                     "disease_data": item["disease_data"],
                     "country_sources": {code: context["country_sources_by_code"].get(code) for code in country_codes},
@@ -1143,7 +832,8 @@ def build_direct_download_files(
                 max_file_bytes=max_file_bytes,
             )
             disease_fingerprints[disease_id] = fingerprint
-            if fingerprint != existing.get("input_sha256") or not available:
+            expected_fingerprint = existing.get("dependency_sha256") if changed_country_codes is not None else existing.get("input_sha256")
+            if fingerprint != expected_fingerprint or not available:
                 selected_disease_ids.add(disease_id)
         if index % 25 == 0 or index == len(disease_exports):
             print(
@@ -1186,16 +876,39 @@ def build_direct_download_files(
                 if kind == "country":
                     country_export = item
                     path_id = country_export["code"].lower()
+                    previous_parts = existing_country_parts.get(path_id, {})
                     future = executor.submit(
                         _build_country_parts_task,
                         country_export,
                         output_dir,
                         download_url_base,
                         max_file_bytes,
-                        existing_country_parts.get(path_id, {}),
+                        previous_parts,
+                        {file["relative_path"] for part in previous_parts.values()
+                         for file in part.get("files", {}).values()
+                         if file.get("relative_path") in verified_paths},
                     )
                 else:
                     disease_export = item
+                    previous_parts = existing_disease_parts.get(disease_export["disease_id"], {})
+                    if changed_country_codes is not None:
+                        # Avoid pickling historical curves into every worker.
+                        # Unselected rows come from verified published JSON.
+                        disease_data = disease_export["disease_data"]
+                        if not previous_parts:
+                            missing = sorted(code for code, series in (disease_data.get("country_series") or {}).items()
+                                             if code not in requested_country_codes and (series.get("dates") or series.get("source_series")))
+                            if missing:
+                                raise ValueError(
+                                    f"Disease {disease_export['disease_id']}, countries {', '.join(missing)}: "
+                                    "no published download baseline exists; refresh these country scopes before merging."
+                                )
+                        disease_export = {**disease_export, "disease_data": {
+                            **disease_data, "country_series": {
+                                code: series for code, series in (disease_data.get("country_series") or {}).items()
+                                if code in requested_country_codes
+                            },
+                        }}
                     future = executor.submit(
                         _build_disease_parts_task,
                         disease_export,
@@ -1204,7 +917,11 @@ def build_direct_download_files(
                         output_dir,
                         download_url_base,
                         max_file_bytes,
-                        existing_disease_parts.get(disease_export["disease_id"], {}),
+                        previous_parts,
+                        {file["relative_path"] for part in previous_parts.values()
+                         for file in part.get("files", {}).values()
+                         if file.get("relative_path") in verified_paths},
+                        requested_country_codes if changed_country_codes is not None else None,
                     )
                 pending[future] = index
 
@@ -1252,9 +969,8 @@ def build_direct_download_files(
         processed_disease_results[dataset["dataset_id"]] = result
 
     def reuse_existing_entry(entry: dict) -> dict:
-        reused = dict(entry)
-        reused["generated_at"] = generated_at
-        for part in (entry or {}).get("parts") or []:
+        reused = copy.deepcopy(entry)
+        for part in reused.get("parts") or []:
             for file_meta in (part.get("files") or {}).values():
                 relative_path = str(file_meta.get("relative_path") or "")
                 if relative_path:
@@ -1282,7 +998,7 @@ def build_direct_download_files(
         entry.update(
             {
                 "input_sha256": country_fingerprints.get(dataset["path_id"]) or _input_sha256(
-                    {"country_data": country_export["country_data"], "source_info": country_export["source_info"]},
+                    {"country_data": country_export["country_data"], "country_name": country_export["country_name"], "source_info": country_export["source_info"]},
                     projection_code=projection_code,
                     max_file_bytes=max_file_bytes,
                 ),
@@ -1311,6 +1027,7 @@ def build_direct_download_files(
         entry = dict(disease_entries_by_id[dataset["dataset_id"]])
         entry.update(
             {
+                "dependency_sha256": disease_dependencies.get(disease_id),
                 "input_sha256": disease_fingerprints.get(disease_id) or _input_sha256(
                     {
                         "disease_data": disease_export["disease_data"],
@@ -1356,8 +1073,28 @@ def build_direct_download_files(
         "generation": {
             "changed_files": changed_files,
             "removed_files": removed_files,
+            "preserved_legacy_projection_rows": sum(result.get("preserved_legacy_projection_rows", 0) for result in results_by_index.values()),
+            "selected_datasets": task_count,
+            "rebuilt_partitions": sum(result["rebuilt_partitions"] for result in results_by_index.values()),
+            "reused_partitions": sum(result["reused_partitions"] for result in results_by_index.values())
+            + sum(len(entry.get("parts") or []) for entry in country_entries
+                  if entry["id"] not in processed_country_results)
+            + sum(len(entry.get("parts") or []) for entry in disease_entries
+                  if entry["disease_id"] not in processed_disease_results),
         },
     }
+    # Export timings/counters describe a run, not a dataset version. Keep them
+    # in the return value for diagnostics, never in the committed manifest.
+    generation = manifest.pop("generation")
+    def stable(value):
+        if isinstance(value, dict):
+            return {key: stable(item) for key, item in value.items() if key not in {"generated_at", "generation"}}
+        if isinstance(value, list):
+            return [stable(item) for item in value]
+        return value
+    if stable(manifest) == stable(existing_manifest):
+        manifest = copy.deepcopy(existing_manifest)
+        manifest.pop("generation", None)
     manifest_path = output_dir / "manifest.json"
     _write_if_changed(
         manifest_path,
@@ -1368,7 +1105,7 @@ def build_direct_download_files(
             sort_keys=True,
         ).encode("utf-8"),
     )
-    return manifest
+    return {**manifest, "generation": generation}
 
 
 __all__ = [
@@ -1378,7 +1115,7 @@ __all__ = [
     "PUBLIC_FORMATS",
     "PartitionSpec",
     "build_country_download_rows",
-    "build_disease_download_rows",
     "build_direct_download_files",
+    "build_disease_download_rows",
     "partition_rows",
 ]

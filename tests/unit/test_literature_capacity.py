@@ -31,7 +31,7 @@ def test_literature_capacity_defaults_match_observed_arrival_rate():
     assert config.ai_enrichment_catch_up_interval_minutes == 1
     assert config.ai_enrichment_auto_on_ingest is True
     assert config.ai_enrichment_languages == ["en", "zh", "fr"]
-    assert config.ai_model_request_timeout_seconds == 35
+    assert config.ai_model_request_timeout_seconds == 420
 
 
 def test_review_backlog_threshold_does_not_block_a_bounded_metadata_batch():
@@ -337,8 +337,9 @@ async def test_truncated_scheduled_task_pulls_persisted_schedule_forward(monkeyp
     assert service._state.next_run_at == next_run_at
 
 
-async def test_high_review_backlog_flags_pressure_and_still_schedules_catch_up(
-    monkeypatch,
+@pytest.mark.parametrize("backlog", [199, 200, 201, 4560])
+async def test_review_backlog_only_pauses_acceleration_at_the_headroom_boundary(
+    monkeypatch, backlog,
 ):
     config = SimpleNamespace(
         schedule_enabled=True,
@@ -364,7 +365,7 @@ async def test_high_review_backlog_flags_pressure_and_still_schedules_catch_up(
             }
 
     async def backlog_count():
-        return 200
+        return backlog
 
     async def schedule_earlier(job_kind, job_id, next_run_at):
         advanced.append((job_kind, job_id, next_run_at))
@@ -387,17 +388,27 @@ async def test_high_review_backlog_flags_pressure_and_still_schedules_catch_up(
         SimpleNamespace(input_data={"scheduled_trigger": True})
     )
 
-    assert result["catch_up_scheduled"] == 1
-    assert result["catch_up_paused_backpressure"] == 0
-    assert result["catch_up_review_backlog_high"] == 1
-    assert result["catch_up_backlog_observed_count"] == 200
-    assert result["catch_up_backlog_projected_upper_bound"] == 500
+    paused = backlog >= 200
+    assert result["catch_up_scheduled"] == int(not paused)
+    assert result["catch_up_paused_backpressure"] == int(paused)
+    assert result["catch_up_review_backlog_high"] == int(paused)
+    assert result["catch_up_backlog_observed_count"] == backlog
+    assert result["catch_up_backlog_projected_upper_bound"] == backlog + 300
     assert result["catch_up_backlog_limit"] == 500
-    assert result["catch_up_status"] == "scheduled"
-    assert result["catch_up_next_action_code"] == "await_accelerated_catch_up"
-    assert len(advanced) == 1
-    assert service._state.next_run_at == advanced[0][2]
-    assert service._state.next_run_at != normal_next_run
+    assert result["catch_up_backlog_counting_basis"] == "distinct_actionable_review_articles"
+    assert result["catch_up_resume_below_backlog"] == 200
+    assert result["catch_up_required_backlog_reduction"] == max(0, backlog - 199)
+    if paused:
+        assert result["catch_up_status"] == "paused_backpressure"
+        assert result["catch_up_next_action_code"] == "reduce_exception_backlog_below_resume_threshold"
+        assert result["catch_up_backpressure_reason"] == "exception_backlog_headroom_exhausted"
+        assert not advanced
+        assert service._state.next_run_at == normal_next_run
+    else:
+        assert result["catch_up_status"] == "scheduled"
+        assert result["catch_up_next_action_code"] == "await_accelerated_catch_up"
+        assert len(advanced) == 1
+        assert service._state.next_run_at == advanced[0][2]
 
 
 async def test_backlog_measurement_failure_fails_safe_without_accelerated_schedule(monkeypatch):

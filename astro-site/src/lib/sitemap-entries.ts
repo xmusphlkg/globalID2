@@ -13,6 +13,8 @@ import {
   reportArchiveCountries,
   type ReportIndexEntry,
 } from './report-routes.ts';
+import { REPORTS_ORIGIN } from './papers.ts';
+import type { CountryDirectory, DiseaseDirectory } from './site-data-loaders.ts';
 
 export interface SitemapEntry {
   path: string;
@@ -43,6 +45,8 @@ export interface BuildSitemapEntriesOptions {
   loadDisease?: (id: string) => unknown | null;
   loadKnowledge?: (id: string) => unknown | null;
   loadCountry?: (code: string) => unknown | null;
+  loadCountryDirectory?: (code: string) => CountryDirectory | null;
+  loadDiseaseDirectory?: (id: string) => DiseaseDirectory;
   countryDiseaseLimit?: number;
   situation?: {
     latest?: { public_enabled?: unknown; generated_at?: unknown; content_updated_at?: unknown; report?: { as_of?: unknown } } | null;
@@ -94,6 +98,7 @@ export const STATIC_SITEMAP_PATHS = [
   '/',
   '/about/',
   '/changelog/',
+  '/data-updates/',
   '/subscribe/',
   '/copyright/',
   '/terms/',
@@ -113,6 +118,9 @@ export const SITEMAP_GROUPS = [
 ] as const;
 
 export type SitemapGroup = typeof SITEMAP_GROUPS[number];
+
+/** Article entries; rendered into the papers host's own sitemap, not SITEMAP_GROUPS. */
+export const PAPERS_SITEMAP_GROUP = 'papers' as const;
 
 export function normalizeSitemapDate(value: unknown): string | undefined {
   if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) {
@@ -160,13 +168,22 @@ function countryDiseaseEntries(
   meta: SitemapMeta,
   loadCountry?: (code: string) => unknown | null,
   limit = 50,
+  loadDirectory?: (code: string) => CountryDirectory | null,
 ): SitemapEntry[] {
-  if (!loadCountry) return [];
+  if (!loadCountry && !loadDirectory) return [];
   const candidates: Array<{ path: string; lastmod?: string; score: number }> = [];
   for (const country of meta.countries ?? []) {
     const code = pathSegment(country.code, true);
     if (!code || !hasCountryDataSnapshot(country)) continue;
-    const data = loadCountry(code) as Record<string, any> | null;
+    if (loadDirectory) {
+      const summary = loadDirectory(code);
+      for (const candidate of summary?.candidates ?? []) candidates.push({
+        path: `/countries/${code}/diseases/${candidate.slug}/`, score: candidate.score,
+        lastmod: normalizeSitemapDate(summary?.generated_at),
+      });
+      continue;
+    }
+    const data = loadCountry!(code) as Record<string, any> | null;
     const sourceUrls = [
       data?.source_info?.primary_url,
       ...(data?.source_info?.sources ?? []).map((source: any) => source?.url),
@@ -199,6 +216,30 @@ function countryDiseaseEntries(
     .flatMap(entry => localizedEntry(entry.path, entry.lastmod));
 }
 
+/** Reports builds must never load the multi-GB surveillance/research corpus. */
+export function buildReportsSitemapEntries({
+  meta,
+  reports,
+  loadReport,
+}: Pick<BuildSitemapEntriesOptions, 'meta' | 'reports' | 'loadReport'>): SitemapEntry[] {
+  const siteLastmod = normalizeSitemapDate(meta.generated_at);
+  const entries = localizedEntry('/reports/', siteLastmod);
+  const publishableReports = buildPublishableReports(reports, loadReport);
+  for (const country of reportArchiveCountries(publishableReports)) {
+    entries.push(...localizedEntry(`/countries/${country}/reports/`, siteLastmod));
+  }
+  for (const report of publishableReports) {
+    const lastmod = normalizeSitemapDate(report.summary.created_at)
+      ?? normalizeSitemapDate(report.detail.created_at)
+      ?? siteLastmod;
+    entries.push(...localizedEntry(`/countries/${report.country}/reports/${report.id}/`, lastmod));
+    for (const slug of report.diseaseSlugs) {
+      entries.push(...localizedEntry(`/countries/${report.country}/reports/${report.id}/${toSeoSlug(slug)}/`, lastmod));
+    }
+  }
+  return [...new Map(entries.map(entry => [entry.path, entry])).values()];
+}
+
 export function buildSitemapGroups({
   meta,
   diseases,
@@ -207,12 +248,15 @@ export function buildSitemapGroups({
   loadDisease,
   loadKnowledge,
   loadCountry,
+  loadCountryDirectory,
+  loadDiseaseDirectory,
   countryDiseaseLimit = 50,
   situation,
   research,
-}: BuildSitemapEntriesOptions): Record<SitemapGroup, SitemapEntry[]> {
+}: BuildSitemapEntriesOptions): Record<SitemapGroup | typeof PAPERS_SITEMAP_GROUP, SitemapEntry[]> {
   const siteLastmod = normalizeSitemapDate(meta.generated_at);
-  const groups: Record<SitemapGroup, SitemapEntry[]> = {
+  const groups: Record<SitemapGroup | typeof PAPERS_SITEMAP_GROUP, SitemapEntry[]> = {
+    [PAPERS_SITEMAP_GROUP]: [],
     // Static legal/navigation pages do not necessarily change with the data
     // snapshot. Omitting lastmod is more accurate than refreshing it on every
     // data release.
@@ -220,7 +264,7 @@ export function buildSitemapGroups({
     diseases: [],
     countries: [],
     reports: [],
-    'country-diseases': countryDiseaseEntries(meta, loadCountry, countryDiseaseLimit),
+    'country-diseases': countryDiseaseEntries(meta, loadCountry, countryDiseaseLimit, loadCountryDirectory),
     situation: [],
     research: [],
   };
@@ -252,7 +296,9 @@ export function buildSitemapGroups({
     for (const article of publicResearchArticles) {
       const slug = pathSegment(article.slug, true);
       if (!slug) continue;
-      groups.research.push(...localizedEntry(`/research/articles/${slug}/`, normalizeSitemapDate(article.updated_at ?? article.published_at) ?? researchLastmod));
+      // Article pages are published on the papers host, so they belong to a
+      // separate sitemap served from that host rather than the main one.
+      groups[PAPERS_SITEMAP_GROUP].push(...localizedEntry(`/research/articles/${slug}/`, normalizeSitemapDate(article.updated_at ?? article.published_at) ?? researchLastmod));
     }
     for (const disease of research.facets?.diseases ?? []) {
       const slug = pathSegment(disease.slug, true);
@@ -329,10 +375,11 @@ export function buildSitemapGroups({
   if (Array.isArray(diseases)) {
     for (const disease of diseases as SitemapDisease[]) {
       const slug = toSeoSlug(disease?.slug);
-      if (!slug || !diseaseIsIndexable(disease, loadDisease, loadKnowledge)) continue;
       const id = typeof disease.disease_id === 'string' ? disease.disease_id.toLowerCase() : '';
-      const data = id && loadDisease ? loadDisease(id) as Record<string, any> | null : null;
-      const knowledge = id && loadKnowledge ? loadKnowledge(id) as Record<string, any> | null : null;
+      const summary = loadDiseaseDirectory && id ? loadDiseaseDirectory(id) : null;
+      if (!slug || !(summary ? summary.indexable : diseaseIsIndexable(disease, loadDisease, loadKnowledge))) continue;
+      const data = summary ?? (id && loadDisease ? loadDisease(id) as Record<string, any> | null : null);
+      const knowledge = summary ?? (id && loadKnowledge ? loadKnowledge(id) as Record<string, any> | null : null);
       const lastmod = normalizeSitemapDate(data?.generated_at ?? knowledge?.knowledge_updated_at) ?? siteLastmod;
       groups.diseases.push(...localizedEntry(`/diseases/${slug}/`, lastmod));
     }
@@ -341,28 +388,16 @@ export function buildSitemapGroups({
   for (const country of meta.countries ?? []) {
     const code = pathSegment(country.code, true);
     if (!code || !hasCountryDataSnapshot(country)) continue;
-    const data = loadCountry?.(code) as Record<string, any> | null;
+    const data = loadCountryDirectory ? loadCountryDirectory(code) : loadCountry?.(code) as Record<string, any> | null;
     groups.countries.push(...localizedEntry(
       `/countries/${code}/`,
       normalizeSitemapDate(data?.generated_at) ?? siteLastmod,
     ));
   }
 
-  const publishableReports = buildPublishableReports(reports, loadReport);
-  for (const country of reportArchiveCountries(publishableReports)) {
-    groups.reports.push(...localizedEntry(`/countries/${country}/reports/`, siteLastmod));
-  }
-  for (const report of publishableReports) {
-    const lastmod = normalizeSitemapDate(report.summary.created_at)
-      ?? normalizeSitemapDate(report.detail.created_at)
-      ?? siteLastmod;
-    groups.reports.push(...localizedEntry(`/countries/${report.country}/reports/${report.id}/`, lastmod));
-    for (const slug of report.diseaseSlugs) {
-      groups.reports.push(...localizedEntry(`/countries/${report.country}/reports/${report.id}/${toSeoSlug(slug)}/`, lastmod));
-    }
-  }
+  groups.reports = buildReportsSitemapEntries({ meta, reports, loadReport });
 
-  for (const group of SITEMAP_GROUPS) {
+  for (const group of [...SITEMAP_GROUPS, PAPERS_SITEMAP_GROUP] as const) {
     const unique = new Map<string, SitemapEntry>();
     for (const entry of groups[group]) {
       if (!unique.has(entry.path)) unique.set(entry.path, entry);
@@ -405,7 +440,7 @@ export function renderSitemapXml(entries: SitemapEntry[], site: URL | string): s
 export function renderSitemapIndexXml(groups: SitemapGroup[], site: URL | string): string {
   const siteUrl = site instanceof URL ? site : new URL(site);
   const body = groups.map(group => (
-    `  <sitemap>\n    <loc>${escapeXml(new URL(`/sitemaps/${group}.xml`, siteUrl).toString())}</loc>\n  </sitemap>`
+    `  <sitemap>\n    <loc>${escapeXml(group === 'reports' ? `${REPORTS_ORIGIN}/sitemap.xml` : new URL(`/sitemaps/${group}.xml`, siteUrl).toString())}</loc>\n  </sitemap>`
   )).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</sitemapindex>\n`;
 }

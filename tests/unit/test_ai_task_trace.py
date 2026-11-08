@@ -60,6 +60,11 @@ def test_completed_model_operation_without_stored_progress_reads_as_done():
     )
 
 
+def test_completed_json_release_reads_as_done_but_failed_release_retains_progress():
+    assert displayed_progress(task_type="export_data", status="completed", stored=65) == 100
+    assert displayed_progress(task_type="export_data", status="failed", stored=65) == 65
+
+
 def test_literature_progress_already_recorded_by_the_service_stays_put():
     assert (
         displayed_progress(

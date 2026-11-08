@@ -1,3 +1,4 @@
+import { surveillanceData } from "../../lib/surveillance-data.ts";
 import { localizedDiseaseName } from "../../utils/diseaseNames";
 
 export interface SourceSeriesMetadata {
@@ -317,17 +318,8 @@ export function loadCountrySourceSeries(
 
   const controller = new AbortController();
   const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
-  const request = fetch(dataUrl, {
-    signal: controller.signal,
-    credentials: "same-origin",
-  })
-    .then(async (response) => {
-      if (!response.ok) {
-        throw new Error(
-          `Failed to load country source series: ${response.status}`,
-        );
-      }
-      const raw = (await response.json()) as CountrySourceSeriesDataset;
+  const request = surveillanceData.read<CountrySourceSeriesDataset>(dataUrl, { signal: controller.signal, retain: false })
+    .then((raw) => {
       return raw?.v === 1 && raw.series && typeof raw.series === "object"
         ? raw.series
         : {};
@@ -355,15 +347,8 @@ export function loadCountryDataset(
 
   const controller = new AbortController();
   const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
-  const request = fetch(dataUrl, {
-    signal: controller.signal,
-    credentials: "same-origin",
-  })
-    .then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Failed to load country dataset: ${response.status}`);
-      }
-      const raw = await response.json();
+  const request = surveillanceData.read<CountryDataset | CompactCountryDataset>(dataUrl, { signal: controller.signal, retain: false })
+    .then((raw) => {
       return normalizeCountryDataset(
         raw as CountryDataset | CompactCountryDataset,
       );

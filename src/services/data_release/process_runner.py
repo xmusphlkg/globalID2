@@ -64,13 +64,48 @@ def clean_output_line(value: str) -> str:
     return ANSI_ESCAPE_RE.sub("", value).rstrip("\r\n")
 
 
+def _process_group_running(group_id: int) -> bool:
+    """Linux descendants can outlive the leader; zombies can no longer write."""
+    procfs = Path('/proc')
+    if not procfs.is_dir():  # pragma: no cover - production workers use Linux.
+        return False
+    for entry in procfs.iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            fields = (entry / 'stat').read_text().rpartition(')')[2].split()
+            if len(fields) > 2 and int(fields[2]) == group_id and fields[0] not in {'Z', 'X'}:
+                return True
+        except (OSError, ValueError):
+            continue
+    return False
+
+
+async def _wait_owned_task(task: asyncio.Task) -> tuple[Any, bool]:
+    """Wait for owned subprocess work despite repeated caller cancellation."""
+    cancelled = False
+    while True:
+        try:
+            return await asyncio.shield(task), cancelled
+        except asyncio.CancelledError:
+            if task.cancelled():
+                raise
+            cancelled = True
+
+
+async def _terminate_before_exit(proc: asyncio.subprocess.Process, terminate: TerminateProcess) -> None:
+    _, cancelled = await _wait_owned_task(asyncio.create_task(terminate(proc)))
+    if cancelled:
+        raise asyncio.CancelledError
+
+
 async def terminate_process_tree(
     proc: asyncio.subprocess.Process,
     *,
     grace_seconds: float = 5,
 ) -> None:
     """Terminate a command and every subprocess in its dedicated session."""
-    if proc.returncode is not None:
+    if proc.returncode is not None and os.name != "posix":
         return
 
     try:
@@ -81,10 +116,11 @@ async def terminate_process_tree(
     except ProcessLookupError:
         pass
 
-    try:
-        await asyncio.wait_for(proc.wait(), timeout=grace_seconds)
-    except asyncio.TimeoutError:
-        pass
+    if proc.returncode is None:
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=grace_seconds)
+        except asyncio.TimeoutError:
+            pass
 
     try:
         if os.name == "posix":
@@ -96,6 +132,12 @@ async def terminate_process_tree(
         pass
     if proc.returncode is None:
         await proc.wait()
+    if os.name == "posix":
+        # SIGKILL delivery is asynchronous. Keep snapshot/output locks until
+        # every surviving group member has exited, even if its leader exited
+        # earlier. An exited zombie needs no further wait to stop file writes.
+        while _process_group_running(proc.pid):
+            await asyncio.sleep(0.01)
 
 
 async def run_capture(
@@ -169,17 +211,28 @@ async def run_logged_command(
     merged_env = os.environ.copy()
     if env:
         merged_env.update(env)
+    spawn_task = asyncio.create_task(asyncio.create_subprocess_exec(
+        *cmd,
+        cwd=str(cwd),
+        env=merged_env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+        start_new_session=os.name == "posix",
+    ))
     try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            cwd=str(cwd),
-            env=merged_env,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            start_new_session=os.name == "posix",
-        )
+        proc = await asyncio.shield(spawn_task)
     except FileNotFoundError as exc:
         raise RuntimeError(f"{title} failed to start: {exc}") from exc
+    except BaseException:
+        # Cancellation during spawn must not lose the new process handle.
+        # Finish taking ownership, then stop it before the caller's locks exit.
+        try:
+            proc, _ = await _wait_owned_task(spawn_task)
+        except Exception:
+            pass
+        else:
+            await _terminate_before_exit(proc, terminate)
+        raise
 
     loop = asyncio.get_running_loop()
     deadline = loop.time() + timeout_seconds
@@ -252,10 +305,18 @@ async def run_logged_command(
             },
         )
 
+    stopped = False
+
+    async def stop_process() -> None:
+        nonlocal stopped
+        if not stopped:
+            await terminate(proc)
+            stopped = True
+
     async def fail_on_timeout() -> None:
         if pending_output_fragment:
             record_output_text(pending_output_fragment)
-        await terminate(proc)
+        await stop_process()
         await flush_chunk(force=True)
         timeout_text = f"{timeout_seconds:g} seconds"
         failure_tail = "\n".join(output_tail[-FAILURE_TAIL_LINES:])
@@ -284,178 +345,185 @@ async def run_logged_command(
             timed_out=True,
         )
 
-    while True:
-        now = loop.time()
-        if metadata.get("event") == "generate_site_data" and now >= next_progress_report:
-            try:
-                await report_progress()
-            except Exception as exc:
-                logger.warning("{} progress entry unavailable: {}", title, exc)
-            next_progress_report = loop.time() + COMMAND_PROGRESS_INTERVAL_SECONDS
-        if now >= next_cancel_check:
-            next_cancel_check = now + TASK_CANCEL_CHECK_INTERVAL_SECONDS
-            try:
-                cancel_requested = await task_manager.is_cancel_requested(task_uuid)
-                cancel_store_unavailable_since = None
-            except (TimeoutError, OSError, DBAPIError) as exc:
-                if cancel_store_unavailable_since is None:
-                    cancel_store_unavailable_since = now
-                    logger.warning("{} cancellation check temporarily unavailable: {}", title, type(exc).__name__)
-                if now - cancel_store_unavailable_since >= TASK_CANCEL_STORE_GRACE_SECONDS:
-                    await terminate(proc)
-                    raise ReleaseCommandError(
-                        f"{title} stopped: task-store cancellation checks failed for "
-                        f"{TASK_CANCEL_STORE_GRACE_SECONDS} seconds ({type(exc).__name__})",
-                        release_stage=str(metadata.get("event") or "").strip() or None,
-                        title=title,
-                        timed_out=True,
-                    ) from exc
-                cancel_requested = False
-            if cancel_requested:
-                if pending_output_fragment:
-                    record_output_text(pending_output_fragment)
-                    pending_output_fragment = ""
-                await terminate(proc)
-                if metadata.get("event") == "generate_site_data":
-                    try:
-                        await flush_chunk()
-                        await task_manager.add_workbook_entry(
-                            task_uuid,
-                            entry_type="warning",
-                            title=f"{title} Cancelled",
-                            content="\n".join(output_tail[-FAILURE_TAIL_LINES:]) or "No output was captured.",
-                            content_type="text",
-                            metadata={**metadata, "event": "command_cancelled"},
-                        )
-                    except Exception as exc:
-                        logger.warning("{} cancellation output unavailable: {}", title, exc)
-                raise TaskCancelledError(f"Cancellation requested while running: {title}")
+    try:
+        while True:
+            now = loop.time()
+            if now >= next_progress_report:
+                try:
+                    await report_progress()
+                except Exception as exc:
+                    logger.warning("{} progress entry unavailable: {}", title, exc)
+                next_progress_report = loop.time() + COMMAND_PROGRESS_INTERVAL_SECONDS
+            if now >= next_cancel_check:
+                next_cancel_check = now + TASK_CANCEL_CHECK_INTERVAL_SECONDS
+                try:
+                    cancel_requested = await task_manager.is_cancel_requested(task_uuid)
+                    cancel_store_unavailable_since = None
+                except (TimeoutError, OSError, DBAPIError) as exc:
+                    if cancel_store_unavailable_since is None:
+                        cancel_store_unavailable_since = now
+                        logger.warning("{} cancellation check temporarily unavailable: {}", title, type(exc).__name__)
+                    if now - cancel_store_unavailable_since >= TASK_CANCEL_STORE_GRACE_SECONDS:
+                        await stop_process()
+                        raise ReleaseCommandError(
+                            f"{title} stopped: task-store cancellation checks failed for "
+                            f"{TASK_CANCEL_STORE_GRACE_SECONDS} seconds ({type(exc).__name__})",
+                            release_stage=str(metadata.get("event") or "").strip() or None,
+                            title=title,
+                            timed_out=True,
+                        ) from exc
+                    cancel_requested = False
+                if cancel_requested:
+                    if pending_output_fragment:
+                        record_output_text(pending_output_fragment)
+                        pending_output_fragment = ""
+                    await stop_process()
+                    if metadata.get("event") == "generate_site_data":
+                        try:
+                            await flush_chunk()
+                            await task_manager.add_workbook_entry(
+                                task_uuid,
+                                entry_type="warning",
+                                title=f"{title} Cancelled",
+                                content="\n".join(output_tail[-FAILURE_TAIL_LINES:]) or "No output was captured.",
+                                content_type="text",
+                                metadata={**metadata, "event": "command_cancelled"},
+                            )
+                        except Exception as exc:
+                            logger.warning("{} cancellation output unavailable: {}", title, exc)
+                    raise TaskCancelledError(f"Cancellation requested while running: {title}")
 
-        remaining_seconds = deadline - loop.time()
-        if remaining_seconds <= 0:
-            await fail_on_timeout()
-
-        try:
-            chunk = await asyncio.wait_for(
-                proc.stdout.read(OUTPUT_READ_CHUNK_BYTES),
-                timeout=min(cancel_poll_seconds, remaining_seconds),
-            )
-        except asyncio.TimeoutError:
-            if loop.time() >= deadline:
+            remaining_seconds = deadline - loop.time()
+            if remaining_seconds <= 0:
                 await fail_on_timeout()
-            continue
-        if not chunk:
-            break
 
-        decoded = pending_output_fragment + chunk.decode("utf-8", errors="replace")
-        lines = decoded.splitlines(keepends=True)
-        pending_output_fragment = ""
-        for line in lines:
-            if line.endswith(("\n", "\r")):
-                record_output_text(line)
-                if metadata.get("event") == "generate_site_data":
-                    match = COUNTRY_PROGRESS_RE.match(clean_output_line(line))
-                    if match and int(match.group(2)) > 0:
-                        country_progress = 22 + 6 * int(match.group(1)) // int(match.group(2))
-                        if country_progress > latest_progress:
-                            latest_progress = country_progress
-                            try:
-                                await task_manager.update_task_progress(task_uuid, latest_progress)
-                            except Exception as exc:
-                                logger.warning("{} country progress unavailable: {}", title, exc)
-            else:
-                pending_output_fragment = line
+            try:
+                chunk = await asyncio.wait_for(
+                    proc.stdout.read(OUTPUT_READ_CHUNK_BYTES),
+                    timeout=min(cancel_poll_seconds, remaining_seconds),
+                )
+            except asyncio.TimeoutError:
+                if loop.time() >= deadline:
+                    await fail_on_timeout()
+                continue
+            if not chunk:
+                break
 
-        if pending_output_fragment and len(pending_output_fragment) >= OUTPUT_CHUNK_MAX_CHARS:
-            record_output_text(pending_output_fragment)
+            decoded = pending_output_fragment + chunk.decode("utf-8", errors="replace")
+            lines = decoded.splitlines(keepends=True)
             pending_output_fragment = ""
+            for line in lines:
+                if line.endswith(("\n", "\r")):
+                    record_output_text(line)
+                    if metadata.get("event") == "generate_site_data":
+                        match = COUNTRY_PROGRESS_RE.match(clean_output_line(line))
+                        if match and int(match.group(2)) > 0:
+                            country_progress = 22 + 6 * int(match.group(1)) // int(match.group(2))
+                            if country_progress > latest_progress:
+                                latest_progress = country_progress
+                                try:
+                                    await task_manager.update_task_progress(task_uuid, latest_progress)
+                                except Exception as exc:
+                                    logger.warning("{} country progress unavailable: {}", title, exc)
+                else:
+                    pending_output_fragment = line
 
-        if (
-            len(chunk_lines) >= OUTPUT_CHUNK_MAX_LINES
-            or sum(len(item) for item in chunk_lines) >= OUTPUT_CHUNK_MAX_CHARS
-        ):
-            await flush_chunk()
+            if pending_output_fragment and len(pending_output_fragment) >= OUTPUT_CHUNK_MAX_CHARS:
+                record_output_text(pending_output_fragment)
+                pending_output_fragment = ""
 
-    if proc.returncode is None:
-        remaining_seconds = deadline - loop.time()
-        if remaining_seconds <= 0:
-            await fail_on_timeout()
-        try:
-            await asyncio.wait_for(proc.wait(), timeout=remaining_seconds)
-        except asyncio.TimeoutError:
-            await fail_on_timeout()
+            if (
+                len(chunk_lines) >= OUTPUT_CHUNK_MAX_LINES
+                or sum(len(item) for item in chunk_lines) >= OUTPUT_CHUNK_MAX_CHARS
+            ):
+                await flush_chunk()
 
-    returncode = proc.returncode
-    if pending_output_fragment:
-        record_output_text(pending_output_fragment)
-    await flush_chunk(force=True)
+        if proc.returncode is None:
+            remaining_seconds = deadline - loop.time()
+            if remaining_seconds <= 0:
+                await fail_on_timeout()
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=remaining_seconds)
+            except asyncio.TimeoutError:
+                await fail_on_timeout()
 
-    if returncode != 0:
-        failure_tail = "\n".join(output_tail[-FAILURE_TAIL_LINES:])
-        failure_metadata = {
+        returncode = proc.returncode
+        if pending_output_fragment:
+            record_output_text(pending_output_fragment)
+        await flush_chunk(force=True)
+
+        if returncode != 0:
+            failure_tail = "\n".join(output_tail[-FAILURE_TAIL_LINES:])
+            failure_metadata = {
+                **metadata,
+                "event": "command_failed",
+                "command_event": metadata.get("event"),
+                "returncode": returncode,
+                "total_output_lines": total_output_lines,
+                "stored_output_chunks": persisted_output_chunks,
+                "suppressed_output_chunks": suppressed_output_chunks,
+                "suppressed_output_lines": suppressed_output_lines,
+                "output_compacted": suppressed_output_chunks > 0,
+            }
+            failure_content = (
+                f"Command failed with exit code {returncode}.\n"
+                f"Output: {total_output_lines} lines total; "
+                f"{suppressed_output_lines} lines omitted from chunk records.\n"
+                + (
+                    f"Final output:\n{failure_tail}"
+                    if failure_tail
+                    else "No output was captured."
+                )
+            )
+            try:
+                await task_manager.add_workbook_entry(
+                    task_uuid,
+                    entry_type="error",
+                    title=f"{title} Failed",
+                    content=failure_content,
+                    content_type="text",
+                    metadata=failure_metadata,
+                )
+            except Exception as exc:  # pragma: no cover - lifecycle records the error.
+                logger.warning("Failed to write command failure workbook entry: {}", exc)
+            raise ReleaseCommandError(
+                f"{title} failed with exit code {returncode}.\n{failure_tail}".rstrip(),
+                release_stage=str(metadata.get("event") or "").strip() or None,
+                title=title,
+                returncode=returncode,
+            )
+
+        completion_metadata = {
             **metadata,
-            "event": "command_failed",
-            "command_event": metadata.get("event"),
-            "returncode": returncode,
+            "elapsed_seconds": round(loop.time() - started_at, 3),
             "total_output_lines": total_output_lines,
             "stored_output_chunks": persisted_output_chunks,
             "suppressed_output_chunks": suppressed_output_chunks,
             "suppressed_output_lines": suppressed_output_lines,
             "output_compacted": suppressed_output_chunks > 0,
         }
-        failure_content = (
-            f"Command failed with exit code {returncode}.\n"
-            f"Output: {total_output_lines} lines total; "
-            f"{suppressed_output_lines} lines omitted from chunk records.\n"
-            + (
-                f"Final output:\n{failure_tail}"
-                if failure_tail
-                else "No output was captured."
-            )
-        )
-        try:
-            await task_manager.add_workbook_entry(
-                task_uuid,
-                entry_type="error",
-                title=f"{title} Failed",
-                content=failure_content,
-                content_type="text",
-                metadata=failure_metadata,
-            )
-        except Exception as exc:  # pragma: no cover - lifecycle records the error.
-            logger.warning("Failed to write command failure workbook entry: {}", exc)
-        raise ReleaseCommandError(
-            f"{title} failed with exit code {returncode}.\n{failure_tail}".rstrip(),
-            release_stage=str(metadata.get("event") or "").strip() or None,
-            title=title,
-            returncode=returncode,
-        )
+        completion_tail = "\n".join(output_tail[-COMPLETION_TAIL_LINES:])
+        if suppressed_output_chunks:
+            completion_content = (
+                "Command completed successfully.\n"
+                f"Output compacted: {total_output_lines} lines total; "
+                f"{suppressed_output_lines} lines omitted from chunk records; "
+                "the final output is retained below.\n"
+                + (f"Final output:\n{completion_tail}" if completion_tail else "")
+            ).rstrip()
+        else:
+            completion_content = completion_tail or "Command completed successfully."
 
-    completion_metadata = {
-        **metadata,
-        "total_output_lines": total_output_lines,
-        "stored_output_chunks": persisted_output_chunks,
-        "suppressed_output_chunks": suppressed_output_chunks,
-        "suppressed_output_lines": suppressed_output_lines,
-        "output_compacted": suppressed_output_chunks > 0,
-    }
-    completion_tail = "\n".join(output_tail[-COMPLETION_TAIL_LINES:])
-    if suppressed_output_chunks:
-        completion_content = (
-            "Command completed successfully.\n"
-            f"Output compacted: {total_output_lines} lines total; "
-            f"{suppressed_output_lines} lines omitted from chunk records; "
-            "the final output is retained below.\n"
-            + (f"Final output:\n{completion_tail}" if completion_tail else "")
-        ).rstrip()
-    else:
-        completion_content = completion_tail or "Command completed successfully."
-
-    await task_manager.add_workbook_entry(
-        task_uuid,
-        entry_type="success",
-        title=f"{title} Completed",
-        content=completion_content,
-        content_type="text",
-        metadata=completion_metadata,
-    )
+        await task_manager.add_workbook_entry(
+            task_uuid,
+            entry_type="success",
+            title=f"{title} Completed",
+            content=completion_content,
+            content_type="text",
+            metadata=completion_metadata,
+        )
+    except BaseException:
+        # Async cancellation, output failures and task-store errors all stop
+        # the complete group before outer snapshot/output locks can release.
+        await _terminate_before_exit(proc, lambda _proc: stop_process())
+        raise

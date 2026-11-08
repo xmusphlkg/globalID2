@@ -65,6 +65,18 @@ test("adds a sanitized correlation Message-ID when supplied", () => {
   assert.equal(raw.includes("\r\nBcc:evil"), false);
 });
 
+test("notification MIME provides an HTTPS one-click unsubscribe endpoint without header injection", () => {
+  const config = { fromEmail: "noreply@example.test", fromName: "GIDS" };
+  const content = buildNotificationEmail("en", { subject: "Update", markdown: "News" }, "https://example.test/api/subscriptions/unsubscribe?token=abc");
+  const raw = buildRawEmail(config, { ...content, to: "reader@example.test" });
+  assert.match(raw, /\r\nList-Unsubscribe: <https:\/\/example\.test\/api\/subscriptions\/unsubscribe\?token=abc>\r\n/);
+  assert.match(raw, /\r\nList-Unsubscribe-Post: List-Unsubscribe=One-Click\r\n/);
+  for (const bad of ["http://example.test/", "https://example.test/\r\nBcc:evil", "https://user@example.test/"]) {
+    const invalid = buildRawEmail(config, { ...content, to: "reader@example.test", unsubscribeUrl: bad });
+    assert.doesNotMatch(invalid, /\r\nList-Unsubscribe/);
+  }
+});
+
 test("does not allow address or subject values to inject MIME headers", () => {
   const raw = buildRawEmail(
     { fromEmail: "alerts@example.test\r\nX-Injected: yes", fromName: "GIDS\r\nBcc: hidden@example.test" },

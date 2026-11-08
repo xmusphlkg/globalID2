@@ -14,12 +14,17 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import re
+import sys
 from typing import Any
 
 from sqlalchemy import func, or_, select
 
 from src.ai.agents.base import BaseAgent
-from src.ai.model_center import get_active_model_routes, is_provider_authentication_error
+from src.ai.model_center import (
+    get_active_model_routes,
+    is_provider_authentication_error,
+    live_model_permits,
+)
 from src.core import get_config, get_db, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
@@ -640,16 +645,18 @@ class LiteratureEnrichmentPipeline:
             else await self._load_route_shard_preferences()
         )
         try:
-            active_routes = await get_active_model_routes()
             if preferred_models:
+                # A pinned set of routes only has those routes' permits.
                 active_routes = [
-                    route for route in active_routes
+                    route for route in await get_active_model_routes()
                     if route.get("model_key") in preferred_models or route.get("model_name") in preferred_models
                 ]
-            route_budget = sum(
-                max(1, int(route.get("runtime_model_capacity") or 1))
-                for route in active_routes
-            )
+                route_budget = sum(
+                    max(1, int(route.get("runtime_model_capacity") or 1))
+                    for route in active_routes
+                )
+            else:
+                route_budget = await live_model_permits()
         except Exception as exc:
             logger.warning("Could not read live model concurrency for literature: {}", exc)
             route_budget = 1
@@ -707,15 +714,39 @@ class LiteratureEnrichmentPipeline:
                                 provider_auth_failure_count += 1
                             errors.append({"article_id": article.article_id, "language": language, "error": str(exc)[:500]})
                     finally:
-                        await record_progress()
+                        original_error = sys.exception()
+                        try:
+                            await record_progress()
+                        except Exception as progress_error:
+                            if original_error is None:
+                                raise
+                            logger.warning(
+                                "Could not record literature progress while propagating an existing error: {}",
+                                progress_error,
+                            )
 
-        await asyncio.gather(*(process_article(index, article) for index, article in enumerate(articles)))
+        # gather propagates the first failure without cancelling its siblings.
+        # A failed parent must not leave article tasks writing to the database
+        # or calling models after its lifecycle has already ended.
+        article_tasks = [
+            asyncio.create_task(process_article(index, article))
+            for index, article in enumerate(articles)
+        ]
+        try:
+            await asyncio.gather(*article_tasks)
+        except BaseException:
+            for article_task in article_tasks:
+                article_task.cancel()
+            await asyncio.gather(*article_tasks, return_exceptions=True)
+            raise
         await task_manager.update_task_progress(task.task_uuid, 100)
         automation = None
         if self.config.autopilot_enabled:
             from src.services.literature_automation_service import literature_automation_service
 
-            automation = await literature_automation_service.reconcile()
+            automation = await literature_automation_service.reconcile(
+                article_ids=[article.article_id for article in articles],
+            )
             # Summaries that passed the deterministic gate wait in ``review``;
             # the shared two-model peer review decides publication.
             from src.services.ai_content_governance_service import ai_content_governance_service

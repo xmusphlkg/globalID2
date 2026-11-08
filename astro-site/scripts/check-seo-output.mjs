@@ -2,6 +2,13 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
 const SITE_ORIGIN = 'https://globalinfectiousdisease.com';
+// Mirrors PAPERS_PATH in src/lib/papers.ts: paths published on the papers host.
+const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/articles\/|^\/research\/cards\/|^\/site-data\/research\//;
+
+// Regex captures can be slices backed by an entire HTML document. The global
+// uniqueness maps must own small strings, otherwise one canonical per page
+// keeps the whole catalogue's HTML alive until the audit ends.
+const ownedString = value => Buffer.from(value, 'utf8').toString('utf8');
 
 function walk(directory, suffix) {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
@@ -65,23 +72,47 @@ function redirectMap(dist) {
   return output;
 }
 
-function isRedirectSource(route, redirects) {
-  return redirects.has(route);
+// Destination of the first rule matching `pathname`: an exact rule, or a
+// trailing-wildcard rule such as `/research/articles/*` (papers host split).
+export function redirectFor(pathname, redirects) {
+  if (redirects.has(pathname)) return redirects.get(pathname);
+  for (const [source, destination] of redirects) {
+    if (source.endsWith('*') && pathname.startsWith(source.slice(0, -1))) return destination;
+  }
+  return undefined;
 }
 
-export function auditSeoOutput(distDirectory) {
+function isRedirectSource(route, redirects) {
+  return redirectFor(route, redirects) !== undefined;
+}
+
+export function auditSeoOutput(distDirectory, { files, partial = false, catalogue } = {}) {
   const dist = resolve(distDirectory);
   const redirects = redirectMap(dist);
-  const errors = [];
-  const pages = new Map();
+  // Shared navigation repeats across thousands of pages. Cache only within
+  // this audit so a later audit still observes changed files and redirects.
+  const targets = new Map();
+  const redirectSources = new Map();
+  const hasTarget = pathname => {
+    if (!targets.has(pathname)) targets.set(pathname, targetExists(pathname, dist));
+    return targets.get(pathname);
+  };
+  const hasRedirect = pathname => {
+    if (!redirectSources.has(pathname)) redirectSources.set(pathname, isRedirectSource(pathname, redirects));
+    return redirectSources.get(pathname);
+  };
+  const errors = [...(catalogue?.errors ?? [])];
+  const pages = new Map(catalogue?.pages);
   const indexableTitles = new Map();
   const indexableCanonicals = new Map();
-  let indexable = 0;
-  let noindex = 0;
+  let indexable = catalogue?.indexable ?? 0;
+  let noindex = catalogue?.noindex ?? 0;
 
-  for (const file of walk(dist, '.html')) {
+  for (const file of files ?? walk(dist, '.html')) {
     const route = routeFor(file, dist);
-    if (isRedirectSource(route, redirects)) continue;
+    // Exact rules only: a wildcard rule (papers host) must not hide pages that
+    // an unsplit build still contains from the audit.
+    if (redirects.has(route)) continue;
     const html = readFileSync(file, 'utf8');
     const title = decodeHtml(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] ?? '').replace(/\s+/g, ' ').trim();
     const meta = tags(html, 'meta');
@@ -118,12 +149,12 @@ export function auditSeoOutput(distDirectory) {
       // Localized routes are expected to reuse the same subject title in each
       // language. Detect collisions within a locale, not across translations.
       const locale = route.startsWith('/fr/') ? 'fr' : route.startsWith('/zh/') ? 'zh' : 'en';
-      const titleKey = `${locale}:${title}`;
+      const titleKey = ownedString(`${locale}:${title}`);
       if (indexableTitles.has(titleKey)) errors.push(`${route}: duplicate indexable title also used by ${indexableTitles.get(titleKey)}`);
       else indexableTitles.set(titleKey, route);
       if (canonical[0]?.href) {
         if (indexableCanonicals.has(canonical[0].href)) errors.push(`${route}: duplicate canonical also used by ${indexableCanonicals.get(canonical[0].href)}`);
-        else indexableCanonicals.set(canonical[0].href, route);
+        else indexableCanonicals.set(ownedString(canonical[0].href), route);
       }
     }
 
@@ -150,24 +181,33 @@ export function auditSeoOutput(distDirectory) {
       const normalized = target.pathname === '/' || target.pathname.endsWith('/') || extname(target.pathname)
         ? target.pathname
         : `${target.pathname}/`;
-      if (redirects.has(target.pathname) || redirects.has(normalized)) errors.push(`${route}: internal link points through redirect ${href}`);
-      else if (!targetExists(target.pathname, dist)) errors.push(`${route}: broken internal link ${href}`);
+      // Papers pages and the paths they link to share one host after the
+      // release split, so those links never pass through a redirect.
+      const sameHost = PAPERS_ROUTE.test(route) && PAPERS_ROUTE.test(target.pathname);
+      if (!sameHost && (hasRedirect(target.pathname) || hasRedirect(normalized))) errors.push(`${route}: internal link points through redirect ${href}`);
+      else if (!hasTarget(target.pathname)) errors.push(`${route}: broken internal link ${href}`);
     }
   }
+
+  if (partial) return { errors, pages: [...pages], indexable, noindex,
+    titles: [...indexableTitles], canonicals: [...indexableCanonicals] };
 
   const sitemapFiles = existsSync(resolve(dist, 'sitemaps')) ? walk(resolve(dist, 'sitemaps'), '.xml') : [];
   for (const file of sitemapFiles) {
     const xml = readFileSync(file, 'utf8');
     for (const match of xml.matchAll(/<loc>([^<]+)<\/loc>/g)) {
       const url = new URL(decodeHtml(match[1]));
+      // URLs on another host (the papers site) have no page in this dist.
+      if (url.origin !== SITE_ORIGIN) continue;
       const page = pages.get(url.pathname);
-      if (!page) errors.push(`${relative(dist, file)}: sitemap URL has no HTML page ${url.pathname}`);
+      if (!page && hasRedirect(url.pathname)) errors.push(`${relative(dist, file)}: sitemap URL redirects to another host ${url.pathname}`);
+      else if (!page) errors.push(`${relative(dist, file)}: sitemap URL has no HTML page ${url.pathname}`);
       else if (!page.isIndexable) errors.push(`${relative(dist, file)}: sitemap includes noindex page ${url.pathname}`);
     }
   }
 
   for (const [source, destination] of redirects) {
-    if (destination.startsWith('/') && !targetExists(destination, dist)) errors.push(`_redirects: ${source} points to missing ${destination}`);
+    if (destination.startsWith('/') && !destination.includes(':splat') && !hasTarget(destination)) errors.push(`_redirects: ${source} points to missing ${destination}`);
   }
 
   return { passed: errors.length === 0, errors, pages: pages.size, indexable, noindex, redirects: redirects.size };

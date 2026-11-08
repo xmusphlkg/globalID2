@@ -213,8 +213,17 @@ class LiteratureRepository:
             article.metadata_.get("classification_fingerprint")
             != existing_metadata.get("classification_fingerprint")
         )
+        # Only update publication_status when the classification actually changed or this is a
+        # new insert.  Skipping for unchanged re-upserts breaks the autopilot flip-flop loop
+        # where the classifier (returning "review" for any relevance >= 0.5) re-opens an
+        # autopilot exclusion that has an identical fingerprint, which autopilot then
+        # re-excludes ad infinitum.  Integrity changes (retracted, expression_of_concern)
+        # must always take effect regardless of the fingerprint.
+        integrity_changed = not inserted and previous_integrity != candidate.integrity_status
+        should_update_status = inserted or classification_changed or integrity_changed
         if (
-            not editorial_locked
+            should_update_status
+            and not editorial_locked
             and not autopilot_locked
             and not (
                 preserve_existing_publication_status
@@ -228,44 +237,74 @@ class LiteratureRepository:
                 if inserted and new_publication_status is not None
                 else classification.publication_status
             )
-            article.publication_status = next_publication_status
-            existing_autopilot = existing_metadata.get("autopilot") or {}
+            # Never downgrade a published article to "review" via a classifier reclassification.
+            # Only a hard exclusion, an integrity change (the classifier returns "review" for a
+            # retraction) or an editorial action may change an already-published article's status.
             if (
-                previous_publication_status == "excluded"
+                not inserted
+                and previous_publication_status == "published"
                 and next_publication_status == "review"
-                and isinstance(existing_autopilot, dict)
-                and existing_autopilot.get("decision") == "exclude"
+                and not integrity_changed
+                and candidate.integrity_status == "current"
             ):
-                # A newer classification may legitimately reopen an old
-                # automatic exclusion. Never leave the previous exclusion as
-                # the apparent final decision while the row is back in review.
-                reopened_at = datetime.now(timezone.utc).replace(microsecond=0)
-                reopen_reason = (
-                    "new classification evidence reopened the prior automatic exclusion for review"
-                )
-                article.metadata_ = {
-                    **(article.metadata_ or {}),
-                    "autopilot": {
-                        **existing_autopilot,
-                        "decision": "hold",
-                        "decided_at": reopened_at.isoformat(),
-                        "actor": "literature-classifier",
-                        "reopened_from": "exclude",
-                        "reasons": [reopen_reason],
-                    },
-                }
-                self.db.add(LiteratureStatusEvent(
-                    article_id=article.article_id,
-                    event_type="publication_status_changed",
-                    previous_status="excluded",
-                    current_status="review",
-                    source="literature-classifier",
-                    effective_at=reopened_at,
-                    metadata_={
-                        "previous_automatic_decision": "exclude",
-                        "reason": reopen_reason,
-                    },
-                ))
+                pass  # keep "published" – classifier review cannot override a terminal decision
+            else:
+                article.publication_status = next_publication_status
+                if (
+                    previous_publication_status == "excluded"
+                    and next_publication_status == "review"
+                ):
+                    # A newer classification may legitimately reopen an old automatic exclusion.
+                    # Never leave the previous exclusion as the apparent final decision while
+                    # the row is back in review.  Neutralise both autopilot and
+                    # ai_content_governance stale records so neither looks like a terminal
+                    # decision.
+                    reopened_at = datetime.now(timezone.utc).replace(microsecond=0)
+                    reopen_reason = (
+                        "new classification evidence reopened the prior automatic exclusion for review"
+                    )
+                    metadata_updates: dict[str, Any] = {}
+                    existing_autopilot = existing_metadata.get("autopilot") or {}
+                    if (
+                        isinstance(existing_autopilot, dict)
+                        and existing_autopilot.get("decision") == "exclude"
+                    ):
+                        metadata_updates["autopilot"] = {
+                            **existing_autopilot,
+                            "decision": "hold",
+                            "decided_at": reopened_at.isoformat(),
+                            "actor": "literature-classifier",
+                            "reopened_from": "exclude",
+                            "reasons": [reopen_reason],
+                        }
+                    existing_governance = existing_metadata.get("ai_content_governance") or {}
+                    if (
+                        isinstance(existing_governance, dict)
+                        and existing_governance.get("decision") == "excluded"
+                        and existing_governance.get("actor") == "ai-content-governance"
+                    ):
+                        metadata_updates["ai_content_governance"] = {
+                            **existing_governance,
+                            "decision": "hold",
+                            "decided_at": reopened_at.isoformat(),
+                            "actor": "literature-classifier",
+                            "reopened_from": "excluded",
+                            "reasons": [reopen_reason],
+                        }
+                    if metadata_updates:
+                        article.metadata_ = {**(article.metadata_ or {}), **metadata_updates}
+                    self.db.add(LiteratureStatusEvent(
+                        article_id=article.article_id,
+                        event_type="publication_status_changed",
+                        previous_status="excluded",
+                        current_status="review",
+                        source="literature-classifier",
+                        effective_at=reopened_at,
+                        metadata_={
+                            "previous_automatic_decision": "exclude",
+                            "reason": reopen_reason,
+                        },
+                    ))
 
         await self.db.flush()
         if inserted or classification_changed:

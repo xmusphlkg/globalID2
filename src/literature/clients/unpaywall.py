@@ -9,7 +9,7 @@ from urllib.parse import quote
 import httpx
 
 from ..normalization import normalize_doi
-from .base import AsyncRequestLimiter, LiteratureHttpClient
+from .base import AsyncRequestLimiter, LiteratureHttpClient, gather_cancel_on_error
 
 
 class UnpaywallClient(LiteratureHttpClient):
@@ -55,7 +55,7 @@ class UnpaywallClient(LiteratureHttpClient):
                     response_doi = normalize_doi(payload.get("doi"))
                     return doi, payload if response_doi in {None, doi} else None
 
-            rows = await asyncio.gather(*(fetch(doi) for doi in normalized))
+            rows = await gather_cancel_on_error(*(fetch(doi) for doi in normalized))
         return {doi: payload for doi, payload in rows if payload is not None}
 
 

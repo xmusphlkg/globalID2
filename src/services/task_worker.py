@@ -17,17 +17,19 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Iterable, Optional
 
-from sqlalchemy import case, select
+from sqlalchemy import and_, case, or_, select
 
 from src.core import get_database, get_logger
 from src.core.config import get_config
 from src.domain import Task, TaskPriority, TaskStatus, TaskType
 from src.services.task_executor import execute_task, recover_interrupted_tasks_on_startup
 from src.services._lifecycle import safe_exception_summary
+from src.services.data_release.channel_control import is_automatic_json_paused
 from src.control_plane.events import control_plane_events
 from src.control_plane.runtime import runtime_registry
 from src.core.task_manager import task_manager
-from src.ai.work_queue import AIWorkDispatcher, waiting_parent_uuids
+from src.core.release_admission import COLLECTION_STORE_TASK_TYPES, release_admission
+from src.ai.work_queue import AIWorkDispatcher, release_leases_on_startup, waiting_parent_uuids
 
 logger = get_logger(__name__)
 
@@ -74,20 +76,12 @@ KNOWLEDGE_SERIAL_TASK_TYPES = {
     TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
 }
 RELEASE_EXCLUSIVE_TASK_TYPES = {TaskType.EXPORT_DATA}
-# Country export reads observation rows from separate sessions over many
-# minutes. A collection store that commits during that walk would mix two
-# moments into one site snapshot, so those writers stay outside the release.
-# AI review commits finished rows in its own transactions. Site reads do not
-# take those locks, and a parent stays RUNNING only until its own store ends.
-COLLECTION_STORE_TASK_TYPES = {
-    TaskType.CRAWL_DATA,
-    TaskType.PROCESS_DATA,
-    TaskType.SYNC_LITERATURE,
-    TaskType.REFRESH_SITUATION_SOURCES,
-    TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
-    TaskType.UPDATE_DISEASE_KNOWLEDGE,
-}
-RELEASE_SHARED_BLOCKED_TASK_TYPES = COLLECTION_STORE_TASK_TYPES
+# Archival has a separate single-job lane; it cannot consume the main release
+# slot merely because it shares the persisted EXPORT_DATA enum.
+_claimed_raw_archive_uuids: set[str] = set()
+_claimed_data_release_uuids: set[str] = set()
+# Releases share one filesystem lane; their database readers use an MVCC
+# snapshot, so ordinary collection/network/model work keeps its own lanes.
 # These operations persist their checkpoints and are designed to be resumed.
 # On a controlled worker restart, returning them to QUEUED is preferable to
 # waiting for a long model timeout or treating the deployment as a failure.
@@ -103,12 +97,14 @@ def _release_memory_blocked_task_types(
     *,
     release_waiting: bool = False,
 ) -> set[TaskType]:
-    """Keep site export off the formal tables a collection store is rewriting."""
+    """Serialize releases sharing output paths, without blocking collection.
+
+    Export readers import one PostgreSQL snapshot. Latest formal facts and
+    their dirty markers may advance independently throughout the release.
+    """
     active = set(active_task_types)
     blocked: set[TaskType] = set()
-    if release_waiting or active & RELEASE_EXCLUSIVE_TASK_TYPES:
-        blocked.update(RELEASE_SHARED_BLOCKED_TASK_TYPES)
-    if active & (RELEASE_SHARED_BLOCKED_TASK_TYPES | RELEASE_EXCLUSIVE_TASK_TYPES):
+    if active & RELEASE_EXCLUSIVE_TASK_TYPES:
         blocked.update(RELEASE_EXCLUSIVE_TASK_TYPES)
     return blocked
 
@@ -326,28 +322,48 @@ async def _claim_next_task_uuid(
     mark it RUNNING in the same transaction, and then return the UUID.
     """
     async with get_database() as db:
-        active_task_types = (
+        reports_only = Task.input_data["reports_only"].as_boolean().is_(True)
+        raw_archive_only = Task.input_data["raw_archive_only"].as_boolean().is_(True)
+        data_only = Task.input_data["data_only"].as_boolean().is_(True)
+        static_data_compatible = or_(
+            Task.input_data["content_only"].as_boolean().is_(True), reports_only,
+            Task.input_data["code_only"].as_boolean().is_(True),
+        )
+        legacy_site = and_(Task.task_type == TaskType.EXPORT_DATA,
+                           ~raw_archive_only, ~data_only, ~static_data_compatible)
+        situation_data = and_(data_only, (Task.input_data["data_line"].as_string() == "situation").is_(True))
+        surveillance_data = and_(data_only, Task.input_data["data_line"].as_string().is_distinct_from("situation"))
+        situation_legacy_site = and_(Task.task_type == TaskType.EXPORT_DATA,
+            ~raw_archive_only, ~data_only, ~reports_only,
+            Task.input_data["code_only"].as_boolean().is_not(True),
+            Task.input_data["situation_detached"].as_boolean().is_not(True))
+        nonexclusive_export = or_(reports_only, raw_archive_only, data_only)
+        active_tasks = (
             await db.execute(
-                select(Task.task_type).where(
-                    Task.status.in_([TaskStatus.RUNNING, TaskStatus.RETRYING])
+                select(Task.task_uuid, Task.task_type, nonexclusive_export.label("nonexclusive"),
+                       raw_archive_only.label("raw_archive_only"), data_only.label("data_only"),
+                       legacy_site.label("legacy_site"), situation_legacy_site.label("situation_legacy"),
+                       Task.input_data["data_line"].as_string().label("data_line"), Task.status).where(
+                    or_(
+                        Task.status == TaskStatus.RUNNING,
+                        and_(Task.status == TaskStatus.RETRYING, ~raw_archive_only),
+                    )
                 )
             )
-        ).scalars().all()
-        release_waiting = (
-            await db.execute(
-                select(Task.id)
-                .where(
-                    Task.task_type.in_(RELEASE_EXCLUSIVE_TASK_TYPES),
-                    Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]),
-                )
-                .limit(1)
+        ).all()
+        active_task_types = [
+            task_type for task_uuid, task_type, is_nonexclusive, _is_archive, _is_data, _is_legacy, _is_situation_legacy, _data_line, _status in active_tasks
+            if not (task_type == TaskType.EXPORT_DATA and is_nonexclusive)
+            and not (
+                task_type in COLLECTION_STORE_TASK_TYPES
+                and task_uuid in release_admission.cooperative_tasks
             )
-        ).scalar_one_or_none() is not None
+        ]
         memory_blocked_task_types = _release_memory_blocked_task_types(
             active_task_types,
-            release_waiting=release_waiting,
         )
-        blocked_task_types = set(blocked_task_types or set()) | memory_blocked_task_types
+        lane_blocked = set(blocked_task_types or set())
+        blocked_task_types = lane_blocked | memory_blocked_task_types
 
         priority_rank = case(
             (Task.priority == TaskPriority.URGENT, 0),
@@ -358,14 +374,59 @@ async def _claim_next_task_uuid(
         query = (
             select(Task)
             .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]))
-            .order_by(priority_rank.asc(), Task.created_at.asc())
+            .order_by(
+                case(
+                    (and_(Task.task_type == TaskType.EXPORT_DATA, ~raw_archive_only), 0),
+                    (and_(Task.task_type == TaskType.EXPORT_DATA, raw_archive_only), 2),
+                    else_=1,
+                ),
+                priority_rank.asc(), Task.created_at.asc(),
+            )
             .with_for_update(skip_locked=True)
             # Inspect a small window so a deferred task for one disease does
             # not prevent unrelated diseases from using available capacity.
             .limit(64)
         )
         if blocked_task_types:
-            query = query.where(Task.task_type.notin_(list(blocked_task_types)))
+            allowed = Task.task_type.notin_(list(blocked_task_types))
+            # Archival and JSON own independent slots and artifact roots.
+            allowed = or_(allowed, and_(Task.task_type == TaskType.EXPORT_DATA, or_(raw_archive_only, data_only)))
+            if TaskType.EXPORT_DATA in memory_blocked_task_types and TaskType.EXPORT_DATA not in lane_blocked:
+                # Reports read report snapshots only. They do not walk the
+                # surveillance, literature, or Situation tables being stored.
+                allowed = or_(allowed, and_(Task.task_type == TaskType.EXPORT_DATA, reports_only))
+            query = query.where(allowed)
+        if any(task_type == TaskType.EXPORT_DATA and is_archive
+               for _uuid, task_type, _nonexclusive, is_archive, _is_data, _is_legacy, _is_situation_legacy, _data_line, _status in active_tasks):
+            query = query.where(~raw_archive_only)
+        active_data = [(line or "surveillance") for _uuid, task_type, _nonexclusive,
+            _is_archive, is_data, _is_legacy, _is_situation_legacy, line, _status in active_tasks
+            if task_type == TaskType.EXPORT_DATA and is_data]
+        if active_data:
+            slot_owned = any(task_type == TaskType.EXPORT_DATA and is_data and
+                (status != TaskStatus.RETRYING or (line or "surveillance") not in {"surveillance", "situation"}
+                 or not is_automatic_json_paused(line or "surveillance"))
+                for _uuid, task_type, _nonexclusive, _is_archive, is_data, _is_legacy,
+                    _is_situation_legacy, line, status in active_tasks)
+            if slot_owned:
+                query = query.where(~data_only)
+            else:
+                # A paused, parked retry still reserves its own channel. It
+                # must not prevent the other JSON feed from using the slot.
+                if "surveillance" in active_data:
+                    query = query.where(~surveillance_data)
+                if "situation" in active_data:
+                    query = query.where(~situation_data)
+            if "surveillance" in active_data:
+                query = query.where(~legacy_site)
+            if "situation" in active_data:
+                query = query.where(~situation_legacy_site)
+        if any(task_type == TaskType.EXPORT_DATA and is_legacy
+               for _uuid, task_type, _nonexclusive, _is_archive, _is_data, is_legacy, _is_situation_legacy, _line, _status in active_tasks):
+            query = query.where(~surveillance_data)
+        if any(task_type == TaskType.EXPORT_DATA and is_situation_legacy
+               for _uuid, task_type, _nonexclusive, _is_archive, _is_data, _is_legacy, is_situation_legacy, _line, _status in active_tasks):
+            query = query.where(~situation_data)
         candidates = list((await db.execute(query)).scalars().all())
         if not candidates:
             return None
@@ -414,7 +475,24 @@ async def _claim_next_task_uuid(
         task.input_data = {**(task.input_data or {}), "ai_waiting": False}
         task.last_error = None
         await db.commit()
+        if (task.input_data or {}).get("raw_archive_only") is True:
+            _claimed_raw_archive_uuids.add(task.task_uuid)
+        if (task.input_data or {}).get("data_only") is True:
+            _claimed_data_release_uuids.add(task.task_uuid)
         return task.task_uuid, task.task_type
+
+
+async def _claim_next_task_safely(worker_instance_id, *, blocked_task_types=None, excluded_task_uuids=None):
+    try:
+        return await _claim_next_task_uuid(
+            worker_instance_id, blocked_task_types=blocked_task_types,
+            excluded_task_uuids=excluded_task_uuids,
+        )
+    except Exception as exc:
+        # A transient database outage must not unwind asyncio.run() while
+        # active tasks hold transactions and the runtime guard owns the lease.
+        logger.warning("Task claim failed; worker will retry: {}", exc)
+        return None
 
 
 async def _heartbeat_claimed_task(
@@ -476,6 +554,29 @@ async def _requeue_interrupted_tasks_for_restart(
                 content_type="text",
             )
     return requeued
+
+
+async def _interrupt_resumable_tasks_for_restart(
+    active_tasks: set[asyncio.Task[None]],
+    task_uuids: dict[asyncio.Task[None], str],
+    task_types: dict[asyncio.Task[None], TaskType],
+    worker_instance_id: str,
+) -> set[asyncio.Task[None]]:
+    """Cancel only tasks whose owned lease can safely return to the queue."""
+    interrupted = [
+        (task, task_uuids.get(task), task_types.get(task))
+        for task in active_tasks
+        if task_uuids.get(task) and task_types.get(task) in GRACEFUL_REQUEUE_TASK_TYPES
+    ]
+    for task, _task_uuid, _task_type in interrupted:
+        task.cancel()
+    await asyncio.gather(*(task for task, _task_uuid, _task_type in interrupted), return_exceptions=True)
+    requeued = await _requeue_interrupted_tasks_for_restart(
+        [(task_uuid, task_type) for _task, task_uuid, task_type in interrupted],
+        worker_instance_id,
+    )
+    logger.info("Requeued {} interrupted resumable task(s) after controlled restart", requeued)
+    return {task for task, _task_uuid, _task_type in interrupted}
 
 
 async def _recover_stale_tasks(
@@ -562,6 +663,10 @@ async def run_worker() -> None:
     )
     if recovered:
         logger.warning("Recovered {} interrupted task(s) on worker startup", recovered)
+
+    released = await release_leases_on_startup()
+    if released:
+        logger.warning("Released {} model work lease(s) left by the previous worker", released)
 
     await ai_concurrency.refresh(force=True)
 
@@ -650,6 +755,8 @@ async def run_worker() -> None:
                     "Failed to persist worker execution failure: {}", finalize_exc
                 )
         finally:
+            _claimed_raw_archive_uuids.discard(task_uuid)
+            _claimed_data_release_uuids.discard(task_uuid)
             if task_type in AI_TASK_TYPES:
                 ai_concurrency.record_result(success=succeeded, error=execution_error)
             finished.set()
@@ -662,6 +769,7 @@ async def run_worker() -> None:
     model_center_was_routable: bool | None = None
     idle_ticks = 0
     shutdown_deadline: float | None = None
+    shutdown_grace_handled = False
     while not stop_event.is_set() or active_tasks:
         if not stop_event.is_set():
             await ai_concurrency.refresh()
@@ -669,7 +777,7 @@ async def run_worker() -> None:
             if model_center_is_routable and model_center_was_routable is not True:
                 await _resume_knowledge_repairs_after_model_recovery()
             model_center_was_routable = model_center_is_routable
-        elif shutdown_deadline is None:
+        elif shutdown_deadline is None and not shutdown_grace_handled:
             shutdown_deadline = time.monotonic() + SHUTDOWN_GRACE_SECONDS
             logger.info(
                 "Worker is draining {} active task(s) for up to {}s before restart",
@@ -679,7 +787,9 @@ async def run_worker() -> None:
         while not stop_event.is_set():
             waiting = waiting_parent_uuids()
             executing_types = [task_type for task, task_type in active_task_types.items()
-                               if active_task_uuids.get(task) not in waiting]
+                               if active_task_uuids.get(task) not in waiting
+                               and active_task_uuids.get(task) not in _claimed_raw_archive_uuids
+                               and active_task_uuids.get(task) not in _claimed_data_release_uuids]
             # Parent tasks use separate lanes. Model HTTP permits stay per model
             # inside AIWorkDispatcher and are not collapsed into one AI parent.
             lane_blocked = _lane_blocked_task_types(
@@ -687,8 +797,10 @@ async def run_worker() -> None:
                 ai_capacity=ai_concurrency.capacity,
             )
             if lane_blocked is None:
-                break
-            claimed = await _claim_next_task_uuid(
+                # JSON and archival each own an independent single slot. They
+                # can still be claimed when every ordinary/AI/static lane is full.
+                lane_blocked = set(TaskType)
+            claimed = await _claim_next_task_safely(
                 instance_id,
                 blocked_task_types=lane_blocked or None,
                 excluded_task_uuids=set(active_task_uuids.values()),
@@ -719,32 +831,22 @@ async def run_worker() -> None:
             if done:
                 idle_ticks = 0
             if shutdown_deadline is not None and time.monotonic() >= shutdown_deadline and active_tasks:
-                interrupted = [
-                    (task, active_task_uuids.get(task), active_task_types.get(task))
-                    for task in active_tasks
-                ]
+                interrupted = await _interrupt_resumable_tasks_for_restart(
+                    active_tasks, active_task_uuids, active_task_types, instance_id,
+                )
+                active_tasks.difference_update(interrupted)
+                for task in interrupted:
+                    active_task_types.pop(task, None)
+                    active_task_uuids.pop(task, None)
                 logger.warning(
-                    "Worker shutdown grace period elapsed; interrupting {} resumable task(s)",
-                    len(interrupted),
+                    "Worker shutdown grace period elapsed; waiting for {} non-resumable task(s) to finish",
+                    len(active_tasks),
                 )
-                for task, _task_uuid, _task_type in interrupted:
-                    task.cancel()
-                await asyncio.gather(*(task for task, _task_uuid, _task_type in interrupted), return_exceptions=True)
-                requeued = await _requeue_interrupted_tasks_for_restart(
-                    [
-                        (task_uuid, task_type)
-                        for _task, task_uuid, task_type in interrupted
-                        if task_uuid and task_type is not None
-                    ],
-                    instance_id,
-                )
-                logger.warning(
-                    "Requeued {} interrupted resumable task(s) after controlled restart",
-                    requeued,
-                )
-                active_tasks.clear()
-                active_task_types.clear()
-                active_task_uuids.clear()
+                # Non-resumable work keeps its lease and heartbeat until it
+                # finishes (or the service manager's stop timeout expires).
+                # Clear the deadline so waiting does not become a busy loop.
+                shutdown_deadline = None
+                shutdown_grace_handled = True
             continue
 
         idle_ticks += 1

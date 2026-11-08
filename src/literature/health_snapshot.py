@@ -53,7 +53,7 @@ _ACTIVE_TASK_STATUSES = {
 _SOURCE_RESULT_COUNT_CONTRACTS: Mapping[str, Mapping[str, tuple[str, ...]]] = {
     "crossref": {
         "result": ("crossref_fetched", "source_records_seen", "source_records_returned"),
-        "error": (),
+        "error": ("crossref_source_errors",),
         "skipped": (),
     },
     "europe-pmc": {
@@ -203,6 +203,8 @@ class ResearchRadarSnapshot:
     # never materialize every article's large provider payload. Hand-built
     # snapshots may leave this unset and retain the row-based evaluation path.
     article_metrics: Mapping[str, int] | None = None
+    # Large releases are validated incrementally; never treated as an empty catalogue.
+    release_metrics: Mapping[str, Any] | None = None
 
 
 def _utc(value: Any) -> datetime | None:
@@ -253,6 +255,7 @@ def _source_run_outcome(
     *,
     completed_sources: set[str],
     counts: Mapping[str, Any],
+    checkpoint: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Reduce one provider's latest-run counters to a privacy-safe verdict."""
 
@@ -297,6 +300,20 @@ def _source_run_outcome(
             "skipped_credentials_count": 0,
         }
     error_count = sum(parsed[key] or 0 for key in contract["error"])
+    if source == "crossref" and checkpoint is not None and "source_errors" in checkpoint:
+        # Older runs retained journal failures only in the checkpoint while
+        # incorrectly emitting zero source errors. Do not let that old count
+        # hide the persisted failure evidence.
+        journal_errors = _nonnegative_count(checkpoint["source_errors"])
+        if journal_errors is None:
+            return {
+                "source": source,
+                "status": "failed",
+                "reason": "invalid_count_contract",
+                "error_count": 0,
+                "skipped_credentials_count": 0,
+            }
+        error_count = max(error_count, journal_errors)
     skipped_count = sum(parsed[key] or 0 for key in contract["skipped"])
     if skipped_count:
         reason = "skipped_credentials"
@@ -433,6 +450,11 @@ async def collect_health_snapshot(
     ))).mappings().all())
 
     release, release_status = _read_json_object(Path(release_path), _MAX_RELEASE_BYTES)
+    release_metrics = None
+    if release_status == "too_large":
+        from .release_health_stream import read_streamed_release
+
+        release_metrics, release_status = read_streamed_release(Path(release_path))
     backfill, backfill_status = _read_json_object(
         Path(backfill_checkpoint_path), _MAX_CHECKPOINT_BYTES
     )
@@ -475,6 +497,8 @@ async def collect_health_snapshot(
                     "catch_up_backlog_observed_count",
                     "catch_up_backlog_projected_upper_bound",
                     "catch_up_backlog_limit",
+                    "catch_up_resume_below_backlog",
+                    "catch_up_backlog_counting_basis",
                     "catch_up_review_backlog_high",
                     "catch_up_required_backlog_reduction",
                     "catch_up_backpressure_reason",
@@ -487,6 +511,7 @@ async def collect_health_snapshot(
         current_review_link_count=current_review_link_count,
         evidence_gaps=tuple(dict(row) for row in gaps),
         release_payload=release,
+        release_metrics=release_metrics,
         release_read_status=release_status,
         backfill_checkpoint=backfill,
         backfill_read_status=backfill_status,

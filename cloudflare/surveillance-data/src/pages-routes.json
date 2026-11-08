@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "include": [
+    "/site-data/current.json",
+    "/site-data/objects/*",
+    "/site-data/countries/*",
+    "/site-data/diseases/*",
+    "/site-data/meta.json",
+    "/site-data/site-status.json",
+    "/site-data/situation/*",
+    "/site-data/updates/*",
+    "/situation/map-data.json",
+    "/situation/outbreaks/*"
+  ],
+  "exclude": []
+}

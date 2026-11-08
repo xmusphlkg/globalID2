@@ -1,7 +1,8 @@
+import { readResearchIndex } from '../../lib/generated-site-data.ts';
 import type { APIRoute } from 'astro';
-import researchRaw from '../../data/research/index.json';
 import { diseaseIndex, indexableDiseases, publishableReports, siteMeta } from '../../lib/seo-page-data';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { articleHref, siteHref } from '../../lib/papers';
 import { localizedDynamicText, localizedRegionName } from '../../utils/i18n';
 
 export const prerender = true;
@@ -17,13 +18,20 @@ type SearchEntry = {
 };
 
 const localized = (path: string) => ({ en: path, zh: path === '/' ? '/zh/' : `/zh${path}`, fr: path === '/' ? '/fr/' : `/fr${path}` });
+const localizedReports = (path: string) => {
+  const paths = localized(path);
+  return { en: siteHref(paths.en), zh: siteHref(paths.zh), fr: siteHref(paths.fr) };
+};
 const clean = (values: unknown[]) => [...new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map(value => value.trim()))];
 
 export const GET: APIRoute = () => {
   const entries: SearchEntry[] = [];
   for (const country of siteMeta.countries ?? []) {
     const code = String(country.code ?? '').toLowerCase();
-    if (!code || country.data_available === false) continue;
+    // Registered country shells remain searchable when their data availability
+    // changes. Observation counts belong to the runtime dataset, not this
+    // independently published search/content catalogue.
+    if (!code) continue;
     const countryNameEn = country.name_en ?? country.name ?? code.toUpperCase();
     const countryNameFr = localizedRegionName('fr', code, { en: countryNameEn, zh: country.name_zh, fr: country.name_fr });
     entries.push({
@@ -31,9 +39,8 @@ export const GET: APIRoute = () => {
       kind: 'country',
       href: localized(`/countries/${code}/`),
       title: { en: countryNameEn, zh: country.name_zh, fr: countryNameFr },
-      summary: { en: `${country.disease_count ?? 0} monitored diseases · official-source coverage`, zh: `${country.disease_count ?? 0} 种疾病 · 官方来源覆盖`, fr: `${country.disease_count ?? 0} maladies surveillées · sources officielles` },
+      summary: { en: 'Current surveillance series and official sources', zh: '当前监测序列与官方来源', fr: 'Séries de surveillance actuelles et sources officielles' },
       aliases: clean([country.name, country.name_en, country.name_zh, country.name_fr, country.code]),
-      updated_at: country.date_range?.end,
     });
   }
 
@@ -65,7 +72,7 @@ export const GET: APIRoute = () => {
     entries.push({
       id: `report:${report.country}:${report.id}`,
       kind: 'report',
-      href: localized(path),
+      href: localizedReports(path),
       title: { en: title.en ?? `Surveillance report ${report.id}`, zh: title.zh ?? detail.title, fr: reportTitleFr },
       summary: { en: summary.en, zh: summary.zh ?? detail.summary, fr: reportSummaryFr },
       aliases: clean([report.id, report.country, detail.country_name, detail.country_name_en, detail.period_start, detail.period_end]),
@@ -73,7 +80,7 @@ export const GET: APIRoute = () => {
     });
   }
 
-  const research: any = researchRaw;
+  const research: any = readResearchIndex();
   for (const article of [...(research.articles ?? []), ...(research.preprints ?? [])]) {
     if (article.indexable === false || !article.slug) continue;
     const summaryEn = article.why_it_matters_en ?? article.summary?.en?.gids_interpretation ?? article.summary?.en?.main_findings;
@@ -82,7 +89,7 @@ export const GET: APIRoute = () => {
     entries.push({
       id: `research:${article.article_id ?? article.slug}`,
       kind: 'research',
-      href: localized(`/research/articles/${article.slug}/`),
+      href: { en: articleHref(article.slug, 'en'), zh: articleHref(article.slug, 'zh'), fr: articleHref(article.slug, 'fr') },
       title: { en: article.title, zh: article.title_zh, fr: article.title_fr ?? article.title },
       summary: { en: summaryEn, zh: summaryZh, fr: summaryFr },
       aliases: clean([article.doi, article.pmid, article.journal, article.study_type, ...(article.diseases ?? []).flatMap((item: any) => [item.name_en, item.name_zh, item.name_fr]), ...(article.countries ?? []).flatMap((item: any) => [item.code, item.name_en, item.name_zh, item.name_fr])]),

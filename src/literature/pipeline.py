@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
@@ -367,6 +368,13 @@ class LiteraturePipeline:
         self._latest_completed_checkpoint: dict[str, Any] | None = None
         self._latest_completed_checkpoint_loaded = False
 
+    def _collection_until(self, now: datetime) -> datetime:
+        return now
+
+    def _collection_journals(self) -> list[dict[str, Any]]:
+        payload = _load_json(ROOT / self.config.journals_path)
+        return [item for item in payload.get("journals") or [] if item.get("issn")]
+
     async def execute(self, task: Task | None = None) -> dict[str, Any]:
         # All source cursors in a run come from the same committed ingest row.
         # Reset the snapshot for each execution so reusing a pipeline instance
@@ -374,9 +382,10 @@ class LiteraturePipeline:
         self._latest_completed_checkpoint = None
         self._latest_completed_checkpoint_loaded = False
         now = datetime.now(timezone.utc)
+        collection_until = self._collection_until(now)
         since, resume_after = await self._resolve_start(now, task)
         run_uuid = str(uuid.uuid4())
-        await self._create_run(run_uuid, since, now, task=task)
+        await self._create_run(run_uuid, since, collection_until, task=task)
         from src.services.ingestion.stages import StageRun
         stages = await StageRun.start(task.task_uuid if task else run_uuid, "literature")
         await stages.transition("collect", metrics={"step": "crossref"})
@@ -385,8 +394,7 @@ class LiteraturePipeline:
         source_capture = capture.__enter__()
         try:
             await self._supersede_earlier_running_runs(run_uuid, task)
-            journals_payload = _load_json(ROOT / self.config.journals_path)
-            journals = [item for item in journals_payload.get("journals") or [] if item.get("issn")]
+            journals = self._collection_journals()
             crossref = CrossrefClient(
                 mailto=self.config.contact_email,
                 timeout_seconds=self.config.request_timeout_seconds,
@@ -404,6 +412,7 @@ class LiteraturePipeline:
             source_result = None
             raw_records: list[dict[str, Any]] = []
             crossref_error: str | None = None
+            crossref_source_errors = 0
             pubmed_core_result = None
             pubmed_core_records: list[dict[str, Any]] = []
             pubmed_core_error: str | None = None
@@ -412,24 +421,24 @@ class LiteraturePipeline:
                     source_result = await crossref.fetch_incremental(
                         journals=journals,
                         since=since,
-                        until=now,
+                        until=collection_until,
                         max_records=self.config.max_records_per_run,
                         concurrency=self.config.source_concurrency,
                         resume_after=resume_after,
                     )
                     raw_records = source_result.records
-                    # If every journal stream failed, treat Crossref as
-                    # unavailable so a selected PubMed source can take over.
-                    # Partial Crossref results remain usable and are persisted.
-                    if (
-                        int((source_result.checkpoint or {}).get("source_errors") or 0) > 0
-                        and not raw_records
-                    ):
+                    crossref_source_errors = int((source_result.checkpoint or {}).get("source_errors") or 0)
+                    if crossref_source_errors:
                         crossref_error = "JournalStreamError"
+                    # With no usable partial results, allow PubMed to take
+                    # over without advancing the Crossref checkpoint. Partial
+                    # journal failures still remain visible in source counts.
+                    if crossref_source_errors and not raw_records:
                         source_result = None
                         raise RuntimeError("Crossref journal streams unavailable")
                 except Exception as exc:
-                    crossref_error = type(exc).__name__ or "Exception"
+                    crossref_error = crossref_error or type(exc).__name__ or "Exception"
+                    crossref_source_errors = max(1, crossref_source_errors)
                     if not plan["pubmed"]:
                         await note("crossref", fetched=len(raw_records), error=crossref_error)
                         raise
@@ -460,7 +469,7 @@ class LiteraturePipeline:
                     pubmed_core_records = pubmed_core_result.records
                     await note("pubmed", fetched=len(pubmed_core_records), error=pubmed_core_error)
                 else:
-                    await note("crossref", fetched=len(raw_records))
+                    await note("crossref", fetched=len(raw_records), error=crossref_error)
             elif plan["pubmed"]:
                 pubmed_core_result, pubmed_core_error = await _isolate_optional_source(
                     "pubmed",
@@ -493,6 +502,10 @@ class LiteraturePipeline:
             controlled_pubmed_records: list[dict[str, Any]] = []
             if plan["controlled-query"]:
                 controlled_checkpoint = await self._resolve_nested_checkpoint("controlled_discovery")
+                if task and (task.input_data or {}).get("since"):
+                    # An explicit historical replay also resets the query
+                    # windows; otherwise their independent cursors ignore it.
+                    controlled_checkpoint = None
                 query_batches = build_controlled_query_batches(
                     diseases,
                     taxonomy,
@@ -915,7 +928,9 @@ class LiteraturePipeline:
                     literature_automation_service,
                 )
 
-                automation = await literature_automation_service.reconcile()
+                automation = await literature_automation_service.reconcile(
+                    article_ids=list(dict.fromkeys(candidate.article_id for candidate, _ in classified_candidates)),
+                )
 
             counts = {
                 "fetched": (
@@ -931,7 +946,7 @@ class LiteraturePipeline:
                     + len(preprint_records)
                 ),
                 "crossref_fetched": len(raw_records) + len(controlled_crossref_records),
-                "crossref_source_errors": int(crossref_error is not None),
+                "crossref_source_errors": crossref_source_errors,
                 "pubmed_fetched": len(pubmed_core_records) + len(controlled_pubmed_records),
                 "pubmed_core_fetched": len(pubmed_core_records),
                 "pubmed_core_fallback_used": int(source_result is None and pubmed_core_result is not None),
@@ -1034,7 +1049,7 @@ class LiteraturePipeline:
                 **(
                     {"controlled_discovery": controlled_result.checkpoint}
                     if controlled_result
-                    else {}
+                    else ({"controlled_discovery": controlled_checkpoint} if plan["controlled-query"] and controlled_checkpoint else {})
                 ),
                 **(
                     {"official_guidance": official_guidance_result.checkpoint}
@@ -1116,7 +1131,10 @@ class LiteraturePipeline:
             await self._finish_run(run_uuid, "failed", error=type(exc).__name__ or "Exception")
             raise
         finally:
-            capture.__exit__(None, None, None)
+            # Preserve an in-flight cancellation or collection exception.
+            # Passing a successful exit here causes capture verification to
+            # replace it with an unrelated persistence failure.
+            capture.__exit__(*sys.exc_info())
 
     async def _enrich_candidates(self, candidates: list[ArticleCandidate]) -> dict[str, Any]:
         """Apply optional enrichers independently without blocking core ingestion."""

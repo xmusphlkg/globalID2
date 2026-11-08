@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .figures import figure_contract_issues
 from .localization import validate_report_document
 
 FORBIDDEN_DEATH_PATTERNS = (
@@ -13,6 +14,13 @@ FORBIDDEN_DEATH_PATTERNS = (
     re.compile(r"无死亡"),
     re.compile(r"0\s*例?死亡"),
     re.compile(r"死亡负担为零"),
+)
+
+# Explicit uncertainty statements are not assertions of zero mortality. Keep
+# this narrow: a later affirmative claim in the same paragraph must still fail.
+DEATH_DISCLAIMER_PATTERNS = (
+    re.compile(r"(?:不代表|不意味着|不等于|不能解释为|不能推断为|不能视为)\s*[‘“\"']?(?:无死亡(?:负担)?|0\s*例?死亡|死亡负担为零)[’”\"']?"),
+    re.compile(r"\b(?:does not|do not|cannot|should not)\s+(?:(?:be\s+)?(?:interpreted|taken)\s+as|indicate|imply|mean)\s+[‘“\"']?(?:no deaths|zero deaths)\b[’”\"']?", re.I),
 )
 
 
@@ -24,6 +32,7 @@ class ReportV4QualityGate:
         for message in validate_report_document(document):
             issues.append({"severity": "error", "code": "locale_contract", "message": message})
         issues.extend(self._check_death_claims(document))
+        issues.extend({"severity": "error", "code": "figure_contract", "message": message} for message in figure_contract_issues(document))
         score = max(0.0, 1.0 - 0.08 * len(issues))
         passed = not any(issue.get("severity") == "error" for issue in issues)
         return {
@@ -59,6 +68,8 @@ class ReportV4QualityGate:
                 text_parts.extend(str(item) for item in body.values())
 
         text = "\n".join(text_parts)
+        for disclaimer in DEATH_DISCLAIMER_PATTERNS:
+            text = disclaimer.sub("", text)
         issues = []
         for pattern in FORBIDDEN_DEATH_PATTERNS:
             if pattern.search(text):

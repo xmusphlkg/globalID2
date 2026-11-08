@@ -1,0 +1,194 @@
+from datetime import date, datetime, timezone
+from contextlib import asynccontextmanager
+import os
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import pytest
+
+from src.services.report_schedule_service import (
+    ReportScheduleService,
+    ReportWindow,
+    complete_reporting_period,
+    frequency_is_fresh,
+    infer_frequency_from_dates,
+    normalize_frequency,
+)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("enabled,country,process,expected", [
+    (True, "JP", True, True), (False, "JP", True, False),
+    (True, "US", True, False), (True, "JP", False, False),
+])
+async def test_completed_crawl_checks_report_windows_immediately(monkeypatch, enabled, country, process, expected):
+    service = ReportScheduleService()
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(schedule_enabled=enabled))
+    trigger = AsyncMock()
+    monkeypatch.setattr(service, "trigger_job", trigger)
+    await service.maybe_trigger_after_crawl(SimpleNamespace(input_data={"country_code": country, "process": process}))
+    if expected:
+        trigger.assert_awaited_once_with(service.JOB_ID, manual=False)
+    else:
+        trigger.assert_not_awaited()
+
+
+def test_normalizes_declared_period_names():
+    assert normalize_frequency("yearly") == "ANNUAL"
+    assert normalize_frequency("Quarterly") == "QUARTERLY"
+    assert normalize_frequency("unknown") is None
+
+
+def test_maps_latest_week_to_a_complete_week():
+    assert complete_reporting_period("WEEKLY", date(2026, 10, 17), date(2026, 11, 2)) == (
+        date(2026, 10, 12),
+        date(2026, 10, 18),
+    )
+
+
+def test_does_not_publish_open_daily_or_weekly_periods():
+    today = date(2026, 11, 2)
+    assert complete_reporting_period("DAILY", today, today) == (
+        date(2026, 11, 1),
+        date(2026, 11, 1),
+    )
+    assert complete_reporting_period("WEEKLY", today, today) == (
+        date(2026, 10, 26),
+        date(2026, 11, 1),
+    )
+
+
+def test_monthly_quarterly_and_annual_windows_are_calendar_periods():
+    today = date(2026, 11, 2)
+    assert complete_reporting_period("MONTHLY", date(2026, 11, 1), today) == (
+        date(2026, 10, 1),
+        date(2026, 10, 31),
+    )
+    assert complete_reporting_period("QUARTERLY", date(2026, 10, 1), today) == (
+        date(2026, 7, 1),
+        date(2026, 9, 30),
+    )
+    assert complete_reporting_period("ANNUAL", date(2026, 1, 1), today) == (
+        date(2025, 1, 1),
+        date(2025, 12, 31),
+    )
+
+
+def test_freshness_limits_and_legacy_interval_inference():
+    today = date(2026, 11, 2)
+    assert frequency_is_fresh("WEEKLY", date(2026, 10, 17), today)
+    assert not frequency_is_fresh("WEEKLY", date(2026, 10, 1), today)
+    assert infer_frequency_from_dates([date(2026, 9, 1), date(2026, 9, 8), date(2026, 9, 15)]) == "WEEKLY"
+
+
+@pytest.mark.asyncio
+async def test_enqueue_limits_to_japan_and_deduplicates_existing_periods(monkeypatch):
+    service = ReportScheduleService()
+    cfg = SimpleNamespace(schedule_max_active_tasks=2, schedule_max_tasks_per_tick=2)
+    monkeypatch.setattr(service, "_config", lambda: cfg)
+    monkeypatch.setattr(service, "_now", lambda: datetime(2026, 11, 3, tzinfo=timezone.utc))
+    windows = [ReportWindow(index, code, code, "WEEKLY", date(2026, 10, 12), date(2026, 10, 12), date(2026, 10, 18), 80) for index, code in enumerate(("JP", "US"), 1)]
+    discover = AsyncMock(return_value=windows)
+    monkeypatch.setattr(service, "_country_report_windows", discover)
+    monkeypatch.setattr(service, "_active_scheduled_tasks", AsyncMock(return_value=[]))
+    existing = AsyncMock(return_value=set())
+    monkeypatch.setattr(service, "_existing_report_windows", existing)
+    create = AsyncMock(return_value=SimpleNamespace(task_uuid="jp-task"))
+    monkeypatch.setattr("src.services.report_schedule_service.task_manager.create_task", create)
+    result = await service._enqueue_due_reports(manual=True)
+    discover.assert_awaited_once_with(allow_stale=True)
+    assert len(result["queued"]) == 1
+    assert create.await_args.kwargs["input_data"]["country"] == "JP"
+    assert create.await_args.kwargs["input_data"]["enable_review"] is True
+    existing.return_value = {(1, "weekly", date(2026, 10, 12))}
+    create.reset_mock()
+    result = await service._enqueue_due_reports(manual=False)
+    assert result["queued"] == []
+    create.assert_not_awaited()
+    discover.assert_awaited_with(allow_stale=False)
+
+
+@pytest.mark.asyncio
+async def test_active_period_is_not_enqueued_twice(monkeypatch):
+    service = ReportScheduleService()
+    window = ReportWindow(1, "JP", "Japan", "WEEKLY", date(2026, 10, 12), date(2026, 10, 12), date(2026, 10, 18), 80)
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(schedule_max_active_tasks=3, schedule_max_tasks_per_tick=2))
+    monkeypatch.setattr(service, "_country_report_windows", AsyncMock(return_value=[window]))
+    monkeypatch.setattr(service, "_existing_report_windows", AsyncMock(return_value=set()))
+    monkeypatch.setattr(service, "_active_scheduled_tasks", AsyncMock(return_value=[SimpleNamespace(input_data={"report_schedule_key": window.schedule_key})]))
+    create = AsyncMock()
+    monkeypatch.setattr("src.services.report_schedule_service.task_manager.create_task", create)
+    assert (await service._enqueue_due_reports(manual=True))["queued"] == []
+    create.assert_not_awaited()
+
+
+def test_manual_runs_also_block_duplicate_scheduled_generation():
+    keys = ReportScheduleService._active_window_keys([
+        SimpleNamespace(input_data={"report_type": "weekly", "period_start": "2026-10-12T00:00:00Z"}),
+        SimpleNamespace(input_data={"days": 30}),
+    ])
+    assert keys == {"JP:WEEKLY:2026-10-12", "JP:*"}
+
+
+@pytest.mark.asyncio
+async def test_report_windows_count_only_eligible_public_national_observations(monkeypatch):
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from src.services import report_schedule_service as module
+
+    url = os.environ.get("TEST_DATABASE_URL") or (
+        os.environ.get("DATABASE_URL") if os.environ.get("CI") == "1" else None
+    )
+    if not url or not url.startswith("postgresql"):
+        pytest.skip("requires an explicit test PostgreSQL database")
+    engine = create_async_engine(url)
+    try:
+        async with engine.connect() as connection, connection.begin():
+            # Temporary tables isolate this fixture from every persistent table.
+            for statement in (
+                "CREATE TEMP TABLE countries (id integer, code text, name_en text, is_active boolean) ON COMMIT DROP",
+                "CREATE TEMP TABLE disease_surveillance_series (series_code text, country_code text, temporal_granularity text, source_system text) ON COMMIT DROP",
+                "CREATE TEMP TABLE disease_series_observations (series_code text, time timestamptz, geography_key text, suppressed boolean, value numeric, quality_status text) ON COMMIT DROP",
+                "INSERT INTO countries VALUES (1, 'JP', 'Japan', true)",
+                "INSERT INTO disease_surveillance_series VALUES ('weekly', 'JP', 'weekly', 'official'), ('private', 'JP', 'daily', 'private'), ('monthly', 'JP', 'monthly', 'official')",
+            ):
+                await connection.execute(text(statement))
+            rows = [
+                ("weekly", "2026-10-12", "national", False, 1, "accepted"),
+                ("weekly", "2026-10-18", "national", False, 2, "accepted"),
+                ("weekly", "2026-10-19", "national", False, 3, "accepted"),
+                ("weekly", "2026-10-20", "prefecture", False, 4, "accepted"),
+                ("weekly", "2026-10-20", "national", True, 5, "accepted"),
+                ("weekly", "2026-10-20", "national", False, None, "accepted"),
+                ("weekly", "2026-10-20", "national", False, 6, "rejected"),
+                ("private", "2026-10-20", "national", False, 7, "accepted"),
+                ("monthly", "2026-10-12", "national", False, 8, "accepted"),
+            ]
+            await connection.execute(text("""
+                INSERT INTO disease_series_observations VALUES
+                (:series, :time, :geography, :suppressed, :value, :quality)
+            """), [dict(series=series, time=datetime.fromisoformat(day).replace(tzinfo=timezone.utc),
+                         geography=f"country:JP:{geography}", suppressed=suppressed,
+                         value=value, quality=quality)
+                    for series, day, geography, suppressed, value, quality in rows])
+
+            @asynccontextmanager
+            async def database():
+                yield connection
+
+            monkeypatch.setattr(module, "get_database", database)
+            monkeypatch.setattr(module, "get_country_bootstrap_config", lambda _: {"public_source_systems": ["official"]})
+            service = ReportScheduleService()
+            monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(schedule_min_records=2))
+            windows = await service._country_report_windows(today=date(2026, 10, 22))
+            assert [(w.country_code, w.frequency, w.period_start, w.record_count) for w in windows] == [
+                ("JP", "WEEKLY", date(2026, 10, 12), 2),
+            ]
+            assert await service._observation_dates([1]) == {
+                1: [date(2026, 10, 12), date(2026, 10, 18), date(2026, 10, 19)],
+            }
+            await connection.execute(text("UPDATE disease_surveillance_series SET temporal_granularity = 'unspecified' WHERE series_code = 'weekly'"))
+            window = ReportWindow(1, "JP", "Japan", "WEEKLY", date(2026, 10, 19), date(2026, 10, 12), date(2026, 10, 18), 0)
+            assert (await service._attach_record_counts([window]))[0].record_count == 2
+    finally:
+        await engine.dispose()

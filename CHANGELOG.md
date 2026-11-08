@@ -4,6 +4,182 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Fixed
+
+- Completed tasks now persist and display 100% progress, including older successful JSON publications; failed and cancelled tasks retain their actual progress. Late progress callbacks cannot overwrite terminal task progress.
+- Realtime publication separates cancelled tasks from failed-task history and explains when a later publication succeeded. Overview labels clarify that failures include history rather than only current incidents.
+- Public data monitoring retries one transient transport, 429 or server error within the existing total deadline. A recovered incident remains visible as a warning; persistent, integrity and other errors still alert normally. The 24-hour failure count uses the failure completion time.
+- The systemd monitoring check no longer reports a failed service for a warning-only result; the warning remains visible, and critical conditions and unexpected process errors still fail the check.
+
+### Added
+
+- The control panel has a realtime publication workspace for Surveillance and Situation, with separate queue/backlog views, version and integrity receipts, task history, manual JSON publication and fresh retries. The site release center and shared task list identify JSON channels separately from template and report publication.
+- Automatic JSON publication can be paused per channel with durable cross-process state. Scheduler reconciliation, retries and continuation respect the pause; existing tasks and explicit manual runs remain available. Monitoring shows intentional pauses without treating their pending/retry age as an outage, while retaining integrity and execution alarms.
+
+## [0.18.1] - 2026-11-07
+
+- Added a multilingual website and data update history with monthly archives, channel filters, published coverage metrics and links to release notes. Successful acknowledged publication markers are projected into small JSON files by a separate minute timer, without rebuilding the site or blocking data publication.
+- Fixed stale events during month switches and independent refresh error handling. Failed refreshes retain known events, slow requests are bounded, and monthly records are validated before rendering.
+- Code-only releases recognize the hand-authored changelog and acknowledgements as source files while keeping generated data snapshots strictly unchanged; updating release notes no longer forces a data regeneration.
+- Restored the compact download dialog with date/format filters and scrollable file cards. The dialog code and per-scope catalogue load on demand; chart data actions open it directly, with archive dates kept separate from live curve updates.
+- Restored the homepage's real China/Japan influenza curves, country/disease navigation, download selection, source citations, subdivision shortcuts and weekly/monthly outbreak archives while retaining independent JSON updates. Per-article social cards remain disabled.
+
+## [0.18.0] - 2026-11-07
+
+### Added
+
+- Surveillance and Situation publish versioned JSON independently of static HTML. Data changes trigger bounded publication queues with durable reconciliation and retries; unchanged observations and notice snapshots do not create repeated publication work.
+- Same-origin data delivery uses immutable, checksum-addressed R2 objects and an atomic current-version pointer. Browsers pin one data version per page for summaries, charts, maps and lazy details.
+- A read-only real-time publication monitor checks queue age, task outcomes, live manifests and sampled object integrity. Local observation logs and a systemd timer track rollout without sending notifications.
+
+### Performance and correctness
+
+- Dense precise disease updates (16 or more target diseases) now use the distinct-source-identity query while retaining the exact target filter. On one read-only snapshot, JP-25's actual 68-disease update fell from 57.831 to 3.871 seconds (14.9×); all 38,856 normalized rows and the complete merged country projection matched exactly. Smaller target sets retain their selective query path.
+- Complete-country projection resolves each distinct source identity once, reducing JP-25 category lookups from 60,319 to 112. Paired read-only query measurements reduced source reading from about 49.25 to 5.09 seconds; five alternating pure-computation runs reduced median CPU from 3.959 to 2.757 seconds.
+- Eight-country full projection took 19.7 seconds; generating all 504 public JSON objects into empty output directories took 27.682 seconds. All public object hashes matched the preceding complete export. A synthetic precise correction took 4.608 seconds. These local measurements exclude network publication and acknowledgement.
+- Mapping activation invalidates old and new country scopes in the same transaction. Frozen publication candidates, conditional pointer writes and exact change-ID acknowledgement prevent stale retries from overwriting newer data or losing concurrent updates.
+
+### Changed
+
+- Static template and content releases reuse verified split artifacts when inputs and outputs are unchanged; release identity is stamped after rendering. Surveillance and Situation JSON changes publish independently. Astro shares one prerender process by default with page concurrency 8; source checks and bounded SEO readers run alongside rendering while manifests and routing retain one writer.
+- Large generated research and country JSON is read as build data instead of imported into Vite/TypeScript, keeping it outside the compilation graph.
+
+- Build planning persists compact country/disease directories and shares verified summaries with static rendering. Unchanged histories are no longer repeatedly parsed for ranking, aliases or indexability, and candidate links load full records only when rendering their detail pages.
+- Historical Situation weeks, months and outbreak JSON join incremental page caching with per-period dependencies and adjacent-period navigation. RSS feeds share a facet index and sitemap endpoints share one build catalogue. Parsed JSON uses bounded file-identity caches; route directories keep compact summaries instead of retaining every surveillance history.
+- Site builds run independent validation gates in bounded Node processes, cache country/disease pages in all three locales, and report per-stage timings and rebuild reasons. Unchanged page-cache files retain their identity; verified asset-reference caches avoid reparsing unchanged HTML during restoration and bundle splitting.
+- Release exporters share one PostgreSQL read-only snapshot while collection continues writing. Website builds and uploads release the snapshot before running; publication acknowledges only frozen curves and selected change IDs.
+- Split download projection and encoding, research visualizations and integrity alerts, and release build/deployment stages into focused modules while retaining existing entry points. Added a reproducible large-script audit.
+- Surveillance publication records semantic observation changes and coalesces them into bounded country batches (`DATA_RELEASE__BATCH_MAX_COUNTRIES`, default 8), with durable continuation. Legacy scopes remain conservative and atomic.
+- Download generation reuses existing split windows before constructing XLSX files. Page caches follow route import dependencies, with stable fingerprints across staging and committing unchanged content.
+- Raw-source archival runs as an independent low-priority task. Publication retries reuse validated in-place data/build stages, and report input validation runs before expensive exports.
+- The control panel supports code-only publication using an attested successful data snapshot; pending data markers remain untouched.
+- Source and page dependency checks reuse Git object identities and persistent local file fingerprints. Isolated report builds reuse unchanged report bundles and recover missing cached assets with a full rebuild.
+- Papers/Reports publication reuses build-time checksum receipts and remote object metadata, avoiding local body reads for unchanged files while preserving interrupted-upload recovery and checksum validation for changed files.
+
+### Added
+
+- Subscription preferences can be managed through short-lived email links, including list-level pause and resume and an all-lists unsubscribe. Published report, Research Radar, and reviewed official-notice updates have opt-in dispatchers with durable outboxes and scheduled reconciliation.
+
+### Fixed
+
+- Knowledge catalogue quality assessment yields between diseases so realtime JSON publication, cancellation and worker heartbeats can progress during governance reconciliation without changing catalogue results.
+- Situation runtime JSON routes and static cache planning share the same mode predicate. Pages deployments no longer require or restore outbreak JSON that belongs to the independent data channel; legacy and standalone builds retain their static output.
+- French country/disease surveillance titles retain their full country suffix within the SEO title limit; full disease names remain visible in the page heading.
+- Weekly Situation pages use source-notice dates for publication metadata instead of treating every map export as a historical-page modification. Country/disease ranking discards losing candidates during selection, and sitemap directories avoid unbounded full-history retention that exhausted the 6 GiB Astro heap.
+- SEO validation detaches retained title and canonical strings from full HTML documents to keep catalogue audits within the bounded checker heap.
+- Taiwan NIDSS collection bounds retries and export windows during TLS outages, limits manual historical backfills to 12 missing months per task, preserves transport provenance, and excludes unverified historical zeroes and observations outside reviewed series validity.
+- Preserve collection cancellation semantics, drain failed literature-provider and enrichment requests, and keep non-resumable jobs running during controlled worker shutdown. Retry model work on another eligible route when possible and record otherwise-empty timeout errors.
+- Mark a recovered release's retry metadata as succeeded while retaining its historical failure details.
+- Bound control-panel shutdown when long-lived event streams prevent Next.js from exiting during a service restart.
+- Cross-country download updates replace only selected countries and preserve other countries' verified published rows, including source observations and explicitly counted legacy projections. Disease input fingerprints now use country dependency summaries rather than serializing entire cross-country histories.
+- Control-panel publication preflight allows bounded Git/Cloudflare probes to finish instead of aborting after the ordinary 10-second read timeout.
+- Surveillance downloads retain complete observation provenance instead of replacing it with lossy public-curve snapshots. Missing untouched download artifacts fail explicitly rather than publishing broken manifest entries.
+- Report SEO titles retain full coverage dates so weekly reports in the same month have distinct titles in all three languages.
+- Research Radar review now receives the catalogue's peer-review and integrity statuses and the summary's intended language. Existing holds are reconsidered once under the corrected review context, without bypassing evidence or peer-review gates.
+- Subscription changes now require confirmation without overwriting active preferences; confirmation and unsubscribe links resist automated link scanning, and queued delivery checks subscriber status before sending. Campaign claims, provider feedback and bounded retries reduce duplicate or unwanted email.
+
+## [0.17.5] - 2026-11-06
+
+### Changed
+
+- Data refreshes reuse verified unchanged pages, per-page audit facts and bundle asset dependencies. Cache finalization copies only changed page bundles; missing or changed dependencies invalidate reuse.
+- Partitioning preserves unchanged images and JSON files, consumes strong build-time checksum receipts, and rewrites changed HTML on multiple CPU cores with a single artifact writer.
+- Static rendering uses eight parallel Astro workers. The build pins Astro 7.4.7 and its compatible project-local Node 22.23.4 runtime.
+- Release preparation preserves validation gates and destination reconciliation while avoiding repeated rendering and partitioning of unchanged artifacts.
+
+## [0.17.4] - 2026-11-05
+
+### Fixed
+
+- Taiwan NIDSS monthly ODS imports now recognize pre-2000 years. Invalid disease exports are isolated and audited while valid peers continue; retained cached observations remain explicitly marked as fallback data.
+- Ingestion restores missing surveillance-series definitions from the validated local registry within the observation transaction. Existing mappings are preserved, and unknown definitions remain subject to the quality gate.
+- Report sitemaps build from report data only instead of loading the full surveillance and research corpus. Isolated report builds use the same 6 GiB Node heap allowance as the main site.
+- Report publication records each execution stage and applies the existing bounded automatic retry policy to transient R2 upload failures. Build, validation and credential failures remain terminal.
+
+## [0.17.3] - 2026-11-04
+
+### Changed
+
+- Data publication now completes when upload/deploy commands succeed. Automatic Papers, Reports, main-site and download public-URL checks are skipped; release failures retain generated artifacts without rollback or full artifact backup copies. Explicit download audits remain available with `--verify-remote`.
+- Downloads now export into a persistent Git worktree, retain stable manifests, and skip upload, file validation and remote probes for an unchanged successfully published version. Git history and publication receipts remain available for retries; interrupted commits remain retryable. Full releases freeze exact database change-log IDs so late commits cannot be lost behind a timestamp boundary.
+- Site export consumes database streams in batches, reducing per-row async overhead while preserving bounded memory and output order.
+- Raw archive publication copies independent files with eight bounded workers by default, retaining per-file checksum verification and fsync. All copies must succeed before metadata, commits or pushes; failed partial runs remain recoverable.
+- Large download snapshots upload their objects in resumable 1 GiB batches before the public branch is advanced, avoiding GitHub's per-push limit while keeping the snapshot switch atomic.
+- Scheduled report readiness and cadence inference use eligible public national source-series observations instead of the legacy projection.
+
+### Fixed
+
+- Data releases now outrank other urgent tasks and pause managed collection work at database-session boundaries. Existing transactions finish before publication; paused tasks resume in place after success, failure, or cancellation instead of making publication wait for entire collection/model workflows.
+- Research article Situation context merges repeated countries and source events within each disease/evidence relationship. Historical geographic context has its own label; precise and disease-only matches remain separate.
+- Public research pages share width, spacing and title scales; copyright and terms use the interface font, and subscription panels use the shared flat surface treatment.
+- Papers bundles now carry their referenced build assets and transitive fonts/scripts, uploading assets before HTML and retaining the preceding generation. New self-contained bundles no longer require the missing previous Pages snapshot; legacy bundles retain the verified compatibility-deployment gate.
+
+## [0.17.2] - 2026-11-03
+
+### Added
+
+- Japan report generation now has a scheduled control-panel workflow, an AI author/reviewer pass, and a curated library of 12 evidence-bound ECharts templates. Priority diseases can include up to 52 periods of historical context; changes in source or reporting scope are shown as separate segments.
+- Country report archives and report data are published on `reports.globalinfectiousdisease.com` from a dedicated R2 bundle, with its own directory, sitemap, robots policy, preflight, and public-host verification.
+- Reports can be refreshed independently with `--reports-only`; unchanged detail files are reused. Incremental Astro builds retain shared hashed assets needed by cached pages.
+- Research article pages group related Situation signals by disease and geography, keeping exact geographic matches distinct from disease-only context.
+
+- Situation reads ECDC public health events (`ecdc_events`) as a new source: outbreak pages, seasonal mosquito-borne surveillance and risk assessments in production, which ECDC updates daily and the weekly CDTR only summarizes later. The adapter pages the public listing newest first and keeps the latest version of each event per ISO week. Page bodies are read in full and go through the same two-model review as every other source. The source appears in the control-panel Situation workspace without frontend changes.
+
+### Changed
+
+- The control panel can queue a reports-only release. An approved fresh report can trigger publication automatically, with periodic reconciliation after missed events; reports-only releases can run alongside collection work while release jobs remain serialized.
+- Japan's scheduled import processes a recent cache window and newly downloaded files, refreshes recent source weeks, and batches observation writes. Explicit local and forced imports retain their historical selection.
+- Report preparation and observation processing move expensive work off the worker's event loop; report aggregation avoids repeated per-group scans. Transient task-claim errors no longer terminate the worker.
+- Full Pages releases retain a verified deployable snapshot for later shared-asset compatibility deployments. A compatibility deployment checks the snapshot against the live release ID and content digest and stops if no matching artifact is available.
+
+### Fixed
+
+- Main-site public shared assets allow cross-origin access by both Papers and Reports; the production response-header rule also supplies the header.
+- The migration for quarterly and annual report types is applied to production. Report generation and publication remain subject to source availability and review gates.
+
+### Validation and operational limits
+
+- Two reports-only production runs with unchanged content completed in 91.2 and 64.8 seconds; each reused all 960 R2 objects and uploaded zero bytes. These timings include export, build, upload checks and public verification, and are not guarantees for changed content.
+- A prior new-report release completed in 166.1 seconds. Unchanged report releases still render the report routes before reusing unchanged output files.
+- Full main-site publication remains blocked until the exact previous Pages artifact is restored as a verified snapshot; the reports-only path is independent of this requirement.
+
+## [0.17.1] - 2026-11-02
+
+### Added
+
+- Public hosting is three channels: Cloudflare Pages for the main site, GitHub for download partitions, and Cloudflare R2 (`papers.globalinfectiousdisease.com`) for research article pages, cards, and `site-data/research`. Release splits the Astro `dist`, enforces a Pages file-count budget, and incrementally syncs papers assets to R2 before deploy.
+- The papers host has its own `robots.txt` and `sitemap.xml`. Article URLs are no longer listed in the main-site sitemaps. Canonical, hreflang, JSON-LD, social-card, RSS and search-index URLs for articles all point at the papers host through one module (`src/lib/papers.ts`).
+- The control-panel Publish workspace shows a three-channel strip and preflight rows for papers storage and the Pages file budget. A failed release writes a `dist-inventory.json` under `exports/release-failures/<task>/` before artifacts are rolled back.
+- R2 uploads carry a `Cache-Control` policy (HTML revalidates, JSON five minutes, the manifest is never cached), because an R2 custom domain does not read the Pages `_headers` file.
+- The main-site `_headers` allow the papers origin to load `/_astro/*`, `/scripts/*`, logos, `/site-data/*` and `/release.json` cross-origin. Release adds any missing path instead of skipping the file when one rule already exists.
+- Incremental Astro builds keep rendered article bundles in `data/cache/research-pages`, since release moves them out of `dist`.
+- Model center probes native PDF support: it sends a PDF carrying a random marker and records whether the model read it, rechecked after 24 hours. An operator override (`runtime_native_files`) still wins.
+- The ECDC Communicable Disease Threats Report adapter reads the archive back to the collection start date, not only the latest RSS issues. Africa CDC and PAHO collection page further, and WHO periodicals stop on the raw page so a page of policy articles no longer hides older disease articles.
+- A worker that starts releases every model-work lease left by its predecessor, so a restart does not hold route permits until they expire.
+
+### Changed
+
+- Outbreak grouping and the public Situation export look back 1,100 days, so a routine short refresh no longer drops history.
+- Documents are read with pdfium behind one lock; two threads inside pdfium crashed the worker.
+- Anthropic routes use the model center's stored `/v1` root correctly (no `/v1/v1/messages`), and native calls set an explicit timeout so a large token ceiling does not trip the SDK's streaming guard.
+- Peer review reads the first JSON object in a reply; prose or a second object after the payload no longer corrupts it.
+- A published research article keeps its status when the classifier later returns "review". Only a hard exclusion, an integrity change or an editorial action changes it. Unchanged re-upserts no longer reopen automatic exclusions, and a summary whose parent is excluded is deferred instead of archived permanently, with earlier parent-caused archives restored.
+- AI content governance holds content in review until what the reviewers read changes.
+- The French research labels cover Meta-analysis, Commentary, Preprint and Prion, and `check-i18n` fails when a taxonomy label has no translation.
+- The SEO output check understands wildcard redirects, ignores article URLs hosted on the papers host, and reports main-site sitemap entries that still redirect there. Weekly Research Radar links to articles go straight to the papers host.
+
+### Fixed
+
+- The data-release service read `data_release` settings one level too deep, so the R2 preflight and publish step would have raised `AttributeError`.
+- The R2 bucket check signed a different path from the one it requested and always reported the bucket unreachable.
+- Publishing an empty papers bundle would have deleted every object in the bucket. It is now refused.
+- A failure while writing the release failure inventory can no longer hide the original error or skip restoring the backups.
+- The Situation map loads markers from `/situation/map-data.json`, so the three-year history stays inside the page HTML gzip budget.
+
+### Removed
+
+- The runtime-route fields `runtime_provider_min_capacity`, `runtime_provider_auto_concurrency`, `runtime_provider_success_streak` and `runtime_provider_backoff_remaining_seconds` from the API and the control panel.
+
 ## [0.16.2] - 2026-11-01
 
 ### Added

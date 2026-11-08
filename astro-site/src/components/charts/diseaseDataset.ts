@@ -1,3 +1,4 @@
+import { surveillanceData } from "../../lib/surveillance-data.ts";
 import { decodeCompactIncidence, type SourceSeriesMetadata } from './countryDataset';
 import { localizedRegionName } from '../../utils/i18n';
 
@@ -182,12 +183,10 @@ export function loadDiseaseDataset(dataUrl?: string | null): Promise<DiseaseData
   const cached = cache.get(dataUrl);
   if (cached) return cached;
 
-  const request = fetch(dataUrl)
-    .then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Failed to load disease dataset: ${response.status}`);
-      }
-      const raw = await response.json();
+  // This module caches the normalized dataset. Do not also retain the complete
+  // compact source object after decoding its arrays.
+  const request = surveillanceData.read<DiseaseDataset | CompactDiseaseDataset>(dataUrl, { retain: false })
+    .then((raw) => {
       return normalizeDiseaseDataset(raw as DiseaseDataset | CompactDiseaseDataset);
     })
     .catch((error) => {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import math
@@ -14,7 +15,7 @@ from sqlalchemy import and_, case, func, or_, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
+from src.core.disease_mutation_lock import acquire_country_data_mutation_lock
 from src.domain import (
     DiseaseSeriesObservation,
     DiseaseSeriesObservationRevision,
@@ -184,6 +185,15 @@ def _revision_state(row: Mapping[str, Any]) -> str:
     # refresh. Preserve them in snapshots, but only create a new value revision
     # when the reported observation or its interpretation actually changes.
     state = {key: row.get(key) for key in _REVISION_COMPARISON_COLUMNS}
+    metadata = row.get("metadata") or {}
+    state["interpretation"] = {
+        key: metadata.get(key)
+        for key in (
+            "source_id", "local_code", "local_label", "measure", "frequency",
+            "rollup_policy", "population_scope", "missing_value_status",
+            "dynamic_holding", "source_category_id",
+        )
+    }
     return json.dumps(state, sort_keys=True, separators=(",", ":"), default=str)
 
 
@@ -203,6 +213,7 @@ async def _persist_observation_revisions(
     *,
     recorded_at: datetime,
     seed_current_state: bool,
+    changed_observations: list[dict[str, Any]] | None = None,
 ) -> int:
     """Seed legacy current rows once, then append only changed accepted states."""
     # Each identity expands to four bind parameters in both lookup queries,
@@ -215,6 +226,7 @@ async def _persist_observation_revisions(
             observations[offset : offset + _WRITE_BATCH_SIZE],
             recorded_at=recorded_at,
             seed_current_state=seed_current_state,
+            changed_observations=changed_observations,
         )
     return inserted
 
@@ -225,6 +237,7 @@ async def _persist_observation_revisions_batch(
     *,
     recorded_at: datetime,
     seed_current_state: bool,
+    changed_observations: list[dict[str, Any]] | None = None,
 ) -> int:
     if not observations:
         return 0
@@ -258,7 +271,13 @@ async def _persist_observation_revisions_batch(
     if not current:
         return 0
 
-    history_result = await db.execute(
+    identity_columns = (
+        DiseaseSeriesObservationRevision.time,
+        DiseaseSeriesObservationRevision.series_code,
+        DiseaseSeriesObservationRevision.geography_key,
+        DiseaseSeriesObservationRevision.dimension_key,
+    )
+    history_query = (
         select(
             DiseaseSeriesObservationRevision.time,
             DiseaseSeriesObservationRevision.series_code,
@@ -282,8 +301,13 @@ async def _persist_observation_revisions_batch(
                 DiseaseSeriesObservationRevision.dimension_key,
             ).in_(keys)
         )
-        .order_by(DiseaseSeriesObservationRevision.recorded_at.desc())
+        # Only the latest state per observation participates in comparison.
+        # Fetching every historical revision turns an incremental crawl into a
+        # growing full-history read, especially for frequently revised weeks.
+        .distinct(*identity_columns)
+        .order_by(*identity_columns, DiseaseSeriesObservationRevision.recorded_at.desc())
     )
+    history_result = await db.execute(history_query)
     revisions = [dict(row) for row in history_result.mappings().all()]
 
     inserts: list[dict[str, Any]] = []
@@ -304,6 +328,12 @@ async def _persist_observation_revisions_batch(
 
     if not inserts:
         return 0
+    if not seed_current_state and changed_observations is not None:
+        # Capture the accepted database state, not the incoming proposal or
+        # PostgreSQL upsert count. Seeding pre-existing history is not a change.
+        changed_observations.extend(
+            {key: row[key] for key in _REVISION_KEY_COLUMNS} for row in inserts
+        )
     statement = pg_insert(DiseaseSeriesObservationRevision.__table__)
     statement = statement.on_conflict_do_nothing(
         constraint="uq_disease_series_observation_revision"
@@ -494,6 +524,30 @@ class SeriesObservationSaveResult:
     skipped_unregistered: int = 0
     skipped_missing: int = 0
     holding_observations: int = 0
+    # None means coverage is unknown; an empty tuple proves a semantic no-op.
+    # Keep None as the default for compatibility stores and legacy-only imports.
+    publication_changes: tuple[dict[str, Any], ...] | None = None
+
+
+def observation_publication_changes(
+    observations: list[dict[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    """Compact changed fact identities without merging distinct historical years."""
+    ranges: dict[tuple[str, str, int], dict[str, Any]] = {}
+    for row in observations:
+        when = _as_utc(row["time"])
+        key = (row["geography_key"], row["series_code"], when.year)
+        timestamp = when.isoformat()
+        if key not in ranges:
+            ranges[key] = {
+                "geography_key": key[0], "series_code": key[1],
+                "time_start": timestamp, "time_end": timestamp,
+                "operation": "upsert",
+            }
+        else:
+            ranges[key]["time_start"] = min(ranges[key]["time_start"], timestamp)
+            ranges[key]["time_end"] = max(ranges[key]["time_end"], timestamp)
+    return tuple(ranges[key] for key in sorted(ranges))
 
 
 @dataclass(frozen=True)
@@ -820,6 +874,7 @@ class SeriesObservationStore:
         value_field: str = "Cases",
         geography_key: str | None = None,
         quality_policy: SeriesObservationQualityPolicy | None = None,
+        jp_holding_profiles: dict | None = None,
     ) -> SeriesObservationSaveResult:
         policy = quality_policy or SeriesObservationQualityPolicy()
         if policy.registry_coverage == "legacy_only":
@@ -837,13 +892,17 @@ class SeriesObservationStore:
                 skipped_registry_not_synced=0,
                 quality_report=quality_report,
             )
-        built = self.build_observations(
+        built = await asyncio.to_thread(
+            self.build_observations,
             rows,
             country_code,
             source_id=source_id,
             value_field=value_field,
             geography_key=geography_key,
         )
+        # Holding-series construction can insert or relocate facts. Acquire
+        # the partition before it, including direct storage/backfill callers.
+        await acquire_country_data_mutation_lock(db, country_code)
         holding_observations, holding_handled = await self._build_holding_observations(
             db,
             rows,
@@ -851,6 +910,7 @@ class SeriesObservationStore:
             source_id=source_id,
             value_field=value_field,
             geography_key=geography_key,
+            jp_holding_profiles=jp_holding_profiles,
         )
         if holding_observations:
             built = SeriesObservationBuildResult(
@@ -878,9 +938,9 @@ class SeriesObservationStore:
                 skipped_registry_not_synced=0,
                 quality_report=quality_report,
                 holding_observations=0,
+                publication_changes=() if not rows else None,
             )
 
-        await acquire_disease_data_mutation_lock(db)
         requested_codes = {row["series_code"] for row in built.observations}
         existing = await db.execute(
             select(DiseaseSurveillanceSeries.series_code).where(
@@ -888,6 +948,20 @@ class SeriesObservationStore:
             )
         )
         available_codes = set(existing.scalars())
+        missing_codes = requested_codes - available_codes
+        if missing_codes:
+            from src.services.disease_ontology_sync_service import restore_missing_registry_series
+            from src.core.logging import get_logger
+
+            restored = await restore_missing_registry_series(
+                db, self.ontology, missing_codes, country_code=country_code,
+            )
+            available_codes.update(restored)
+            if restored:
+                get_logger(__name__).warning(
+                    "Disease source-series registry restored in ingestion transaction | country={} series={}",
+                    country_code, sorted(restored),
+                )
         observations = [
             row for row in built.observations if row["series_code"] in available_codes
         ]
@@ -897,7 +971,8 @@ class SeriesObservationStore:
             if observations and policy.mode != "off"
             else []
         )
-        quality_report = self.assess_quality(
+        quality_report = await asyncio.to_thread(
+            self.assess_quality,
             observations,
             country_code=country_code,
             source_row_count=len(rows),
@@ -978,11 +1053,13 @@ class SeriesObservationStore:
             write_result = await db.execute(statement, batch)
             affected_rows += len(write_result.scalars().all())
 
+        changed_observations: list[dict[str, Any]] = []
         await _persist_observation_revisions(
             db,
             observations,
             recorded_at=revision_time,
             seed_current_state=False,
+            changed_observations=changed_observations,
         )
 
         return SeriesObservationSaveResult(
@@ -993,6 +1070,12 @@ class SeriesObservationStore:
             skipped_registry_not_synced=skipped_registry,
             quality_report=quality_report,
             holding_observations=len(holding_observations),
+            publication_changes=(
+                observation_publication_changes(changed_observations)
+                if not (missing_codes or skipped_registry or built.skipped_unmatched
+                        or built.skipped_ambiguous or built.skipped_invalid)
+                else None
+            ),
         )
 
     def _jp_mixed_holding_profiles(
@@ -1248,6 +1331,7 @@ class SeriesObservationStore:
         source_id: str | Mapping[str, str] | None,
         value_field: str,
         geography_key: str | None,
+        jp_holding_profiles: dict | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         """Retain valid source facts whose disease category is awaiting review.
 
@@ -1262,7 +1346,7 @@ class SeriesObservationStore:
         observation_by_key: dict[tuple[object, ...], dict[str, Any]] = {}
         series_by_category: dict[int, DiseaseSurveillanceSeries] = {}
         categories_by_identity: dict[tuple, SourceDiseaseCategory | None] = {}
-        jp_profiles = self._jp_mixed_holding_profiles(
+        jp_profiles = jp_holding_profiles if jp_holding_profiles is not None else self._jp_mixed_holding_profiles(
             rows, country_code, source_id, value_field
         )
         jp_splits: dict[int, dict[str, Any]] = {}
@@ -1552,6 +1636,9 @@ class SeriesObservationStore:
         earliest = min(_as_utc(row["time"]) for row in observations)
         latest = max(_as_utc(row["time"]) for row in observations)
         lower_bound = earliest - timedelta(days=policy.history_lookback_days)
+        # Quality checks compare identity, values and frequency. Historical raw
+        # provenance is never consulted (revision overrides apply to incoming
+        # rows), so do not transfer/decode millions of large JSON payloads here.
         result = await db.execute(
             select(
                 DiseaseSeriesObservation.time,
@@ -1561,7 +1648,6 @@ class SeriesObservationStore:
                 DiseaseSeriesObservation.value,
                 DiseaseSeriesObservation.suppressed,
                 DiseaseSeriesObservation.quality_status,
-                DiseaseSeriesObservation.raw_data,
                 DiseaseSeriesObservation.metadata_.label("metadata"),
             ).where(
                 DiseaseSeriesObservation.series_code.in_(requested_codes),

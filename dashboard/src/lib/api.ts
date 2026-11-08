@@ -15,6 +15,7 @@ export class ApiError extends Error {
     message: string,
     public code = `http_${status}`,
     public requestId?: string,
+    public taskUuid?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -53,12 +54,16 @@ async function performApiFetch(path: string, init?: ApiFetchInit): Promise<Respo
         title?: string;
         code?: string;
         request_id?: string;
+        task_uuid?: unknown;
       };
       throw new ApiError(
         res.status,
         problem?.detail || problem?.title || "Request failed",
         problem?.code,
         problem?.request_id,
+        typeof problem?.task_uuid === "string" && /^[A-Za-z0-9_.:-]{1,160}$/.test(problem.task_uuid)
+          ? problem.task_uuid
+          : undefined,
       );
     }
     const text = await res.text().catch(() => "Unknown error");

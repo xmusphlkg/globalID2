@@ -1,75 +1,30 @@
 ---
-/** One calendar month: the weekly changes whose week starts in it. */
 import ReportLayout from '../../../layouts/ReportLayout.astro';
+import SituationArchive from '../../../components/situation/SituationArchive';
 import { buildAlternatePaths, type SeoDocument } from '../../../lib/seo';
-import { weeklyDiff } from '../../../components/situation/text';
-import { listMonths, weeksOfMonth } from '../../../utils/international';
-import { translateUi } from '../../../utils/i18n';
+import { listMonths } from '../../../utils/international';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 
 export function getStaticPaths() {
-  const months = [...listMonths()].reverse();
-  return months.map((month, index) => ({
-    params: { period: month },
-    props: { reportPeriod: month, locale: 'en', previous: months[index - 1], next: months[index + 1] },
-  }));
+  return listMonths().map(period => ({
+    params: { period }, props: { reportPeriod: period, locale: 'en' },
+  })).filter(entry => shouldBuildPage(`situation-month:${entry.params.period}`));
 }
-
-const { reportPeriod, previous, next, locale = 'en' } = Astro.props as { reportPeriod?: string; previous?: string; next?: string; locale?: 'en' | 'zh' | 'fr' };
-const month = reportPeriod ?? String(Astro.params.period ?? '');
-const zh = locale === 'zh';
-const fr = locale === 'fr';
-const prefix = zh ? '/zh' : fr ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
-const weeks = weeksOfMonth(month);
-if (!weeks.length) return Astro.redirect(`${prefix}/situation/monthly/`, 302);
-const title = pick(`Situation overview ${month}`, `${month} 态势汇总`, `Aperçu de la situation ${month}`);
-const description = weeklyDiff(
-  {
-    new_outbreaks: weeks.flatMap(week => week.new_outbreaks),
-    updated_outbreaks: weeks.flatMap(week => week.updated_outbreaks),
-    new_places: weeks.reduce((sum, week) => sum + week.new_places, 0),
-    alerts: weeks.reduce((sum, week) => sum + week.alerts, 0),
-  },
-  locale,
-).replace(/^(This week|本周|Cette semaine)/, pick('This month', '本月', 'Ce mois-ci'));
-const canonicalPath = `${prefix}/situation/monthly/${month}/`;
-const seo: SeoDocument = {
-  title: `${title} | GIDS`,
-  description,
-  canonicalPath,
-  locale,
-  alternatePaths: buildAlternatePaths(canonicalPath, locale),
-  pageType: 'Report',
-};
+const { reportPeriod, locale = 'en' } = Astro.props as { reportPeriod?: string; locale?: 'en' | 'zh' | 'fr' };
+const period = reportPeriod ?? String(Astro.params.period ?? '');
+const prefix = locale === 'en' ? '' : `/${locale}`;
+const pick = (en: string, zh: string, fr: string) => locale === 'zh' ? zh : locale === 'fr' ? fr : en;
+const title = pick(`Situation overview ${period}`, `${period} 态势汇总`, `Aperçu de la situation ${period}`);
+const description = pick('Reviewed official outbreak alerts and changes for this reporting period.', '该报告期已审核的官方疫情警报与变化。', 'Alertes officielles relues et changements pour cette période.');
+const canonicalPath = `${prefix}/situation/monthly/${period}/`;
+const seo: SeoDocument = { title: `${title} | GIDS`, description, canonicalPath, locale, alternatePaths: buildAlternatePaths(canonicalPath, locale), pageType: 'Report' };
 ---
-
-<ReportLayout title={title} description={description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation map', '态势地图', 'Carte de situation'), href: `${prefix}/situation/` }, { label: pick('Monthly archive', '每月归档', 'Archive mensuelle'), href: `${prefix}/situation/monthly/` }, { label: month }]}>
-  <div class="month max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-    <nav class="month-nav" aria-label={pick('Adjacent months', '相邻月份', 'Mois adjacents')}>
-      {previous ? <a href={`${prefix}/situation/monthly/${previous}/`}>← {previous}</a> : <span />}
-      <a href={`${prefix}/situation/monthly/`}>{pick('All months', '全部月份', 'Tous les mois')}</a>
-      {next ? <a href={`${prefix}/situation/monthly/${next}/`}>{next} →</a> : <span />}
-    </nav>
-    <h1>{title}</h1>
-    <p class="lead">{description}</p>
-    <ol>
-      {weeks.map(week => (
-        <li><a href={`${prefix}/situation/weekly/${week.period_key}/`}><b>{week.period_key}</b><span>{weeklyDiff(week, locale)}</span></a></li>
-      ))}
-    </ol>
-  </div>
+<ReportLayout title={title} description={description} initialLanguage={locale} seo={seo} breadcrumbs={[
+  { label: pick('Situation map', '态势地图', 'Carte de situation'), href: `${prefix}/situation/` },
+  { label: pick('Monthly archive', '每月归档', 'Archive mensuelle'), href: `${prefix}/situation/monthly/` }, { label: period },
+]}>
+  <article class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+    <h1 class="academic-title">{title}</h1>
+    <SituationArchive client:load locale={locale} mode="monthly" month={period} />
+  </article>
 </ReportLayout>
-
-<style>
-  .month { display: grid; gap: 1.2rem; padding-block: 2rem 4rem; }
-  h1 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.1; margin: 0; }
-  .lead { color: rgb(var(--text-muted)); line-height: 1.6; margin: 0; }
-  .month-nav { display: flex; justify-content: space-between; gap: .5rem; font-size: .75rem; font-weight: 700; }
-  .month-nav a { color: rgb(var(--color-teal)); text-decoration: none; }
-  ol { display: grid; gap: .6rem; list-style: none; margin: 0; padding: 0; }
-  li a { border: 1px solid rgb(var(--border)); color: inherit; display: grid; gap: .3rem 1rem; grid-template-columns: 7rem minmax(0, 1fr); padding: .8rem; text-decoration: none; }
-  li a:hover { border-color: rgb(var(--color-teal)); }
-  li b { color: rgb(var(--text-strong)); font-family: ui-monospace, monospace; }
-  li span { color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.5; }
-  @media (max-width: 700px) { li a { grid-template-columns: 1fr; } }
-</style>

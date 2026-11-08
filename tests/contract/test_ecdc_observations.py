@@ -138,14 +138,14 @@ async def test_ecdc_collect_records_bytes_before_business_parser(tmp_path, monke
 
 async def test_ecdc_delete_is_confined_to_its_commit_strategy(monkeypatch):
     lock = AsyncMock()
-    monkeypatch.setattr("src.services.ingestion.strategies.acquire_disease_data_mutation_lock", lock)
-    updater = SimpleNamespace(delete_authoritative_window=AsyncMock(return_value=3))
+    monkeypatch.setattr("src.services.ingestion.strategies.acquire_country_data_mutation_lock", lock)
+    updater = SimpleNamespace(country_code="FR", delete_authoritative_window=AsyncMock(return_value=3))
     commit = AsyncMock(return_value="stored")
     monkeypatch.setattr(UpdaterCommitStrategy, "commit", commit)
     assert (
         await EcdcWindowCommitStrategy().commit("db", updater=updater, start_year=2020)
         == "stored"
     )
-    lock.assert_awaited_once_with("db")
+    lock.assert_awaited_once_with("db", "FR")
     updater.delete_authoritative_window.assert_awaited_once_with("db", start_year=2020)
     assert commit.call_args.kwargs["updater"] is updater

@@ -103,6 +103,7 @@ export const navigationSections: RouteSection[] = [
     { id: "models.interactions", href: "/models/interactions", label: "Interactions", labelKey: "ai_interactions", description: "Interactions", icon: Cpu, section: "models", countryScope: "optional" },
   ] },
   { id: "publish", step: 5, href: "/publish", title: "Publish", titleKey: "publish", description: "Publish", descriptionKey: "nav_publish_desc", icon: Rocket, items: [
+    { id: "publish.realtime", href: "/publish/realtime", label: "Realtime data", labelKey: "rt_nav", description: "Independent Surveillance and Situation data publication", icon: Activity, section: "publish", countryScope: "none" },
     { id: "publish.home", href: "/publish", label: "Site Release", labelKey: "publish", description: "Site Release", icon: Rocket, section: "publish", countryScope: "none" },
     { id: "publish.tasks", href: "/publish/tasks", label: "Release tasks", labelKey: "wf_release_tasks", description: "Release tasks", icon: Activity, section: "publish", countryScope: "none" },
     { id: "publish.schedules", href: "/publish/schedules", label: "Release schedules", labelKey: "wf_release_schedules", description: "Release schedules", icon: SlidersHorizontal, section: "publish", countryScope: "none" },

@@ -28,14 +28,19 @@ const canonicalRoutes = [
 ];
 
 test('subscription links preselect filters and keep diseases selected across searches', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   const apiOrigin = 'https://subscriptions.globalinfectiousdisease.com';
   let submittedDiseases: string[] = [];
+  let submittedPayload: Record<string, unknown> = {};
   await page.route(/(\/__dev\/subscription-options|\/api\/subscriptions\/options)$/, route => route.fulfill({
     json: {
       ok: true,
       locales: [{ value: 'en', label_en: 'English' }],
       frequencies: [{ value: 'weekly', label_en: 'Weekly' }],
-      lists: [{ code: 'reports', name_en: 'Report updates' }],
+      lists: [
+        { code: 'reports', name_en: 'Report updates' },
+        { code: 'alerts', name_en: 'Priority alerts' },
+      ],
       filters: {
         country: [{ value: 'CA', label_en: 'Canada' }, { value: 'CN', label_en: 'China' }],
         disease: [
@@ -54,8 +59,9 @@ test('subscription links preselect filters and keep diseases selected across sea
         'access-control-allow-headers': 'content-type',
       } });
     }
-    submittedDiseases = route.request().postDataJSON().diseases;
-    return route.fulfill({ json: { ok: true }, headers: { 'access-control-allow-origin': '*' } });
+    submittedPayload = route.request().postDataJSON();
+    submittedDiseases = submittedPayload.diseases as string[];
+    return route.fulfill({ json: { ok: true, email: { status: 'sent' } }, headers: { 'access-control-allow-origin': '*' } });
   });
 
   await page.goto('/diseases/measles/');
@@ -78,8 +84,105 @@ test('subscription links preselect filters and keep diseases selected across sea
   await expect(page.locator('#subscription-status')).toContainText('Enter a valid email address.');
   expect(submittedDiseases).toEqual([]);
   await page.locator('#subscriber-email').fill('reader@example.org');
+  await page.locator('input[name="list_codes"][value="alerts"]').check();
   await page.locator('#subscription-submit').click();
   await expect.poll(() => submittedDiseases.sort()).toEqual(['dengue', 'measles']);
+  expect(submittedPayload.consent).toBe(true);
+  expect(submittedPayload.list_frequencies).toEqual({ reports: 'weekly', alerts: 'instant' });
+});
+
+test('a failed confirmation email preserves the form and does not claim success', async ({ page }) => {
+  await page.route(/(\/__dev\/subscription-options|\/api\/subscriptions\/options)$/, route => route.fulfill({
+    json: {
+      ok: true, locales: [{ value: 'en', label_en: 'English' }],
+      frequencies: [{ value: 'weekly', label_en: 'Weekly' }],
+      lists: [{ code: 'reports', name_en: 'Report updates' }], filters: {},
+    },
+  }));
+  await page.route('https://subscriptions.globalinfectiousdisease.com/api/subscriptions', route => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: {
+      'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS',
+      'access-control-allow-headers': 'content-type',
+    } });
+    return route.fulfill({
+      json: { ok: true, email: { status: 'failed', reason: 'smtp_delivery_failed' } },
+      headers: { 'access-control-allow-origin': '*' },
+    });
+  });
+  await page.goto('/subscribe/');
+  await page.locator('#subscriber-email').fill('reader@example.org');
+  await page.locator('input[name="consent"]').check();
+  await page.locator('#subscription-submit').click();
+  await expect(page.locator('#subscription-status')).toContainText('could not send the confirmation email');
+  await expect(page.locator('#subscriber-email')).toHaveValue('reader@example.org');
+  await expect(page.locator('#subscription-modal')).toBeHidden();
+});
+
+test('subscription choices that have no enabled dispatcher cannot be selected', async ({ page }) => {
+  await page.route(/(\/__dev\/subscription-options|\/api\/subscriptions\/options)$/, route => route.fulfill({
+    json: {
+      ok: true, locales: [{ value: 'en', label_en: 'English' }],
+      frequencies: [{ value: 'weekly', label_en: 'Weekly' }],
+      lists: [
+        { code: 'reports', name_en: 'Report updates', available: true },
+        { code: 'alerts', name_en: 'Priority alerts', available: false },
+      ], filters: {},
+    },
+  }));
+  await page.goto('/subscribe/');
+  await expect(page.locator('input[name="list_codes"][value="reports"]')).toBeChecked();
+  await expect(page.locator('input[name="list_codes"][value="alerts"]')).toBeDisabled();
+  await expect(page.locator('#list-options')).toContainText('Temporarily unavailable');
+});
+
+test('the subscription page clearly announces administrator-only pilot mode', async ({ page }) => {
+  await page.route(/(\/__dev\/subscription-options|\/api\/subscriptions\/options)$/, route => route.fulfill({
+    json: { ok: true, pilot_mode: true, locales: [{ value: 'en', label_en: 'English' }],
+      frequencies: [{ value: 'weekly', label_en: 'Weekly' }], lists: [{ code: 'reports', name_en: 'Reports' }], filters: {} },
+  }));
+  await page.goto('/subscribe/');
+  await expect(page.locator('#subscription-pilot-notice')).toContainText('administrator mailbox');
+  await expect(page.locator('#subscription-pilot-notice')).toBeVisible();
+});
+
+test('pilot rejects non-admin submissions with an understandable message', async ({ page }) => {
+  await page.route(/(\/__dev\/subscription-options|\/api\/subscriptions\/options)$/, route => route.fulfill({
+    json: { ok: true, pilot_mode: true, locales: [{ value: 'en', label_en: 'English' }],
+      lists: [{ code: 'reports', name_en: 'Reports' }], filters: {} },
+  }));
+  await page.route('https://subscriptions.globalinfectiousdisease.com/api/subscriptions', route => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: {
+      'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS',
+      'access-control-allow-headers': 'content-type',
+    } });
+    return route.fulfill({ status: 403, json: { error: 'subscription_pilot_only' }, headers: { 'access-control-allow-origin': '*' } });
+  });
+  await page.goto('/subscribe/');
+  await page.locator('#subscriber-email').fill('reader@example.org');
+  await page.locator('input[name="consent"]').check();
+  await page.locator('#subscription-submit').click();
+  await expect(page.locator('#subscription-status')).toContainText('only to the administrator mailbox');
+  await expect(page.locator('#subscriber-email')).toHaveValue('reader@example.org');
+});
+
+test('queued confirmation is not described as already sent', async ({ page }) => {
+  await page.route(/(\/__dev\/subscription-options|\/api\/subscriptions\/options)$/, route => route.fulfill({
+    json: { ok: true, locales: [{ value: 'en', label_en: 'English' }],
+      lists: [{ code: 'reports', name_en: 'Reports' }], filters: {} },
+  }));
+  await page.route('https://subscriptions.globalinfectiousdisease.com/api/subscriptions', route => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: {
+      'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS',
+      'access-control-allow-headers': 'content-type',
+    } });
+    return route.fulfill({ json: { ok: true, email: { status: 'queued' } }, headers: { 'access-control-allow-origin': '*' } });
+  });
+  await page.goto('/subscribe/');
+  await page.locator('#subscriber-email').fill('reader@example.org');
+  await page.locator('input[name="consent"]').check();
+  await page.locator('#subscription-submit').click();
+  await expect(page.locator('#subscription-status')).toContainText('queued for delivery');
+  await expect(page.locator('#subscription-modal')).toContainText('queued for delivery');
 });
 
 test('annual country disease observations show their reporting year', async ({ page }) => {

@@ -63,6 +63,10 @@ export async function applyDeliveryFeedback(
   const failedAt = terminalFailure ? feedback.occurredAt : null;
   const error = terminalFailure ? (feedback.errorCode || feedback.eventType) : null;
   const match = `(provider_message_id = ? OR id = ?)`;
+  // The callback may arrive before the SMTP success transaction stores the
+  // provider ID. The transaction ID is attached to the campaign row before
+  // invoking SMTP, so correlation still identifies the in-flight message.
+  const campaignMatch = `(provider_message_id = ? OR id = ? OR transaction_delivery_id = ?)`;
   const providerId = feedback.providerMessageId || "";
   const correlationId = feedback.correlationId || "";
   const statusGuard = feedback.eventType === "delivered"
@@ -74,17 +78,63 @@ export async function applyDeliveryFeedback(
   const campaign = await db.prepare(
     `UPDATE message_deliveries SET status = ?, delivered_at = COALESCE(?, delivered_at),
        failed_at = COALESCE(?, failed_at), last_error = ?
-     WHERE ${match} ${statusGuard}`,
-  ).bind(status, deliveredAt, failedAt, error, providerId, correlationId).run() as { meta?: { changes?: number } };
+     WHERE ${campaignMatch} ${statusGuard}`,
+  ).bind(status, deliveredAt, failedAt, error, providerId, correlationId, correlationId).run() as { meta?: { changes?: number } };
   const transactional = await db.prepare(
     `UPDATE transactional_email_deliveries SET status = ?, delivered_at = COALESCE(?, delivered_at),
        failed_at = COALESCE(?, failed_at), error_code = ?, updated_at = ?
      WHERE ${match} ${statusGuard}`,
   ).bind(status, deliveredAt, failedAt, error, now, providerId, correlationId).run() as { meta?: { changes?: number } };
 
+  // Confirmation jobs also have a durable transaction ID before SMTP starts.
+  // Provider feedback settles an uncertain job and invalidates the old claim;
+  // a late SMTP completion must not move it back to sending or resend it.
+  const confirmationStatus = terminalFailure ? "failed" : "sent";
+  const confirmationGuard = terminalFailure ? "AND status <> 'cancelled'" : "AND status NOT IN ('failed', 'cancelled')";
+  await db.prepare(
+    `UPDATE confirmation_email_outbox SET status=?, last_error=?, updated_at=?,
+       claim_token=NULL, claim_expires_at=NULL, next_attempt_at=NULL
+     WHERE (transaction_delivery_id=? OR transaction_delivery_id IN
+       (SELECT id FROM transactional_email_deliveries WHERE provider_message_id=?)) ${confirmationGuard}`,
+  ).bind(confirmationStatus, error, now, correlationId, providerId).run();
+
+  // An alert stores the transaction ID before SMTP starts. A provider callback
+  // can therefore settle an in-flight or ambiguous delivery before the SMTP
+  // request returns. A defer means the provider accepted responsibility; it is
+  // never a signal to submit another copy to SMTP.
+  const alertStatus = terminalFailure ? "dead_letter" : "sent";
+  const alertGuard = terminalFailure ? "AND status <> 'skipped'" : "AND status NOT IN ('dead_letter', 'skipped')";
+  const alertMatch = `(transaction_delivery_id = ? OR transaction_delivery_id IN
+    (SELECT id FROM transactional_email_deliveries WHERE provider_message_id = ?))`;
+  await db.prepare(
+    `UPDATE situation_alert_deliveries SET status = ?, sent_at = COALESCE(?, sent_at),
+       failed_at = COALESCE(?, failed_at), last_error = ?, updated_at = ?,
+       claim_token = NULL, claim_expires_at = NULL
+     WHERE ${alertMatch} ${alertGuard}`,
+  ).bind(alertStatus, terminalFailure ? null : feedback.occurredAt, failedAt, error, now, correlationId, providerId).run();
+  const affectedAlerts = await db.prepare(
+    `SELECT DISTINCT event_id FROM situation_alert_deliveries WHERE ${alertMatch} LIMIT 20`,
+  ).bind(correlationId, providerId).all<{ event_id: string }>();
+  for (const row of affectedAlerts.results || []) {
+    const rows = await db.prepare("SELECT status, COUNT(*) AS count FROM situation_alert_deliveries WHERE event_id = ? GROUP BY status")
+      .bind(row.event_id).all<{ status: string; count: number }>();
+    const counts = Object.fromEntries((rows.results || []).map(item => [item.status, Number(item.count || 0)]));
+    const sent = (counts.sent || 0) + (counts.delivered || 0), skipped = counts.skipped || 0;
+    const failed = (counts.dead_letter || 0) + (counts.unknown || 0);
+    const pending = (counts.queued || 0) + (counts.retry || 0) + (counts.sending || 0) + (counts.deferred || 0);
+    const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+    const parentStatus = total === 0 ? "completed_no_audience" : pending ? (counts.sending ? "sending" : "queued")
+      : failed ? (sent ? "partial_failed" : "failed") : sent ? "sent" : "skipped";
+    await db.prepare(
+      `UPDATE situation_alert_events SET status=?, queued_count=?, sent_count=?, skipped_count=?, failed_count=?,
+       completed_at=?, updated_at=?, last_error=? WHERE id=?`,
+    ).bind(parentStatus, total, sent, skipped, failed, pending ? null : now, now,
+      failed ? "delivery_dead_letter" : null, row.event_id).run();
+  }
+
   const affectedCampaigns = await db.prepare(
-    `SELECT DISTINCT campaign_id FROM message_deliveries WHERE ${match} LIMIT 20`,
-  ).bind(providerId, correlationId).all<{ campaign_id: string }>();
+    `SELECT DISTINCT campaign_id FROM message_deliveries WHERE ${campaignMatch} LIMIT 20`,
+  ).bind(providerId, correlationId, correlationId).all<{ campaign_id: string }>();
   for (const row of affectedCampaigns.results || []) {
     if (!row.campaign_id) continue;
     const statusRows = await db.prepare(
@@ -109,9 +159,9 @@ export async function applyDeliveryFeedback(
          WHERE ${match}
          UNION
          SELECT contact_id FROM message_deliveries
-         WHERE ${match}
+         WHERE ${campaignMatch}
        )`,
-    ).bind(now, providerId, correlationId, providerId, correlationId).run() as { meta?: { changes?: number } };
+    ).bind(now, providerId, correlationId, providerId, correlationId, correlationId).run() as { meta?: { changes?: number } };
     suppressedContacts = Number(suppressed.meta?.changes || 0);
   }
   // Record the idempotency marker only after state application. If a D1 write
