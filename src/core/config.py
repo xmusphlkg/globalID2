@@ -1000,7 +1000,7 @@ class TaskWorkerSettings(_BaseEnvSettings):
         description="任务 worker 最大并发数",
     )
     general_concurrency: int = Field(
-        default=6,
+        default=12,
         validation_alias="TASK_WORKER_GENERAL_CONCURRENCY",
         ge=1,
         le=64,
