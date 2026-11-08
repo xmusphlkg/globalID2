@@ -104,19 +104,19 @@ export default function DataUpdates({ language, releases }: { language: Language
   const total = counts ? (Object.keys(paths) as DataChannel[]).reduce((sum, key) => sum + counts[key], 0) : null;
   const displayNumber = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? new Intl.NumberFormat(locale).format(value) : '—';
   return <>
-    <div className="updates-metrics" aria-label={pick('Publication overview', '发布概览', 'Aperçu des publications')}>
-      <div><strong>{displayNumber(summary?.total_countries)}</strong><span>{pick('Reporting jurisdictions', '有数据的国家及地区', 'Juridictions avec données')}</span></div>
-      <div><strong>{displayNumber(curvePoints)}</strong><span>{pick('Published curve points', '已发布曲线数据点', 'Points de courbe publiés')}</span></div>
-      <div><strong>{displayNumber(summary?.total_diseases)}</strong><span>{pick('Diseases in catalogue', '疾病目录收录', 'Maladies au catalogue')}</span></div>
-      <div><strong>{displayNumber(total)}</strong><span>{pick('Recorded data release batches', '已记录的数据发布批次', 'Lots de données publiés enregistrés')}</span></div>
-      <div><strong>{displayNumber(releases.length)}</strong><span>{pick('Documented website versions', '已记录的网站版本', 'Versions du site documentées')}</span></div>
+    <div className="updates-metrics site-stat-grid" aria-label={pick('Publication overview', '发布概览', 'Aperçu des publications')}>
+      <div className="site-stat-item"><strong>{displayNumber(summary?.total_countries)}</strong><span>{pick('Reporting jurisdictions', '有数据的国家及地区', 'Juridictions avec données')}</span></div>
+      <div className="site-stat-item"><strong>{displayNumber(curvePoints)}</strong><span>{pick('Published curve points', '已发布曲线数据点', 'Points de courbe publiés')}</span></div>
+      <div className="site-stat-item"><strong>{displayNumber(summary?.total_diseases)}</strong><span>{pick('Diseases in catalogue', '疾病目录收录', 'Maladies au catalogue')}</span></div>
+      <div className="site-stat-item"><strong>{displayNumber(total)}</strong><span>{pick('Recorded data release batches', '已记录的数据发布批次', 'Lots de données publiés enregistrés')}</span></div>
+      <div className="site-stat-item"><strong>{displayNumber(releases.length)}</strong><span>{pick('Documented website versions', '已记录的网站版本', 'Versions du site documentées')}</span></div>
     </div>
     <p className="updates-metrics-note">{pick('Coverage and curve points come from the current surveillance summary. Geographic levels may overlap. Batches count retained publication records, not data points.', '覆盖规模和曲线数据点来自当前监测摘要，国家与地区层级可能重叠；发布批次统计现存记录，不等同于数据条数。', 'La couverture et les points de courbe proviennent du résumé de surveillance ; les niveaux géographiques peuvent se recouper. Les lots comptent les publications conservées, pas les observations.')}</p>
-    <div className="updates-panel">
-      <div className="updates-heading"><div><span>{pick('PUBLICATION HISTORY', '发布历史', 'HISTORIQUE DES PUBLICATIONS')}</span><h2>{pick('Latest activity', '最新动态', 'Activité récente')}</h2></div><span className="updates-refresh">● {pick('Checks every minute', '每分钟检查更新', 'Vérification chaque minute')}</span></div>
+    <div className="updates-panel card">
+      <div className="updates-heading"><div><span className="academic-kicker">{pick('PUBLICATION HISTORY', '发布历史', 'HISTORIQUE DES PUBLICATIONS')}</span><h2>{pick('Latest activity', '最新动态', 'Activité récente')}</h2></div><span className="updates-refresh">● {pick('Checks every minute', '每分钟检查更新', 'Vérification chaque minute')}</span></div>
       <div className="updates-controls">
-        <label>{pick('Month (UTC)', '月份（UTC）', 'Mois (UTC)')} <select value={month} onChange={event => setMonth(event.target.value)} disabled={!allMonths.length}>{allMonths.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
-        <label>{pick('Update type', '更新类型', 'Type de mise à jour')} <select value={filter} onChange={event => setFilter(event.target.value as 'all' | Channel)}><option value="all">{pick('All updates', '全部更新', 'Toutes les mises à jour')}</option>{(Object.keys(labels) as Channel[]).map(key => <option key={key} value={key}>{labels[key][language === 'zh' ? 1 : language === 'fr' ? 2 : 0]}</option>)}</select></label>
+        <label>{pick('Month (UTC)', '月份（UTC）', 'Mois (UTC)')} <select className="site-control-input focus-ring" value={month} onChange={event => setMonth(event.target.value)} disabled={!allMonths.length}>{allMonths.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+        <label>{pick('Update type', '更新类型', 'Type de mise à jour')} <select className="site-control-input focus-ring" value={filter} onChange={event => setFilter(event.target.value as 'all' | Channel)}><option value="all">{pick('All updates', '全部更新', 'Toutes les mises à jour')}</option>{(Object.keys(labels) as Channel[]).map(key => <option key={key} value={key}>{labels[key][language === 'zh' ? 1 : language === 'fr' ? 2 : 0]}</option>)}</select></label>
       </div>
       <div role="status" className="updates-status">{error ? pick('Data update history is temporarily unavailable. Website versions remain available; checking will resume automatically.', '数据更新记录暂不可用，网站版本仍可查看；系统将自动重试。', 'Historique des données temporairement indisponible. Les versions du site restent accessibles ; une nouvelle vérification sera effectuée.') : loading ? pick('Loading data updates…', '正在加载数据更新记录…', 'Chargement des mises à jour…') : !selected.length ? pick('No published updates for this selection.', '所选范围暂无发布记录。', 'Aucune mise à jour publiée pour cette sélection.') : ''}</div>
       <ol className="updates-list">{selected.map((item, index) => item.kind === 'website' ? <li key={`website-${item.release.version}`}>

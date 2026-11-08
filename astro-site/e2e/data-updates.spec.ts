@@ -1,5 +1,24 @@
 import { expect, test } from '@playwright/test';
 
+test('footer links to the localized updates page and header stays clear', async ({ page }) => {
+  for (const [path, label] of [
+    ['/data-updates/', 'Data & site updates'],
+    ['/zh/data-updates/', '网站与数据更新'],
+    ['/fr/data-updates/', 'Mises à jour du site et des données'],
+  ]) {
+    await page.goto(path);
+    await expect(page.locator('footer').getByRole('link', { name: label, exact: true })).toHaveAttribute('href', path);
+    await expect(page.locator('header.site-header').getByRole('link', { name: label, exact: true })).toHaveCount(0);
+    for (const theme of ['light', 'dark']) {
+      await page.locator('html').evaluate((element, value) => element.setAttribute('data-theme', value), theme);
+      await expect(page.locator('.updates-intro')).toHaveClass(/academic-hero/);
+      await expect(page.locator('.updates-panel')).toHaveClass(/card/);
+      await expect(page.locator('.updates-controls select').first()).toHaveClass(/site-control-input/);
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+  }
+});
+
 test('shows real published events, filters channels, and loads monthly archives', async ({ page }) => {
   await page.route('**/site-data/updates/latest.json', route => route.fulfill({ json: { schema_version: 1, months: ['2026-11', '2026-10'], counts: { surveillance: 54, situation: 24, literature: 13, knowledge: 0 } } }));
   await page.route('**/site-data/updates/2026-11.json', route => route.fulfill({ json: { schema_version: 1, month: '2026-11', events: [
