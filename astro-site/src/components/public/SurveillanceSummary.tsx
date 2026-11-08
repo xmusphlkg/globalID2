@@ -53,7 +53,7 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
       ...(reportCount !== undefined ? [[pick('Published reports', '已发布报告', 'Rapports publiés'), reportCount]] : []),
     ];
     return <div data-surveillance-version={version}>
-      <dl className="site-stat-grid grid grid-cols-2 sm:grid-cols-3 gap-px border">
+      <dl className="site-stat-grid grid grid-cols-2 sm:grid-cols-4 gap-px border">
         {values.map(([name, value]) => <div className="site-stat-item px-4 py-5 text-center" key={String(name)}><dt className="academic-kicker mb-2">{name}</dt><dd className="font-semibold tabular-nums">{number(value, language)}</dd></div>)}
       </dl>{revision}
       {mode !== 'country-indicators' && <p className="figure-caption mt-2">{pick('National and subnational coverage are counted separately.', '国家级与省级／地区覆盖分别统计，地区数据不叠加到全国总量。', 'Les couvertures nationale et infranationale sont comptées séparément, sans additionner leurs totaux.')}</p>}

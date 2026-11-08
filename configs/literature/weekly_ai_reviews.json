@@ -143,13 +143,13 @@
     },
     {
       "week": "2026-W45",
-      "brief_fingerprint": "06e8c6b8fb1ab3da2e980ca6a764b9c140d6ecda6e5e19391caf9829dd0df812",
+      "brief_fingerprint": "45e323afd883493c3fa0096538d75dfdb4ffe34dc00ee9434887d93302d375a1",
       "review": {
         "verdict": "needs_editorial_review",
         "issue_codes": [
           "peer_review_unresolved"
         ],
-        "reviewed_at": "2026-11-07T22:53:01+00:00",
+        "reviewed_at": "2026-11-08T02:29:15+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center",

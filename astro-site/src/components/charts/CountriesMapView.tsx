@@ -9,6 +9,7 @@ import { pngFromCanvases } from './chartExport';
 import ReactEChartsCore from '../../lib/echartsReact';
 import echarts from '../../lib/echartsMap';
 import countryCatalogue from 'flag-icons/country.json' with { type: 'json' };
+import additionalSubdivisionPoints from '../../lib/subdivision-map-points.json';
 import { getFlagAssetPath } from '../../lib/country-flag';
 import {
   COUNTRY_COVERAGE,
@@ -136,7 +137,9 @@ const FALLBACK_POINTS: Record<string, [number, number]> = {
   TW: [121, 23.7], MV: [73.22, 4.2], MT: [14.4, 35.9],
 };
 
-const SUBDIVISION_POINTS: Record<string, [number, number]> = {
+const SUBDIVISION_POINTS: Record<string, number[]> = {
+  // Natural Earth admin-1 coordinates, with fallbacks for US territories.
+  ...additionalSubdivisionPoints,
   'AU-ACT': [149.13, -35.28], 'AU-NSW': [147, -32], 'AU-NT': [133, -19.5], 'AU-QLD': [145, -22],
   'AU-SA': [136, -30], 'AU-TAS': [147, -42], 'AU-VIC': [144, -36.8], 'AU-WA': [121, -25],
   'CA-ON': [-85, 50], 'CN-AH': [117.2, 31.8], 'CN-BJ': [116.4, 39.9], 'CN-CQ': [107.9, 29.6],

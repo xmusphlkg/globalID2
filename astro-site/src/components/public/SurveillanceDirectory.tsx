@@ -70,7 +70,7 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
       <button type="button" className="site-action-secondary border px-3 py-2 text-sm" onClick={reset}>{pick('Reset filters', '重置筛选', 'Réinitialiser les filtres')}</button>
     </div>}
     <p className="figure-caption" aria-live="polite">{filtered.length.toLocaleString()} {pick('countries and regions', '个国家和地区', 'pays et régions')}</p>
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {filtered.map(row => { const active = hasData(row);
         const name = countryLabel(row, language);
         const content = <><div className="flex items-center gap-3"><img src={getFlagAssetPath(row.code) ?? undefined} alt="" width="32" height="24" loading="lazy" /><div><strong>{name}</strong><span className="block text-xs text-[rgb(var(--text-muted))]">{row.code}</span></div></div>

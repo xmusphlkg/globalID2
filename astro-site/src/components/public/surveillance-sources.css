@@ -1,0 +1,8 @@
+.surveillance-sources { border-top: 1px solid rgb(var(--border)); padding-top: .75rem; }
+.surveillance-sources__heading { color: rgb(var(--text-strong)); font-size: .8rem; font-weight: 700; }
+.surveillance-source { min-width: 0; padding: .85rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); color: rgb(var(--text-muted)); font-size: .8rem; }
+.surveillance-source__title { color: rgb(var(--text-strong)); font-weight: 700; overflow-wrap: anywhere; }
+.surveillance-source__title a { color: rgb(var(--color-teal)); text-underline-offset: .15em; }
+.surveillance-source__countries { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; color: rgb(var(--text-muted)); font-size: .7rem; }
+.surveillance-source__countries span { display: inline-flex; align-items: center; gap: .4rem; }
+.surveillance-source__countries img { width: 2rem; height: 1.5rem; object-fit: cover; border: 1px solid rgb(var(--border)); }

@@ -17,7 +17,7 @@ export default function SurveillanceDiseaseSummary({ dataUrl, mode, language, ro
   if (mode === 'disease-coverage') return <div className="academic-meta-grid xl:grid-cols-2">
     {[[pick('Coverage window', '覆盖区间', 'Période couverte'), coverage(data)], [pick('Reporting countries', '报告国家数', 'Pays déclarants'), number(data.country_count, language)]].map(([name, value]) => <div className="academic-meta-item" key={name}><div className="academic-meta-label">{name}</div><div className="academic-meta-value text-sm">{value}</div></div>)}{revision}
   </div>;
-  if (mode === 'disease-countries') return <div><p className="figure-caption">{number(data.country_count, language)} {pick('reporting countries', '个报告国家', 'pays déclarants')}</p><ul className="grid gap-2 mt-4 sm:grid-cols-3 lg:grid-cols-5">
+  if (mode === 'disease-countries') return <div><p className="figure-caption">{number(data.country_count, language)} {pick('reporting countries', '个报告国家', 'pays déclarants')}</p><ul className="grid gap-2 mt-4 sm:grid-cols-2 lg:grid-cols-4">
     {(data.reporting_countries ?? []).map((row: Summary) => <li key={row.code}><a href={routes[String(row.code).toUpperCase()] || `${prefix}/countries/${encodeURIComponent(String(row.code).toLowerCase())}/`} className="site-action-secondary flex items-center gap-2 px-3 py-2 text-sm border"><img src={getFlagAssetPath(row.code) ?? undefined} alt="" width="28" height="20" loading="lazy" /><span>{countryLabel(row, language)}</span><span className="text-xs text-[rgb(var(--text-muted))]">{row.code}</span></a></li>)}
   </ul></div>;
   return null;
