@@ -155,13 +155,15 @@ def test_adaptive_ai_concurrency_pauses_when_model_center_has_no_routes():
     assert controller.record_result(success=False, error=RuntimeError("connection error")) == 0
 
 
-def test_task_worker_lane_defaults_when_unset(tmp_path: Path):
+def test_task_worker_lane_defaults_when_unset(tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("TASK_WORKER_GENERAL_CONCURRENCY", raising=False)
+    monkeypatch.delenv("TASK_WORKER_RELEASE_CONCURRENCY", raising=False)
     env_file = tmp_path / ".env"
     env_file.write_text("TASK_WORKER_CONCURRENCY=8\n", encoding="utf-8")
 
     settings = TaskWorkerSettings(_env_file=env_file)
 
-    assert settings.general_concurrency == 6
+    assert settings.general_concurrency == 12
     assert settings.release_concurrency == 1
 
 
