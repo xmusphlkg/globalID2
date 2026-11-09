@@ -1,4 +1,3 @@
-import { recipientAllowed } from "../lib/pilot.ts";
 import { escapeHtml, normalizeEmail } from "../lib/input.ts";
 import { HttpError, publicBaseUrl } from "../lib/http.ts";
 import { secureTextEqual, sha256Hex } from "../lib/security.ts";
@@ -15,7 +14,7 @@ type Dependencies = {
   smtpConfig(env: Env): SmtpConfig | null;
   sendSmtpEmail(config: SmtpConfig, message: {
     to: string; subject: string; text: string; html: string; messageId?: string;
-  }): Promise<void | { providerMessageId: string | null }>;
+  }, purpose?: "content" | "transactional"): Promise<void | { providerMessageId: string | null }>;
 };
 
 type Subscription = {
@@ -141,7 +140,7 @@ export function createPreferenceHandlers(deps: Dependencies) {
   }
 
   async function deliverManagementLink(request: Request, env: Env, email: string): Promise<void> {
-    if (!email || !env.TOKEN_SIGNING_SECRET || !recipientAllowed(env, email)) return;
+    if (!email || !env.TOKEN_SIGNING_SECRET) return;
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
     if (!await consumeLimit(env, `ip:${ip}`, 20) || !await consumeLimit(env, `email:${email}`, 2)) return;
     const addressHash = await sha256Hex(`${env.TOKEN_SIGNING_SECRET}:email:${email}`);
@@ -172,7 +171,7 @@ export function createPreferenceHandlers(deps: Dependencies) {
         text: `These links expire in 30 minutes. / 链接 30 分钟后过期。\n\n${links.map(link => `${link.name}: ${link.url}`).join("\n")}`,
         html: `<p>These links expire in 30 minutes. / 链接 30 分钟后过期。</p><ul>${links.map(link => `<li><a href="${escapeHtml(link.url)}">${escapeHtml(link.name)}</a></li>`).join("")}</ul>`,
         messageId: `${deliveryId}@globalinfectiousdisease.com`,
-      });
+      }, "transactional");
     } catch {
       // A lost connection does not prove the server rejected the message.
       await env.DB.prepare("UPDATE transactional_email_deliveries SET status='unknown', error_code='smtp_result_unknown', updated_at=? WHERE id=? AND status='queued'")

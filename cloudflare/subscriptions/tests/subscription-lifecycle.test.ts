@@ -190,17 +190,14 @@ test('confirmation outbox retries explicit temporary failures but does not retry
   f.sqlite.close();
 });
 
-test('pilot blocks new non-admin subscriptions and holds pre-existing confirmation jobs', async () => {
+test('pilot accepts and confirms public registrations while content delivery remains restricted', async () => {
   let sends = 0;
   const f = fixture({ send: async () => { sends++; return { status: 'sent', provider: 'smtp' }; } });
-  await submit(f);
   f.env.DELIVERY_MODE = 'pilot'; f.env.PILOT_RECIPIENTS = 'admin@example.test';
-  await assert.rejects(f.handlers.createSubscription(make(payload), f.env), /subscription_pilot_only/);
-  await f.handlers.drainConfirmationOutbox(f.env);
-  assert.equal(sends, 0);
-  assert.equal(f.sqlite.prepare('SELECT status FROM confirmation_email_outbox').get()?.status, 'queued');
-  f.env.DELIVERY_MODE = 'full';
+  const registration = await submit(f);
   await f.handlers.drainConfirmationOutbox(f.env);
   assert.equal(sends, 1);
+  await f.handlers.confirmSubscription(req(registration.subscriptions[0].confirm_url, 'POST'), f.env);
+  assert.equal(f.state()?.status, 'active');
   f.sqlite.close();
 });

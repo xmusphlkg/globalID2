@@ -789,4 +789,4 @@ architecture rather than raising batch limits past D1's per-invocation budget.
 SUBSCRIPTIONS__ALLOW_SECRET_SYNC=production ./scripts/wrangler-env.sh sync-pilot production
 ```
 
-修改管理员通知邮箱后需要重新同步。公开 options 的 `pilot_mode` 和 health 的 `delivery_mode` 显示当前模式，但不公开邮箱。试运行期间非管理员不能新建订阅，也不会收到管理邮件；已经排队的非管理员历史投递会保留到全量模式。试运行新建的通知只为管理员建立投递记录，自动任务使用 `pilot:` 幂等键及独立水位，后续正式运行不会复用试运行任务。仅在试运行通过并明确决定开放后，将 `SUBSCRIPTIONS__DELIVERY_MODE` 显式设为 `full` 并部署；切换前检查待恢复的历史队列和自动任务水位。
+修改管理员通知邮箱后需要重新同步。公开 options 的 `pilot_mode` 和 health 的 `delivery_mode` 显示当前模式，但不公开邮箱。试运行期间公众可以登记订阅并接收确认及管理邮件，内容投递仍限管理员；已经排队的非管理员历史内容投递会保留到全量模式。试运行新建的通知只为管理员建立投递记录，自动任务使用 `pilot:` 幂等键及独立水位，后续正式运行不会复用试运行任务。仅在试运行通过并明确决定开放后，将 `SUBSCRIPTIONS__DELIVERY_MODE` 显式设为 `full` 并部署；切换前检查待恢复的历史队列和自动任务水位。

@@ -1,4 +1,3 @@
-import { recipientAllowed, recipientSql } from "../lib/pilot.ts";
 import { boundedText, isRecord, normalizeEmail, normalizeLocale, valueAsString } from "../lib/input.ts";
 import { HttpError, htmlPage, json, publicBaseUrl, type JsonValue } from "../lib/http.ts";
 import { normalizeFilters, normalizeListCodes, pendingCutoff } from "../lib/subscriptions.ts";
@@ -30,7 +29,6 @@ export function createSubscriptionLifecycleHandlers(deps: Deps) {
     await deps.verifyTurnstileIfConfigured(payload, request, env);
     const email = normalizeEmail(valueAsString(payload.email));
     if (!email) throw new HttpError(400, "valid_email_required");
-    if (!recipientAllowed(env, email)) throw new HttpError(403, "subscription_pilot_only");
     if (payload.consent !== true && payload.consent !== "on" && payload.consent !== "true") throw new HttpError(400, "consent_required");
     await deps.enforceSubmissionRateLimit(request, env);
     const now = new Date().toISOString();
@@ -230,10 +228,9 @@ export function createSubscriptionLifecycleHandlers(deps: Deps) {
     await env.DB.prepare(`UPDATE confirmation_email_outbox SET status = 'unknown', last_error = 'send_outcome_unknown',
       claim_token = NULL, claim_expires_at = NULL, updated_at = ?
       WHERE status = 'sending' AND claim_expires_at <= ?`).bind(now, now).run();
-    const policy = recipientSql(env, "c.address");
     const due = await env.DB.prepare(`SELECT o.id FROM confirmation_email_outbox o JOIN subscriber_contacts c ON c.id=o.contact_id
-      WHERE o.status IN ('queued', 'retry') AND o.next_attempt_at <= ? AND ${policy.sql} ORDER BY o.created_at LIMIT 1`)
-      .bind(now, ...policy.binds).all<{ id: string }>();
+      WHERE o.status IN ('queued', 'retry') AND o.next_attempt_at <= ? ORDER BY o.created_at LIMIT 1`)
+      .bind(now).all<{ id: string }>();
     for (const candidate of due.results || []) {
       const nonce = crypto.randomUUID();
       const lease = new Date(Date.now() + 120_000).toISOString();

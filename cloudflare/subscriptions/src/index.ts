@@ -298,7 +298,7 @@ async function sendAndRecordConfirmationEmail(
       text: content.text,
       html: content.html,
       messageId: `${deliveryId}@globalinfectiousdisease.com`,
-    });
+    }, "transactional");
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "smtp_delivery_failed";
     await updateEmailDeliveryRecord(env.DB, {
