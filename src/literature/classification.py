@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from functools import lru_cache
 import re
 from typing import Any, Iterable
 
@@ -81,6 +82,11 @@ def _is_short_acronym(term: str) -> bool:
     return 2 <= len(letters) <= 3 and letters.isupper()
 
 
+@lru_cache(maxsize=32768)
+def _term_pattern(term: str, flags: int) -> re.Pattern[str]:
+    return re.compile(rf"(?<![A-Za-z0-9]){re.escape(term)}(?![A-Za-z0-9])", flags)
+
+
 def _contains(text: str, term: str) -> bool:
     """Match a term at token boundaries without turning ``us`` into ``US``.
 
@@ -93,21 +99,14 @@ def _contains(text: str, term: str) -> bool:
     if not normalized:
         return False
     if _is_short_acronym(normalized):
-        return re.search(
-            rf"(?<![A-Za-z0-9]){re.escape(normalized)}(?![A-Za-z0-9])",
-            text,
-        ) is not None
+        return _term_pattern(normalized, 0).search(text) is not None
     if (
         len(normalized) < 3
         and not _is_short_acronym(normalized)
         and not (_CJK_RE.search(normalized) and len(normalized) >= 2)
     ):
         return False
-    return re.search(
-        rf"(?<![A-Za-z0-9]){re.escape(normalized)}(?![A-Za-z0-9])",
-        text,
-        re.IGNORECASE,
-    ) is not None
+    return _term_pattern(normalized, re.IGNORECASE).search(text) is not None
 
 
 def _term_spans(text: str, term: str) -> list[tuple[int, int]]:
@@ -123,11 +122,7 @@ def _term_spans(text: str, term: str) -> list[tuple[int, int]]:
         return []
     return [
         match.span()
-        for match in re.finditer(
-            rf"(?<![A-Za-z0-9]){re.escape(normalized)}(?![A-Za-z0-9])",
-            text,
-            flags,
-        )
+        for match in _term_pattern(normalized, flags).finditer(text)
     ]
 
 
@@ -595,15 +590,10 @@ def classify_candidate(
     discovery_score = _total_discovery_score(discovery_score_components)
     if candidate.integrity_status in {"retracted", "expression_of_concern"}:
         publication_status = "review"
-    elif research_domain == "plant_only":
-        publication_status = "excluded"
-    elif research_domain in {"animal_only", "basic_research"}:
-        publication_status = "review"
-    elif not disease_matches or relevance_score < 0.5:
-        publication_status = "excluded"
-    elif discovery_score >= auto_publish_min_score and disease_relevance >= 0.8:
-        publication_status = "published"
     else:
+        # Classification supplies evidence; absence of a match is uncertainty,
+        # not evidence of irrelevance. Publication is decided separately after
+        # bibliographic, integrity and disease-confidence checks.
         publication_status = "review"
     return Classification(
         diseases=sorted(disease_matches, key=lambda item: item.confidence, reverse=True),

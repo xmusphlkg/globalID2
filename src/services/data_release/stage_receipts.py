@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 from .artifact_checkpoint import _fingerprint, rendering_configuration, source_fingerprint
+from .release_binding import PAPERS_FIELDS, papers_binding_matches
 
 
 def _stat(path: Path) -> list[int]:
@@ -128,7 +129,9 @@ class StageReceipts:
         if (current.get("release_id") == identity.get("release_id")
                 and (path != marker or current.get("task_uuid") == self.task_uuid)
                 and ready.get("identity", {}).get("release_id") == identity.get("release_id")
-                and current.get("build_digest") == ready.get("identity", {}).get("build_digest")):
+                and current.get("build_digest") == ready.get("identity", {}).get("build_digest")
+                and papers_binding_matches(current, ready.get("identity", {}))
+                and papers_binding_matches(current, identity)):
             # Deployment may succeed before the final database acknowledgement.
             # Only this task's own release can advance its baseline on retry.
             return ready.get("baseline")
@@ -187,6 +190,7 @@ class StageReceipts:
             return bool(
                 current.get("release_id") == identity["release_id"]
                 and current.get("build_digest") == identity["build_digest"]
+                and papers_binding_matches(current, identity)
                 and (path != marker or (
                     current.get("schema") == 1 and current.get("task_uuid") == self.task_uuid
                 ))
@@ -240,8 +244,19 @@ class StageReceipts:
                     return None
                 if entry.get("sha256") and _digest(Path(name)) != entry["sha256"]:
                     return None
+            identity = record.get("identity", {})
+            if stage == "ready" and any(key in identity for key in PAPERS_FIELDS):
+                manifests = [Path(root) / "release.json" for root in record["roots"]
+                             if (Path(root) / "release.json").is_file()]
+                if len(manifests) != 1:
+                    return None
+                manifest = json.loads(manifests[0].read_text())
+                if (manifest.get("release_id") != identity.get("release_id")
+                        or manifest.get("build_digest") != identity.get("build_digest")
+                        or not papers_binding_matches(manifest, identity)):
+                    return None
             return record
-        except (OSError, ValueError, KeyError, TypeError):
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
             return None
 
     def save(self, stage: str, signature: str, paths: list[Path], *, identity: dict) -> bool:

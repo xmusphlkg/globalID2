@@ -2,7 +2,7 @@ import { deliveryMode, recipientSql } from "../lib/pilot.ts";
 import { buildNotificationEmail } from "../lib/email.ts";
 import { json, publicBaseUrl, requireAdmin, type JsonValue } from "../lib/http.ts";
 import { boundedText, isRecord, normalizeCode, normalizeLocale, valueAsString } from "../lib/input.ts";
-import { cleanHeaderValue } from "../lib/markdown.ts";
+import { cleanHeaderValue, cleanMarkdown } from "../lib/markdown.ts";
 import { FREQUENCIES, maskEmail, normalizeFilters } from "../lib/subscriptions.ts";
 import {
   campaignContentFingerprint,
@@ -41,8 +41,9 @@ type CampaignRow = {
   status: string; created_at: string; scheduled_at?: string | null; sent_at?: string | null;
 };
 
-type ContentItem = { id: string; filters: Array<{ type: string; value: string }> };
+type ContentItem = { id: string; filters: Array<{ type: string; value: string }>; localized_markdown?: Record<string, string> };
 const CONTENT_FILTER_TYPES = new Set(["country", "disease", "research_topic", "study_type", "peer_review_status"]);
+const PERSONALIZED_MARKER = "{{GIDS_PERSONALIZED_ITEMS}}";
 
 function contentItems(payload: Payload): ContentItem[] | null {
   if (payload.content_items === undefined) return null;
@@ -57,10 +58,70 @@ function contentItems(payload: Payload): ContentItem[] | null {
     ids.add(id);
     const filters = normalizeFilters(item).filter((filter) => CONTENT_FILTER_TYPES.has(filter.type));
     if (filters.length > 200) throw new Error("invalid_content_items");
-    return { id, filters: filters.sort((a, b) => `${a.type}:${a.value}`.localeCompare(`${b.type}:${b.value}`)) };
+    const localized: Record<string, string> = {};
+    if (item.localized_markdown !== undefined) {
+      if (!isRecord(item.localized_markdown)) throw new Error("invalid_content_items");
+      for (const [locale, value] of Object.entries(item.localized_markdown)) {
+        if (!['en', 'zh'].includes(locale) || typeof value !== "string" || value.length > 20000 || !cleanMarkdown(value) || value.includes(PERSONALIZED_MARKER)) throw new Error("invalid_content_items");
+        localized[locale] = cleanMarkdown(value);
+      }
+    }
+    return { id, filters: filters.sort((a, b) => `${a.type}:${a.value}`.localeCompare(`${b.type}:${b.value}`)),
+      ...(Object.keys(localized).length ? { localized_markdown: localized } : {}) };
   }).sort((a, b) => a.id.localeCompare(b.id));
   if (new TextEncoder().encode(JSON.stringify(items)).length > 1_000_000) throw new Error("invalid_content_items");
   return items;
+}
+
+function personalizedTemplates(payload: Payload, items: ContentItem[] | null, locales: string[]): Record<string, string> | null {
+  if (payload.personalized_templates === undefined) {
+    if (items?.some(item => item.localized_markdown)) throw new Error("invalid_personalization");
+    return null;
+  }
+  if (!items || !isRecord(payload.personalized_templates) || locales.length === 0) throw new Error("invalid_personalization");
+  const templates: Record<string, string> = {};
+  for (const locale of locales) {
+    const value = payload.personalized_templates[locale];
+    if (!['en', 'zh'].includes(locale) || typeof value !== "string" || value.length > 50000 || value.split(PERSONALIZED_MARKER).length !== 2 || !items.every(item => item.localized_markdown?.[locale])) throw new Error("invalid_personalization");
+    // buildNotificationEmail bounds markdown to 50,000 characters. Check the
+    // largest possible issue before queueing so neither a matching item nor
+    // source/disclosure text can be silently truncated for any recipient.
+    const length = value.length - PERSONALIZED_MARKER.length
+      + items.reduce((sum, item) => sum + item.localized_markdown![locale].length, 0)
+      + Math.max(0, items.length - 1) * 2;
+    if (length > 50000) throw new Error("invalid_personalization");
+    templates[locale] = cleanMarkdown(value);
+  }
+  if (Object.keys(payload.personalized_templates).some(locale => !locales.includes(locale))) throw new Error("invalid_personalization");
+  return templates;
+}
+
+function matchedItems(items: ContentItem[], filters: Array<{ filter_type: string; filter_value: string }>): ContentItem[] {
+  const selected = new Map<string, Set<string>>();
+  for (const filter of filters) {
+    if (!CONTENT_FILTER_TYPES.has(filter.filter_type)) continue;
+    if (!selected.has(filter.filter_type)) selected.set(filter.filter_type, new Set());
+    selected.get(filter.filter_type)!.add(filter.filter_value);
+  }
+  return items.filter(item => [...selected].every(([type, values]) =>
+    item.filters.some(fact => fact.type === type && values.has(fact.value))));
+}
+
+function retryChangedPreferences(env: Env, delivery: { delivery_id: string; preference_revision: string | null },
+                                 claimToken: string, frequency: string) {
+  return env.DB.prepare(`UPDATE message_deliveries
+    SET status = CASE WHEN attempts >= 5 THEN 'failed' ELSE 'queued' END,
+    last_error = CASE WHEN attempts >= 5 THEN 'preference_changed_too_often' ELSE 'preference_changed_retry' END,
+    failed_at = CASE WHEN attempts >= 5 THEN ? ELSE NULL END,
+    transaction_delivery_id = NULL, claim_token = NULL, claim_expires_at = NULL
+    WHERE id = ? AND status = 'sending' AND claim_token = ? AND claim_expires_at > ?
+    AND EXISTS (SELECT 1 FROM subscriptions s JOIN subscriber_contacts c ON c.id = s.contact_id
+      JOIN subscribers sub ON sub.id = s.subscriber_id
+      WHERE s.id = message_deliveries.subscription_id AND s.status = 'active'
+        AND c.status = 'active' AND sub.status = 'active'
+        AND COALESCE(s.preference_revision, '') <> ? AND (? = '' OR s.frequency = ?))`)
+    .bind(new Date().toISOString(), delivery.delivery_id, claimToken, new Date().toISOString(),
+      delivery.preference_revision || "", frequency, frequency);
 }
 
 export function createCampaignHandlers(deps: Dependencies) {
@@ -117,6 +178,15 @@ export function createCampaignHandlers(deps: Dependencies) {
     try { items = contentItems(payload); } catch { return json({ error: "invalid_content_items" }, request, env, 400); }
     const sourceLocale = normalizeLocale(valueAsString(payload.source_locale), fallbackLocale);
     const targetLocales = normalizeTargetLocales(payload, contents);
+    let personalized: Record<string, string> | null;
+    try { personalized = personalizedTemplates(payload, items, targetLocales); }
+    catch { return json({ error: "invalid_personalization" }, request, env, 400); }
+    // Historical subscriber locales may fall back to the default. Require a
+    // complete matching subject and template for that fallback and every
+    // advertised locale so a queued delivery cannot fail after being claimed.
+    if (personalized && (!targetLocales.includes(fallbackLocale) || targetLocales.some(locale => !contents[locale]))) {
+      return json({ error: "invalid_personalization" }, request, env, 400);
+    }
     const idempotencyKeySupplied = payload.idempotency_key !== undefined && payload.idempotency_key !== null;
     const rawIdempotencyKey = valueAsString(payload.idempotency_key).trim();
     const idempotencyKey = normalizeCampaignIdempotencyKey(rawIdempotencyKey);
@@ -143,6 +213,7 @@ export function createCampaignHandlers(deps: Dependencies) {
       source_ref: sourceRef,
       target_locales: [...targetLocales].sort(),
       ...(items ? { content_items: items } : {}),
+      ...(personalized ? { personalized_templates: personalized } : {}),
     });
     const contentRef = idempotencyKey ? `idempotency:${idempotencyKey}` : "metadata_json.contents";
     if (idempotencyKey) {
@@ -173,6 +244,7 @@ export function createCampaignHandlers(deps: Dependencies) {
       source_ref: sourceRef || undefined,
       frequency: rawFrequency || undefined,
       ai: isRecord(payload.ai) ? payload.ai as JsonValue : undefined,
+      ...(personalized ? { personalized_templates: personalized, personalized_items: items } : {}),
     };
     const subject = cleanHeaderValue(defaultContent.subject, 200);
     const status = recipients.length > 0 ? "queued" : "sent";
@@ -199,7 +271,12 @@ export function createCampaignHandlers(deps: Dependencies) {
     } catch (error) {
       if (!idempotencyKey) throw error;
       const existing = await loadRowByContentRef(env, contentRef);
-      if (!existing) throw error;
+      if (!existing) {
+        if (error instanceof Error && error.message.includes('idx_weekly_digest_issue_owner')) {
+          return json({ error: "weekly_digest_issue_already_owned" }, request, env, 409);
+        }
+        throw error;
+      }
       const prior = parseNotificationMetadata(existing.metadata_json || "");
       if (prior.content_fingerprint !== contentFingerprint) {
         return json({ error: "notification_idempotency_conflict" }, request, env, 409);
@@ -225,6 +302,12 @@ export function createCampaignHandlers(deps: Dependencies) {
     const batchSize = Math.min(Math.max(Number.isFinite(requested) ? Math.trunc(requested) : 5, 1), 5);
     const row = await loadRow(env, campaignId);
     if (!row) return json({ error: "notification_campaign_not_found" }, request, env, 404);
+    // Integrated weekly mail combines independently published sources. Until
+    // a per-attempt immutable-source guard is available, even an already
+    // queued campaign must fail closed, including Cron-driven recovery.
+    if (/^idempotency:(?:pilot:)?weekly-digest:/.test(row.content_ref || "")) {
+      return json({ error: "weekly_digest_source_guard_unavailable" }, request, env, 503);
+    }
     // An explicit process request authorizes this campaign for later recovery.
     // Draft/queued campaigns that were never started remain manual.
     await env.DB.prepare(
@@ -263,9 +346,13 @@ export function createCampaignHandlers(deps: Dependencies) {
       ).bind(claimToken, claimUntil, candidate.id, new Date().toISOString()).run();
       const delivery = await env.DB.prepare(
         `SELECT d.id AS delivery_id, d.subscription_id, d.contact_id, d.attempts,
-         s.subscriber_id, s.status AS subscription_status, sub.status AS subscriber_status,
-         c.status AS contact_status, sub.locale, c.address AS email FROM message_deliveries d
+         s.subscriber_id, s.status AS subscription_status, s.frequency, s.preference_revision, sub.status AS subscriber_status,
+         c.status AS contact_status, sub.locale, c.address AS email, l.code AS list_code,
+         (SELECT json_group_array(json_object('filter_type', f.filter_type, 'filter_value', f.filter_value))
+          FROM subscription_filters f WHERE f.subscription_id = s.id) AS filters_json
+         FROM message_deliveries d
          JOIN subscriptions s ON s.id = d.subscription_id
+         JOIN subscription_lists l ON l.id = s.list_id
          JOIN subscriber_contacts c ON c.id = d.contact_id
          JOIN subscribers sub ON sub.id = s.subscriber_id
          WHERE d.id = ? AND d.status = 'sending' AND d.claim_token = ?`,
@@ -273,10 +360,11 @@ export function createCampaignHandlers(deps: Dependencies) {
         delivery_id: string; subscription_id: string; contact_id: string; attempts: number;
         subscriber_id: string; locale?: string | null; email: string;
         subscription_status: string; subscriber_status: string; contact_status: string;
+        frequency: string; preference_revision: string | null; filters_json: string; list_code: string;
       }>();
       if (!delivery) continue;
       processed += 1;
-      if (delivery.subscription_status !== "active" || delivery.subscriber_status !== "active" || delivery.contact_status !== "active") {
+      if (delivery.subscription_status !== "active" || delivery.subscriber_status !== "active" || delivery.contact_status !== "active" || (metadata.frequency && delivery.frequency !== metadata.frequency)) {
         await env.DB.prepare(
           `UPDATE message_deliveries SET status = 'skipped', last_error = 'subscription_inactive',
            claim_token = NULL, claim_expires_at = NULL WHERE id = ? AND status = 'sending' AND claim_token = ?`,
@@ -284,12 +372,44 @@ export function createCampaignHandlers(deps: Dependencies) {
         continue;
       }
       const locale = normalizeLocale(delivery.locale || "", metadata.default_locale || "en");
-      const content = localizedNotificationContent(metadata, locale);
+      let content = localizedNotificationContent(metadata, locale);
+      if (metadata.personalized_templates !== undefined || metadata.personalized_items !== undefined) {
+        const templates = metadata.personalized_templates;
+        const storedItems = metadata.personalized_items;
+        if (!isRecord(templates) || !Array.isArray(storedItems)) throw new Error("invalid_campaign_personalization");
+        const template = valueAsString(templates[locale] ?? templates[metadata.default_locale || "en"]);
+        const contentLocale = typeof templates[locale] === "string" ? locale : metadata.default_locale || "en";
+        if (!template || template.split(PERSONALIZED_MARKER).length !== 2) throw new Error("invalid_campaign_personalization");
+        const filters: unknown = JSON.parse(delivery.filters_json || "[]");
+        if (!Array.isArray(filters)) throw new Error("invalid_subscription_filters");
+        const matched = matchedItems(storedItems as ContentItem[], filters as Array<{ filter_type: string; filter_value: string }>);
+        if (matched.some(item => !item.localized_markdown?.[contentLocale])) throw new Error("invalid_campaign_personalization");
+        if (!matched.length) {
+          await env.DB.batch([
+            env.DB.prepare(`UPDATE message_deliveries SET status = 'skipped', last_error = 'subscription_filters_no_longer_match',
+              claim_token = NULL, claim_expires_at = NULL WHERE id = ? AND status = 'sending' AND claim_token = ?
+              AND claim_expires_at > ? AND EXISTS (SELECT 1 FROM subscriptions s JOIN subscriber_contacts c ON c.id = s.contact_id
+                JOIN subscribers sub ON sub.id = s.subscriber_id WHERE s.id = message_deliveries.subscription_id
+                AND s.status = 'active' AND c.status = 'active' AND sub.status = 'active'
+                AND COALESCE(s.preference_revision, '') = ? AND (? = '' OR s.frequency = ?))`)
+              .bind(delivery.delivery_id, claimToken, new Date().toISOString(), delivery.preference_revision || "", metadata.frequency || "", metadata.frequency || ""),
+            retryChangedPreferences(env, delivery, claimToken, metadata.frequency || ""),
+            env.DB.prepare(`UPDATE message_deliveries SET status = CASE WHEN claim_expires_at <= ? THEN 'unknown' ELSE 'skipped' END,
+              last_error = CASE WHEN claim_expires_at <= ? THEN 'claim_expired_unknown' ELSE 'subscription_inactive' END,
+              claim_token = NULL, claim_expires_at = NULL WHERE id = ? AND status = 'sending' AND claim_token = ?`)
+              .bind(new Date().toISOString(), new Date().toISOString(), delivery.delivery_id, claimToken),
+          ]);
+          continue;
+        }
+        content = { ...content, markdown: template.replace(PERSONALIZED_MARKER, () => matched.map(item => item.localized_markdown![contentLocale]).join("\n\n")) };
+      }
       const token = await deps.createSignedToken(env, "unsubscribe", delivery.subscription_id, 60 * 60 * 24 * 365);
       const unsubscribeUrl = `${publicBaseUrl(request, env)}/api/subscriptions/unsubscribe?token=${token}`;
       const manageToken = await deps.createSignedToken(env, "manage", delivery.subscription_id, 60 * 60 * 24);
       const manageUrl = `${publicBaseUrl(request, env)}/api/subscriptions/manage?token=${manageToken}`;
-      const email = buildNotificationEmail(locale, content, unsubscribeUrl, manageUrl);
+      const kind = delivery.list_code === "research_digest" ? "research"
+        : delivery.list_code === "reports" || delivery.list_code === "weekly_digest" ? "report" : "update";
+      const email = buildNotificationEmail(locale, content, unsubscribeUrl, manageUrl, kind);
       const transactionId = crypto.randomUUID();
       // The delivery ledger is part of the state machine; failure must block SMTP.
       try {
@@ -322,17 +442,22 @@ export function createCampaignHandlers(deps: Dependencies) {
          JOIN subscriber_contacts c ON c.id = d.contact_id JOIN subscribers sub ON sub.id = s.subscriber_id
          WHERE d.id = ? AND d.status = 'sending' AND d.claim_token = ?
            AND d.claim_expires_at > ?
-           AND s.status = 'active' AND c.status = 'active' AND sub.status = 'active'`,
-      ).bind(delivery.delivery_id, claimToken, new Date().toISOString()).first<{ id: string }>();
+           AND s.status = 'active' AND c.status = 'active' AND sub.status = 'active'
+           AND COALESCE(s.preference_revision, '') = ? AND (? = '' OR s.frequency = ?)`,
+      ).bind(delivery.delivery_id, claimToken, new Date().toISOString(), delivery.preference_revision || "", metadata.frequency || "", metadata.frequency || "").first<{ id: string }>();
       if (!eligible) {
         await env.DB.batch([
+          // No SMTP call has started. A concurrent preference change on an
+          // otherwise eligible subscription must be recalculated from the
+          // new revision. Bound repeated churn to avoid an endless queue.
+          retryChangedPreferences(env, delivery, claimToken, metadata.frequency || ""),
           env.DB.prepare(`UPDATE message_deliveries
             SET status = CASE WHEN claim_expires_at <= ? THEN 'unknown' ELSE 'skipped' END,
             last_error = CASE WHEN claim_expires_at <= ? THEN 'claim_expired_unknown' ELSE 'subscription_inactive' END,
             claim_token = NULL, claim_expires_at = NULL WHERE id = ? AND status = 'sending' AND claim_token = ?`)
             .bind(new Date().toISOString(), new Date().toISOString(), delivery.delivery_id, claimToken),
           env.DB.prepare(`UPDATE transactional_email_deliveries
-            SET status = CASE WHEN EXISTS (SELECT 1 FROM message_deliveries WHERE id = ? AND status = 'skipped')
+            SET status = CASE WHEN EXISTS (SELECT 1 FROM message_deliveries WHERE id = ? AND status IN ('queued', 'skipped', 'failed'))
               THEN 'skipped' ELSE 'unknown' END, updated_at = ? WHERE id = ? AND status = 'queued'`)
             .bind(delivery.delivery_id, new Date().toISOString(), transactionId),
         ]);
@@ -391,6 +516,8 @@ export function createCampaignHandlers(deps: Dependencies) {
       `SELECT c.id FROM message_campaigns c
        WHERE c.trigger_type = 'admin_notification' AND c.processing_started_at IS NOT NULL
          AND c.status IN ('queued', 'sending')
+         AND COALESCE(c.content_ref, '') NOT GLOB 'idempotency:weekly-digest:*'
+         AND COALESCE(c.content_ref, '') NOT GLOB 'idempotency:pilot:weekly-digest:*'
          AND EXISTS (SELECT 1 FROM message_deliveries d JOIN subscriber_contacts contact ON contact.id=d.contact_id WHERE d.campaign_id = c.id AND ${policy.sql} AND (
            (d.status = 'queued' AND (d.next_attempt_at IS NULL OR d.next_attempt_at <= ?))
            OR (d.status = 'sending' AND d.claim_expires_at < ?)
@@ -470,7 +597,9 @@ async function audience(
         )
       )
     )`);
-    binds.push(JSON.stringify(items));
+    // The selection query needs only facts; keep localized email bodies out of
+    // the SQL argument, especially for larger bilingual research issues.
+    binds.push(JSON.stringify(items.map(({ id, filters: facts }) => ({ id, filters: facts }))));
   }
   binds.push(limit);
   const rows = await env.DB.prepare(

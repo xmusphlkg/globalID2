@@ -57,7 +57,7 @@ def test_aids_diagnosis_and_nationality_are_not_imported_infections():
         "date_basis": "診斷日", "population": "本國籍及非本國籍",
     }}]
     row = normalize_monthly_exports(data, disease=TWDiseaseSource("042", "後天免疫缺乏症候群", "", ""))[0]
-    assert (row["Cases"], row["LocalCases"], row["ImportedCases"]) == ("48", "48", "0")
+    assert (row["Cases"], row["LocalCases"], row["ImportedCases"]) == ("48", "", "")
 
 
 def test_unsplit_source_counts_do_not_invent_local_or_imported_zeros(tmp_path):
@@ -210,6 +210,7 @@ def test_live_export_refreshes_values_even_when_prior_snapshot_has_more_diseases
     fallback = next(row for row in result.rows if row["DiseaseCode"] == "fixture")
     assert fallback["SourceFreshness"] == "cache_fallback"
     assert fallback["SourceDataDate"] == "2026-09-01"
+    assert [(row["DiseaseCode"], row["Cases"]) for row in result.store_rows] == [("061", "25")]
 
 
 def test_all_live_failures_do_not_report_cached_data_as_a_refresh(monkeypatch, tmp_path):

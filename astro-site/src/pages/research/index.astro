@@ -27,6 +27,9 @@ const articles = (data.articles ?? []).filter((article: any) => (
   || article.source_kind === 'historical_seed'
   || article.historical_baseline === true
 ));
+const bibliographicArticles = data.bibliographic_articles ?? [];
+const catalogueCount = articles.length + bibliographicArticles.length;
+const catalogueFacets = [...articles, ...bibliographicArticles];
 const preprints = filterResearchFeedArticles(data, 'peer-review', 'preprint');
 const integrityAlerts = data.integrity_alerts ?? [];
 const metrics = data.metrics ?? {};
@@ -44,18 +47,18 @@ const surveillanceSignals = surveillanceEvidence.available === true && surveilla
 const historicalBaselineAll = data.historical_baseline ?? articles.filter((article: any) => article.source_kind === 'historical_seed' || article.historical_baseline);
 const historicalBaseline = historicalBaselineAll.slice(0, 8);
 const initialVisibleArticles = 8;
-const initialResultCount = articles.length > initialVisibleArticles
-  ? pick(`${initialVisibleArticles} of ${articles.length} publications shown`, `已显示 ${initialVisibleArticles} / ${articles.length} 篇文献`, `${initialVisibleArticles} publications sur ${articles.length} affichées`)
-  : pick(`${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`, `${articles.length} 篇文献`, `${articles.length} publication${articles.length === 1 ? '' : 's'}`);
-const diseases = [...new Map(articles.flatMap((article: any) => article.diseases ?? []).map((item: any) => [item.disease_id, item])).values()] as any[];
-const countries = [...new Map(articles.flatMap((article: any) => article.countries ?? []).map((item: any) => [item.code, item])).values()] as any[];
+const initialResultCount = catalogueCount > initialVisibleArticles
+  ? pick(`${initialVisibleArticles} of ${catalogueCount} publications shown`, `已显示 ${initialVisibleArticles} / ${catalogueCount} 篇文献`, `${initialVisibleArticles} publications sur ${catalogueCount} affichées`)
+  : pick(`${catalogueCount} ${catalogueCount === 1 ? 'publication' : 'publications'}`, `${catalogueCount} 篇文献`, `${catalogueCount} publication${catalogueCount === 1 ? '' : 's'}`);
+const diseases = [...new Map(catalogueFacets.flatMap((article: any) => article.diseases ?? []).map((item: any) => [item.disease_id, item])).values()] as any[];
+const countries = [...new Map(catalogueFacets.flatMap((article: any) => article.countries ?? []).map((item: any) => [item.code, item])).values()] as any[];
 const countryNameFr = (country: any) => localizedRegionName('fr', country.code, { en: country.name_en, fr: country.name_fr });
-const studyTypes = [...new Set(articles.map((article: any) => article.study_type).filter(Boolean))] as string[];
-const topics = [...new Set(articles.flatMap((article: any) => (article.topics ?? []).map((item: any) => item.name)).filter(Boolean))].sort() as string[];
-const pathogenTypes = [...new Map(articles.flatMap((article: any) => article.pathogen_types ?? []).map((item: any) => [item.id, item])).values()] as any[];
-const populations = [...new Map(articles.flatMap((article: any) => article.populations ?? []).map((item: any) => [item.id, item])).values()] as any[];
-const journals = [...new Set(articles.map((article: any) => article.journal).filter(Boolean))].sort() as string[];
-const publishers = [...new Set(articles.map((article: any) => article.publisher).filter(Boolean))].sort() as string[];
+const studyTypes = [...new Set(catalogueFacets.map((article: any) => article.study_type).filter(Boolean))] as string[];
+const topics = [...new Set(catalogueFacets.flatMap((article: any) => (article.topics ?? []).map((item: any) => item.name)).filter(Boolean))].sort() as string[];
+const pathogenTypes = [...new Map(catalogueFacets.flatMap((article: any) => article.pathogen_types ?? []).map((item: any) => [item.id, item])).values()] as any[];
+const populations = [...new Map(catalogueFacets.flatMap((article: any) => article.populations ?? []).map((item: any) => [item.id, item])).values()] as any[];
+const journals = [...new Set(catalogueFacets.map((article: any) => article.journal).filter(Boolean))].sort() as string[];
+const publishers = [...new Set(catalogueFacets.map((article: any) => article.publisher).filter(Boolean))].sort() as string[];
 const researchFeeds = buildResearchFeedDefinitions(data);
 type FeedGroup = {
   scopes: ResearchFeedScope[];
@@ -164,7 +167,7 @@ const itemList = {
         <aside class="research-week" aria-label={pick('Research Radar at a glance', '研究雷达快速概览')}>
           <p class="academic-kicker">{pick('At a glance', '快速概览')}</p>
           <dl>
-            <div><dt>{pick('Public catalogue', '公开目录')}</dt><dd>{metrics.total_public_articles ?? articles.length}</dd></div>
+            <div><dt>{pick('Public catalogue', '公开目录')}</dt><dd>{catalogueCount}</dd></div>
             <div><dt>{pick('Historical baseline', '历史基线')}</dt><dd>{metrics.historical_baseline_articles ?? historicalBaselineAll.length}</dd></div>
             <div><dt>{pick('Papers · 7 days', '近 7 天论文')}</dt><dd>{metrics.papers_last_7_days ?? 0}</dd></div>
             <div><dt>{pick('Diseases · 7 days', '近 7 天疾病')}</dt><dd>{metrics.diseases_last_7_days ?? 0}</dd></div>
@@ -342,6 +345,7 @@ const itemList = {
 
     <section id="latest-publications" class="card research-section latest-section">
       <div class="research-heading"><div><p class="academic-kicker">{pick('Evidence library', '证据库')}</p><h2 class="section-heading">{pick('Latest publications', '最新发表')}</h2></div></div>
+      {bibliographicArticles.length > 0 && <p>{pick('Bibliographic records link to the original source and do not yet have a GIDS evidence summary.', '书目记录直接链接原文，目前尚无 GIDS 证据摘要。', 'Les notices bibliographiques renvoient à la source et ne disposent pas encore de synthèse GIDS.')}</p>}
       <form class="research-filters" role="search" aria-label={pick('Filter research articles', '筛选研究文献')} data-research-filters data-research-locale={locale}>
         <label class="search-field"><span class="sr-only">{pick('Search', '搜索')}</span><input class="site-control-input" id="research-search" type="search" placeholder={pick('Search title, disease, journal, or topic', '搜索标题、疾病、期刊或主题')} /></label>
         <label><span>{pick('Disease', '疾病', 'Maladie')}</span><select class="site-control-input" id="research-disease"><option value="">{pick('All diseases', '全部疾病', 'Toutes les maladies')}</option>{diseases.map((item: any) => <option value={item.disease_id.toLowerCase()}>{localizedDiseaseName(item, locale)}</option>)}</select></label>
@@ -357,18 +361,19 @@ const itemList = {
         <label><span>{pick('Collection', '文献集合')}</span><select class="site-control-input" id="research-publication-collection"><option value="peer_reviewed">{pick('Peer reviewed', '同行评议')}</option><option value="preprint">{pick('Approved preprints', '已审核预印本')}</option></select></label>
         <label class="oa-filter"><input id="research-oa" type="checkbox" /><span>{pick('Open access only', '仅开放获取')}</span></label>
       </form>
-      <p id="research-result-count" class="result-count" data-total={articles.length} aria-live="polite">{initialResultCount}</p>
+      <p id="research-result-count" class="result-count" data-total={catalogueCount} aria-live="polite">{initialResultCount}</p>
       <div
         id="research-list"
         class="research-list"
         data-initial-visible={initialVisibleArticles}
-        data-total={articles.length}
+        data-initial-count={Math.min(articles.length, initialVisibleArticles)}
+        data-total={catalogueCount}
         data-disease-name-map={JSON.stringify({ ...DISEASE_NAMES_FR, ...Object.fromEntries(Object.entries(DISEASE_NAMES_FR_BY_ID).map(([key, value]) => [key.toLowerCase(), value])) })}
         data-region-name-map={JSON.stringify({ 'cn-gx': 'Guangxi, Chine', 'cn-sd': 'Shandong, Chine' })}
         data-study-type-map={JSON.stringify(Object.fromEntries(Object.entries(STUDY_TYPE_LABELS).map(([key, labels]) => [key, labels.fr])))}
         data-topic-name-map={JSON.stringify(Object.fromEntries(Object.entries(RESEARCH_TOPIC_LABELS).map(([key, labels]) => [key, labels.fr])))}
       >{articles.slice(0, initialVisibleArticles).map((article: any, index: number) => <ResearchArticleCard article={article} stream index={index} initialVisible={initialVisibleArticles} locale={locale} />)}</div>
-      {articles.length > initialVisibleArticles && <button id="research-load-more" class="research-load-more" type="button" aria-controls="research-list" data-load-more-research>{pick('Load more publications', '加载更多论文')}</button>}
+      {catalogueCount > initialVisibleArticles && <button id="research-load-more" class="research-load-more" type="button" aria-controls="research-list" data-load-more-research>{pick('Load more publications', '加载更多论文')}</button>}
       <div id="research-empty" class:list={['research-empty', articles.length > 0 && 'hidden']}>
         <div class="empty-orbit" aria-hidden="true"></div>
         <h3>{pick(articles.length ? 'No matching research' : 'Research Radar is ready', articles.length ? '没有匹配的研究' : '研究雷达已就绪')}</h3>
@@ -476,7 +481,7 @@ const itemList = {
       populationText: (article.populations ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     });
     const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText} ${tokens.pathogenText} ${tokens.populationText}`.toLowerCase();
-    const loadCatalogue = (limit?: number) => loadResearchCatalogue({ limit });
+    const loadCatalogue = (limit?: number) => loadResearchCatalogue({ limit, includeBibliographic: true });
     const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
       const element = document.createElement(tag);
       if (className) element.className = className;
@@ -516,6 +521,7 @@ const itemList = {
       const topline = make('div', 'research-card-topline');
       const badges = make('div', 'research-card-badges');
       badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer', article.peer_review_status === 'peer_reviewed' ? 'Évalué par les pairs' : 'Prépublication'));
+      if (article.detail_available === false) badges.appendChild(makeBadge('Bibliographic record', '书目记录', '', 'Notice bibliographique'));
       if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history', 'Référence historique'));
       if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa', 'Accès ouvert'));
       (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', frenchDiseaseName(item))));
@@ -534,7 +540,13 @@ const itemList = {
 
       const title = make('h3', 'research-card-title');
       const titleLink = document.createElement('a');
-      titleLink.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
+      if (article.detail_available === false) {
+        titleLink.href = article.doi ? `https://doi.org/${article.doi}` : `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(article.pmid)}/`;
+        titleLink.target = '_blank';
+        titleLink.rel = 'noopener noreferrer';
+      } else {
+        titleLink.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
+      }
       titleLink.textContent = text(article.title);
       title.appendChild(titleLink);
       card.appendChild(title);
@@ -611,6 +623,7 @@ const itemList = {
       facts.append(studyFact, geographyFact);
       card.appendChild(facts);
 
+      if (article.detail_available === false) return card;
       const context = make('p', 'research-context');
       const contextLabel = document.createElement('strong');
       setLangText(contextLabel, 'Why it matters now', '为何现在值得关注', 'Pourquoi cette étude compte maintenant');
@@ -715,7 +728,7 @@ const itemList = {
       visibleLimit += initialVisible;
       void applyFilters(true);
     });
-    void applyFilters(filtersAreActive());
+    void applyFilters(filtersAreActive() || Number(list?.dataset.initialCount ?? 0) < Math.min(totalArticles, initialVisible));
   </script>
 </ReportLayout>
 

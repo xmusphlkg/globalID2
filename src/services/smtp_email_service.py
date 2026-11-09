@@ -19,6 +19,7 @@ from src.services.settings_service import system_settings_service
 logger = get_logger(__name__)
 
 _SMTP_MAX_ATTEMPTS = 3
+_SMTP_TIMEOUT_SECONDS = 30
 _SMTP_RETRY_BASE_DELAY_SECONDS = 1.0
 _SMTP_AUTH_FAILURE_COOLDOWN_SECONDS = 300.0
 _smtp_auth_failure_retry_after: float = 0.0
@@ -98,10 +99,10 @@ class SMTPEmailService:
         context = ssl.create_default_context()
 
         if config["smtp_use_tls"]:
-            server = smtplib.SMTP(config["smtp_host"], config["smtp_port"])
+            server = smtplib.SMTP(config["smtp_host"], config["smtp_port"], timeout=_SMTP_TIMEOUT_SECONDS)
             server.starttls(context=context)
         else:
-            server = smtplib.SMTP_SSL(config["smtp_host"], config["smtp_port"], context=context)
+            server = smtplib.SMTP_SSL(config["smtp_host"], config["smtp_port"], context=context, timeout=_SMTP_TIMEOUT_SECONDS)
 
         server.login(config["smtp_username"], config["smtp_password"])
         return server

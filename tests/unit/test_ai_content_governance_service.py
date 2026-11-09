@@ -22,6 +22,110 @@ def test_all_current_briefs_published_requires_at_least_one_published_brief() ->
     assert not _all_current_briefs_are_published([])
 
 
+def test_summary_review_scope_skips_unrelated_backlog_and_handles_empty_scope() -> None:
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+    from src.domain import LiteratureArticle, LiteratureSummary
+
+    engine = create_engine("sqlite:///:memory:")
+    LiteratureArticle.__table__.create(engine)
+    LiteratureSummary.__table__.create(engine)
+    with Session(engine) as db:
+        for number in range(22):
+            article_id = f"article-{number}"
+            db.add(LiteratureArticle(article_id=article_id, slug=article_id, title=article_id))
+            db.add(LiteratureSummary(article_id=article_id, language="en", status="review", quality_score=1.0))
+        db.commit()
+        service = AIContentGovernanceService()
+        rows = db.execute(service._summary_review_query(None, article_ids=["article-21"]).limit(20)).all()
+        assert [article.article_id for _, article in rows] == ["article-21"]
+        assert db.execute(service._summary_review_query(None, article_ids=[])).all() == []
+        assert len(db.execute(service._summary_review_query(None).limit(20)).all()) == 20
+
+
+def test_summary_peer_review_requires_current_deterministic_gate(monkeypatch) -> None:
+    from src.literature.enrichment import SUMMARY_FIELDS, source_fingerprint
+    import src.core
+
+    monkeypatch.setattr(src.core, "get_config", lambda: SimpleNamespace(
+        literature=SimpleNamespace(autopilot_summary_min_quality=0.9)
+    ))
+    article = SimpleNamespace(
+        article_id="a", publication_status="published", title="Title", doi="doi",
+        journal="Journal", published_at=None, abstract_text="Abstract", integrity_status="current",
+    )
+    fields = {field: f"Grounded {field}" for field in SUMMARY_FIELDS}
+    summary = SimpleNamespace(
+        article_id="a", language="en", status="review", generated_by="literature-evidence-agent",
+        quality_score=0.95, review_notes="", evidence_map={
+            field: {"sources": ["abstract"], "confidence": 0.9} for field in fields
+        }, generation_metadata={"source_fingerprint": source_fingerprint(article)}, **fields,
+    )
+    service = AIContentGovernanceService()
+    assert service._summary_precheck(summary, article)[0] == "review"
+    summary.quality_score = 0.5
+    assert service._summary_precheck(summary, article)[0] == "waiting"
+    summary.quality_score = 0.95
+    summary.language = "zh"
+    summary.generation_metadata.update({
+        "protocol_version": 2,
+        "bilingual_alignment": {"protocol_version": "canonical-en-translation.v1", "canonical_language": "en", "canonical_summary_fingerprint": "old"},
+    })
+    assert service._summary_precheck(summary, article, canonical_fingerprint="new")[0] == "waiting"
+    assert service._summary_precheck(summary, article, canonical_fingerprint="old")[0] == "review"
+    article.publication_status = "excluded"
+    assert service._summary_precheck(summary, article, canonical_fingerprint="old")[0] == "waiting"
+
+
+def test_stream_summary_rechecks_parent_before_applying_review(monkeypatch) -> None:
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+    from src.domain import LiteratureArticle, LiteratureSummary
+    from src.literature.enrichment import SUMMARY_FIELDS, source_fingerprint
+    import src.core
+
+    monkeypatch.setattr(src.core, "get_config", lambda: SimpleNamespace(
+        literature=SimpleNamespace(autopilot_summary_min_quality=0.9)
+    ))
+
+    async def exercise() -> None:
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        async with engine.begin() as conn:
+            await conn.run_sync(LiteratureArticle.__table__.create)
+            await conn.run_sync(LiteratureSummary.__table__.create)
+        async with async_sessionmaker(engine, expire_on_commit=False)() as db:
+            article = LiteratureArticle(article_id="a", slug="a", title="Title", publication_status="published")
+            db.add(article)
+            await db.flush()
+            fields = {field: f"Grounded {field}" for field in SUMMARY_FIELDS}
+            summary = LiteratureSummary(
+                article_id="a", language="en", status="review", generated_by="literature-evidence-agent",
+                quality_score=0.95, generation_metadata={"source_fingerprint": source_fingerprint(article)},
+                evidence_map={field: {"sources": ["abstract"], "confidence": 0.9} for field in fields},
+                **fields,
+            )
+            db.add(summary)
+            await db.commit()
+            service = AIContentGovernanceService()
+            seen = service._summary_fingerprint(summary)
+            article.publication_status = "excluded"
+            await db.commit()
+            counts = await service._write_stream_results(db, "summaries", [
+                (summary.id, seen, _reviewed("published", "publish"))
+            ])
+            assert counts["stale"] == 1
+            assert summary.status == "review"
+            article.publication_status = "published"
+            await db.commit()
+            counts = await service._write_stream_results(db, "summaries", [
+                (summary.id, seen, _reviewed("published", "publish"))
+            ])
+            assert counts["published"] == 1
+            assert summary.status == "published"
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_infer_failed_knowledge_repair_languages_targets_single_language() -> None:
     assert infer_failed_knowledge_repair_languages("zh: substantive brief is required") == ["zh"]
     assert infer_failed_knowledge_repair_languages("en: profile was not generated") == ["en"]

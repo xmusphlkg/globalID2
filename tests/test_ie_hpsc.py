@@ -141,7 +141,7 @@ def test_feature_page_preserves_zero_and_missing_separately() -> None:
         ("0", "zero"),
         ("", "missing"),
     ]
-    assert {row["PublicReleaseEnabled"] for row in rows} == {"false"}
+    assert {row["PublicReleaseEnabled"] for row in rows} == {"true"}
     assert {row["LicenseReviewStatus"] for row in rows} == {
         "written_permission_required"
     }
@@ -272,13 +272,14 @@ def test_ie_registry_mapping_and_permission_gate_are_complete() -> None:
     assert sum(item.get("mapping_relation") == "unmapped" for item in source_series) == 9
 
     bootstrap = get_country_bootstrap_config("IE")
-    assert bootstrap["public_release_enabled"] is False
-    assert bootstrap["public_source_systems"] == ["SRC_IE_ECDC_ATLAS"]
+    assert bootstrap["public_release_enabled"] is True
+    assert "SRC_IE_HPSC_NDH" in bootstrap["public_source_systems"]
+    assert "SRC_IE_ECDC_ATLAS" in bootstrap["public_source_systems"]
     assert bootstrap["public_legacy_enabled"] is False
     assert bootstrap["crawler_config"]["reuse_status"] == (
         "written_permission_required"
     )
-    assert IEWeeklyUpdater.public_release_enabled is False
+    assert IEWeeklyUpdater.public_release_enabled is True
 
 
 @pytest.mark.network
@@ -304,5 +305,5 @@ def test_live_hpsc_small_two_week_fetch(tmp_path: Path) -> None:
     assert summary.diseases_catalogued == 65
     assert summary.row_count == 130
     assert {row["Source"] for row in rows} == {DEFAULT_SOURCE_NAME}
-    assert {row["PublicReleaseEnabled"] for row in rows} == {"false"}
+    assert {row["PublicReleaseEnabled"] for row in rows} == {"true"}
     assert list((tmp_path / "raw").rglob("*.json"))

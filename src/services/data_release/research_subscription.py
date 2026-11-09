@@ -253,7 +253,19 @@ def dispatch_after_release(
             fingerprint = _fingerprint(payload)
             if pending_week in records:
                 record_path, record = records[pending_week]
-                if record.get("payload_sha256") != fingerprint or _fingerprint(record.get("payload") or {}) != fingerprint:
+                original = record.get("payload")
+                # An outbox created before per-article bodies remains immutable.
+                # Resume it only if its exact legacy payload still matches the
+                # currently published brief with the new fields removed.
+                if isinstance(original, dict) and "personalized_templates" not in original:
+                    legacy = dict(payload)
+                    legacy.pop("personalized_templates", None)
+                    legacy["content_items"] = [
+                        {key: value for key, value in item.items() if key != "localized_markdown"}
+                        for item in payload["content_items"]
+                    ]
+                    fingerprint = _fingerprint(legacy)
+                if record.get("payload_sha256") != fingerprint or _fingerprint(original or {}) != fingerprint:
                     raise ResearchSubscriptionError("research_dispatch_content_changed_requires_review")
             else:
                 record_path = directory / f"{pending_week}.json"

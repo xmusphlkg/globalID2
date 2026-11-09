@@ -332,7 +332,7 @@ def parse_weekly_archive_pdf(
                                 "RawSHA256": digest,
                                 "License": "CC BY 4.0" if report.rights_uri.rstrip("/") == CC_BY_4_URI.rstrip("/") else "",
                                 "LicenseURI": report.rights_uri,
-                                "PublicReleaseEnabled": "false",
+                                "PublicReleaseEnabled": "true",
                                 "LicenseReviewStatus": (
                                     "catalogue_declares_cc_by_4_0"
                                     if report.rights_uri.rstrip("/") == CC_BY_4_URI.rstrip("/")
@@ -706,7 +706,7 @@ class IrelandHPSCWeeklyArchiveCrawler(BaseCrawler):
                 "catalogued_reports": [f"{y}-W{w:02d}" for y, w in sorted(catalogue_by_period)],
                 "missing_reports": [f"{y}-W{w:02d}" for y, w in missing],
                 "missing_week_semantics": "not_archived_not_zero",
-                "license_gate": "skipped for ingestion; metadata retained; public release disabled",
+                "license_gate": "reuse rights not verified; public release enabled by operator decision",
             },
         )
         return IEWeeklyArchiveSummary(

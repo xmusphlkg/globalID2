@@ -22,6 +22,11 @@ NOW = datetime(2026, 10, 30, 10, tzinfo=timezone.utc)
 
 @pytest_asyncio.fixture
 async def db(tmp_path, monkeypatch):
+    country_config = projection.get_country_bootstrap_config
+    monkeypatch.setattr(projection, "get_country_bootstrap_config", lambda code: (
+        {**country_config(code), "public_release_enabled": False}
+        if code == "IE" else country_config(code)
+    ))
     engine = create_async_engine(
         f"sqlite+aiosqlite:///{tmp_path / 'retirement.sqlite'}"
     )

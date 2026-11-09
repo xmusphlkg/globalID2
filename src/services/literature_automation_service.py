@@ -38,7 +38,7 @@ from src.literature.enrichment import (
     source_fingerprint,
 )
 
-POLICY_VERSION = "research-radar-autopilot.v1"
+POLICY_VERSION = "research-radar-autopilot.v3"
 AUTOPILOT_ACTOR = "research-radar-autopilot"
 _RUN_LOCK = asyncio.Lock()
 
@@ -59,8 +59,6 @@ class _EffectiveLink:
 
 
 _CORRECTION_TITLE = re.compile(r"^\s*(?:correction|corrigendum|erratum)\s*(?::|to\b)", re.IGNORECASE)
-_STRICT_ANIMAL_ONLY_MAX_SCORE = 0.20
-_NON_PUBLIC_RESEARCH_DOMAINS = frozenset({"animal_only", "basic_research", "plant_only"})
 _POLICY_OVERRIDE_FIELDS = frozenset({"autopilot_article_min_score"})
 _SCORED_REASON = re.compile(r"^(?:discovery score|summary quality)\s+[0-9.]+")
 
@@ -133,6 +131,11 @@ def _article_reconciliation_statement(
         )
         .where(
             LiteratureArticle.publication_status.in_(("review", "published")),
+            or_(
+                LiteratureArticle.publication_status == "published",
+                func.coalesce(LiteratureArticle.metadata_["initial_screen"]["status"].as_string(), "") != "needs_more_evidence",
+                func.length(func.trim(func.coalesce(LiteratureArticle.abstract_text, ""))) >= 80,
+            ),
             LiteratureArticle.id > after_id,
         )
         .order_by(LiteratureArticle.id)
@@ -270,7 +273,7 @@ def _is_autopilot_managed(metadata: Any) -> bool:
     if not isinstance(automation, Mapping):
         return False
     return (
-        automation.get("policy_version") == POLICY_VERSION
+        automation.get("policy_version") in {POLICY_VERSION, "research-radar-autopilot.v1", "research-radar-autopilot.v2"}
         and automation.get("actor") == AUTOPILOT_ACTOR
     )
 
@@ -409,89 +412,26 @@ def decide_article(
             "exclude",
             ("correction/corrigendum record has an explicit parent DOI",),
         )
-    score = float(article.discovery_score or 0.0)
     research_domain = _research_domain(article)
     if research_domain == "plant_only":
-        return AutomationDecision(
-            "exclude",
-            ("research domain is plant_only and is outside the public health catalogue",),
-        )
-    if (
-        research_domain == "animal_only"
-        and max_disease_confidence <= 0.0
-        and score <= min(float(config.autopilot_article_exclude_below_score), _STRICT_ANIMAL_ONLY_MAX_SCORE)
-    ):
-        return AutomationDecision(
-            "exclude",
-            ("strict animal-only record has no disease link and extremely low discovery score",),
-        )
-    if (
-        research_domain in {"animal_only", "basic_research"}
-        and max_disease_confidence <= 0.0
-        and score < min(float(config.autopilot_article_exclude_below_score), 0.30)
-    ):
-        # Preserve the record and revisit it when classification or disease
-        # evidence changes, without treating an obviously low-priority record
-        # as an outstanding editorial exception on every ingest run.
-        return AutomationDecision(
-            "defer",
-            ("low-scoring non-public research without a disease link; re-evaluate on new evidence",),
-        )
-    if research_domain in _NON_PUBLIC_RESEARCH_DOMAINS:
         return AutomationDecision(
             "hold",
             (f"research domain is {research_domain} and requires editorial review",),
         )
     hold_reasons = _article_hold_reasons(article, now=now)
     if hold_reasons:
-        incomplete_markers = {
-            "DOI/PMID/PMCID is missing",
-            "title is incomplete",
-            "journal is missing",
-            "authors are missing",
-        }
-        deterministic_exclusion = (
-            config.autopilot_auto_exclude_preprints and "record is not peer reviewed" in hold_reasons
-        ) or (
-            config.autopilot_auto_exclude_incomplete and bool(incomplete_markers.intersection(hold_reasons))
-        )
-        if deterministic_exclusion:
-            return AutomationDecision("exclude", tuple(hold_reasons))
+        # Missing bibliography or peer-review metadata prevents automatic
+        # release, but does not prove the study is outside the disease scope.
         if hold_reasons == ["publication date is in the future"]:
             return AutomationDecision(
                 "defer",
                 ("publication date is in the future; scheduled for automatic re-evaluation",),
             )
         return AutomationDecision("hold", tuple(hold_reasons))
-    exact = "exact_disease_geography" in confirmed_relation_levels
-    strong_context = "disease_context" in confirmed_relation_levels
-    catalogue_gate = (
-        score >= config.autopilot_article_min_score
-        and max_disease_confidence >= config.autopilot_disease_min_confidence
-    )
-    if exact or strong_context or catalogue_gate:
-        reasons = ["bibliographic and integrity gates passed"]
-        if exact:
-            reasons.append("high-confidence exact signal relationship")
-        elif strong_context:
-            reasons.append("high-confidence disease-context relationship")
-        else:
-            reasons.extend((
-                f"discovery score {score:.3f}",
-                f"disease confidence {max_disease_confidence:.2f}",
-            ))
-        return AutomationDecision("publish", tuple(reasons))
-    if score < config.autopilot_article_exclude_below_score and max_disease_confidence <= 0.0:
-        return AutomationDecision(
-            "exclude",
-            (f"discovery score {score:.3f} is below the automatic exclusion gate and article has no disease link",),
-        )
-    if score < config.autopilot_article_exclude_below_score:
-        return AutomationDecision(
-            "hold",
-            (f"discovery score {score:.3f} is below the automatic publication gate; AI review decides",),
-        )
-    return AutomationDecision("hold", ("article relevance is inside the exception-review band",))
+    # Classifier matches and even confirmed signal links can be based on the
+    # title alone. They find candidates; neither establishes article aboutness.
+    # Contextual relevance review is a separate decision with source evidence.
+    return AutomationDecision("hold", ("disease relevance requires contextual review",))
 
 
 def _is_parent_archived_summary(summary: Any) -> bool:
@@ -601,8 +541,6 @@ def _published_revalidation_status(article: Any, decision: AutomationDecision, *
     research_domain = _research_domain(article)
     if research_domain == "plant_only":
         return "excluded"
-    if research_domain in {"animal_only", "basic_research"}:
-        return "review"
     if str(article.integrity_status) in {"retracted", "expression_of_concern"}:
         return "excluded"
     if _has_explicit_correction_parent(article):

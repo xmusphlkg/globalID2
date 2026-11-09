@@ -12,6 +12,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from sqlalchemy.exc import TimeoutError as SQLAlchemyTimeoutError
+
 AUTOMATIC_RELEASE_TRIGGERS = frozenset({"scheduled", "upstream_completion"})
 
 _EXTERNAL_RETRY_STAGES = frozenset(
@@ -115,6 +117,21 @@ def classify_release_failure(exc: BaseException) -> ReleaseFailureClassification
             stage=stage,
             reason="code, contract, configuration, validation, or credential failure",
         )
+
+    # Only SQLAlchemy's own pool-exhaustion error qualifies. Generic timeouts
+    # in local validation or build stages must stay terminal.
+    cursor: BaseException | None = exc
+    seen: set[int] = set()
+    while cursor is not None and id(cursor) not in seen:
+        seen.add(id(cursor))
+        if isinstance(cursor, SQLAlchemyTimeoutError) and "queuepool limit of size" in str(cursor).casefold():
+            return ReleaseFailureClassification(
+                retryable=True,
+                category="transient_database_pool",
+                stage=stage,
+                reason="database connection pool exhausted; retry with bounded backoff",
+            )
+        cursor = cursor.__cause__
 
     # A preflight exception is retryable only when its retained integration
     # diagnostics contain a positive transient signature.  Generic preflight

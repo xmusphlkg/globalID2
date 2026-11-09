@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+import asyncio
 import hashlib
 import json
 from pathlib import Path
@@ -595,7 +596,8 @@ class LiteratureGapService:
             repository = LiteratureRepository(db)
             ranked_candidates: list[dict[str, Any]] = []
             for candidate in candidates.values():
-                classification = classify_candidate(
+                classification = await asyncio.to_thread(
+                    classify_candidate,
                     candidate,
                     diseases=disease_catalogue,
                     countries=country_catalogue,

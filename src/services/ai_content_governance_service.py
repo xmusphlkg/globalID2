@@ -1056,7 +1056,9 @@ class AIContentGovernanceService:
             rules=LITERATURE_ARTICLE_REVIEW_RULES,
         )
 
-    def _summary_precheck(self, summary: Any, article: Any) -> tuple[str, str | None]:
+    def _summary_precheck(
+        self, summary: Any, article: Any, *, canonical_fingerprint: str | None = None
+    ) -> tuple[str, str | None]:
         """Deterministic gate before any model call: waiting, skipped, archive or review."""
 
         wait = self._literature_dependency_wait(summary, article)
@@ -1067,7 +1069,30 @@ class AIContentGovernanceService:
         missing = [field for field in SUMMARY_FIELDS if not _text(getattr(summary, field, None), limit=50)]
         if missing:
             return "archive", "summary fields are missing: " + ", ".join(missing[:5])
+        from src.core import get_config
+        from src.services.literature_automation_service import decide_summary
+
+        decision = decide_summary(
+            summary, article, get_config().literature,
+            expected_canonical_summary_fingerprint=canonical_fingerprint,
+        )
+        if decision.action != "publish":
+            return "waiting", decision.reasons[0]
         return "review", None
+
+    async def _canonical_fingerprints(self, db: AsyncSession, pairs: list[tuple[Any, Any]]) -> dict[str, str]:
+        from src.literature.enrichment import canonical_summary_fingerprint
+
+        ids = {summary.article_id for summary, _ in pairs if summary.language in {"zh", "fr"}}
+        if not ids:
+            return {}
+        rows = (await db.execute(select(LiteratureSummary).where(
+            LiteratureSummary.article_id.in_(ids), LiteratureSummary.language == "en"
+        ).execution_options(populate_existing=True))).scalars().all()
+        return {
+            row.article_id: canonical_summary_fingerprint({field: getattr(row, field) for field in SUMMARY_FIELDS})
+            for row in rows
+        }
 
     def _archive_summary(self, summary: Any, reason: str | None) -> None:
         summary.status = "archived"
@@ -1084,7 +1109,9 @@ class AIContentGovernanceService:
     def _apply_article(self, db: AsyncSession, article: Any, reviewed: ReviewedOutput, desired: str) -> None:
         previous = article.publication_status
         article.publication_status = desired
-        article.metadata_ = self._metadata(article.metadata_, desired, reviewed)
+        metadata = self._metadata(article.metadata_, desired, reviewed)
+        metadata.pop("screening_hold_reason", None)
+        article.metadata_ = metadata
         if previous != desired:
             db.add(
                 LiteratureStatusEvent(
@@ -1105,16 +1132,22 @@ class AIContentGovernanceService:
                 LiteratureArticle.publication_status == "review",
                 LiteratureArticle.integrity_status == "current",
                 LiteratureArticle.peer_review_status == "peer_reviewed",
+                # The relevance decision must cite an abstract excerpt. Keep
+                # records without enough context queued for enrichment rather
+                # than repeatedly spending model calls on unanswerable cases.
+                func.length(func.trim(func.coalesce(LiteratureArticle.abstract_text, ""))) >= 80,
             )
             .order_by(LiteratureArticle.discovery_score.desc(), LiteratureArticle.updated_at.asc())
         )
 
-    def _summary_review_query(self, after_id: int | None):
+    def _summary_review_query(self, after_id: int | None, article_ids: list[str] | None = None):
         query = (
             select(LiteratureSummary, LiteratureArticle)
             .join(LiteratureArticle, LiteratureArticle.article_id == LiteratureSummary.article_id)
             .where(LiteratureSummary.status == "review")
         )
+        if article_ids is not None:
+            query = query.where(LiteratureSummary.article_id.in_(article_ids))
         if after_id is not None:
             # Backlog drains walk by id so waiting rows never block progress.
             return query.where(LiteratureSummary.id > after_id).order_by(LiteratureSummary.id.asc())
@@ -1153,10 +1186,11 @@ class AIContentGovernanceService:
                 query = query.where(LiteratureSummary.id != all_(literal(sorted(claims.ids), ARRAY(Integer))))
             rows = (await db.execute(query.limit(limit))).all()
             claims.ids.update(summary.id for summary, _article in rows)
+        fingerprints = await self._canonical_fingerprints(db, rows)
         items: list[tuple[Any, Any, Any]] = []
         archived = 0
         for summary, article in rows:
-            action, reason = self._summary_precheck(summary, article)
+            action, reason = self._summary_precheck(summary, article, canonical_fingerprint=fingerprints.get(summary.article_id))
             if action == "archive":
                 self._archive_summary(summary, reason)
                 archived += 1
@@ -1209,6 +1243,18 @@ class AIContentGovernanceService:
         else:
             found = (await db.execute(select(LiteratureSummary).where(LiteratureSummary.id.in_(keys)))).scalars().all()
             rows = {row.id: row for row in found}
+            article_ids = {row.article_id for row in found}
+            parents = (await db.execute(select(LiteratureArticle).where(
+                LiteratureArticle.article_id.in_(article_ids)
+            ).with_for_update())).scalars().all()
+            parents_by_id = {row.article_id: row for row in parents}
+            found = (await db.execute(select(LiteratureSummary).where(
+                LiteratureSummary.id.in_(keys)
+            ).with_for_update().execution_options(populate_existing=True))).scalars().all()
+            rows = {row.id: row for row in found}
+            fingerprints = await self._canonical_fingerprints(
+                db, [(row, parents_by_id[row.article_id]) for row in found if row.article_id in parents_by_id]
+            )
         for key, seen, reviewed in results:
             row = rows.get(key)
             status = None if row is None else (row.publication_status if kind == "articles" else row.status)
@@ -1216,9 +1262,24 @@ class AIContentGovernanceService:
             if row is None or status != "review" or current != seen:
                 counts["stale"] += 1
                 continue
+            if kind == "summaries":
+                parent = parents_by_id.get(row.article_id)
+                if parent is None or self._summary_precheck(
+                    row, parent, canonical_fingerprint=fingerprints.get(row.article_id)
+                )[0] != "review":
+                    counts["stale"] += 1
+                    continue
             outcome = _review_outcome(reviewed)
+            ungrounded = False
+            if kind == "articles" and outcome in {"publish", "exclude"}:
+                from src.literature.screening import decision_is_grounded
+                if not decision_is_grounded(row, reviewed):
+                    outcome = "hold"
+                    ungrounded = True
             if outcome == "hold":
                 self._hold(row, reviewed, current, kind)
+                if ungrounded:
+                    row.metadata_ = {**(row.metadata_ or {}), "screening_hold_reason": "abstract_evidence_not_verified"}
                 counts["held"] += 1
                 continue
             publish = outcome == "publish"
@@ -1488,8 +1549,9 @@ class AIContentGovernanceService:
         completer: Completer | None = None,
         after_id: int | None = None,
         claims: ReviewClaims | None = None,
+        article_ids: list[str] | None = None,
     ) -> dict[str, Any]:
-        query = self._summary_review_query(after_id)
+        query = self._summary_review_query(after_id, article_ids=article_ids)
         if claims is None:
             rows = (await db.execute(query.limit(limit))).all()
         else:
@@ -1502,9 +1564,10 @@ class AIContentGovernanceService:
         applied: list[dict[str, Any]] = []
         route_error: str | None = None
         pending: list[tuple[Any, Any]] = []
+        fingerprints = await self._canonical_fingerprints(db, rows)
         for summary, article in rows:
             item_id = str(summary.id)
-            action, reason = self._summary_precheck(summary, article)
+            action, reason = self._summary_precheck(summary, article, canonical_fingerprint=fingerprints.get(summary.article_id))
             if action == "waiting":
                 # A dependency, not a judgement: the item is re-reviewed when it clears.
                 counts["waiting"] += 1
@@ -1546,10 +1609,17 @@ class AIContentGovernanceService:
             if not await _reload_review_input(db, article, snapshots) or not await _reload_review_input(db, summary, snapshots):
                 counts["deferred"] += 1
                 continue
-            if self._summary_precheck(summary, article)[0] != "review":
+            current_fingerprints = await self._canonical_fingerprints(db, [(summary, article)])
+            if self._summary_precheck(summary, article, canonical_fingerprint=current_fingerprints.get(summary.article_id))[0] != "review":
                 counts["deferred"] += 1
                 continue
             outcome = _review_outcome(reviewed)
+            ungrounded = False
+            if outcome in {"publish", "exclude"}:
+                from src.literature.screening import decision_is_grounded
+                if not decision_is_grounded(article, reviewed):
+                    outcome = "hold"
+                    ungrounded = True
             if outcome == "hold":
                 counts["held"] = counts.get("held", 0) + 1
                 if not dry_run:
@@ -1610,6 +1680,8 @@ class AIContentGovernanceService:
                 counts["held"] = counts.get("held", 0) + 1
                 if not dry_run:
                     self._hold(article, reviewed, self._article_fingerprint(article), "articles")
+                    if ungrounded:
+                        article.metadata_ = {**(article.metadata_ or {}), "screening_hold_reason": "abstract_evidence_not_verified"}
                 applied.append({"article_id": article.article_id, "decision": "hold", "review": reviewed.provenance(PROMPT_VERSION)})
                 continue
             desired = "published" if outcome == "publish" else "excluded"
@@ -1890,6 +1962,7 @@ class AIContentGovernanceService:
         }
 
     def _literature_article_item(self, article: LiteratureArticle) -> dict[str, Any]:
+        from src.literature.screening import initial_screen
         return {
             "id": article.article_id,
             "title": _text(article.title, limit=800),
@@ -1908,6 +1981,7 @@ class AIContentGovernanceService:
             "discovery_score": article.discovery_score,
             "abstract": _text(article.abstract_text, limit=3600),
             "classification_evidence": (article.metadata_ or {}).get("classification_evidence"),
+            "initial_screen": initial_screen(article),
             "source_urls": article.source_urls,
         }
 
@@ -1970,12 +2044,16 @@ LITERATURE_ARTICLE_REVIEW_SYSTEM = (
 )
 
 LITERATURE_ARTICLE_REVIEW_RULES = [
+    "Disease names in titles, classifier tags, scores, and journal names are candidate clues only; they do not establish that the disease is the subject of the study.",
+    "Read the abstract and controlled subject metadata together. Assess the actual research question, population, pathogen, intervention, and outcomes; distinguish a central disease focus from background, exclusions, comparisons or incidental mentions.",
+    "A publish or exclude decision must include in reasons a short exact phrase from the supplied abstract in double quotes that supports the decision. With no adequate abstract or no supporting quotation, choose hold. Never fabricate source evidence.",
+    "If a pathogen, vaccine, diagnostic, treatment or epidemiological study is disease-related even though its title omits the disease name, consider it in scope; do not require a keyword match.",
     "Publish only peer-reviewed/current articles with clear infectious-disease, outbreak, surveillance, diagnostics, prevention, burden, policy, or public-health relevance.",
     "The supplied peer_review_status and integrity_status are catalogue metadata, not proof from the full article; use the supplied values when evaluating these fields and do not claim they are absent when present.",
-    "Exclude articles that are clearly off-topic, animal-only without public-health relevance, corrections without new evidence, pure methods with no infectious-disease application, or low-signal catalogue noise.",
+    "Animal and laboratory studies can be relevant to an infectious disease. Exclude only when the abstract supports that the article is clearly outside the infectious-disease scope; otherwise hold.",
     "Hold if relevance depends on expert judgment, if the abstract is too thin, or if the article may be relevant but the public-health connection is uncertain.",
     "Do not publish because a score is high by itself; use scores as hints and justify the semantic decision from title/abstract/evidence.",
-    "Exclusion is final; when unsure between publish and exclude, choose hold. An old publication date or a low discovery score is not a reason to exclude.",
+    "When unsure between publish and exclude, choose hold. An old publication date, access status or a low discovery score is not a reason to exclude.",
 ]
 
 

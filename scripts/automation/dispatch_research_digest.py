@@ -238,6 +238,7 @@ def _markdown(
     methodology: str,
     reviewer: Mapping[str, str] | None,
     ai_review: Mapping[str, Any] | None,
+    personalized_template: bool = False,
 ) -> str:
     zh = locale == "zh"
     if reviewer:
@@ -271,19 +272,11 @@ def _markdown(
             "",
             f"> {'审核备注' if zh else 'Review note'}: {reviewer['note_zh' if zh else 'note_en']}",
         ])
-    for index, finding in enumerate(findings, 1):
-        lines.extend([
-            "",
-            f"## {index}. {finding['title']}",
-            "",
-            finding["finding_zh" if zh else "finding_en"],
-            "",
-        ])
-        source_label = "Research Radar 文献页" if zh else "Research Radar article"
-        links = [f"[{source_label}]({finding['source_url']})"]
-        if finding.get("doi_url"):
-            links.append(f"[DOI]({finding['doi_url']})")
-        lines.append(("来源：" if zh else "Sources: ") + " · ".join(links))
+    if personalized_template:
+        lines.extend(["", "{{GIDS_PERSONALIZED_ITEMS}}"])
+    else:
+        for index, finding in enumerate(findings, 1):
+            lines.extend(["", _finding_markdown(finding, locale, index)])
     lines.extend([
         "",
         f"[{'查看完整每周简报' if zh else 'Read the full weekly brief'}]({brief_url})",
@@ -291,6 +284,18 @@ def _markdown(
         f"**{'方法说明' if zh else 'Methodology'}:** {methodology}",
     ])
     return "\n".join(lines)
+
+
+def _finding_markdown(finding: Mapping[str, str], locale: str, index: int | None) -> str:
+    zh = locale == "zh"
+    source_label = "Research Radar 文献页" if zh else "Research Radar article"
+    links = [f"[{source_label}]({finding['source_url']})"]
+    if finding.get("doi_url"):
+        links.append(f"[DOI]({finding['doi_url']})")
+    return "\n".join([
+        f"## {str(index) + '. ' if index is not None else ''}{finding['title']}", "", finding["finding_zh" if zh else "finding_en"],
+        "", ("来源：" if zh else "Sources: ") + " · ".join(links),
+    ])
 
 
 def build_campaign_payload(
@@ -348,6 +353,13 @@ def build_campaign_payload(
         "peer_review_statuses": _unique([_slug(article.get("peer_review_status"))]),
     } for article in cited_articles]
 
+    # Only the already validated, public bilingual findings become fragments.
+    # Each fragment stays bound to the metadata for the same article.
+    by_id = {finding["article_id"]: finding for finding in findings}
+    for item in content_items:
+        finding = by_id[item["id"]]
+        item["localized_markdown"] = {locale: _finding_markdown(finding, locale, None) for locale in ("en", "zh")}
+
     return {
         "idempotency_key": f"research-digest:{week}:{revision}",
         "source_ref": brief_url,
@@ -371,6 +383,13 @@ def build_campaign_payload(
                     methodology=method_zh, reviewer=reviewer, ai_review=ai_review,
                 ),
             },
+        },
+        "personalized_templates": {
+            locale: _markdown(
+                week=week, locale=locale, findings=[], brief_url=brief_url,
+                methodology=method_zh if locale == "zh" else method_en,
+                reviewer=reviewer, ai_review=ai_review, personalized_template=True,
+            ) for locale in ("en", "zh")
         },
         "content_items": content_items,
         "created_by": "research-brief-dispatcher",
@@ -420,6 +439,7 @@ def _post_json(
 
 def require_content_item_capability(
     worker_base_url: str, *, timeout_seconds: float, opener: Callable[..., Any] = urlopen,
+    personalized: bool = False,
 ) -> None:
     """Do not send a new-filter payload to an older Worker that ignores it."""
     request = Request(_endpoint(worker_base_url, "/health"), headers={
@@ -442,6 +462,8 @@ def require_content_item_capability(
     capabilities = health.get("capabilities") if isinstance(health, dict) else None
     if not isinstance(capabilities, dict) or capabilities.get("research_content_items_v1") is not True:
         raise DispatchError("worker_research_content_items_capability_required")
+    if personalized and capabilities.get("research_personalized_items_v1") is not True:
+        raise DispatchError("worker_research_personalized_items_capability_required")
 
 
 def queue_campaign(
@@ -454,7 +476,8 @@ def queue_campaign(
 ) -> dict[str, Any]:
     if not token:
         raise DispatchError("admin_token_required")
-    require_content_item_capability(worker_base_url, timeout_seconds=timeout_seconds, opener=opener)
+    require_content_item_capability(worker_base_url, timeout_seconds=timeout_seconds, opener=opener,
+                                    personalized="personalized_templates" in payload)
     return _post_json(
         _endpoint(worker_base_url, CREATE_ROUTE), token, payload,
         timeout_seconds=timeout_seconds, opener=opener,

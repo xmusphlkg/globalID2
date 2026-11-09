@@ -668,6 +668,9 @@ async def run_worker() -> None:
     if released:
         logger.warning("Released {} model work lease(s) left by the previous worker", released)
 
+    from src.services.model_dispatch_ready import publish_ready
+    publish_ready()
+
     await ai_concurrency.refresh(force=True)
 
     stop_event = asyncio.Event()

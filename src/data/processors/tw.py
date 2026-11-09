@@ -48,6 +48,7 @@ class TWUpdateFetchResult:
     source_csv: Path
     script_logs: List[str]
     source_audit: Optional[Dict] = None
+    store_rows: Optional[List[Dict[str, str]]] = None
 
 
 @dataclass
@@ -488,8 +489,8 @@ class TWMonthlyUpdater:
                 continue
 
             cases = _parse_int(row.get("Cases")) or 0
-            local_cases = _parse_int(row.get("LocalCases")) or 0
-            imported_cases = _parse_int(row.get("ImportedCases")) or 0
+            local_cases = _parse_int(row.get("LocalCases"))
+            imported_cases = _parse_int(row.get("ImportedCases"))
             key = (day, disease_id, country_id)
 
             bucket = grouped.setdefault(
@@ -503,6 +504,7 @@ class TWMonthlyUpdater:
                     "data_source": row.get("Source", self.source_name),
                     "local_cases": 0,
                     "imported_cases": 0,
+                    "split_known": True,
                     "raw_disease_labels": [],
                     "disease_codes": [],
                     "source_urls": [],
@@ -510,8 +512,11 @@ class TWMonthlyUpdater:
                 },
             )
             bucket["cases"] = int(bucket["cases"]) + max(0, cases)
-            bucket["local_cases"] = int(bucket["local_cases"]) + max(0, local_cases)
-            bucket["imported_cases"] = int(bucket["imported_cases"]) + max(0, imported_cases)
+            if local_cases is None or imported_cases is None:
+                bucket["split_known"] = False
+            else:
+                bucket["local_cases"] = int(bucket["local_cases"]) + max(0, local_cases)
+                bucket["imported_cases"] = int(bucket["imported_cases"]) + max(0, imported_cases)
             if label and label not in bucket["raw_disease_labels"]:
                 bucket["raw_disease_labels"].append(label)
             if code and code not in bucket["disease_codes"]:
@@ -526,8 +531,8 @@ class TWMonthlyUpdater:
             metadata_obj = {
                 "raw_disease_labels": bucket["raw_disease_labels"],
                 "disease_codes": bucket["disease_codes"],
-                "local_cases": bucket["local_cases"],
-                "imported_cases": bucket["imported_cases"],
+                "local_cases": bucket["local_cases"] if bucket["split_known"] else None,
+                "imported_cases": bucket["imported_cases"] if bucket["split_known"] else None,
                 "source_urls": bucket["source_urls"],
                 "death_reporting": "not_provided_by_source",
                 "death_reporting_note": "Taiwan CDC case feed used here reports cases, not death counts.",

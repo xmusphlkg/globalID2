@@ -1015,6 +1015,7 @@ def empty_literature_export() -> dict[str, Any]:
         },
         "featured": [],
         "articles": [],
+        "bibliographic_articles": [],
         "title_estimated_related_records": [],
         "preprints": [],
         "related_only_articles": [],
@@ -1087,6 +1088,28 @@ def apply_public_summary_gate(
         [article for article in preprints if article.get("indexable") is True],
         withheld,
     )
+
+
+def bibliographic_catalogue_records(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Project approved records without evidence pages to a source-linked tier."""
+    fields = (
+        "article_id", "slug", "title", "doi", "pmid", "journal", "publisher",
+        "authors", "study_type", "published_at", "publication_week", "open_access_status",
+        "open_access_url", "peer_review_status", "discovery_score", "diseases", "countries",
+        "topics", "pathogens", "pathogen_types", "populations", "publication_date_label_en",
+        "publication_date_label_zh", "publication_date_label_fr", "integrity_status", "editorial_status",
+    )
+    return [
+        {**{key: article.get(key) for key in fields},
+         "content_tier": "bibliographic", "detail_available": False}
+        for article in articles
+        if article.get("editorial_status") == "published"
+        and article.get("peer_review_status") == "peer_reviewed"
+        and article.get("integrity_status") not in {"retracted", "expression_of_concern"}
+        and article.get("indexable") is not True
+        and (article.get("doi") or article.get("pmid"))
+        and article.get("research_domain") != "plant_only"
+    ]
 
 
 async def collect_literature_export(
@@ -1489,6 +1512,10 @@ async def collect_literature_export(
         })
 
     projected, preprints = partition_public_literature_articles(projected)
+    # Bibliographic records can be useful even when no detailed GIDS summary
+    # is available. They link to their original source, not to an evidence
+    # page, and never contain private abstracts or provider payloads.
+    bibliographic_articles = bibliographic_catalogue_records(projected)
     related_only_articles = [
         article
         for article in [*projected, *preprints]
@@ -1698,6 +1725,7 @@ async def collect_literature_export(
             reverse=True,
         )[:6],
         "articles": projected,
+        "bibliographic_articles": bibliographic_articles,
         "title_estimated_related_records": title_estimate_records,
         "preprints": preprints,
         "related_only_articles": related_only_articles,
@@ -1816,7 +1844,7 @@ def write_literature_artifacts(
         {
             "schema_version": public_index.get("schema_version"),
             "last_updated": public_index.get("last_updated"),
-            "articles": payload.get("articles") or [],
+            "articles": [*(payload.get("articles") or []), *(payload.get("bibliographic_articles") or [])],
         },
     )
     report_phase("build-time indexes")

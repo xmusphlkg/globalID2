@@ -7,8 +7,11 @@ class UpdaterCommitStrategy:
     async def commit(self, db, *, service, updater, fetched, force, task_uuid, **kwargs):
         latest = await updater.get_db_latest_date(db)
         publication_results = []
+        # Some connectors retain cached rows for diagnostics but must not let
+        # stale snapshots overwrite newer database observations.
+        store_rows = getattr(fetched, "store_rows", None)
         result = await service._import_rows_with_series(
-            db, updater, fetched.rows,
+            db, updater, fetched.rows if store_rows is None else store_rows,
             series_rows=getattr(fetched, "series_rows", None),
             db_latest_date=latest,
             source_latest_date=getattr(fetched, "latest_date", None) or getattr(fetched, "source_latest_date", None),

@@ -10,7 +10,7 @@ import signal
 import shlex
 from typing import Any, Awaitable, Callable, Optional, Protocol
 
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.exc import DBAPIError, TimeoutError as SQLAlchemyTimeoutError
 
 from src.services.exceptions import TaskCancelledError
 
@@ -359,7 +359,7 @@ async def run_logged_command(
                 try:
                     cancel_requested = await task_manager.is_cancel_requested(task_uuid)
                     cancel_store_unavailable_since = None
-                except (TimeoutError, OSError, DBAPIError) as exc:
+                except (TimeoutError, OSError, DBAPIError, SQLAlchemyTimeoutError) as exc:
                     if cancel_store_unavailable_since is None:
                         cancel_store_unavailable_since = now
                         logger.warning("{} cancellation check temporarily unavailable: {}", title, type(exc).__name__)

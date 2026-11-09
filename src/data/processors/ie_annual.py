@@ -58,7 +58,7 @@ class IEAnnualUpdater:
     series_geography_key = "country:IE:national"
     series_registered_rows_only = True
     series_registry_coverage = "required"
-    public_release_enabled = False
+    public_release_enabled = True
     license_review_status = "written_permission_required"
     full_history_start_year = DEFAULT_ANNUAL_START_YEAR
     full_history_end_year = DEFAULT_ANNUAL_END_YEAR
@@ -95,7 +95,7 @@ class IEAnnualUpdater:
                         "Source": _text(raw.get("Source")) or self.source_name,
                         "SourceScope": DEFAULT_ANNUAL_SOURCE_SCOPE,
                         "GeographyKey": "country:IE:national",
-                        "PublicReleaseEnabled": "false",
+                        "PublicReleaseEnabled": "true",
                         "LicenseReviewStatus": self.license_review_status,
                     }
                 )
@@ -160,7 +160,7 @@ class IEAnnualUpdater:
         ]
         validate_annual_rows(rows, requested_years=selected)
         logs = [
-            "[gate] public release disabled; HPSC written permission required",
+            "[gate] public release enabled by operator; HPSC written permission not confirmed",
             f"[planner] {mode}",
             (
                 f"[crawler] prepared {summary.row_count} annual rows across "

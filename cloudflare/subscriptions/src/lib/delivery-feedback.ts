@@ -98,6 +98,15 @@ export async function applyDeliveryFeedback(
        (SELECT id FROM transactional_email_deliveries WHERE provider_message_id=?)) ${confirmationGuard}`,
   ).bind(confirmationStatus, error, now, correlationId, providerId).run();
 
+  // A management message is also linked before SMTP, so a callback can
+  // settle a claimed or uncertain job without risking a second submission.
+  await db.prepare(
+    `UPDATE management_email_outbox SET status=?, last_error=?, updated_at=?,
+       claim_token=NULL, claim_expires_at=NULL, next_attempt_at=NULL
+     WHERE (transaction_delivery_id=? OR transaction_delivery_id IN
+       (SELECT id FROM transactional_email_deliveries WHERE provider_message_id=?)) ${confirmationGuard}`,
+  ).bind(confirmationStatus, error, now, correlationId, providerId).run();
+
   // An alert stores the transaction ID before SMTP starts. A provider callback
   // can therefore settle an in-flight or ambiguous delivery before the SMTP
   // request returns. A defer means the provider accepted responsibility; it is

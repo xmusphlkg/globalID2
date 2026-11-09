@@ -802,10 +802,11 @@ class LiteraturePipeline:
                 after_batch=after_classification_batch,
             )
             for candidate, classification in classified:
-                if _hold_degraded_enrichment_for_review(
+                held_for_degraded = _hold_degraded_enrichment_for_review(
                     classification,
                     enrichment_degraded=enrichment_degraded,
-                ):
+                )
+                if held_for_degraded or (enrichment_degraded and classification.publication_status == "review"):
                     persisted["enrichment_degraded_review"] += 1
                 persisted["preprints_held_for_review"] += int(
                     _hold_preprint_for_review(candidate, classification)

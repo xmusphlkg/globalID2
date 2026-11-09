@@ -93,6 +93,20 @@ def test_classifier_keeps_preflight_syntax_and_credentials_terminal():
     assert credential.retryable is False
 
 
+def test_only_typed_connection_pool_exhaustion_is_retried():
+    from sqlalchemy.exc import TimeoutError as PoolTimeout
+
+    pool = PoolTimeout("QueuePool limit of size 10 overflow 20 reached, connection timed out, timeout 30.00")
+    assert classify_release_failure(pool).category == "transient_database_pool"
+    assert not classify_release_failure(RuntimeError(str(pool))).retryable
+    assert not classify_release_failure(PoolTimeout("different database timeout")).retryable
+
+    try:
+        raise RuntimeError("parallel publication failed") from pool
+    except RuntimeError as wrapped:
+        assert classify_release_failure(wrapped).retryable
+
+
 @pytest.mark.parametrize("stage,message,expected", [
     ("r2_reports_publish", "Connection reset by peer", True),
     ("r2_reports_publish", "HTTP 503 Service unavailable", True),

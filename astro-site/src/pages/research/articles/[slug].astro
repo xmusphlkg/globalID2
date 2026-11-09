@@ -9,6 +9,7 @@ import { buildAlternatePaths, clampSeoDescription, clampSeoTitle, normalizeDisea
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/diseaseNames';
 import { localizedRegionName, translateUi } from '../../../utils/i18n';
 import { researchSocialImage } from '../../../lib/research-publishing';
+import { researchArticleVersion } from '../../../lib/research-article-version';
 
 export function getStaticPaths() {
   const plan = process.env.GIDS_RESEARCH_BUILD_PLAN
@@ -28,9 +29,9 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 const file = resolve(`./src/data/research/articles/${slug}.json`);
-const article: any = existsSync(file)
-  ? JSON.parse(readFileSync(file, 'utf-8'))
-  : null;
+const articleBytes = existsSync(file) ? readFileSync(file) : null;
+const article: any = articleBytes ? JSON.parse(articleBytes.toString('utf-8')) : null;
+const articleVersion = articleBytes ? researchArticleVersion(articleBytes) : '';
 if (!article) return Astro.redirect(localeHref('/research/'));
 const isPreprint = article.peer_review_status === 'preprint';
 const versionRelation = (article.version_relations ?? []).find((relation: any) => (
@@ -185,7 +186,7 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
     { label: 'Evidence summary', labelZh: '证据摘要', labelFr: 'Résumé des preuves' },
   ]}
 >
-  <article class="evidence-page">
+  <article class="evidence-page" data-research-article-id={article.article_id} data-research-article-sha256={articleVersion}>
     <header class="academic-hero evidence-header">
       <div class="evidence-badges">
         <span>{article.peer_review_status === 'peer_reviewed' ? pick('Peer reviewed', '同行评议', 'Évalué par les pairs') : pick('Preprint', '预印本', 'Prépublication')}</span>

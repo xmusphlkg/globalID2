@@ -92,7 +92,7 @@ def test_weekly_pdf_parser_uses_only_week_ending_column(monkeypatch):
     )
     assert len(rows) == 70
     assert {row["Cases"] for row in rows} == {"0", "1", "2", "3"}
-    assert all(row["PublicReleaseEnabled"] == "false" for row in rows)
+    assert all(row["PublicReleaseEnabled"] == "true" for row in rows)
     assert all(row["DatasetStatus"] == "historical_provisional_snapshot" for row in rows)
     validate_archive_rows(rows, requested_periods={(2020, 20)})
 

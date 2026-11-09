@@ -8,7 +8,7 @@
 | 读者 | 按 PR 实施的工程师 |
 | Alembic 头 | `0021_situation_alerts`（`down_revision = 0020_drop_legacy_situation`） |
 
-本文是实施说明。公开站页面结构、Postgres / Redis / systemd 进程模型、疾病本体和 mapping v3 的产品规则保持不动。过时文档 `docs/REFACTORING_PLAN.md`、`docs/ARCHITECTURE_V2.md`、`src/data/README.md` 只作历史，不按它们实施。
+本文是实施说明。公开站页面结构、Postgres / Redis / systemd 进程模型、疾病本体和 mapping v3 的产品规则保持不动。`src/data/README.md` 只作历史参考，不按它实施。
 
 ## 1. 要改成什么样
 

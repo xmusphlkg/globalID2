@@ -67,11 +67,11 @@ def test_shared_ecdc_adapter_covers_all_eu_eea_country_codes() -> None:
     assert CrawlService._PIPELINES["FI"].handler_name == "_execute_fi_monthly"
 
 
-def test_permission_gated_national_sources_do_not_enter_public_ecdc_export() -> None:
+def test_ireland_public_sources_retain_operator_decision_and_ecdc_provenance() -> None:
     austria = get_country_bootstrap_config("AT")
     ireland = get_country_bootstrap_config("IE")
     assert austria["public_release_enabled"] is True
-    assert ireland["public_release_enabled"] is False
+    assert ireland["public_release_enabled"] is True
     assert ireland["crawler_config"]["source_policies"]["ecdc_atlas_annual"]["public_release_enabled"] is True
     assert austria["crawler_config"]["sources"] == [
         "ages_radar",
@@ -79,7 +79,9 @@ def test_permission_gated_national_sources_do_not_enter_public_ecdc_export() -> 
     ]
     assert ireland["crawler_config"]["sources"][-1] == "ecdc_atlas_annual"
     assert austria["public_source_systems"] == ["SRC_AT_ECDC_ATLAS"]
-    assert ireland["public_source_systems"] == ["SRC_IE_ECDC_ATLAS"]
+    assert set(ireland["public_source_systems"]) == {
+        "SRC_IE_ECDC_ATLAS", "SRC_IE_HPSC_NDH", "SRC_IE_HPSC_ANNUAL", "SRC_IE_HPSC_WEEKLY_ARCHIVE"
+    }
     assert austria["public_legacy_enabled"] is False
     assert ireland["public_legacy_enabled"] is False
 

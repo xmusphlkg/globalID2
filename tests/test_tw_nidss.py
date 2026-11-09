@@ -96,12 +96,22 @@ def test_tw_nidss_monthly_aggregation_accepts_diagnosis_year_month_columns():
             "Year": "2026",
             "Month": "1",
             "Cases": "3",
-            "LocalCases": "3",
-            "ImportedCases": "0",
+            "LocalCases": "",
+            "ImportedCases": "",
             "Source": DEFAULT_SOURCE_NAME,
             "SourceURL": "https://od.cdc.gov.tw/eic/Age_County_Gender_042.csv",
         }
     ]
+
+
+def test_tw_unknown_origin_keeps_total_without_inventing_a_partial_split():
+    disease = TWDiseaseSource("061", "登革熱", "https://example.test/061.csv", "")
+    rows = [
+        {"發病年份": "2026", "發病月份": "01", "是否為境外移入": "1", "確定病例數": "3"},
+        {"發病年份": "2026", "發病月份": "01", "是否為境外移入": "未知", "確定病例數": "2"},
+    ]
+    result = aggregate_monthly_csv_rows(disease, rows)
+    assert (result[0]["Cases"], result[0]["LocalCases"], result[0]["ImportedCases"]) == ("5", "", "")
 
 
 def test_tw_nidss_source_scope_aliases():

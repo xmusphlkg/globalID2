@@ -354,6 +354,29 @@ async def test_concurrent_claims_respect_route_capacity(db, capacity):
     assert len(ids) == len(set(ids)) == capacity
 
 
+async def test_dominant_route_reserves_review_capacity_when_its_authors_have_backlog(db):
+    author = await queue.enqueue_work(
+        parent_task_uuid="parent", line="agent_workflow", priority="low",
+        payload={"agent_name": "content_governance_author", "avoid_models": []},
+    )
+    for _ in range(4):
+        await queue.enqueue_work(
+            parent_task_uuid="parent", line="agent_workflow", priority="low",
+            payload={"agent_name": "content_governance_reviewer", "avoid_models": ["big"]},
+        )
+    reviewer = await queue.enqueue_work(
+        parent_task_uuid="parent", line="agent_workflow", priority="low",
+        payload={"agent_name": "content_governance_reviewer", "avoid_models": ["small"]},
+    )
+    chosen = await queue.claim_work(route("provider:big", capacity=50),
+                                    alternatives={"provider:big", "provider:small"},
+                                    balance_peer_review=True)
+    assert chosen.id == reviewer
+    assert (await row(db, author)).status == "queued"
+    assert (await queue.claim_work(route("provider:small"),
+                                   alternatives={"provider:big", "provider:small"})).id == author
+
+
 async def test_two_routes_cannot_lease_the_same_item(db):
     work_id = await add()
     claims = await asyncio.gather(
@@ -1258,6 +1281,29 @@ async def test_avoided_route_takes_work_when_the_other_route_is_full(db):
     await asyncio.sleep(0)
     await dispatcher.tick()
     release.set()
+    await asyncio.gather(*dispatcher.active.values())
+    assert served[work_id] == "first"
+
+
+async def test_shared_dispatcher_uses_global_leases_to_detect_full_alternative(db):
+    busy = await add()
+    work_id = await queue.enqueue_work(
+        parent_task_uuid="parent", line="agent_workflow", priority="low",
+        payload={"avoid_models": ["first"]},
+    )
+    assert (await queue.claim_work(route("second"))).id == busy
+    served = {}
+
+    async def routes():
+        return [route("first"), route("second")]
+
+    async def complete(item, chosen):
+        served[item.id] = chosen["model_key"]
+        return "done"
+
+    # The second lease belongs to another dispatcher, not dispatcher.active.
+    dispatcher = queue.AIWorkDispatcher(routes, complete)
+    assert await dispatcher.tick() == 1
     await asyncio.gather(*dispatcher.active.values())
     assert served[work_id] == "first"
 

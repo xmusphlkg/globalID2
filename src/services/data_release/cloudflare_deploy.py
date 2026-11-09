@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import Any
+from .release_binding import PAPERS_FIELDS, papers_binding_matches
 
 
 async def deploy_cloudflare_site(
@@ -16,11 +17,14 @@ async def deploy_cloudflare_site(
     """Deploy or resume an identical current publication before recording success."""
     if not deployment_branch:
         raise RuntimeError("Cloudflare production branch could not be resolved.")
+    if not papers_binding_matches(release_identity, release_identity):
+        raise RuntimeError("Invalid or incomplete Papers release binding; Pages deployment refused.")
     artifact_digest = release_identity["build_digest"]
     deploy_checkpoint = dict(release_checkpoints.get("cloudflare_deploy") or {})
     if (
         deploy_checkpoint.get("release_id") == release_identity["release_id"]
         and deploy_checkpoint.get("artifact_digest") == artifact_digest
+        and papers_binding_matches(deploy_checkpoint, release_identity)
         and deploy_checkpoint.get("project_name") == project_name
         and deploy_checkpoint.get("account_id") == service._cloudflare_account_id()
         and deploy_checkpoint.get("deployment_branch") == deployment_branch
@@ -89,6 +93,7 @@ async def deploy_cloudflare_site(
                 "artifact_digest": artifact_digest,
                 "project_name": project_name,
                 "account_id": service._cloudflare_account_id(),
+                **{key: release_identity[key] for key in PAPERS_FIELDS if key in release_identity},
             },
         )
     cloudflare_deployment = {

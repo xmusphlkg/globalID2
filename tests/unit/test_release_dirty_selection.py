@@ -991,6 +991,12 @@ async def test_disabled_scope_stays_pending_without_blocking_publishable_scopes(
     release_db, monkeypatch, disabled_code, include_us
 ):
     maker, service, _ = release_db
+    if disabled_code == "IE":
+        country_config = module.get_country_bootstrap_config
+        monkeypatch.setattr(module, "get_country_bootstrap_config", lambda code: (
+            {**country_config(code), "public_release_enabled": False}
+            if code == "IE" else country_config(code)
+        ))
     async with maker() as session:
         if disabled_code == "IE":
             session.add(

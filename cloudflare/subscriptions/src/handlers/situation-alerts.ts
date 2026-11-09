@@ -363,7 +363,8 @@ export async function processSituationAlertOutbox(
     const unsubscribeUrl = `${configuredPublicBaseUrl(env)}/api/subscriptions/unsubscribe?token=${unsubscribeToken}`;
     const manageToken = await deps.createSignedToken(env, "manage", claimed.subscription_id, 60 * 60 * 24);
     const manageUrl = `${configuredPublicBaseUrl(env)}/api/subscriptions/manage?token=${manageToken}`;
-    const email = buildNotificationEmail(locale, content, unsubscribeUrl, manageUrl);
+    const email = buildNotificationEmail(locale, content, unsubscribeUrl, manageUrl,
+      alert.basis === "official_authority_notice" ? "alert" : "update");
     const transactionId = crypto.randomUUID();
     const attemptTime = new Date().toISOString();
     const deliveryMetadata = JSON.stringify({

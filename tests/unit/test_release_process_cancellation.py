@@ -125,6 +125,23 @@ async def test_output_or_task_store_exception_retains_original_error_and_stops_w
         await _emergency_cleanup(task, tmp_path)
 
 
+async def test_transient_sqlalchemy_pool_timeout_does_not_kill_command(tmp_path, monkeypatch):
+    from sqlalchemy.exc import TimeoutError as PoolTimeout
+
+    monkeypatch.setattr(runner, "TASK_CANCEL_CHECK_INTERVAL_SECONDS", 0.01)
+    manager = _manager()
+    manager.is_cancel_requested.side_effect = [
+        PoolTimeout("QueuePool limit of size 10 overflow 20 reached"), False, False, False, False,
+    ]
+    await runner.run_logged_command(
+        "pool-recovery-fixture", title="Short command",
+        cmd=[sys.executable, "-c", "import time; time.sleep(0.05)"], cwd=tmp_path,
+        task_manager=manager, logger=SimpleNamespace(warning=lambda *_: None),
+        terminate=_terminate, timeout_seconds=5, cancel_poll_seconds=0.02,
+    )
+    assert manager.is_cancel_requested.await_count >= 2
+
+
 async def test_repeated_cancellation_cannot_release_output_lock_before_cleanup(tmp_path):
     cleaning = asyncio.Event()
     allow_cleanup = asyncio.Event()

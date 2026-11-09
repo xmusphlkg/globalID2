@@ -118,6 +118,15 @@ async def _run_repository_publications(
                 returncode=getattr(primary, "returncode", None),
                 timed_out=bool(getattr(primary, "timed_out", False)),
             ) from primary
+        # Preserve the typed cause for a single failure. For several failures,
+        # keep the aggregate terminal unless every failure is a pool timeout.
+        from sqlalchemy.exc import TimeoutError as SQLAlchemyTimeoutError
+        if len(stage_errors) == 1 or all(
+            isinstance(error, SQLAlchemyTimeoutError)
+            and "queuepool limit of size" in str(error).casefold()
+            for error in stage_errors
+        ):
+            raise RuntimeError(message) from primary
         raise RuntimeError(message)
     return completed
 

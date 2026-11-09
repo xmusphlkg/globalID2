@@ -60,7 +60,7 @@ class IEWeeklyArchiveUpdater:
     series_geography_key = "country:IE:national"
     series_registered_rows_only = True
     series_registry_coverage = "required"
-    public_release_enabled = False
+    public_release_enabled = True
     license_review_status = "not_checked_for_ingestion"
     full_history_start_year = DEFAULT_ARCHIVE_START_YEAR
     full_history_end_year = DEFAULT_ARCHIVE_END[0]
@@ -93,7 +93,7 @@ class IEWeeklyArchiveUpdater:
                         "Source": _text(raw.get("Source")) or self.source_name,
                         "SourceScope": DEFAULT_ARCHIVE_SOURCE_SCOPE,
                         "GeographyKey": "country:IE:national",
-                        "PublicReleaseEnabled": "false",
+                        "PublicReleaseEnabled": "true",
                         "LicenseReviewStatus": _text(raw.get("LicenseReviewStatus")) or self.license_review_status,
                     }
                 )
@@ -189,7 +189,7 @@ class IEWeeklyArchiveUpdater:
         ]
         validate_archive_rows(rows, requested_periods=set(selected))
         logs = [
-            "[licence] validation skipped for ingestion; public release disabled",
+            "[licence] reuse rights not verified; public release enabled by operator decision",
             f"[planner] {mode}",
             (
                 f"[crawler] prepared {summary.row_count} rows across "

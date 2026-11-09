@@ -263,9 +263,9 @@
 
 ## 📚 相关文档
 
-- [数据库快速入门](../docs/DATABASE_QUICKSTART.md)
+- [数据库设计](../docs/database_design.md)
 - [疾病映射 V2 设计](../docs/DISEASE_MAPPING_V2.md)
-- [疾病数据管理策略](../docs/DISEASE_MANAGEMENT_STRATEGY.md)
+- [疾病本体与来源系列](../docs/DISEASE_ONTOLOGY_V3.md)
 - [废弃脚本说明](./deprecated/README.md)
 
 ---

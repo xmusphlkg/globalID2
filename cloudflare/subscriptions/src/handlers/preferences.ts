@@ -1,5 +1,6 @@
 import { escapeHtml, normalizeEmail } from "../lib/input.ts";
 import { HttpError, publicBaseUrl } from "../lib/http.ts";
+import { buildManagementEmail } from "../lib/email.ts";
 import { secureTextEqual, sha256Hex } from "../lib/security.ts";
 import type { Env } from "../types.ts";
 
@@ -18,7 +19,7 @@ type Dependencies = {
 };
 
 type Subscription = {
-  id: string; status: string; contact_status: string; subscriber_status: string;
+  id: string; status: string; frequency: string; contact_status: string; subscriber_status: string;
   list_code: string; list_name: string; list_name_zh: string | null; locale: string;
   preference_revision: string | null;
   management_generation: string;
@@ -36,8 +37,22 @@ const FILTERS: Record<string, Array<{ type: string; en: string; zh: string }>> =
   ],
 };
 
+// Match the frequencies accepted by new subscription requests and consumed by
+// the automated dispatchers. Historical values stay unchanged without consent.
+const SUPPORTED_FREQUENCIES: Record<string, string> = {
+  reports: "weekly", weekly_digest: "weekly", research_digest: "weekly", alerts: "instant",
+};
+const FREQUENCY_LABELS: Record<string, { en: string; zh: string }> = {
+  instant: { en: "Instant", zh: "即时" }, daily: { en: "Daily", zh: "每日" },
+  weekly: { en: "Weekly", zh: "每周" }, monthly: { en: "Monthly", zh: "每月" },
+};
+
+function frequencyLabel(value: string, zh: boolean): string {
+  return FREQUENCY_LABELS[value]?.[zh ? "zh" : "en"] || value;
+}
+
 function page(title: string, content: string, status = 200, lang = "en"): Response {
-  return new Response(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} | GIDS</title><style>body{font:16px/1.5 system-ui,sans-serif;background:#f7faf9;color:#172a2a;margin:0}main{max-width:720px;margin:3rem auto;padding:1.5rem;background:white;border:1px solid #d7e4e1}label{display:block;margin:1.2rem 0 .3rem;font-weight:600}input,select,button{font:inherit;padding:.7rem;box-sizing:border-box;max-width:100%}select{width:100%;min-height:9rem}button{background:#087b70;color:white;border:0;cursor:pointer;margin:.6rem .5rem .6rem 0}a{color:#087b70}small{color:#526462}</style></head><body><main><h1>${escapeHtml(title)}</h1>${content}</main></body></html>`, {
+  return new Response(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} | GIDS</title><style>body{font:16px/1.5 system-ui,sans-serif;background:#f7faf9;color:#172a2a;margin:0}main{max-width:720px;margin:3rem auto;padding:1.5rem;background:white;border:1px solid #d7e4e1}label{display:block;margin:1.2rem 0 .3rem;font-weight:600}input,select,button{font:inherit;padding:.7rem;box-sizing:border-box;max-width:100%}select{width:100%}select[multiple]{min-height:9rem}button{background:#087b70;color:white;border:0;cursor:pointer;margin:.6rem .5rem .6rem 0}a{color:#087b70}small{color:#526462}</style></head><body><main><h1>${escapeHtml(title)}</h1>${content}</main></body></html>`, {
     status,
     headers: {
       "content-type": "text/html; charset=utf-8", "cache-control": "no-store",
@@ -93,7 +108,7 @@ export function createPreferenceHandlers(deps: Dependencies) {
     const parsed = await deps.verifySignedToken(env, token, "manage");
     if (!parsed) throw new HttpError(400, "invalid_or_expired_management_link");
     const row = await env.DB.prepare(
-      `SELECT s.id, s.status, s.preference_revision, s.management_generation, c.status AS contact_status, sub.status AS subscriber_status,
+      `SELECT s.id, s.status, s.frequency, s.preference_revision, s.management_generation, c.status AS contact_status, sub.status AS subscriber_status,
        l.code AS list_code, l.name AS list_name, l.name_zh AS list_name_zh, sub.locale
        FROM subscriptions s JOIN subscriber_contacts c ON c.id=s.contact_id
        JOIN subscribers sub ON sub.id=s.subscriber_id JOIN subscription_lists l ON l.id=s.list_id
@@ -124,63 +139,139 @@ export function createPreferenceHandlers(deps: Dependencies) {
     const action = row.status === "paused" ? "resume" : "pause";
     const title = zh ? "管理订阅偏好" : "Manage subscription preferences";
     const revision = escapeHtml(row.preference_revision || "");
-    return page(title, `${notice ? `<p role="status">${escapeHtml(notice)}</p>` : ""}<p>${escapeHtml(zh ? row.list_name_zh || row.list_name : row.list_name)} · ${escapeHtml(row.status)}</p><form method="post" action="/api/subscriptions/manage"><input type="hidden" name="token" value="${escapeHtml(token)}"><input type="hidden" name="revision" value="${revision}">${controls}<button name="action" value="save">${zh ? "保存偏好" : "Save preferences"}</button><button name="action" value="${action}">${action === "pause" ? (zh ? "暂停订阅" : "Pause subscription") : (zh ? "恢复订阅" : "Resume subscription")}</button></form><form method="post" action="/api/subscriptions/manage"><input type="hidden" name="token" value="${escapeHtml(token)}"><input type="hidden" name="revision" value="${revision}"><button name="action" value="unsubscribe_all">${zh ? "退订此邮箱的全部更新" : "Unsubscribe all updates for this email"}</button></form><p><a href="/api/subscriptions/manage">${zh ? "重新获取管理链接" : "Request another management link"}</a></p>`, 200, zh ? "zh" : "en");
+    const supportedFrequency = SUPPORTED_FREQUENCIES[row.list_code];
+    const frequencyNotice = supportedFrequency && row.frequency !== supportedFrequency
+      ? (zh ? "当前频率暂不支持自动投递。请选择可用频率并点击保存偏好；在此之前，原选择保持不变。" : "Automatic delivery does not support your current frequency. Select an available frequency and save preferences; your existing choice stays unchanged until then.")
+      : (zh ? "选择新频率后点击保存偏好；暂停或恢复不会更改频率。" : "Select a new frequency and save preferences; pausing or resuming does not change it.");
+    const frequencyControl = `<label for="frequency">${zh ? "投递频率" : "Delivery frequency"}</label><p>${zh ? "当前频率" : "Current frequency"}: ${escapeHtml(frequencyLabel(row.frequency, zh))}</p><small id="frequency-help">${escapeHtml(frequencyNotice)}</small><select id="frequency" name="frequency" aria-describedby="frequency-help"><option value="">${zh ? "保留当前频率" : "Keep current frequency"}</option>${supportedFrequency && row.frequency !== supportedFrequency ? `<option value="${escapeHtml(supportedFrequency)}">${escapeHtml(frequencyLabel(supportedFrequency, zh))}</option>` : ""}</select>`;
+    return page(title, `${notice ? `<p role="status">${escapeHtml(notice)}</p>` : ""}<p>${escapeHtml(zh ? row.list_name_zh || row.list_name : row.list_name)} · ${escapeHtml(row.status)}</p><form method="post" action="/api/subscriptions/manage"><input type="hidden" name="token" value="${escapeHtml(token)}"><input type="hidden" name="revision" value="${revision}">${frequencyControl}${controls}<button name="action" value="save">${zh ? "保存偏好" : "Save preferences"}</button><button name="action" value="${action}">${action === "pause" ? (zh ? "暂停订阅" : "Pause subscription") : (zh ? "恢复订阅" : "Resume subscription")}</button></form><form method="post" action="/api/subscriptions/manage"><input type="hidden" name="token" value="${escapeHtml(token)}"><input type="hidden" name="revision" value="${revision}"><button name="action" value="unsubscribe_all">${zh ? "退订此邮箱的全部更新" : "Unsubscribe all updates for this email"}</button></form><p><a href="/api/subscriptions/manage">${zh ? "重新获取管理链接" : "Request another management link"}</a></p>`, 200, zh ? "zh" : "en");
   }
 
   async function requestLink(request: Request, env: Env, form: FormData, ctx?: ExecutionContext): Promise<Response> {
     const email = normalizeEmail(String(form.get("email") || ""));
     const message = "If this address has an eligible subscription, a management link will be sent. / 如果该邮箱有可管理的订阅，我们会发送管理链接。";
-    const work = deliverManagementLink(request, env, email).catch(() => {
-      // Do not expose the address or provider response through logs.
-      console.error(JSON.stringify({ message: "subscription_management_delivery_failed" }));
-    });
-    if (ctx) ctx.waitUntil(work);
-    else await work; // The isolated handler tests do not provide an execution context.
+    try {
+      // Persist before returning: waitUntil alone can be interrupted and is not a queue.
+      await enqueueManagementLink(request, env, email);
+      const work = drainManagementOutbox(env).catch(() => {
+        console.error(JSON.stringify({ message: "subscription_management_drain_failed" }));
+      });
+      if (ctx) ctx.waitUntil(work);
+      else await work;
+    } catch {
+      // Never reveal whether an address exists, including on storage errors.
+      console.error(JSON.stringify({ message: "subscription_management_enqueue_failed" }));
+    }
     return requestPage(message);
   }
 
-  async function deliverManagementLink(request: Request, env: Env, email: string): Promise<void> {
+  async function enqueueManagementLink(request: Request, env: Env, email: string): Promise<void> {
     if (!email || !env.TOKEN_SIGNING_SECRET) return;
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
     if (!await consumeLimit(env, `ip:${ip}`, 20) || !await consumeLimit(env, `email:${email}`, 2)) return;
     const addressHash = await sha256Hex(`${env.TOKEN_SIGNING_SECRET}:email:${email}`);
-    const contact = await env.DB.prepare("SELECT id, subscriber_id FROM subscriber_contacts WHERE channel='email' AND address_hash=? AND status='active'")
+    const contact = await env.DB.prepare(`SELECT c.id, c.subscriber_id FROM subscriber_contacts c
+      JOIN subscribers sub ON sub.id=c.subscriber_id
+      WHERE c.channel='email' AND c.address_hash=? AND c.status='active' AND sub.status='active'
+        AND EXISTS (SELECT 1 FROM subscriptions s WHERE s.contact_id=c.id AND s.status IN ('active','paused'))`)
       .bind(addressHash).first<{ id: string; subscriber_id: string }>();
     if (!contact) return;
-    const rows = await env.DB.prepare(
-      `SELECT s.id, l.name FROM subscriptions s JOIN subscription_lists l ON l.id=s.list_id
-       JOIN subscribers sub ON sub.id=s.subscriber_id
-       WHERE s.contact_id=? AND s.status IN ('active','paused') AND sub.status='active' ORDER BY l.sort_order`,
-    ).bind(contact.id).all<{ id: string; name: string }>();
-    const config = deps.smtpConfig(env);
-    if (!config || !rows.results?.length) return;
-    const links = await Promise.all(rows.results.map(async row => ({
-      name: row.name,
-      url: `${publicBaseUrl(request, env)}/api/subscriptions/manage?token=${await deps.createSignedToken(env, "manage", row.id, 1800)}`,
-    })));
-    const deliveryId = crypto.randomUUID();
     const now = new Date().toISOString();
-    await env.DB.prepare(
-      `INSERT INTO transactional_email_deliveries (id,subscriber_id,contact_id,delivery_type,channel,recipient,subject,provider,status,attempts,request_source,created_at,updated_at)
-       VALUES (?,?,?,'subscription_management','email',?,'Manage your GIDS subscriptions','smtp','queued',1,'preferences',?,?)`,
-    ).bind(deliveryId, contact.subscriber_id, contact.id, email, now, now).run();
-    let receipt: void | { providerMessageId: string | null };
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    await env.DB.prepare(`INSERT INTO management_email_outbox
+      (id, subscriber_id, contact_id, status, attempts, next_attempt_at, created_at, expires_at, updated_at)
+      VALUES (?, ?, ?, 'queued', 0, ?, ?, ?, ?)`)
+      .bind(crypto.randomUUID(), contact.subscriber_id, contact.id, now, now, expires, now).run();
+  }
+
+  async function drainManagementOutbox(env: Env): Promise<void> {
+    const now = new Date().toISOString();
+    // The provider may have accepted a message before its worker died.
+    await env.DB.prepare(`UPDATE management_email_outbox SET status='unknown', last_error='send_outcome_unknown',
+      claim_token=NULL, claim_expires_at=NULL, updated_at=? WHERE status='sending' AND claim_expires_at<=?`)
+      .bind(now, now).run();
+    await env.DB.prepare(`UPDATE management_email_outbox SET status='cancelled', last_error='request_expired', updated_at=?
+      WHERE status IN ('queued','retry') AND expires_at<=?`).bind(now, now).run();
+    const candidate = await env.DB.prepare(`SELECT id FROM management_email_outbox
+      WHERE status IN ('queued','retry') AND next_attempt_at<=? AND expires_at>? ORDER BY created_at LIMIT 1`)
+      .bind(now, now).first<{ id: string }>();
+    if (!candidate) return;
+    const claim = crypto.randomUUID();
+    const lease = new Date(Date.now() + 120_000).toISOString();
+    const job = await env.DB.prepare(`UPDATE management_email_outbox SET status='sending', attempts=attempts+1,
+      claim_token=?, claim_expires_at=?, updated_at=? WHERE id=? AND status IN ('queued','retry')
+      AND next_attempt_at<=? AND expires_at>? RETURNING id,subscriber_id,contact_id,attempts`)
+      .bind(claim, lease, now, candidate.id, now, now)
+      .first<{ id: string; subscriber_id: string; contact_id: string; attempts: number }>();
+    if (!job) return;
+    const update = async (status: string, reason: string | null, next: string | null = null) => {
+      await env.DB.prepare(`UPDATE management_email_outbox SET status=?, last_error=?, next_attempt_at=?,
+        claim_token=NULL, claim_expires_at=NULL, updated_at=? WHERE id=? AND status='sending' AND claim_token=?`)
+        .bind(status, reason, next, new Date().toISOString(), job.id, claim).run();
+    };
+    const retry = async (reason: string) => {
+      if (job.attempts >= 12) await update('failed', reason);
+      else await update('retry', reason, new Date(Date.now() + 600_000).toISOString());
+    };
+    let smtpStarted = false;
     try {
-      receipt = await deps.sendSmtpEmail(config, {
-        to: email, subject: "Manage your GIDS subscriptions / 管理 GIDS 订阅",
-        text: `These links expire in 30 minutes. / 链接 30 分钟后过期。\n\n${links.map(link => `${link.name}: ${link.url}`).join("\n")}`,
-        html: `<p>These links expire in 30 minutes. / 链接 30 分钟后过期。</p><ul>${links.map(link => `<li><a href="${escapeHtml(link.url)}">${escapeHtml(link.name)}</a></li>`).join("")}</ul>`,
-        messageId: `${deliveryId}@globalinfectiousdisease.com`,
-      }, "transactional");
+      const contact = await env.DB.prepare(`SELECT c.address, sub.locale FROM subscriber_contacts c
+        JOIN subscribers sub ON sub.id=c.subscriber_id WHERE c.id=? AND c.subscriber_id=?
+        AND c.status='active' AND sub.status='active'`)
+        .bind(job.contact_id, job.subscriber_id).first<{ address: string; locale: string }>();
+      if (!contact) { await update('cancelled', 'contact_inactive'); return; }
+      const rows = await env.DB.prepare(`SELECT s.id, l.name, l.name_zh FROM subscriptions s
+        JOIN subscription_lists l ON l.id=s.list_id WHERE s.contact_id=? AND s.status IN ('active','paused')
+        ORDER BY l.sort_order`).bind(job.contact_id).all<{ id: string; name: string; name_zh: string | null }>();
+      if (!rows.results?.length) { await update('cancelled', 'subscription_inactive'); return; }
+      const config = deps.smtpConfig(env);
+      if (!config || !env.PUBLIC_BASE_URL || !env.TOKEN_SIGNING_SECRET) { await retry('delivery_not_configured'); return; }
+      const base = publicBaseUrl(new Request(env.PUBLIC_BASE_URL), env);
+      const links = await Promise.all(rows.results.map(async row => ({
+        name: contact.locale === 'zh' ? row.name_zh || row.name : row.name,
+        url: `${base}/api/subscriptions/manage?token=${await deps.createSignedToken(env, 'manage', row.id, 1800)}`,
+      })));
+      const content = buildManagementEmail(contact.locale, links);
+      const deliveryId = crypto.randomUUID();
+      const timestamp = new Date().toISOString();
+      const written = await env.DB.batch([
+        env.DB.prepare(`INSERT INTO transactional_email_deliveries
+          (id,subscriber_id,contact_id,delivery_type,channel,recipient,subject,provider,status,attempts,request_source,created_at,updated_at)
+          SELECT ?,subscriber_id,contact_id,'subscription_management','email',?,?,'smtp','queued',1,'preferences',?,?
+          FROM management_email_outbox WHERE id=? AND status='sending' AND claim_token=?`)
+          .bind(deliveryId, contact.address, content.subject, timestamp, timestamp, job.id, claim),
+        env.DB.prepare(`UPDATE management_email_outbox SET transaction_delivery_id=?, updated_at=?
+          WHERE id=? AND status='sending' AND claim_token=?`)
+          .bind(deliveryId, timestamp, job.id, claim),
+      ]);
+      if (!written[0]?.meta.changes || !written[1]?.meta.changes) return;
+      smtpStarted = true;
+      let receipt: void | { providerMessageId: string | null };
+      try {
+        receipt = await deps.sendSmtpEmail(config, { to: contact.address, ...content,
+          messageId: `${deliveryId}@globalinfectiousdisease.com` }, 'transactional');
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : '';
+        const temporary = /_rejected:4\d\d$/.test(reason);
+        const permanent = /_rejected:5\d\d$/.test(reason);
+        await env.DB.prepare(`UPDATE transactional_email_deliveries SET status=?, error_code=?, updated_at=?
+          WHERE id=? AND status='queued'`)
+          .bind(temporary || permanent ? 'failed' : 'unknown', temporary ? 'smtp_temporary_rejection' : permanent ? 'smtp_permanent_rejection' : 'smtp_result_unknown', new Date().toISOString(), deliveryId).run();
+        if (temporary) await retry('smtp_temporary_rejection');
+        else if (permanent) await update('failed', 'smtp_permanent_rejection');
+        else await update('unknown', 'smtp_result_unknown');
+        return;
+      }
+      await env.DB.prepare(`UPDATE transactional_email_deliveries SET status=CASE WHEN status='queued' THEN 'sent' ELSE status END,
+        sent_at=?, provider_message_id=?, updated_at=? WHERE id=?`)
+        .bind(new Date().toISOString(), receipt?.providerMessageId || `${deliveryId}@globalinfectiousdisease.com`, new Date().toISOString(), deliveryId).run();
+      await update('sent', null);
     } catch {
-      // A lost connection does not prove the server rejected the message.
-      await env.DB.prepare("UPDATE transactional_email_deliveries SET status='unknown', error_code='smtp_result_unknown', updated_at=? WHERE id=? AND status='queued'")
-        .bind(new Date().toISOString(), deliveryId).run();
-      return;
+      // Before SMTP starts we know no mail was sent; afterward the outcome is uncertain.
+      if (smtpStarted) await update('unknown', 'send_outcome_unknown');
+      else await retry('management_preparation_failed');
+      console.error(JSON.stringify({ message: 'subscription_management_outbox_failed', outbox_id: job.id }));
     }
-    // Keep already-arrived terminal provider feedback intact.
-    await env.DB.prepare("UPDATE transactional_email_deliveries SET status=CASE WHEN status='queued' THEN 'sent' ELSE status END, sent_at=?, provider_message_id=?, updated_at=? WHERE id=?")
-      .bind(new Date().toISOString(), receipt?.providerMessageId || `${deliveryId}@globalinfectiousdisease.com`, new Date().toISOString(), deliveryId).run();
   }
 
   async function update(request: Request, env: Env, token: string, form: FormData): Promise<Response> {
@@ -192,13 +283,20 @@ export function createPreferenceHandlers(deps: Dependencies) {
     const now = new Date().toISOString();
     const revision = crypto.randomUUID();
     const newStatus = action === "pause" ? "paused" : action === "resume" ? "active" : action === "unsubscribe_all" ? "unsubscribed" : row.status;
+    const requestedFrequencies = form.getAll("frequency");
+    if (action === "save" && (requestedFrequencies.length > 1 || requestedFrequencies.some(value => typeof value !== "string"))) {
+      throw new HttpError(400, "invalid_frequency");
+    }
+    const requestedFrequency = action === "save" ? String(requestedFrequencies[0] || "") : "";
+    if (requestedFrequency && requestedFrequency !== SUPPORTED_FREQUENCIES[row.list_code]) throw new HttpError(400, "invalid_frequency");
+    const newFrequency = requestedFrequency || row.frequency;
     const statements = [env.DB.prepare(
-      `UPDATE subscriptions SET status=?, updated_at=?, preference_revision=? WHERE id=? AND status=?
+      `UPDATE subscriptions SET status=?, frequency=?, updated_at=?, preference_revision=? WHERE id=? AND status=?
        AND COALESCE(preference_revision, '') = ?
        AND management_generation = ?
        AND EXISTS (SELECT 1 FROM subscriber_contacts c JOIN subscribers sub ON sub.id=c.subscriber_id
        WHERE c.id=subscriptions.contact_id AND c.status='active' AND sub.status='active')`,
-    ).bind(newStatus, now, revision, row.id, row.status, suppliedRevision, row.management_generation)];
+    ).bind(newStatus, newFrequency, now, revision, row.id, row.status, suppliedRevision, row.management_generation)];
     if (action === "unsubscribe_all") {
       const guard = "EXISTS (SELECT 1 FROM subscriptions WHERE id=? AND preference_revision=?)";
       statements.push(env.DB.prepare(
@@ -223,6 +321,14 @@ export function createPreferenceHandlers(deps: Dependencies) {
          WHERE subscription_id=? AND status IN ('queued','retry') AND EXISTS (SELECT 1 FROM subscriptions WHERE id=? AND preference_revision=?)`,
       ).bind(now, now, row.id, row.id, revision));
     } else if (action === "save") {
+      if (requestedFrequency && requestedFrequency !== row.frequency) {
+        // A previously requested confirmation must not restore the old
+        // frequency after this authenticated preference change.
+        statements.push(env.DB.prepare(`UPDATE subscription_change_requests SET status='invalidated'
+          WHERE subscription_id=? AND status='pending'
+          AND EXISTS (SELECT 1 FROM subscriptions WHERE id=? AND preference_revision=?)`)
+          .bind(row.id, row.id, revision));
+      }
       const allowedTypes = FILTERS[row.list_code] || [];
       const options = await env.DB.prepare("SELECT filter_type, filter_value FROM subscription_filter_options WHERE is_public=1")
         .all<{ filter_type: string; filter_value: string }>();
@@ -244,7 +350,7 @@ export function createPreferenceHandlers(deps: Dependencies) {
     statements.push(env.DB.prepare(
       `INSERT INTO subscription_events (id, subscriber_id, subscription_id, event_type, actor_type, metadata_json, created_at)
        SELECT ?, subscriber_id, id, ?, 'subscriber', ?, ? FROM subscriptions WHERE id=? AND preference_revision=?`,
-    ).bind(crypto.randomUUID(), `preferences_${action}`, JSON.stringify({ action }), now, row.id, revision));
+    ).bind(crypto.randomUUID(), `preferences_${action}`, JSON.stringify({ action, ...(requestedFrequency && requestedFrequency !== row.frequency ? { frequency_from: row.frequency, frequency_to: requestedFrequency } : {}) }), now, row.id, revision));
     const result = await env.DB.batch(statements);
     if (!result[0]?.meta?.changes) throw new HttpError(409, "subscription_changed_retry");
     if (action === "unsubscribe_all") {
@@ -254,6 +360,7 @@ export function createPreferenceHandlers(deps: Dependencies) {
   }
 
   return {
+    drainManagementOutbox,
     async get(request: Request, env: Env): Promise<Response> {
       try {
         return await render(request, env, new URL(request.url).searchParams.get("token") || "");

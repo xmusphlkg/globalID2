@@ -23,6 +23,26 @@ type Deps = {
 };
 type Change = { id: string; subscription_id: string; subscriber_id: string; contact_id: string; locale: string; timezone: string; frequency: string; source: string; filters_json: string };
 
+function consentPage(kind: "confirm" | "unsubscribe", token: string, locale: string): Response {
+  const zh = locale === "zh";
+  const heading = kind === "confirm"
+    ? (zh ? "确认你的 GIDS 订阅" : "Confirm your GIDS subscription")
+    : (zh ? "退订此 GIDS 订阅？" : "Unsubscribe from this GIDS list?");
+  const button = kind === "confirm" ? (zh ? "确认订阅" : "Confirm subscription") : (zh ? "确认退订" : "Unsubscribe");
+  const action = `/api/subscriptions/${kind}?token=${encodeURIComponent(token)}`;
+  return new Response(`<!doctype html><html lang="${zh ? "zh" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${heading} | GIDS</title><style>body{margin:0;font-family:Arial,sans-serif;background:#f8fafc;color:#0f172a}main{max-width:560px;margin:64px auto;padding:28px;background:white;border:1px solid #dbe5e1}h1{font-size:24px}button{background:#0f766e;color:white;border:0;padding:12px 18px;font:inherit;cursor:pointer}</style></head><body><main><h1>${heading}</h1><form method="post" action="${action}"><button type="submit">${button}</button></form></main></body></html>`, {
+    headers: { "content-type": "text/html; charset=utf-8", "referrer-policy": "no-referrer", "cache-control": "no-store",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" },
+  });
+}
+
+function resultPage(kind: "confirm" | "unsubscribe", locale: string): Response {
+  const zh = locale === "zh";
+  return kind === "confirm"
+    ? htmlPage(zh ? "订阅已确认" : "Subscription confirmed", zh ? "你的 GIDS 订阅已生效。" : "Your GIDS subscription is active.", zh ? "zh" : "en")
+    : htmlPage(zh ? "已退订" : "Unsubscribed", zh ? "此项 GIDS 订阅已停止。" : "This GIDS subscription has been stopped.", zh ? "zh" : "en");
+}
+
 export function createSubscriptionLifecycleHandlers(deps: Deps) {
   async function createSubscription(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const payload = await deps.readPayload(request);
@@ -130,10 +150,11 @@ export function createSubscriptionLifecycleHandlers(deps: Deps) {
     const parsed = await deps.verifySignedToken(env, token, "confirm");
     if (!parsed) throw new HttpError(400, "invalid_or_expired_token");
     if (request.method === "GET") {
-      const action = `/api/subscriptions/confirm?token=${encodeURIComponent(token)}`;
-      return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Confirm subscription | GIDS</title></head><body><main><h1>Confirm your GIDS subscription</h1><form method="post" action="${action}"><button type="submit">Confirm subscription</button></form></main></body></html>`,
-        { headers: { "content-type": "text/html; charset=utf-8", "referrer-policy": "no-referrer", "cache-control": "no-store",
-          "content-security-policy": "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" } });
+      const pending = await env.DB.prepare("SELECT locale FROM subscription_change_requests WHERE id = ?")
+        .bind(parsed.subscriptionId).first<{ locale: string }>();
+      const legacy = pending ? null : await env.DB.prepare(`SELECT sub.locale FROM subscriptions s
+        JOIN subscribers sub ON sub.id = s.subscriber_id WHERE s.id = ?`).bind(parsed.subscriptionId).first<{ locale: string }>();
+      return consentPage("confirm", token, pending?.locale || legacy?.locale || "en");
     }
     const change = await env.DB.prepare(`SELECT id, subscription_id, subscriber_id, contact_id, locale, timezone, frequency, source, filters_json
       FROM subscription_change_requests WHERE id = ?`).bind(parsed.subscriptionId).first<Change>();
@@ -166,15 +187,15 @@ export function createSubscriptionLifecycleHandlers(deps: Deps) {
     ]);
     if (!results[0]?.meta.changes) throw new HttpError(400, "invalid_or_expired_token");
     await deps.recordEvent(env, { subscriberId: change.subscriber_id, subscriptionId: change.subscription_id, eventType: "subscription_confirmed", actorType: "subscriber", request });
-    return htmlPage("Subscription confirmed", "Your GIDS subscription is active.");
+    return resultPage("confirm", change.locale);
   }
 
   async function confirmLegacy(request: Request, env: Env, subscriptionId: string): Promise<Response> {
     // Old links can only confirm a never-confirmed pending record, never undo an unsubscribe or suppression.
-    const old = await env.DB.prepare(`SELECT s.id, s.subscriber_id, s.contact_id FROM subscriptions s
+    const old = await env.DB.prepare(`SELECT s.id, s.subscriber_id, s.contact_id, sub.locale FROM subscriptions s
       JOIN subscriber_contacts c ON c.id = s.contact_id JOIN subscribers sub ON sub.id = s.subscriber_id
       WHERE s.id = ? AND s.status = 'pending' AND s.confirmed_at IS NULL AND c.status IN ('pending', 'active') AND sub.status = 'active'`)
-      .bind(subscriptionId).first<{ id: string; subscriber_id: string; contact_id: string }>();
+      .bind(subscriptionId).first<{ id: string; subscriber_id: string; contact_id: string; locale: string }>();
     if (!old) throw new HttpError(400, "invalid_or_expired_token");
     const now = new Date().toISOString(), marker = `legacy:${subscriptionId}`, nonce = crypto.randomUUID();
     const results = await env.DB.batch([
@@ -194,20 +215,19 @@ export function createSubscriptionLifecycleHandlers(deps: Deps) {
     ]);
     if (!results[0]?.meta.changes) throw new HttpError(400, "invalid_or_expired_token");
     await deps.recordEvent(env, { subscriberId: old.subscriber_id, subscriptionId, eventType: "subscription_confirmed", actorType: "subscriber", request });
-    return htmlPage("Subscription confirmed", "Your GIDS subscription is active.");
+    return resultPage("confirm", old.locale);
   }
 
   async function unsubscribe(request: Request, env: Env): Promise<Response> {
     const token = new URL(request.url).searchParams.get("token") || "";
     const parsed = await deps.verifySignedToken(env, token, "unsubscribe");
     if (!parsed) throw new HttpError(400, "invalid_or_expired_token");
-    const subscription = await env.DB.prepare("SELECT id, subscriber_id FROM subscriptions WHERE id = ?").bind(parsed.subscriptionId)
-      .first<{ id: string; subscriber_id: string }>();
+    const subscription = await env.DB.prepare(`SELECT s.id, s.subscriber_id, sub.locale FROM subscriptions s
+      JOIN subscribers sub ON sub.id = s.subscriber_id WHERE s.id = ?`).bind(parsed.subscriptionId)
+      .first<{ id: string; subscriber_id: string; locale: string }>();
     if (!subscription) throw new HttpError(404, "subscription_not_found");
     if (request.method === "GET") {
-      const action = `/api/subscriptions/unsubscribe?token=${encodeURIComponent(token)}`;
-      return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unsubscribe | GIDS</title></head><body><main><h1>Unsubscribe from this GIDS list?</h1><form method="post" action="${action}"><button type="submit">Unsubscribe</button></form></main></body></html>`,
-        { headers: { "content-type": "text/html; charset=utf-8", "referrer-policy": "no-referrer", "cache-control": "no-store" } });
+      return consentPage("unsubscribe", token, subscription.locale);
     }
     const now = new Date().toISOString();
     await env.DB.batch([
@@ -218,7 +238,7 @@ export function createSubscriptionLifecycleHandlers(deps: Deps) {
     ]);
     await deps.skipPendingSituationAlertsForSubscription(env, subscription.id);
     await deps.recordEvent(env, { subscriberId: subscription.subscriber_id, subscriptionId: subscription.id, eventType: "subscription_unsubscribed", actorType: "subscriber", request });
-    return htmlPage("Unsubscribed", "This GIDS subscription has been stopped.");
+    return resultPage("unsubscribe", subscription.locale);
   }
 
   async function drainConfirmationOutbox(env: Env): Promise<void> {

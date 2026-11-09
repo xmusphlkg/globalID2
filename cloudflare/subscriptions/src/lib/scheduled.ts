@@ -1,6 +1,6 @@
 import type { Env } from "../types.ts";
 
-export const SCHEDULED_TASKS = ["maintenance", "confirmation", "campaign", "situation", "feedback"] as const;
+export const SCHEDULED_TASKS = ["maintenance", "confirmation", "management", "campaign", "situation", "feedback"] as const;
 export type ScheduledTask = typeof SCHEDULED_TASKS[number];
 
 /** Each task gets its own invocation and D1 budget. All endpoints require the

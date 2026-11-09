@@ -89,7 +89,7 @@ export default {
       const route = matchWorkerRoute(request.method, url.pathname);
       switch (route.name) {
         case "health":
-          return json({ ok: true, service: "globalid-subscriptions", delivery_mode: deliveryMode(env), capabilities: { research_content_items_v1: true, official_notice_alert_v1: true } }, request, env);
+          return json({ ok: true, service: "globalid-subscriptions", delivery_mode: deliveryMode(env), capabilities: { research_content_items_v1: true, research_personalized_items_v1: true, official_notice_alert_v1: true } }, request, env);
         case "subscription_options":
           return await listSubscriptionOptions(request, env);
         case "create_subscription":
@@ -110,6 +110,7 @@ export default {
           requireAdmin(request, env);
           if (route.task === "maintenance") return json(await runMaintenance(env), request, env);
           if (route.task === "confirmation") await subscriptionLifecycle.drainConfirmationOutbox(env);
+          if (route.task === "management") await preferenceHandlers.drainManagementOutbox(env);
           if (route.task === "campaign") await campaignHandlers.drainDue(env);
           if (route.task === "situation") await processSituationAlertOutbox(env, { createSignedToken, smtpConfig, sendSmtpEmail });
           if (route.task === "feedback") await reconcileSesFeedback(env);

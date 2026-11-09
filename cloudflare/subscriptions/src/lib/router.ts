@@ -13,7 +13,7 @@ export type WorkerRoute =
   | { name: "situation_alert_ingest" }
   | { name: "email_delivery_feedback" }
   | { name: "ses_sns_feedback" }
-  | { name: "internal_scheduled_task"; task: "maintenance" | "confirmation" | "campaign" | "situation" | "feedback" }
+  | { name: "internal_scheduled_task"; task: "maintenance" | "confirmation" | "management" | "campaign" | "situation" | "feedback" }
   | { name: "admin_situation_alerts"; operation: "list" | "process" }
   | { name: "admin_maintenance" }
   | { name: "not_found" };
@@ -31,9 +31,9 @@ export function matchWorkerRoute(method: string, pathname: string): WorkerRoute 
   if (method === "POST" && path === "/api/internal/situation-alerts") return { name: "situation_alert_ingest" };
   if (method === "POST" && path === "/api/internal/email-delivery-events") return { name: "email_delivery_feedback" };
   if (method === "POST" && path === "/api/internal/ses-sns-feedback") return { name: "ses_sns_feedback" };
-  const scheduledTask = path.match(/^\/api\/internal\/scheduled\/(maintenance|confirmation|campaign|situation|feedback)$/);
+  const scheduledTask = path.match(/^\/api\/internal\/scheduled\/(maintenance|confirmation|management|campaign|situation|feedback)$/);
   if (method === "POST" && scheduledTask) {
-    return { name: "internal_scheduled_task", task: scheduledTask[1] as "maintenance" | "confirmation" | "campaign" | "situation" | "feedback" };
+    return { name: "internal_scheduled_task", task: scheduledTask[1] as "maintenance" | "confirmation" | "management" | "campaign" | "situation" | "feedback" };
   }
   if (method === "POST" && path === "/api/admin/audience") return { name: "admin_audience" };
   if (method === "GET" && path === "/api/admin/stats") return { name: "admin_stats" };

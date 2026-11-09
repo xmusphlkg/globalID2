@@ -114,6 +114,25 @@ def test_province_source_info_uses_database_adapter_metadata() -> None:
     assert result["sources"][1]["url"] == "https://wsjkw.sh.gov.cn/yqxx/index.html"
 
 
+def test_ireland_public_source_metadata_discloses_hpsc_permission_status() -> None:
+    result = about.build_country_source_info("IE", database_config={
+        "data_source_url": "https://notifiabledisease.hpsc.ie/",
+        "notes": "Private HPSC ingestion metadata",
+        "crawler_config": {"sources": ["hpsc_ndh", "hpsc_annual"], "cadence": "weekly"},
+        "parser_config": {"primary": "ie_hpsc_ndh_weekly"},
+    })
+    assert result["primary_scope"] == "hpsc_ndh"
+    assert result["primary_url"] == "https://notifiabledisease.hpsc.ie/"
+    assert [source["scope"] for source in result["sources"]] == [
+        "hpsc_ndh", "hpsc_weekly_archive", "hpsc_annual", "ecdc_atlas_annual"
+    ]
+    assert "written reuse permission has not been confirmed" in result["sources"][0]["description"]
+    assert "尚未确认取得书面" in result["sources"][0]["description_zh"]
+    assert "Data provided by ECDC" in result["sources"][-1]["description"]
+    assert result["parser_primary"] == "ie_hpsc_ndh_weekly"
+    assert "Private HPSC" not in result["notes"]
+
+
 def test_cadence_and_iso_helpers_keep_labels_and_utc_semantics() -> None:
     assert about.normalize_cadence_label(None) == "Variable"
     assert about.normalize_cadence_label("every_two_weeks") == "Every Two Weeks"

@@ -46,6 +46,27 @@ async function submit(f: ReturnType<typeof fixture>, body = payload) {
 }
 function req(url: string, method = 'GET') { return new Request(url, { method }); }
 
+test('confirmation and unsubscribe pages follow the subscriber language without changing consent on GET', async () => {
+  const f = fixture();
+  const first = await submit(f, { ...payload, locale: 'zh' });
+  const confirmation = await f.handlers.confirmSubscription(req(first.subscriptions[0].confirm_url), f.env);
+  const confirmationHtml = await confirmation.text();
+  assert.match(confirmationHtml, /<html lang="zh">/);
+  assert.match(confirmationHtml, /确认你的 GIDS 订阅/);
+  assert.equal(f.state()?.status, 'pending');
+  const confirmed = await f.handlers.confirmSubscription(req(first.subscriptions[0].confirm_url, 'POST'), f.env);
+  assert.match(await confirmed.text(), /订阅已确认/);
+  const token = await signSubscriptionToken('test-secret', 'unsubscribe', first.subscriptions[0].id, 3600);
+  const url = 'https://example.test/api/subscriptions/unsubscribe?token=' + token;
+  const unsubscribe = await f.handlers.unsubscribe(req(url), f.env);
+  assert.match(await unsubscribe.text(), /确认退订/);
+  assert.equal(f.state()?.status, 'active');
+  const stopped = await f.handlers.unsubscribe(req(url, 'POST'), f.env);
+  assert.match(await stopped.text(), /此项 GIDS 订阅已停止/);
+  assert.equal(stopped.headers.get('cache-control'), 'no-store');
+  f.sqlite.close();
+});
+
 test('changes are staged, old confirmations survive resend, and confirmation is single-use', async () => {
   const f = fixture();
   const first = await submit(f);

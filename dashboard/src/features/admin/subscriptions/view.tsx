@@ -20,6 +20,7 @@ import {
 } from "@/features/admin/api";
 import { formatNumber } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
+import { DeliveryStatus } from "./delivery-status";
 
 const statusOptions = ["", "pending", "active", "unsubscribed", "expired", "paused"];
 
@@ -242,11 +243,11 @@ export default function SubscriptionsPage() {
           hint={`${formatNumber(countTotal(stats?.contacts))} ${isZh ? "总联系人" : "contacts"}`}
         />
         <MetricTile
-          label={isZh ? "近7天邮件" : "7-day email"}
+          label={isZh ? "近7天事务邮件" : "7-day transactional email"}
           value={formatNumber(countTotal(stats?.deliveries_last_7_days))}
           icon={<ShieldCheck className="h-4 w-4" />}
           tone="info"
-          hint={`${isZh ? "成功" : "sent"} ${formatNumber(stats?.deliveries_last_7_days?.sent ?? 0)}`}
+          hint={`${isZh ? "服务商已接收" : "provider accepted"} ${formatNumber((stats?.deliveries_last_7_days?.sent ?? 0) + (stats?.deliveries_last_7_days?.delivered ?? 0) + (stats?.deliveries_last_7_days?.deferred ?? 0))}`}
         />
         <MetricTile
           label={isZh ? "过期待清理" : "Stale pending"}
@@ -256,6 +257,8 @@ export default function SubscriptionsPage() {
           hint={isZh ? "maintenance 会标记 expired" : "maintenance marks expired"}
         />
       </div>
+
+      <DeliveryStatus options={options} stats={stats} isZh={isZh} />
 
       <section className="app-panel p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

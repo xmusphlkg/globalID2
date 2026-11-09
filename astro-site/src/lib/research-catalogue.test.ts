@@ -22,3 +22,14 @@ test('compact catalogue retains every field used by client-side research filters
   assert.deepEqual(compact.populations, [{ id: 'pregnant_women', name: 'Pregnant women' }]);
   assert.deepEqual(compact.related_surveillance, [{ url: '/diseases/example/', disease_name_en: 'Example' }]);
 });
+
+test('bibliographic records retain source identifiers and do not claim an evidence page', () => {
+  const compact = compactResearchArticle({
+    article_id: 'bibliographic', title: 'Study', doi: '10.1000/example', pmid: '123',
+    detail_available: false, content_tier: 'bibliographic',
+  });
+  assert.equal(compact.detail_available, false);
+  assert.equal(compact.content_tier, 'bibliographic');
+  assert.equal(compact.doi, '10.1000/example');
+  assert.equal(compact.pmid, '123');
+});

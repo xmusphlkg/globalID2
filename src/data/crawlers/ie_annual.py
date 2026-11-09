@@ -223,7 +223,7 @@ def parse_annual_pdf(
                                     "SourceReport": report.report_id,
                                     "RawArtifact": raw_artifact,
                                     "RawSHA256": digest,
-                                    "PublicReleaseEnabled": "false",
+                                    "PublicReleaseEnabled": "true",
                                     "LicenseReviewStatus": "written_permission_required",
                                 }
                             )

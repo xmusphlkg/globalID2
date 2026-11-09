@@ -710,11 +710,10 @@ Key documents in `docs/`:
 
 - `DASHBOARD_GUIDE.md`: active dashboard usage
 - `ADD_NEW_COUNTRY_GUIDE.md`: end-to-end checklist for onboarding a new country
-- `ARCHITECTURE_V2.md`: architecture direction and subsystem overview
-- `DATABASE_QUICKSTART.md`: database initialization details
+- `DATA_LINE_AND_CONTROL_PLANE_REFACTOR.md`: data pipeline and control plane design
 - `database_design.md`: schema and storage notes
+- `DISEASE_ONTOLOGY_V3.md`: disease ontology and source series
 - `PARSER.md`: parser-related documentation
-- `MIGRATION.md`: migration context and project transitions
 
 ## Testing
 

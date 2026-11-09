@@ -881,7 +881,7 @@ class BrazilSINANCrawler(BaseCrawler):
             raise RuntimeError("[BR-SINAN] No SINAN DBC files matched requested months/prefixes")
 
         all_rows: List[Dict[str, str]] = []
-        failed_files = 0
+        failed_files = []
         logger.info(
             f"[BR-SINAN] Aggregation start | files={len(candidate_files)} workers={self.max_workers} "
             f"months={len(target_months)}"
@@ -906,14 +906,19 @@ class BrazilSINANCrawler(BaseCrawler):
                     try:
                         all_rows.extend(future.result())
                     except Exception as exc:
-                        failed_files += 1
+                        failed_files.append(item_name)
                         logger.warning(f"[BR-SINAN] file skipped | file={item_name} error={exc}")
                     if completed % 10 == 0 or completed == len(candidate_files):
                         logger.info(
                             f"[BR-SINAN] Aggregation progress | completed={completed}/{len(candidate_files)} "
-                            f"rows={len(all_rows)} failed={failed_files}"
+                            f"rows={len(all_rows)} failed={len(failed_files)}"
                         )
 
+        if failed_files:
+            raise RuntimeError(
+                "[BR-SINAN] Failed to aggregate source files; refusing incomplete totals: "
+                + ", ".join(sorted(failed_files))
+            )
         if not all_rows:
             raise RuntimeError("[BR-SINAN] No national monthly rows parsed from SINAN files")
 

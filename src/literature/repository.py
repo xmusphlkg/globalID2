@@ -22,6 +22,7 @@ from src.domain import (
 from .classification import CLASSIFICATION_VERSION
 from .content_policy import content_policy
 from .payloads import SOURCE_PAYLOAD_SCHEMA_VERSION, compact_source_payload
+from .screening import initial_screen
 from .types import ArticleCandidate, Classification
 
 logger = get_logger(__name__)
@@ -209,6 +210,10 @@ class LiteratureRepository:
             metadata["discovery_origins"] = origins[-20:]
         metadata["content_policy"] = content_policy(article)
         article.metadata_ = _classification_metadata(metadata, classification)
+        screen = initial_screen(article)
+        article.metadata_ = {**article.metadata_, "initial_screen": {
+            key: value for key, value in screen.items() if key != "controlled_subjects"
+        }}
         classification_changed = (
             article.metadata_.get("classification_fingerprint")
             != existing_metadata.get("classification_fingerprint")
@@ -491,6 +496,10 @@ class LiteratureRepository:
         article.public_health_score = classification.public_health_score
         article.discovery_score = classification.discovery_score
         article.metadata_ = _classification_metadata(dict(article.metadata_ or {}), classification)
+        screen = initial_screen(article)
+        article.metadata_ = {**article.metadata_, "initial_screen": {
+            key: value for key, value in screen.items() if key != "controlled_subjects"
+        }}
         await self.db.flush()
         await self._replace_links(article.article_id, classification)
 

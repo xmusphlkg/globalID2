@@ -51,6 +51,7 @@ SUBSCRIPTIONS__LOG_SAMPLING_RATE=1
 SUBSCRIPTIONS__TRACE_SAMPLING_RATE=0.05
 SUBSCRIPTIONS__REPORT_DIGEST_ENABLED=false
 SUBSCRIPTIONS__REPORT_DIGEST_START_WEEK=
+SUBSCRIPTIONS__INTEGRATED_WEEKLY_START_WEEK=
 SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED=false
 SUBSCRIPTIONS__RESEARCH_DIGEST_START_WEEK=
 SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED=false
@@ -524,10 +525,21 @@ SUBSCRIPTIONS__REPORT_DIGEST_START_WEEK=2026-W46
 
 Choose a future ISO start week explicitly. The first successful observation
 only establishes a baseline and does not mail the existing catalogue. Once a
-full UTC week has completed, the next successful report or main-site release
-can create that week's campaign; releases must continue for pending outbox
-records to be retried. Subscriber targeting uses report metadata; verify the
+full UTC week has completed, the independent reconciliation loop can create
+that week's campaign and retry pending records without a new release. The
+scheduler and persistent shared outbox must remain available. Subscriber targeting uses report metadata; verify the
 public reports manifest and content before enabling it.
+
+For a future integrated weekly cutover, `SUBSCRIPTIONS__INTEGRATED_WEEKLY_START_WEEK`
+can specify the first ISO week owned by that producer. From that week onward,
+the report producer continues the `reports` campaign but no longer creates its
+own `weekly_digest` campaign. Leave it unset until the integrated sender and
+its per-delivery source guard are ready: setting this alone does not enable the
+integrated producer and would otherwise leave the weekly list without mail.
+An existing pending legacy outbox for a cutover week blocks that week until an
+operator reconciles its Worker campaign and ambiguous delivery outcomes. The
+database ownership migration is also required to prevent concurrent producers
+from claiming the same automated issue.
 
 ### Automatic research dispatch
 
@@ -541,7 +553,8 @@ SUBSCRIPTIONS__RESEARCH_DIGEST_START_WEEK=2026-W46
 
 Set the start week deliberately: only that week and subsequent completed weeks
 are eligible; the pipeline never backfills older issues. The Worker must expose
-the `research_content_items_v1` health capability. Public-only immutable
+both the `research_content_items_v1` and `research_personalized_items_v1`
+health capabilities before creating personalized campaigns. Public-only immutable
 outbox records live under `exports/subscription-outbox/research/` on the
 release host. Pending records are retried on a later release; this local
 outbox requires persistent storage and a single shared filesystem for all
@@ -553,10 +566,30 @@ HTTP 409. For an intentional corrected resend, review the new content and pass
 `--revision r2` (then `r3`, and so on). The generated campaign is restricted to
 active `research_digest` subscriptions whose frequency is exactly `weekly`, and
 matches each subscriber against at least one individual cited article across
-their topic, disease, country, study-type, and peer-review preferences. The
-body is the full issue, not an individually trimmed digest. Explicit SMTP 4xx
+their topic, disease, country, study-type, and peer-review preferences. New
+campaigns render only matching articles or reports using the subscriber's
+current preferences; older pending campaigns retain their immutable original
+payload. Explicit SMTP 4xx
 rejections may retry; ambiguous outcomes are marked unknown for reconciliation.
 Never resend a whole campaign merely because a subset failed.
+
+The existing `weekly_digest` currently contains surveillance reports; the
+proposed cross-source issue is described separately in
+[`docs/SUBSCRIPTION_WEEKLY_DIGEST_DESIGN.md`](../../docs/SUBSCRIPTION_WEEKLY_DIGEST_DESIGN.md).
+
+### Preview the email templates
+
+Generate synthetic HTML and plain-text examples locally, without contacting a
+provider or sending email:
+
+```bash
+cd cloudflare/subscriptions
+npm run preview:email
+```
+
+Open `exports/subscription-email-previews/index.html` from the repository root.
+This is a browser preview; acceptance in actual mail clients and controlled
+inboxes is a separate verification step.
 
 ### Verified Situation alert webhook
 
@@ -752,15 +785,25 @@ Readers can request a short-lived, email-delivered management link at
 `/api/subscriptions/manage` to edit one list, pause/resume it, or unsubscribe
 all email updates. Management tokens have a separate purpose and are revoked
 when a subscription is confirmed again or unsubscribed. Management-link
-requests return a generic response immediately and send in the background;
-unlike confirmation jobs, a management-link request is not durably retried if
-the invocation is interrupted, so readers can request another link.
+requests return a generic response after a durable job is queued. The Worker
+generates fresh 30-minute links when it actually sends, retries explicit SMTP
+temporary rejections, and leaves ambiguous outcomes for provider feedback or
+operator investigation. Jobs expire after 24 hours; suppressed contacts and
+contacts with no active or paused subscription are cancelled before sending.
+Migration `0016_management_email_outbox.sql` must be applied before deploying
+this Worker version. The migration only adds the new queue; apply it before
+deploying the Worker, confirm `/health` advertises
+`research_personalized_items_v1`, then update the release scheduler. A newer
+producer refuses to queue personalized content against an older Worker.
+Existing pending campaigns retain their original immutable content, including
+older full-issue bodies. Review their state before rollout; do not treat them as
+personalized or resend an ambiguous delivery.
 
-Each Cron tick dispatches maintenance, confirmation, campaign, and Situation
+Each Cron tick dispatches maintenance, confirmation, management, campaign, and Situation
 work through separate authenticated same-origin internal requests; this keeps
 their D1 query budgets independent. The custom domain and admin token must be
 reachable from the Worker, and WAF rules must not challenge these API routes.
-Each confirmation invocation drains at most one queued email, each campaign
+Each confirmation or management invocation drains at most one queued email, each campaign
 batch at most five, and each Situation batch at most three; a backlog therefore
 may take multiple five-minute ticks. The optional Queue consumer handles one
 message per invocation. Monitor task-failure logs and queue age, and adjust the

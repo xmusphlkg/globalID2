@@ -1,5 +1,83 @@
 # GIDS Research Radar
 
+## Disease-relevance screening and recovery
+
+The `research-radar-autopilot.v3` policy treats disease names, classifier
+matches, controlled headings and signal links as candidate evidence, not a
+final relevance decision. Discovery score is for ordering only. Automated
+article publication or exclusion requires a separate contextual review: the
+reviewer receives the title, abstract, attributed MeSH subjects and classifier
+evidence, and must distinguish the actual study focus from incidental or
+negated mentions. A final model decision is held unless it cites an exact short
+phrase in the available abstract. This check establishes provenance, not that
+the model interpreted the phrase correctly. Insufficient abstract evidence,
+model disagreement or missing context remains in review for enrichment or human
+assessment. No-access status and age are not relevance tests. Missing disease
+evidence, incomplete metadata, and preprints also remain in review.
+Integrity and bibliographic release checks still apply. Disease-relevant animal
+and basic research are no longer rejected solely for their research domain.
+
+The screening assessment is article-wide. Disease links currently remain
+classifier-generated candidates; a model review does not create a validated
+disease-specific link or guarantee detection of all relevant diseases. A
+separate adjudicated per-disease benchmark and evidence-bearing mapping are
+needed before treating these links as verified diagnoses or associations.
+
+Approved peer-reviewed records that lack a bilingual evidence summary may be
+shown as source-linked bibliographic records in the research homepage catalogue.
+They have no GIDS article detail page, do not enter the Ask GIDS evidence stream,
+and never expose private abstracts or source payloads. Existing evidence pages
+continue to require the bilingual quality gates. The older references below to
+withholding *all* metadata-only records describe the former evidence-page policy.
+
+Historical excluded records do not automatically enter reconciliation. Preview
+and then run a bounded batch of disease-linked records using
+`scripts/reopen_disease_literature.py`; `--apply` reopens records for review,
+preserves prior automatic decisions in metadata, writes status events, and
+honours editorial locks. The command is read-only without `--apply`. `--journal`
+and `--doi` are repeatable; `--after-id` resumes the preceding batch. Do not
+run a second apply concurrently. After changing aliases, use the scoped
+`scripts/reclassify_literature.py --doi <doi>` to update disease links first.
+For bounded scans use `--limit 100 --after-id 0 --excluded-only --journal
+'The Lancet Infectious Diseases'`, then use the returned `next_after_id` for
+the next batch. Add `--dry-run` to preview the scan. Its scoped run does not
+reconcile unrelated signal links. The complete corpus
+still needs bounded reclassification and review; a high classifier confidence
+is not proof that a paper is relevant.
+
+Update the running worker to the new code before a large recovery or release.
+The generated static catalogue changes only after a successful normal site
+release; reopening a record does not itself make it public.
+
+The historical exclusion campaign is implemented by
+`scripts/rescreen_excluded_literature.py` and the optional
+`globalid-literature-historical-rescreen.service` unit. It snapshots record
+IDs once, preserves locked editorial decisions and integrity blocks, and
+commits bounded batches with a crash-recoverable cursor. It does not require a
+disease-keyword match. When an eligible record has a PMID but no usable
+abstract, it first requests the abstract through the existing rate-limited
+PubMed client and shared backfill lock. Provider failures retry the same batch;
+records for which PubMed has no abstract remain in `needs_more_evidence`.
+Context-bearing candidates enter the existing peer-review worker. The campaign's
+configurable backlog ceiling is set to one million for the current historical
+recovery, allowing the whole snapshot to be prepared while model reviews run.
+`data/cache/literature_historical_rescreen_v1/state.json`
+contains aggregate progress; the accompanying ID snapshot is internal.
+The campaign's `initial_screen_complete` status does not mean that every
+record received a final relevance decision or that all papers were released.
+
+Model calls use the durable `ai_work_items` queue. The singleton dashboard
+worker and auxiliary `globalid-model-dispatch@` services consume the same
+queue; database leases enforce route capacity across processes. The worker
+drop-in in `deploy/systemd/globalid-dashboard-worker.service.d/` starts six
+auxiliary instances with the singleton, and the template binds them to its
+lifecycle so startup lease recovery does not race active consumers. Install the
+template with the same project/user substitutions as the other units and reload
+systemd after installing either unit. Failed routes can cool down, so configured
+capacity and currently usable capacity are different. An empty model queue can
+also mean that the review producer is blocked or that records need more context;
+adding consumers alone cannot address those conditions.
+
 Research Radar connects current infectious-disease literature to the existing
 GIDS disease catalogue and surveillance pages. It is an additive domain: source
 metadata, editorial state, and public site projections remain separate from

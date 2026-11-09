@@ -1,12 +1,12 @@
 type CatalogueScope = 'disease' | 'country' | 'topic' | 'week';
 type CatalogueChunk = { path: string; count: number; facets: Record<CatalogueScope, string[]> };
 type CatalogueManifest = { chunks: CatalogueChunk[] };
-type CatalogueRequest = { limit?: number; scope?: CatalogueScope; value?: string };
+type CatalogueRequest = { limit?: number; scope?: CatalogueScope; value?: string; includeBibliographic?: boolean };
 
 let manifestPromise: Promise<CatalogueManifest> | null = null;
 const chunkPromises = new Map<string, Promise<any[]>>();
 
-export async function loadResearchCatalogue({ limit, scope, value }: CatalogueRequest = {}): Promise<any[]> {
+export async function loadResearchCatalogue({ limit, scope, value, includeBibliographic = false }: CatalogueRequest = {}): Promise<any[]> {
   manifestPromise ??= fetch('/research/catalogue/manifest.json', { cache: 'no-store' })
     .then(response => {
       if (!response.ok) throw new Error(`Research catalogue manifest failed: ${response.status}`);
@@ -36,5 +36,5 @@ export async function loadResearchCatalogue({ limit, scope, value }: CatalogueRe
     }
     return promise;
   }));
-  return chunks.flat();
+  return chunks.flat().filter(article => includeBibliographic || article.detail_available !== false);
 }

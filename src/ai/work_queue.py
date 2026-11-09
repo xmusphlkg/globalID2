@@ -329,7 +329,8 @@ async def submit_completion(
     state.work_ids.add(work_id)
     async with state.lock:
         state.waiting += 1
-        await _set_waiting(state, True)
+        if state.waiting == 1:
+            await _set_waiting(state, True)
     try:
         while True:
             async with get_database() as db:
@@ -365,7 +366,8 @@ async def submit_completion(
     finally:
         async with state.lock:
             state.waiting = max(0, state.waiting - 1)
-            await _set_waiting(state, state.waiting > 0)
+            if state.waiting == 0:
+                await _set_waiting(state, False)
 
 
 async def submit_probe(operation: str, arguments: dict[str, Any]) -> Any:
@@ -382,7 +384,8 @@ async def submit_probe(operation: str, arguments: dict[str, Any]) -> Any:
     state.work_ids.add(work_id)
     async with state.lock:
         state.waiting += 1
-        await _set_waiting(state, True)
+        if state.waiting == 1:
+            await _set_waiting(state, True)
     try:
         while True:
             async with get_database() as db:
@@ -397,7 +400,8 @@ async def submit_probe(operation: str, arguments: dict[str, Any]) -> Any:
     finally:
         async with state.lock:
             state.waiting = max(0, state.waiting - 1)
-            await _set_waiting(state, state.waiting > 0)
+            if state.waiting == 0:
+                await _set_waiting(state, False)
 
 
 def _priority_rank():
@@ -679,6 +683,7 @@ async def claim_work(
     *,
     now: datetime | None = None,
     alternatives: set[str] | Mapping[str, list[str]] | None = None,
+    balance_peer_review: bool = False,
 ) -> AIWorkItem | None:
     """Atomically reserve a remaining route permit and highest-priority due item."""
     if not route.get("available_for_routing"):
@@ -700,6 +705,24 @@ async def claim_work(
         )
         if leased >= int(route["runtime_model_capacity"]):
             return None
+        defer_governance_author = False
+        if balance_peer_review:
+            # On a dominant route, unbounded author calls create a queue of
+            # reviewers that cannot use their own author model. Limit this
+            # imbalance while still allowing the route to review work authored
+            # elsewhere. All checks occur under the shared per-route lock.
+            model_name = key.split(":", 1)[-1]
+            author_leases = await db.scalar(select(func.count()).select_from(AIWorkItem).where(
+                AIWorkItem.status == "leased", AIWorkItem.route_key == key,
+                AIWorkItem.lease_expires_at > now,
+                AIWorkItem.payload["agent_name"].as_string() == "content_governance_author",
+            ))
+            waiting_reviewers = await db.scalar(select(func.count()).select_from(AIWorkItem).where(
+                AIWorkItem.status == "queued", AIWorkItem.available_at <= now,
+                AIWorkItem.payload["agent_name"].as_string() == "content_governance_reviewer",
+                AIWorkItem.payload["avoid_models"].as_string().contains(model_name),
+            ))
+            defer_governance_author = int(author_leases or 0) + int(waiting_reviewers or 0) >= 4
         rank = _priority_rank()
         due = (
             AIWorkItem.status == "queued",
@@ -718,6 +741,7 @@ async def claim_work(
                     AIWorkItem.capability,
                     AIWorkItem.payload["avoid_models"].label("avoid_models"),
                     AIWorkItem.payload["last_failed_route"].label("last_failed_route"),
+                    AIWorkItem.payload["agent_name"].as_string().label("agent_name"),
                 )
                 .where(*due)
                 .order_by(rank, AIWorkItem.created_at, AIWorkItem.id)
@@ -731,6 +755,8 @@ async def claim_work(
             if not page:
                 return None
             for candidate in page:
+                if defer_governance_author and candidate.agent_name == "content_governance_author":
+                    continue
                 if not _route_accepts_work(
                     key, candidate.avoid_models,
                     _capable_alternatives(alternatives, candidate.capability),
@@ -768,6 +794,19 @@ async def claim_work(
             cursor = (last.priority_rank, last.created_at, last.id)
 
 
+async def active_route_lease_counts(*, now: datetime | None = None) -> dict[str, int]:
+    """Read shared route occupancy, including calls owned by other processes."""
+    now = now or _now()
+    async with get_database() as db:
+        rows = (await db.execute(
+            select(AIWorkItem.route_key, func.count()).where(
+                AIWorkItem.status == "leased", AIWorkItem.lease_expires_at > now,
+                AIWorkItem.route_key.is_not(None),
+            ).group_by(AIWorkItem.route_key)
+        )).all()
+    return {str(key): int(count) for key, count in rows}
+
+
 def _capable_alternatives(
     alternatives: set[str] | Mapping[str, list[str]] | None, capability: str,
 ) -> set[str] | None:
@@ -799,13 +838,14 @@ def _route_accepts_work(
 
 
 class AIWorkDispatcher:
-    def __init__(self, route_loader=None, complete=None):
+    def __init__(self, route_loader=None, complete=None, *, balance_peer_review=False):
         if route_loader is None:
             from .model_center import get_runtime_routes
 
             route_loader = get_runtime_routes
         self.route_loader = route_loader
         self.complete = complete
+        self.balance_peer_review = balance_peer_review
         self.active: dict[int, asyncio.Task] = {}
         self.outcomes: dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
         self._tick_lock = asyncio.Lock()
@@ -1012,13 +1052,19 @@ class AIWorkDispatcher:
         ]
         if not routes:
             return 0
+        # Dispatcher instances share DB-enforced route permits. Local task
+        # counts alone misidentify routes owned by other processes as idle,
+        # causing eligible work to wait while a genuinely free route sits idle.
+        counts = defaultdict(int, await active_route_lease_counts())
+        dominant_key = None
+        if self.balance_peer_review and len(routes) > 1:
+            largest = max(routes, key=lambda item: int(item["runtime_model_capacity"]))
+            largest_capacity = int(largest["runtime_model_capacity"])
+            if largest_capacity > sum(int(item["runtime_model_capacity"]) for item in routes if item is not largest):
+                dominant_key = largest["model_key"]
         claimed = 0
         # Choose from available permits using the shared recent-success weighting.
         while routes:
-            counts = defaultdict(int)
-            for task in self.active.values():
-                key = getattr(task, "_ai_route_key", "")
-                counts[key] += 1
             weights = [
                 route_weight(
                     int(r["runtime_model_capacity"]),
@@ -1038,7 +1084,10 @@ class AIWorkDispatcher:
                 for r, weight in zip(routes, weights)
                 if weight > 0
             }
-            item = await claim_work(route, alternatives=idle)
+            if route["model_key"] == dominant_key:
+                item = await claim_work(route, alternatives=idle, balance_peer_review=True)
+            else:
+                item = await claim_work(route, alternatives=idle)
             if item is None:
                 routes.remove(route)
                 continue
@@ -1048,6 +1097,7 @@ class AIWorkDispatcher:
             task._ai_route_key = route["model_key"]
             task._ai_lease_expires_at = item.lease_expires_at
             self.active[item.id] = task
+            counts[route["model_key"]] += 1
             claimed += 1
         return claimed
 

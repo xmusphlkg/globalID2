@@ -1,0 +1,19 @@
+[Unit]
+Description=GlobalID historical literature relevance rescreen
+After=globalid-dashboard-worker.service
+Wants=globalid-dashboard-worker.service
+
+[Service]
+Type=simple
+User=__RUN_AS_USER__
+Group=__RUN_AS_GROUP__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=-__PROJECT_DIR__/.env
+ExecStart=__PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/rescreen_excluded_literature.py --apply --wait-for-new-worker-pid 0 --batch-size 100 --max-backlog 1000000 --interval 10
+Restart=on-failure
+RestartSec=30
+MemoryMax=2G
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

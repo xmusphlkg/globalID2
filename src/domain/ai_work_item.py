@@ -65,4 +65,9 @@ class AIWorkItem(Base):
             postgresql_where=text("status = 'queued'"),
         ),
         Index("ix_ai_work_items_parent", "parent_task_uuid", "status"),
+        Index(
+            "ix_ai_work_items_leased_route_expiry", "route_key", "lease_expires_at",
+            postgresql_where=text("status = 'leased'"),
+            sqlite_where=text("status = 'leased'"),
+        ),
     )

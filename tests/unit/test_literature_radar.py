@@ -398,7 +398,7 @@ def test_classifier_links_disease_country_topics_and_study_type():
     assert [item.key for item in result.countries] == ["JP"]
     assert {item.key for item in result.topics} == {"Surveillance", "Vaccination", "Outbreak investigation"}
     assert result.study_type == "Outbreak investigation"
-    assert result.publication_status == "published"
+    assert result.publication_status == "review"
     assert 0.75 <= result.discovery_score <= 0.85
     assert result.surveillance_relation_score == 0.0
 
@@ -413,7 +413,7 @@ def test_short_terms_do_not_create_substring_false_positives():
         taxonomy={},
     )
     assert result.diseases == []
-    assert result.publication_status == "excluded"
+    assert result.publication_status == "review"
 
 
 def test_aggregate_catalogue_rows_never_become_literature_diseases():
@@ -427,7 +427,7 @@ def test_aggregate_catalogue_rows_never_become_literature_diseases():
         taxonomy={"topics": {"Surveillance": ["surveillance"]}},
     )
     assert result.diseases == []
-    assert result.publication_status == "excluded"
+    assert result.publication_status == "review"
 
 
 def test_recommendations_in_prose_do_not_misclassify_an_article_as_a_guideline():
@@ -1678,7 +1678,7 @@ def test_manual_publication_gate_blocks_future_and_incomplete_records():
     assert "authors are missing" in blockers
 
 
-def test_autopilot_confirms_exact_relationship_and_publishes_eligible_article():
+def test_autopilot_relation_is_only_a_candidate_for_contextual_review():
     article = _autopilot_article()
     link = SimpleNamespace(
         status="review",
@@ -1699,7 +1699,7 @@ def test_autopilot_confirms_exact_relationship_and_publishes_eligible_article():
         now=datetime(2026, 8, 13, tzinfo=timezone.utc),
     )
     assert relation.action == "confirm"
-    assert publication.action == "publish"
+    assert publication.action == "hold"
 
 
 def test_autopilot_holds_preprints_and_rejects_weak_relationships():
@@ -1731,10 +1731,10 @@ def test_autopilot_defers_future_only_records_and_re_evaluates_after_publication
 
     assert deferred.action == "defer"
     assert "scheduled for automatic re-evaluation" in deferred.reasons[0]
-    assert eligible.action == "publish"
+    assert eligible.action == "hold"
 
 
-def test_future_date_does_not_hide_an_independent_incomplete_record_exclusion():
+def test_future_date_and_incomplete_metadata_are_held_for_review():
     article = _autopilot_article(
         published_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
         authors=[],
@@ -1748,7 +1748,7 @@ def test_future_date_does_not_hide_an_independent_incomplete_record_exclusion():
         now=datetime(2026, 8, 17, tzinfo=timezone.utc),
     )
 
-    assert decision.action == "exclude"
+    assert decision.action == "hold"
     assert "authors are missing" in decision.reasons
 
 
@@ -1791,7 +1791,7 @@ def test_correction_notice_requires_both_title_marker_and_explicit_parent_relati
     assert decision(corrected_primary).action == "hold"
 
 
-def test_animal_only_exclusion_requires_no_disease_link_and_extremely_low_score():
+def test_animal_only_records_are_held_even_with_low_discovery_score():
     metadata = {"classification_evidence": {"research_domain": {"value": "animal_only"}}}
 
     def decision(*, score, disease_confidence):
@@ -1807,13 +1807,13 @@ def test_animal_only_exclusion_requires_no_disease_link_and_extremely_low_score(
             now=datetime(2026, 8, 17, tzinfo=timezone.utc),
         )
 
-    assert decision(score=0.15, disease_confidence=0.0).action == "exclude"
+    assert decision(score=0.15, disease_confidence=0.0).action == "hold"
     assert decision(score=0.15, disease_confidence=0.80).action == "hold"
     assert decision(score=0.30, disease_confidence=0.0).action == "hold"
     assert decision(score=0.74, disease_confidence=0.95).action == "hold"
 
 
-def test_non_public_research_domains_cannot_auto_publish():
+def test_animal_and_basic_research_are_not_excluded_before_contextual_review():
     for domain in ("animal_only", "basic_research"):
         article = _autopilot_article(
             discovery_score=0.95,
@@ -1827,7 +1827,6 @@ def test_non_public_research_domains_cannot_auto_publish():
             now=datetime(2026, 8, 17, tzinfo=timezone.utc),
         )
         assert decision.action == "hold"
-        assert domain in decision.reasons[0]
 
     plant = _autopilot_article(
         discovery_score=0.95,
@@ -1839,7 +1838,7 @@ def test_non_public_research_domains_cannot_auto_publish():
         max_disease_confidence=0.99,
         confirmed_relation_levels={"exact_disease_geography"},
         now=datetime(2026, 8, 17, tzinfo=timezone.utc),
-    ).action == "exclude"
+    ).action == "hold"
 
 
 def test_published_revalidation_only_reopens_hard_public_boundary_failures():
@@ -1872,7 +1871,7 @@ def test_published_revalidation_only_reopens_hard_public_boundary_failures():
         confirmed_relation_levels={"exact_disease_geography"},
         now=now,
     )
-    assert _published_revalidation_status(animal_only, animal_decision, now=now) == "review"
+    assert _published_revalidation_status(animal_only, animal_decision, now=now) == "published"
 
     plant_only = _autopilot_article(
         publication_status="published",
@@ -1889,7 +1888,7 @@ def test_published_revalidation_only_reopens_hard_public_boundary_failures():
     assert _published_revalidation_status(plant_only, plant_decision, now=now) == "excluded"
 
 
-def test_relevance_exception_band_remains_fail_closed_for_human_health_research():
+def test_high_disease_confidence_does_not_replace_contextual_review():
     article = _autopilot_article(
         discovery_score=0.65,
         metadata_={"classification_evidence": {"research_domain": {"value": "human_health"}}},
@@ -1904,7 +1903,7 @@ def test_relevance_exception_band_remains_fail_closed_for_human_health_research(
     )
 
     assert decision.action == "hold"
-    assert decision.reasons == ("article relevance is inside the exception-review band",)
+    assert "contextual review" in decision.reasons[-1]
 
 
 def test_non_public_summary_review_is_deferred_by_article_state():
@@ -2083,12 +2082,8 @@ async def test_french_enrichment_uses_canonical_english_contract():
 # Problem 1 new tests: article exclusion gate
 # ---------------------------------------------------------------------------
 
-def test_low_discovery_with_disease_link_becomes_hold_not_exclude():
-    """High-relevance but low-discovery paper must go to hold, not exclude.
-
-    Mirrors the motivating case: relevance 1.0, discovery 0.579 — previously
-    excluded by the discovery score gate, now must be held for AI peer review.
-    """
+def test_low_discovery_with_strong_disease_link_requires_contextual_review():
+    """Discovery score is not a disease relevance or publication gate."""
     article = _autopilot_article(
         discovery_score=0.579,
         # default domain is not set → treated as human_health by _research_domain
@@ -2102,12 +2097,11 @@ def test_low_discovery_with_disease_link_becomes_hold_not_exclude():
         now=datetime(2026, 8, 17, tzinfo=timezone.utc),
     )
     assert decision.action == "hold"
-    assert "below the automatic publication gate" in decision.reasons[0]
-    assert "AI review decides" in decision.reasons[0]
+    assert "contextual review" in decision.reasons[-1]
 
 
-def test_low_discovery_no_disease_link_still_excluded():
-    """An article with no disease link and a sub-threshold score must still be excluded."""
+def test_low_discovery_without_disease_link_requires_review():
+    """No disease match is uncertainty rather than proof of irrelevance."""
     article = _autopilot_article(
         discovery_score=0.50,
         metadata_={},
@@ -2119,8 +2113,8 @@ def test_low_discovery_no_disease_link_still_excluded():
         confirmed_relation_levels=set(),
         now=datetime(2026, 8, 17, tzinfo=timezone.utc),
     )
-    assert decision.action == "exclude"
-    assert "no disease link" in decision.reasons[0]
+    assert decision.action == "hold"
+    assert "contextual review" in decision.reasons[0]
 
 
 # ---------------------------------------------------------------------------

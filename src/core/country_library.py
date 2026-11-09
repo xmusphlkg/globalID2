@@ -673,7 +673,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         "notes": "Finland THL Infectious Diseases Register national monthly case counts. The current month is ingested as provisional and the latest three months are refreshed for source revisions.",
     },
     "IE": {
-        "public_release_enabled": False,
+        "public_release_enabled": True,
         "data_source_url": "https://notifiabledisease.hpsc.ie/",
         "data_source_type": "official_arcgis_and_reviewed_pdf_catalogue",
         "crawler_config": {
@@ -689,6 +689,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "geography_key": "country:IE:national",
             "api_contract": "unversioned_official_arcgis_table",
             "reuse_status": "written_permission_required",
+            "operator_authorized_public_release": True,
             "annual_index_url": "https://www.hpsc.ie/notifiablediseases/annualidstatistics/",
             "annual_history_start_year": 2004,
             "annual_history_end_year": 2020,
@@ -706,7 +707,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
                     "revision_window_unit": "weeks",
                     "default_revision_window": 12,
                     "source_update_cadence": "weekly_revisable",
-                    "public_release_enabled": False,
+                    "public_release_enabled": True,
                 },
                 "hpsc_annual": {
                     "source_kind": "history",
@@ -720,7 +721,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
                     "revision_window_unit": "years",
                     "default_revision_window": 3,
                     "source_update_cadence": "reviewed_annual_history",
-                    "public_release_enabled": False,
+                    "public_release_enabled": True,
                 },
                 "hpsc_weekly_archive": {
                     "source_kind": "history",
@@ -734,7 +735,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
                     "revision_window_unit": "weeks",
                     "default_revision_window": 1,
                     "source_update_cadence": "immutable_archive_reconciliation",
-                    "public_release_enabled": False,
+                    "public_release_enabled": True,
                 },
             },
         },
@@ -748,7 +749,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "fallback": "quarantine_unmapped",
         },
         "report_config": {"default_type": "WEEKLY", "lang": "en-IE"},
-        "notes": "Ireland HPSC weekly totals from 2021 W30 onward, sparse reconstructed weekly PDF snapshots for 2015–2021 W29, and separate annual history for 2004–2020. The grains are not spliced and archive public release is disabled.",
+        "notes": "Ireland HPSC weekly totals from 2021 W30 onward, sparse reconstructed weekly PDF snapshots for 2015–2021 W29, and separate annual history for 2004–2020. The grains are not spliced. Published by operator decision without confirmed written HPSC reuse permission; archive reuse rights have not been verified.",
     },
     "NO": {
         "public_release_enabled": True,
@@ -1233,9 +1234,7 @@ def _merge_ecdc_baseline_config(code: str, config: dict) -> dict:
                 },
             }
         )
-    # The independent ECDC adapter must not open Ireland's country-level gate.
-    # Its observations remain available internally while public release is off.
-    merged["public_release_enabled"] = code != "IE"
+    merged["public_release_enabled"] = True
     merged["ecdc_baseline"] = {
         "source_id": f"SRC_{code}_ECDC_ATLAS",
         "dataset_id": 27,
@@ -1248,11 +1247,24 @@ def _merge_ecdc_baseline_config(code: str, config: dict) -> dict:
             "access-eueea-surveillance-data-third-parties"
         ),
     }
-    if code in {"AT", "IE"}:
-        # National adapters remain permission-gated. Austria's public export
-        # uses ECDC facts only; Ireland's country-level gate remains closed.
+    if code == "AT":
+        # Austria's national adapter remains permission-gated; use ECDC only.
         merged["public_source_systems"] = [f"SRC_{code}_ECDC_ATLAS"]
         merged["public_legacy_enabled"] = False
+    if code == "IE":
+        merged["public_source_systems"] = [
+            "SRC_IE_ECDC_ATLAS", "SRC_IE_HPSC_NDH",
+            "SRC_IE_HPSC_ANNUAL", "SRC_IE_HPSC_WEEKLY_ARCHIVE",
+        ]
+        merged["public_legacy_enabled"] = False
+        merged["public_source_scopes"] = [
+            "hpsc_ndh", "hpsc_weekly_archive", "hpsc_annual", "ecdc_atlas_annual",
+        ]
+        merged["public_source_notes"] = (
+            "HPSC data are published by operator decision without confirmed written "
+            "permission; HPSC terms require prior permission. Archive reuse rights "
+            "have not been verified. ECDC annual data are attributed separately."
+        )
     return merged
 
 

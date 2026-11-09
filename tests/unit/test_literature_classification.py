@@ -74,6 +74,23 @@ def _classify(candidate: ArticleCandidate):
     )
 
 
+def test_new_controlled_aliases_recover_virus_studies_without_full_disease_name():
+    aliases = json.loads((ROOT / "configs/literature/disease_aliases.json").read_text())["aliases"]
+    diseases = [
+        {"disease_id": "D129", "name_en": "Oropouche virus disease", "aliases": aliases["D129"]},
+        {"disease_id": "D142", "name_en": "Respiratory syncytial virus infection (RSV)", "aliases": aliases["D142"]},
+        {"disease_id": "D238", "name_en": "Human T-lymphotropic virus 1 or 2 infection", "aliases": aliases["D238"]},
+    ]
+    for title, expected in (
+        ("Re-emergence of Oropouche virus in Brazil", "D129"),
+        ("Effectiveness of respiratory syncytial virus immunisation", "D142"),
+        ("HTLV-1: an overlooked sexually transmitted infection", "D238"),
+    ):
+        result = classify_candidate(_candidate(title), diseases=diseases, countries=[], taxonomy={})
+        assert expected in {match.key for match in result.diseases}
+        assert result.publication_status == "review"
+
+
 def test_stage_two_uses_controlled_europe_pmc_metadata_with_traceable_evidence():
     result = _classify(_candidate(
         "A multicentre infection study",
@@ -359,7 +376,7 @@ def test_non_human_research_domains_cannot_cross_the_automatic_publish_gate():
     ))
 
     assert plant.research_domain == "plant_only"
-    assert plant.publication_status == "excluded"
+    assert plant.publication_status == "review"
     assert animal.research_domain == "animal_only"
     assert animal.publication_status == "review"
     assert one_health.research_domain == "one_health"

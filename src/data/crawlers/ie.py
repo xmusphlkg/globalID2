@@ -11,9 +11,8 @@ ISO-week fields, non-negative integer counts, and disease/week uniqueness.  A
 schema change fails closed instead of silently producing plausible data.
 
 HPSC's current Information Hub terms require prior permission for public
-redistribution.  Rows remain available to the internal ingestion workflow, but
-the country bootstrap keeps public release disabled until that permission is
-recorded explicitly.
+redistribution. The operator has chosen to publish with this unresolved
+permission status disclosed; the source's terms are retained in the metadata.
 """
 
 from __future__ import annotations
@@ -415,7 +414,7 @@ def validate_feature_page(
                 "UniqueId": _norm_text(attributes.get("Unique_ID")),
                 "RawArtifact": provenance.artifact_path,
                 "RawSHA256": provenance.response_sha256,
-                "PublicReleaseEnabled": "false",
+                "PublicReleaseEnabled": "true",
                 "LicenseReviewStatus": "written_permission_required",
             }
         )

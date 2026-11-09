@@ -14,6 +14,8 @@ import os
 import shutil
 from pathlib import Path
 
+from .release_binding import PAPERS_FIELDS, papers_binding_matches
+
 
 def link_immutable_or_copy(source, destination):
     """Share immutable partition bytes when possible, preserving portability."""
@@ -124,6 +126,14 @@ class ArtifactCheckpoint:
             expected_digest = candidate["identity"].get("build_digest")
             if expected_digest and digest_site(self.directory / "2") != expected_digest:
                 raise ValueError("Release candidate build checksum mismatch")
+            # release.json is deliberately excluded from the build checksum.
+            # A bound candidate therefore needs an independent identity check.
+            if any(key in candidate["identity"] for key in PAPERS_FIELDS):
+                manifest = json.loads((self.directory / "2" / "release.json").read_text())
+                if (manifest.get("release_id") != candidate["identity"].get("release_id")
+                        or manifest.get("build_digest") != expected_digest
+                        or not papers_binding_matches(manifest, candidate["identity"])):
+                    raise ValueError("Release candidate Papers binding mismatch")
         except (OSError, ValueError, KeyError, TypeError, RuntimeError):
             self.discard()
             return None

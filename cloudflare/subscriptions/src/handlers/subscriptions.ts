@@ -209,6 +209,10 @@ export async function subscriptionStats(request: Request, env: Env): Promise<Res
     `SELECT event_type AS status, COUNT(*) AS count FROM email_delivery_events
      WHERE occurred_at >= ? GROUP BY event_type ORDER BY event_type`
   ).bind(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).all<{ status: string; count: number }>();
+  const managementOutboxRows = await env.DB.prepare(
+    `SELECT status, COUNT(*) AS count FROM management_email_outbox
+     WHERE status IN ('queued', 'retry', 'sending', 'unknown', 'failed') GROUP BY status ORDER BY status`
+  ).all<{ status: string; count: number }>();
   const stalePending = await env.DB.prepare(
     "SELECT COUNT(*) AS count FROM subscriptions WHERE status = 'pending' AND created_at < ?"
   ).bind(pendingCutoff(env.PENDING_EXPIRY_DAYS)).first<{ count: number }>();
@@ -225,6 +229,7 @@ export async function subscriptionStats(request: Request, env: Env): Promise<Res
     deliveries_last_7_days: rowsToCounts(deliveryRows.results || []),
     campaign_deliveries_last_7_days: campaignDeliveries,
     provider_feedback_last_7_days: feedback,
+    management_outbox: rowsToCounts(managementOutboxRows.results || []),
     delivery_acceptance_rate_last_7_days: terminal > 0 ? Math.round((accepted / terminal) * 10000) / 10000 : null,
     stale_pending_subscriptions: Number(stalePending?.count || 0),
     pending_expiry_days: configInt(env.PENDING_EXPIRY_DAYS, 14, 1, 365),

@@ -756,7 +756,8 @@ class LiteratureEnrichmentPipeline:
                     automation = {
                         **(automation or {}),
                         "peer_review": await ai_content_governance_service.review_literature_summaries(
-                            db, limit=max(20, len(articles) * len(languages))
+                            db, limit=max(20, len(articles) * len(languages)),
+                            article_ids=[article.article_id for article in articles],
                         ),
                     }
             except Exception as exc:  # noqa: BLE001 - the queue is retried on the next run
