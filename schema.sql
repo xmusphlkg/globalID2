@@ -1223,3 +1223,26 @@ CREATE TABLE ai_review_workflows (
 CREATE INDEX ix_ai_review_workflow_parent ON ai_review_workflows (parent_task_uuid, generation, status, id);
 CREATE INDEX ix_ai_review_workflow_subject ON ai_review_workflows (kind, subject_id, input_fingerprint, policy_version);
 CREATE UNIQUE INDEX uq_ai_review_workflow_open_subject ON ai_review_workflows (kind, subject_id) WHERE status = 'open';
+
+CREATE TABLE ai_model_call_logs (
+	request_id VARCHAR(36) NOT NULL,
+	model_id INTEGER,
+	provider_id INTEGER,
+	model_key VARCHAR(200) NOT NULL,
+	model_name VARCHAR(120) NOT NULL,
+	provider_key VARCHAR(120) NOT NULL,
+	agent_name VARCHAR(160) NOT NULL,
+	status VARCHAR(20) NOT NULL,
+	latency_ms FLOAT NOT NULL,
+	error_type VARCHAR(160),
+	error_message TEXT,
+	id SERIAL NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	PRIMARY KEY (id)
+);
+CREATE INDEX idx_ai_model_call_logs_created ON ai_model_call_logs (created_at);
+CREATE INDEX idx_ai_model_call_logs_model_created ON ai_model_call_logs (model_key, created_at);
+CREATE INDEX idx_ai_model_call_logs_provider_created ON ai_model_call_logs (provider_key, created_at);
+CREATE INDEX idx_ai_model_call_logs_request ON ai_model_call_logs (request_id);
+CREATE INDEX idx_ai_model_call_logs_success_model ON ai_model_call_logs (model_key) WHERE status = 'success';

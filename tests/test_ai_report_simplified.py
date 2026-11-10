@@ -46,10 +46,9 @@ class ReportGenerationTest:
             raise RuntimeError("Required dependencies not available")
             
         self.config = get_config()
-        # Allow test to override reviewer threshold and retries via config for reproducibility
+        # Allow the manual report test to set its reviewer threshold.
         try:
             self.config.ai.reviewer_threshold = 0.8
-            self.config.ai.max_retries = 5
         except Exception:
             pass
         self.test_data_dir = Path(__file__).parent / "fixtures" / "ai_test_data"
@@ -195,10 +194,8 @@ class ReportGenerationTest:
         
         writer = WriterAgent()
         reviewer = ReviewerAgent()
-        # Use reviewer-configured threshold and retries when available
+        # Use the reviewer's threshold; this scenario owns its revision budget.
         configured_threshold = getattr(reviewer, 'reviewer_threshold', 0.8)
-        configured_max_retries = getattr(reviewer, 'max_retries', max_retries)
-        max_retries = configured_max_retries
         
         for section_type in sections:
             print(f"   🔤 生成 {section_type} 部分...")

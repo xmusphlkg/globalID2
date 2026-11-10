@@ -1,0 +1,431 @@
+{
+  "sample_count": 13,
+  "start": "2026-11-10T16:11:41.343519+00:00",
+  "end": "2026-11-10T16:12:41.390735+00:00",
+  "queued": [
+    0,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    0,
+    0
+  ],
+  "valid_leases": [
+    32,
+    25,
+    51,
+    53,
+    32,
+    43,
+    47,
+    41,
+    63,
+    70,
+    77,
+    62,
+    56
+  ],
+  "blocked_shapes": [
+    [
+      [
+        "select",
+        "ai_models",
+        "tuple"
+      ],
+      34
+    ],
+    [
+      [
+        "select",
+        "ai_models",
+        "transactionid"
+      ],
+      15
+    ],
+    [
+      [
+        "select",
+        "",
+        "advisory"
+      ],
+      62
+    ],
+    [
+      [
+        "parent_lock",
+        "tasks",
+        "transactionid"
+      ],
+      1
+    ],
+    [
+      [
+        "commit",
+        "",
+        "object"
+      ],
+      18
+    ]
+  ],
+  "root_shapes": [
+    [
+      [
+        "commit",
+        "",
+        "WALSync"
+      ],
+      4
+    ],
+    [
+      [
+        "select",
+        "ai_work_items",
+        null
+      ],
+      2
+    ],
+    [
+      [
+        "select",
+        "",
+        "ClientRead"
+      ],
+      4
+    ],
+    [
+      [
+        "commit",
+        "",
+        "WALWrite"
+      ],
+      13
+    ]
+  ],
+  "aggregation_sessions": [
+    {
+      "time": "2026-11-10T16:11:51.350711+00:00",
+      "pid": 2637076,
+      "state": "idle in transaction",
+      "wait_event_type": "Client",
+      "wait_event": "ClientRead",
+      "query_age_s": "0.137511",
+      "transaction_age_s": "0.253661",
+      "blockers": [],
+      "shape": "activity_status_aggregation",
+      "tables": [
+        "ai_work_items"
+      ],
+      "has_group_by": true,
+      "has_for_update": false
+    },
+    {
+      "time": "2026-11-10T16:11:56.354678+00:00",
+      "pid": 2638139,
+      "state": "active",
+      "wait_event_type": null,
+      "wait_event": null,
+      "query_age_s": "0.066125",
+      "transaction_age_s": "0.070129",
+      "blockers": [],
+      "shape": "activity_status_aggregation",
+      "tables": [
+        "ai_work_items"
+      ],
+      "has_group_by": true,
+      "has_for_update": false
+    },
+    {
+      "time": "2026-11-10T16:11:56.354678+00:00",
+      "pid": 2638140,
+      "state": "active",
+      "wait_event_type": null,
+      "wait_event": null,
+      "query_age_s": "0.066209",
+      "transaction_age_s": "0.070215",
+      "blockers": [],
+      "shape": "activity_status_aggregation",
+      "tables": [
+        "ai_work_items"
+      ],
+      "has_group_by": true,
+      "has_for_update": false
+    },
+    {
+      "time": "2026-11-10T16:11:56.354678+00:00",
+      "pid": 2638141,
+      "state": "active",
+      "wait_event_type": null,
+      "wait_event": null,
+      "query_age_s": "0.066459",
+      "transaction_age_s": "0.070464",
+      "blockers": [],
+      "shape": "activity_status_aggregation",
+      "tables": [
+        "ai_work_items"
+      ],
+      "has_group_by": true,
+      "has_for_update": false
+    },
+    {
+      "time": "2026-11-10T16:11:56.354678+00:00",
+      "pid": 2638142,
+      "state": "active",
+      "wait_event_type": null,
+      "wait_event": null,
+      "query_age_s": "0.066525",
+      "transaction_age_s": "0.070530",
+      "blockers": [],
+      "shape": "activity_status_aggregation",
+      "tables": [
+        "ai_work_items"
+      ],
+      "has_group_by": true,
+      "has_for_update": false
+    },
+    {
+      "time": "2026-11-10T16:11:56.354678+00:00",
+      "pid": 2638110,
+      "state": "active",
+      "wait_event_type": null,
+      "wait_event": null,
+      "query_age_s": "0.066541",
+      "transaction_age_s": "0.070546",
+      "blockers": [],
+      "shape": "activity_status_aggregation",
+      "tables": [
+        "ai_work_items"
+      ],
+      "has_group_by": true,
+      "has_for_update": false
+    }
+  ],
+  "first_drains": [
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "kind": "summaries",
+      "scanned": 43419,
+      "admitted": 35338,
+      "cursor": 84201,
+      "high_watermark": 84201,
+      "exhausted": true,
+      "buffer_size": "512"
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "scanned": 7546,
+      "admitted": 7290,
+      "cursor": 11701,
+      "high_watermark": 400516,
+      "exhausted": false,
+      "buffer_size": "512"
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "kind": "summaries",
+      "scanned": 5888,
+      "admitted": 5305,
+      "cursor": 13805,
+      "high_watermark": 84419,
+      "exhausted": false,
+      "buffer_size": "512"
+    }
+  ],
+  "last_drains": [
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "kind": "summaries",
+      "scanned": 43419,
+      "admitted": 35338,
+      "cursor": 84201,
+      "high_watermark": 84201,
+      "exhausted": true,
+      "buffer_size": "512"
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "kind": "summaries",
+      "scanned": 6272,
+      "admitted": 5668,
+      "cursor": 14266,
+      "high_watermark": 84419,
+      "exhausted": false,
+      "buffer_size": "512"
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "scanned": 7613,
+      "admitted": 7355,
+      "cursor": 11793,
+      "high_watermark": 400516,
+      "exhausted": false,
+      "buffer_size": "512"
+    }
+  ],
+  "first_workflows": [
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "author",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "leased",
+      "count": 14,
+      "oldest_updated_at": "2026-11-10 16:11:28.039979+00:00",
+      "max_success_wait_s": null,
+      "p50_success_wait_s": null
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "author",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "succeeded",
+      "count": 47,
+      "oldest_updated_at": "2026-11-10 16:10:44.256586+00:00",
+      "max_success_wait_s": "40.935606",
+      "p50_success_wait_s": 35.672933
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "ready",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "none",
+      "count": 211,
+      "oldest_updated_at": "2026-11-10 16:08:17.298626+00:00",
+      "max_success_wait_s": null,
+      "p50_success_wait_s": null
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "reviewer",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "leased",
+      "count": 17,
+      "oldest_updated_at": "2026-11-10 16:08:25.148874+00:00",
+      "max_success_wait_s": null,
+      "p50_success_wait_s": null
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "reviewer",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "succeeded",
+      "count": 17,
+      "oldest_updated_at": "2026-11-10 16:10:28.136231+00:00",
+      "max_success_wait_s": "39.573972",
+      "p50_success_wait_s": 9.647744
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "kind": "summaries",
+      "step": "ready",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "none",
+      "count": 36,
+      "oldest_updated_at": "2026-11-10 16:11:37.644588+00:00",
+      "max_success_wait_s": null,
+      "p50_success_wait_s": null
+    }
+  ],
+  "last_workflows": [
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "author",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "leased",
+      "count": 26,
+      "oldest_updated_at": "2026-11-10 16:11:38.866160+00:00",
+      "max_success_wait_s": null,
+      "p50_success_wait_s": null
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "author",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "succeeded",
+      "count": 21,
+      "oldest_updated_at": "2026-11-10 16:12:05.632597+00:00",
+      "max_success_wait_s": "25.345602",
+      "p50_success_wait_s": 8.528926
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "ready",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "none",
+      "count": 211,
+      "oldest_updated_at": "2026-11-10 16:08:51.980940+00:00",
+      "max_success_wait_s": null,
+      "p50_success_wait_s": null
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "reviewer",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "leased",
+      "count": 29,
+      "oldest_updated_at": "2026-11-10 16:08:25.148874+00:00",
+      "max_success_wait_s": null,
+      "p50_success_wait_s": null
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "step": "reviewer",
+      "status": "open",
+      "outcome": null,
+      "activity_status": "succeeded",
+      "count": 16,
+      "oldest_updated_at": "2026-11-10 16:11:33.678125+00:00",
+      "max_success_wait_s": "18.710256",
+      "p50_success_wait_s": 9.8266375
+    }
+  ],
+  "last_recent_outcomes": [
+    {
+      "kind": "articles",
+      "outcome": "held",
+      "count": 17
+    },
+    {
+      "kind": "articles",
+      "outcome": "published",
+      "count": 3
+    },
+    {
+      "kind": "articles",
+      "outcome": "rejected",
+      "count": 48
+    },
+    {
+      "kind": "summaries",
+      "outcome": "waiting",
+      "count": 399
+    }
+  ]
+}

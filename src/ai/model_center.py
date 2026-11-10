@@ -9,6 +9,7 @@ these same catalogue and transport contracts.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import re
 import time
 import weakref
@@ -18,7 +19,7 @@ from uuid import UUID, uuid4
 
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import selectinload
 
 from src.core import get_config, get_db, get_engine, get_logger
@@ -783,6 +784,7 @@ async def record_route_runtime_failure(
     *,
     duration_seconds: float | None = None,
     cooldown_seconds: int = 60,
+    retry_after_seconds: int | None = None,
 ) -> dict[str, Any]:
     """Persist a real production-call transport failure for this model route.
 
@@ -818,6 +820,11 @@ async def record_route_runtime_failure(
             occurred_at=now,
             duration_seconds=duration_seconds,
             cooldown_seconds=cooldown_seconds,
+            retry_after_seconds=(
+                retry_after_seconds
+                if retry_after_seconds is not None
+                else failure.retry_after_seconds
+            ),
         )
         model_state = health._runtime_health_state(model.extra_params, now)
 
@@ -836,7 +843,13 @@ async def record_route_runtime_success(
     *,
     duration_seconds: float | None = None,
 ) -> dict[str, Any]:
-    """Persist a successful production completion and its observed latency."""
+    """Sample healthy route telemetry without serializing every completion.
+
+    Per-call logs remain complete. Their count is read before acquiring the
+    model lock; competing writers share the persisted five-second window.
+    A fresh failure bypasses sampling, while an older success cannot clear a
+    newer failure. Busy rows are left to the next completion or recovery probe.
+    """
     try:
         model_id = int(route.get("model_id"))
     except (TypeError, ValueError):
@@ -844,14 +857,61 @@ async def record_route_runtime_success(
 
     now = health._utcnow()
     async with get_db() as db:
-        model = await db.get(AIModelConfig, model_id, with_for_update=True)
-        if model is None:
+        snapshot = (
+            await db.execute(
+                select(AIModelConfig.extra_params, AIModelConfig.model_key).where(
+                    AIModelConfig.id == model_id
+                )
+            )
+        ).one_or_none()
+        if snapshot is None:
             return {"recorded": False, "reason": "model_not_found"}
+        if not health._runtime_success_is_due(snapshot.extra_params, now):
+            return {"recorded": False, "reason": "not_due"}
+
+        if db.get_bind().dialect.name == "postgresql":
+            sample_key = int.from_bytes(
+                hashlib.sha256(f"ai-model-success:{model_id}".encode()).digest()[:8],
+                "big",
+                signed=True,
+            )
+            if not await db.scalar(
+                text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": sample_key}
+            ):
+                return {"recorded": False, "reason": "sampling_busy"}
+            # Another sampler may have committed between our initial read and
+            # acquiring this lock. Recheck before scanning the durable log.
+            payload = await db.scalar(
+                select(AIModelConfig.extra_params).where(AIModelConfig.id == model_id)
+            )
+            if not health._runtime_success_is_due(payload, now):
+                return {"recorded": False, "reason": "not_due"}
+
+        successes = await db.scalar(
+            select(func.count())
+            .select_from(AIModelCallLog)
+            .where(
+                AIModelCallLog.model_key == snapshot.model_key,
+                # Keep this fixed predicate literal so generic prepared plans
+                # can use the partial success index too.
+                text("ai_model_call_logs.status = 'success'"),
+            )
+        )
+        model = await db.scalar(
+            select(AIModelConfig)
+            .where(AIModelConfig.id == model_id)
+            .with_for_update(skip_locked=True)
+        )
+        if model is None:
+            return {"recorded": False, "reason": "busy_or_removed"}
+        if not health._runtime_success_is_due(model.extra_params, now):
+            return {"recorded": False, "reason": "not_due"}
 
         model.extra_params = health._write_runtime_success(
             model.extra_params,
             occurred_at=now,
             duration_seconds=duration_seconds,
+            observed_success_count=int(successes or 0),
         )
         await db.commit()
 

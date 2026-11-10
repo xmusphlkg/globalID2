@@ -19,19 +19,17 @@ from sqlalchemy import func, inspect as sa_inspect, select
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.ai.agents import WorkflowAgent
 from src.ai.peer_review import (
     Completer,
     ReviewedOutput,
     build_author_prompt,
     build_reviewer_prompt,
     clean_enum,
-    parse_json_object,
     peer_review,
     reviewer_system,
 )
 from src.ai.peer_review_completer import ModelCenterCompleter
-from src.core import get_database, get_logger
+from src.core import get_database
 from src.core.task_manager import task_manager
 from src.domain import (
     DiseaseKnowledgeBrief,
@@ -50,8 +48,6 @@ from src.literature.review_application import (
     LiteratureReviewApplication,
     ReviewApplicationResult,
 )
-
-logger = get_logger(__name__)
 
 PROMPT_VERSION = "ai-content-governance.v1"
 REVIEW_MAX_TOKENS = 4000
@@ -172,15 +168,6 @@ _EVIDENCE_BLOCK_MARKERS = (
 
 
 @dataclass(frozen=True, slots=True)
-class ModelDecision:
-    item_id: str
-    decision: str
-    confidence: float
-    reasons: tuple[str, ...]
-    payload: Mapping[str, Any]
-
-
-@dataclass(frozen=True, slots=True)
 class KnowledgeRepairPlan:
     """A bounded next action derived from a publication-gate failure."""
 
@@ -198,94 +185,6 @@ def _now() -> datetime:
 def _text(value: Any, *, limit: int = 5000) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     return text[:limit]
-
-
-def _coerce_confidence(value: Any) -> float:
-    try:
-        return max(0.0, min(1.0, float(value)))
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _decisions(payload: Mapping[str, Any], allowed: set[str]) -> list[ModelDecision]:
-    raw_decisions = payload.get("decisions")
-    if not isinstance(raw_decisions, list):
-        return []
-    result: list[ModelDecision] = []
-    for raw in raw_decisions:
-        if not isinstance(raw, Mapping):
-            continue
-        decision = str(raw.get("decision") or "hold").strip().lower()
-        if decision not in allowed:
-            decision = "hold"
-        reasons = tuple(
-            _text(reason, limit=400)
-            for reason in (raw.get("reasons") or [])
-            if _text(reason, limit=400)
-        )
-        result.append(
-            ModelDecision(
-                item_id=str(raw.get("id") or raw.get("item_id") or "").strip(),
-                decision=decision,
-                confidence=_coerce_confidence(raw.get("confidence")),
-                reasons=reasons or ("No model reason supplied.",),
-                payload=dict(raw),
-            )
-        )
-    return result
-
-
-def _conversation_route(conversation: Mapping[str, Any] | None) -> dict[str, Any]:
-    """Normalize BaseAgent telemetry to the historic governance route shape."""
-
-    conversation = conversation or {}
-    provider = str(conversation.get("provider") or "").strip() or None
-    model = str(conversation.get("model") or "").strip() or None
-    return {
-        "provider_key": provider,
-        "model_name": model,
-        "model_key": f"{provider}:{model}" if provider and model else model,
-    }
-
-
-async def _call_json_model(
-    *,
-    system: str,
-    user_payload: Mapping[str, Any],
-    max_tokens: int = 3000,
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Call governance models through the Model Center's shared agent path.
-
-    The activity runtime owns admission, route health and transport retries.
-    Governance supplies the structured task and its request timeout.
-    """
-    user = json.dumps(user_payload, ensure_ascii=False, default=str)
-    agent = WorkflowAgent(
-        name="AIContentGovernance",
-        system_prompt=system,
-        temperature=0.0,
-        max_tokens=max_tokens,
-    )
-    try:
-        text = await agent.complete(
-            prompt=user,
-            system=system,
-            use_cache=False,
-            model_request_timeout_seconds=90,
-        )
-        return parse_json_object(text), _conversation_route(agent.get_latest_conversation())
-    except Exception as exc:
-        route = _conversation_route(agent.get_latest_conversation())
-        logger.warning(
-            "AI governance Model Center invocation failed provider={} model={} error={}",
-            route.get("provider_key"),
-            route.get("model_name"),
-            exc,
-        )
-        raise RuntimeError(
-            "Model Center could not complete AI content governance: "
-            f"{type(exc).__name__}: {str(exc)[:500]}"
-        ) from exc
 
 
 def _ordered_sections(values: Iterable[str]) -> tuple[str, ...]:
@@ -413,12 +312,6 @@ def plan_failed_knowledge_repair(error: str | None) -> KnowledgeRepairPlan:
         fingerprint=hashlib.sha256(canonical.encode("ascii")).hexdigest()[:16],
         reason=reason,
     )
-
-
-def infer_failed_knowledge_repair_languages(error: str | None) -> list[str]:
-    """Compatibility helper returning only a safely narrowed language scope."""
-    plan = plan_failed_knowledge_repair(error)
-    return list(plan.languages) if len(plan.languages) == 1 else []
 
 
 def _same_recovery_plan_was_attempted(task: Task | Any, plan: KnowledgeRepairPlan) -> bool:
@@ -1352,7 +1245,7 @@ class AIContentGovernanceService:
             }
             for item in standards
         ]
-        exact = self._deterministic_learning_decisions(suggestions, standards)
+        exact = self._exact_learning_targets(suggestions, standards)
         counts = {"approved": 0, "rejected": 0, "deferred": 0}
         applied: list[dict[str, Any]] = []
         route_error: str | None = None
@@ -1380,7 +1273,7 @@ class AIContentGovernanceService:
             item_id = str(suggestion.id)
             reviewed: ReviewedOutput | None = None
             if item_id in exact:
-                target: str | None = str(exact[item_id].payload.get("target_disease_id") or "") or None
+                target: str | None = str(exact[item_id] or "") or None
                 reasons = ["Exact match against the active standard-disease catalogue."]
             elif not use_ai:
                 counts["deferred"] += 1
@@ -1569,12 +1462,12 @@ class AIContentGovernanceService:
             "occurrence_count": suggestion.occurrence_count,
         }
 
-    def _deterministic_learning_decisions(
+    def _exact_learning_targets(
         self,
         suggestions: list[DiseaseLearningSuggestion],
         standards: list[StandardDisease],
-    ) -> dict[str, ModelDecision]:
-        decisions: dict[str, ModelDecision] = {}
+    ) -> dict[str, str]:
+        targets: dict[str, str] = {}
         aliases: dict[str, StandardDisease] = {}
         for disease in standards:
             for name in (disease.standard_name_en, disease.standard_name_zh, disease.disease_id):
@@ -1586,14 +1479,8 @@ class AIContentGovernanceService:
             disease = aliases.get(key)
             if disease is None:
                 continue
-            decisions[str(suggestion.id)] = ModelDecision(
-                item_id=str(suggestion.id),
-                decision="map",
-                confidence=1.0,
-                reasons=("Exact match against the active standard-disease catalogue.",),
-                payload={"target_disease_id": disease.disease_id},
-            )
-        return decisions
+            targets[str(suggestion.id)] = disease.disease_id
+        return targets
 
 
 LITERATURE_ARTICLE_REVIEW_SYSTEM = (

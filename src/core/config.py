@@ -97,11 +97,7 @@ class AISettings(_BaseEnvSettings):
     fallback_model: str = Field(default="glm-4-plus", description="降级模型")
     model_chain_raw: str = Field(
         default="",
-        description="模型优先级列表，逗号分隔（高→低），为空则使用 default_model + fallback_model",
-    )
-    knowledge_model_shards_raw: str = Field(
-        default="",
-        description="知识库任务的模型分流列表，逗号分隔；为空时回退到 model_chain",
+        description="环境初始化的显式模型列表，逗号分隔；为空时仅初始化提供商，不创建模型",
     )
     knowledge_generation_timeout_seconds: int = Field(
         default=300,
@@ -270,31 +266,18 @@ class AISettings(_BaseEnvSettings):
     # 模型配置
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="生成温度")
     max_tokens: int = Field(default=2000, gt=0, description="最大生成tokens")
-    max_retries: int = Field(default=3, ge=1, le=5, description="最大重试次数")
     # Reviewer threshold for approval (0.0-1.0)
     reviewer_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Reviewer approval threshold")
     
     # 成本控制
     enable_cache: bool = Field(default=True, description="是否启用缓存")
     cache_ttl: int = Field(default=168, description="缓存过期时间（小时）")
-    enable_rate_limiting: bool = Field(default=True, description="是否启用限流")
-    rate_limit: int = Field(default=50, description="每分钟请求限制")
     rate_limit_cooldown_seconds: int = Field(default=10, gt=0, description="命中429/额度限制后的冷却秒数（连续限流时递增的上限）")
-    rate_limit_wait_cap_seconds: int = Field(
-        default=900,
-        gt=0,
-        description="限流恢复阶段单次最大等待秒数（建议大于等于冷却时间）",
-    )
-    route_cache_ttl_seconds: int = Field(default=15, gt=0, description="模型中心运行时路由缓存秒数")
     prompt_auto_reload: bool = Field(
         default=False,
         description="是否启用提示词模板热刷新（开发环境建议开启）",
     )
     
-    # 测试配置
-    enable_api_test: bool = Field(default=True, description="是否启用API连通性测试")
-    test_prompt: str = Field(default="测试成功", description="API测试提示")
-
     @property
     def model_chain(self) -> list[str]:
         """
@@ -313,25 +296,6 @@ class AISettings(_BaseEnvSettings):
             if m and m not in seen:
                 seen.add(m)
                 ordered.append(m)
-        return ordered
-
-    @property
-    def knowledge_model_shards(self) -> list[str]:
-        """
-        返回知识库生成的候选分流模型列表。
-
-        若未显式配置 knowledge_model_shards_raw，则回退到通用 model_chain。
-        """
-        raw = self.knowledge_model_shards_raw.strip()
-        if not raw:
-            return list(self.model_chain)
-
-        seen: set[str] = set()
-        ordered: list[str] = []
-        for item in [m.strip() for m in raw.split(",") if m.strip()]:
-            if item not in seen:
-                seen.add(item)
-                ordered.append(item)
         return ordered
 
     @property
@@ -1203,7 +1167,6 @@ if __name__ == "__main__":
     table.add_row("OpenAI Key", "✓" if cfg.ai.openai_api_key else "✗")
     table.add_row("Anthropic Key", "✓" if cfg.ai.anthropic_api_key else "✗")
     table.add_row("Cache Enabled", str(cfg.ai.enable_cache))
-    table.add_row("Rate Limiting", str(cfg.ai.enable_rate_limiting))
     
     rprint(table)
     

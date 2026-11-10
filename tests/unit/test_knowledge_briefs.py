@@ -3788,14 +3788,12 @@ def test_ai_brief_json_parser_uses_the_first_complete_object_when_two_are_return
     assert parsed == {"brief": "A"}
 
 
-def test_ai_settings_knowledge_model_shards_falls_back_to_model_chain() -> None:
+def test_ai_settings_bootstrap_model_chain_preserves_order_without_duplicates() -> None:
     settings = AISettings(
         model_chain_raw="model-a,model-b,model-a",
-        knowledge_model_shards_raw="",
     )
 
     assert settings.model_chain == ["model-a", "model-b"]
-    assert settings.knowledge_model_shards == ["model-a", "model-b"]
 
 
 def test_ai_brief_preferred_models_follow_model_center_shard_rotation(monkeypatch) -> None:

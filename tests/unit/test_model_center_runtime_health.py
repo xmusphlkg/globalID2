@@ -9,10 +9,79 @@ from src.ai.catalogue.health import (
     _provider_check_result_from_model_results,
     _route_routing_status,
     _runtime_health_state,
+    _runtime_success_is_due,
     _utcnow,
     _write_runtime_failure,
     _write_runtime_success,
 )
+
+
+def test_success_sampling_recovers_failures_but_rejects_older_successes():
+    now = _utcnow()
+    healthy = _write_runtime_success({}, occurred_at=now, duration_seconds=1)
+    assert not _runtime_success_is_due(healthy, now + timedelta(seconds=4))
+    assert _runtime_success_is_due(healthy, now + timedelta(seconds=5))
+    failed = _write_runtime_failure(
+        healthy,
+        kind="timeout",
+        error="timeout",
+        occurred_at=now + timedelta(seconds=1),
+        duration_seconds=1,
+        cooldown_seconds=30,
+    )
+    assert not _runtime_success_is_due(failed, now)
+    assert _runtime_success_is_due(failed, now + timedelta(seconds=2))
+
+
+def test_sampled_success_count_uses_durable_calls_and_never_decreases():
+    now = _utcnow()
+    counted = _write_runtime_success(
+        {}, occurred_at=now, duration_seconds=1, observed_success_count=50
+    )
+    assert _runtime_health_state(counted)["runtime_success_count"] == 50
+    older_count = _write_runtime_success(
+        counted,
+        occurred_at=now + timedelta(seconds=5),
+        duration_seconds=1,
+        observed_success_count=49,
+    )
+    assert _runtime_health_state(older_count)["runtime_success_count"] == 50
+
+
+def test_upstream_retry_after_survives_success_until_instructed_deadline():
+    now = _utcnow()
+    payload = {}
+    for index in range(3):
+        at = now + timedelta(seconds=index)
+        payload = _write_runtime_failure(
+            payload,
+            kind="upstream",
+            error="edge unavailable",
+            occurred_at=at,
+            duration_seconds=1,
+            cooldown_seconds=60,
+            retry_after_seconds=600,
+        )
+        assert _runtime_health_state(payload, at)["runtime_failure_active"] == (
+            index == 2
+        )
+    assert _runtime_health_state(payload, now + timedelta(seconds=200))[
+        "runtime_failure_active"
+    ]
+    recovered = _write_runtime_success(
+        payload, occurred_at=now + timedelta(seconds=201), duration_seconds=1
+    )
+    health = _runtime_health_state(recovered, now + timedelta(seconds=201))
+    assert health["runtime_failure_streak"] == 0
+    assert health["runtime_failure_active"]
+    assert health["runtime_failure_remaining_seconds"] == 401
+    assert not _runtime_health_state(recovered, now + timedelta(seconds=603))[
+        "runtime_failure_active"
+    ]
+    after = _write_runtime_success(
+        recovered, occurred_at=now + timedelta(seconds=603), duration_seconds=1
+    )
+    assert "runtime_retry_after_until" not in after["routing_state"]
 
 
 def test_repeated_runtime_timeouts_open_model_circuit_and_success_records_latency() -> (

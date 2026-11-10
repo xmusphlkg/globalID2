@@ -874,6 +874,172 @@ async def test_supply_shrink_does_not_discard_existing_open_work(workflow_db):
     assert await env.repo.feed("parent", "articles", target_size=1) == 1
 
 
+@pytest.mark.parametrize(
+    "mesh",
+    [
+        None,
+        {
+            "meshHeading": [
+                {"descriptorName": {"$": "Dengue"}, "majorTopic_YN": "Y"},
+                {"descriptorName": "Disease Outbreaks", "majorTopic_YN": "N"},
+            ]
+        },
+        ["malformed provider headings"],
+    ],
+)
+async def test_article_projection_preserves_fingerprint_and_both_role_requests(
+    workflow_db, mesh
+):
+    from src.literature.review_workflow.reducer import initial_state
+
+    env = workflow_db
+    full = await article(
+        env,
+        source_payload={
+            "europe_pmc": {
+                "meshHeadingList": mesh,
+                "unused_provider_body": "x" * 200_000,
+            },
+            "other_provider": {"unused_provider_body": "y" * 200_000},
+        },
+        metadata_={
+            "classification_evidence": {"diseases": {"D001": {"confidence": 0.9}}}
+        },
+        source_urls={"abstract": "https://example.test/evidence"},
+        authors=[{"name": "Researcher"}],
+    )
+    async with env.database() as db:
+        record = (
+            (await db.execute(select(*module.ARTICLE_REVIEW_COLUMNS))).mappings().one()
+        )
+    projected = module.article_snapshot(record)
+    assert len(json.dumps(projected.source_payload)) < 1000
+    assert env.repo.policy._literature_article_item(
+        projected
+    ) == env.repo.policy._literature_article_item(full)
+    assert env.repo.policy._article_fingerprint(
+        projected
+    ) == env.repo.policy._article_fingerprint(full)
+    workflow = SimpleNamespace(id=123, kind="articles", generation=0)
+    state = initial_state()
+    state.update(
+        draft={"decision": "publish", "reasons": [QUOTE]}, author_model="provider:a"
+    )
+    for step in ("author", "reviewer"):
+        assert env.repo._request(
+            workflow, projected, None, step=step, state=state
+        ) == env.repo._request(workflow, full, None, step=step, state=state)
+    ids = await initialise(env)
+    async with env.database() as db:
+        saved = await db.get(AIReviewWorkflow, ids[0])
+        assert saved.input_fingerprint == env.repo.policy._article_fingerprint(full)
+
+
+async def test_changed_mesh_subject_invalidates_projected_review_snapshot(workflow_db):
+    env = workflow_db
+    await article(
+        env,
+        source_payload={
+            "europe_pmc": {
+                "meshHeadingList": {
+                    "meshHeading": [{"descriptorName": "Dengue"}],
+                }
+            }
+        },
+    )
+    ids = await initialise(env)
+    async with env.database() as db:
+        row = await db.scalar(select(LiteratureArticle))
+        row.source_payload = {
+            "europe_pmc": {
+                "meshHeadingList": {
+                    "meshHeading": [{"descriptorName": "Malaria"}],
+                }
+            }
+        }
+    await env.repo.advance_many("parent", ids)
+    async with env.database() as db:
+        assert (await db.get(AIReviewWorkflow, ids[0])).outcome == "stale"
+        assert await db.scalar(select(func.count(AIWorkItem.id))) == 0
+
+
+async def test_rotation_admits_ready_work_before_revisiting_completed_low_ids(
+    workflow_db,
+):
+    env = workflow_db
+    async with env.database() as db:
+        db.add_all(
+            [
+                LiteratureArticle(
+                    article_id=f"rotation-{i}",
+                    slug=f"rotation-{i}",
+                    title="Dengue surveillance",
+                    abstract_text=ABSTRACT,
+                )
+                for i in range(10)
+            ]
+        )
+    ids = await initialise(env, buffer_size=16)
+    await env.repo.advance_many("parent", ids[:8])
+    for work_id in ids[:8]:
+        await complete(
+            env, work_id, json.dumps({"decision": "publish", "reasons": [QUOTE]})
+        )
+    actionable, waiting = await env.repo.open_work(
+        "parent", "articles", after_id=ids[7], limit=8
+    )
+    assert actionable == [*ids[8:], *ids[:6]]
+    assert waiting == []
+    await env.repo.advance_many("parent", actionable)
+    async with env.database() as db:
+        rows = (
+            (await db.execute(select(AIReviewWorkflow).order_by(AIReviewWorkflow.id)))
+            .scalars()
+            .all()
+        )
+        assert [row.step for row in rows] == ["reviewer"] * 6 + ["author"] * 4
+        assert all(row.activity_id for row in rows)
+
+
+async def test_eight_article_transitions_do_not_lazy_load_per_item(workflow_db):
+    env = workflow_db
+    async with env.database() as db:
+        db.add_all(
+            [
+                LiteratureArticle(
+                    article_id=f"bounded-{i}",
+                    slug=f"bounded-{i}",
+                    title="Dengue surveillance",
+                    abstract_text=ABSTRACT,
+                    source_payload={"unused_provider_data": "x" * 8192},
+                )
+                for i in range(8)
+            ]
+        )
+    ids = await initialise(env, buffer_size=8)
+    statements = []
+
+    def record(_conn, _cursor, statement, _parameters, _context, _executemany):
+        if statement.lstrip().startswith("SELECT") and "pg_notify" not in statement:
+            statements.append(statement)
+
+    event.listen(env.engine.sync_engine, "before_cursor_execute", record)
+    try:
+        await env.repo.advance_many("parent", ids)
+        assert (
+            len(statements) <= 4
+        )  # parent, workflows, article snapshots, request dedupe
+        for work_id in ids:
+            await complete(
+                env, work_id, json.dumps({"decision": "publish", "reasons": [QUOTE]})
+            )
+        statements.clear()
+        await env.repo.advance_many("parent", ids)
+        assert len(statements) <= 5  # the completed activity projection adds one query
+    finally:
+        event.remove(env.engine.sync_engine, "before_cursor_execute", record)
+
+
 async def test_batch_final_application_is_atomic_and_skips_late_edit(workflow_db):
     env = workflow_db
     await article(env, "z")

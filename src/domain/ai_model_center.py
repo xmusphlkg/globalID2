@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, Float
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, Float, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -133,5 +133,10 @@ class AIModelCallLog(BaseModel):
         Index("idx_ai_model_call_logs_created", "created_at"),
         Index("idx_ai_model_call_logs_provider_created", "provider_key", "created_at"),
         Index("idx_ai_model_call_logs_model_created", "model_key", "created_at"),
+        Index(
+            "idx_ai_model_call_logs_success_model", "model_key",
+            postgresql_where=text("status = 'success'"),
+            sqlite_where=text("status = 'success'"),
+        ),
         Index("idx_ai_model_call_logs_request", "request_id"),
     )

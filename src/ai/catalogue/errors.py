@@ -17,6 +17,7 @@ from math import ceil
 from typing import Any, Literal
 
 _ROUTE_CHANNEL_FAILURE_CODES = {"get_channel_failed"}
+_EDGE_BLOCK_RETRY_SECONDS = 60
 
 
 class FailureKind(str, Enum):
@@ -48,6 +49,13 @@ def classify_failure(error: Any) -> ProviderFailure:
     """
     if is_provider_authentication_error(error):
         return ProviderFailure(FailureKind.AUTHENTICATION, False, "provider")
+    if _is_cloudflare_edge_block(error):
+        return ProviderFailure(
+            FailureKind.UPSTREAM,
+            True,
+            "model",
+            max(_EDGE_BLOCK_RETRY_SECONDS, extract_retry_after_seconds(error) or 0),
+        )
     if is_model_channel_failure(error):
         return ProviderFailure(FailureKind.CHANNEL_UNAVAILABLE, True, "model")
     if is_rate_limit_error(error):
@@ -73,6 +81,42 @@ def _http_status(error: Any) -> int | None:
         return int(status) if status is not None else None
     except (TypeError, ValueError):
         return None
+
+
+def _is_cloudflare_edge_block(error: Any) -> bool:
+    """Identify an HTML edge rejection, never a provider's JSON permission error.
+
+    A Cloudflare response header alone also appears on successful provider API
+    traffic. Require HTTP 403 and its specific HTML error/challenge page. The
+    block may persist, so callers still enforce the ordinary attempt budget.
+    """
+    if _http_status(error) != 403:
+        return False
+    body = getattr(error, "body", None)
+    if isinstance(body, (dict, list)):
+        return False
+    response = getattr(error, "response", None)
+    headers = getattr(response, "headers", None) or {}
+    if "json" in str(headers.get("content-type", "")).lower():
+        return False
+    if not isinstance(body, str):
+        try:
+            body = getattr(response, "text", None)
+        except RuntimeError:  # An unread streaming response has no text yet.
+            body = None
+    page = (body if isinstance(body, str) and body else str(error)).lower()
+    if not re.search(r"<!doctype\s+html\b|<html(?:\s|>)", page):
+        return False
+    return bool(
+        re.search(
+            r"<title[^>]*>\s*attention required!\s*\|\s*cloudflare\s*</title>",
+            page,
+        )
+        or (
+            re.search(r"<title[^>]*>\s*just a moment[.!\s]*</title>", page)
+            and ("/cdn-cgi/challenge-platform/" in page or "cf-chl-" in page)
+        )
+    )
 
 
 def is_rate_limit_error(error: Any) -> bool:
@@ -202,7 +246,11 @@ def _extract_error_codes(error: Any) -> list[str]:
 
 def is_model_unavailable_error(error: Any) -> bool:
     """Detect unrecoverable model-level errors (missing model or no access)."""
-    if is_provider_authentication_error(error) or is_model_channel_failure(error):
+    if (
+        is_provider_authentication_error(error)
+        or is_model_channel_failure(error)
+        or _is_cloudflare_edge_block(error)
+    ):
         return False
 
     normalized_status = _http_status(error)
@@ -313,6 +361,8 @@ def _runtime_failure_kind(error: Any) -> str | None:
     """Classify only transport failures that justify a routing circuit break."""
     if isinstance(error, (TimeoutError, asyncio.TimeoutError)):
         return "timeout"
+    if _is_cloudflare_edge_block(error):
+        return "upstream"
     status = _http_status(error)
     if status is not None and status >= 500:
         return "upstream"

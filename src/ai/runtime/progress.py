@@ -96,7 +96,10 @@ class SuccessProgressBuffer:
 
     MAX_PENDING = 1024
     BATCH_SIZE = 16
-    INTERVAL_SECONDS = 0.5
+    # This is a disposable projection; the API reads durable activity counts.
+    # Recounting a long-running parent twice per second in every dispatcher
+    # competes with the business coordinator for its row and database capacity.
+    INTERVAL_SECONDS = 5.0
 
     def __init__(self) -> None:
         self._pending: OrderedDict[tuple[str, int], int] = OrderedDict()

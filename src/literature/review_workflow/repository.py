@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Any
 
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.orm import load_only
 
 from src.ai.peer_review import (
     build_author_prompt,
@@ -29,6 +31,44 @@ PAGE_SIZE = 64
 ADVANCE_BATCH_SIZE = 8
 TERMINAL_ACTIVITIES = ("succeeded", "failed", "cancelled")
 
+# These are exactly the article fields used by the review prompt, fingerprint
+# and eligibility checks. Provider responses can be much larger than the
+# abstract; the review consumes only their controlled MeSH headings.
+ARTICLE_REVIEW_COLUMNS = (
+    LiteratureArticle.id,
+    LiteratureArticle.article_id,
+    LiteratureArticle.title,
+    LiteratureArticle.journal,
+    LiteratureArticle.published_at,
+    LiteratureArticle.doi,
+    LiteratureArticle.pmid,
+    LiteratureArticle.authors,
+    LiteratureArticle.article_type,
+    LiteratureArticle.study_type,
+    LiteratureArticle.peer_review_status,
+    LiteratureArticle.integrity_status,
+    LiteratureArticle.open_access_status,
+    LiteratureArticle.relevance_score,
+    LiteratureArticle.public_health_score,
+    LiteratureArticle.discovery_score,
+    LiteratureArticle.abstract_text,
+    LiteratureArticle.metadata_.label("metadata_"),
+    LiteratureArticle.source_urls,
+    LiteratureArticle.publication_status,
+    LiteratureArticle.source_payload["europe_pmc"]["meshHeadingList"].label(
+        "mesh_headings"
+    ),
+)
+
+
+def article_snapshot(record) -> SimpleNamespace:
+    """Read-only prompt input; final application reloads the writable ORM row."""
+    values = dict(record)
+    headings = values.pop("mesh_headings")
+    return SimpleNamespace(
+        **values, source_payload={"europe_pmc": {"meshHeadingList": headings}}
+    )
+
 
 def now() -> datetime:
     return datetime.now(timezone.utc)
@@ -44,7 +84,18 @@ async def lock_parent(db, task_uuid: str, *, check_cancel: bool = True) -> Task 
         db.info["ai_write_reserved"] = True
     task = (
         await db.execute(
-            select(Task).where(Task.task_uuid == task_uuid).with_for_update()
+            select(Task)
+            .options(
+                load_only(
+                    Task.task_uuid,
+                    Task.status,
+                    Task.priority,
+                    Task.metadata_,
+                    raiseload=True,
+                )
+            )
+            .where(Task.task_uuid == task_uuid)
+            .with_for_update()
         )
     ).scalar_one_or_none()
     if task is None:
@@ -162,10 +213,11 @@ class ReviewWorkflowRepository:
             if capacity <= 0:
                 return 0
             if kind == "articles":
-                rows = (
+                records = (
                     (
                         await db.execute(
                             self.policy._article_review_query()
+                            .with_only_columns(*ARTICLE_REVIEW_COLUMNS)
                             .order_by(None)
                             .where(
                                 LiteratureArticle.id > drain.cursor,
@@ -175,9 +227,10 @@ class ReviewWorkflowRepository:
                             .limit(capacity)
                         )
                     )
-                    .scalars()
+                    .mappings()
                     .all()
                 )
+                rows = [article_snapshot(record) for record in records]
                 candidates = [
                     (
                         row.id,
@@ -260,8 +313,12 @@ class ReviewWorkflowRepository:
                 drain.exhausted = True
             return inserted
 
-    async def open_work(self, parent: str, kind: str) -> tuple[list[int], list[int]]:
-        """One bounded join, never one polling query per pending model call."""
+    async def open_work(
+        self, parent: str, kind: str, *, after_id: int = 0, limit: int = PAGE_SIZE
+    ) -> tuple[list[int], list[int]]:
+        """Scan the bounded buffer fairly, including newly ready high-id items."""
+        if not 1 <= limit <= PAGE_SIZE:
+            raise ValueError(f"Review scan limit must be between 1 and {PAGE_SIZE}")
         async with get_database() as db:
             rows = (
                 await db.execute(
@@ -284,16 +341,22 @@ class ReviewWorkflowRepository:
                 )
             ).all()
         actionable, waiting = [], []
+        clock = now()
         for work_id, activity_id, status, deadline in rows:
             if (
                 activity_id is None
                 or status in TERMINAL_ACTIVITIES
-                or utc(deadline) <= now()
+                or utc(deadline) <= clock
             ):
                 actionable.append(work_id)
             else:
                 waiting.append(activity_id)
-        return actionable[:PAGE_SIZE], waiting
+        # A continually completing low-id workflow must not keep higher-id
+        # author work waiting behind repeated rounds or second opinions.
+        actionable = [item for item in actionable if item > after_id] + [
+            item for item in actionable if item <= after_id
+        ]
+        return actionable[:limit], waiting
 
     def _subject(self, workflow, rows, parents, canonical):
         # Every subject in this batch has already been locked in one global order.
@@ -466,14 +529,34 @@ class ReviewWorkflowRepository:
             }
             activities = (
                 {
-                    item.id: item
+                    item.id: SimpleNamespace(
+                        id=item.id,
+                        status=item.status,
+                        error=item.error,
+                        route_key=item.route_key,
+                        result={
+                            "text": item.text or "",
+                            "input_mode": item.input_mode,
+                            "conversation": {"metadata": {"runtime_route": item.route}},
+                        },
+                    )
                     for item in (
                         await db.execute(
-                            select(AIWorkItem).where(AIWorkItem.id.in_(activity_ids))
+                            select(
+                                AIWorkItem.id,
+                                AIWorkItem.status,
+                                AIWorkItem.error,
+                                AIWorkItem.route_key,
+                                AIWorkItem.result["text"].as_string().label("text"),
+                                AIWorkItem.result["input_mode"]
+                                .as_string()
+                                .label("input_mode"),
+                                AIWorkItem.result["conversation"]["metadata"][
+                                    "runtime_route"
+                                ].label("route"),
+                            ).where(AIWorkItem.id.in_(activity_ids))
                         )
-                    )
-                    .scalars()
-                    .all()
+                    ).all()
                 }
                 if activity_ids
                 else {}
@@ -502,7 +585,26 @@ class ReviewWorkflowRepository:
             )
             # Acquire the entire batch's subject locks before inspecting or
             # mutating any one row. Workflow id order is not article lock order.
-            rows, parents = await lock_review_subjects(db, kind, keys)
+            if kind == "articles":
+                records = (
+                    (
+                        await db.execute(
+                            select(*ARTICLE_REVIEW_COLUMNS)
+                            .where(LiteratureArticle.article_id.in_(keys))
+                            .order_by(LiteratureArticle.article_id)
+                            .with_for_update(of=LiteratureArticle)
+                        )
+                    )
+                    .mappings()
+                    .all()
+                )
+                rows = {
+                    row.article_id: row
+                    for row in (article_snapshot(record) for record in records)
+                }
+                parents = {}
+            else:
+                rows, parents = await lock_review_subjects(db, kind, keys)
             canonical = (
                 await self.policy._canonical_fingerprints(
                     db,

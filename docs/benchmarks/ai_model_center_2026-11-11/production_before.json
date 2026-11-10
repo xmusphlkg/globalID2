@@ -1,0 +1,716 @@
+{
+  "sampled_at": "2026-11-10T16:25:09.730121+00:00",
+  "window_start": "2026-11-10T16:20:09.730121+00:00",
+  "window_seconds": 300.0,
+  "database_revision": [
+    "0030_ai_activity_leases"
+  ],
+  "new_runtime_schema_ready": true,
+  "database_connections": [
+    {
+      "backend_type": "TimescaleDB Background Worker Scheduler",
+      "state": "idle",
+      "wait_event_type": "Extension",
+      "wait_event": "Extension",
+      "count": 1
+    },
+    {
+      "backend_type": "client backend",
+      "state": "active",
+      "wait_event_type": "IO",
+      "wait_event": "WALSync",
+      "count": 1
+    },
+    {
+      "backend_type": "client backend",
+      "state": "active",
+      "wait_event_type": "LWLock",
+      "wait_event": "WALWrite",
+      "count": 2
+    },
+    {
+      "backend_type": "client backend",
+      "state": "active",
+      "wait_event_type": "Lock",
+      "wait_event": "advisory",
+      "count": 10
+    },
+    {
+      "backend_type": "client backend",
+      "state": "active",
+      "wait_event_type": "Lock",
+      "wait_event": "object",
+      "count": 10
+    },
+    {
+      "backend_type": "client backend",
+      "state": "active",
+      "wait_event_type": "Lock",
+      "wait_event": "transactionid",
+      "count": 3
+    },
+    {
+      "backend_type": "client backend",
+      "state": "active",
+      "wait_event_type": "Lock",
+      "wait_event": "tuple",
+      "count": 6
+    },
+    {
+      "backend_type": "client backend",
+      "state": "active",
+      "wait_event_type": null,
+      "wait_event": null,
+      "count": 2
+    },
+    {
+      "backend_type": "client backend",
+      "state": "idle",
+      "wait_event_type": "Client",
+      "wait_event": "ClientRead",
+      "count": 23
+    },
+    {
+      "backend_type": "client backend",
+      "state": "idle in transaction",
+      "wait_event_type": "Client",
+      "wait_event": "ClientRead",
+      "count": 6
+    },
+    {
+      "backend_type": "client backend",
+      "state": "idle in transaction",
+      "wait_event_type": null,
+      "wait_event": null,
+      "count": 1
+    }
+  ],
+  "review_arrivals_window": [],
+  "new_review_articles_window": 0,
+  "parents": [
+    {
+      "task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "RUNNING",
+      "progress": 99,
+      "generation": 1,
+      "operation": "governance_stream",
+      "kind": "articles",
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:25:23.557485+00:00",
+      "completed_at": null
+    },
+    {
+      "task_uuid": "07a2c87e-50f0-45bd-ab24-707b74d91892",
+      "task_type": "CRAWL_DATA",
+      "status": "RUNNING",
+      "progress": 0,
+      "generation": 0,
+      "operation": null,
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:36:58.907539+00:00",
+      "completed_at": null
+    },
+    {
+      "task_uuid": "1d888252-1ecf-4292-b144-eed63139eee3",
+      "task_type": "ENRICH_LITERATURE",
+      "status": "FAILED",
+      "progress": 100,
+      "generation": 0,
+      "operation": null,
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:56:20.911181+00:00",
+      "completed_at": "2026-11-10 16:22:29.948973+00:00"
+    },
+    {
+      "task_uuid": "87116205-e23b-41a0-b2f2-ba0a043a9d70",
+      "task_type": "CRAWL_DATA",
+      "status": "RETRYING",
+      "progress": 0,
+      "generation": 0,
+      "operation": null,
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 16:18:38.714112+00:00",
+      "completed_at": "2026-11-10 16:20:42.587699+00:00"
+    },
+    {
+      "task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "RUNNING",
+      "progress": 94,
+      "generation": 0,
+      "operation": "governance_stream",
+      "kind": "summaries",
+      "cancel_requested": false,
+      "started_at": "2026-11-10 16:01:54.242357+00:00",
+      "completed_at": null
+    },
+    {
+      "task_uuid": "a13015f1-8d6a-414f-ae6e-ff455e52fe96",
+      "task_type": "SYNC_LITERATURE",
+      "status": "RUNNING",
+      "progress": 0,
+      "generation": 0,
+      "operation": null,
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 16:18:50.659119+00:00",
+      "completed_at": null
+    },
+    {
+      "task_uuid": "aad4a330-0fa0-4a53-97b4-73776879df3b",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 16:20:25.011453+00:00",
+      "completed_at": "2026-11-10 16:20:57.417945+00:00"
+    },
+    {
+      "task_uuid": "c3ebd34d-7a91-45b2-82c0-b68185a51e95",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 16:21:26.041195+00:00",
+      "completed_at": "2026-11-10 16:21:49.199538+00:00"
+    },
+    {
+      "task_uuid": "9db9adce-c41d-4c2e-bb92-7566ba028e55",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 16:22:26.183101+00:00",
+      "completed_at": "2026-11-10 16:23:05.755795+00:00"
+    },
+    {
+      "task_uuid": "8a8ac8d4-e7b0-4bd4-a273-7433452fbd16",
+      "task_type": "ENRICH_LITERATURE",
+      "status": "RUNNING",
+      "progress": 53,
+      "generation": 0,
+      "operation": null,
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 16:23:24.099423+00:00",
+      "completed_at": null
+    },
+    {
+      "task_uuid": "dbcbe46e-9fe1-409a-9416-a9deb9ab5988",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 16:23:26.995960+00:00",
+      "completed_at": "2026-11-10 16:23:55.674595+00:00"
+    },
+    {
+      "task_uuid": "e07d206e-443c-49a8-a3cc-b24a2a5a4e13",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 16:24:26.240173+00:00",
+      "completed_at": "2026-11-10 16:24:43.658615+00:00"
+    }
+  ],
+  "activity_pending": [
+    {
+      "capability": "health",
+      "status": "queued",
+      "count": 1,
+      "valid_leases": 0,
+      "leased_routes": 0,
+      "oldest_created_at": "2026-11-10 16:25:07.991535+00:00"
+    },
+    {
+      "capability": "text",
+      "status": "leased",
+      "count": 93,
+      "valid_leases": 93,
+      "leased_routes": 6,
+      "oldest_created_at": "2026-11-10 16:22:46.719435+00:00"
+    },
+    {
+      "capability": "text",
+      "status": "queued",
+      "count": 3,
+      "valid_leases": 0,
+      "leased_routes": 0,
+      "oldest_created_at": "2026-11-10 16:25:08.448092+00:00"
+    }
+  ],
+  "route_leases": [
+    {
+      "route_key": "ctm:CTM-Fable-5",
+      "valid_text_leases": 1
+    },
+    {
+      "route_key": "ctm:CTM-M3",
+      "valid_text_leases": 1
+    },
+    {
+      "route_key": "kiro:hy3",
+      "valid_text_leases": 9
+    },
+    {
+      "route_key": "kiro:hy4free",
+      "valid_text_leases": 5
+    },
+    {
+      "route_key": "zzshuc:gpt-6.1-terra",
+      "valid_text_leases": 39
+    },
+    {
+      "route_key": "zzshuccc:gemini-3.5-flash-lite",
+      "valid_text_leases": 38
+    }
+  ],
+  "activity_completions_window": [
+    {
+      "line": "content_governance",
+      "capability": "text",
+      "status": "succeeded",
+      "count": 1457
+    },
+    {
+      "line": "literature_enrich",
+      "capability": "text",
+      "status": "succeeded",
+      "count": 72
+    },
+    {
+      "line": "model_probe",
+      "capability": "health",
+      "status": "succeeded",
+      "count": 45
+    }
+  ],
+  "model_calls_window": [
+    {
+      "model_key": "ctm:CTM-Fable-5",
+      "status": "success",
+      "count": 2,
+      "mean_logged_latency_ms": 182188.59999999998,
+      "p50_logged_latency_ms": 182188.59999999998,
+      "p95_logged_latency_ms": 233907.72999999998
+    },
+    {
+      "model_key": "ctm:CTM-M3",
+      "status": "success",
+      "count": 13,
+      "mean_logged_latency_ms": 14206.176923076922,
+      "p50_logged_latency_ms": 8343.6,
+      "p95_logged_latency_ms": 34092.09999999998
+    },
+    {
+      "model_key": "kiro:hy3",
+      "status": "success",
+      "count": 70,
+      "mean_logged_latency_ms": 29781.86571428572,
+      "p50_logged_latency_ms": 26887.2,
+      "p95_logged_latency_ms": 60788.414999999986
+    },
+    {
+      "model_key": "kiro:hy4free",
+      "status": "success",
+      "count": 10,
+      "mean_logged_latency_ms": 137011.2,
+      "p50_logged_latency_ms": 151697.45,
+      "p95_logged_latency_ms": 218428.55499999996
+    },
+    {
+      "model_key": "zzshuc:gpt-6.1-terra",
+      "status": "failed",
+      "count": 3,
+      "mean_logged_latency_ms": 125.09999999999998,
+      "p50_logged_latency_ms": 121.1,
+      "p95_logged_latency_ms": 133.07
+    },
+    {
+      "model_key": "zzshuc:gpt-6.1-terra",
+      "status": "success",
+      "count": 719,
+      "mean_logged_latency_ms": 6001.33115438109,
+      "p50_logged_latency_ms": 5150.3,
+      "p95_logged_latency_ms": 11824.78
+    },
+    {
+      "model_key": "zzshuccc:gemini-3.5-flash-lite",
+      "status": "failed",
+      "count": 7,
+      "mean_logged_latency_ms": 151.85714285714286,
+      "p50_logged_latency_ms": 130.8,
+      "p95_logged_latency_ms": 249.28999999999985
+    },
+    {
+      "model_key": "zzshuccc:gemini-3.5-flash-lite",
+      "status": "success",
+      "count": 738,
+      "mean_logged_latency_ms": 2101.9247967479673,
+      "p50_logged_latency_ms": 1986.9499999999998,
+      "p95_logged_latency_ms": 3136.454999999999
+    }
+  ],
+  "failure_types_window": [
+    {
+      "error_type": "APIConnectionError",
+      "count": 10
+    }
+  ],
+  "routes": [
+    {
+      "model_key": "zzshuccc:gemini-3.5-flash-lite",
+      "model_name": "gemini-3.5-flash-lite",
+      "capacity": 70,
+      "routable": true,
+      "routing_status": "routable"
+    },
+    {
+      "model_key": "zzshuc:gpt-6.1-terra",
+      "model_name": "gpt-6.1-terra",
+      "capacity": 70,
+      "routable": true,
+      "routing_status": "routable"
+    },
+    {
+      "model_key": "ctm:CTM-M3",
+      "model_name": "CTM-M3",
+      "capacity": 1,
+      "routable": true,
+      "routing_status": "routable"
+    },
+    {
+      "model_key": "kiro:hy3",
+      "model_name": "hy3",
+      "capacity": 10,
+      "routable": true,
+      "routing_status": "routable"
+    },
+    {
+      "model_key": "ctm:CTM-Fable-5",
+      "model_name": "CTM-Fable-5",
+      "capacity": 1,
+      "routable": true,
+      "routing_status": "routable"
+    },
+    {
+      "model_key": "kiro:hy4free",
+      "model_name": "hy4free",
+      "capacity": 5,
+      "routable": true,
+      "routing_status": "routable"
+    }
+  ],
+  "workflows_current_generation": [
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "generation": 1,
+      "kind": "articles",
+      "status": "open",
+      "step": "author",
+      "outcome": null,
+      "count": 119
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "generation": 1,
+      "kind": "articles",
+      "status": "open",
+      "step": "ready",
+      "outcome": null,
+      "count": 121
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "generation": 1,
+      "kind": "articles",
+      "status": "open",
+      "step": "reviewer",
+      "outcome": null,
+      "count": 54
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "generation": 1,
+      "kind": "articles",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "deferred",
+      "count": 705
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "generation": 1,
+      "kind": "articles",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "held",
+      "count": 1442
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "generation": 1,
+      "kind": "articles",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "published",
+      "count": 851
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "generation": 1,
+      "kind": "articles",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "rejected",
+      "count": 5035
+    },
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "generation": 1,
+      "kind": "articles",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "stale",
+      "count": 2
+    },
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "generation": 1,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "archived",
+      "count": 7
+    },
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "generation": 1,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "deferred",
+      "count": 19
+    },
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "generation": 1,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "held",
+      "count": 92
+    },
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "generation": 1,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "published",
+      "count": 43
+    },
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "generation": 1,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "skipped",
+      "count": 4
+    },
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "generation": 1,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "waiting",
+      "count": 35173
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "generation": 0,
+      "kind": "summaries",
+      "status": "open",
+      "step": "author",
+      "outcome": null,
+      "count": 1
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "generation": 0,
+      "kind": "summaries",
+      "status": "open",
+      "step": "reviewer",
+      "outcome": null,
+      "count": 4
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "generation": 0,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "archived",
+      "count": 5
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "generation": 0,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "deferred",
+      "count": 8
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "generation": 0,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "held",
+      "count": 8
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "generation": 0,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "published",
+      "count": 3
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "generation": 0,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "skipped",
+      "count": 4
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "generation": 0,
+      "kind": "summaries",
+      "status": "terminal",
+      "step": "terminal",
+      "outcome": "waiting",
+      "count": 11464
+    }
+  ],
+  "drains_current_generation": [
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "generation": 1,
+      "cursor": 13150,
+      "high_watermark": 400516,
+      "scanned": 8612,
+      "admitted": 8329,
+      "exhausted": false,
+      "buffer_size": "512",
+      "max_items": null
+    },
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "kind": "summaries",
+      "generation": 1,
+      "cursor": 84201,
+      "high_watermark": 84201,
+      "scanned": 43419,
+      "admitted": 35338,
+      "exhausted": true,
+      "buffer_size": "512",
+      "max_items": null
+    },
+    {
+      "parent_task_uuid": "9ac4d530-6000-4f44-adc6-b83718e25db8",
+      "kind": "summaries",
+      "generation": 0,
+      "cursor": 33100,
+      "high_watermark": 84419,
+      "scanned": 13056,
+      "admitted": 11497,
+      "exhausted": false,
+      "buffer_size": "512",
+      "max_items": null
+    }
+  ],
+  "workflow_subject_outcomes_window": [
+    {
+      "kind": "summaries",
+      "outcome": "held",
+      "count": 3
+    },
+    {
+      "kind": "articles",
+      "outcome": "held",
+      "count": 85
+    },
+    {
+      "kind": "summaries",
+      "outcome": "published",
+      "count": 1
+    },
+    {
+      "kind": "articles",
+      "outcome": "published",
+      "count": 40
+    },
+    {
+      "kind": "articles",
+      "outcome": "rejected",
+      "count": 355
+    },
+    {
+      "kind": "summaries",
+      "outcome": "waiting",
+      "count": 3538
+    }
+  ],
+  "notes": [
+    "Valid leases measure occupied queue permits, not live HTTP sockets.",
+    "Model call logs describe application attempts; protocol negotiation may contain multiple HTTP requests.",
+    "Workflow progress filters the current parent generation; window throughput counts distinct subjects using their latest completed outcome.",
+    "Unchanged held content and missing abstract context cannot be cleared by repeating the same model calls."
+  ],
+  "estimate": {
+    "window_seconds": 300.0,
+    "distinct_reviewed_articles": 480,
+    "reviewed_articles_per_minute": 96.0,
+    "reviewed_summaries_per_minute": 0.8,
+    "summary_archive_count": 0,
+    "final_publish_or_exclude_per_minute": 79.0,
+    "eligible_remaining_including_inflight": null,
+    "eligible_drain_eta_minutes": null,
+    "parked_unchanged_holds": null,
+    "parked_holds_eta_minutes": null,
+    "missing_abstract_context": null,
+    "missing_context_eta_minutes": null,
+    "interpretation": "ETA drains the currently eligible review pass, including newly parked holds; it does not promise all articles will be published/excluded. Holds require changed evidence, missing abstracts require enrichment. Assumes observed throughput persists and no new arrivals."
+  },
+  "backlog_measured_this_sample": false
+}

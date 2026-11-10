@@ -174,12 +174,6 @@ async def submit_activities(
     return result
 
 
-async def enqueue_work(**kwargs) -> int:
-    async with get_database() as db:
-        await _lock_reservation(db, f"parent:{kwargs['parent_task_uuid']}")
-        return (await submit_activity(db, **kwargs)).id
-
-
 async def enqueue_runtime_probe() -> int | None:
     async with get_database() as db:
         await _lock_reservation(db, "runtime-probe")
@@ -352,20 +346,6 @@ def _route_accepts_work(
     ):
         return False
     return True
-
-
-async def claim_work(
-    route: dict[str, Any],
-    *,
-    owner: str,
-    now: datetime | None = None,
-    alternatives: set[str] | Mapping[str, list[str]] | None = None,
-) -> AIWorkItem | None:
-    """Claim one activity using the same reservation transaction as batch admission."""
-    items = await claim_work_batch(
-        route, owner=owner, limit=1, now=now, alternatives=alternatives
-    )
-    return items[0] if items else None
 
 
 async def claim_work_batch(

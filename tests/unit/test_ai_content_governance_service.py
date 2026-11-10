@@ -8,9 +8,6 @@ from src.domain import TaskStatus, TaskType
 from src.services.ai_content_governance_service import (
     _all_current_briefs_are_published,
     AIContentGovernanceService,
-    _call_json_model,
-    _decisions,
-    infer_failed_knowledge_repair_languages,
     is_recoverable_knowledge_failure,
     plan_failed_knowledge_repair,
 )
@@ -126,10 +123,10 @@ def test_stream_summary_rechecks_parent_before_applying_review(monkeypatch) -> N
     asyncio.run(exercise())
 
 
-def test_infer_failed_knowledge_repair_languages_targets_single_language() -> None:
-    assert infer_failed_knowledge_repair_languages("zh: substantive brief is required") == ["zh"]
-    assert infer_failed_knowledge_repair_languages("en: profile was not generated") == ["en"]
-    assert infer_failed_knowledge_repair_languages("en: timeout | zh: timeout") == []
+def test_failed_knowledge_repair_plan_preserves_language_scope() -> None:
+    assert plan_failed_knowledge_repair("zh: substantive brief is required").languages == ("zh",)
+    assert plan_failed_knowledge_repair("en: profile was not generated").languages == ("en",)
+    assert plan_failed_knowledge_repair("en: timeout | zh: timeout").languages == ("en", "zh")
 
 
 def test_failed_knowledge_repair_plan_extracts_minimal_bilingual_sections() -> None:
@@ -172,45 +169,6 @@ def test_failed_knowledge_repair_plan_parses_current_targeted_gate_wording() -> 
     assert plan.sections_by_language == {
         "en": ("prevention",),
         "zh": ("epidemiology", "transmission"),
-    }
-
-
-def test_governance_model_call_uses_shared_model_center_agent(monkeypatch) -> None:
-    captured = {}
-
-    class FakeWorkflowAgent:
-        def __init__(self, **kwargs) -> None:
-            captured["init"] = kwargs
-
-        async def complete(self, **kwargs) -> str:
-            captured["complete"] = kwargs
-            return json.dumps({"decisions": [{"id": "42", "decision": "hold"}]})
-
-        def get_latest_conversation(self):
-            return {"provider": "qianwen", "model": "qwen-plus"}
-
-    monkeypatch.setattr(
-        "src.services.ai_content_governance_service.WorkflowAgent",
-        FakeWorkflowAgent,
-    )
-
-    payload, route = asyncio.run(
-        _call_json_model(
-            system="Return JSON only.",
-            user_payload={"items": [{"id": "42"}]},
-            max_tokens=1200,
-        )
-    )
-
-    assert payload["decisions"][0]["id"] == "42"
-    assert captured["init"]["name"] == "AIContentGovernance"
-    assert captured["complete"]["use_cache"] is False
-    assert "wait_for_model_recovery" not in captured["complete"]
-    assert "max_attempts_per_model" not in captured["complete"]
-    assert route == {
-        "provider_key": "qianwen",
-        "model_name": "qwen-plus",
-        "model_key": "qianwen:qwen-plus",
     }
 
 
@@ -445,24 +403,6 @@ def test_certified_content_gap_retries_the_model_without_restarting_source_disco
     assert "source_refresh" not in task.tags
 
 
-def test_decisions_sanitizes_unknown_actions_and_confidence() -> None:
-    parsed = _decisions(
-        {
-            "decisions": [
-                {"id": "1", "decision": "publish", "confidence": 1.2, "reasons": ["ok"]},
-                {"id": "2", "decision": "delete", "confidence": "bad", "reasons": []},
-            ]
-        },
-        {"publish", "hold"},
-    )
-
-    assert parsed[0].decision == "publish"
-    assert parsed[0].confidence == 1.0
-    assert parsed[1].decision == "hold"
-    assert parsed[1].confidence == 0.0
-    assert parsed[1].reasons == ("No model reason supplied.",)
-
-
 def test_learning_suggestion_exact_match_maps_without_model() -> None:
     service = AIContentGovernanceService()
     suggestion = SimpleNamespace(id=7, local_name="HIV")
@@ -471,12 +411,7 @@ def test_learning_suggestion_exact_match_maps_without_model() -> None:
         SimpleNamespace(disease_id="D900", standard_name_en="HIV", standard_name_zh="人类免疫缺陷病毒感染"),
     ]
 
-    decisions = service._deterministic_learning_decisions([suggestion], standards)
-
-    decision = decisions["7"]
-    assert decision.decision == "map"
-    assert decision.confidence == 1.0
-    assert decision.payload["target_disease_id"] == "D900"
+    assert service._exact_learning_targets([suggestion], standards) == {"7": "D900"}
 
 
 class _ScriptedCompleter:
@@ -600,6 +535,8 @@ def test_exact_match_learning_suggestion_stores_the_disease_id_string() -> None:
     assert result["applied"][0]["target_disease_id"] == "D021"
     assert suggestion.final_disease_id == "D021"
     assert suggestion.status == "approved"
+    assert suggestion.ai_confidence == 1.0
+    assert suggestion.ai_reasoning == "Exact match against the active standard-disease catalogue."
 
 
 def test_old_hold_without_second_opinion_is_read_again() -> None:

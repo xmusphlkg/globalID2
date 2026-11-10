@@ -12,6 +12,7 @@ from typing import Any, Awaitable, Callable, Literal, Protocol, Sequence
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from src.ai.peer_review import ReviewedOutput
 from src.domain import LiteratureArticle, LiteratureSummary, Task, TaskStatus
@@ -355,6 +356,7 @@ async def lock_review_subjects(
         (
             await db.execute(
                 select(LiteratureArticle)
+                .options(defer(LiteratureArticle.source_payload, raiseload=True))
                 .where(LiteratureArticle.article_id.in_(article_ids))
                 .order_by(LiteratureArticle.article_id)
                 .with_for_update()

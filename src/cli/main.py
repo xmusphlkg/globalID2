@@ -5,7 +5,7 @@ GlobalID V2 CLI - 命令行接口
 """
 
 import asyncio
-from typing import Optional
+from urllib.parse import urlsplit
 
 import typer
 from rich.console import Console
@@ -17,6 +17,21 @@ app = typer.Typer(
     add_completion=False,
 )
 console = Console()
+
+
+def _connection_address(url: str) -> str:
+    """Show only a connection's host and port, never credentials or URL options."""
+    if not url:
+        return "未配置"
+    try:
+        parsed = urlsplit(str(url))
+        hostname = parsed.hostname
+        if not hostname:
+            return "已配置（地址隐藏）"
+        host = f"[{hostname}]" if ":" in hostname else hostname
+        return f"{host}:{parsed.port}" if parsed.port else host
+    except ValueError:
+        return "已配置（地址隐藏）"
 
 
 @app.command()
@@ -82,7 +97,7 @@ def health():
 
 @app.command()
 def config():
-    """显示当前配置"""
+    """显示本地配置与首次初始化设置，不查询运行中的模型目录。"""
     from src.core import get_config
     
     cfg = get_config()
@@ -96,17 +111,31 @@ def config():
     table.add_row("环境", cfg.app_env)
     table.add_row("调试模式", str(cfg.debug))
     table.add_row("", "")
-    table.add_row("数据库", cfg.database_url.split("@")[1] if "@" in cfg.database_url else "未配置")
-    table.add_row("Redis", cfg.redis_url)
-    table.add_row("Qdrant", cfg.qdrant_url)
+    table.add_row("数据库地址", _connection_address(cfg.database.url))
+    table.add_row("Redis 地址", _connection_address(cfg.redis.url))
+    table.add_row("Qdrant 地址", _connection_address(cfg.qdrant.url))
+    table.add_row("Qdrant 密钥", "已配置" if cfg.qdrant.api_key else "未配置")
     table.add_row("", "")
-    table.add_row("AI 缓存", "✓" if cfg.enable_ai_cache else "✗")
-    table.add_row("速率限制", "✓" if cfg.enable_rate_limiting else "✗")
-    table.add_row("向量搜索", "✓" if cfg.enable_vector_search else "✗")
+    table.add_row("AI 缓存", "已启用" if cfg.ai.enable_cache else "已关闭")
+    table.add_row("AI 运行路由", "由模型中心管理；本命令不查询运行目录")
     table.add_row("", "")
-    table.add_row("OpenAI Key", "✓ 已配置" if cfg.openai_api_key else "✗ 未配置")
-    table.add_row("默认模型", cfg.default_model)
-    table.add_row("最大重试", str(cfg.max_retries))
+    table.add_row("首次初始化提供商", cfg.ai.default_provider)
+    table.add_row(
+        "首次初始化模型列表",
+        ", ".join(cfg.ai.model_chain) or "未设置；仅初始化提供商",
+    )
+    for provider, field in (
+        ("OpenAI", "openai_api_key"),
+        ("Anthropic", "anthropic_api_key"),
+        ("GLM", "glm_api_key"),
+        ("千问", "qianwen_api_key"),
+        ("Azure", "azure_api_key"),
+        ("自定义", "custom_api_key"),
+    ):
+        table.add_row(
+            f"{provider} 初始化密钥",
+            "已配置" if getattr(cfg.ai, field) else "未配置",
+        )
     
     console.print(table)
 
@@ -170,37 +199,6 @@ def test_cache():
     except Exception as e:
         console.print(f"\n[bold red]✗ 缓存测试失败: {e}[/bold red]")
         raise typer.Exit(1)
-
-
-@app.command()
-def test_limiter():
-    """测试速率限制器"""
-    console.print("[bold yellow]测试速率限制器...[/bold yellow]\n")
-    
-    from src.core import RateLimiter
-    
-    # 创建一个测试用的限制器（5次/10秒）
-    limiter = RateLimiter(max_requests=5, window_seconds=10)
-    
-    console.print(f"限制: {limiter.max_requests} 次请求 / {limiter.window_seconds} 秒\n")
-    
-    # 模拟10次请求
-    for i in range(10):
-        if limiter.can_proceed():
-            limiter.record_request()
-            console.print(f"请求 {i+1}: [green]✓ 允许[/green]")
-        else:
-            wait = limiter.wait_time()
-            console.print(f"请求 {i+1}: [red]✗ 限流（需等待 {wait:.2f}秒）[/red]")
-    
-    # 显示统计
-    stats = limiter.get_stats()
-    console.print(f"\n统计信息:")
-    console.print(f"  当前请求数: {stats['current_requests']}/{stats['max_requests']}")
-    console.print(f"  使用率: {stats['usage_percent']}%")
-    console.print(f"  可继续: {stats['can_proceed']}")
-    
-    console.print("\n[bold green]✓ 速率限制器测试完成[/bold green]")
 
 
 if __name__ == "__main__":

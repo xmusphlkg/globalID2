@@ -135,7 +135,12 @@ class AIWorkDispatcher:
                         **(current.payload or {}),
                         "last_failed_route": item.route_key,
                     }
-                    delay = min(60.0, 2 ** (current.attempt - 1) + random.random())
+                    # Retry-After is a lower bound, including edge blocks that
+                    # failed before the provider API handled the request.
+                    delay = max(
+                        min(60.0, 2 ** (current.attempt - 1)),
+                        failure.retry_after_seconds or 0,
+                    ) + random.random()
                     current.available_at = _now() + timedelta(seconds=delay)
                 else:
                     current.status, current.finished_at = "failed", _now()

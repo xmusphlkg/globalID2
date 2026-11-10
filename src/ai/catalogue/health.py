@@ -35,6 +35,8 @@ _RATE_LIMIT_BASE_COOLDOWN_SECONDS = 30
 
 _RATE_LIMIT_STREAK_WINDOW_SECONDS = 600
 
+_RUNTIME_SUCCESS_SAMPLE_INTERVAL = timedelta(seconds=5)
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -178,6 +180,15 @@ def _runtime_health_state(payload: Any, now: datetime | None = None) -> dict[str
             cooldown_until,
             last_failure_at + timedelta(seconds=_RUNTIME_FAILURE_COOLDOWN_CAP_SECONDS),
         )
+    retry_after_until = _parse_datetime(state.get("runtime_retry_after_until"))
+    if retry_after_until:
+        # Upstream retry instructions are a lower bound, independent of our
+        # bounded local backoff. Successful siblings cannot shorten it.
+        cooldown_until = (
+            max(cooldown_until, retry_after_until)
+            if cooldown_until
+            else retry_after_until
+        )
     failure_kind = str(state.get("last_runtime_failure_kind") or "").strip() or None
     # Older versions opened circuits for malformed/empty structured output.
     # Those records are telemetry, not evidence of transport failure.
@@ -259,6 +270,7 @@ def _write_runtime_failure(
     occurred_at: datetime,
     duration_seconds: float | None,
     cooldown_seconds: int,
+    retry_after_seconds: int | None = None,
 ) -> dict[str, Any]:
     state = _extract_routing_state(payload)
     current_health = _runtime_health_state(payload, occurred_at)
@@ -302,6 +314,15 @@ def _write_runtime_failure(
         ).isoformat()
     else:
         state.pop("runtime_cooldown_until", None)
+    if retry_after_seconds and (
+        current_health["runtime_failure_active"]
+        or streak >= _MODEL_TRANSPORT_CIRCUIT_THRESHOLD
+    ):
+        instructed_until = occurred_at + timedelta(seconds=max(1, retry_after_seconds))
+        previous_until = _parse_datetime(state.get("runtime_retry_after_until"))
+        state["runtime_retry_after_until"] = max(
+            instructed_until, previous_until or instructed_until
+        ).isoformat()
     if kind == "timeout":
         state["runtime_timeout_count"] = previous_timeouts + 1
     if duration_seconds is not None:
@@ -309,22 +330,51 @@ def _write_runtime_failure(
     return _write_routing_state(payload, state)
 
 
+def _runtime_success_is_due(payload: Any, occurred_at: datetime) -> bool:
+    """Use persisted observations, so independent dispatchers share one window."""
+    state = _extract_routing_state(payload)
+    last_failure = _parse_datetime(state.get("last_runtime_failure_at"))
+    last_success = _parse_datetime(state.get("last_runtime_success_at"))
+    if (last_failure and last_failure > occurred_at) or (
+        last_success and last_success > occurred_at
+    ):
+        return False
+    if state.get("last_runtime_error") or state.get("runtime_cooldown_until"):
+        return True
+    if last_failure and (last_success is None or last_failure > last_success):
+        return True
+    return (
+        last_success is None
+        or occurred_at - last_success >= _RUNTIME_SUCCESS_SAMPLE_INTERVAL
+    )
+
+
 def _write_runtime_success(
     payload: Any,
     *,
     occurred_at: datetime,
     duration_seconds: float | None,
+    observed_success_count: int | None = None,
 ) -> dict[str, Any]:
     state = _extract_routing_state(payload)
     try:
         successes = max(0, int(state.get("runtime_success_count") or 0))
     except (TypeError, ValueError):
         successes = 0
-    state["runtime_success_count"] = successes + 1
+    # Sampled health updates derive their cumulative count from the durable
+    # per-call log. Preserve older counters that may include historical probes.
+    state["runtime_success_count"] = (
+        successes + 1
+        if observed_success_count is None
+        else max(successes, observed_success_count)
+    )
     state["runtime_failure_streak"] = 0
     state["last_runtime_success_at"] = occurred_at.isoformat()
     state.pop("runtime_cooldown_until", None)
-    state.pop("last_runtime_failure_kind", None)
+    retry_after_until = _parse_datetime(state.get("runtime_retry_after_until"))
+    if retry_after_until is None or retry_after_until <= occurred_at:
+        state.pop("runtime_retry_after_until", None)
+        state.pop("last_runtime_failure_kind", None)
     state.pop("last_runtime_error", None)
     if duration_seconds is not None:
         latency_ms = round(max(0.0, duration_seconds) * 1000, 1)

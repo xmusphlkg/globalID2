@@ -82,23 +82,26 @@ def route(key="provider:model", capacity=2):
 
 
 async def enqueue(count=1):
-    return [
-        await store.enqueue_work(
+    async with store.get_database() as session:
+        items = await store.submit_activities(
+            session,
             parent_task_uuid="parent",
             line="report_section",
             priority="high",
-            payload={"request_key": str(uuid4())},
+            payloads=[{"request_key": str(uuid4())} for _ in range(count)],
         )
-        for _ in range(count)
-    ]
+        return [item.id for item in items]
 
 
 async def test_global_route_capacity_and_unique_claims(database):
     await enqueue(12)
     results = await asyncio.gather(
-        *(store.claim_work(route(), owner=f"executor-{i % 3}") for i in range(12))
+        *(
+            store.claim_work_batch(route(), limit=1, owner=f"executor-{i % 3}")
+            for i in range(12)
+        )
     )
-    leased = [item for item in results if item]
+    leased = [item for batch in results for item in batch]
     assert len(leased) == 2
     assert len({item.id for item in leased}) == 2
     assert len({item.lease_token for item in leased}) == 2
@@ -112,19 +115,21 @@ async def test_locked_head_does_not_block_next_activity(database):
             select(AIWorkItem).where(AIWorkItem.id == first).with_for_update()
         )
         async with asyncio.timeout(3):
-            item = await store.claim_work(route(), owner="other-process")
+            item = (
+                await store.claim_work_batch(route(), limit=1, owner="other-process")
+            )[0]
         assert item.id == second
 
 
 async def test_renewal_owner_release_and_fencing(database):
     await enqueue(2)
-    first = await store.claim_work(route(), owner="one")
-    second = await store.claim_work(route(), owner="two")
+    first = (await store.claim_work_batch(route(), limit=1, owner="one"))[0]
+    second = (await store.claim_work_batch(route(), limit=1, owner="two"))[0]
     assert await store.renew_owned_leases("one") == {first.id}
     async with database() as session:
         assert store._owns_lease(await session.get(AIWorkItem, first.id), first)
     assert await store.release_owned_leases("one") == 1
-    replacement = await store.claim_work(route(), owner="three")
+    replacement = (await store.claim_work_batch(route(), limit=1, owner="three"))[0]
     assert replacement.id == first.id and replacement.lease_token != first.lease_token
     async with database() as session:
         assert not store._owns_lease(await session.get(AIWorkItem, first.id), first)
@@ -187,17 +192,25 @@ async def test_targeted_notification_and_lost_hint_reconciliation(database):
 
 
 async def test_strict_reviewer_does_not_use_author_when_alternative_busy(database):
-    work_id = await store.enqueue_work(
-        parent_task_uuid="parent",
-        line="content_governance",
-        priority="normal",
-        payload={"avoid_models": ["model"], "require_distinct_model": True},
-    )
+    async with database() as session:
+        work_id = (
+            await store.submit_activity(
+                session,
+                parent_task_uuid="parent",
+                line="content_governance",
+                priority="normal",
+                payload={"avoid_models": ["model"], "require_distinct_model": True},
+            )
+        ).id
     assert (
-        await store.claim_work(route(), owner="one", alternatives={"provider:model"})
-        is None
+        await store.claim_work_batch(
+            route(), limit=1, owner="one", alternatives={"provider:model"}
+        )
+        == []
     )
-    item = await store.claim_work(route("other:reviewer"), owner="two")
+    item = (
+        await store.claim_work_batch(route("other:reviewer"), limit=1, owner="two")
+    )[0]
     assert item.id == work_id
 
 
@@ -340,7 +353,12 @@ async def test_cancelled_http_keeps_global_permit_until_cleanup_finishes(
     cancelling = asyncio.create_task(dispatcher.tick())
     try:
         await asyncio.wait_for(closing.wait(), 3)
-        assert await store.claim_work(route(capacity=1), owner="other-executor") is None
+        assert (
+            await store.claim_work_batch(
+                route(capacity=1), limit=1, owner="other-executor"
+            )
+            == []
+        )
         close_allowed.set()
         await asyncio.wait_for(cancelling, 3)
         await asyncio.gather(*dispatcher.active.values())
@@ -366,7 +384,9 @@ async def test_execution_generation_fences_old_provider_attempt(database, monkey
     monkeypatch.setattr(module, "get_database", database)
     monkeypatch.setattr(module, "note_parent_work", AsyncMock())
     (work_id,) = await enqueue()
-    claimed = await store.claim_work(route(), owner="old-generation")
+    claimed = (await store.claim_work_batch(route(), limit=1, owner="old-generation"))[
+        0
+    ]
     async with database() as session:
         parent = await session.scalar(select(Task).where(Task.task_uuid == "parent"))
         parent.metadata_ = {"ai_execution_generation": 1}

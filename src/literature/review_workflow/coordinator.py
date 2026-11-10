@@ -6,7 +6,7 @@ from src.ai import runtime
 from src.ai.model_center import get_runtime_routes
 from src.services.exceptions import TaskCancelledError
 
-from .repository import ADVANCE_BATCH_SIZE, ReviewWorkflowRepository
+from .repository import ADVANCE_BATCH_SIZE, PAGE_SIZE, ReviewWorkflowRepository
 
 CAPACITY_REFRESH_SECONDS = 5
 MAX_BUFFER_SIZE = 512
@@ -72,6 +72,8 @@ async def run_literature_review(
         )
         next_capacity_read = 0.0
         target = min(settings["buffer_size"], MIN_SUPPLY_TARGET)
+        after_id = 0
+        advances_since_feed = PAGE_SIZE
         while True:
             now = asyncio.get_running_loop().time()
             if now >= next_capacity_read:
@@ -79,15 +81,28 @@ async def run_literature_review(
                     await get_runtime_routes(), settings["buffer_size"]
                 )
                 next_capacity_read = now + CAPACITY_REFRESH_SECONDS
-            await repository.feed(parent.task_uuid, kind, target_size=target)
-            actionable, waiting = await repository.open_work(parent.task_uuid, kind)
+            fed = advances_since_feed >= PAGE_SIZE
+            if fed:
+                await repository.feed(parent.task_uuid, kind, target_size=target)
+                advances_since_feed = 0
+            actionable, waiting = await repository.open_work(
+                parent.task_uuid, kind, after_id=after_id, limit=ADVANCE_BATCH_SIZE
+            )
             if actionable:
-                for offset in range(0, len(actionable), ADVANCE_BATCH_SIZE):
-                    await repository.advance_many(
-                        parent.task_uuid,
-                        actionable[offset : offset + ADVANCE_BATCH_SIZE],
-                    )
+                await repository.advance_many(parent.task_uuid, actionable)
+                after_id = actionable[-1]
+                advances_since_feed += len(actionable)
                 continue
+            # Refill before sleeping even when fewer than a page of transitions
+            # completed. Only this coordinator advances its parent; no parallel
+            # transactions compete for the same parent lock.
+            if not fed:
+                inserted = await repository.feed(
+                    parent.task_uuid, kind, target_size=target
+                )
+                advances_since_feed = 0
+                if inserted:
+                    continue
             if waiting:
                 # The shared notification/batch fallback releases every DB session.
                 await runtime.wait_for_activities(

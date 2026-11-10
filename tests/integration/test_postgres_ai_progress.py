@@ -125,7 +125,7 @@ async def test_success_finishes_and_releases_permit_while_parent_is_locked(datab
         "runtime_model_capacity": 1,
         "available_for_routing": True,
     }
-    leased = await store.claim_work(route, owner="executor")
+    leased = (await store.claim_work_batch(route, limit=1, owner="executor"))[0]
 
     async def complete(*args):
         return "done"

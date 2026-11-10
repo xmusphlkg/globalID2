@@ -74,6 +74,7 @@ def route(key="first", capacity=1, available=True):
 async def enqueue(**kwargs):
     async with store.get_database() as session:
         parent_id = kwargs["parent_task_uuid"]
+        await store._lock_reservation(session, f"parent:{parent_id}")
         if (
             parent_id != contracts.RUNTIME_PARENT
             and await session.scalar(select(Task.id).where(Task.task_uuid == parent_id))
@@ -89,7 +90,7 @@ async def enqueue(**kwargs):
                     input_data={},
                 )
             )
-    return await store.enqueue_work(**kwargs)
+        return (await store.submit_activity(session, **kwargs)).id
 
 
 async def add(line="knowledge_brief", priority="low", parent="parent"):
@@ -106,18 +107,28 @@ async def row(db, work_id):
 async def test_high_priority_report_claimed_before_low_backlog(db):
     low = await add()
     high = await add("report_section", "high")
-    item = await store.claim_work(route(), owner=OWNER)
+    item = (await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]
     assert item.id == high
     assert (await row(db, low)).status == "queued"
-    assert await store.claim_work(route(), owner=OWNER) is None  # route permit is held
-    assert (await store.claim_work(route("second"), owner=OWNER)).id == low
+    assert (
+        await store.claim_work_batch(route(), limit=1, owner=OWNER) == []
+    )  # route permit is held
+    assert (
+        ((await store.claim_work_batch(route("second"), limit=1, owner=OWNER))[0]).id
+        == low
+    )
 
 
 async def test_cooling_route_leaves_item_queued_for_other_route(db):
     work_id = await add()
-    assert await store.claim_work(route(available=False), owner=OWNER) is None
+    assert (
+        await store.claim_work_batch(route(available=False), limit=1, owner=OWNER) == []
+    )
     assert (await row(db, work_id)).status == "queued"
-    assert (await store.claim_work(route("second"), owner=OWNER)).id == work_id
+    assert (
+        ((await store.claim_work_batch(route("second"), limit=1, owner=OWNER))[0]).id
+        == work_id
+    )
 
 
 async def test_retry_prefers_another_idle_route_after_transient_failure(db):
@@ -133,7 +144,7 @@ async def test_retry_prefers_another_idle_route_after_transient_failure(db):
         return "recovered"
 
     dispatcher = dispatch.AIWorkDispatcher(routes, complete, owner=OWNER)
-    first = await store.claim_work(live[0], owner=OWNER)
+    first = (await store.claim_work_batch(live[0], limit=1, owner=OWNER))[0]
     await dispatcher._execute(first, live[0])
     waiting = await row(db, work_id)
     assert (waiting.status, waiting.attempt, waiting.payload["last_failed_route"]) == (
@@ -144,15 +155,75 @@ async def test_retry_prefers_another_idle_route_after_transient_failure(db):
     assert store._utc(waiting.available_at) > datetime.now(timezone.utc)
     await make_ready(db)
     assert (
-        await store.claim_work(live[0], alternatives={"first", "second"}, owner=OWNER)
-        is None
+        await store.claim_work_batch(
+            live[0], limit=1, alternatives={"first", "second"}, owner=OWNER
+        )
+        == []
     )
-    second = await store.claim_work(
-        live[1], alternatives={"first", "second"}, owner=OWNER
-    )
+    second = (
+        await store.claim_work_batch(
+            live[1], limit=1, alternatives={"first", "second"}, owner=OWNER
+        )
+    )[0]
     assert second.id == work_id
     await dispatcher._execute(second, live[1])
     assert (await row(db, work_id)).status == "succeeded"
+
+
+@pytest.mark.parametrize("retry_after,minimum_delay", [(None, 60), ("6050", 6050)])
+async def test_cloudflare_block_retries_after_delay_within_attempt_budget(
+    db, retry_after, minimum_delay
+):
+    import httpx
+    from openai import PermissionDeniedError
+
+    page = "<html><title>Attention Required! | Cloudflare</title></html>"
+    headers = {"content-type": "text/html"}
+    if retry_after is not None:
+        headers["retry-after"] = retry_after
+    error = PermissionDeniedError(
+        page,
+        response=httpx.Response(
+            403,
+            request=httpx.Request("POST", "https://provider.invalid/chat/completions"),
+            headers=headers,
+            text=page,
+        ),
+        body=page,
+    )
+    work_id = await add()
+    calls = 0
+
+    async def routes():
+        return [route()]
+
+    async def complete(item, chosen):
+        nonlocal calls
+        calls += 1
+        raise error
+
+    dispatcher = dispatch.AIWorkDispatcher(routes, complete, owner=OWNER)
+    for attempt in range(1, contracts.MAX_ATTEMPTS + 1):
+        item = (await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]
+        before = datetime.now(timezone.utc)
+        await dispatcher._execute(item, route())
+        current = await row(db, work_id)
+        assert current.lease_owner is None
+        if attempt < contracts.MAX_ATTEMPTS:
+            assert (current.status, current.attempt) == ("queued", attempt + 1)
+            assert store._utc(current.available_at) >= before + timedelta(
+                seconds=minimum_delay
+            )
+            assert (
+                await store.claim_work_batch(route("other"), limit=1, owner=OWNER) == []
+            )
+            await make_ready(db)
+        else:
+            assert (current.status, current.attempt) == (
+                "failed",
+                contracts.MAX_ATTEMPTS,
+            )
+    assert calls == contracts.MAX_ATTEMPTS
 
 
 @pytest.mark.parametrize(
@@ -172,8 +243,15 @@ async def test_failed_route_can_retry_when_no_eligible_alternative(
         payload={"avoid_models": avoid, "last_failed_route": "first"},
     )
     assert (
-        await store.claim_work(route(), alternatives=alternatives, owner=OWNER)
-    ).id == work_id
+        (
+            (
+                await store.claim_work_batch(
+                    route(), limit=1, alternatives=alternatives, owner=OWNER
+                )
+            )[0]
+        ).id
+        == work_id
+    )
 
 
 @pytest.mark.parametrize(
@@ -228,7 +306,9 @@ async def test_expired_lease_reuses_id_and_attempt_is_bounded(db):
     work_id = await add()
     now = datetime.now(timezone.utc)
     for attempt in (1, 2, 3):
-        leased = await store.claim_work(route(), now=now, owner=OWNER)
+        leased = (await store.claim_work_batch(route(), limit=1, now=now, owner=OWNER))[
+            0
+        ]
         assert leased.id == work_id
         assert leased.attempt == attempt
         now += timedelta(seconds=contracts.LEASE_SECONDS + 1)
@@ -421,8 +501,13 @@ async def test_urgent_precedes_high_and_not_yet_available_work_is_skipped(db):
         item = await session.get(AIWorkItem, future)
         item.available_at = datetime.now(timezone.utc) + timedelta(hours=1)
         await session.commit()
-    assert (await store.claim_work(route(), owner=OWNER)).id == urgent
-    assert (await store.claim_work(route("second"), owner=OWNER)).id == high
+    assert (
+        ((await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]).id == urgent
+    )
+    assert (
+        ((await store.claim_work_batch(route("second"), limit=1, owner=OWNER))[0]).id
+        == high
+    )
     assert (await row(db, future)).status == "queued"
 
 
@@ -431,9 +516,12 @@ async def test_concurrent_claims_respect_route_capacity(db, capacity):
     for _ in range(4):
         await add()
     claims = await asyncio.gather(
-        *(store.claim_work(route(capacity=capacity), owner=OWNER) for _ in range(4))
+        *(
+            store.claim_work_batch(route(capacity=capacity), limit=1, owner=OWNER)
+            for _ in range(4)
+        )
     )
-    ids = [item.id for item in claims if item is not None]
+    ids = [item.id for batch in claims for item in batch]
     assert len(ids) == len(set(ids)) == capacity
 
 
@@ -484,10 +572,10 @@ async def test_batch_claim_preserves_priority_and_strict_model_diversity(db):
 async def test_two_routes_cannot_lease_the_same_item(db):
     work_id = await add()
     claims = await asyncio.gather(
-        store.claim_work(route(), owner=OWNER),
-        store.claim_work(route("second"), owner=OWNER),
+        store.claim_work_batch(route(), limit=1, owner=OWNER),
+        store.claim_work_batch(route("second"), limit=1, owner=OWNER),
     )
-    assert [item.id for item in claims if item is not None] == [work_id]
+    assert [item.id for batch in claims for item in batch] == [work_id]
 
 
 async def test_health_permits_are_atomic_across_dispatchers(db):
@@ -663,7 +751,7 @@ async def test_health_refresh_failure_does_not_leave_failed_call_leased(db):
     async def complete(item, chosen):
         raise TimeoutError("provider timed out")
 
-    item = await store.claim_work(route(), owner=OWNER)
+    item = (await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]
     dispatcher = dispatch.AIWorkDispatcher(routes, complete, owner=OWNER)
     await dispatcher._execute(item, route())
     item = await row(db, work_id)
@@ -673,7 +761,7 @@ async def test_health_refresh_failure_does_not_leave_failed_call_leased(db):
 async def test_concurrent_recovery_does_not_advance_same_lease_twice(db):
     work_id = await add()
     now = datetime.now(timezone.utc)
-    await store.claim_work(route(), now=now, owner=OWNER)
+    await store.claim_work_batch(route(), limit=1, now=now, owner=OWNER)
     now += timedelta(seconds=contracts.LEASE_SECONDS + 1)
     recovered = await asyncio.gather(
         store.recover_expired_leases(now=now), store.recover_expired_leases(now=now)
@@ -686,7 +774,7 @@ async def test_concurrent_recovery_does_not_advance_same_lease_twice(db):
 @pytest.mark.parametrize("fails", [False, True])
 async def test_late_callback_cannot_overwrite_new_lease_on_same_attempt(db, fails):
     work_id = await add()
-    old = await store.claim_work(route(), owner=OWNER)
+    old = (await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]
     async with db() as session:
         current = await session.get(AIWorkItem, work_id)
         # A reclaimed activity has a new token even on the same route and attempt.
@@ -1100,7 +1188,10 @@ async def test_autopilot_source_followup_persists_low_work_priority(db):
             report_id = await add(
                 line="report_section", priority="high", parent="report-parent"
             )
-            assert (await store.claim_work(route(), owner=OWNER)).id == report_id
+            assert (
+                ((await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]).id
+                == report_id
+            )
             assert (await row(db, item.id)).status == "queued"
         finally:
             waiting.cancel()
@@ -1134,7 +1225,7 @@ async def test_claim_does_not_materialize_entire_queued_backlog(db):
 
     event.listen(Session, "loaded_as_persistent", loaded_item)
     try:
-        item = await store.claim_work(route(), owner=OWNER)
+        item = (await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]
     finally:
         event.remove(Session, "loaded_as_persistent", loaded_item)
     assert item is not None
@@ -1186,17 +1277,23 @@ async def test_claim_pages_past_avoided_head_without_starving_eligible_work(
             )
         )
         await session.commit()
-    item = await store.claim_work(
-        route("provider:first"),
-        alternatives={"provider:first", "provider:second"},
-        owner=OWNER,
-    )
+    item = (
+        await store.claim_work_batch(
+            route("provider:first"),
+            limit=1,
+            alternatives={"provider:first", "provider:second"},
+            owner=OWNER,
+        )
+    )[0]
     assert item.id == expected_id
-    other = await store.claim_work(
-        route("provider:second"),
-        alternatives={"provider:first", "provider:second"},
-        owner=OWNER,
-    )
+    other = (
+        await store.claim_work_batch(
+            route("provider:second"),
+            limit=1,
+            alternatives={"provider:first", "provider:second"},
+            owner=OWNER,
+        )
+    )[0]
     assert other.id != expected_id
     assert other.priority == "urgent"
 
@@ -1209,15 +1306,25 @@ async def test_claim_all_avoided_work_stays_available_for_other_route(db):
         payload={"avoid_models": ["first"]},
     )
     assert (
-        await store.claim_work(route(), alternatives={"first", "second"}, owner=OWNER)
-        is None
+        await store.claim_work_batch(
+            route(), limit=1, alternatives={"first", "second"}, owner=OWNER
+        )
+        == []
     )
     assert (await row(db, work_id)).status == "queued"
     assert (
-        await store.claim_work(
-            route("second"), alternatives={"first", "second"}, owner=OWNER
-        )
-    ).id == work_id
+        (
+            (
+                await store.claim_work_batch(
+                    route("second"),
+                    limit=1,
+                    alternatives={"first", "second"},
+                    owner=OWNER,
+                )
+            )[0]
+        ).id
+        == work_id
+    )
 
 
 async def test_avoided_route_takes_work_when_the_other_route_is_full(db):
@@ -1244,9 +1351,11 @@ async def test_avoided_route_takes_work_when_the_other_route_is_full(db):
 
     dispatcher = dispatch.AIWorkDispatcher(routes, complete, owner=OWNER)
     # Pin the first claim to "second" so it is full when the avoiding item is scanned.
-    first = await store.claim_work(
-        route("second"), alternatives={"second"}, owner=OWNER
-    )
+    first = (
+        await store.claim_work_batch(
+            route("second"), limit=1, alternatives={"second"}, owner=OWNER
+        )
+    )[0]
     assert first.id == busy
     dispatcher.active[busy] = asyncio.create_task(complete(first, route("second")))
     dispatcher.active[busy]._ai_route_key = "second"
@@ -1265,7 +1374,10 @@ async def test_shared_dispatcher_uses_global_leases_to_detect_full_alternative(d
         priority="low",
         payload={"avoid_models": ["first"]},
     )
-    assert (await store.claim_work(route("second"), owner=OWNER)).id == busy
+    assert (
+        ((await store.claim_work_batch(route("second"), limit=1, owner=OWNER))[0]).id
+        == busy
+    )
     served = {}
 
     async def routes():
@@ -1320,8 +1432,10 @@ async def make_ready(db):
 
 async def test_shutdown_releases_only_owned_leases(db):
     first_id, second_id = await add(), await add()
-    first = await store.claim_work(route(), owner="executor-a")
-    second = await store.claim_work(route("second"), owner="executor-b")
+    first = (await store.claim_work_batch(route(), limit=1, owner="executor-a"))[0]
+    second = (
+        await store.claim_work_batch(route("second"), limit=1, owner="executor-b")
+    )[0]
     assert {first.id, second.id} == {first_id, second_id}
     assert await store.release_owned_leases("executor-a") == 1
     released, retained = await row(db, first.id), await row(db, second.id)
@@ -1337,13 +1451,15 @@ async def test_shutdown_releases_only_owned_leases(db):
         second.lease_token,
     )
     assert await store.release_owned_leases("executor-a") == 0
-    assert await store.claim_work(route("second"), owner="executor-a") is None
+    assert (
+        await store.claim_work_batch(route("second"), limit=1, owner="executor-a") == []
+    )
 
 
 async def test_renewal_keeps_owner_and_token_and_never_extends_execution_deadline(db):
     await add()
     now = datetime.now(timezone.utc)
-    claimed = await store.claim_work(route(), owner=OWNER, now=now)
+    claimed = (await store.claim_work_batch(route(), limit=1, owner=OWNER, now=now))[0]
     renewal = now + timedelta(seconds=contracts.LEASE_SECONDS - 1)
     assert await store.renew_owned_leases("another-executor", now=renewal) == set()
     assert await store.renew_owned_leases(OWNER, now=renewal) == {claimed.id}
@@ -1368,7 +1484,7 @@ async def test_renewal_keeps_owner_and_token_and_never_extends_execution_deadlin
 
 async def test_deleted_parent_prevents_a_claimed_activity_from_sending_provider_io(db):
     work_id = await add()
-    claimed = await store.claim_work(route(), owner=OWNER)
+    claimed = (await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]
     async with db() as session:
         parent = await session.scalar(select(Task).where(Task.task_uuid == "parent"))
         await session.execute(delete(Task).where(Task.id == parent.id))
@@ -1575,7 +1691,7 @@ async def test_expired_execution_finishes_cancellation_before_it_can_be_reclaime
 
 async def test_another_dispatcher_cannot_execute_a_claimed_activity(db):
     work_id = await add()
-    claimed = await store.claim_work(route(), owner="owner-a")
+    claimed = (await store.claim_work_batch(route(), limit=1, owner="owner-a"))[0]
 
     async def complete(item, chosen):
         pytest.fail("A dispatcher must not send another owner's provider request")
@@ -1666,10 +1782,20 @@ async def test_strict_bare_model_exclusion_applies_across_provider_case(db):
         priority="high",
         payload={"avoid_models": ["model-x"], "require_distinct_model": True},
     )
-    assert await store.claim_work(route("ProviderB:Model-X"), owner=OWNER) is None
     assert (
-        await store.claim_work(route("ProviderB:Model-Y"), owner=OWNER)
-    ).id == work_id
+        await store.claim_work_batch(route("ProviderB:Model-X"), limit=1, owner=OWNER)
+        == []
+    )
+    assert (
+        (
+            (
+                await store.claim_work_batch(
+                    route("ProviderB:Model-Y"), limit=1, owner=OWNER
+                )
+            )[0]
+        ).id
+        == work_id
+    )
 
 
 async def test_cancellation_during_a_failing_provider_call_does_not_retry(db):
@@ -1678,7 +1804,7 @@ async def test_cancellation_during_a_failing_provider_call_does_not_retry(db):
         session.add(parent)
         await session.commit()
     work_id = await add()
-    claimed = await store.claim_work(route(), owner=OWNER)
+    claimed = (await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]
 
     async def complete(item, chosen):
         async with db() as session:
@@ -1701,7 +1827,7 @@ async def test_queue_age_boundary_expires_waiters_but_does_not_abort_leased_exec
     leased_id = await add()
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(seconds=contracts.QUEUE_WAIT_SECONDS)
-    leased = await store.claim_work(route(), owner=OWNER, now=now)
+    leased = (await store.claim_work_batch(route(), limit=1, owner=OWNER, now=now))[0]
     expired_id, fresh_id = await add(), await add()
     async with db() as session:
         expired = await session.get(AIWorkItem, expired_id)
@@ -1714,8 +1840,15 @@ async def test_queue_age_boundary_expires_waiters_but_does_not_abort_leased_exec
         await session.commit()
     # Claiming filters expired work even between the periodic expiry sweeps.
     assert (
-        await store.claim_work(route("second"), owner=OWNER, now=now)
-    ).id == fresh_id
+        (
+            (
+                await store.claim_work_batch(
+                    route("second"), limit=1, owner=OWNER, now=now
+                )
+            )[0]
+        ).id
+        == fresh_id
+    )
     assert await store.expire_queued_activities(now=now) == 1
     expired, active = await row(db, expired_id), await row(db, leased_id)
     assert (expired.status, expired.attempt) == ("failed", 1)
@@ -1837,7 +1970,9 @@ async def test_cancellation_holds_route_permit_until_provider_cleanup_finishes(
             task = await session.scalar(select(Task))
             task.status = TaskStatus.CANCELLED
         await session.commit()
-    assert await store.claim_work(route(), owner="another-executor") is None
+    assert (
+        await store.claim_work_batch(route(), limit=1, owner="another-executor") == []
+    )
     ticking = asyncio.create_task(dispatcher.tick())
     try:
         await asyncio.wait_for(cleaning_up.wait(), 1)
@@ -1845,7 +1980,10 @@ async def test_cancellation_holds_route_permit_until_provider_cleanup_finishes(
         assert current.status == "leased" and current.cancel_requested
         assert current.lease_token == original.lease_token
         assert await store.active_route_lease_counts() == {"first": 1}
-        assert await store.claim_work(route(), owner="another-executor") is None
+        assert (
+            await store.claim_work_batch(route(), limit=1, owner="another-executor")
+            == []
+        )
         assert calls == [first_id]
     finally:
         allow_cleanup.set()
@@ -1902,7 +2040,7 @@ async def test_cancel_requested_lease_is_never_requeued_by_shutdown_or_recovery(
     db, recover
 ):
     work_id = await add()
-    claimed = await store.claim_work(route(), owner=OWNER)
+    claimed = (await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]
     async with db() as session:
         await store.request_cancellation(
             session, await session.get(AIWorkItem, work_id)
@@ -1923,7 +2061,9 @@ async def test_cancellation_refreshes_a_queued_row_that_was_just_leased_elsewher
     work_id = await add()
     async with db() as session:
         stale = await session.get(AIWorkItem, work_id)
-        claimed = await store.claim_work(route(), owner="other-executor")
+        claimed = (
+            await store.claim_work_batch(route(), limit=1, owner="other-executor")
+        )[0]
         assert stale.status == "queued"
         await store.request_cancellation(session, stale)
         await session.commit()
@@ -2046,7 +2186,7 @@ async def test_retry_cancels_old_work_without_releasing_live_http_permit(
         operations.control_plane_events, "publish_task_event", AsyncMock()
     )
     first, second = await add(), await add()
-    leased = await store.claim_work(route(), owner=OWNER)
+    leased = (await store.claim_work_batch(route(), limit=1, owner=OWNER))[0]
     assert leased.id == first
     async with db() as session:
         parent = await session.scalar(select(Task).where(Task.task_uuid == "parent"))
@@ -2058,7 +2198,7 @@ async def test_retry_cancels_old_work_without_releasing_live_http_permit(
     assert active.status == "leased" and active.cancel_requested is True
     assert active.lease_token == leased.lease_token
     assert queued.status == "cancelled"
-    assert await store.claim_work(route(), owner="other-executor") is None
+    assert await store.claim_work_batch(route(), limit=1, owner="other-executor") == []
 
 
 async def test_old_execution_cannot_submit_consume_or_clear_new_waiting_state(db):

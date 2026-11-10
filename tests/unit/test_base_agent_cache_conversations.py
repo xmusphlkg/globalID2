@@ -128,6 +128,33 @@ async def test_failure_identity_is_preserved_and_one_route_is_tried(agent, monke
     assert not agent.cache.values and not agent.conversation_history
 
 
+async def test_cloudflare_block_is_one_attempt_with_model_scoped_retry_hint(agent):
+    import httpx
+    from openai import PermissionDeniedError
+
+    page = "<html><title>Attention Required! | Cloudflare</title></html>"
+    error = PermissionDeniedError(
+        page,
+        response=httpx.Response(
+            403,
+            request=httpx.Request("POST", "https://provider.invalid/chat/completions"),
+            headers={"content-type": "text/html", "retry-after": "600"},
+            text=page,
+        ),
+        body=page,
+    )
+    agent.transport.complete.side_effect = error
+    with pytest.raises(PermissionDeniedError) as raised:
+        await agent.complete("question", _scheduled_route=ROUTE)
+    assert raised.value is error
+    agent.transport.complete.assert_awaited_once()
+    base.mark_provider_authentication_failed.assert_not_awaited()
+    base.mark_route_unavailable.assert_not_awaited()
+    base.record_route_runtime_failure.assert_awaited_once()
+    assert base.record_route_runtime_failure.await_args.kwargs["retry_after_seconds"] == 600
+    assert base.record_route_runtime_failure.await_args.kwargs["cooldown_seconds"] >= 600
+
+
 async def test_cancellation_propagates_without_model_health_penalty(agent):
     entered = asyncio.Event()
     cancelled = asyncio.Event()

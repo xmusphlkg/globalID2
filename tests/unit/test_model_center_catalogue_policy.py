@@ -10,8 +10,11 @@ import pytest
 from src.ai import model_center
 from src.ai.catalogue.errors import (
     FailureKind,
+    _health_check_failure_status,
+    _runtime_failure_kind,
     classify_failure,
     extract_retry_after_seconds,
+    is_model_unavailable_error,
 )
 from src.ai.catalogue.probes import client_session
 from src.ai.catalogue.routes import (
@@ -87,6 +90,109 @@ def test_retry_after_honors_fractional_delays_and_http_dates():
     )
     assert classify_failure(fractional).retry_after_seconds == 2
     assert extract_retry_after_seconds(dated, now=now) == 17
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        "<!DOCTYPE html><html><head><title>Attention Required! | Cloudflare</title>"
+        "</head><body>Access denied</body></html>",
+        "<html><head><title>Just a moment...</title></head><body>"
+        '<script src="/cdn-cgi/challenge-platform/example.js"></script></body></html>',
+    ],
+)
+@pytest.mark.parametrize(
+    "retry_after,expected", [(None, 60), ("2", 60), ("6050", 6050)]
+)
+def test_cloudflare_html_rejection_is_transient_without_poisoning_model_access(
+    page, retry_after, expected
+):
+    import httpx
+    from openai import PermissionDeniedError
+
+    headers = {"content-type": "text/html"}
+    if retry_after is not None:
+        headers["retry-after"] = retry_after
+    response = httpx.Response(
+        403,
+        request=httpx.Request("POST", "https://provider.invalid/chat/completions"),
+        headers=headers,
+        text=page,
+    )
+    error = PermissionDeniedError(page, response=response, body=page)
+    failure = classify_failure(error)
+
+    assert (failure.kind, failure.retryable, failure.scope) == (
+        FailureKind.UPSTREAM,
+        True,
+        "model",
+    )
+    assert failure.retry_after_seconds == expected
+    assert _runtime_failure_kind(error) == "upstream"
+    assert _health_check_failure_status(error) == "probe_failed"
+    assert is_model_unavailable_error(error) is False
+
+
+@pytest.mark.parametrize(
+    "message,status,headers,body,kind",
+    [
+        (
+            "<html><title>Attention Required! | Cloudflare</title></html>",
+            401,
+            {"content-type": "text/html"},
+            None,
+            FailureKind.AUTHENTICATION,
+        ),
+        (
+            "model access denied",
+            403,
+            {
+                "server": "cloudflare",
+                "cf-ray": "test-ray",
+                "content-type": "application/json",
+            },
+            {"error": {"code": "model_access_denied"}},
+            FailureKind.MODEL_UNAVAILABLE,
+        ),
+        (
+            "<html><title>Attention Required! | Cloudflare</title></html>",
+            403,
+            {"content-type": "application/json"},
+            {"error": {"code": "model_access_denied"}},
+            FailureKind.MODEL_UNAVAILABLE,
+        ),
+        (
+            "Forbidden",
+            403,
+            {"server": "cloudflare", "cf-ray": "test-ray"},
+            None,
+            FailureKind.UNKNOWN,
+        ),
+        (
+            "<html><title>Forbidden</title><body>permission denied</body></html>",
+            403,
+            {"content-type": "text/html"},
+            None,
+            FailureKind.MODEL_UNAVAILABLE,
+        ),
+        (
+            "<html><title>Just a moment...</title></html>",
+            403,
+            {"content-type": "text/html"},
+            None,
+            FailureKind.UNKNOWN,
+        ),
+    ],
+)
+def test_edge_detection_does_not_retry_real_permissions_or_generic_403(
+    message, status, headers, body, kind
+):
+    error = ProviderError(message, status, headers=headers)
+    error.body = body
+    failure = classify_failure(error)
+    assert failure.kind is kind
+    assert failure.retryable is False
+    assert failure.retry_after_seconds is None
 
 
 @pytest.mark.parametrize(

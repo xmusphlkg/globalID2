@@ -12,7 +12,6 @@ from .database import (
 )
 from .cache import CacheService, get_cache
 from .missing_values import normalize_rate_columns, normalize_rate_value
-from .rate_limiter import RateLimiter
 
 # 别名
 get_database = get_db  # 为了兼容性
@@ -41,5 +40,4 @@ __all__ = [
     "get_cache",
     "normalize_rate_columns",
     "normalize_rate_value",
-    "RateLimiter",
 ]

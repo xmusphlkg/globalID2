@@ -36,8 +36,6 @@ class ReviewerAgent(BaseAgent):
         # Load reviewer-specific configuration
         # reviewer_threshold can be set via .env or configuration (default 0.7)
         self.reviewer_threshold = float(getattr(config.ai, "reviewer_threshold", 0.7))
-        # max_retries preference for writer-review loop, fallback to ai.max_retries
-        self.max_retries = int(getattr(config.ai, "max_retries", config.ai.max_retries))
 
         # Load system prompt
         self.system_prompt = self._load_system_prompt()

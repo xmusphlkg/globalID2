@@ -229,7 +229,9 @@ class BaseAgent(ABC):
                         cooldown_seconds=max(
                             5,
                             int(cooldown or self.config.ai.rate_limit_cooldown_seconds),
+                            failure.retry_after_seconds or 0,
                         ),
+                        retry_after_seconds=failure.retry_after_seconds,
                     )
             except Exception as health_error:
                 logger.warning(
