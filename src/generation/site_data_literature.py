@@ -1813,7 +1813,8 @@ def write_literature_artifacts(
     public_index = {
         key: value
         for key, value in payload.items()
-        if key not in {"disease_articles", "country_articles", "topic_articles"} and not key.startswith("_")
+        if key not in {"disease_articles", "country_articles", "topic_articles", "title_estimated_related_records"}
+        and not key.startswith("_")
     }
     public_index["weekly_briefs"] = [
         {key: value for key, value in brief.items() if key != "articles"}
