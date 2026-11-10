@@ -28,7 +28,8 @@ from src.services.exceptions import TaskCancelledError, TaskExecutionSupersededE
 from .reducer import POLICY_VERSION, initial_state, model_exclusions, reduce_completion
 
 PAGE_SIZE = 64
-ADVANCE_BATCH_SIZE = 8
+# Amortize workflow commits while bounding cancellation checks and held row locks.
+ADVANCE_BATCH_SIZE = 32
 TERMINAL_ACTIVITIES = ("succeeded", "failed", "cancelled")
 
 # These are exactly the article fields used by the review prompt, fingerprint
@@ -489,7 +490,7 @@ class ReviewWorkflowRepository:
         return bool(await self.advance_many(parent, [workflow_id]))
 
     async def advance_many(self, parent: str, workflow_ids: list[int]) -> int:
-        """Advance at most eight workflows with one globally ordered lock set.
+        """Advance a bounded batch with one globally ordered lock set.
 
         Parent → all workflows by id → all articles by article_id → summaries.
         Mixed kinds are rejected before content locks; a coordinator owns one

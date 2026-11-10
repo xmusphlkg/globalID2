@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "stage": "production_isolated_workers_advance_batch_8",
+  "source": {
+    "name": "ai-backlog-isolated-worker-result-audit.json",
+    "sha256": "a9b3ff0d2e01ca47424747012f599b39edd3c018ad20927fd67df3aff4a52e17"
+  },
+  "scope": {
+    "selection": "Latest 60 terminal article workflows after the worker restart cutoff, as visible at audit snapshot time.",
+    "is_final_five_minute_census": false,
+    "is_random_sample": false,
+    "performance_window_reference": "production_isolated_workers.json: final_five_minute_window",
+    "sample_within_final_five_minute_window": true,
+    "interpretation": "Checks traceability, execution contracts and consistent persisted business decisions; does not establish scientific accuracy or population-wide correctness."
+  },
+  "sampled_at": "2026-11-10T17:03:14.088798+00:00",
+  "cutoff": "2026-11-10T16:58:19+00:00",
+  "sample_count": 60,
+  "sample_finished_at_min": "2026-11-10T17:03:03.053648+00:00",
+  "sample_finished_at_max": "2026-11-10T17:03:10.716604+00:00",
+  "outcomes": {
+    "rejected": 46,
+    "held": 10,
+    "published": 4
+  },
+  "applied_outcomes_checked": 60,
+  "review_opinions_checked": 60,
+  "actual_model_identity_count": 4,
+  "activity_count": 161,
+  "activity_statuses": {
+    "succeeded": 161
+  },
+  "transport_attempts": {
+    "1": 160,
+    "2": 1
+  },
+  "opinion_distribution": {
+    "1": 60
+  },
+  "grounding_gate_holds": 10,
+  "bounded_opinions_without_final_round_reviewer": 0,
+  "fingerprint_mismatches_with_later_article_update": 0,
+  "prompt_read_errors": {},
+  "sample_workflows_reopened_after_same_snapshot_business_terminal": 0,
+  "related_workflows_checked_for_sample_subjects": 60,
+  "checks": {
+    "parent_generation_preserved_since_pre_restart_snapshot": {
+      "checked": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "one_persisted_article_drain_for_current_parent_generation": {
+      "checked": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "resumed_drain_preserves_high_watermark": {
+      "checked": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "resumed_drain_cursor_and_counts_did_not_reset": {
+      "checked": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "workflow_generation_matches_current_parent": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "subject_exists": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "current_article_fingerprint_matches_review_input": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "workflow_round_and_opinion_bounded": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "degraded_review_not_enabled": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "history_review_has_distinct_canonical_models": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "history_review_round_bounded": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "one_activity_per_logical_workflow_step": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "no_activity_created_after_workflow_terminal": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "no_active_calls_for_applied_terminal_workflow": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "activity_execution_generation_matches_workflow": {
+      "checked": 161,
+      "passed": 161,
+      "failed": 0
+    },
+    "actual_prompt_snapshot_matches_workflow_fingerprint": {
+      "checked": 161,
+      "passed": 161,
+      "failed": 0
+    },
+    "request_file_digest_matches_dedupe_key": {
+      "checked": 161,
+      "passed": 161,
+      "failed": 0
+    },
+    "request_step_metadata_matches_activity": {
+      "checked": 161,
+      "passed": 161,
+      "failed": 0
+    },
+    "reviewer_strict_distinct_route_requirement": {
+      "checked": 80,
+      "passed": 80,
+      "failed": 0
+    },
+    "actual_reviewer_model_not_in_exclusions": {
+      "checked": 80,
+      "passed": 80,
+      "failed": 0
+    },
+    "actual_author_reviewer_calls_use_distinct_models": {
+      "checked": 80,
+      "passed": 80,
+      "failed": 0
+    },
+    "history_model_identity_matches_actual_activity": {
+      "checked": 120,
+      "passed": 120,
+      "failed": 0
+    },
+    "persisted_state_matches_deterministic_replay_of_actual_responses": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "applied_outcome_has_review_history": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "article_status_consistent_with_workflow_outcome": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "stored_governance_decision_consistent_with_outcome": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "stored_evidence_reasons_match_final_review": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "stored_review_provenance_matches_final_review": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "stored_provenance_is_cross_model": {
+      "checked": 60,
+      "passed": 60,
+      "failed": 0
+    },
+    "published_or_excluded_has_grounded_abstract_quote": {
+      "checked": 50,
+      "passed": 50,
+      "failed": 0
+    },
+    "status_change_event_matches_decision": {
+      "checked": 50,
+      "passed": 50,
+      "failed": 0
+    },
+    "held_fingerprint_matches_review_input": {
+      "checked": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    "held_content_is_parked_for_same_input": {
+      "checked": 10,
+      "passed": 10,
+      "failed": 0
+    }
+  },
+  "anomalies": [],
+  "limitations": [
+    "Latest 60 terminal article workflows only; not a random sample or a full audit.",
+    "Quoted evidence checks traceability, not the scientific correctness of the reasoning.",
+    "Duplicate-snapshot check covers sampled subjects and the database snapshot; later executions are outside this observation."
+  ],
+  "restart_continuity": {
+    "baseline_sampled_at": "2026-11-10T16:46:15.819558+00:00",
+    "parent_count": 1,
+    "parents_with_pre_restart_baseline": 1,
+    "parent_generation_distribution": {
+      "1": 1
+    },
+    "controlled_restart_count_per_parent": [
+      4
+    ],
+    "sample_workflows_created_before_isolated_worker_start": 0,
+    "sample_activities_created_before_isolated_worker_start": 0,
+    "current_parent_drain_count": 1
+  },
+  "read_only": true,
+  "export_contains_article_text": false
+}

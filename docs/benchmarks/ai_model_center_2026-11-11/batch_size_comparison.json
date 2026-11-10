@@ -1,0 +1,117 @@
+{
+  "input_identity_equal": true,
+  "business_identity_equal": true,
+  "business_identity_includes": [
+    "article_id",
+    "workflow_outcome",
+    "publication_status",
+    "stored_reasons"
+  ],
+  "parameters": {
+    "items": 1024,
+    "capacity": 157,
+    "latency": 0.75,
+    "buffer_budget": 512,
+    "seed": 7,
+    "transport": "simulated",
+    "http_requests": 0
+  },
+  "variants": [
+    {
+      "advance_batch_size": 8,
+      "elapsed_seconds": 51.532,
+      "terminal_workflows_per_minute": 1192.26,
+      "workflow_outcomes": {
+        "published": 16,
+        "held": 1008
+      },
+      "activity_statuses": {
+        "succeeded": 2048
+      },
+      "peak_active_executions": 104,
+      "seconds_to_full_capacity": null,
+      "interior_sampled_occupancy": 0.2044,
+      "whole_run_execution_occupancy": 0.1929,
+      "sql_statements": {
+        "SELECT": 16964,
+        "INSERT": 308,
+        "UPDATE": 2883
+      },
+      "commit_transactions": 6113,
+      "ready_queue_wait_p50_seconds": 0.049,
+      "ready_queue_wait_p95_seconds": 0.472,
+      "tick_p95_seconds": 0.764,
+      "business_identity_sha256": "59924b4118ad97a8b00b492ed5aab7af3e8983796ed286aa3302be574355bba8",
+      "independent_review_failures": 0
+    },
+    {
+      "advance_batch_size": 16,
+      "elapsed_seconds": 44.881,
+      "terminal_workflows_per_minute": 1368.97,
+      "workflow_outcomes": {
+        "published": 16,
+        "held": 1008
+      },
+      "activity_statuses": {
+        "succeeded": 2048
+      },
+      "peak_active_executions": 141,
+      "seconds_to_full_capacity": null,
+      "interior_sampled_occupancy": 0.2468,
+      "whole_run_execution_occupancy": 0.2222,
+      "sql_statements": {
+        "SELECT": 14190,
+        "INSERT": 182,
+        "UPDATE": 2550
+      },
+      "commit_transactions": 5245,
+      "ready_queue_wait_p50_seconds": 0.146,
+      "ready_queue_wait_p95_seconds": 0.907,
+      "tick_p95_seconds": 1.093,
+      "business_identity_sha256": "59924b4118ad97a8b00b492ed5aab7af3e8983796ed286aa3302be574355bba8",
+      "independent_review_failures": 0
+    },
+    {
+      "advance_batch_size": 32,
+      "elapsed_seconds": 38.417,
+      "terminal_workflows_per_minute": 1599.31,
+      "workflow_outcomes": {
+        "held": 1008,
+        "published": 16
+      },
+      "activity_statuses": {
+        "succeeded": 2048
+      },
+      "peak_active_executions": 137,
+      "seconds_to_full_capacity": null,
+      "interior_sampled_occupancy": 0.2643,
+      "whole_run_execution_occupancy": 0.2637,
+      "sql_statements": {
+        "SELECT": 12938,
+        "INSERT": 113,
+        "UPDATE": 2415
+      },
+      "commit_transactions": 4856,
+      "ready_queue_wait_p50_seconds": 0.527,
+      "ready_queue_wait_p95_seconds": 1.418,
+      "tick_p95_seconds": 1.602,
+      "business_identity_sha256": "59924b4118ad97a8b00b492ed5aab7af3e8983796ed286aa3302be574355bba8",
+      "independent_review_failures": 0
+    }
+  ],
+  "limitations": [
+    "One measured run per batch size, same in-memory source snapshot.",
+    "A single simulated dispatcher exercises real SQL and workflow policy; no provider latency distribution or external quality claim.",
+    "Existing simulator quotes up to 180 characters; the evidence gate held 1008/1024 inputs. The measured application mix differs from production and is not a model-quality estimate."
+  ],
+  "postgres_workflow_regression": {
+    "batch_size_override": 32,
+    "passed": 50
+  },
+  "recommended_next_validation": {
+    "batch_size": 32,
+    "scope": "Bounded batch constant only; unchanged model/evidence/cancellation/fingerprint policy.",
+    "status": "source batch32 adopted / production observation completed; no additional throughput gain established",
+    "production_evidence": "production_batch32.json"
+  }
+}

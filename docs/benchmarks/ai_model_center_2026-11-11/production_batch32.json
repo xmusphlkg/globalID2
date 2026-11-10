@@ -1,0 +1,957 @@
+{
+  "schema_version": 1,
+  "stage": "production_isolated_workers_advance_batch_32",
+  "source": {
+    "name": "ai-backlog-batch32-20261111.jsonl",
+    "sha256": "0d7bd0eab9f73a8c530f82cd50e65efe051a15529729828a1c712f0b9b86f9b0"
+  },
+  "environment": {
+    "advance_batch_size": 32,
+    "worker_roles": [
+      "general",
+      "ai"
+    ],
+    "auxiliary_model_dispatchers": 12,
+    "database_revision": [
+      "0031_ai_success_log_index"
+    ],
+    "source_workload": "Real existing literature backlog, observed read-only; no synthetic calls added by the observer."
+  },
+  "collection": {
+    "requested_since_utc": "2026-11-10T17:16:55.739661+00:00",
+    "first_snapshot_at_utc": "2026-11-10T17:16:55.836590+00:00",
+    "last_snapshot_at_utc": "2026-11-10T17:22:55.763523+00:00",
+    "source_sample_count": 22,
+    "source_error_sample_count": 0,
+    "nominal_interval_seconds": 15,
+    "snapshot_consistency": "READ ONLY, REPEATABLE READ; sampled_at is PostgreSQL transaction now(). Deep backlog scans complete later but retain the same database snapshot.",
+    "missing_startup_coverage": "Occupancy before the first saved snapshot is not inferred."
+  },
+  "final_five_minute_window": {
+    "start_utc": "2026-11-10T17:17:55.763523+00:00",
+    "end_utc": "2026-11-10T17:22:55.763523+00:00",
+    "start_asia_shanghai": "2026-11-11T01:17:55.763523+08:00",
+    "end_asia_shanghai": "2026-11-11T01:22:55.763523+08:00",
+    "duration_seconds": 300,
+    "actual_samples_in_window": 20,
+    "article_outcomes": {
+      "held": 291,
+      "published": 158,
+      "rejected": 968,
+      "stale": 2
+    },
+    "distinct_reviewed_articles": 1417,
+    "reviewed_articles_per_minute": 283.4,
+    "published_or_rejected_articles": 1126,
+    "published_or_rejected_per_minute": 225.2,
+    "summary_outcomes": {
+      "held": 8,
+      "published": 19,
+      "waiting": 3269
+    },
+    "distinct_reviewed_summaries": 27,
+    "reviewed_summaries_per_minute": 5.4,
+    "model_call_log_counts": {
+      "success": 4973,
+      "failed": 28
+    },
+    "model_call_log_counts_per_minute": {
+      "success": 994.6,
+      "failed": 5.6
+    },
+    "model_call_logs_by_route": [
+      {
+        "model_key": "ctm:CTM-Fable-5",
+        "status": "success",
+        "count": 3,
+        "mean_logged_latency_ms": 103730.86666666665,
+        "p50_logged_latency_ms": 66782.8,
+        "p95_logged_latency_ms": 192465.18999999997
+      },
+      {
+        "model_key": "ctm:CTM-M3",
+        "status": "success",
+        "count": 11,
+        "mean_logged_latency_ms": 26328.445454545457,
+        "p50_logged_latency_ms": 11542.7,
+        "p95_logged_latency_ms": 86119.0
+      },
+      {
+        "model_key": "kiro:hy3",
+        "status": "success",
+        "count": 56,
+        "mean_logged_latency_ms": 46210.98392857141,
+        "p50_logged_latency_ms": 40471.3,
+        "p95_logged_latency_ms": 92704.875
+      },
+      {
+        "model_key": "kiro:hy4free",
+        "status": "success",
+        "count": 10,
+        "mean_logged_latency_ms": 160519.23,
+        "p50_logged_latency_ms": 159464.3,
+        "p95_logged_latency_ms": 253833.55999999997
+      },
+      {
+        "model_key": "zzshu:claude-haiku-5-5",
+        "status": "failed",
+        "count": 7,
+        "mean_logged_latency_ms": 8889.285714285714,
+        "p50_logged_latency_ms": 134.4,
+        "p95_logged_latency_ms": 43022.379999999954
+      },
+      {
+        "model_key": "zzshu:claude-haiku-5-5",
+        "status": "success",
+        "count": 626,
+        "mean_logged_latency_ms": 11606.439616613416,
+        "p50_logged_latency_ms": 10579.900000000001,
+        "p95_logged_latency_ms": 17927.75
+      },
+      {
+        "model_key": "zzshuc:gpt-6.1-terra",
+        "status": "failed",
+        "count": 10,
+        "mean_logged_latency_ms": 126.10999999999999,
+        "p50_logged_latency_ms": 126.05000000000001,
+        "p95_logged_latency_ms": 135.04
+      },
+      {
+        "model_key": "zzshuc:gpt-6.1-terra",
+        "status": "success",
+        "count": 1750,
+        "mean_logged_latency_ms": 5478.388857142858,
+        "p50_logged_latency_ms": 4782.7,
+        "p95_logged_latency_ms": 11568.175
+      },
+      {
+        "model_key": "zzshuccc:gemini-3.5-flash-lite",
+        "status": "failed",
+        "count": 11,
+        "mean_logged_latency_ms": 142.74545454545455,
+        "p50_logged_latency_ms": 129.7,
+        "p95_logged_latency_ms": 191.5
+      },
+      {
+        "model_key": "zzshuccc:gemini-3.5-flash-lite",
+        "status": "success",
+        "count": 2517,
+        "mean_logged_latency_ms": 2576.127691696467,
+        "p50_logged_latency_ms": 2398.1,
+        "p95_logged_latency_ms": 4041.54
+      }
+    ],
+    "model_call_failure_types": [
+      {
+        "error_type": "APIConnectionError",
+        "count": 27
+      },
+      {
+        "error_type": "RuntimeError",
+        "count": 1
+      }
+    ],
+    "completed_activities": [
+      {
+        "line": "content_governance",
+        "capability": "text",
+        "status": "succeeded",
+        "count": 4701
+      },
+      {
+        "line": "literature_enrich",
+        "capability": "text",
+        "status": "succeeded",
+        "count": 272
+      },
+      {
+        "line": "model_probe",
+        "capability": "health",
+        "status": "succeeded",
+        "count": 31
+      }
+    ],
+    "observed_review_status_arrivals": [
+      {
+        "source": "literature-classifier",
+        "events": 18,
+        "distinct_articles": 18
+      },
+      {
+        "source": "research-radar-autopilot",
+        "events": 4,
+        "distinct_articles": 4
+      }
+    ],
+    "new_articles_still_in_review_at_snapshot": 43,
+    "permit_occupancy": {
+      "duration_seconds": 300.0,
+      "actual_samples_in_window": 20,
+      "estimated_lease_seconds": 55026.018,
+      "routable_capacity_seconds": 61451.229,
+      "configured_capacity_seconds": 68100.0,
+      "time_weighted_mean_leases": 183.42,
+      "time_weighted_mean_routable_capacity": 204.837,
+      "time_weighted_mean_configured_capacity": 227.0,
+      "estimated_occupied_routable_permit_fraction": 0.895442,
+      "estimated_occupied_configured_permit_fraction": 0.808018,
+      "observed_peak_leases": 226,
+      "observed_minimum_leases": 119,
+      "last_leases": 221
+    },
+    "permit_occupancy_by_route": [
+      {
+        "model_key": "ctm:CTM-Fable-5",
+        "model_name": "CTM-Fable-5",
+        "capacity": 1,
+        "routable": true,
+        "routing_status": "routable",
+        "duration_seconds": 300.0,
+        "actual_samples_in_window": 20,
+        "estimated_lease_seconds": 300.0,
+        "routable_capacity_seconds": 300.0,
+        "configured_capacity_seconds": 300.0,
+        "time_weighted_mean_leases": 1.0,
+        "time_weighted_mean_routable_capacity": 1.0,
+        "time_weighted_mean_configured_capacity": 1.0,
+        "estimated_occupied_routable_permit_fraction": 1.0,
+        "estimated_occupied_configured_permit_fraction": 1.0,
+        "observed_peak_leases": 1,
+        "observed_minimum_leases": 1,
+        "last_leases": 1
+      },
+      {
+        "model_key": "ctm:CTM-M3",
+        "model_name": "CTM-M3",
+        "capacity": 1,
+        "routable": true,
+        "routing_status": "routable",
+        "duration_seconds": 300.0,
+        "actual_samples_in_window": 20,
+        "estimated_lease_seconds": 300.0,
+        "routable_capacity_seconds": 300.0,
+        "configured_capacity_seconds": 300.0,
+        "time_weighted_mean_leases": 1.0,
+        "time_weighted_mean_routable_capacity": 1.0,
+        "time_weighted_mean_configured_capacity": 1.0,
+        "estimated_occupied_routable_permit_fraction": 1.0,
+        "estimated_occupied_configured_permit_fraction": 1.0,
+        "observed_peak_leases": 1,
+        "observed_minimum_leases": 1,
+        "last_leases": 1
+      },
+      {
+        "model_key": "kiro:hy3",
+        "model_name": "hy3",
+        "capacity": 10,
+        "routable": true,
+        "routing_status": "routable",
+        "duration_seconds": 300.0,
+        "actual_samples_in_window": 20,
+        "estimated_lease_seconds": 2886.469,
+        "routable_capacity_seconds": 3000.0,
+        "configured_capacity_seconds": 3000.0,
+        "time_weighted_mean_leases": 9.622,
+        "time_weighted_mean_routable_capacity": 10.0,
+        "time_weighted_mean_configured_capacity": 10.0,
+        "estimated_occupied_routable_permit_fraction": 0.962156,
+        "estimated_occupied_configured_permit_fraction": 0.962156,
+        "observed_peak_leases": 10,
+        "observed_minimum_leases": 8,
+        "last_leases": 10
+      },
+      {
+        "model_key": "kiro:hy4free",
+        "model_name": "hy4free",
+        "capacity": 5,
+        "routable": true,
+        "routing_status": "routable",
+        "duration_seconds": 300.0,
+        "actual_samples_in_window": 20,
+        "estimated_lease_seconds": 1483.368,
+        "routable_capacity_seconds": 1500.0,
+        "configured_capacity_seconds": 1500.0,
+        "time_weighted_mean_leases": 4.945,
+        "time_weighted_mean_routable_capacity": 5.0,
+        "time_weighted_mean_configured_capacity": 5.0,
+        "estimated_occupied_routable_permit_fraction": 0.988912,
+        "estimated_occupied_configured_permit_fraction": 0.988912,
+        "observed_peak_leases": 5,
+        "observed_minimum_leases": 4,
+        "last_leases": 5
+      },
+      {
+        "model_key": "zzshu:claude-haiku-5-5",
+        "model_name": "claude-haiku-5-5",
+        "capacity": 70,
+        "routable": true,
+        "routing_status": "routable",
+        "duration_seconds": 300.0,
+        "actual_samples_in_window": 20,
+        "estimated_lease_seconds": 13236.723,
+        "routable_capacity_seconds": 14351.229,
+        "configured_capacity_seconds": 21000.0,
+        "time_weighted_mean_leases": 44.122,
+        "time_weighted_mean_routable_capacity": 47.837,
+        "time_weighted_mean_configured_capacity": 70.0,
+        "estimated_occupied_routable_permit_fraction": 0.922341,
+        "estimated_occupied_configured_permit_fraction": 0.63032,
+        "observed_peak_leases": 70,
+        "observed_minimum_leases": 0,
+        "last_leases": 67
+      },
+      {
+        "model_key": "zzshuc:gpt-6.1-terra",
+        "model_name": "gpt-6.1-terra",
+        "capacity": 70,
+        "routable": true,
+        "routing_status": "routable",
+        "duration_seconds": 300.0,
+        "actual_samples_in_window": 20,
+        "estimated_lease_seconds": 19399.186,
+        "routable_capacity_seconds": 21000.0,
+        "configured_capacity_seconds": 21000.0,
+        "time_weighted_mean_leases": 64.664,
+        "time_weighted_mean_routable_capacity": 70.0,
+        "time_weighted_mean_configured_capacity": 70.0,
+        "estimated_occupied_routable_permit_fraction": 0.923771,
+        "estimated_occupied_configured_permit_fraction": 0.923771,
+        "observed_peak_leases": 70,
+        "observed_minimum_leases": 46,
+        "last_leases": 69
+      },
+      {
+        "model_key": "zzshuccc:gemini-3.5-flash-lite",
+        "model_name": "gemini-3.5-flash-lite",
+        "capacity": 70,
+        "routable": true,
+        "routing_status": "routable",
+        "duration_seconds": 300.0,
+        "actual_samples_in_window": 20,
+        "estimated_lease_seconds": 17420.273,
+        "routable_capacity_seconds": 21000.0,
+        "configured_capacity_seconds": 21000.0,
+        "time_weighted_mean_leases": 58.068,
+        "time_weighted_mean_routable_capacity": 70.0,
+        "time_weighted_mean_configured_capacity": 70.0,
+        "estimated_occupied_routable_permit_fraction": 0.829537,
+        "estimated_occupied_configured_permit_fraction": 0.829537,
+        "observed_peak_leases": 70,
+        "observed_minimum_leases": 20,
+        "last_leases": 68
+      }
+    ],
+    "capacity_segments": [
+      {
+        "segment_type": "unchanged_at_observed_endpoints",
+        "start_utc": "2026-11-10T17:17:55.763523+00:00",
+        "end_utc": "2026-11-10T17:19:22.635957+00:00",
+        "observed_state_before": {
+          "routable_capacity": 157,
+          "routes": {
+            "ctm:CTM-Fable-5": 1,
+            "ctm:CTM-M3": 1,
+            "kiro:hy3": 10,
+            "kiro:hy4free": 5,
+            "zzshuc:gpt-6.1-terra": 70,
+            "zzshuccc:gemini-3.5-flash-lite": 70
+          }
+        },
+        "observed_state_after": {
+          "routable_capacity": 157,
+          "routes": {
+            "ctm:CTM-Fable-5": 1,
+            "ctm:CTM-M3": 1,
+            "kiro:hy3": 10,
+            "kiro:hy4free": 5,
+            "zzshuc:gpt-6.1-terra": 70,
+            "zzshuccc:gemini-3.5-flash-lite": 70
+          }
+        },
+        "permit_occupancy": {
+          "duration_seconds": 86.872434,
+          "actual_samples_in_window": 6,
+          "estimated_lease_seconds": 11819.487,
+          "routable_capacity_seconds": 13638.972,
+          "configured_capacity_seconds": 19720.042,
+          "time_weighted_mean_leases": 136.056,
+          "time_weighted_mean_routable_capacity": 157.0,
+          "time_weighted_mean_configured_capacity": 227.0,
+          "estimated_occupied_routable_permit_fraction": 0.866597,
+          "estimated_occupied_configured_permit_fraction": 0.599364,
+          "observed_peak_leases": 151,
+          "observed_minimum_leases": 119,
+          "last_leases": 146
+        },
+        "interpretation": "Capacity was unchanged at sampled endpoints; shorter unsampled changes are not excluded."
+      },
+      {
+        "segment_type": "capacity_transition_interval",
+        "start_utc": "2026-11-10T17:19:22.635957+00:00",
+        "end_utc": "2026-11-10T17:19:38.855975+00:00",
+        "observed_state_before": {
+          "routable_capacity": 157,
+          "routes": {
+            "ctm:CTM-Fable-5": 1,
+            "ctm:CTM-M3": 1,
+            "kiro:hy3": 10,
+            "kiro:hy4free": 5,
+            "zzshuc:gpt-6.1-terra": 70,
+            "zzshuccc:gemini-3.5-flash-lite": 70
+          }
+        },
+        "observed_state_after": {
+          "routable_capacity": 227,
+          "routes": {
+            "ctm:CTM-Fable-5": 1,
+            "ctm:CTM-M3": 1,
+            "kiro:hy3": 10,
+            "kiro:hy4free": 5,
+            "zzshu:claude-haiku-5-5": 70,
+            "zzshuc:gpt-6.1-terra": 70,
+            "zzshuccc:gemini-3.5-flash-lite": 70
+          }
+        },
+        "permit_occupancy": {
+          "duration_seconds": 16.220018,
+          "actual_samples_in_window": 2,
+          "estimated_lease_seconds": 2935.823,
+          "routable_capacity_seconds": 3114.243,
+          "configured_capacity_seconds": 3681.944,
+          "time_weighted_mean_leases": 181.0,
+          "time_weighted_mean_routable_capacity": 192.0,
+          "time_weighted_mean_configured_capacity": 227.0,
+          "estimated_occupied_routable_permit_fraction": 0.942708,
+          "estimated_occupied_configured_permit_fraction": 0.797357,
+          "observed_peak_leases": 216,
+          "observed_minimum_leases": 146,
+          "last_leases": 216
+        },
+        "interpretation": "Lease trajectory is unobserved between these endpoints. See observed_route_recoveries for independently corroborated health-state recovery time; interpolation is unchanged."
+      },
+      {
+        "segment_type": "unchanged_at_observed_endpoints",
+        "start_utc": "2026-11-10T17:19:38.855975+00:00",
+        "end_utc": "2026-11-10T17:22:55.763523+00:00",
+        "observed_state_before": {
+          "routable_capacity": 227,
+          "routes": {
+            "ctm:CTM-Fable-5": 1,
+            "ctm:CTM-M3": 1,
+            "kiro:hy3": 10,
+            "kiro:hy4free": 5,
+            "zzshu:claude-haiku-5-5": 70,
+            "zzshuc:gpt-6.1-terra": 70,
+            "zzshuccc:gemini-3.5-flash-lite": 70
+          }
+        },
+        "observed_state_after": {
+          "routable_capacity": 227,
+          "routes": {
+            "ctm:CTM-Fable-5": 1,
+            "ctm:CTM-M3": 1,
+            "kiro:hy3": 10,
+            "kiro:hy4free": 5,
+            "zzshu:claude-haiku-5-5": 70,
+            "zzshuc:gpt-6.1-terra": 70,
+            "zzshuccc:gemini-3.5-flash-lite": 70
+          }
+        },
+        "permit_occupancy": {
+          "duration_seconds": 196.907548,
+          "actual_samples_in_window": 14,
+          "estimated_lease_seconds": 40270.708,
+          "routable_capacity_seconds": 44698.013,
+          "configured_capacity_seconds": 44698.013,
+          "time_weighted_mean_leases": 204.516,
+          "time_weighted_mean_routable_capacity": 227.0,
+          "time_weighted_mean_configured_capacity": 227.0,
+          "estimated_occupied_routable_permit_fraction": 0.900951,
+          "estimated_occupied_configured_permit_fraction": 0.900951,
+          "observed_peak_leases": 226,
+          "observed_minimum_leases": 138,
+          "last_leases": 221
+        },
+        "interpretation": "Capacity was unchanged at sampled endpoints; shorter unsampled changes are not excluded."
+      }
+    ],
+    "sampling_boundary_anchor_before_window": {
+      "sampled_at_utc": "2026-11-10T17:17:45.930340+00:00",
+      "valid_non_health_leases": 56,
+      "routable_capacity": 157,
+      "configured_capacity": 227,
+      "non_health_queued": 34,
+      "article_open_steps": {
+        "author": 104,
+        "ready": 40,
+        "reviewer": 142
+      },
+      "summary_open_steps": {
+        "author": 5,
+        "ready": 68,
+        "reviewer": 6
+      }
+    },
+    "samples": [
+      {
+        "sampled_at_utc": "2026-11-10T17:18:02.115595+00:00",
+        "valid_non_health_leases": 150,
+        "routable_capacity": 157,
+        "configured_capacity": 227,
+        "non_health_queued": 122,
+        "article_open_steps": {
+          "author": 113,
+          "ready": 67,
+          "reviewer": 134
+        },
+        "summary_open_steps": {
+          "author": 6,
+          "ready": 48,
+          "reviewer": 5
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:18:18.240198+00:00",
+        "valid_non_health_leases": 143,
+        "routable_capacity": 157,
+        "configured_capacity": 227,
+        "non_health_queued": 206,
+        "article_open_steps": {
+          "author": 98,
+          "reviewer": 207
+        },
+        "summary_open_steps": {
+          "author": 6,
+          "ready": 14,
+          "reviewer": 5
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:18:34.368698+00:00",
+        "valid_non_health_leases": 119,
+        "routable_capacity": 157,
+        "configured_capacity": 227,
+        "non_health_queued": 248,
+        "article_open_steps": {
+          "author": 101,
+          "reviewer": 201
+        },
+        "summary_open_steps": {
+          "author": 6,
+          "ready": 25,
+          "reviewer": 5
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:18:50.432185+00:00",
+        "valid_non_health_leases": 121,
+        "routable_capacity": 157,
+        "configured_capacity": 227,
+        "non_health_queued": 69,
+        "article_open_steps": {
+          "author": 81,
+          "ready": 69,
+          "reviewer": 150
+        },
+        "summary_open_steps": {
+          "reviewer": 9
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:19:06.521953+00:00",
+        "valid_non_health_leases": 151,
+        "routable_capacity": 157,
+        "configured_capacity": 227,
+        "non_health_queued": 179,
+        "article_open_steps": {
+          "author": 111,
+          "ready": 21,
+          "reviewer": 181
+        },
+        "summary_open_steps": {
+          "author": 2,
+          "reviewer": 1
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:19:22.635957+00:00",
+        "valid_non_health_leases": 146,
+        "routable_capacity": 157,
+        "configured_capacity": 227,
+        "non_health_queued": 408,
+        "article_open_steps": {
+          "author": 67,
+          "ready": 16,
+          "reviewer": 230
+        },
+        "summary_open_steps": {
+          "author": 204,
+          "ready": 23,
+          "reviewer": 1
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:19:38.855975+00:00",
+        "valid_non_health_leases": 216,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 313,
+        "article_open_steps": {
+          "author": 69,
+          "ready": 35,
+          "reviewer": 255
+        },
+        "summary_open_steps": {
+          "author": 220,
+          "reviewer": 2
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:19:55.153569+00:00",
+        "valid_non_health_leases": 219,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 181,
+        "article_open_steps": {
+          "author": 244,
+          "ready": 80,
+          "reviewer": 128
+        },
+        "summary_open_steps": {
+          "author": 178,
+          "reviewer": 44
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:20:11.344986+00:00",
+        "valid_non_health_leases": 175,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 362,
+        "article_open_steps": {
+          "author": 194,
+          "ready": 26,
+          "reviewer": 234
+        },
+        "summary_open_steps": {
+          "author": 80,
+          "reviewer": 142
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:20:27.459781+00:00",
+        "valid_non_health_leases": 202,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 368,
+        "article_open_steps": {
+          "author": 214,
+          "ready": 28,
+          "reviewer": 212
+        },
+        "summary_open_steps": {
+          "author": 67,
+          "reviewer": 155
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:20:44.331621+00:00",
+        "valid_non_health_leases": 210,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 296,
+        "article_open_steps": {
+          "author": 242,
+          "ready": 22,
+          "reviewer": 190
+        },
+        "summary_open_steps": {
+          "author": 67,
+          "reviewer": 155
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:21:00.723690+00:00",
+        "valid_non_health_leases": 138,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 299,
+        "article_open_steps": {
+          "author": 207,
+          "ready": 63,
+          "reviewer": 182
+        },
+        "summary_open_steps": {
+          "author": 67,
+          "reviewer": 155
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:21:17.113403+00:00",
+        "valid_non_health_leases": 204,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 251,
+        "article_open_steps": {
+          "author": 125,
+          "ready": 116,
+          "reviewer": 212
+        },
+        "summary_open_steps": {
+          "author": 62,
+          "reviewer": 160
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:21:33.215528+00:00",
+        "valid_non_health_leases": 213,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 320,
+        "article_open_steps": {
+          "author": 193,
+          "ready": 29,
+          "reviewer": 231
+        },
+        "summary_open_steps": {
+          "author": 39,
+          "reviewer": 183
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:21:49.276990+00:00",
+        "valid_non_health_leases": 226,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 244,
+        "article_open_steps": {
+          "author": 185,
+          "ready": 85,
+          "reviewer": 157
+        },
+        "summary_open_steps": {
+          "author": 28,
+          "reviewer": 194
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:22:05.355003+00:00",
+        "valid_non_health_leases": 223,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 206,
+        "article_open_steps": {
+          "author": 107,
+          "ready": 122,
+          "reviewer": 225
+        },
+        "summary_open_steps": {
+          "author": 22,
+          "reviewer": 200
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:22:21.459839+00:00",
+        "valid_non_health_leases": 209,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 255,
+        "article_open_steps": {
+          "author": 174,
+          "ready": 153,
+          "reviewer": 127
+        },
+        "summary_open_steps": {
+          "author": 18,
+          "reviewer": 198
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:22:37.679538+00:00",
+        "valid_non_health_leases": 219,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 339,
+        "article_open_steps": {
+          "author": 127,
+          "ready": 29,
+          "reviewer": 279
+        },
+        "summary_open_steps": {
+          "author": 21,
+          "reviewer": 194
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:22:53.773216+00:00",
+        "valid_non_health_leases": 215,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 177,
+        "article_open_steps": {
+          "author": 129,
+          "ready": 173,
+          "reviewer": 151
+        },
+        "summary_open_steps": {
+          "author": 34,
+          "reviewer": 170
+        }
+      },
+      {
+        "sampled_at_utc": "2026-11-10T17:22:55.763523+00:00",
+        "valid_non_health_leases": 221,
+        "routable_capacity": 227,
+        "configured_capacity": 227,
+        "non_health_queued": 207,
+        "article_open_steps": {
+          "author": 141,
+          "ready": 120,
+          "reviewer": 193
+        },
+        "summary_open_steps": {
+          "author": 31,
+          "reviewer": 172
+        }
+      }
+    ]
+  },
+  "all_observed_samples_occupancy": {
+    "start_utc": "2026-11-10T17:16:55.836590+00:00",
+    "end_utc": "2026-11-10T17:22:55.763523+00:00",
+    "duration_seconds": 359.926933,
+    "actual_samples_in_window": 22,
+    "estimated_lease_seconds": 57260.082,
+    "routable_capacity_seconds": 70859.757,
+    "configured_capacity_seconds": 81703.414,
+    "time_weighted_mean_leases": 159.088,
+    "time_weighted_mean_routable_capacity": 196.873,
+    "time_weighted_mean_configured_capacity": 227.0,
+    "estimated_occupied_routable_permit_fraction": 0.808076,
+    "estimated_occupied_configured_permit_fraction": 0.700829,
+    "observed_peak_leases": 226,
+    "observed_minimum_leases": 0,
+    "last_leases": 221,
+    "scope": "Includes startup samples outside the final outcome window; not interchangeable with final-window throughput."
+  },
+  "observed_route_recoveries": [
+    {
+      "model_key": "zzshu:claude-haiku-5-5",
+      "model_name": "claude-haiku-5-5",
+      "capacity": 70,
+      "last_observed_unavailable_at_utc": "2026-11-10T17:19:22.635957+00:00",
+      "first_observed_routable_at_utc": "2026-11-10T17:19:38.855975+00:00",
+      "previous_routing_status": "degraded",
+      "restored_routing_status": "routable",
+      "database_corroboration": {
+        "source": "Read-only database inspection reported by the catalogue reviewer.",
+        "activity_type": "check_model",
+        "activity_created_at_utc": "2026-11-10T17:19:26.563+00:00",
+        "activity_finished_at_utc": "2026-11-10T17:19:31.127+00:00",
+        "model_last_checked_at_utc": "2026-11-10T17:19:30.875+00:00",
+        "routing_state_last_recovered_at_utc": "2026-11-10T17:19:30.875+00:00",
+        "initiator": "Not established; do not infer automatic or manual initiation.",
+        "not_probe_degraded": true,
+        "integration_effect": "None. Occupancy remains interpolated from measured snapshots; the timestamp is not used to invent unobserved lease values."
+      }
+    }
+  ],
+  "remaining_backlog_at_final_snapshot": {
+    "review_total": 339677,
+    "sql_eligible": 212045,
+    "missing_abstract_context": 122456,
+    "other_ineligible": 5176,
+    "hold_metadata_total": 13268,
+    "parked_unchanged_holds": 11920,
+    "fingerprint_candidates_checked": 12064,
+    "eligible_not_parked": 200125,
+    "scan_seconds": 31.511,
+    "exact_hold_check": true
+  },
+  "conditional_estimate_at_final_snapshot": {
+    "window_seconds": 300.0,
+    "distinct_reviewed_articles": 1417,
+    "reviewed_articles_per_minute": 283.4,
+    "reviewed_summaries_per_minute": 5.4,
+    "summary_archive_count": 0,
+    "final_publish_or_exclude_per_minute": 225.2,
+    "eligible_remaining_including_inflight": 200125,
+    "eligible_drain_eta_minutes": 706.2,
+    "parked_unchanged_holds": 11920,
+    "parked_holds_eta_minutes": null,
+    "missing_abstract_context": 122456,
+    "missing_context_eta_minutes": null,
+    "interpretation": "ETA drains the currently eligible review pass, including newly parked holds; it does not promise all articles will be published/excluded. Holds require changed evidence, missing abstracts require enrichment. Assumes observed throughput persists and no new arrivals.",
+    "eligible_drain_eta_hours": 11.77,
+    "confidence_interval": null
+  },
+  "comparison_to_batch8": {
+    "source": {
+      "name": "production_isolated_workers.json",
+      "sha256": "22db0a01f48675ab11320cf7f464986cc93ae543fe3428a51633ea789565615f"
+    },
+    "method": "Both final windows use exactly 300 seconds, identical outcome definitions, and piecewise-linear time integration of leases and capacities.",
+    "batch8_window_start_utc": "2026-11-10T17:00:00.186588+00:00",
+    "batch8_window_end_utc": "2026-11-10T17:05:00.186588+00:00",
+    "batch8_reviewed_articles_per_minute": 292.2,
+    "batch32_reviewed_articles_per_minute": 283.4,
+    "observed_reviewed_rate_ratio": 0.969884,
+    "batch8_permit_occupancy": {
+      "duration_seconds": 300.0,
+      "actual_samples_in_window": 20,
+      "estimated_lease_seconds": 30703.359,
+      "routable_capacity_seconds": 47057.083,
+      "time_weighted_mean_leases": 102.345,
+      "time_weighted_mean_routable_capacity": 156.857,
+      "observed_peak_leases": 157,
+      "observed_minimum_leases": 23,
+      "last_leases": 141,
+      "configured_capacity_seconds": 47100.0,
+      "configured_capacity": 157,
+      "estimated_occupied_configured_permit_fraction": 0.651876,
+      "estimated_occupied_routable_permit_fraction": 0.65247
+    },
+    "batch32_permit_occupancy": {
+      "duration_seconds": 300.0,
+      "actual_samples_in_window": 20,
+      "estimated_lease_seconds": 55026.018,
+      "routable_capacity_seconds": 61451.229,
+      "configured_capacity_seconds": 68100.0,
+      "time_weighted_mean_leases": 183.42,
+      "time_weighted_mean_routable_capacity": 204.837,
+      "time_weighted_mean_configured_capacity": 227.0,
+      "estimated_occupied_routable_permit_fraction": 0.895442,
+      "estimated_occupied_configured_permit_fraction": 0.808018,
+      "observed_peak_leases": 226,
+      "observed_minimum_leases": 119,
+      "last_leases": 221
+    },
+    "causal_claim": false,
+    "confounders": [
+      "A previously degraded 70-capacity route recovered during the batch32 observation. Available capacity and model mix therefore changed.",
+      "These sequential production windows have different queued content, provider latency, warm-up state and concurrent general-worker/database load."
+    ],
+    "interpretation": "Observed production difference, not a controlled A/B causal estimate of changing advance batch size."
+  },
+  "measurement_definitions": {
+    "reviewed_article": "Distinct article with its latest terminal outcome in the window equal to published, rejected or held; each subject counted once even if retried.",
+    "throughput_timestamp": "Workflow finished_at within the inclusive window bounds. Current-generation progress is separate from window throughput.",
+    "model_call_timestamp": "AIModelCallLog.created_at within the inclusive window bounds. Logs record application attempts, not necessarily one HTTP request each.",
+    "activity_timestamp": "AIWorkItem.finished_at within the inclusive window bounds. Activity completion and call-log counts can differ at boundaries and through retries.",
+    "occupied_permits": "Unexpired, leased, non-health AIWorkItem rows across all dispatcher owners; not real-time HTTP sockets or measured HTTP concurrency.",
+    "capacity_denominator": "Configured and dynamically routable capacity are both integrated over exactly the same window as occupied leases. Dynamic routable capacity is the primary occupancy denominator for the batch8 comparison; this run includes a 70-permit route recovery. Existing leases can remain valid during route cooldown.",
+    "time_weighting": "Same piecewise-linear/trapezoidal method as the batch8 baseline, clipped to the exact final 300-second window. The start is interpolated between bracketing observations. The independently corroborated recovery timestamp does not provide unobserved lease values; integration retains the same sampled interpolation method instead of inserting synthetic points.",
+    "peak": "Largest observed value among actual samples inside the stated window; unsampled peaks may be higher.",
+    "held_backlog": "Exact eligibility-filtered, fingerprint-aware unchanged-hold check; raw hold metadata is not used as a substitute."
+  },
+  "limitations": [
+    "Route recovery is explicitly separated into unchanged-capacity observed spans and transition intervals. A check_model recovery timestamp is independently corroborated in the database; exact lease trajectories between samples remain unobserved.",
+    "Per-capacity-segment business throughput is not reconstructed by subtracting overlapping rolling windows. Saved snapshots do not contain event-level timestamps sufficient for exact segment throughput.",
+    "The time-weighted occupancy estimate counts reserved permits, not live HTTP concurrency or provider utilization.",
+    "Held, published and rejected are distinct reviewed outcomes. Waiting/skipped summary outcomes are not successful AI reviews.",
+    "Conditional ETA estimates one pass of currently eligible non-parked articles, assumes no new arrivals and sustained observed throughput, and is not a confidence interval.",
+    "Unchanged holds and missing abstracts cannot be cleared by repeating the same calls; their automatic-clearance ETA remains null.",
+    "No model-quality audit is inferred from the prior batch8 sample; this file contains performance and backlog aggregates only.",
+    "No article text, request/response content, task identifiers, credentials, URLs or host connection details are exported."
+  ]
+}
