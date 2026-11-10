@@ -15,9 +15,7 @@ from typing import Any
 from uuid import uuid4
 
 from src.core.logging import get_logger
-from src.ai.model_center import (
-    get_runtime_routes,
-)
+from src.ai.model_center import get_runtime_routes
 
 
 ROOT = Path(__file__).resolve().parents[2]

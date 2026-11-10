@@ -471,6 +471,9 @@ class TaskOperationsService:
         ]
 
     async def retry(self, task_uuid: str) -> dict[str, Any] | None:
+        from src.ai.runtime.store import _lock_reservation, restart_parent_activities
+
+        await _lock_reservation(self.db, f"parent:{task_uuid}")
         task = (
             await self.db.execute(
                 select(Task).where(Task.task_uuid == task_uuid).with_for_update()
@@ -513,6 +516,7 @@ class TaskOperationsService:
             datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         )
         task.metadata_ = metadata
+        await restart_parent_activities(self.db, task)
         task.status = TaskStatus.QUEUED
         task.progress = 0
         task.completed_steps = 0

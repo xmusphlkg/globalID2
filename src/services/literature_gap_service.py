@@ -389,7 +389,7 @@ class LiteratureGapService:
         cfg = get_config().literature
         if not cfg.gap_discovery_enabled:
             raise ValueError("Literature evidence-gap discovery is disabled")
-        from src.ai.work_queue import current_parent
+        from src.ai.runtime import current_parent
 
         parent = current_parent()
         source_task_uuid = task.task_uuid if task else parent.task_uuid if parent else None

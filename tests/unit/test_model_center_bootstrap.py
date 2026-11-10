@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 from src.ai import model_center
+from src.ai.catalogue import probes, responses
 
 
 @pytest.fixture(autouse=True)
@@ -29,9 +30,7 @@ def _install_bootstrap_fakes(monkeypatch, *, engine=None):
         # lock. Only the lock owner may reach this function.
         await asyncio.sleep(0)
 
-    monkeypatch.setattr(
-        model_center, "get_engine", lambda: current_engine["value"]
-    )
+    monkeypatch.setattr(model_center, "get_engine", lambda: current_engine["value"])
     monkeypatch.setattr(model_center, "ensure_model_center_tables", ensure_tables)
     monkeypatch.setattr(
         model_center,
@@ -42,17 +41,17 @@ def _install_bootstrap_fakes(monkeypatch, *, engine=None):
 
 
 def test_structured_workload_probe_accepts_the_contract_payload() -> None:
-    model_center._validate_structured_test_response(
+    probes._validate_structured_test_response(
         '{"status":"globalid-structured-probe-ok","items":['
         '{"id":1,"title":"Wastewater","summary":"Wastewater surveillance provides an early population signal that can lead observed clinical case trends.","confidence":0.9},'
         '{"id":2,"title":"Vaccination","summary":"Vaccination lowers the probability of severe outcomes across the synthetic evidence supplied for this probe.","confidence":0.8},'
         '{"id":3,"title":"Reporting delay","summary":"Reporting delays systematically bias the newest observations downward until delayed records are incorporated.","confidence":0.85}'
-        ']}'
+        "]}"
     )
 
 
 def test_structured_workload_probe_accepts_production_style_json_fence() -> None:
-    model_center._validate_structured_test_response(
+    probes._validate_structured_test_response(
         """Here is the requested result:
 ```json
 {"status":"globalid-structured-probe-ok","items":[
@@ -66,9 +65,19 @@ def test_structured_workload_probe_accepts_production_style_json_fence() -> None
 
 
 def test_model_catalogue_extraction_is_stable_and_deduplicated() -> None:
-    payload = {"data": [{"id": "qwen3.8-flash"}, {"id": "qwen3.6-flash"}, {"id": "qwen3.8-flash"}, {"missing": "id"}]}
+    payload = {
+        "data": [
+            {"id": "qwen3.8-flash"},
+            {"id": "qwen3.6-flash"},
+            {"id": "qwen3.8-flash"},
+            {"missing": "id"},
+        ]
+    }
 
-    assert model_center._model_ids_from_catalogue(payload) == ["qwen3.6-flash", "qwen3.8-flash"]
+    assert responses._model_ids_from_catalogue(payload) == [
+        "qwen3.6-flash",
+        "qwen3.8-flash",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -81,11 +90,13 @@ def test_model_catalogue_extraction_is_stable_and_deduplicated() -> None:
 )
 def test_structured_workload_probe_rejects_invalid_payloads(response: str) -> None:
     with pytest.raises(RuntimeError):
-        model_center._validate_structured_test_response(response)
+        probes._validate_structured_test_response(response)
 
 
 @pytest.mark.asyncio
-async def test_check_all_models_uses_provider_bounded_parallel_probes(monkeypatch) -> None:
+async def test_check_all_models_uses_provider_bounded_parallel_probes(
+    monkeypatch,
+) -> None:
     routes = [
         {
             "model_id": 11,
@@ -184,7 +195,9 @@ async def test_force_always_bypasses_bootstrap_cache(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_changed_engine_does_not_reuse_previous_database_check(monkeypatch) -> None:
+async def test_changed_engine_does_not_reuse_previous_database_check(
+    monkeypatch,
+) -> None:
     current_engine, calls, _ = _install_bootstrap_fakes(monkeypatch)
 
     await model_center.bootstrap_model_center_from_env()
@@ -200,9 +213,7 @@ async def test_expired_check_revisits_database_after_out_of_band_clear(
 ) -> None:
     _, calls, _ = _install_bootstrap_fakes(monkeypatch)
     monotonic_now = {"value": 100.0}
-    monkeypatch.setattr(
-        model_center.time, "monotonic", lambda: monotonic_now["value"]
-    )
+    monkeypatch.setattr(model_center.time, "monotonic", lambda: monotonic_now["value"])
 
     await model_center.bootstrap_model_center_from_env()
     # This represents the same database being cleared by an external

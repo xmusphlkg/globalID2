@@ -55,6 +55,7 @@ async def test_model_screening_cannot_publish_without_abstract_evidence(reason, 
 
     row = article(
         article_id="example", publication_status="review",
+        integrity_status="current", peer_review_status="peer_reviewed",
         abstract_text=("Patients with dengue were assessed for infection and clinical outcomes. "
                        "The investigators measured changes over the study period."),
     )
@@ -74,7 +75,7 @@ async def test_model_screening_cannot_publish_without_abstract_evidence(reason, 
             self.events.append(event)
 
     db = Database()
-    counts = await service._write_stream_results(db, "articles", [("example", "snapshot", reviewed)])
+    counts = (await service._apply_literature_results(db, "articles", [("example", "snapshot", reviewed)])).counts
     assert row.publication_status == expected_status
     assert counts["held"] == (expected_status == "review")
     assert len(db.events) == (expected_status == "published")

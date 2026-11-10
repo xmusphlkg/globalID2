@@ -1,0 +1,348 @@
+{
+  "window_start": "2026-11-10T15:27:06.758582+00:00",
+  "window_end": "2026-11-10T15:32:06.715324+00:00",
+  "samples": 14,
+  "errors": [],
+  "estimate": {
+    "window_seconds": 300.0,
+    "distinct_reviewed_articles": 525,
+    "reviewed_articles_per_minute": 105.0,
+    "reviewed_summaries_per_minute": 0.2,
+    "summary_archive_count": 0,
+    "final_publish_or_exclude_per_minute": 86.0,
+    "eligible_remaining_including_inflight": 216340,
+    "eligible_drain_eta_minutes": 2060.4,
+    "parked_unchanged_holds": 8724,
+    "parked_holds_eta_minutes": null,
+    "missing_abstract_context": 122128,
+    "missing_context_eta_minutes": null,
+    "interpretation": "ETA drains the currently eligible review pass, including newly parked holds; it does not promise all articles will be published/excluded. Holds require changed evidence, missing abstracts require enrichment. Assumes observed throughput persists and no new arrivals."
+  },
+  "article_backlog_start": {
+    "review_total": 352795,
+    "sql_eligible": 225494,
+    "missing_abstract_context": 122128,
+    "other_ineligible": 5173,
+    "hold_metadata_total": 9921,
+    "parked_unchanged_holds": 8629,
+    "fingerprint_candidates_checked": 8759,
+    "eligible_not_parked": 216865,
+    "scan_seconds": 29.334,
+    "exact_hold_check": true
+  },
+  "article_backlog_end": {
+    "review_total": 352365,
+    "sql_eligible": 225064,
+    "missing_abstract_context": 122128,
+    "other_ineligible": 5173,
+    "hold_metadata_total": 10015,
+    "parked_unchanged_holds": 8724,
+    "fingerprint_candidates_checked": 8853,
+    "eligible_not_parked": 216340,
+    "scan_seconds": 29.124,
+    "exact_hold_check": true
+  },
+  "net_eligible_reduction": 525,
+  "workflow_outcomes": [
+    {
+      "kind": "articles",
+      "outcome": "deferred",
+      "count": 1
+    },
+    {
+      "kind": "summaries",
+      "outcome": "held",
+      "count": 1
+    },
+    {
+      "kind": "articles",
+      "outcome": "held",
+      "count": 95
+    },
+    {
+      "kind": "articles",
+      "outcome": "published",
+      "count": 125
+    },
+    {
+      "kind": "articles",
+      "outcome": "rejected",
+      "count": 305
+    },
+    {
+      "kind": "summaries",
+      "outcome": "waiting",
+      "count": 3090
+    }
+  ],
+  "rolling_approximately_two_minute_rates": [
+    {
+      "end": "2026-11-10T15:29:08.498560+00:00",
+      "seconds": 121.74,
+      "articles_per_minute": 106.46
+    },
+    {
+      "end": "2026-11-10T15:30:10.858637+00:00",
+      "seconds": 124.49,
+      "articles_per_minute": 118.09
+    },
+    {
+      "end": "2026-11-10T15:30:31.577476+00:00",
+      "seconds": 124.46,
+      "articles_per_minute": 113.29
+    },
+    {
+      "end": "2026-11-10T15:30:52.318207+00:00",
+      "seconds": 124.5,
+      "articles_per_minute": 107.95
+    },
+    {
+      "end": "2026-11-10T15:31:12.992533+00:00",
+      "seconds": 124.49,
+      "articles_per_minute": 104.58
+    },
+    {
+      "end": "2026-11-10T15:31:33.761394+00:00",
+      "seconds": 124.49,
+      "articles_per_minute": 104.11
+    },
+    {
+      "end": "2026-11-10T15:31:54.515942+00:00",
+      "seconds": 124.47,
+      "articles_per_minute": 85.32
+    },
+    {
+      "end": "2026-11-10T15:32:06.715324+00:00",
+      "seconds": 115.86,
+      "articles_per_minute": 96.33
+    }
+  ],
+  "observed_rate_eta_range_hours": [
+    30.5,
+    42.3
+  ],
+  "configured_available_capacity": 157,
+  "valid_lease_min": 16,
+  "valid_lease_max": 137,
+  "sampled_time_weighted_leases": 55.09,
+  "sampled_time_weighted_lease_occupancy": 0.3509,
+  "client_connection_range": [
+    44,
+    58
+  ],
+  "max_lock_waiters": 28,
+  "model_call_counts": {
+    "success": 1642,
+    "failed": 10
+  },
+  "model_calls": [
+    {
+      "model_key": "ctm:CTM-Fable-5",
+      "status": "success",
+      "count": 3,
+      "mean_logged_latency_ms": 104839.76666666666,
+      "p50_logged_latency_ms": 93338.7,
+      "p95_logged_latency_ms": 139804.71
+    },
+    {
+      "model_key": "ctm:CTM-M3",
+      "status": "success",
+      "count": 16,
+      "mean_logged_latency_ms": 11258.306250000001,
+      "p50_logged_latency_ms": 7873.049999999999,
+      "p95_logged_latency_ms": 27025.075
+    },
+    {
+      "model_key": "kiro:hy3",
+      "status": "failed",
+      "count": 1,
+      "mean_logged_latency_ms": 102137.2,
+      "p50_logged_latency_ms": 102137.2,
+      "p95_logged_latency_ms": 102137.2
+    },
+    {
+      "model_key": "kiro:hy3",
+      "status": "success",
+      "count": 57,
+      "mean_logged_latency_ms": 41265.466666666674,
+      "p50_logged_latency_ms": 42765.2,
+      "p95_logged_latency_ms": 70970.41999999998
+    },
+    {
+      "model_key": "kiro:hy4free",
+      "status": "success",
+      "count": 10,
+      "mean_logged_latency_ms": 122655.53,
+      "p50_logged_latency_ms": 116472.5,
+      "p95_logged_latency_ms": 211117.93
+    },
+    {
+      "model_key": "zzshuc:gpt-6.1-terra",
+      "status": "failed",
+      "count": 4,
+      "mean_logged_latency_ms": 127.72500000000001,
+      "p50_logged_latency_ms": 124.5,
+      "p95_logged_latency_ms": 142.30499999999998
+    },
+    {
+      "model_key": "zzshuc:gpt-6.1-terra",
+      "status": "success",
+      "count": 749,
+      "mean_logged_latency_ms": 8239.612683578105,
+      "p50_logged_latency_ms": 6329.5,
+      "p95_logged_latency_ms": 17436.26
+    },
+    {
+      "model_key": "zzshuccc:gemini-3.5-flash-lite",
+      "status": "failed",
+      "count": 5,
+      "mean_logged_latency_ms": 337.78000000000003,
+      "p50_logged_latency_ms": 128.0,
+      "p95_logged_latency_ms": 968.9599999999999
+    },
+    {
+      "model_key": "zzshuccc:gemini-3.5-flash-lite",
+      "status": "success",
+      "count": 807,
+      "mean_logged_latency_ms": 2187.293556381662,
+      "p50_logged_latency_ms": 1969.7,
+      "p95_logged_latency_ms": 3413.6099999999974
+    }
+  ],
+  "failure_types": [
+    {
+      "error_type": "APIConnectionError",
+      "count": 9
+    },
+    {
+      "error_type": "RuntimeError",
+      "count": 1
+    }
+  ],
+  "review_arrivals": [],
+  "new_review_articles": 0,
+  "parent_ai_states": [
+    {
+      "task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "RUNNING",
+      "progress": 96,
+      "generation": 1,
+      "operation": "governance_stream",
+      "kind": "articles",
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:25:23.557485+00:00",
+      "completed_at": null
+    },
+    {
+      "task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "RUNNING",
+      "progress": 99,
+      "generation": 1,
+      "operation": "governance_stream",
+      "kind": "summaries",
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:25:24.987043+00:00",
+      "completed_at": null
+    },
+    {
+      "task_uuid": "f47aa007-c535-411e-bc5f-3dc5ba0cb37f",
+      "task_type": "ENRICH_LITERATURE",
+      "status": "RUNNING",
+      "progress": 100,
+      "generation": 1,
+      "operation": null,
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:25:24.899070+00:00",
+      "completed_at": null
+    },
+    {
+      "task_uuid": "b0022483-217d-4501-a680-1f1592a694cd",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:27:16.825835+00:00",
+      "completed_at": "2026-11-10 15:27:59.120657+00:00"
+    },
+    {
+      "task_uuid": "7e783580-127d-4f83-a32f-0468c60090be",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:28:15.236737+00:00",
+      "completed_at": "2026-11-10 15:28:50.527050+00:00"
+    },
+    {
+      "task_uuid": "96baacd4-1769-44a9-9633-170ff73f986e",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:29:30.588259+00:00",
+      "completed_at": "2026-11-10 15:29:45.920354+00:00"
+    },
+    {
+      "task_uuid": "08e526a8-1dee-42d7-ad01-d3684bb54153",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:30:14.631143+00:00",
+      "completed_at": "2026-11-10 15:31:01.401125+00:00"
+    },
+    {
+      "task_uuid": "367961e6-40d6-4bfa-999b-13f79ec70221",
+      "task_type": "AGENT_WORKFLOW",
+      "status": "COMPLETED",
+      "progress": 100,
+      "generation": 0,
+      "operation": "knowledge_reconcile",
+      "kind": null,
+      "cancel_requested": false,
+      "started_at": "2026-11-10 15:31:14.856879+00:00",
+      "completed_at": "2026-11-10 15:31:56.424706+00:00"
+    }
+  ],
+  "drains": [
+    {
+      "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+      "kind": "articles",
+      "generation": 1,
+      "cursor": 2127,
+      "high_watermark": 400516,
+      "scanned": 989,
+      "admitted": 942,
+      "exhausted": false,
+      "buffer_size": "512",
+      "max_items": null
+    },
+    {
+      "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+      "kind": "summaries",
+      "generation": 1,
+      "cursor": 11998,
+      "high_watermark": 84201,
+      "scanned": 4416,
+      "admitted": 3890,
+      "exhausted": false,
+      "buffer_size": "512",
+      "max_items": null
+    }
+  ]
+}

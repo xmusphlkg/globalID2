@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, or_, select, union
 
-from src.ai.model_center import is_provider_authentication_error
+from src.ai.catalogue.errors import is_provider_authentication_error
 from src.control_plane.schedule_state import schedule_state_repository
 from src.core import get_config, get_database, get_logger
 from src.core.task_manager import task_manager

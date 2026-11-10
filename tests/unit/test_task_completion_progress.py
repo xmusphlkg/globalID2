@@ -106,3 +106,68 @@ async def test_recent_failure_count_uses_failure_time_not_a_later_metadata_updat
         count = (await db.execute(select(func.count(Task.id)).where(
             *task_channel_clause("surveillance"), recent_failure_clause(now)))).scalar_one()
         assert count == 2
+
+
+@pytest.mark.parametrize("status", [TaskStatus.RUNNING, TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED])
+async def test_obsolete_execution_cannot_overwrite_retried_parent(task_store, status):
+    from src.services.exceptions import TaskExecutionSupersededError
+    sessions, manager = task_store
+    async with sessions() as db:
+        db.add(Task(task_uuid="retry-generation", task_name="Retry", task_type=TaskType.AGENT_WORKFLOW,
+                    status=TaskStatus.QUEUED, metadata_={"ai_execution_generation": 1}))
+        await db.commit()
+    with pytest.raises(TaskExecutionSupersededError):
+        await manager.update_task_status("retry-generation", status, expected_ai_generation=0)
+    async with sessions() as db:
+        saved = await db.scalar(select(Task).where(Task.task_uuid == "retry-generation"))
+        assert saved.status == TaskStatus.QUEUED
+        assert saved.metadata_["ai_execution_generation"] == 1
+    await manager.update_task_status("retry-generation", TaskStatus.RUNNING, expected_ai_generation=1)
+    async with sessions() as db:
+        saved = await db.scalar(select(Task).where(Task.task_uuid == "retry-generation"))
+        assert saved.status == TaskStatus.RUNNING
+
+
+@pytest.mark.parametrize("cancelled", [False, True])
+async def test_obsolete_lifecycle_does_not_run_terminal_side_effects(monkeypatch, cancelled):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from src.services import _lifecycle
+    from src.services.exceptions import TaskCancelledError, TaskExecutionSupersededError
+
+    task = SimpleNamespace(task_uuid="old-execution", task_type=TaskType.GENERATE_REPORT,
+                           metadata_={"ai_execution_generation": 0})
+    async def update(_uuid, status, **kwargs):
+        assert kwargs["expected_ai_generation"] == 0
+        if status != TaskStatus.RUNNING:
+            raise TaskExecutionSupersededError("new retry already queued")
+    completion = AsyncMock()
+    alert = AsyncMock()
+    mark_report = AsyncMock()
+    monkeypatch.setattr(_lifecycle.task_manager, "update_task_status", update)
+    monkeypatch.setattr(_lifecycle.task_manager, "is_cancel_requested", AsyncMock(return_value=False))
+    monkeypatch.setattr(_lifecycle.task_manager, "add_workbook_entry", AsyncMock())
+    monkeypatch.setattr(_lifecycle.data_release_service, "maybe_trigger_after_task_completion", completion)
+    monkeypatch.setattr(_lifecycle.task_alert_service, "send_task_alert", alert)
+    monkeypatch.setattr(_lifecycle, "_mark_report", mark_report)
+    async with _lifecycle.task_lifecycle(task, exit_on_cancel=False):
+        if cancelled:
+            raise TaskCancelledError("obsolete run cancelled")
+    completion.assert_not_awaited()
+    alert.assert_not_awaited()
+    mark_report.assert_not_awaited()
+
+
+async def test_business_cancellation_checkpoint_stops_obsolete_generation(task_store):
+    from src.ai.runtime.context import ParentContext, _PARENT
+    sessions, manager = task_store
+    async with sessions() as db:
+        db.add(Task(task_uuid="checkpoint", task_name="Retry", task_type=TaskType.GENERATE_REPORT,
+                    status=TaskStatus.QUEUED, metadata_={"ai_execution_generation": 1}))
+        await db.commit()
+    for generation, cancelled in [(0, True), (1, False)]:
+        token = _PARENT.set(ParentContext("checkpoint", "report_section", "high", generation=generation))
+        try:
+            assert await manager.is_cancel_requested("checkpoint") is cancelled
+        finally:
+            _PARENT.reset(token)

@@ -259,7 +259,7 @@ class KnowledgeAutomationService:
 
     async def reconcile_once(self) -> dict[str, Any]:
         """Scheduler entry: enqueue maintenance; only a worker mutates profiles."""
-        from src.ai.work_queue import current_parent
+        from src.ai.runtime import current_parent
         from src.services.model_operations import enqueue_model_operation
         from src.domain import TaskPriority
         parent = current_parent()
@@ -502,7 +502,7 @@ class KnowledgeAutomationService:
                         + int(transport_profile_recovery.get("restored_brief_count", 0))
                     )
                     if changed:
-                        from src.ai.work_queue import current_parent
+                        from src.ai.runtime import current_parent
                         from src.services.ingestion.stages import mark_dirty
                         parent = current_parent()
                         if parent is None:

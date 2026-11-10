@@ -28,6 +28,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Iterable, Sequence
 
+from src.ai.model_identity import model_identity
+
 VERDICTS = ("accept", "revise", "reject")
 MAX_ROUNDS = 2
 
@@ -113,7 +115,7 @@ def review_mode(author_model: str | None, reviewer_model: str | None) -> str | N
 
     if not author_model or not reviewer_model:
         return None
-    return "single_model" if author_model == reviewer_model else "cross_model"
+    return "single_model" if model_identity(author_model) == model_identity(reviewer_model) else "cross_model"
 
 
 def parse_json_object(text: str) -> dict[str, Any]:
@@ -292,7 +294,8 @@ async def _review_cycle(
 
         reviewed = await _call(complete, "reviewer", reviewer_system, reviewer_prompt(draft), attachments)
         reviewer_model = reviewed.model
-        if reviewer_model and reviewer_model == author_model and not getattr(complete, "single_model", False):
+        if (reviewer_model and model_identity(reviewer_model) == model_identity(author_model)
+                and not getattr(complete, "allow_single_model", False)):
             raise SameModelReviewError(author_model)
         try:
             verdict, issues, score, corrected = _verdict(parse_json_object(reviewed.text))

@@ -6,6 +6,7 @@ import re
 from typing import Any, Optional
 
 from src.core import get_logger
+from src.ai.runtime.contracts import RoutingRequirements
 
 from .base import BaseAgent
 
@@ -22,11 +23,9 @@ class WorkflowAgent(BaseAgent):
         system_prompt: str,
         temperature: float = 0.2,
         max_tokens: int = 2500,
-        model: Optional[str] = None,
     ) -> None:
         super().__init__(
             name=name,
-            model=model,
             temperature=temperature,
             max_tokens=max_tokens,
         )
@@ -44,7 +43,7 @@ class WorkflowAgent(BaseAgent):
             prompt=prompt,
             system=system or self.system_prompt,
             use_cache=use_cache,
-            preferred_models=preferred_models,
+            routing=RoutingRequirements(preferred_models=tuple(preferred_models or ())),
         )
         payload: dict[str, Any] = self._parse_json(response)
         payload["raw_response"] = response

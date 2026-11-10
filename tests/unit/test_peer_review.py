@@ -22,6 +22,7 @@ class ScriptedCompleter:
         self.replies = {"author": list(author), "reviewer": list(reviewer)}
         self.prompts: dict[str, list[str]] = {"author": [], "reviewer": []}
         self.single_model = single_model
+        self.allow_single_model = single_model
 
     async def __call__(self, role: str, system: str, prompt: str) -> Completion:
         self.prompts[role].append(prompt)
@@ -121,6 +122,7 @@ async def test_same_model_refused_unless_single_model_mode():
 def test_review_mode_labels():
     assert review_mode("a", "b") == "cross_model"
     assert review_mode("a", "a") == "single_model"
+    assert review_mode("provider-a:Same", "provider-b:same") == "single_model"
     assert review_mode(None, "a") is None
 
 

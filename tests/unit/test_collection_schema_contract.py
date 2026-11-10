@@ -7,6 +7,8 @@ import io
 import json
 import os
 from datetime import datetime, timezone
+from contextlib import nullcontext
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -32,6 +34,10 @@ VERSIONS = [
     "0024_collection_jsonb",
     "0025_report_period_types",
     "0026_publish_dirty_changes",
+    "0027_ai_work_leased_route_index",
+    "0028_ai_work_request_index",
+    "0029_ai_review_workflows",
+    "0030_ai_activity_leases",
 ]
 
 
@@ -55,10 +61,10 @@ def test_fresh_postgresql_upgrade_sql_changes_only_new_tables():
     sql = stream.getvalue()
     assert {
         line.split()[2] for line in sql.splitlines() if line.startswith("CREATE TABLE ")
-    } == {table.name for table in TABLES}
+    } == {table.name for table in TABLES} | {"ai_review_drains", "ai_review_workflows"}
     assert sql.count(" TYPE JSONB USING ") == 4
     assert sql.count("SET DEFAULT '{}'::jsonb") == 2
-    assert "PRIMARY KEY (id)" in sql and sql.count("BIGSERIAL") == 4
+    assert "PRIMARY KEY (id)" in sql and sql.count("BIGSERIAL") == 5
     assert "WHERE published_at IS NULL" in sql and "WHERE status = 'queued'" in sql
     assert (
         "DROP TABLE" not in sql
@@ -77,9 +83,28 @@ class MigrationTables:
     def add_column(self, table, column):
         self.metadata.tables[table].append_column(column)
 
+    def get_bind(self):
+        return SimpleNamespace(dialect=SimpleNamespace(name="postgresql"))
+
+    def get_context(self):
+        return SimpleNamespace(autocommit_block=nullcontext)
+
     def execute(self, statement):
-        # Report enum additions have no effect on the collection table metadata.
-        assert statement.startswith("ALTER TYPE reporttype ADD VALUE ")
+        statement = str(statement).strip()
+        table = self.metadata.tables.get("ai_work_items")
+        if "CREATE INDEX CONCURRENTLY" in statement:
+            if "ix_ai_work_items_leased_route_expiry" in statement:
+                sa.Index("ix_ai_work_items_leased_route_expiry", table.c.route_key,
+                         table.c.lease_expires_at, postgresql_where=sa.text("status = 'leased'"))
+            elif "ix_ai_work_items_parent_request" in statement:
+                sa.Index("ix_ai_work_items_parent_request", table.c.parent_task_uuid,
+                         table.c.payload.op("->>")("request_key"), table.c.id.desc())
+            else:
+                raise AssertionError(statement)
+        else:
+            # Data changes have no effect on table structure; real upgrade tests
+            # independently verify the cutover statement against PostgreSQL.
+            assert statement.startswith(("ALTER TYPE reporttype ADD VALUE ", "UPDATE ai_work_items", "UPDATE tasks"))
 
     def create_index(self, name, table, columns, **kwargs):
         sa.Index(

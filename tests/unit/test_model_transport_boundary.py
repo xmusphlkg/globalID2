@@ -15,38 +15,40 @@ class Agent(BaseAgent):
         return {}
 
 
-@pytest.mark.parametrize("entry", ["_complete_transport", "_complete_with_runtime_route", "_complete_with_admitted_runtime_route", "_send_runtime_route_request", "_safe_openai_completion_create"])
+@pytest.mark.parametrize("entry", ["agent", "complete", "send", "negotiate"])
 async def test_completion_transport_rejects_non_dispatcher_before_io(monkeypatch, entry):
+    from src.ai import providers
     constructor = Mock(side_effect=AssertionError("provider must not be constructed"))
-    monkeypatch.setattr("src.ai.agents.base.AsyncOpenAI", constructor)
-    monkeypatch.setattr("src.ai.agents.base.AsyncAnthropic", constructor)
-    agent = Agent(name="boundary")
-    arguments = {
-        "_complete_transport": ("prompt",),
-        "_complete_with_runtime_route": ({}, "prompt"),
-        "_complete_with_admitted_runtime_route": ({}, "prompt"),
-        "_send_runtime_route_request": ({}, "prompt"),
-        "_safe_openai_completion_create": (None, {}),
-    }
+    monkeypatch.setattr(providers, "AsyncOpenAI", constructor)
+    monkeypatch.setattr(providers, "AsyncAnthropic", constructor)
+    transport = providers.ProviderTransport()
     with pytest.raises(RuntimeError, match="worker dispatcher"):
-        await getattr(agent, entry)(*arguments[entry])
+        if entry == "agent":
+            await Agent(name="boundary")._complete_transport("prompt")
+        elif entry == "negotiate":
+            await providers._create_with_optional_negotiation(AsyncMock(), {})
+        else:
+            await getattr(transport, entry)({}, "prompt")
     constructor.assert_not_called()
 
 
-@pytest.mark.parametrize("entry", ["test_route_connection", "_test_openai_compatible", "_test_anthropic"])
+@pytest.mark.parametrize("entry", ["route", "openai", "anthropic", "file"])
 async def test_health_transport_rejects_non_dispatcher_before_io(monkeypatch, entry):
+    from src.ai.catalogue import probes
     constructor = Mock(side_effect=AssertionError("provider must not be constructed"))
-    monkeypatch.setattr(model_center, "AsyncOpenAI", constructor)
-    monkeypatch.setattr(model_center, "AsyncAnthropic", constructor)
-    args = ({},) if entry == "test_route_connection" else ({}, "model")
     with pytest.raises(RuntimeError, match="worker dispatcher"):
-        await getattr(model_center, entry)(*args)
+        if entry == "route":
+            await model_center.test_route_connection({})
+        elif entry == "file":
+            await probes.probe_native_file({}, openai_factory=constructor, anthropic_factory=constructor)
+        else:
+            await getattr(probes, "probe_" + entry)({}, "model", client_factory=constructor)
     constructor.assert_not_called()
 
 
 async def test_business_completion_submits_durable_work(monkeypatch):
     submit = AsyncMock(return_value="queued result")
-    monkeypatch.setattr("src.ai.work_queue.submit_completion", submit)
+    monkeypatch.setattr("src.ai.runtime.submit_completion", submit)
     agent = Agent(name="boundary")
     assert await agent.complete("prompt", use_cache=False) == "queued result"
     submit.assert_awaited_once_with(agent, "prompt", None, False, {})
@@ -55,7 +57,7 @@ async def test_business_completion_submits_durable_work(monkeypatch):
 
 
 async def test_semantic_literature_failure_fails_parent_and_keeps_metrics(monkeypatch):
-    from src.ai.work_queue import AIWorkFailed
+    from src.ai.runtime import AIWorkFailed
     from src.services import _lifecycle, task_executor
     from src.services.literature_service import literature_service
 

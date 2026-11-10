@@ -17,6 +17,16 @@ from src.domain import TaskPriority, TaskStatus, TaskType
 from src.services import model_operations
 
 
+async def test_governance_operation_uses_durable_review_coordinator(monkeypatch):
+    import src.literature.review_workflow as workflow
+
+    run = AsyncMock(return_value={"published": 3, "pending": 0})
+    monkeypatch.setattr(workflow, "run_literature_review", run)
+    result = await model_operations.execute_model_operation("governance_stream", {"kind": "articles", "buffer_size": 8})
+    assert result == {"published": 3, "pending": 0}
+    run.assert_awaited_once_with(kind="articles", buffer_size=8)
+
+
 async def test_worker_operation_waits_for_existing_task_contract(monkeypatch):
     enqueue = AsyncMock(return_value=SimpleNamespace(task_uuid="uuid"))
     wait = AsyncMock(return_value={"result": {"success": True}})
@@ -75,7 +85,6 @@ def test_report_cli_queues_worker_task_without_direct_execution(monkeypatch):
 @pytest_asyncio.fixture
 async def notification_db(tmp_path, monkeypatch):
     pytest.importorskip("aiosqlite")
-    from src.ai import work_queue as queue
     from src.domain import AIProviderConfig, Base, Task
     from src.domain.ai_work_item import AIWorkItem
 
@@ -104,8 +113,10 @@ async def notification_db(tmp_path, monkeypatch):
                 await session.rollback()
                 raise
 
-    monkeypatch.setattr(queue, "get_database", database)
-    monkeypatch.setattr(queue, "ROOT", tmp_path)
+    from src.ai.runtime import client, context, dispatcher, payloads, progress, store
+    for component in (client, context, dispatcher, progress, store):
+        monkeypatch.setattr(component, "get_database", database)
+    monkeypatch.setattr(payloads, "ROOT", tmp_path)
     monkeypatch.setattr(model_operations, "get_database", database)
     manager_module = importlib.import_module("src.core.task_manager")
     monkeypatch.setattr(manager_module, "get_db", database)
@@ -123,7 +134,7 @@ async def test_notification_translation_runs_only_in_dispatcher_before_campaign_
     from fastapi import BackgroundTasks
 
     from dashboard.api.routers import subscriptions
-    from src.ai import work_queue as queue
+    from src.ai import runtime as queue
     from src.ai.agents.base import BaseAgent
     from src.domain import AIProviderConfig, Task
     from src.domain.ai_work_item import AIWorkItem

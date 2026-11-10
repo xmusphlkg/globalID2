@@ -1,0 +1,11 @@
+{
+  "sampled_at": "2026-11-10T23:33:20+08:00",
+  "selection": "Latest 40 published/rejected article workflows for the current article parent generation 1",
+  "read_only": true,
+  "sampled": 40,
+  "distinct_author_and_reviewer_model_identity": 40,
+  "stored_reason_passed_abstract_grounding_check": 40,
+  "publication_status_matched_workflow_outcome": 40,
+  "unexpected_editorial_locked": 0,
+  "limitations": "Checks stored contracts and application consistency; not an independent human scientific-quality review."
+}

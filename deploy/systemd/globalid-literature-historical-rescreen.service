@@ -9,6 +9,8 @@ User=__RUN_AS_USER__
 Group=__RUN_AS_GROUP__
 WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=-__PROJECT_DIR__/.env
+Environment=DATABASE__POOL_SIZE=1
+Environment=DATABASE__MAX_OVERFLOW=1
 ExecStart=__PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/rescreen_excluded_literature.py --apply --wait-for-new-worker-pid 0 --batch-size 100 --max-backlog 1000000 --interval 10
 Restart=on-failure
 RestartSec=30

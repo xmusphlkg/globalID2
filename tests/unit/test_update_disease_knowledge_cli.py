@@ -119,7 +119,7 @@ async def test_cli_preserves_force_limit_concurrency_and_per_disease_errors(
 async def test_executor_constructs_knowledge_service_with_requested_catalogue(
     monkeypatch, custom_path
 ):
-    from src.ai import work_queue
+    from src.ai import runtime as work_queue
     from src.services import disease_knowledge_service, task_executor
 
     task = SimpleNamespace(

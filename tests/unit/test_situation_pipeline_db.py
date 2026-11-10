@@ -287,33 +287,17 @@ async def test_no_model_route_defers_the_batch_without_spending_attempts(db):
     assert all(row.ai_next_attempt_at is None for row in rows)
 
 
-async def test_failover_onto_one_model_is_retried_on_another_pair(db):
-    from src.ai.peer_review_completer import ReviewRoutePool
-
+async def test_same_model_review_failure_is_not_a_local_route_retry(db):
     class Collapsed(Scripted):
         async def __call__(self, role, system, prompt, *, attachments=None):
             reply = await super().__call__(role, system, prompt, attachments=attachments)
             return Completion(text=reply.text, model="model-a", input_mode="text")
 
     accept = {"verdict": "accept", "score": 0.9, "issues": [], "corrected": None}
-
-    class Pool(ReviewRoutePool):
-        def __init__(self):
-            super().__init__({"p:model-a": 1, "p:model-b": 1, "p:model-c": 1}, line="situation_notice", max_tokens=2400)
-            self.avoided: list[set] = []
-            self.pairs = [Collapsed([DRAFT], [accept]), Scripted([DRAFT], [accept])]
-
-        def completer(self, avoid=()):
-            self.avoided.append(set(avoid))
-            return self.pairs.pop(0)
-
     await store_notices(_run(_event("2026-DON640", ref={"kind": "who_don", "slug": "2026-DON640"})), run_id="r1")
     await fetch_pending_documents(fetch=_fetcher([]))
-
-    pool = Pool()
-    counts = await extract_pending(pool)
-    assert counts["published"] == 1 and counts["failed"] == 0
-    assert pool.avoided == [set(), {"model-a"}]
+    counts = await extract_pending(Collapsed([DRAFT], [accept]))
+    assert counts["published"] == 0 and counts["failed"] == 1
 
 
 async def test_unchanged_collection_has_three_stages_without_dirty_or_export(db, monkeypatch):
@@ -703,7 +687,7 @@ async def test_runner_waits_for_extraction_and_records_partial_failure_before_st
             return await super().__call__(*args, **kwargs)
 
     complete = OneFailure()
-    monkeypatch.setattr(peer_review_completer, "QueuedModelCompleter", lambda **kwargs: complete)
+    monkeypatch.setattr(peer_review_completer, "ModelCenterCompleter", lambda **kwargs: complete)
     task_uuid = str(uuid4())
     # One at a time: the scripted completer shares one failure flag and asserts an idle pool.
     task = asyncio.create_task(runner.run_situation(task_uuid=task_uuid, fetch=False, concurrency=1))
@@ -736,7 +720,7 @@ async def test_runner_waits_for_extraction_and_records_partial_failure_before_st
         await session.execute(update(SituationNotice).where(SituationNotice.ai_status == "failed").values(
             ai_next_attempt_at=None
         ))
-    monkeypatch.setattr(peer_review_completer, "QueuedModelCompleter", lambda **kwargs: Scripted([DRAFT], [ACCEPT]))
+    monkeypatch.setattr(peer_review_completer, "ModelCenterCompleter", lambda **kwargs: Scripted([DRAFT], [ACCEPT]))
     retry = await runner.run_situation(task_uuid=task_uuid, fetch=False)
     assert retry["extraction"]["failed"] == 0 and retry["extraction"]["published"] == 1
     async with db() as session:
@@ -750,7 +734,7 @@ async def test_runner_waits_for_extraction_and_records_partial_failure_before_st
 async def test_queued_runner_can_dispatch_with_a_single_database_connection(db, monkeypatch, tmp_path):
     from uuid import uuid4
 
-    from src.ai import work_queue as queue
+    from src.ai import runtime as queue
     from src.domain import Task, TaskPriority, TaskStatus, TaskType
     from src.domain.ai_work_item import AIWorkItem
     from src.domain.collection import PublishDirty, RunStage, SourceArtifact
@@ -761,8 +745,10 @@ async def test_queued_runner_can_dispatch_with_a_single_database_connection(db, 
             sync, tables=[Task.__table__, AIWorkItem.__table__, RunStage.__table__,
                           PublishDirty.__table__, SourceArtifact.__table__]
         ))
-    monkeypatch.setattr(queue, "get_database", database_module.get_db)
-    monkeypatch.setattr(queue, "ROOT", tmp_path)
+    from src.ai.runtime import client, context, dispatcher as dispatcher_module, payloads
+    for module in (client, context, dispatcher_module):
+        monkeypatch.setattr(module, "get_database", database_module.get_db)
+    monkeypatch.setattr(payloads, "ROOT", tmp_path)
     await _ready_reports("2026-DON660")
     parent = Task(
         task_uuid=str(uuid4()), task_type=TaskType.REFRESH_SITUATION_SOURCES,

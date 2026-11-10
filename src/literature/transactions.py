@@ -31,7 +31,7 @@ async def commit_literature_change(
     transaction. They never enqueue a second execution or use an orphan UUID.
     Any failure rolls back even if the caller catches the exception afterwards.
     """
-    from src.ai.work_queue import current_parent
+    from src.ai.runtime import current_parent
     from src.services.ingestion.stages import mark_dirty
 
     try:

@@ -1,0 +1,121 @@
+{
+  "audit": "Read-only literature AI necessity audit",
+  "production_mutations": false,
+  "model_calls": false,
+  "population_snapshot_source": "production_5min.json",
+  "population_snapshot_timestamp": "2026-11-10T15:32:06.715324+00:00",
+  "population_snapshot": {
+    "review_total": 352365,
+    "sql_eligible": 225064,
+    "missing_abstract_context": 122128,
+    "other_ineligible": 5173,
+    "hold_metadata_total": 10015,
+    "parked_unchanged_holds": 8724,
+    "fingerprint_candidates_checked": 8853,
+    "eligible_not_parked": 216340,
+    "scan_seconds": 29.124,
+    "exact_hold_check": true
+  },
+  "systematic_sample": {
+    "timestamp": "2026-11-10T15:44:13.215561+00:00",
+    "read_only": "on",
+    "sample_method": "all current SQL-eligible rows with id % 101 = 0; systematic sample, not random",
+    "elapsed_seconds": 0.87,
+    "counts": {
+      "sample_total": 2241,
+      "historical_rescreen": 2230,
+      "bibliographic_blocker_union": 23
+    },
+    "pure_existing_rule_decisions": {
+      "hold": 2241
+    },
+    "bibliographic_reasons": {
+      "authors are missing": 6,
+      "title is incomplete": 9,
+      "DOI/PMID/PMCID is missing": 8
+    },
+    "classification_versions": {
+      "5": 2241
+    },
+    "domains": {
+      "not_determined": 1035,
+      "human_health": 757,
+      "animal_only": 204,
+      "one_health": 171,
+      "basic_research": 69,
+      "plant_only": 5
+    },
+    "ai_records": {
+      "hold": 107,
+      "missing": 2134
+    },
+    "autopilot_records": {
+      "hold": 2239,
+      "defer": 1,
+      "missing": 1
+    },
+    "historical_previous_records": {
+      "ai:missing": 2180,
+      "rule:missing": 1737,
+      "rule:exclude": 431,
+      "ai:excluded": 48,
+      "rule:defer": 43,
+      "rule:hold": 19,
+      "ai:hold": 1,
+      "ai:published": 1
+    }
+  },
+  "correction_rule_exact_check": {
+    "timestamp": "2026-11-10T15:45:22.114745+00:00",
+    "candidate_count": 16,
+    "existing_rule_decisions": {
+      "hold": 16
+    },
+    "scope": "all currently SQL-eligible correction/corrigendum/erratum title candidates",
+    "elapsed_seconds": 0.52,
+    "read_only": "on"
+  },
+  "unique_indexes": [
+    {
+      "indexname": "literature_articles_article_id_key",
+      "indexdef": "CREATE UNIQUE INDEX literature_articles_article_id_key ON public.literature_articles USING btree (article_id)"
+    },
+    {
+      "indexname": "literature_articles_doi_key",
+      "indexdef": "CREATE UNIQUE INDEX literature_articles_doi_key ON public.literature_articles USING btree (doi)"
+    },
+    {
+      "indexname": "literature_articles_openalex_id_key",
+      "indexdef": "CREATE UNIQUE INDEX literature_articles_openalex_id_key ON public.literature_articles USING btree (openalex_id)"
+    },
+    {
+      "indexname": "literature_articles_pkey",
+      "indexdef": "CREATE UNIQUE INDEX literature_articles_pkey ON public.literature_articles USING btree (id)"
+    },
+    {
+      "indexname": "literature_articles_pmcid_key",
+      "indexdef": "CREATE UNIQUE INDEX literature_articles_pmcid_key ON public.literature_articles USING btree (pmcid)"
+    },
+    {
+      "indexname": "literature_articles_pmid_key",
+      "indexdef": "CREATE UNIQUE INDEX literature_articles_pmid_key ON public.literature_articles USING btree (pmid)"
+    },
+    {
+      "indexname": "literature_articles_slug_key",
+      "indexdef": "CREATE UNIQUE INDEX literature_articles_slug_key ON public.literature_articles USING btree (slug)"
+    }
+  ],
+  "interpretation": [
+    "216340 represents candidates admitted by current policy, not demonstrated necessary AI calls.",
+    "Systematic sample percentages are descriptive; not a validated corpus-wide error rate or savings forecast.",
+    "Missing bibliography can be parked or enriched without AI, but is not evidence of irrelevance.",
+    "Historical final AI decisions lack terminal input fingerprints in the old metadata contract; no safe reuse count is established.",
+    "Absence of disease matches, low ranking score, or animal/plant research cannot safely substitute for relevance adjudication."
+  ],
+  "sample_bibliographic_blockers_exact_hold_check": {
+    "timestamp": "2026-11-10T15:46:24.078433+00:00",
+    "sample_sql_eligible_with_bibliographic_blockers": 23,
+    "already_parked_unchanged_hold": 3,
+    "not_parked_bibliographic_blocker": 20
+  }
+}

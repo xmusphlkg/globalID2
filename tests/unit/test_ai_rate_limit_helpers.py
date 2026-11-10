@@ -1,20 +1,25 @@
 from types import SimpleNamespace
 
-from src.ai.model_center import (
-    _effective_route_check_status,
+from src.ai.catalogue.errors import (
     _health_check_failure_status,
     _legacy_transient_probe_unavailable,
     _runtime_failure_kind,
     extract_retry_after_seconds,
     is_model_channel_failure,
-    is_provider_authentication_error,
     is_model_unavailable_error,
+    is_provider_authentication_error,
     is_rate_limit_error,
 )
+from src.ai.catalogue.health import _effective_route_check_status
 
 
 class DummyRateLimitError(Exception):
-    def __init__(self, message: str, status_code: int | None = None, headers: dict[str, str] | None = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        headers: dict[str, str] | None = None,
+    ):
         super().__init__(message)
         self.status_code = status_code
         self.response = SimpleNamespace(status_code=status_code, headers=headers or {})
@@ -56,7 +61,9 @@ def test_is_provider_authentication_error_detects_invalid_token_message() -> Non
     assert is_provider_authentication_error(error) is True
 
 
-def test_is_provider_authentication_error_does_not_treat_model_acl_as_credentials() -> None:
+def test_is_provider_authentication_error_does_not_treat_model_acl_as_credentials() -> (
+    None
+):
     error = DummyRateLimitError(
         "Error code: 403 - {'error': {'message': '无权访问 gemini特惠 分组'}}",
         status_code=403,
@@ -65,13 +72,17 @@ def test_is_provider_authentication_error_does_not_treat_model_acl_as_credential
     assert is_provider_authentication_error(error) is False
 
 
-def test_is_provider_authentication_error_does_not_treat_rate_limit_as_credentials() -> None:
+def test_is_provider_authentication_error_does_not_treat_rate_limit_as_credentials() -> (
+    None
+):
     error = DummyRateLimitError("Too many requests", status_code=429)
 
     assert is_provider_authentication_error(error) is False
 
 
-def test_model_unavailable_error_does_not_mask_provider_authentication_failure() -> None:
+def test_model_unavailable_error_does_not_mask_provider_authentication_failure() -> (
+    None
+):
     error = DummyRateLimitError("permission denied: invalid token", status_code=401)
 
     assert is_model_unavailable_error(error) is False
@@ -82,7 +93,9 @@ def test_provider_unavailable_dominates_older_model_available_status() -> None:
 
 
 def test_extract_retry_after_seconds_reads_retry_after_header() -> None:
-    error = DummyRateLimitError("Too many requests", status_code=429, headers={"retry-after": "17"})
+    error = DummyRateLimitError(
+        "Too many requests", status_code=429, headers={"retry-after": "17"}
+    )
 
     assert extract_retry_after_seconds(error) == 17
 
@@ -181,16 +194,23 @@ def test_is_model_channel_failure_detects_missing_channel_message() -> None:
 
 
 def test_rate_limit_cooldown_escalates_from_30s_to_ceiling() -> None:
-    from src.ai.model_center import _escalating_rate_limit_cooldown
+    from src.ai.catalogue.health import _escalating_rate_limit_cooldown
 
-    assert [_escalating_rate_limit_cooldown(streak, 300) for streak in range(6)] == [30, 60, 120, 240, 300, 300]
+    assert [_escalating_rate_limit_cooldown(streak, 300) for streak in range(6)] == [
+        30,
+        60,
+        120,
+        240,
+        300,
+        300,
+    ]
     assert _escalating_rate_limit_cooldown(0, 10) == 10
 
 
 def test_rate_limit_streak_resets_after_success_and_window() -> None:
     from datetime import timedelta
 
-    from src.ai.model_center import (
+    from src.ai.catalogue.health import (
         _clear_payload_rate_limit,
         _mark_payload_rate_limited,
         _rate_limit_streak,
@@ -208,7 +228,7 @@ def test_rate_limit_streak_resets_after_success_and_window() -> None:
 def test_rate_limit_cooldown_escalates_per_consecutive_limit_and_resets() -> None:
     from datetime import timedelta
 
-    from src.ai.model_center import (
+    from src.ai.catalogue.health import (
         _clear_payload_rate_limit,
         _escalating_rate_limit_cooldown,
         _mark_payload_rate_limited,

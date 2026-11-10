@@ -11,15 +11,12 @@ import asyncio
 import json
 import re
 import hashlib
-import time
-import weakref
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Iterable, Mapping
 
-from sqlalchemy import Integer, String, all_, func, inspect as sa_inspect, literal, select
+from sqlalchemy import func, inspect as sa_inspect, select
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.agents import WorkflowAgent
@@ -28,13 +25,12 @@ from src.ai.peer_review import (
     ReviewedOutput,
     build_author_prompt,
     build_reviewer_prompt,
-    SameModelReviewError,
     clean_enum,
     parse_json_object,
     peer_review,
     reviewer_system,
 )
-from src.ai.peer_review_completer import ModelCenterCompleter, ReviewRoutePool
+from src.ai.peer_review_completer import ModelCenterCompleter
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
@@ -50,13 +46,15 @@ from src.domain import (
     TaskType,
 )
 from src.literature.enrichment import SUMMARY_FIELDS, source_fingerprint
+from src.literature.review_application import (
+    LiteratureReviewApplication,
+    ReviewApplicationResult,
+)
 
 logger = get_logger(__name__)
 
 PROMPT_VERSION = "ai-content-governance.v1"
-REVIEW_CONCURRENCY = 192
 REVIEW_MAX_TOKENS = 4000
-_POOL_REFRESH_SECONDS = 5
 
 
 async def _release_review_connection(db: AsyncSession, pending: list[Any]) -> dict[int, Any]:
@@ -72,12 +70,15 @@ async def _release_review_connection(db: AsyncSession, pending: list[Any]) -> di
     return snapshots
 
 
-async def _mark_review_dirty(db: AsyncSession, *, line: str, scope_key: str) -> None:
-    from src.ai.work_queue import current_parent
+async def _mark_review_dirty(
+    db: AsyncSession, *, line: str, scope_key: str, parent_task_uuid: str | None = None,
+) -> None:
+    from src.ai.runtime import current_parent
     from src.services.ingestion.stages import mark_dirty
     parent = current_parent()
-    if parent is not None:
-        await mark_dirty(db, line=line, scope_key=scope_key, task_uuid=parent.task_uuid)
+    task_uuid = parent_task_uuid or (parent.task_uuid if parent is not None else None)
+    if task_uuid is not None:
+        await mark_dirty(db, line=line, scope_key=scope_key, task_uuid=task_uuid)
 
 
 def _review_stamp(value):
@@ -99,96 +100,25 @@ async def _reload_review_input(db: AsyncSession, row: Any, snapshots: dict[int, 
     return before is None or _review_stamp(row.updated_at) == _review_stamp(before)
 
 
-class ReviewClaims:
-    """Row ids an overlapping drain run has already taken.
-
-    Lanes share one instance so two batches fetched at the same time never
-    review the same row twice. Ids stay claimed for the whole run: rows that were
-    deferred are retried by the next run instead of being re-fetched at once.
-    """
-
-    POOL_REFRESH_SECONDS = 15.0
-
-    def __init__(self) -> None:
-        self.ids: set[Any] = set()
-        self.lock = asyncio.Lock()
-        self._pool: ReviewRoutePool | None = None
-        self._pool_at = float("-inf")
-
-    async def route_pool(self) -> ReviewRoutePool:
-        """One pool for every lane, so failure rates and free permits are shared."""
-
-        async with self.lock:
-            now = time.monotonic()
-            if self._pool is None:
-                self._pool = await ReviewRoutePool.from_model_center(
-                    line="content_governance", max_tokens=REVIEW_MAX_TOKENS
-                )
-                self._pool_at = now
-            elif now - self._pool_at > self.POOL_REFRESH_SECONDS:
-                self._pool_at = now
-                try:
-                    await self._pool.refresh()
-                except Exception as exc:  # noqa: BLE001 - keep serving with the last known routes
-                    logger.warning("Review route pool refresh failed: {}", exc)
-            return self._pool
-
-
-SAME_MODEL_RETRIES = 3
-
-
-async def _decide_once(
+async def _review_with_second_opinion(
     decide: Callable[[Completer, Any], Awaitable[ReviewedOutput]],
-    pool: ReviewRoutePool,
-    item: Any,
-    avoid: set[str],
-) -> ReviewedOutput:
-    """Run one review; if failover put both roles on one model, redo it on other models."""
-
-    avoid = set(avoid)
-    for attempt in range(SAME_MODEL_RETRIES + 1):
-        try:
-            return await decide(pool.completer(avoid), item)
-        except SameModelReviewError as exc:
-            if attempt >= SAME_MODEL_RETRIES:
-                raise
-            avoid.add(exc.model)
-    raise AssertionError("unreachable")
-
-
-async def _decide_with_retry(
-    decide: Callable[[Completer, Any], Awaitable[ReviewedOutput]],
-    pool: ReviewRoutePool,
     item: Any,
 ) -> ReviewedOutput:
-    """One review, plus a second opinion from other models when it comes back ``hold``.
-
-    A hold is a disagreement or an unsure verdict, not a decision. Instead of parking
-    the item for a person, a different author/reviewer pair reads it again. If that
-    pair also holds, the hold stands (the item is never excluded for being unsure).
-    A model outage in the second pass raises, so the item is retried as a whole.
-    """
-
-    first = await _decide_once(decide, pool, item, set())
-    if _review_outcome(first) != "hold":
+    """At most two business opinions; route admission belongs to the runtime."""
+    first = await decide(ModelCenterCompleter(
+        line="content_governance", max_tokens=REVIEW_MAX_TOKENS, allow_single_model=False,
+    ), item)
+    # Each caller's sanitizer has already validated its own vocabulary. Source
+    # approval and disease mapping must not be mistaken for literature holds.
+    if first.published and (first.payload or {}).get("decision") not in {None, "hold"}:
         return first
     used = {model for model in (first.author_model, first.reviewer_model) if model}
-    second = await _decide_once(decide, pool, item, used)
-    second.notes = [f"second opinion after hold by {', '.join(sorted(used)) or 'unknown models'}", *second.notes]
+    second = await decide(ModelCenterCompleter(
+        line="content_governance", max_tokens=REVIEW_MAX_TOKENS,
+        avoid_models=used, allow_single_model=False,
+    ), item)
+    second.notes = ["second opinion completed", *second.notes]
     return second
-
-
-_review_gates: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore]" = weakref.WeakKeyDictionary()
-
-
-def _review_gate() -> asyncio.Semaphore:
-    """One in-flight cap per event loop, shared by every concurrent review call."""
-
-    loop = asyncio.get_running_loop()
-    gate = _review_gates.get(loop)
-    if gate is None:
-        gate = _review_gates[loop] = asyncio.Semaphore(REVIEW_CONCURRENCY)
-    return gate
 
 
 GOVERNANCE_ACTOR = "ai-content-governance"
@@ -277,19 +207,6 @@ def _coerce_confidence(value: Any) -> float:
         return 0.0
 
 
-def _review_outcome(reviewed: Any) -> str:
-    """``publish``, ``hold`` or the negative decision (``exclude``/``reject``).
-
-    A peer review the reviewer did not accept is a disagreement, not a verdict
-    on the item, so it holds instead of excluding.
-    """
-
-    if not reviewed.published:
-        return "hold"
-    decision = str((reviewed.payload or {}).get("decision") or "hold")
-    return decision if decision in {"publish", "exclude", "reject"} else "hold"
-
-
 def _decisions(payload: Mapping[str, Any], allowed: set[str]) -> list[ModelDecision]:
     raw_decisions = payload.get("decisions")
     if not isinstance(raw_decisions, list):
@@ -339,10 +256,8 @@ async def _call_json_model(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Call governance models through the Model Center's shared agent path.
 
-    This deliberately contains no provider clients or environment-key routing.
-    ``BaseAgent.complete`` acquires Model Center admission, records live route
-    health and dynamically fails over, so governance observes the same route
-    state, quotas and circuit breakers as every other AI workflow.
+    The activity runtime owns admission, route health and transport retries.
+    Governance supplies the structured task and its request timeout.
     """
     user = json.dumps(user_payload, ensure_ascii=False, default=str)
     agent = WorkflowAgent(
@@ -357,11 +272,6 @@ async def _call_json_model(
             system=system,
             use_cache=False,
             model_request_timeout_seconds=90,
-            max_attempts_per_model=1,
-            # A governance batch should yield to the worker rather than occupy
-            # a slot through a long quota wait. The scheduler will retry it
-            # after Model Center records the cooling route.
-            wait_for_model_recovery=False,
         )
         return parse_json_object(text), _conversation_route(agent.get_latest_conversation())
     except Exception as exc:
@@ -813,6 +723,15 @@ class AIContentGovernanceService:
         task: Task,
         error: str,
     ) -> KnowledgeRepairPlan:
+        from src.ai.runtime.context import current_parent, parent_execution_generation
+        from src.ai.runtime.store import restart_parent_activities
+        from src.services.exceptions import TaskExecutionSupersededError
+
+        parent = current_parent()
+        if (parent is not None and parent.task_uuid == task.task_uuid
+                and parent.generation != parent_execution_generation(task)):
+            raise TaskExecutionSupersededError("Knowledge retry belongs to an obsolete execution")
+        await restart_parent_activities(db, task)
         plan = plan_failed_knowledge_repair(error)
         input_data = dict(task.input_data or {})
         input_data["generator"] = "ai"
@@ -925,47 +844,17 @@ class AIContentGovernanceService:
         task.last_error = "Automatically requeued by AI content governance"
         return plan
 
-    async def _governance_completer(self, completer: Completer | None) -> Completer:
-        if completer is not None:
-            return completer
-        return await ModelCenterCompleter.from_model_center(line="content_governance", max_tokens=REVIEW_MAX_TOKENS)
-
     async def _review_all(
         self,
         items: list[Any],
         completer: Completer | None,
         decide: Callable[[Completer, Any], Awaitable[ReviewedOutput]],
-        claims: ReviewClaims | None = None,
     ) -> list[ReviewedOutput | Exception]:
-        """Review ``items`` with up to ``REVIEW_CONCURRENCY`` model calls in flight.
-
-        Every item gets its own author/reviewer pair from a shared route pool, which
-        shifts work away from routes that keep failing. Failures are returned in
-        place, not raised, so one bad item never discards its neighbours' reviews.
-        """
-
-        if not items:
-            return []
-        pool: ReviewRoutePool | None = None
-        if completer is not None:
-            pick: Callable[[], Completer] = lambda: completer  # noqa: E731
-        else:
-            try:
-                pool = (
-                    await claims.route_pool()
-                    if claims is not None
-                    else await ReviewRoutePool.from_model_center(line="content_governance", max_tokens=REVIEW_MAX_TOKENS)
-                )
-                pick = pool.completer
-            except Exception as exc:  # noqa: BLE001 - no routable model: every item stays queued
-                return [exc for _ in items]
-        gate = _review_gate()
-
+        """Review the caller's bounded batch through the shared model runtime."""
         async def one(item: Any) -> ReviewedOutput:
-            async with gate:
-                if pool is not None:
-                    return await _decide_with_retry(decide, pool, item)
-                return await decide(pick(), item)
+            if completer is not None:
+                return await decide(completer, item)
+            return await _review_with_second_opinion(decide, item)
 
         results = await asyncio.gather(*(one(item) for item in items), return_exceptions=True)
         for result in results:
@@ -1061,6 +950,8 @@ class AIContentGovernanceService:
     ) -> tuple[str, str | None]:
         """Deterministic gate before any model call: waiting, skipped, archive or review."""
 
+        if (getattr(article, "metadata_", None) or {}).get("editorial_locked") or (summary.generation_metadata or {}).get("editorial_locked"):
+            return "skipped", "explicit editorial decision is locked"
         wait = self._literature_dependency_wait(summary, article)
         if wait:
             return "waiting", wait
@@ -1132,6 +1023,7 @@ class AIContentGovernanceService:
                 LiteratureArticle.publication_status == "review",
                 LiteratureArticle.integrity_status == "current",
                 LiteratureArticle.peer_review_status == "peer_reviewed",
+                func.coalesce(LiteratureArticle.metadata_["editorial_locked"].as_boolean(), False).is_(False),
                 # The relevance decision must cite an abstract excerpt. Keep
                 # records without enough context queued for enrichment rather
                 # than repeatedly spending model calls on unanswerable cases.
@@ -1152,53 +1044,6 @@ class AIContentGovernanceService:
             # Backlog drains walk by id so waiting rows never block progress.
             return query.where(LiteratureSummary.id > after_id).order_by(LiteratureSummary.id.asc())
         return query.order_by(LiteratureSummary.quality_score.desc().nullslast(), LiteratureSummary.updated_at.asc())
-
-    async def _claim_stream_items(
-        self, db: AsyncSession, kind: str, limit: int, claims: ReviewClaims
-    ) -> tuple[int, list[tuple[Any, Any, Any]], int]:
-        """Claim up to ``limit`` rows; returns ``(fetched, items, archived)``.
-
-        ``items`` are ``(key, seen_updated_at, payload)`` ready for a model call.
-        Deterministic archives are applied here; waiting and skipped rows are
-        claimed so this run does not fetch them again.
-        """
-
-        if kind == "articles":
-            async with claims.lock:
-                query = self._article_review_query()
-                if claims.ids:
-                    query = query.where(LiteratureArticle.article_id != all_(literal(sorted(claims.ids), ARRAY(String))))
-                articles = (await db.execute(query.limit(limit))).scalars().all()
-                claims.ids.update(article.article_id for article in articles)
-            items = []
-            for article in articles:
-                fingerprint = self._article_fingerprint(article)
-                # Held content waits until what the reviewers read changes.
-                if not self._held(article.metadata_, fingerprint):
-                    items.append((article.article_id, fingerprint, article))
-            return len(articles), items, 0
-
-        async with claims.lock:
-            # Summaries under an unpublished parent cannot be reviewed yet; leaving them
-            # out keeps passes short and lets them be picked up once the parent clears.
-            query = self._summary_review_query(0).where(LiteratureArticle.publication_status == "published")
-            if claims.ids:
-                query = query.where(LiteratureSummary.id != all_(literal(sorted(claims.ids), ARRAY(Integer))))
-            rows = (await db.execute(query.limit(limit))).all()
-            claims.ids.update(summary.id for summary, _article in rows)
-        fingerprints = await self._canonical_fingerprints(db, rows)
-        items: list[tuple[Any, Any, Any]] = []
-        archived = 0
-        for summary, article in rows:
-            action, reason = self._summary_precheck(summary, article, canonical_fingerprint=fingerprints.get(summary.article_id))
-            if action == "archive":
-                self._archive_summary(summary, reason)
-                archived += 1
-            elif action == "review":
-                fingerprint = self._summary_fingerprint(summary)
-                if not self._held(summary.generation_metadata, fingerprint):
-                    items.append((summary.id, fingerprint, (summary, article)))
-        return len(rows), items, archived
 
     @staticmethod
     def _fingerprint(value: Any) -> str:
@@ -1224,71 +1069,34 @@ class AIContentGovernanceService:
             "source": (summary.generation_metadata or {}).get("source_fingerprint"),
         })
 
-    async def _write_stream_results(
-        self, db: AsyncSession, kind: str, results: list[tuple[Any, Any, ReviewedOutput]]
-    ) -> dict[str, int]:
-        """Apply finished reviews to freshly loaded rows.
+    async def _archive_incomplete_summaries(
+        self,
+        db: AsyncSession,
+        candidates: list[tuple[int, str]],
+        *,
+        dry_run: bool = False,
+        parent_task_uuid: str | None = None,
+    ) -> ReviewApplicationResult:
+        return await LiteratureReviewApplication(
+            self, prompt_version=PROMPT_VERSION, mark_dirty=_mark_review_dirty,
+        ).archive_incomplete(
+            db, candidates, dry_run=dry_run, parent_task_uuid=parent_task_uuid,
+        )
 
-        A row that left ``review`` or whose reviewed content changed since it was
-        claimed is left alone (``stale``); the next run picks it up again. The
-        Research Radar autopilot re-stamps ``updated_at`` on every waiting row each
-        cycle, so content is compared by fingerprint rather than by timestamp.
-        """
-
-        counts = {"published": 0, "rejected": 0, "held": 0, "stale": 0}
-        keys = [key for key, _seen, _reviewed in results]
-        if kind == "articles":
-            found = (await db.execute(select(LiteratureArticle).where(LiteratureArticle.article_id.in_(keys)))).scalars().all()
-            rows: dict[Any, Any] = {row.article_id: row for row in found}
-        else:
-            found = (await db.execute(select(LiteratureSummary).where(LiteratureSummary.id.in_(keys)))).scalars().all()
-            rows = {row.id: row for row in found}
-            article_ids = {row.article_id for row in found}
-            parents = (await db.execute(select(LiteratureArticle).where(
-                LiteratureArticle.article_id.in_(article_ids)
-            ).with_for_update())).scalars().all()
-            parents_by_id = {row.article_id: row for row in parents}
-            found = (await db.execute(select(LiteratureSummary).where(
-                LiteratureSummary.id.in_(keys)
-            ).with_for_update().execution_options(populate_existing=True))).scalars().all()
-            rows = {row.id: row for row in found}
-            fingerprints = await self._canonical_fingerprints(
-                db, [(row, parents_by_id[row.article_id]) for row in found if row.article_id in parents_by_id]
-            )
-        for key, seen, reviewed in results:
-            row = rows.get(key)
-            status = None if row is None else (row.publication_status if kind == "articles" else row.status)
-            current = None if row is None else (self._article_fingerprint(row) if kind == "articles" else self._summary_fingerprint(row))
-            if row is None or status != "review" or current != seen:
-                counts["stale"] += 1
-                continue
-            if kind == "summaries":
-                parent = parents_by_id.get(row.article_id)
-                if parent is None or self._summary_precheck(
-                    row, parent, canonical_fingerprint=fingerprints.get(row.article_id)
-                )[0] != "review":
-                    counts["stale"] += 1
-                    continue
-            outcome = _review_outcome(reviewed)
-            ungrounded = False
-            if kind == "articles" and outcome in {"publish", "exclude"}:
-                from src.literature.screening import decision_is_grounded
-                if not decision_is_grounded(row, reviewed):
-                    outcome = "hold"
-                    ungrounded = True
-            if outcome == "hold":
-                self._hold(row, reviewed, current, kind)
-                if ungrounded:
-                    row.metadata_ = {**(row.metadata_ or {}), "screening_hold_reason": "abstract_evidence_not_verified"}
-                counts["held"] += 1
-                continue
-            publish = outcome == "publish"
-            if kind == "articles":
-                self._apply_article(db, row, reviewed, "published" if publish else "excluded")
-            else:
-                self._apply_summary(row, reviewed, publish)
-            counts["published" if publish else "rejected"] += 1
-        return counts
+    async def _apply_literature_results(
+        self,
+        db: AsyncSession,
+        kind: str,
+        results: list[tuple[Any, str, ReviewedOutput]],
+        *,
+        dry_run: bool = False,
+        parent_task_uuid: str | None = None,
+    ) -> ReviewApplicationResult:
+        return await LiteratureReviewApplication(
+            self, prompt_version=PROMPT_VERSION, mark_dirty=_mark_review_dirty,
+        ).apply(
+            db, kind, results, dry_run=dry_run, parent_task_uuid=parent_task_uuid,
+        )
 
     def _hold(self, row: Any, reviewed: ReviewedOutput, fingerprint: str, kind: str) -> None:
         """Leave the row in review and remember which content was held.
@@ -1346,199 +1154,6 @@ class AIContentGovernanceService:
             "learning_suggestions": int(learning or 0),
         }
 
-    async def _live_review_slots(self) -> int:
-        """Reviews to keep in flight: one per currently routable model permit.
-
-        Each review holds a single model call at a time. Matching that number to
-        the sum of route permits fills the dispatcher without claiming a fixed
-        batch ahead of the routes that can actually run.
-        """
-
-        from src.ai.model_center import live_model_permits
-
-        return await live_model_permits(ceiling=REVIEW_CONCURRENCY)
-
-    async def stream_review(
-        self,
-        kind: str,
-        *,
-        workers: int | None = None,
-        fetch_size: int = 64,
-        commit_every: int = 25,
-        commit_seconds: float = 10.0,
-        stall_limit: int = 150,
-        pause_seconds: float = 300.0,
-        emit: Callable[[dict[str, Any]], None] | None = None,
-        claims: ReviewClaims | None = None,
-        max_claims: int | None = None,
-    ) -> dict[str, int]:
-        """Review a backlog until it is empty, pacing calls from live route permits.
-
-        Omit ``workers`` to follow the model center: the pool grows when routes
-        gain permits and never claims a fixed slice. Pass ``workers`` only to pin
-        a ceiling, which tests and a manual override use. A feeder claims rows in
-        short database sessions, pool tasks call models (one item each, taking the
-        next as soon as one finishes), and a single writer commits finished
-        reviews in small groups. No worker holds a database connection while it
-        waits on a model. Rows that fail on the model side stay in ``review``.
-
-        ``max_claims`` ends the run after that many rows so a caller can work in
-        slices; pass the same ``claims`` to every slice so rows deferred earlier are
-        not re-fetched until a pass finishes (``totals["exhausted"] == 1``).
-        """
-
-        from src.core import get_db
-
-        if kind not in {"articles", "summaries"}:
-            raise ValueError(f"unsupported stream kind: {kind}")
-        dynamic = workers is None
-        pool_size = await self._live_review_slots() if dynamic else max(1, workers)
-        decide = self._decide_article if kind == "articles" else self._decide_summary
-        emit = emit or (lambda _record: None)
-        claims = claims or ReviewClaims()
-        gate = _review_gate()
-        # Two items per slot keeps the dispatcher fed when one call returns.
-        # The cap stays on the live pool, not on a pre-claimed slice.
-        todo: asyncio.Queue[Any] = asyncio.Queue(maxsize=max(2, pool_size * 2))
-        finished: asyncio.Queue[Any] = asyncio.Queue()
-        totals = {"claimed": 0, "archived": 0, "published": 0, "rejected": 0, "held": 0, "deferred": 0, "stale": 0, "write_errors": 0, "exhausted": 0}
-        state: dict[str, Any] = {"failures": 0, "route_error": None}
-        tick = object()
-
-        async def feeder() -> None:
-            stalls = 0
-            while True:
-                if state["failures"] >= stall_limit:
-                    stalls += 1
-                    emit({"event": "stalled", "stalls": stalls, "route_error": state["route_error"]})
-                    if stalls >= 3:
-                        return
-                    await asyncio.sleep(pause_seconds)
-                    state["failures"] = 0
-                size = fetch_size if max_claims is None else min(fetch_size, max_claims - totals["claimed"])
-                if size <= 0:
-                    return
-                async with get_db() as db:
-                    fetched, items, archived = await self._claim_stream_items(db, kind, size, claims)
-                if fetched == 0:
-                    totals["exhausted"] = 1
-                    return
-                totals["claimed"] += fetched
-                totals["archived"] += archived
-                for item in items:
-                    await todo.put(item)
-
-        async def worker() -> None:
-            while True:
-                item = await todo.get()
-                if item is None:
-                    return
-                key, seen, payload = item
-                try:
-                    async with gate:
-                        pool = await claims.route_pool()
-                        reviewed = await _decide_with_retry(decide, pool, payload)
-                except Exception as exc:  # noqa: BLE001 - model outage: the row stays in review
-                    state["failures"] += 1
-                    state["route_error"] = str(exc)[:500]
-                    await finished.put((key, seen, exc))
-                    continue
-                state["failures"] = 0
-                await finished.put((key, seen, reviewed))
-
-        async def flush(batch: list[tuple[Any, Any, Any]]) -> None:
-            reviewed_rows = [entry for entry in batch if not isinstance(entry[2], Exception)]
-            deferred = len(batch) - len(reviewed_rows)
-            totals["deferred"] += deferred
-            counts = {"published": 0, "rejected": 0, "held": 0, "stale": 0}
-            if reviewed_rows:
-                try:
-                    async with get_db() as db:
-                        counts = await self._write_stream_results(db, kind, reviewed_rows)
-                except Exception as exc:  # noqa: BLE001 - nothing was committed; rows stay in review
-                    totals["write_errors"] += len(reviewed_rows)
-                    emit({"event": "write_failed", "items": len(reviewed_rows), "error": str(exc)[:300]})
-                    return
-            for name, value in counts.items():
-                totals[name] += value
-            emit({
-                "event": "commit",
-                "written": len(reviewed_rows),
-                **counts,
-                "deferred": deferred,
-                "route_error": state["route_error"] if deferred else None,
-                "queued": todo.qsize(),
-                "totals": dict(totals),
-            })
-
-        async def writer() -> None:
-            pending: list[tuple[Any, Any, Any]] = []
-            first_at = 0.0
-            while True:
-                timeout = commit_seconds if not pending else max(0.01, commit_seconds - (time.monotonic() - first_at))
-                try:
-                    entry = await asyncio.wait_for(finished.get(), timeout=timeout)
-                except asyncio.TimeoutError:
-                    entry = tick
-                if entry is None:
-                    if pending:
-                        await flush(pending)
-                    return
-                if entry is not tick:
-                    if not pending:
-                        first_at = time.monotonic()
-                    pending.append(entry)
-                if pending and (len(pending) >= commit_every or time.monotonic() - first_at >= commit_seconds):
-                    batch, pending = pending, []
-                    await flush(batch)
-
-        writer_task = asyncio.create_task(writer())
-        worker_tasks: list[asyncio.Task[None]] = []
-        spawn_lock = asyncio.Lock()
-
-        def spawn(count: int) -> None:
-            for _ in range(count):
-                worker_tasks.append(asyncio.create_task(worker()))
-
-        spawn(pool_size)
-
-        async def follow_capacity() -> None:
-            while True:
-                await asyncio.sleep(_POOL_REFRESH_SECONDS)
-                target = await self._live_review_slots()
-                async with spawn_lock:
-                    deficit = target - len(worker_tasks)
-                if deficit > 0:
-                    async with spawn_lock:
-                        spawn(target - len(worker_tasks))
-
-        scaler_task = asyncio.create_task(follow_capacity()) if dynamic else None
-        try:
-            await feeder()
-            if scaler_task is not None:
-                scaler_task.cancel()
-                await asyncio.gather(scaler_task, return_exceptions=True)
-                scaler_task = None
-            async with spawn_lock:
-                stopping = list(worker_tasks)
-            for _ in stopping:
-                await todo.put(None)
-            await asyncio.gather(*stopping)
-            await finished.put(None)
-            await writer_task
-        except BaseException:
-            # A bounded todo queue may be full while every worker waits on a
-            # model. Draining it during cancellation keeps issuing work and can
-            # prevent the worker from relinquishing its singleton lease.
-            children: list[asyncio.Task[Any]] = [*worker_tasks, writer_task]
-            if scaler_task is not None:
-                children.append(scaler_task)
-            for child in children:
-                child.cancel()
-            await asyncio.gather(*children, return_exceptions=True)
-            raise
-        return totals
-
     async def review_literature_summaries(
         self,
         db: AsyncSession,
@@ -1548,22 +1163,15 @@ class AIContentGovernanceService:
         use_ai: bool = True,
         completer: Completer | None = None,
         after_id: int | None = None,
-        claims: ReviewClaims | None = None,
         article_ids: list[str] | None = None,
     ) -> dict[str, Any]:
         query = self._summary_review_query(after_id, article_ids=article_ids)
-        if claims is None:
-            rows = (await db.execute(query.limit(limit))).all()
-        else:
-            async with claims.lock:
-                if claims.ids:
-                    query = query.where(LiteratureSummary.id != all_(literal(sorted(claims.ids), ARRAY(Integer))))
-                rows = (await db.execute(query.limit(limit))).all()
-                claims.ids.update(summary.id for summary, _article in rows)
+        rows = (await db.execute(query.limit(limit))).all()
         counts = {"published": 0, "archived": 0, "waiting": 0, "deferred": 0}
         applied: list[dict[str, Any]] = []
         route_error: str | None = None
         pending: list[tuple[Any, Any]] = []
+        archives: list[tuple[int, str]] = []
         fingerprints = await self._canonical_fingerprints(db, rows)
         for summary, article in rows:
             item_id = str(summary.id)
@@ -1580,61 +1188,35 @@ class AIContentGovernanceService:
                 applied.append({"summary_id": int(item_id), "decision": "skip", "reason": reason})
                 continue
             if action == "archive":
-                counts["archived"] += 1
-                if not dry_run:
-                    self._archive_summary(summary, reason)
-                applied.append({"summary_id": int(item_id), "decision": "archive", "reason": "missing fields"})
+                archives.append((summary.id, self._summary_fingerprint(summary)))
                 continue
             if not use_ai:
                 counts["deferred"] += 1
                 continue
             pending.append((summary, article))
 
-        if not dry_run and counts["archived"]:
-            await _mark_review_dirty(db, line="literature", scope_key="*")
-        model_changed = False
-        snapshots = await _release_review_connection(db, [row for pair in pending for row in pair])
-        results = await self._review_all(
-            pending,
-            completer,
-            self._decide_summary,
-            claims,
-        )
-        for (summary, article), reviewed in zip(pending, results):
-            item_id = str(summary.id)
-            if isinstance(reviewed, Exception):  # model outage: the item stays queued
+        prechecked = await self._archive_incomplete_summaries(db, archives, dry_run=dry_run)
+        counts["archived"] += prechecked.counts["rejected"]
+        counts["deferred"] += prechecked.counts["stale"]
+        applied.extend(prechecked.applied)
+        snapshots = {summary.id: self._summary_fingerprint(summary) for summary, _article in pending}
+        await _release_review_connection(db, [row for pair in pending for row in pair])
+        results = await self._review_all(pending, completer, self._decide_summary)
+        completed = []
+        for (summary, _article), reviewed in zip(pending, results):
+            if isinstance(reviewed, Exception):
                 route_error = str(reviewed)[:1000]
                 counts["deferred"] += 1
-                continue
-            if not await _reload_review_input(db, article, snapshots) or not await _reload_review_input(db, summary, snapshots):
-                counts["deferred"] += 1
-                continue
-            current_fingerprints = await self._canonical_fingerprints(db, [(summary, article)])
-            if self._summary_precheck(summary, article, canonical_fingerprint=current_fingerprints.get(summary.article_id))[0] != "review":
-                counts["deferred"] += 1
-                continue
-            outcome = _review_outcome(reviewed)
-            ungrounded = False
-            if outcome in {"publish", "exclude"}:
-                from src.literature.screening import decision_is_grounded
-                if not decision_is_grounded(article, reviewed):
-                    outcome = "hold"
-                    ungrounded = True
-            if outcome == "hold":
-                counts["held"] = counts.get("held", 0) + 1
-                if not dry_run:
-                    self._hold(summary, reviewed, self._summary_fingerprint(summary), "summaries")
-                applied.append({"summary_id": int(item_id), "decision": "hold", "review": reviewed.provenance(PROMPT_VERSION)})
-                continue
-            publish = outcome == "publish"
-            counts["published" if publish else "archived"] += 1
-            if not dry_run:
-                self._apply_summary(summary, reviewed, publish)
-                model_changed = True
-            applied.append({"summary_id": int(item_id), "decision": "publish" if publish else "archive", "review": reviewed.provenance(PROMPT_VERSION)})
+            else:
+                completed.append((summary.id, snapshots[summary.id], reviewed))
+        application = await self._apply_literature_results(db, "summaries", completed, dry_run=dry_run)
+        counts["published"] += application.counts["published"]
+        counts["archived"] += application.counts["rejected"]
+        counts["deferred"] += application.counts["stale"]
+        if application.counts["held"]:
+            counts["held"] = application.counts["held"]
+        applied.extend(application.applied)
         if not dry_run:
-            if model_changed:
-                await _mark_review_dirty(db, line="literature", scope_key="*")
             await db.commit()
         return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(rows), "route_error": route_error, "applied": applied[:100]}
 
@@ -1646,56 +1228,33 @@ class AIContentGovernanceService:
         dry_run: bool = False,
         use_ai: bool = True,
         completer: Completer | None = None,
-        claims: ReviewClaims | None = None,
     ) -> dict[str, Any]:
         query = self._article_review_query()
-        if claims is None:
-            articles = (await db.execute(query.limit(limit))).scalars().all()
-        else:
-            async with claims.lock:
-                if claims.ids:
-                    query = query.where(LiteratureArticle.article_id != all_(literal(sorted(claims.ids), ARRAY(String))))
-                articles = (await db.execute(query.limit(limit))).scalars().all()
-                claims.ids.update(article.article_id for article in articles)
+        articles = (await db.execute(query.limit(limit))).scalars().all()
         counts = {"published": 0, "excluded": 0, "deferred": 0}
-        applied: list[dict[str, Any]] = []
         route_error: str | None = None
-        snapshots = await _release_review_connection(db, list(articles) if use_ai else [])
-        results = await self._review_all(
-            list(articles) if use_ai else [],
-            completer,
-            self._decide_article,
-            claims,
-        )
-        for article, reviewed in zip(articles if use_ai else [], results):
-            if isinstance(reviewed, Exception):  # model outage: the item stays queued
+        pending = list(articles) if use_ai else []
+        snapshots = {article.article_id: self._article_fingerprint(article) for article in pending}
+        await _release_review_connection(db, pending)
+        results = await self._review_all(pending, completer, self._decide_article)
+        completed = []
+        for article, reviewed in zip(pending, results):
+            if isinstance(reviewed, Exception):
                 route_error = str(reviewed)[:1000]
                 counts["deferred"] += 1
-                continue
-            if not await _reload_review_input(db, article, snapshots) or article.publication_status != "review":
-                counts["deferred"] += 1
-                continue
-            outcome = _review_outcome(reviewed)
-            if outcome == "hold":
-                counts["held"] = counts.get("held", 0) + 1
-                if not dry_run:
-                    self._hold(article, reviewed, self._article_fingerprint(article), "articles")
-                    if ungrounded:
-                        article.metadata_ = {**(article.metadata_ or {}), "screening_hold_reason": "abstract_evidence_not_verified"}
-                applied.append({"article_id": article.article_id, "decision": "hold", "review": reviewed.provenance(PROMPT_VERSION)})
-                continue
-            desired = "published" if outcome == "publish" else "excluded"
-            counts[desired] += 1
-            if not dry_run:
-                self._apply_article(db, article, reviewed, desired)
-            applied.append({"article_id": article.article_id, "decision": desired, "review": reviewed.provenance(PROMPT_VERSION)})
+            else:
+                completed.append((article.article_id, snapshots[article.article_id], reviewed))
+        application = await self._apply_literature_results(db, "articles", completed, dry_run=dry_run)
+        counts["published"] = application.counts["published"]
+        counts["excluded"] = application.counts["rejected"]
+        counts["deferred"] += application.counts["stale"]
+        if application.counts["held"]:
+            counts["held"] = application.counts["held"]
         if not use_ai:
             counts["deferred"] = len(articles)
         if not dry_run:
-            if counts["published"] or counts["excluded"]:
-                await _mark_review_dirty(db, line="literature", scope_key="*")
             await db.commit()
-        return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(articles), "route_error": route_error, "applied": applied[:100]}
+        return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(articles), "route_error": route_error, "applied": application.applied[:100]}
 
     async def review_knowledge_sources(
         self,

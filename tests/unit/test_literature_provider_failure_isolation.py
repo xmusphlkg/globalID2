@@ -559,8 +559,8 @@ async def test_empty_connect_error_persists_nonempty_redacted_task_error(monkeyp
             raise httpx.ConnectError("", request=httpx.Request("GET", "https://secret.example/api?token=abc"))
 
     assert status_updates == [
-        (TaskStatus.RUNNING, {}),
-        (TaskStatus.FAILED, {"error_message": "ConnectError"}),
+        (TaskStatus.RUNNING, {"expected_ai_generation": 0}),
+        (TaskStatus.FAILED, {"error_message": "ConnectError", "expected_ai_generation": 0}),
     ]
     assert workbook_entries[0]["content"] == "Error: ConnectError"
     assert lifecycle_module.safe_exception_summary(

@@ -686,7 +686,7 @@ async def _run_literature_enrichment(task: Task) -> Dict[str, Any]:
                 task_obj.output_data = result
                 await db.commit()
         if int(result.get("failed") or 0):
-            from src.ai.work_queue import AIWorkFailed
+            from src.ai.runtime import AIWorkFailed
             raise AIWorkFailed(f"Literature enrichment failed for {result['failed']} article(s)")
         return result
 

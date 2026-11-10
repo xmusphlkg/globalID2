@@ -93,7 +93,11 @@ def compare_table_metadata(expected, actual, dialect):
             differences.append(f"{expected.name}.{column.name}: nullability differs")
         left = column.server_default.arg if column.server_default is not None else None
         right = other.server_default.arg if other.server_default is not None else None
-        if normalized_default(left) != normalized_default(right):
+        implicit_sequence = (
+            column.primary_key and column.autoincrement in (True, "auto")
+            and left is None and str(right).startswith("nextval(")
+        )
+        if not implicit_sequence and normalized_default(left) != normalized_default(right):
             differences.append(f"{expected.name}.{column.name}: server default differs")
 
     def checks(table):
@@ -113,7 +117,7 @@ def compare_table_metadata(expected, actual, dialect):
     def indexes(table):
         return {
             index.name: (
-                tuple(column.name for column in index.columns),
+                tuple(getattr(getattr(expr, "element", expr), "name", None) for expr in index.expressions),
                 bool(index.unique),
                 normalized_predicate(index.dialect_options["postgresql"].get("where")),
             )
@@ -199,7 +203,7 @@ def compare_postgresql_schema(connection):
             differences.append(f"{table.name}: unique constraints differ")
         indexes = {
             index.name: (
-                tuple(column.name for column in index.columns),
+                tuple(getattr(getattr(expr, "element", expr), "name", None) for expr in index.expressions),
                 bool(index.unique),
                 normalized_predicate(index.dialect_options["postgresql"].get("where")),
             )
@@ -225,7 +229,7 @@ def main():
     from src.core.config import get_config
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--expected-revision", default="0024_collection_jsonb")
+    parser.add_argument("--expected-revision", default="0030_ai_activity_leases")
     args = parser.parse_args()
     engine = create_engine(get_config().database.url_sync)
     try:

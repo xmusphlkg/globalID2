@@ -1,7 +1,7 @@
 """Additional model dispatcher sharing the durable queue and route limits.
 
 The main worker owns task and lease recovery. This process must never call
-``release_leases_on_startup``: other dispatchers may own live work. PostgreSQL
+global lease resets: other dispatchers may own live work. PostgreSQL
 route reservation locks and work-row locks enforce shared capacity and prevent
 two dispatchers from claiming the same model call.
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import signal
 
-from src.ai.work_queue import AIWorkDispatcher
+from src.ai.runtime import AIWorkDispatcher
 from src.core.database import dispose_database
 from src.core.logging import get_logger
 from src.services.model_dispatch_ready import worker_ready
@@ -35,7 +35,7 @@ async def run() -> None:
         if stop.is_set():
             return
         logger.info("Auxiliary shared-queue model dispatcher started")
-        await AIWorkDispatcher(balance_peer_review=True).run(stop)
+        await AIWorkDispatcher().run(stop)
     finally:
         await dispose_database()
         logger.info("Auxiliary shared-queue model dispatcher stopped")

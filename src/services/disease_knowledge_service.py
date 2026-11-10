@@ -138,7 +138,7 @@ def _knowledge_snapshot(
 
 
 def _raise_if_model_work_failed() -> None:
-    from src.ai.work_queue import AIWorkFailed, current_parent
+    from src.ai.runtime import AIWorkFailed, current_parent
 
     parent = current_parent()
     if parent is not None and parent.failures:

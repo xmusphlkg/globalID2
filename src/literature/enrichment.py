@@ -20,11 +20,9 @@ from typing import Any
 from sqlalchemy import func, or_, select
 
 from src.ai.agents.base import BaseAgent
-from src.ai.model_center import (
-    get_active_model_routes,
-    is_provider_authentication_error,
-    live_model_permits,
-)
+from src.ai.runtime.contracts import RoutingRequirements
+from src.ai.model_center import get_active_model_routes, live_model_permits
+from src.ai.catalogue.errors import is_provider_authentication_error
 from src.core import get_config, get_db, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
@@ -73,29 +71,11 @@ class LiteratureEvidenceAgent(BaseAgent):
         )
 
     async def process(self, **kwargs: Any) -> dict[str, Any]:
-        literature_config = get_config().literature
         response = await self.complete(
             prompt=kwargs["prompt"],
             system=kwargs["system"],
             use_cache=bool(kwargs.get("use_cache", True)),
-            preferred_models=kwargs.get("preferred_models"),
-            wait_for_model_recovery=bool(
-                kwargs.get(
-                    "wait_for_model_recovery",
-                    literature_config.ai_wait_for_model_recovery,
-                )
-            ),
-            max_attempts_per_model=getattr(
-                literature_config,
-                "ai_literature_max_attempts_per_model",
-                2,
-            ),
-            max_quota_recovery_rounds=int(
-                kwargs.get(
-                    "max_quota_recovery_rounds",
-                    literature_config.ai_quota_recovery_rounds,
-                )
-            ),
+            routing=RoutingRequirements(preferred_models=tuple(kwargs.get("preferred_models") or ())),
             model_request_timeout_seconds=kwargs.get("timeout_seconds"),
         )
         return {"raw_response": response}

@@ -77,6 +77,7 @@ from .literature import (
 )
 from .collection import PublishDirty, RunStage, SourceArtifact
 from .ai_work_item import AIWorkItem
+from .ai_review_workflow import AIReviewDrain, AIReviewWorkflow
 
 __all__ = [
     # Base classes
@@ -156,6 +157,8 @@ __all__ = [
     "LiteratureSummary",
     "LiteratureTopicLink",
     "AIWorkItem",
+    "AIReviewDrain",
+    "AIReviewWorkflow",
     "PublishDirty",
     "RunStage",
     "SourceArtifact",

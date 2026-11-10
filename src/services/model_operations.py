@@ -107,7 +107,9 @@ async def enqueue_model_operation(
             (
                 t
                 for t in candidates
-                if (t.input_data or {}).get("arguments") == arguments
+                if ((t.input_data or {}).get("arguments") == arguments
+                    or (operation == "governance_stream" and
+                        ((t.input_data or {}).get("arguments") or {}).get("kind") == arguments.get("kind")))
             ),
             None,
         )
@@ -197,11 +199,9 @@ async def execute_model_operation(operation: str, arguments: dict[str, Any]) -> 
         options["registry_path"] = Path(options["registry_path"])
         return await review_weekly_brief_files(**options)
     if operation == "governance_stream":
-        from src.services.ai_content_governance_service import (
-            ai_content_governance_service,
-        )
+        from src.literature.review_workflow import run_literature_review
 
-        return await ai_content_governance_service.stream_review(**arguments)
+        return await run_literature_review(**arguments)
     if operation == "governance_simple":
         from src.services.ai_content_governance_service import (
             ai_content_governance_service,
@@ -215,7 +215,7 @@ async def execute_model_operation(operation: str, arguments: dict[str, Any]) -> 
                 db, limit=arguments.get("limit", 64)
             )
     if operation == "idle_situation":
-        from src.ai.work_queue import current_parent
+        from src.ai.runtime import current_parent
         from src.services.situation_notices.runner import run_situation
 
         # Reuse the same collect/organize/store and dirty-marking contract.
@@ -226,7 +226,7 @@ async def execute_model_operation(operation: str, arguments: dict[str, Any]) -> 
             task_uuid=current_parent().task_uuid,
         )
     if operation in {"check_model", "check_provider", "check_all_models"}:
-        from src.ai.work_queue import submit_probe
+        from src.ai.runtime import submit_probe
 
         return await submit_probe(operation, arguments)
     raise ValueError(f"Unsupported worker model operation: {operation}")

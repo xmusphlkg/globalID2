@@ -1359,22 +1359,13 @@ def test_parse_json_extracts_first_json_object_from_messy_text() -> None:
 
 
 @pytest.mark.asyncio
-async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeypatch):
+async def test_literature_evidence_agent_submits_routing_requirements(monkeypatch):
     captured = {}
 
     async def fake_complete(self, **kwargs):
         captured.update(kwargs)
         return "{}"
 
-    monkeypatch.setattr(
-        "src.literature.enrichment.get_config",
-        lambda: SimpleNamespace(
-            literature=SimpleNamespace(
-                ai_wait_for_model_recovery=True,
-                ai_quota_recovery_rounds=1,
-            )
-        ),
-    )
     monkeypatch.setattr(LiteratureEvidenceAgent, "complete", fake_complete)
 
     await LiteratureEvidenceAgent().process(
@@ -1384,9 +1375,9 @@ async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeyp
         timeout_seconds=30,
     )
 
-    assert captured["wait_for_model_recovery"] is True
-    assert captured["max_quota_recovery_rounds"] == 1
-    assert captured["max_attempts_per_model"] == 2
+    assert captured["routing"].preferred_models == ("qwen3.8-flash",)
+    assert captured["model_request_timeout_seconds"] == 30
+    assert set(captured) == {"prompt", "system", "use_cache", "routing", "model_request_timeout_seconds"}
 
 
 @pytest.mark.asyncio

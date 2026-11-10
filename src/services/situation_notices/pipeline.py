@@ -29,8 +29,6 @@ from sqlalchemy.orm import selectinload
 
 from src.ai.attachments import PDF, Attachment
 from src.ai.agents.base import NoModelAvailable
-from src.ai.peer_review import SameModelReviewError
-from src.ai.peer_review_completer import ReviewRoutePool
 from src.core import get_logger
 from src.core.database import get_db
 from src.domain import (
@@ -56,7 +54,6 @@ OUTBREAK_GAP_DAYS = 60
 OUTBREAK_QUIET_DAYS = 30
 MAX_DOCUMENT_ATTEMPTS = 4
 MAX_AI_ATTEMPTS = 4
-SAME_MODEL_RETRIES = 3
 #: Reports downloaded at once; the HTTP client additionally caps each host.
 DOWNLOAD_WORKERS = 6
 #: Reuse the retry deadline as a renewable claim; a dead worker releases it by expiry.
@@ -381,22 +378,6 @@ async def requeue_stale_prompts() -> int:
     return requeued
 
 
-async def _extract_with_retry(complete: Completer | ReviewRoutePool, *args: Any, **kwargs: Any) -> Any:
-    """With a route pool, redo a review that failover collapsed onto one model."""
-
-    if not isinstance(complete, ReviewRoutePool):
-        return await extract_alerts(complete, *args, **kwargs)
-    avoid: set[str] = set()
-    for attempt in range(SAME_MODEL_RETRIES + 1):
-        try:
-            return await extract_alerts(complete.completer(avoid), *args, **kwargs)
-        except SameModelReviewError as exc:
-            if attempt >= SAME_MODEL_RETRIES:
-                raise
-            avoid.add(exc.model)
-    raise AssertionError("unreachable")
-
-
 @dataclass
 class _ExtractionClaim:
     notice_id: str
@@ -424,7 +405,7 @@ class _ExtractionClaimLost(Exception):
 async def _extract_claimed(claim: _ExtractionClaim, complete: Any, *args: Any, **kwargs: Any) -> Any:
     """Wait without a session, renewing in short transactions during long queue waits."""
 
-    work = asyncio.create_task(_extract_with_retry(complete, *args, **kwargs))
+    work = asyncio.create_task(extract_alerts(complete, *args, **kwargs))
     try:
         while True:
             done, _ = await asyncio.wait({work}, timeout=EXTRACTION_LEASE_SECONDS / 3)
@@ -462,7 +443,7 @@ def _published_signature(extraction, alerts) -> tuple:
 
 
 async def extract_pending(
-    complete: Completer | ReviewRoutePool,
+    complete: Completer,
     *,
     limit: int = 30,
     source_ids: list[str] | None = None,
@@ -474,12 +455,12 @@ async def extract_pending(
 
     ``concurrency`` reports are read at once. A completer remembers which model
     wrote the draft and which one served last, so reading several reports at once
-    needs ``new_completer`` (or a route pool), which gives every report its own.
+    needs ``new_completer``, which gives every report its own.
     """
 
     concurrency = max(1, int(concurrency))
-    if concurrency > 1 and new_completer is None and not isinstance(complete, ReviewRoutePool):
-        raise ValueError("concurrent extraction needs new_completer or a ReviewRoutePool")
+    if concurrency > 1 and new_completer is None:
+        raise ValueError("concurrent extraction needs new_completer")
     counts = {"published": 0, "rejected": 0, "failed": 0, "unchanged": 0}
     diseases = allowed_diseases()
     country_codes = set(country_catalogue())

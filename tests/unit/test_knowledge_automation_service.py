@@ -20,7 +20,7 @@ async def test_scheduler_only_enqueues_reconciliation(monkeypatch):
     from unittest.mock import AsyncMock
     from src.services import knowledge_automation_service as module
     from src.services import model_operations
-    from src.ai import work_queue
+    from src.ai import runtime as work_queue
 
     service = module.KnowledgeAutomationService()
     monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(knowledge_automation_interval_seconds=60))

@@ -16,18 +16,22 @@ from ..schemas.task import TaskOut
 from src.ai.model_center import (
     bootstrap_model_center_from_env,
     discover_provider_models_by_id,
+    get_runtime_routes,
+    mask_api_key,
+)
+from src.ai.catalogue.health import (
     get_model_rate_limit_state,
     get_model_runtime_health_state,
     get_provider_rate_limit_state,
     get_provider_runtime_health_state,
-    get_runtime_routes,
+)
+from src.ai.catalogue.options import (
     availability_view,
     get_thinking_mode,
-    mask_api_key,
     with_availability,
     with_thinking_mode,
 )
-from src.control_plane.runtime import runtime_registry
+from src.ai.runtime_metrics import read_runtime_metrics
 from src.core.db_schema import ensure_task_type_enum_schema
 from src.core.task_manager import task_manager
 from src.domain.ai_model_center import AIModelCallLog, AIModelConfig, AIProviderConfig
@@ -1228,42 +1232,10 @@ async def list_ai_model_call_logs(
 @router.get("/ai/models/runtime", response_model=List[RuntimeRouteOut])
 async def list_runtime_routes():
     routes = await get_runtime_routes()
-    services, _ = await runtime_registry.list_services()
-    workers = [item for item in services if item.get("service") == "worker"]
-    workers.sort(key=lambda item: str(item.get("last_seen_at") or ""), reverse=True)
-    worker_metadata = (
-        workers[0].get("metadata")
-        if workers and isinstance(workers[0].get("metadata"), dict)
-        else {}
-    )
-    provider_capacities = worker_metadata.get("ai_provider_capacities")
-    provider_capacities = provider_capacities if isinstance(provider_capacities, dict) else {}
-    model_capacities = worker_metadata.get("ai_model_capacities")
-    model_capacities = model_capacities if isinstance(model_capacities, dict) else {}
-    admission_fields = {
-        "runtime_provider_capacity",
-        "runtime_provider_inflight",
-        "runtime_provider_max_capacity",
-    }
-    for route in routes:
-        worker_snapshot = provider_capacities.get(str(route.get("provider_id")))
-        if isinstance(worker_snapshot, dict):
-            route.update(
-                {
-                    key: worker_snapshot[key]
-                    for key in admission_fields
-                    if key in worker_snapshot
-                }
-            )
-        model_snapshot = model_capacities.get(str(route.get("model_id")))
-        if isinstance(model_snapshot, dict):
-            route.update(
-                {
-                    key: model_snapshot[key]
-                    for key in ("runtime_model_capacity", "runtime_model_inflight")
-                    if key in model_snapshot
-                }
-            )
+    # Occupancy is shared by all dispatchers. The legacy "inflight" fields
+    # report occupied durable permits, not a count of live HTTP connections.
+    snapshot = await read_runtime_metrics(routes)
+    routes = snapshot.apply_to_routes(routes)
     return [
         RuntimeRouteOut(
             model_id=int(route["model_id"]),
@@ -1305,10 +1277,10 @@ async def list_runtime_routes():
             runtime_last_failure_at=route.get("runtime_last_failure_at"),
             runtime_last_success_at=route.get("runtime_last_success_at"),
             runtime_last_error=route.get("runtime_last_error"),
-            runtime_provider_capacity=int(route.get("runtime_provider_capacity") or 1),
+            runtime_provider_capacity=int(route.get("runtime_provider_capacity") or 0),
             runtime_provider_inflight=int(route.get("runtime_provider_inflight") or 0),
-            runtime_provider_max_capacity=int(route.get("runtime_provider_max_capacity") or 1),
-            runtime_model_capacity=int(route.get("runtime_model_capacity") or 1),
+            runtime_provider_max_capacity=int(route.get("runtime_provider_max_capacity") or 0),
+            runtime_model_capacity=int(route.get("runtime_model_capacity") or 0),
             runtime_model_inflight=int(route.get("runtime_model_inflight") or 0),
         )
         for route in routes

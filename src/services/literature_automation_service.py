@@ -706,7 +706,7 @@ class LiteratureAutomationService:
             raise ValueError("statement_timeout_seconds must be between 30 and 3600")
         if not 1 <= effective_lock_timeout <= 300:
             raise ValueError("lock_timeout_seconds must be between 1 and 300")
-        from src.ai.work_queue import current_parent
+        from src.ai.runtime import current_parent
         parent = current_parent()
         if not dry_run and parent is None:
             from src.services.model_operations import enqueue_model_operation

@@ -93,9 +93,7 @@ async def ensure_article_review() -> str:
         for task in tasks:
             if ((task.input_data or {}).get("arguments") or {}).get("kind") == "articles":
                 return str(task.task_uuid)
-    task = await enqueue_model_operation("governance_stream", {
-        "kind": "articles", "fetch_size": 64, "stall_limit": 24, "pause_seconds": 1.0,
-    })
+    task = await enqueue_model_operation("governance_stream", {"kind": "articles"})
     return str(task.task_uuid)
 
 

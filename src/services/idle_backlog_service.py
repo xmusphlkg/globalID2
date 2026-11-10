@@ -4,8 +4,7 @@ Scheduled AI tasks and release exports always go first. While none is waiting
 and few are running, this loop spends spare model capacity on the queues the
 other automations leave behind: Research Radar articles and summaries,
 knowledge sources, learning suggestions and Situation reports. Article and
-summary review stay on one open stream whose in-flight calls follow live route
-permits, instead of a fixed slice.
+summary review use durable workflow cursors; model permits are shared by the runtime.
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ from sqlalchemy import func, select
 from src.control_plane.schedule_state import schedule_state_repository
 from src.core import get_config, get_database, get_logger
 from src.domain import Task, TaskStatus
-from src.services.ai_content_governance_service import ReviewClaims, ai_content_governance_service as governance
+from src.services.ai_content_governance_service import ai_content_governance_service as governance
 from src.services.situation_notices.pipeline import (
     backlog_counts as situation_backlog_counts,
 )
@@ -49,11 +48,10 @@ LaneWork = Callable[["Lane", int, int], Awaitable[SliceResult]]
 
 @dataclass
 class Lane:
-    """One review line. ``claims`` and ``pass_finalised`` live for one pass over the queue."""
+    """One review line following its queued durable parent task."""
 
     name: str
     work: LaneWork
-    claims: ReviewClaims | None = None
     next_at: float = 0.0
     failures: int = 0
     pass_finalised: int = 0
@@ -114,7 +112,7 @@ def _finalised(task: Task) -> int:
 
 
 def _queued_lane(name: str, operation: str, options) -> Lane:
-    async def work(lane: Lane, slice_size: int, workers: int) -> SliceResult:
+    async def work(lane: Lane, slice_size: int, buffer_size: int) -> SliceResult:
         from src.services.model_operations import enqueue_model_operation
         from src.domain import TaskPriority
 
@@ -133,7 +131,7 @@ def _queued_lane(name: str, operation: str, options) -> Lane:
                     # Usually a worker restart expired the lease mid-stream. That says
                     # nothing about the backlog, so start a new stream instead of resting.
                     lane.pass_finalised += _finalised(task)
-                    task = await enqueue_model_operation(operation, options(slice_size, workers), priority=TaskPriority.LOW)
+                    task = await enqueue_model_operation(operation, options(slice_size, buffer_size), priority=TaskPriority.LOW)
                     lane.task_uuid = task.task_uuid
                     return SliceResult(detail={"queued_task_uuid": task.task_uuid, "after_cancelled": True})
                 finalised = _finalised(task)
@@ -141,25 +139,22 @@ def _queued_lane(name: str, operation: str, options) -> Lane:
                     # No progress: rest instead of re-claiming rows that keep deferring.
                     return SliceResult(exhausted=True, detail={"finished_task_uuid": task.task_uuid})
                 lane.pass_finalised += finalised
-        task = await enqueue_model_operation(operation, options(slice_size, workers), priority=TaskPriority.LOW)
+        task = await enqueue_model_operation(operation, options(slice_size, buffer_size), priority=TaskPriority.LOW)
         lane.task_uuid = task.task_uuid
         return SliceResult(detail={"queued_task_uuid": task.task_uuid})
     return Lane(name, work)
 
 
-def stream_lane(name: str, kind: str) -> Lane:
-    # No slice and no fixed worker count. stream_review sizes the pool from
-    # the permits each route still has, and keeps claiming until that kind is empty.
-    return _queued_lane(name, "governance_stream", lambda _size, _workers: {
-        "kind": kind, "fetch_size": 64, "stall_limit": 24, "pause_seconds": 1.0})
+def review_lane(name: str, kind: str) -> Lane:
+    return _queued_lane(name, "governance_stream", lambda _size, buffer_size: {"kind": kind, "buffer_size": buffer_size})
 
 
 def simple_lane(name: str, method: str) -> Lane:
-    return _queued_lane(name, "governance_simple", lambda size, workers: {"method": method, "limit": min(size, 64)})
+    return _queued_lane(name, "governance_simple", lambda size, buffer_size: {"method": method, "limit": min(size, 64)})
 
 
 def situation_lane() -> Lane:
-    return _queued_lane("situation", "idle_situation", lambda size, workers: {
+    return _queued_lane("situation", "idle_situation", lambda size, buffer_size: {
         "document_limit": SITUATION_DOCUMENTS_PER_SLICE, "ai_limit": SITUATION_REPORTS_PER_SLICE})
 
 
@@ -168,8 +163,8 @@ def default_lanes() -> list[Lane]:
     # which wait on their parent article.
     return [
         situation_lane(),
-        stream_lane("articles", "articles"),
-        stream_lane("summaries", "summaries"),
+        review_lane("articles", "articles"),
+        review_lane("summaries", "summaries"),
         simple_lane("knowledge_sources", "review_knowledge_sources"),
         simple_lane("learning_suggestions", "review_learning_suggestions"),
     ]
@@ -258,15 +253,15 @@ class IdleBacklogService:
             return await self._finish(cycle, started)
 
         # A lane in the middle of a pass already knows it has work; only others need counting.
-        counts = await self._counts() if any(lane.claims is None for lane in due) else {}
+        counts = await self._counts() if any(lane.task_uuid is None for lane in due) else {}
         cycle["backlog"] = counts
         for lane in due:
             if self._stop.is_set():
                 break
-            if lane.claims is None and not counts.get(lane.name):
+            if lane.task_uuid is None and not counts.get(lane.name):
                 self._rest(lane, cfg.idle_backlog_rest_seconds)
                 continue
-            result = await self._run_slice(lane, cfg.idle_backlog_slice_size, cfg.idle_backlog_workers)
+            result = await self._run_slice(lane, cfg.idle_backlog_slice_size, cfg.idle_backlog_review_buffer_size)
             self._schedule(lane, result, cfg.idle_backlog_interval_seconds, cfg.idle_backlog_rest_seconds)
             cycle["lanes"][lane.name] = {
                 "finalised": result.finalised,
@@ -285,9 +280,9 @@ class IdleBacklogService:
             cycle["status"] = "worked"
         return await self._finish(cycle, started)
 
-    async def _run_slice(self, lane: Lane, slice_size: int, workers: int) -> SliceResult:
+    async def _run_slice(self, lane: Lane, slice_size: int, buffer_size: int) -> SliceResult:
         try:
-            return await lane.work(lane, slice_size, workers)
+            return await lane.work(lane, slice_size, buffer_size)
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001 - treated like a model outage: back off, retry later
@@ -296,16 +291,14 @@ class IdleBacklogService:
 
     @staticmethod
     def _rest(lane: Lane, seconds: float) -> None:
-        lane.claims = None
         lane.pass_finalised = 0
         lane.next_at = time.monotonic() + seconds
 
     def _schedule(self, lane: Lane, result: SliceResult, interval: float, rest: float) -> None:
         """Decide when the lane runs next.
 
-        A pass keeps its claims across slices so rows that were deferred or are not
-        reviewable yet are not fetched again until the pass ends. A pass that decided
-        something is followed by another soon; one that decided nothing rests.
+        The durable workflow owns the pass cursor. A pass that decided something
+        is followed by another soon; one that decided nothing rests.
         """
 
         if result.outage:

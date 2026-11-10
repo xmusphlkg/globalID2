@@ -1,10 +1,23 @@
 """AI task progress and the log lines synthesized for the control panel."""
 
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
+import pytest
+import pytest_asyncio
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from src.ai.runtime import progress as runtime_progress
 from src.ai.task_progress import displayed_progress
-from src.control_plane.ai_task_trace import build_ai_task_entries
+from src.control_plane.ai_task_trace import (
+    build_ai_task_entries,
+    trace_for_task,
+    work_counts,
+)
+from src.domain import Base, RunStage, Task, TaskStatus, TaskType, TaskWorkbook
+from src.domain.ai_work_item import AIWorkItem
 
 
 def _item(**kwargs):
@@ -198,3 +211,98 @@ def test_non_ai_task_without_model_work_adds_no_log():
         )
         == []
     )
+
+
+@pytest_asyncio.fixture
+async def trace_database(tmp_path, monkeypatch):
+    pytest.importorskip("aiosqlite")
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'trace.db'}")
+    async with engine.begin() as connection:
+        await connection.run_sync(lambda sync: Base.metadata.create_all(sync, tables=[
+            Task.__table__, TaskWorkbook.__table__, AIWorkItem.__table__, RunStage.__table__,
+        ]))
+    sessions = async_sessionmaker(engine, expire_on_commit=False)
+
+    @asynccontextmanager
+    async def database():
+        async with sessions.begin() as session:
+            yield session
+
+    monkeypatch.setattr(runtime_progress, "get_database", database)
+    yield sessions
+    await engine.dispose()
+
+
+async def _retry_trace_fixture(database):
+    async with database.begin() as session:
+        task = Task(task_uuid="same-parent", task_name="review", task_type=TaskType.AGENT_WORKFLOW,
+                    status=TaskStatus.RUNNING, input_data={}, metadata_={"ai_execution_generation": 1})
+        session.add(task)
+        old_failed = AIWorkItem(parent_task_uuid=task.task_uuid, line="content_governance", priority="normal",
+                                status="failed", payload={}, error="old upstream failure")
+        old_success = AIWorkItem(parent_task_uuid=task.task_uuid, line="content_governance", priority="normal",
+                                 status="succeeded", payload={"execution_generation": 0})
+        current = AIWorkItem(parent_task_uuid=task.task_uuid, line="content_governance", priority="normal",
+                             status="queued", payload={"execution_generation": 1})
+        session.add_all([old_failed, old_success, current])
+    return task, old_failed, old_success, current
+
+
+async def test_retried_parent_counts_only_current_generation_but_keeps_history(trace_database):
+    task, old_failed, old_success, current = await _retry_trace_fixture(trace_database)
+    async with trace_database() as session:
+        counts = await work_counts(session, [task.task_uuid])
+        assert counts == {task.task_uuid: {"queued": 1}}
+        progress, entries = await trace_for_task(session, await session.get(Task, task.id))
+    assert progress == 0
+    summary = next(entry for entry in entries if entry["title"] == "Model work progress")
+    assert "failed: 0" in summary["content"] and "finished: 0/1" in summary["content"]
+    assert summary["entry_type"] == "info"
+    historical = [entry for entry in entries if entry["metadata"].get("execution_generation") == 0]
+    assert {entry["metadata"]["work_id"] for entry in historical} == {old_failed.id, old_success.id}
+
+
+async def test_late_old_event_does_not_advance_new_generation_progress(trace_database):
+    task, old_failed, old_success, current = await _retry_trace_fixture(trace_database)
+    event = runtime_progress._work_event(old_failed, route_key="old:model", record_error=True)
+    assert event["execution_generation"] == 0
+    await runtime_progress.note_parent_work(event)
+    async with trace_database() as session:
+        parent = await session.get(Task, task.id)
+        assert parent.progress == 0
+        history = (await session.scalars(select(TaskWorkbook))).all()
+        assert len(history) == 1
+        assert history[0].metadata_["execution_generation"] == 0
+        assert history[0].error_message == "old upstream failure"
+    async with trace_database.begin() as session:
+        active = await session.get(AIWorkItem, current.id)
+        active.status = "succeeded"
+        session.add(AIWorkItem(parent_task_uuid=task.task_uuid, line="content_governance", priority="normal",
+                               status="queued", payload={"execution_generation": 1}))
+    current.status = "succeeded"
+    await runtime_progress.note_parent_work(runtime_progress._work_event(current, route_key="new:model", record_error=False))
+    async with trace_database() as session:
+        assert (await session.get(Task, task.id)).progress == 50
+        assert await work_counts(session, [task.task_uuid]) == {task.task_uuid: {"queued": 1, "succeeded": 1}}
+
+
+async def test_generation_zero_counts_activities_without_generation_metadata(trace_database):
+    async with trace_database.begin() as session:
+        task = Task(task_uuid="original-parent", task_name="first run", task_type=TaskType.AGENT_WORKFLOW,
+                    status=TaskStatus.RUNNING, input_data={})
+        session.add(task)
+        session.add(AIWorkItem(parent_task_uuid=task.task_uuid, line="content_governance", priority="normal",
+                               status="queued", payload={}))
+    async with trace_database() as session:
+        assert await work_counts(session, [task.task_uuid]) == {task.task_uuid: {"queued": 1}}
+
+
+async def test_history_remains_visible_before_new_generation_submits_work(trace_database):
+    task, old_failed, old_success, current = await _retry_trace_fixture(trace_database)
+    async with trace_database.begin() as session:
+        await session.delete(await session.get(AIWorkItem, current.id))
+    async with trace_database() as session:
+        progress, entries = await trace_for_task(session, await session.get(Task, task.id))
+    assert progress == 0
+    assert {entry["metadata"].get("work_id") for entry in entries} >= {old_failed.id, old_success.id}
+    assert not any(entry["title"] == "Model work progress" for entry in entries)

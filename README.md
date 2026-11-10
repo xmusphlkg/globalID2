@@ -170,10 +170,15 @@ See [Papers hosting](docs/PAPERS_HOSTING.md),
 ### Local development
 
 - Python 3.11+
-- Node.js 22+ recommended for the dashboard stack
+- Node.js 22.23.4 or newer (the installed Astro version requires at least 22.23.4)
 - PostgreSQL 14+ or compatible TimescaleDB image
 - Redis
 - optional: Qdrant
+
+The system `node` on the service PATH must also satisfy this requirement:
+Reports builds launch it directly from the Python worker. The Node package in
+`astro-site/node_modules` only changes npm-script resolution and does not upgrade
+the system runtime. Check `node --version` in the service environment after upgrades.
 
 ### Docker workflow
 
@@ -196,14 +201,34 @@ The shipped example includes these categories:
 - AI bootstrap defaults: `DEFAULT_AI_PROVIDER`, `DEFAULT_MODEL`, `AI__MODEL_CHAIN_RAW`
 - paths: `DATA_DIR`, `LOG_DIR`, `CONFIG_DIR`
 
-For dashboard background tasks, `TASK_WORKER_CONCURRENCY` controls how many queued jobs
-the standalone worker consumes in parallel. Increase it carefully because higher values
-also increase model/API pressure and email/report throughput.
-`TASK_WORKER_AI_CONCURRENCY` is the AI-task hard ceiling. With
-`TASK_WORKER_AI_DYNAMIC_CONCURRENCY_ENABLED=true`, the worker starts from the
-healthy-model-route baseline, then adds slots up to
-`TASK_WORKER_AI_CONCURRENCY_PER_ROUTE` after consecutive successful AI tasks.
-It immediately backs off on model quota, rate-limit, or model-call timeout signals.
+Dashboard work uses separate general, release, and AI organizer lanes.
+`TASK_WORKER_AI_CONCURRENCY` bounds active AI business organizers, including
+parents awaiting model results, and is clamped by `TASK_WORKER_AI_CONCURRENCY_MIN`
+and `TASK_WORKER_CONCURRENCY`. Model HTTP concurrency is admitted separately by
+the model center's per-route durable leases. Adding model capacity does not add
+business task stacks. `AI__IDLE_BACKLOG_REVIEW_BUFFER_SIZE` sets the maximum open
+literature workflow budget (default/maximum 512). The supply target follows twice
+the available text-model permits, with a floor of 64 inside the saved budget;
+an explicit smaller budget remains binding across restarts. When the AI organizer
+budget exceeds one, background work
+leaves one slot for reports. Health checks have a separate single-organizer lane.
+With `TASK_WORKER_AI_DYNAMIC_CONCURRENCY_ENABLED=true`, no routable models pauses
+new AI business tasks; health checks can still recover the routes. Disabling it
+keeps the configured organizer budget. Situation tasks that explicitly skip AI
+use the ordinary collection lane. Runtime model occupancy comes from unexpired
+database leases across all dispatchers; it measures occupied permits, including
+request preparation, rather than live HTTP connections.
+The systemd worker drop-in starts 12 auxiliary model dispatchers alongside the
+main worker. The example configuration allows 12 AI organizers with
+`TASK_WORKER_CONCURRENCY=16`; organizer slots and dispatcher processes do not
+multiply the model center's global route limits. Service templates budget up to
+69 database pool connections across these dispatchers, the main worker, API,
+scheduler, and historical rescreen service. Keep additional clients within the
+database's connection limit when changing these settings. The installer also
+installs the managed service drop-ins so the dispatcher count survives reinstalls.
+The [AI runtime architecture and cutover notes](docs/AI_MODEL_CENTER_ARCHITECTURE_REVIEW_2026-11-10.md#重构实施记录2026-11-10)
+describe activity leases, explicit retry generations, durable review workflows,
+and the coordinated migration from the previous scheduler.
 `TASK_WORKER_TASK_HEARTBEAT_SECONDS`, `TASK_WORKER_STALE_TASK_SECONDS`, and
 `TASK_WORKER_RECOVERY_SCAN_SECONDS` control task-lease recovery; keep the stale threshold
 comfortably above the heartbeat interval. `SCHEDULER_WORKER_GRACE_SECONDS` bounds how long
@@ -212,8 +237,12 @@ the scheduler may remain active without a worker heartbeat.
 For disease knowledge building, runtime routing comes from the dashboard model
 center. Environment model values only seed the model-center tables during first
 initialization or an explicit forced bootstrap. The worker deterministically
-rotates preferred model-center routes per disease/language and fail-closes when
-no model-center route is active, routable, and out of cooldown.
+rotates preferred model-center routes per disease/language. Requests wait in the
+durable queue until a route meets the request's requirements; provider failures
+are retried or moved to another route by the dispatcher. Each review requires a
+different underlying model unless that data line explicitly allows a single
+model. Changing providers alone does not make two identically named models
+independent reviewers.
 
 The Situation module reads official reports (WHO Disease Outbreak News, ECDC
 CDTR, Africa CDC, PAHO and others) in full and extracts alerts: one disease in

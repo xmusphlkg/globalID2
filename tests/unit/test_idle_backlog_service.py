@@ -30,8 +30,10 @@ def scripted_lane(name, results, calls):
     async def work(lane, slice_size, workers):
         calls.append(name)
         result = queue.pop(0)
+        if result.exhausted or result.outage:
+            lane.task_uuid = None
         if not result.exhausted and not result.outage:
-            lane.claims = object()
+            lane.task_uuid = "durable-parent"
         return result
 
     return Lane(name, work)
@@ -82,7 +84,7 @@ async def test_finished_pass_with_progress_returns_soon_and_without_rests_long()
     assert long_rest > 600
 
 
-async def test_unfinished_pass_keeps_claims_for_the_next_slice():
+async def test_unfinished_pass_keeps_task_for_the_next_slice():
     calls = []
     lane = scripted_lane(
         "articles",
@@ -92,15 +94,15 @@ async def test_unfinished_pass_keeps_claims_for_the_next_slice():
     service, _ = make_service([lane])
 
     await service.process_once()
-    claims = lane.claims
-    assert claims is not None
+    task_uuid = lane.task_uuid
+    assert task_uuid is not None
     assert lane.pass_finalised == 10
 
-    # The pass is still open, so the lane is not re-counted and keeps its claims.
+    # The pass is still open, so the lane is not re-counted and follows its task.
     lane.next_at = 0.0
     await service.process_once()
     assert calls == ["articles", "articles"]
-    assert lane.claims is None
+    assert lane.task_uuid is None
     assert lane.pass_finalised == 0
 
 
@@ -145,7 +147,7 @@ async def test_new_foreground_work_stops_the_cycle_between_lanes():
     assert cycle["status"] == "yielded"
 
 
-def _stream_lane(monkeypatch, tasks):
+def _review_lane(monkeypatch, tasks):
     from types import SimpleNamespace
 
     from src.services import idle_backlog_service as idle
@@ -163,7 +165,7 @@ def _stream_lane(monkeypatch, tasks):
 
     monkeypatch.setattr(model_operations, "enqueue_model_operation", enqueue)
     monkeypatch.setattr(idle, "_load_task", load)
-    return idle.stream_lane("articles", "articles"), queued
+    return idle.review_lane("articles", "articles"), queued
 
 
 def _task(status, result=None):
@@ -172,11 +174,11 @@ def _task(status, result=None):
     return SimpleNamespace(task_uuid="t", status=status, output_data={"result": result} if result else {})
 
 
-async def test_stream_lane_waits_on_its_task_then_relaunches_after_progress(monkeypatch):
+async def test_review_lane_waits_on_its_task_then_relaunches_after_progress(monkeypatch):
     from src.domain import TaskStatus
 
     tasks = {}
-    lane, queued = _stream_lane(monkeypatch, tasks)
+    lane, queued = _review_lane(monkeypatch, tasks)
     service, _ = make_service([lane])
 
     await service.process_once()
@@ -192,11 +194,11 @@ async def test_stream_lane_waits_on_its_task_then_relaunches_after_progress(monk
     assert lane.pass_finalised == 5
 
 
-async def test_stream_lane_rests_when_its_task_made_no_progress(monkeypatch):
+async def test_review_lane_rests_when_its_task_made_no_progress(monkeypatch):
     from src.domain import TaskStatus
 
     tasks = {"task-0": _task(TaskStatus.COMPLETED, {"deferred": 9})}
-    lane, queued = _stream_lane(monkeypatch, tasks)
+    lane, queued = _review_lane(monkeypatch, tasks)
     service, _ = make_service([lane])
 
     await service.process_once()
@@ -205,11 +207,11 @@ async def test_stream_lane_rests_when_its_task_made_no_progress(monkeypatch):
     assert lane.next_at > time.monotonic() + 60
 
 
-async def test_stream_lane_relaunches_at_once_after_lease_expiry(monkeypatch):
+async def test_review_lane_relaunches_at_once_after_lease_expiry(monkeypatch):
     from src.domain import TaskStatus
 
     tasks = {"task-0": _task(TaskStatus.CANCELLED)}
-    lane, queued = _stream_lane(monkeypatch, tasks)
+    lane, queued = _review_lane(monkeypatch, tasks)
     service, _ = make_service([lane])
 
     await service.process_once()
@@ -219,13 +221,13 @@ async def test_stream_lane_relaunches_at_once_after_lease_expiry(monkeypatch):
     assert cycle["lanes"]["articles"]["outage"] is None
 
 
-async def test_stream_lane_rests_after_an_explicit_cancel(monkeypatch):
+async def test_review_lane_rests_after_an_explicit_cancel(monkeypatch):
     from src.domain import TaskStatus
 
     task = _task(TaskStatus.CANCELLED)
     task.metadata_ = {"cancel_requested": True}
     tasks = {"task-0": task}
-    lane, queued = _stream_lane(monkeypatch, tasks)
+    lane, queued = _review_lane(monkeypatch, tasks)
     service, _ = make_service([lane])
 
     await service.process_once()
@@ -234,11 +236,11 @@ async def test_stream_lane_rests_after_an_explicit_cancel(monkeypatch):
     assert lane.next_at > time.monotonic() + 60
 
 
-async def test_stream_lane_failed_task_backs_off(monkeypatch):
+async def test_review_lane_failed_task_backs_off(monkeypatch):
     from src.domain import TaskStatus
 
     tasks = {"task-0": _task(TaskStatus.FAILED)}
-    lane, queued = _stream_lane(monkeypatch, tasks)
+    lane, queued = _review_lane(monkeypatch, tasks)
     service, _ = make_service([lane])
 
     await service.process_once()

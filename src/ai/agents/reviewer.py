@@ -29,7 +29,6 @@ class ReviewerAgent(BaseAgent):
 
         super().__init__(
             name="Reviewer",
-            # No explicit model - BaseAgent uses config.ai.default_model and respects model_chain
             temperature=0.2,  # Reviewing tasks need low temperature (strict, objective)
             max_tokens=2000,
         )

@@ -18,7 +18,7 @@ from src.core.task_manager import task_manager
 from src.domain import Task, TaskStatus, TaskType
 from src.services.automation_service import automation_service
 from src.services.data_release_service import data_release_service
-from src.services.exceptions import TaskCancelledError
+from src.services.exceptions import TaskCancelledError, TaskExecutionSupersededError
 from src.services.task_alert_service import task_alert_service
 
 logger = get_logger(__name__)
@@ -68,7 +68,13 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
                         KeyboardInterrupt.  Set False for API background tasks
                         to avoid killing the server process.
     """
-    await task_manager.update_task_status(task.task_uuid, TaskStatus.RUNNING)
+    from src.ai.runtime.context import parent_execution_generation
+
+    expected_generation = parent_execution_generation(task)
+    await task_manager.update_task_status(
+        task.task_uuid, TaskStatus.RUNNING,
+        expected_ai_generation=expected_generation,
+    )
 
     # Only install signal handlers when running in CLI mode (main thread)
     import threading
@@ -80,7 +86,7 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             raise KeyboardInterrupt()
         old_sigterm = signal.signal(signal.SIGTERM, _noop)
 
-    from src.ai.work_queue import AIWorkFailed, assert_children_succeeded, task_context
+    from src.ai.runtime import AIWorkFailed, assert_children_succeeded, task_context
     ai_context = task_context(task)
     await ai_context.__aenter__()
     try:
@@ -88,7 +94,10 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
         assert_children_succeeded()
         if await task_manager.is_cancel_requested(task.task_uuid):
             raise TaskCancelledError("Cancellation requested by user")
-        await task_manager.update_task_status(task.task_uuid, TaskStatus.COMPLETED)
+        await task_manager.update_task_status(
+            task.task_uuid, TaskStatus.COMPLETED,
+            expected_ai_generation=expected_generation,
+        )
         if task.task_type == TaskType.EXPORT_DATA:
             try:
                 await data_release_service.mark_automatic_retry_succeeded(task.task_uuid)
@@ -121,6 +130,11 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             await data_release_service.maybe_trigger_after_task_completion(task.task_uuid, task.task_type)
         except Exception as exc:
             logger.warning(f"Post-task data release auto-trigger skipped for {task.task_uuid}: {exc}")
+
+    except TaskExecutionSupersededError:
+        # A retry owns the parent now. Do not mark its report, issue alerts, or
+        # trigger completion actions from this obsolete execution.
+        return
 
     except KeyboardInterrupt:
         await _handle_task_cancelled(task, report_id_ref, "Interrupted by user (Ctrl+C)")
@@ -172,6 +186,7 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             task.task_uuid,
             TaskStatus.FAILED,
             error_message=error_summary,
+            expected_ai_generation=expected_generation,
         )
         automatic_retry_scheduled = False
         if task.task_type == TaskType.EXPORT_DATA:
@@ -237,6 +252,15 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
 
 async def _handle_task_cancelled(task: Task, report_id_ref: Optional[list], message: str) -> None:
     logger.warning(f"Task {task.task_uuid} cancelled: {message}")
+    from src.ai.runtime.context import parent_execution_generation
+
+    try:
+        await task_manager.update_task_status(
+            task.task_uuid, TaskStatus.CANCELLED, error_message=message,
+            expected_ai_generation=parent_execution_generation(task),
+        )
+    except TaskExecutionSupersededError:
+        return
     try:
         await task_manager.add_workbook_entry(
             task.task_uuid,
@@ -247,11 +271,6 @@ async def _handle_task_cancelled(task: Task, report_id_ref: Optional[list], mess
         )
     except Exception as log_exc:
         logger.warning(f"Failed to write cancellation workbook entry for {task.task_uuid}: {log_exc}")
-    await task_manager.update_task_status(
-        task.task_uuid,
-        TaskStatus.CANCELLED,
-        error_message=message,
-    )
     try:
         await task_alert_service.send_task_alert(task.task_uuid, TaskStatus.CANCELLED)
     except Exception as notify_exc:

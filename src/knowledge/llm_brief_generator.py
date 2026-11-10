@@ -10,7 +10,8 @@ from typing import Any
 
 from src.ai.agents.base import BaseAgent
 from src.ai.model_center import get_runtime_routes, record_route_runtime_failure
-from src.ai.work_queue import AIWorkFailed, current_parent
+from src.ai.runtime import AIWorkFailed, current_parent
+from src.ai.runtime.contracts import RoutingRequirements
 from src.core import get_config, get_logger
 from src.knowledge.brief_generator import DISCLAIMER_EN, DISCLAIMER_ZH
 from src.knowledge.citations import (
@@ -1042,13 +1043,10 @@ class AIDiseaseBriefGenerator:
             prompt=prompt,
             system=system,
             use_cache=True,
-            preferred_models=preferred_models,
-            max_quota_recovery_rounds=config.knowledge_quota_recovery_rounds,
-            wait_for_model_recovery=config.knowledge_wait_for_model_recovery,
+            routing=RoutingRequirements(preferred_models=tuple(preferred_models)),
             model_request_timeout_seconds=self._effective_model_request_timeout_seconds(
                 output_token_budget=output_token_budget,
             ),
-            max_attempts_per_model=config.knowledge_model_attempts_per_route,
             timeout_cooldown_seconds=config.knowledge_timeout_cooldown_seconds,
             response_format={"type": "json_object"},
         )
@@ -1235,14 +1233,12 @@ class AIDiseaseBriefGenerator:
     def _retry_policy_metadata() -> dict[str, Any]:
         config = get_config().ai
         return {
-            "attempts_per_route": config.knowledge_model_attempts_per_route,
+            "retry_owner": "durable_dispatcher",
             "configured_route_timeout_seconds": config.knowledge_model_request_timeout_seconds,
             "route_timeout_seconds": AIDiseaseBriefGenerator._effective_model_request_timeout_seconds(),
             "route_timeout_cap_seconds": config.knowledge_model_request_timeout_cap_seconds,
             "timeout_cooldown_seconds": config.knowledge_timeout_cooldown_seconds,
             "output_repair_attempts": config.knowledge_output_repair_attempts,
-            "wait_for_model_recovery": config.knowledge_wait_for_model_recovery,
-            "quota_recovery_rounds": config.knowledge_quota_recovery_rounds,
         }
 
     @staticmethod

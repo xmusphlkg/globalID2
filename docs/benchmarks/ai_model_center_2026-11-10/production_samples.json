@@ -1,0 +1,3299 @@
+[
+  {
+    "sampled_at": "2026-11-10T15:27:06.758582+00:00",
+    "window_seconds": 0.078281,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientWrite",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "DataFileRead",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 36
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 4
+      },
+      {
+        "backend_type": "parallel worker",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "DataFileRead",
+        "count": 2
+      },
+      {
+        "backend_type": "parallel worker",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 1
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "ctm:CTM-M3",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 10
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 6
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 14
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 37,
+        "valid_leases": 37,
+        "leased_routes": 6,
+        "oldest_created_at": "2026-11-10 15:25:26.324279+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 100
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 151
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 37
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 14
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 38
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 55
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 737
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:28:06.372581+00:00",
+    "window_seconds": 59.69228,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "WALSync",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "LWLock",
+        "wait_event": "WALWrite",
+        "count": 5
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "object",
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "transactionid",
+        "count": 4
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "tuple",
+        "count": 8
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 28
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 1
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-M3",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 10
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 70
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 51
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 137,
+        "valid_leases": 137,
+        "leased_routes": 5,
+        "oldest_created_at": "2026-11-10 15:25:26.324286+00:00"
+      },
+      {
+        "capability": "text",
+        "status": "queued",
+        "count": 1,
+        "valid_leases": 0,
+        "leased_routes": 0,
+        "oldest_created_at": "2026-11-10 15:28:05.988881+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 14
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 34
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 46
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 563
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 101
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 186
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 26
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 28
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 72
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 101
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 46
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 1300
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:28:27.119483+00:00",
+    "window_seconds": 80.439182,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 37
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 7
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 8
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 15
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 29,
+        "valid_leases": 29,
+        "leased_routes": 4,
+        "oldest_created_at": "2026-11-10 15:25:26.324286+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 18
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 37
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 53
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 802
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 107
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 147
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 55
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 32
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 75
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 108
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 56
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 1539
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:28:47.815347+00:00",
+    "window_seconds": 101.135046,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "WALSync",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "advisory",
+        "count": 3
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "transactionid",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 5
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 26
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 9
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 2
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "ctm:CTM-M3",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 10
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 23
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 13
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 53,
+        "valid_leases": 53,
+        "leased_routes": 6,
+        "oldest_created_at": "2026-11-10 15:25:26.324286+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 29
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 54
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 74
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 949
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 74
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 159
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 39
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 43
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 92
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 129
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 31
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 1686
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:29:08.498560+00:00",
+    "window_seconds": 121.818259,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientWrite",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "LWLock",
+        "wait_event": "WALWrite",
+        "count": 4
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "object",
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 31
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 4
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "ctm:CTM-M3",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 10
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 38
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 11
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 66,
+        "valid_leases": 66,
+        "leased_routes": 6,
+        "oldest_created_at": "2026-11-10 15:26:11.084116+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 42
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 71
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 103
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 1419
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 91
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 158
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 39
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 56
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 109
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 158
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 63
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 2156
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:29:29.271715+00:00",
+    "window_seconds": 142.591414,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "WALSync",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "advisory",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "transactionid",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 27
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 11
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 1
+      },
+      {
+        "backend_type": "parallel worker",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 4
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 10
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 4
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 8
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 2
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 25,
+        "valid_leases": 25,
+        "leased_routes": 5,
+        "oldest_created_at": "2026-11-10 15:26:11.084116+00:00"
+      },
+      {
+        "capability": "text",
+        "status": "queued",
+        "count": 3,
+        "valid_leases": 0,
+        "leased_routes": 0,
+        "oldest_created_at": "2026-11-10 15:29:28.516221+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 44
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 74
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 108
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 1506
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 69
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 184
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 51
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 58
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 112
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 163
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 40
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 2243
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:29:50.048422+00:00",
+    "window_seconds": 163.368121,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "WALSync",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "object",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "transactionid",
+        "count": 4
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "tuple",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 29
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 11
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "ctm:CTM-M3",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 8
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 4
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 39
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 40
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 93,
+        "valid_leases": 93,
+        "leased_routes": 6,
+        "oldest_created_at": "2026-11-10 15:27:44.080694+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "summaries",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 59
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 94
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 144
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 1871
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 68
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 199
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 35
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 73
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 132
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 199
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 59
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 2608
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:30:10.858637+00:00",
+    "window_seconds": 184.178336,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientWrite",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "WALSync",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "LWLock",
+        "wait_event": "WALWrite",
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "transactionid",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "tuple",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 3
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 29
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 6
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 9
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 33
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 11
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 59,
+        "valid_leases": 59,
+        "leased_routes": 5,
+        "oldest_created_at": "2026-11-10 15:27:44.080694+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "summaries",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 64
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 112
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 163
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 2124
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 48
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 196
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 56
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 78
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 150
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 218
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 55
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 2861
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:30:31.577476+00:00",
+    "window_seconds": 204.897175,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 36
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 6
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 5
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 16,
+        "valid_leases": 16,
+        "leased_routes": 4,
+        "oldest_created_at": "2026-11-10 15:27:44.080694+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "summaries",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 65
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 113
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 165
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 2179
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 16
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 210
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 84
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 79
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 151
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 220
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 58
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 2916
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:30:52.318207+00:00",
+    "window_seconds": 225.637906,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "advisory",
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 27
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 15
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "ctm:CTM-M3",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 7
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 15
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 2
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 31,
+        "valid_leases": 31,
+        "leased_routes": 6,
+        "oldest_created_at": "2026-11-10 15:27:55.997138+00:00"
+      },
+      {
+        "capability": "text",
+        "status": "queued",
+        "count": 1,
+        "valid_leases": 0,
+        "leased_routes": 0,
+        "oldest_created_at": "2026-11-10 15:30:50.866480+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "summaries",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 68
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 118
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 195
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 2301
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 38
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 213
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 44
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 82
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 156
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 250
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 3038
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:31:12.992533+00:00",
+    "window_seconds": 246.312232,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "WALSync",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "LWLock",
+        "wait_event": "WALWrite",
+        "count": 11
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "advisory",
+        "count": 3
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "object",
+        "count": 5
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "transactionid",
+        "count": 4
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "tuple",
+        "count": 16
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 3
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 14
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 1
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "ctm:CTM-M3",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 10
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 51
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 68
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 136,
+        "valid_leases": 136,
+        "leased_routes": 6,
+        "oldest_created_at": "2026-11-10 15:27:55.997138+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "summaries",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 75
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 122
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 236
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 2666
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 126
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 147
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 33
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 89
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 160
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 291
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 3403
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:31:33.761394+00:00",
+    "window_seconds": 267.081093,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 4
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 35
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 10
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 6
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 12
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 1
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 25,
+        "valid_leases": 25,
+        "leased_routes": 5,
+        "oldest_created_at": "2026-11-10 15:27:55.997138+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "summaries",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 79
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 124
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 239
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 2791
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 91
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 135
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 85
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 93
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 162
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 294
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 58
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 3528
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:31:54.515942+00:00",
+    "window_seconds": 287.835641,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "WALSync",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "LWLock",
+        "wait_event": "WALWrite",
+        "count": 3
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "object",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 34
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 7
+      },
+      {
+        "backend_type": "parallel worker",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 4
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 14
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 9
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 34,
+        "valid_leases": 34,
+        "leased_routes": 5,
+        "oldest_created_at": "2026-11-10 15:27:55.997138+00:00"
+      },
+      {
+        "capability": "text",
+        "status": "queued",
+        "count": 6,
+        "valid_leases": 0,
+        "leased_routes": 0,
+        "oldest_created_at": "2026-11-10 15:31:53.661709+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "summaries",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 83
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 124
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 267
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 2889
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 77
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 167
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 67
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 97
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 162
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 322
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 21
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 3626
+      }
+    ]
+  },
+  {
+    "sampled_at": "2026-11-10T15:32:06.715324+00:00",
+    "window_seconds": 300.0,
+    "database_revision": [
+      "0030_ai_activity_leases"
+    ],
+    "database_connections": [
+      {
+        "backend_type": "TimescaleDB Background Worker Scheduler",
+        "state": "idle",
+        "wait_event_type": "Extension",
+        "wait_event": "Extension",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "IO",
+        "wait_event": "WALSync",
+        "count": 1
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "LWLock",
+        "wait_event": "WALWrite",
+        "count": 8
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "advisory",
+        "count": 4
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "object",
+        "count": 3
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": "Lock",
+        "wait_event": "transactionid",
+        "count": 2
+      },
+      {
+        "backend_type": "client backend",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 3
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 30
+      },
+      {
+        "backend_type": "client backend",
+        "state": "idle in transaction",
+        "wait_event_type": "Client",
+        "wait_event": "ClientRead",
+        "count": 1
+      },
+      {
+        "backend_type": "parallel worker",
+        "state": "active",
+        "wait_event_type": null,
+        "wait_event": null,
+        "count": 4
+      }
+    ],
+    "route_leases": [
+      {
+        "route_key": "ctm:CTM-Fable-5",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "ctm:CTM-M3",
+        "valid_text_leases": 1
+      },
+      {
+        "route_key": "kiro:hy3",
+        "valid_text_leases": 10
+      },
+      {
+        "route_key": "kiro:hy4free",
+        "valid_text_leases": 5
+      },
+      {
+        "route_key": "zzshuc:gpt-6.1-terra",
+        "valid_text_leases": 42
+      },
+      {
+        "route_key": "zzshuccc:gemini-3.5-flash-lite",
+        "valid_text_leases": 15
+      }
+    ],
+    "activity_pending": [
+      {
+        "capability": "text",
+        "status": "leased",
+        "count": 74,
+        "valid_leases": 74,
+        "leased_routes": 6,
+        "oldest_created_at": "2026-11-10 15:27:55.997138+00:00"
+      }
+    ],
+    "workflow_subject_outcomes_window": [
+      {
+        "kind": "articles",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "kind": "summaries",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "kind": "articles",
+        "outcome": "held",
+        "count": 95
+      },
+      {
+        "kind": "articles",
+        "outcome": "published",
+        "count": 125
+      },
+      {
+        "kind": "articles",
+        "outcome": "rejected",
+        "count": 305
+      },
+      {
+        "kind": "summaries",
+        "outcome": "waiting",
+        "count": 3090
+      }
+    ],
+    "workflows_current_generation": [
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "author",
+        "outcome": null,
+        "count": 33
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 216
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "open",
+        "step": "reviewer",
+        "outcome": null,
+        "count": 60
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "deferred",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 109
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 163
+      },
+      {
+        "parent_task_uuid": "1830d74b-2ffe-49dc-93e0-2316930ecbeb",
+        "generation": 1,
+        "kind": "articles",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "rejected",
+        "count": 360
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "open",
+        "step": "ready",
+        "outcome": null,
+        "count": 56
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "held",
+        "count": 1
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "published",
+        "count": 2
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "skipped",
+        "count": 4
+      },
+      {
+        "parent_task_uuid": "18d30257-79d0-4bf5-80ef-12dc4a6db546",
+        "generation": 1,
+        "kind": "summaries",
+        "status": "terminal",
+        "step": "terminal",
+        "outcome": "waiting",
+        "count": 3827
+      }
+    ]
+  }
+]
