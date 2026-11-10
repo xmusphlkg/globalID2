@@ -175,11 +175,6 @@ const itemList = {
             <div><dt>{pick('Reviews & guidelines · 7 days', '近 7 天综述与指南')}</dt><dd>{metrics.reviews_and_guidelines_last_7_days ?? 0}</dd></div>
             <div><dt>{pick('Title-linked records · estimated', '标题关联文献 · 估算', 'Liens par titre · estimation')}</dt><dd>{metrics.title_estimated_related_records ?? 0}</dd></div>
           </dl>
-          {(metrics.title_estimated_related_records ?? 0) > 0 && <p class="research-estimate-note">{pick(
-            `${metrics.title_estimated_related_records} metadata-only records retained; inferred links use title mentions (${metrics.title_estimated_disease_links ?? 0} disease, ${metrics.title_estimated_topic_links ?? 0} topic matches).`,
-            `已保留 ${metrics.title_estimated_related_records} 条轻量文献元数据；缺少现有关联时才按标题补估（${metrics.title_estimated_disease_links ?? 0} 项疾病、${metrics.title_estimated_topic_links ?? 0} 项主题匹配）。`,
-            `${metrics.title_estimated_related_records} notices bibliographiques légères conservées ; les liens manquants sont estimés à partir des titres (${metrics.title_estimated_disease_links ?? 0} maladies, ${metrics.title_estimated_topic_links ?? 0} thèmes).`
-          )}</p>}
         </aside>
       </div>
     </section>
@@ -216,7 +211,7 @@ const itemList = {
         <div>
           <p class="academic-kicker">{pick('Stay current', '持续追踪')}</p>
           <h2 id="research-feeds-title">{pick('Subscribe to a focused Research Radar feed', '订阅筛选后的研究雷达')}</h2>
-          <p>{pick('Choose a stable RSS address for all research, or narrow it by disease, country, topic, study type, reviews and guidelines, or peer-review status. A count of 0 means no matching public records are available yet; the feed remains active for future releases.', '可订阅全部研究，或按疾病、国家、主题、研究类型、综述与指南以及同行评议状态选择稳定的 RSS 地址。数量为 0 表示目前没有匹配的公开记录；该 feed 仍然有效，可用于接收未来发布。')}</p>
+          <p>{pick('Choose all research or a focused RSS feed. Feeds with no current records remain active.', '订阅全部研究或按条件筛选；暂无文献的 RSS 仍可接收未来更新。', 'Abonnez-vous à toute la recherche ou à un flux ciblé. Les flux sans notice restent actifs.')}</p>
         </div>
         <a class="feed-all-link" href={`${fr ? '/fr' : ''}/research/rss.xml`} type="application/rss+xml">
           <span>{pick('Subscribe to all research', '订阅全部研究', 'S’abonner à toute la recherche')}</span>
@@ -258,7 +253,7 @@ const itemList = {
           </div>
           <a href={`${prefix}/situation/`}>{pick('Open Situation Room →', '打开全球态势室 →')}</a>
         </div>
-        <p class="research-section-intro">{pick('Published literature is linked to public monitoring context with exact and disease-only relationships clearly separated. These links provide background and do not validate or explain a signal.', '已发表文献与公开监测背景建立关联，并明确区分精确关系和仅疾病关系。这些链接仅提供背景，不验证或解释监测信号。')}</p>
+        <p class="research-section-intro">{pick('Links provide context; they do not validate or explain a signal.', '文献关联仅供参考，不验证或解释监测信号。', 'Ces liens fournissent un contexte sans valider ni expliquer le signal.')}</p>
         <div class="surveillance-research-grid">
           {surveillanceSignals.map((signal: any) => {
             const exact = signal.exact_articles ?? [];
@@ -280,7 +275,7 @@ const itemList = {
             </article>;
           })}
         </div>
-        {surveillanceEvidence.methodology?.en && <p class="research-method-note">{pick(surveillanceEvidence.methodology.en, surveillanceEvidence.methodology.zh ?? surveillanceEvidence.methodology.en, surveillanceEvidence.methodology.fr ?? (() => { throw new Error('Missing French surveillance-evidence methodology'); })())}</p>}
+        {surveillanceEvidence.methodology?.en && <details class="research-method-note"><summary>{pick('How links are made', '关联方法', 'Méthode de liaison')}</summary><p>{pick(surveillanceEvidence.methodology.en, surveillanceEvidence.methodology.zh ?? surveillanceEvidence.methodology.en, surveillanceEvidence.methodology.fr ?? (() => { throw new Error('Missing French surveillance-evidence methodology'); })())}</p></details>}
       </section>
     )}
 
@@ -326,7 +321,6 @@ const itemList = {
             <h2 class="section-heading">{pick('Baseline literature across earlier eras', '跨年代基线文献')}</h2>
           </div>
         </div>
-        <p class="historical-intro">{pick('Curated historical records supplement the recent literature stream and are labelled separately from newly indexed papers.', '精选历史记录用于补充近期文献流，并与新近索引论文分开标注。')}</p>
         <div class="historical-list">{historicalBaseline.map((article: any) => <ResearchArticleCard article={article} compact locale={locale} />)}</div>
       </section>
     )}
@@ -753,7 +747,6 @@ const itemList = {
   .research-week dl div:nth-child(n+3) { margin-top: .65rem; padding-top: .65rem; border-top: 1px solid rgb(var(--border) / .7); }
   .research-week dt { min-height: 2.4em; color: rgb(var(--text-faint)); font-size: .57rem; font-weight: 700; line-height: 1.2; letter-spacing: .06em; text-transform: uppercase; }
   .research-week dd { margin-top: .45rem; color: rgb(var(--text-strong)); font: 600 1.55rem/1 'IBM Plex Sans', sans-serif; }
-  .research-estimate-note { margin: .9rem 0 0; padding-top: .7rem; border-top: 1px solid rgb(var(--border) / .7); color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
   .research-section { margin-top: 1.15rem; padding: clamp(1.05rem, 2vw, 1.5rem); }
   .research-directory { margin-top: 1.15rem; padding: 1.05rem clamp(1.05rem, 2vw, 1.5rem); }
   .directory-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: .8rem; border-bottom: 1px solid rgb(var(--border) / .68); }
@@ -789,19 +782,22 @@ const itemList = {
   .featured-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .72rem; margin-top: .72rem; }
   .curated-research-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .72rem; margin-top: .72rem; }
   .surveillance-research-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: .72rem; margin-top: .8rem; }
-  .surveillance-research-card { min-width: 0; border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .28); padding: 1rem; }
+  .surveillance-research-card { position: relative; min-width: 0; border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .28); padding: 1rem; }
+  .surveillance-research-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 2px; background: linear-gradient(180deg, rgb(var(--color-teal)), rgb(var(--color-brand) / .15) 72%, transparent); opacity: .7; pointer-events: none; }
   .surveillance-research-status { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
   .surveillance-research-status span { border: 1px solid rgb(var(--color-accent) / .44); background: rgb(var(--color-accent) / .06); padding: .2rem .45rem; color: rgb(var(--color-accent)); font-size: .62rem; font-weight: 700; }
   .surveillance-research-status time { color: rgb(var(--text-faint)); font: 500 .62rem/1 ui-monospace, monospace; }
   .surveillance-research-card h3 { margin-top: .75rem; color: rgb(var(--text-strong)); font: 600 1.12rem/1.3 'IBM Plex Sans', sans-serif; }
   .surveillance-research-card h3 a:hover { color: rgb(var(--color-brand)); }
   .surveillance-research-meta { margin-top: .42rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
-  .surveillance-research-card ol { display: grid; gap: .45rem; margin-top: .8rem; }
-  .surveillance-research-card li { border-top: 1px solid rgb(var(--border) / .55); padding-top: .55rem; }
-  .surveillance-research-card li strong { display: -webkit-box; overflow: hidden; color: rgb(var(--text)); font: 600 .82rem/1.35 'IBM Plex Sans', sans-serif; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+  .surveillance-research-card ol { display: grid; grid-template-columns: minmax(0, 1fr); gap: .45rem; margin-top: .8rem; }
+  .surveillance-research-card li { min-width: 0; border-top: 1px solid rgb(var(--border) / .55); padding-top: .55rem; }
+  .surveillance-research-card li strong { display: -webkit-box; overflow: hidden; overflow-wrap: anywhere; color: rgb(var(--text)); font: 600 .82rem/1.35 'IBM Plex Sans', sans-serif; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
   .surveillance-research-card li span { display: block; overflow: hidden; margin-top: .25rem; color: rgb(var(--text-faint)); font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
   .surveillance-research-empty { margin-top: .8rem; color: rgb(var(--text-faint)); font-size: .72rem; }
   .research-method-note { margin-top: .7rem; color: rgb(var(--text-faint)); font-size: .66rem; line-height: 1.55; }
+  .research-method-note summary { cursor: pointer; }
+  .research-method-note p { margin-top: .4rem; }
   .emerging-topic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .62rem; margin-top: .8rem; }
   .emerging-topic-card { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); padding: .9rem; }
   .emerging-topic-card:hover { border-color: rgb(var(--color-brand) / .52); }
@@ -810,7 +806,6 @@ const itemList = {
   .emerging-topic-card dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; margin-top: .8rem; }
   .emerging-topic-card dt { color: rgb(var(--text-faint)); font-size: .57rem; text-transform: uppercase; }
   .emerging-topic-card dd { margin-top: .2rem; color: rgb(var(--color-brand)); font: 600 .85rem/1 ui-monospace, monospace; }
-  .historical-intro { max-width: 54rem; margin-top: .75rem; color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.55; }
   .historical-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .72rem; margin-top: .72rem; }
   .research-filters { display: grid; grid-template-columns: minmax(18rem, 2fr) repeat(4, minmax(9rem, 1fr)); align-items: stretch; overflow: hidden; margin-top: 1rem; border: 1px solid rgb(var(--border) / .78); background: rgb(var(--surface) / .82); box-shadow: 0 1px 0 rgb(var(--border) / .22); }
   .research-filters > label { min-width: 0; border-left: 1px solid rgb(var(--border) / .62); padding: .45rem .65rem; transition: background .15s ease, box-shadow .15s ease; }
