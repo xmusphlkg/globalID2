@@ -9,6 +9,6 @@ ensure_log_dir
 PYTHON_BIN="$(resolve_python)"
 
 cd "$ROOT_DIR"
-export PYTHONUNBUFFERED=1
+export PYTHONUNBUFFERED=1 TASK_WORKER_ROLE=general
 
 exec "$PYTHON_BIN" -m src.services.task_worker

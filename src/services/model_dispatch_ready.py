@@ -19,7 +19,7 @@ def publish_ready() -> None:
     pid = os.getpid()
     READY_FILE.parent.mkdir(parents=True, exist_ok=True)
     tmp = READY_FILE.with_name(f"{READY_FILE.name}.{pid}.tmp")
-    tmp.write_text(json.dumps({"pid": pid, "start_time": _start_time(pid)}))
+    tmp.write_text(json.dumps({"pid": pid, "start_time": _start_time(pid), "role": "ai"}))
     os.replace(tmp, READY_FILE)
 
 
@@ -28,6 +28,10 @@ def worker_ready() -> bool:
         marker = json.loads(READY_FILE.read_text())
         pid = int(marker["pid"])
         cmdline = Path(f"/proc/{pid}/cmdline").read_bytes()
-        return marker["start_time"] == _start_time(pid) and b"src.services.task_worker" in cmdline
+        return (
+            marker.get("role") == "ai"
+            and marker["start_time"] == _start_time(pid)
+            and b"src.services.task_worker" in cmdline
+        )
     except (OSError, ValueError, KeyError, IndexError, TypeError):
         return False

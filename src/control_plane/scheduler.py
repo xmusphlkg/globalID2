@@ -6,13 +6,15 @@ import asyncio
 import signal
 
 from src.control_plane.events import control_plane_events
-from src.control_plane.runtime import runtime_registry
+from src.control_plane.runtime import TASK_WORKER_SERVICES, runtime_registry
 from src.core.config import get_config
 from src.core.logging import get_logger
 from src.core.task_manager import task_manager
 from src.services.automation_service import automation_service
 from src.services.data_release_service import data_release_service
-from src.services.disease_mapping_automation_service import disease_mapping_automation_service
+from src.services.disease_mapping_automation_service import (
+    disease_mapping_automation_service,
+)
 from src.services.literature_service import literature_service
 from src.services.situation_schedule_service import situation_schedule_service
 from src.services.report_schedule_service import report_schedule_service
@@ -32,7 +34,14 @@ async def _monitor_worker(
     loop = asyncio.get_running_loop()
     missing_since: float | None = None
     while not stop_event.is_set():
-        live, registry_available = await runtime_registry.service_is_live("worker")
+        states = await asyncio.gather(
+            *(
+                runtime_registry.service_is_live(service)
+                for service in TASK_WORKER_SERVICES
+            )
+        )
+        live = all(state[0] for state in states)
+        registry_available = all(state[1] for state in states)
         if live:
             missing_since = None
         else:
@@ -65,11 +74,15 @@ async def run_scheduler() -> None:
             "Another scheduler owns the singleton lease or Redis is unavailable"
         )
     worker_grace_seconds = get_config().task_worker.scheduler_worker_grace_seconds
-    if not await runtime_registry.wait_for_service(
-        "worker",
-        stop_event,
-        timeout_seconds=worker_grace_seconds,
-    ):
+    ready = await asyncio.gather(
+        *(
+            runtime_registry.wait_for_service(
+                service, stop_event, timeout_seconds=worker_grace_seconds
+            )
+            for service in TASK_WORKER_SERVICES
+        )
+    )
+    if not all(ready):
         await runtime_registry.release_lease("scheduler", instance_id)
         await runtime_registry.close()
         raise RuntimeError(
@@ -110,7 +123,9 @@ async def run_scheduler() -> None:
         await idle_backlog_service.start()
         await situation_schedule_service.start()
         await report_schedule_service.start()
-        await control_plane_events.publish("runtime.started", resource_type="runtime", resource_id=instance_id)
+        await control_plane_events.publish(
+            "runtime.started", resource_type="runtime", resource_id=instance_id
+        )
         await stop_event.wait()
     finally:
         await situation_schedule_service.stop()
@@ -125,7 +140,9 @@ async def run_scheduler() -> None:
         await worker_monitor
         await lease_maintenance
         await heartbeat
-        await control_plane_events.publish("runtime.stopped", resource_type="runtime", resource_id=instance_id)
+        await control_plane_events.publish(
+            "runtime.stopped", resource_type="runtime", resource_id=instance_id
+        )
         await runtime_registry.release_lease("scheduler", instance_id)
         await runtime_registry.remove_heartbeat("scheduler", instance_id)
         task_manager.set_broadcast_hook(None)
@@ -133,7 +150,11 @@ async def run_scheduler() -> None:
         await control_plane_events.close()
         logger.info("Control-plane scheduler stopped")
     if worker_unavailable.is_set() or lease_lost.is_set():
-        reason = "task worker became unavailable" if worker_unavailable.is_set() else "singleton lease was lost"
+        reason = (
+            "task worker became unavailable"
+            if worker_unavailable.is_set()
+            else "singleton lease was lost"
+        )
         raise RuntimeError(f"Scheduler stopped because its {reason}")
 
 

@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
+import csv
 import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import src.generation.site_data_literature as literature_export_module
 
 from src.generation.site_data_literature import (
     _chunk_records,
@@ -111,6 +113,59 @@ def test_title_disease_aliases_use_correct_ids_and_specific_mentions():
 
     h5n1 = _title_estimated_literature_links("Study of H5N1 avian influenza", diseases, aliases)
     assert [item["disease_id"] for item in h5n1] == ["D014"]
+
+
+class _UnfilteredRegexText(str):
+    """Disable only the literal prefilter to reproduce the previous regex scan."""
+
+    def __contains__(self, _term):
+        return True
+
+
+def test_title_literal_prefilter_preserves_config_alias_boundaries_and_specificity(monkeypatch):
+    with (ROOT / "configs/standard_diseases.csv").open(encoding="utf-8", newline="") as stream:
+        diseases = {row["disease_id"]: row for row in csv.DictReader(stream)}
+    diseases["TEST_ACCENT"] = {"name_en": "Fièvre Q", "name_zh": "测试热病"}
+    aliases = _load_title_disease_aliases()
+    prepared = literature_export_module._prepare_title_disease_aliases(diseases, aliases)
+    # Real configured aliases exercise every supported preparation form; fixed
+    # cases cover CJK substring matches, Latin boundaries, accents and negation.
+    titles = [
+        "SARS-CoV-2 infection and SARS outbreak",
+        "Study of H5N1 avian influenza",
+        "A non-HIV cohort with HIV infection",
+        "HIV negative controls and hepatitis B infection",
+        "HIVpositive and antidengue vaccine candidates",
+        "dengue-negative controls without malaria",
+        "A cohort free of dengue infection",
+        "我国登革热与流感调查",
+        "抗登革热疫苗的研究进展",
+        "Fièvre Q outbreaks", "FIEVRE Q outbreaks", "Fie\u0300vre Q outbreaks",
+        "No disease terms in this title.",
+        *[f"Research on {raw_term} infection" for _, raw_term, _, _ in prepared[::17]],
+    ]
+    expected = []
+    normalize = literature_export_module._normalize_title_match_text
+    with monkeypatch.context() as baseline:
+        baseline.setattr(literature_export_module, "_normalize_title_match_text", lambda value: _UnfilteredRegexText(normalize(value)))
+        for title in titles:
+            expected.append(_title_estimated_literature_links(title, diseases, aliases, prepared))
+    actual = [_title_estimated_literature_links(title, diseases, aliases, prepared) for title in titles]
+    assert actual == expected
+    assert "TEST_ACCENT" in {entry["disease_id"] for entry in actual[9]}
+    assert actual[9] == actual[10] == actual[11]
+
+
+def test_title_literal_prefilter_skips_absent_regexes_but_retains_boundary_checks():
+    class AbsentPattern:
+        def finditer(self, _value):
+            raise AssertionError("An absent literal must not scan the title")
+
+    diseases = {"D162": {"name_en": "HIV infection"}}
+    prepared = [("D162", "HIV", "hiv", AbsentPattern())]
+    assert _title_estimated_literature_links("A dengue study", diseases, prepared_aliases=prepared) == []
+    normal = literature_export_module._prepare_title_disease_aliases(diseases, {"D162": ["HIV"]})
+    assert _title_estimated_literature_links("HIVpositive controls", diseases, prepared_aliases=normal) == []
 
 
 def test_autopilot_summary_reconciliation_does_not_load_heavy_article_payloads():

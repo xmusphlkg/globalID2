@@ -1,8 +1,8 @@
 [Unit]
 Description=GlobalID control-plane scheduler
-After=globalid-docker.service globalid-dashboard-api.service globalid-dashboard-worker.service
+After=globalid-docker.service globalid-dashboard-api.service globalid-dashboard-worker.service globalid-ai-worker.service
 Wants=globalid-docker.service globalid-dashboard-api.service
-Requires=globalid-dashboard-worker.service
+Requires=globalid-dashboard-worker.service globalid-ai-worker.service
 PartOf=globalid-stack.target
 StartLimitIntervalSec=300
 StartLimitBurst=5

@@ -6,7 +6,7 @@ GlobalID V2 Core Configuration
 from functools import lru_cache
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -924,6 +924,11 @@ class CrawlerSettings(BaseSettings):
 class TaskWorkerSettings(_BaseEnvSettings):
     """后台任务 worker 配置"""
 
+    role: Literal["general", "ai"] = Field(
+        default="general",
+        validation_alias="TASK_WORKER_ROLE",
+        description="general 执行采集和发布；ai 独立执行 AI 业务组织与模型调度",
+    )
     concurrency: int = Field(
         default=2,
         validation_alias="TASK_WORKER_CONCURRENCY",

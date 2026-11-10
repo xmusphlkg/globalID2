@@ -1,6 +1,6 @@
 [Unit]
 Description=GlobalID dashboard task worker
-After=globalid-docker.service globalid-dashboard-api.service
+After=globalid-docker.service globalid-dashboard-api.service globalid-ai-worker.service
 Wants=globalid-docker.service globalid-dashboard-api.service
 PartOf=globalid-stack.target
 StartLimitIntervalSec=300
@@ -13,6 +13,7 @@ User=__RUN_AS_USER__
 Group=__RUN_AS_GROUP__
 WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=-__PROJECT_DIR__/.env
+Environment=TASK_WORKER_ROLE=general
 Environment=DATABASE__POOL_SIZE=12
 Environment=DATABASE__MAX_OVERFLOW=4
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_worker_service.sh

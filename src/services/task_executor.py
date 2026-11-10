@@ -114,6 +114,7 @@ async def recover_interrupted_tasks_on_startup(
     stale_after_seconds: int = 180,
     now: datetime | None = None,
     exclude_owner: str | None = None,
+    exclude_owners: set[str] | None = None,
     only_owner: str | None = None,
 ) -> int:
     """Recover only expired RUNNING tasks.
@@ -152,6 +153,8 @@ async def recover_interrupted_tasks_on_startup(
                 else {}
             )
             if exclude_owner and current_lease.get("owner") == exclude_owner:
+                continue
+            if exclude_owners and current_lease.get("owner") in exclude_owners:
                 continue
             if only_owner and current_lease.get("owner") != only_owner:
                 continue

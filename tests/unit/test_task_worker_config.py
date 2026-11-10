@@ -1,19 +1,21 @@
+import asyncio
 import os
 import sys
-import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from src.core.config import TaskWorkerSettings
-from src.domain import TaskStatus, TaskType
 import src.core.task_manager as task_manager_module
-from src.core.task_manager import task_manager
 from dashboard.api.routers.tasks import _worker_concurrency
+from src.core.config import TaskWorkerSettings
+from src.core.task_manager import task_manager
+from src.domain import TaskStatus, TaskType
 from src.services import task_worker
 
 
@@ -22,6 +24,7 @@ def test_task_worker_idle_logging_defaults_to_low_noise():
 
     assert settings.poll_interval_seconds == 2.0
     assert settings.idle_log_every == 300
+    assert settings.role == "general"
 
 
 def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
@@ -29,6 +32,7 @@ def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
     env_file.write_text(
         "\n".join(
             [
+                "TASK_WORKER_ROLE=ai",
                 "TASK_WORKER_CONCURRENCY=6",
                 "TASK_WORKER_GENERAL_CONCURRENCY=5",
                 "TASK_WORKER_RELEASE_CONCURRENCY=1",
@@ -54,6 +58,7 @@ def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
     settings = TaskWorkerSettings(_env_file=env_file)
 
     assert settings.concurrency == 6
+    assert settings.role == "ai"
     assert settings.general_concurrency == 5
     assert settings.release_concurrency == 1
     assert settings.ai_concurrency == 4
@@ -70,6 +75,14 @@ def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
     assert settings.runtime_lease_ttl_seconds == 240
     assert settings.runtime_heartbeat_ttl_seconds == 150
     assert settings.scheduler_worker_grace_seconds == 60
+
+
+def test_worker_role_rejects_combined_or_unknown_execution_mode():
+    from pydantic import ValidationError
+
+    for role in ("all", "mixed", "unknown"):
+        with pytest.raises(ValidationError):
+            TaskWorkerSettings(TASK_WORKER_ROLE=role, _env_file=None)
 
 
 def test_worker_concurrency_uses_unified_config(monkeypatch):

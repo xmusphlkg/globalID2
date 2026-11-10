@@ -1,8 +1,8 @@
 [Unit]
 Description=GlobalID auxiliary model dispatcher %i
-After=globalid-dashboard-worker.service
-BindsTo=globalid-dashboard-worker.service
-PartOf=globalid-dashboard-worker.service
+After=globalid-ai-worker.service
+BindsTo=globalid-ai-worker.service
+PartOf=globalid-ai-worker.service
 
 [Service]
 Type=simple

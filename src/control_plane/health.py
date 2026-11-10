@@ -8,7 +8,7 @@ from sqlalchemy import func, select, text
 
 from src.core import get_database
 from src.core.disease_cutover import get_disease_cutover_config
-from src.control_plane.runtime import runtime_registry
+from src.control_plane.runtime import REQUIRED_RUNTIME_SERVICES, runtime_registry
 from src.domain import Task, TaskStatus
 
 
@@ -60,7 +60,7 @@ async def readiness_payload() -> dict:
     live_services = {str(item.get("service")) for item in services}
     required_services = {
         name: ("ok" if name in live_services else "missing")
-        for name in ("worker", "scheduler")
+        for name in REQUIRED_RUNTIME_SERVICES
     }
     runtime_ready = registry_available and all(
         state == "ok" for state in required_services.values()

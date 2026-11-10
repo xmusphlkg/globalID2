@@ -9,29 +9,37 @@ from __future__ import annotations
 import asyncio
 import ctypes
 import ctypes.util
-from datetime import datetime, timezone
 import gc
 import signal
 import sys
 import time
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Iterable, Optional
+from datetime import datetime, timezone
+from typing import Any, Literal
 
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import aliased
 
-from src.core import get_database, get_logger
-from src.core.config import get_config
-from src.domain import Task, TaskPriority, TaskStatus, TaskType
-from src.services.task_executor import execute_task, recover_interrupted_tasks_on_startup
-from src.services._lifecycle import safe_exception_summary
-from src.services.data_release.channel_control import is_automatic_json_paused
+from src.ai.runtime import (
+    AIWorkDispatcher,
+    recover_expired_leases,
+    waiting_parent_uuids,
+)
+from src.ai.runtime_metrics import RuntimeMetricsMonitor
 from src.control_plane.events import control_plane_events
 from src.control_plane.runtime import runtime_registry
-from src.core.task_manager import task_manager
+from src.core import get_database, get_logger
+from src.core.config import get_config
 from src.core.release_admission import COLLECTION_STORE_TASK_TYPES, release_admission
-from src.ai.runtime import AIWorkDispatcher, recover_expired_leases, waiting_parent_uuids
-from src.ai.runtime_metrics import RuntimeMetricsMonitor
+from src.core.task_manager import task_manager
+from src.domain import Task, TaskPriority, TaskStatus, TaskType
+from src.services._lifecycle import safe_exception_summary
+from src.services.data_release.channel_control import is_automatic_json_paused
+from src.services.task_executor import (
+    execute_task,
+    recover_interrupted_tasks_on_startup,
+)
 
 logger = get_logger(__name__)
 
@@ -59,6 +67,11 @@ MODEL_ROUTE_RECOVERY_SCAN_SECONDS = max(
     60,
     min(300, TASK_WORKER_CONFIG.ai_concurrency_adjust_seconds * 3),
 )
+WorkerRole = Literal["general", "ai"]
+WORKER_SERVICES: dict[WorkerRole, str] = {"general": "worker", "ai": "ai-worker"}
+# Serializes only the short task admission transaction across both roles.
+# Cross-row health, release and per-disease limits must share one snapshot.
+TASK_CLAIM_LOCK_KEY = int.from_bytes(b"GIDSTASK", "big")
 
 _LIBC: ctypes.CDLL | None = None
 _LIBC_LOOKUP_DONE = False
@@ -286,15 +299,22 @@ def _release_task_memory() -> None:
 async def _claim_next_task_uuid(
     worker_instance_id: str,
     *,
+    role: WorkerRole | None = None,
     blocked_task_types: set[TaskType] | None = None,
     excluded_task_uuids: set[str] | None = None,
-) -> Optional[tuple[str, TaskType]]:
+) -> tuple[str, TaskType] | None:
     """Pick one runnable task and return its UUID.
 
     Claim must be atomic across worker processes. We lock one candidate row,
     mark it RUNNING in the same transaction, and then return the UUID.
     """
+    if role is not None and role not in WORKER_SERVICES:
+        raise ValueError(f"Unknown worker role: {role}")
     async with get_database() as db:
+        if db.get_bind().dialect.name == "postgresql" and not await db.scalar(
+            select(func.pg_try_advisory_xact_lock(TASK_CLAIM_LOCK_KEY))
+        ):
+            return None
         health_operation = and_(
             Task.task_type == TaskType.AGENT_WORKFLOW,
             Task.input_data["operation"].as_string().in_(MODEL_HEALTH_OPERATIONS).is_(True),
@@ -381,6 +401,11 @@ async def _claim_next_task_uuid(
             # not prevent unrelated diseases from using available capacity.
             .limit(64)
         )
+        if role is not None:
+            ai_task = and_(Task.task_type.in_(AI_TASK_TYPES), ~collection_only_situation)
+            # Keep this outside every lane override. Health and release spare
+            # slots can never let a process claim the other role's work.
+            query = query.where(ai_task if role == "ai" else ~ai_task)
         if blocked_task_types:
             allowed = Task.task_type.notin_(list(blocked_task_types))
             if GENERAL_TASK_TYPES.issubset(lane_blocked):
@@ -489,10 +514,10 @@ async def _claim_next_task_uuid(
         return task.task_uuid, task.task_type
 
 
-async def _claim_next_task_safely(worker_instance_id, *, blocked_task_types=None, excluded_task_uuids=None):
+async def _claim_next_task_safely(worker_instance_id, *, role: WorkerRole, blocked_task_types=None, excluded_task_uuids=None):
     try:
         return await _claim_next_task_uuid(
-            worker_instance_id, blocked_task_types=blocked_task_types,
+            worker_instance_id, role=role, blocked_task_types=blocked_task_types,
             excluded_task_uuids=excluded_task_uuids,
         )
     except Exception as exc:
@@ -592,10 +617,7 @@ async def _recover_stale_tasks(
     """Continuously recover tasks orphaned after a hard worker termination."""
     while not stop_event.is_set():
         try:
-            recovered = await recover_interrupted_tasks_on_startup(
-                stale_after_seconds=STALE_TASK_SECONDS,
-                exclude_owner=worker_instance_id,
-            )
+            recovered = await _recover_orphaned_tasks(worker_instance_id)
             if recovered:
                 logger.warning("Recovered {} stale task(s) during worker sweep", recovered)
         except Exception as exc:
@@ -604,6 +626,20 @@ async def _recover_stale_tasks(
             await asyncio.wait_for(stop_event.wait(), timeout=RECOVERY_SCAN_SECONDS)
         except asyncio.TimeoutError:
             pass
+
+
+async def _recover_orphaned_tasks(worker_instance_id: str) -> int:
+    """A stale task heartbeat does not override either live process lease."""
+    owners = await asyncio.gather(
+        *(runtime_registry.lease_owner(service) for service in WORKER_SERVICES.values())
+    )
+    if any(not available for _owner, available in owners):
+        logger.warning("Task recovery deferred: worker ownership registry unavailable")
+        return 0
+    return await recover_interrupted_tasks_on_startup(
+        stale_after_seconds=STALE_TASK_SECONDS,
+        exclude_owners={worker_instance_id, *(owner for owner, _available in owners if owner)},
+    )
 
 
 async def _resume_knowledge_repairs_after_model_recovery() -> None:
@@ -631,12 +667,15 @@ async def _resume_knowledge_repairs_after_model_recovery() -> None:
 
 async def run_worker() -> None:
     """Main worker loop."""
+    role = TASK_WORKER_CONFIG.role
+    service = WORKER_SERVICES[role]
     logger.info(
-        "Task worker started (poll_interval={}s, general_workers={}, release_workers={}, ai_organizers={})",
+        "Task worker started (role={}, poll_interval={}s, general_workers={}, release_workers={}, ai_organizers={})",
+        role,
         POLL_INTERVAL_SECONDS,
-        GENERAL_WORKER_CONCURRENCY,
-        RELEASE_WORKER_CONCURRENCY,
-        TASK_WORKER_CONFIG.ai_concurrency,
+        GENERAL_WORKER_CONCURRENCY if role == "general" else 0,
+        RELEASE_WORKER_CONCURRENCY if role == "general" else 0,
+        TASK_WORKER_CONFIG.ai_concurrency if role == "ai" else 0,
     )
 
     ai_concurrency = AIOrganizerAdmission(
@@ -646,14 +685,14 @@ async def run_worker() -> None:
         enabled=TASK_WORKER_CONFIG.ai_dynamic_concurrency_enabled,
         adjust_seconds=TASK_WORKER_CONFIG.ai_concurrency_adjust_seconds,
         route_loader=_load_runtime_routes,
-    )
+    ) if role == "ai" else None
 
-    instance_id = runtime_registry.new_instance_id("worker")
+    instance_id = runtime_registry.new_instance_id(service)
     lease_wait_seconds = max(5, min(30, RUNTIME_LEASE_TTL_SECONDS // 3))
     while not await runtime_registry.acquire_lease(
-        "worker", instance_id, ttl_seconds=RUNTIME_LEASE_TTL_SECONDS
+        service, instance_id, ttl_seconds=RUNTIME_LEASE_TTL_SECONDS
     ):
-        if await runtime_registry.release_dead_local_instance_lease("worker"):
+        if await runtime_registry.release_dead_local_instance_lease(service):
             continue
         # A killed worker can leave a Redis lease behind until its TTL expires.
         # A same-host dead owner is removed above; other hosts and live owners
@@ -664,16 +703,16 @@ async def run_worker() -> None:
         )
         await asyncio.sleep(lease_wait_seconds)
     try:
-        await _run_owned_worker(instance_id, ai_concurrency)
+        await _run_owned_worker(instance_id, ai_concurrency, role=role)
     finally:
         # Ownership starts before recovery/bootstrap. Even an initialization
         # failure releases this process lease instead of waiting for its TTL.
         task_manager.set_broadcast_hook(None)
         try:
-            await runtime_registry.release_lease("worker", instance_id)
+            await runtime_registry.release_lease(service, instance_id)
         finally:
             try:
-                await runtime_registry.remove_heartbeat("worker", instance_id)
+                await runtime_registry.remove_heartbeat(service, instance_id)
             finally:
                 try:
                     await runtime_registry.close()
@@ -681,28 +720,16 @@ async def run_worker() -> None:
                     await control_plane_events.close()
 
 
-async def _run_owned_worker(instance_id: str, ai_concurrency: AIOrganizerAdmission) -> None:
+async def _run_owned_worker(
+    instance_id: str, ai_concurrency: AIOrganizerAdmission | None, *, role: WorkerRole
+) -> None:
     task_manager.set_broadcast_hook(control_plane_events.publish_task_event)
-
-    recovered = await recover_interrupted_tasks_on_startup(
-        stale_after_seconds=STALE_TASK_SECONDS
-    )
-    if recovered:
-        logger.warning("Recovered {} interrupted task(s) on worker startup", recovered)
-
-    recovered_leases = await recover_expired_leases()
-    if recovered_leases:
-        logger.warning("Recovered {} expired model activity lease(s)", recovered_leases)
-
-    from src.services.model_dispatch_ready import publish_ready
-    publish_ready()
-
-    await ai_concurrency.refresh(force=True)
-
     stop_event = asyncio.Event()
     ai_stop_event = asyncio.Event()
-    model_dispatcher = AIWorkDispatcher()
-    runtime_metrics = RuntimeMetricsMonitor(_load_runtime_routes)
+    runtime_metrics = None
+    runtime_guard = None
+    model_dispatch_loop = None
+    background_tasks: list[asyncio.Task] = []
     lease_lost = asyncio.Event()
     loop = asyncio.get_running_loop()
 
@@ -710,40 +737,21 @@ async def _run_owned_worker(instance_id: str, ai_concurrency: AIOrganizerAdmissi
         loop.call_soon_threadsafe(lease_lost.set)
         loop.call_soon_threadsafe(stop_event.set)
 
-    runtime_guard = runtime_registry.start_threaded_guard(
-        "worker",
-        instance_id,
-        lease_ttl_seconds=RUNTIME_LEASE_TTL_SECONDS,
-        heartbeat_ttl_seconds=RUNTIME_HEARTBEAT_TTL_SECONDS,
-        lease_loss_shutdown_timeout_seconds=SHUTDOWN_GRACE_SECONDS + 15,
-        metadata=lambda: {
+    def _heartbeat_metadata():
+        return {
+            "role": role,
             "concurrency": MAX_CONCURRENT_TASKS,
-            "general_concurrency": GENERAL_WORKER_CONCURRENCY,
-            "release_concurrency": RELEASE_WORKER_CONCURRENCY,
-            "ai_concurrency_max": ai_concurrency.configured,
-            "ai_concurrency_current": ai_concurrency.capacity,
-            "ai_concurrency_adaptive": ai_concurrency.enabled,
-            **runtime_metrics.heartbeat_metadata(),
-        },
-        on_lease_lost=_threaded_lease_lost,
-    )
-    model_dispatch_loop = asyncio.create_task(model_dispatcher.run(ai_stop_event), name="worker-model-dispatch")
-    metrics_loop = asyncio.create_task(runtime_metrics.run(ai_stop_event), name="worker-model-metrics")
-    recovery_sweep = asyncio.create_task(
-        _recover_stale_tasks(stop_event, instance_id),
-        name="control-plane-worker-task-recovery",
-    )
+            "general_concurrency": GENERAL_WORKER_CONCURRENCY if role == "general" else 0,
+            "release_concurrency": RELEASE_WORKER_CONCURRENCY if role == "general" else 0,
+            "ai_concurrency_max": ai_concurrency.configured if ai_concurrency else 0,
+            "ai_concurrency_current": ai_concurrency.capacity if ai_concurrency else 0,
+            "ai_concurrency_adaptive": ai_concurrency.enabled if ai_concurrency else False,
+            **(runtime_metrics.heartbeat_metadata() if runtime_metrics else {}),
+        }
 
     def _request_stop() -> None:
         logger.info("Stop signal received, task worker shutting down soon")
         stop_event.set()
-
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        try:
-            loop.add_signal_handler(sig, _request_stop)
-        except NotImplementedError:
-            # Fallback for environments that do not support signal handlers.
-            pass
 
     async def _run_claimed_task(task_uuid: str, task_type: TaskType) -> None:
         task_logger = logger.bind(task_uuid=task_uuid, worker_instance_id=instance_id)
@@ -796,17 +804,56 @@ async def _run_owned_worker(instance_id: str, ai_concurrency: AIOrganizerAdmissi
     shutdown_deadline: float | None = None
     shutdown_grace_handled = False
     try:
+        # Guard ownership before bootstrap; every subsequent failure runs the
+        # same cleanup path, including partially started background services.
+        runtime_guard = runtime_registry.start_threaded_guard(
+            WORKER_SERVICES[role], instance_id,
+            lease_ttl_seconds=RUNTIME_LEASE_TTL_SECONDS,
+            heartbeat_ttl_seconds=RUNTIME_HEARTBEAT_TTL_SECONDS,
+            lease_loss_shutdown_timeout_seconds=SHUTDOWN_GRACE_SECONDS + 15,
+            metadata=_heartbeat_metadata,
+            on_lease_lost=_threaded_lease_lost,
+        )
+        recovered = await _recover_orphaned_tasks(instance_id)
+        if recovered:
+            logger.warning("Recovered {} interrupted task(s) on worker startup", recovered)
+        if ai_concurrency is not None:
+            recovered_leases = await recover_expired_leases()
+            if recovered_leases:
+                logger.warning("Recovered {} expired model activity lease(s)", recovered_leases)
+            await ai_concurrency.refresh(force=True)
+            model_dispatcher = AIWorkDispatcher()
+            runtime_metrics = RuntimeMetricsMonitor(_load_runtime_routes)
+            model_dispatch_loop = asyncio.create_task(
+                model_dispatcher.run(ai_stop_event), name="worker-model-dispatch"
+            )
+            background_tasks.append(model_dispatch_loop)
+            background_tasks.append(asyncio.create_task(
+                runtime_metrics.run(ai_stop_event), name="worker-model-metrics"
+            ))
+            from src.services.model_dispatch_ready import publish_ready
+            publish_ready()
+        background_tasks.append(asyncio.create_task(
+            _recover_stale_tasks(stop_event, instance_id),
+            name="control-plane-worker-task-recovery",
+        ))
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            try:
+                loop.add_signal_handler(sig, _request_stop)
+            except NotImplementedError:
+                pass
         await control_plane_events.publish("runtime.started", resource_type="runtime", resource_id=instance_id)
         while not stop_event.is_set() or active_tasks:
-            if model_dispatch_loop.done():
+            if model_dispatch_loop is not None and model_dispatch_loop.done():
                 model_dispatch_loop.result()
                 raise RuntimeError("Model dispatcher stopped before the worker")
             if not stop_event.is_set():
-                await ai_concurrency.refresh()
-                model_center_is_routable = ai_concurrency.has_routable_models
-                if model_center_is_routable and model_center_was_routable is not True:
-                    await _resume_knowledge_repairs_after_model_recovery()
-                model_center_was_routable = model_center_is_routable
+                if ai_concurrency is not None:
+                    await ai_concurrency.refresh()
+                    model_center_is_routable = ai_concurrency.has_routable_models
+                    if model_center_is_routable and model_center_was_routable is not True:
+                        await _resume_knowledge_repairs_after_model_recovery()
+                    model_center_was_routable = model_center_is_routable
             elif shutdown_deadline is None and not shutdown_grace_handled:
                 shutdown_deadline = time.monotonic() + SHUTDOWN_GRACE_SECONDS
                 logger.info(
@@ -826,7 +873,9 @@ async def _run_owned_worker(instance_id: str, ai_concurrency: AIOrganizerAdmissi
                 # inside AIWorkDispatcher and are not collapsed into one AI parent.
                 lane_blocked = _lane_blocked_task_types(
                     executing_types,
-                    ai_capacity=ai_concurrency.capacity,
+                    ai_capacity=ai_concurrency.capacity if ai_concurrency else 0,
+                    general_capacity=GENERAL_WORKER_CONCURRENCY if role == "general" else 0,
+                    release_capacity=RELEASE_WORKER_CONCURRENCY if role == "general" else 0,
                     collection_only_count=sum(
                         uuid in _claimed_collection_only_situation_uuids and uuid not in waiting
                         for uuid in active_task_uuids.values()
@@ -838,6 +887,7 @@ async def _run_owned_worker(instance_id: str, ai_concurrency: AIOrganizerAdmissi
                     lane_blocked = set(TaskType)
                 claimed = await _claim_next_task_safely(
                     instance_id,
+                    role=role,
                     blocked_task_types=lane_blocked or None,
                     excluded_task_uuids=set(active_task_uuids.values()),
                 )
@@ -909,12 +959,13 @@ async def _run_owned_worker(instance_id: str, ai_concurrency: AIOrganizerAdmissi
             await asyncio.gather(*active_tasks, return_exceptions=True)
             ai_stop_event.set()
             results = await asyncio.gather(
-                model_dispatch_loop, metrics_loop, recovery_sweep, return_exceptions=True,
+                *background_tasks, return_exceptions=True,
             )
             for result in results:
                 if isinstance(result, BaseException) and not isinstance(result, asyncio.CancelledError):
                     logger.error("Worker background task stopped with {}", type(result).__name__)
-            await asyncio.to_thread(runtime_guard.stop)
+            if runtime_guard is not None:
+                await asyncio.to_thread(runtime_guard.stop)
             await control_plane_events.publish("runtime.stopped", resource_type="runtime", resource_id=instance_id)
     logger.info("Task worker stopped")
     if lease_lost.is_set():

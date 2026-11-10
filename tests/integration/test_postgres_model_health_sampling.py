@@ -236,6 +236,144 @@ async def test_runtime_success_does_not_override_invalid_model_status(database):
         assert model.last_check_status == "unavailable"
 
 
+async def seed_expired_rate_limit(factory, route):
+    now = health._utcnow()
+    limited_at = now - timedelta(minutes=2)
+    params = health._mark_payload_rate_limited(
+        {}, now - timedelta(seconds=1), limited_at
+    )
+    async with factory() as db:
+        model = await db.get(AIModelConfig, route["model_id"])
+        model.extra_params = params
+        model.last_check_status = "rate_limited"
+        model.last_checked_at = limited_at
+    return {
+        **route,
+        "extra_params": params,
+        "last_check_status": "rate_limited",
+        "rate_limit_active": False,
+        "model_last_rate_limit_at": limited_at.isoformat(),
+        "model_rate_limit_count": 1,
+    }
+
+
+async def test_concurrent_rate_limit_recovery_writes_once_and_keeps_history(database):
+    factory, engine, route = database
+    snapshot = await seed_expired_rate_limit(factory, route)
+    writes, locks = [], []
+
+    @event.listens_for(engine.sync_engine, "before_cursor_execute")
+    def observe(_conn, _cursor, statement, _params, _context, _many):
+        if statement.startswith("UPDATE ai_models"):
+            writes.append(statement)
+        if "ai_models" in statement and "FOR UPDATE" in statement:
+            locks.append(statement)
+
+    await asyncio.gather(
+        *[model_center.clear_route_rate_limit(snapshot) for _ in range(16)]
+    )
+    assert len(writes) == 1
+    async with factory() as db:
+        model = await db.get(AIModelConfig, route["model_id"])
+        state = health._extract_routing_state(model.extra_params)
+        assert model.last_check_status == "available"
+        assert state["rate_limit_count"] == 1
+        assert state["last_rate_limit_at"] == snapshot["model_last_rate_limit_at"]
+        assert "cooldown_until" not in state
+        recovered_at = state["last_recovered_at"]
+    writes.clear()
+    locks.clear()
+    await asyncio.gather(
+        *[model_center.clear_route_rate_limit(snapshot) for _ in range(16)]
+    )
+    assert writes == locks == []
+    async with factory() as db:
+        model = await db.get(AIModelConfig, route["model_id"])
+        assert model.extra_params["routing_state"]["last_recovered_at"] == recovered_at
+
+
+@pytest.mark.parametrize("same_timestamp", [False, True])
+async def test_rate_limit_recovery_rechecks_new_429_between_read_and_lock(
+    database, monkeypatch, same_timestamp
+):
+    factory, _engine, route = database
+    snapshot = await seed_expired_rate_limit(factory, route)
+    read, proceed = asyncio.Event(), asyncio.Event()
+
+    @asynccontextmanager
+    async def delayed_factory():
+        async with factory() as db:
+            execute = db.execute
+
+            async def delayed(statement, *args, **kwargs):
+                result = await execute(statement, *args, **kwargs)
+                if str(statement).startswith("SELECT ai_models.extra_params,"):
+                    read.set()
+                    await proceed.wait()
+                return result
+
+            db.execute = delayed
+            yield db
+
+    monkeypatch.setattr(model_center, "get_db", delayed_factory)
+    clear = asyncio.create_task(model_center.clear_route_rate_limit(snapshot))
+    try:
+        await asyncio.wait_for(read.wait(), 2)
+        clock = (
+            health._parse_datetime(snapshot["model_last_rate_limit_at"])
+            if same_timestamp
+            else health._utcnow()
+        )
+        monkeypatch.setattr(health, "_utcnow", lambda: clock)
+        await model_center.mark_route_rate_limited(
+            route, "a newer 429", retry_after_seconds=600
+        )
+        proceed.set()
+        await clear
+        async with factory() as db:
+            model = await db.get(AIModelConfig, route["model_id"])
+            state = health._rate_limit_state(model.extra_params, clock)
+            assert model.last_check_status == "rate_limited"
+            assert model.last_check_message == "a newer 429"
+            assert state["rate_limit_count"] == 2
+            assert state["rate_limit_remaining_seconds"] == 600
+    finally:
+        proceed.set()
+        await asyncio.gather(clear, return_exceptions=True)
+
+
+async def test_locked_rate_limit_recovery_does_not_block_success(database):
+    factory, _engine, route = database
+    snapshot = await seed_expired_rate_limit(factory, route)
+    async with factory() as locked:
+        await locked.scalar(
+            select(AIModelConfig)
+            .where(AIModelConfig.id == route["model_id"])
+            .with_for_update()
+        )
+        async with asyncio.timeout(1):
+            await model_center.clear_route_rate_limit(snapshot)
+    async with factory() as db:
+        model = await db.get(AIModelConfig, route["model_id"])
+        assert model.last_check_status == "rate_limited"
+    await model_center.clear_route_rate_limit(snapshot)
+    async with factory() as db:
+        model = await db.get(AIModelConfig, route["model_id"])
+        assert model.last_check_status == "available"
+
+
+async def test_rate_limit_recovery_never_revives_a_new_model_access_failure(database):
+    factory, _engine, route = database
+    snapshot = await seed_expired_rate_limit(factory, route)
+    async with factory() as db:
+        model = await db.get(AIModelConfig, route["model_id"])
+        model.last_check_status = "unavailable"
+    await model_center.clear_route_rate_limit(snapshot)
+    async with factory() as db:
+        model = await db.get(AIModelConfig, route["model_id"])
+        assert model.last_check_status == "unavailable"
+
+
 async def test_success_index_migration_is_concurrent_reversible_and_covers_count(
     database,
 ):

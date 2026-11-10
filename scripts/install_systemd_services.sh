@@ -20,6 +20,7 @@ UNIT_NAMES=(
   globalid-dashboard-api.service
   globalid-dashboard-scheduler.service
   globalid-dashboard-worker.service
+  globalid-ai-worker.service
   globalid-model-dispatch@.service
   globalid-literature-historical-rescreen.service
   globalid-dashboard-web.service
@@ -213,5 +214,6 @@ echo "Run these commands to inspect the stack:"
 echo "  systemctl status globalid-stack.target"
 echo "  journalctl -u globalid-dashboard-api.service -f"
 echo "  journalctl -u globalid-dashboard-worker.service -f"
+echo "  journalctl -u globalid-ai-worker.service -f"
 echo "  journalctl -u globalid-dashboard-scheduler.service -f"
 echo "  journalctl -u globalid-dashboard-web.service -f"

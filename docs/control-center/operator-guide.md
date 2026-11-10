@@ -4,7 +4,7 @@
 
 ### Overview
 
-Use Overview as the first response surface. It combines queue counts, failed work, live API/scheduler/worker heartbeats, enabled schedules, recent tasks, operational action items, and Events & Signals. A missing scheduler or worker heartbeat is treated as a blocker.
+Use Overview as the first response surface. It combines queue counts, failed work, live API/scheduler/general-worker/AI-worker heartbeats, enabled schedules, recent tasks, operational action items, and Events & Signals. A missing scheduler or either worker heartbeat is treated as a blocker.
 
 ### Ingestion & Tasks
 
@@ -37,7 +37,9 @@ Cancellation is cooperative for running work and immediate for queued work. Retr
 
 ## Background-task recovery
 
-The worker and scheduler are singleton services backed by Redis leases. Every
+The general worker (`worker`), AI worker (`ai-worker`), and scheduler each own
+a separate Redis singleton lease. `TASK_WORKER_ROLE=general|ai` selects the
+worker role; service launchers set it explicitly. Every
 claimed task records its worker owner and a heartbeat in `tasks.metadata`. A
 worker continuously scans for expired task leases. `sync_literature`,
 `enrich_literature`, and `discover_literature_gaps` are idempotent and are
@@ -48,7 +50,7 @@ Use the read-only check before any restart:
 
 ```bash
 venv/bin/python scripts/check_task_runtime.py
-systemctl status globalid-dashboard-worker.service globalid-dashboard-scheduler.service
+systemctl status globalid-dashboard-worker.service globalid-ai-worker.service globalid-dashboard-scheduler.service
 ```
 
 For a planned restart, use the fail-closed drain command instead of composing
@@ -58,9 +60,9 @@ individual `systemctl` calls:
 venv/bin/python scripts/restart_task_runtime.py --include-api
 ```
 
-It freezes the scheduler first, immediately asks the worker to stop claiming
-new work, waits for claimed tasks to drain, optionally restarts the API, then
-starts the worker and waits for its Redis heartbeat before starting the
+It freezes the scheduler first, asks both workers to stop claiming
+new work, waits for both roles to drain, optionally restarts the API, then
+starts both workers and waits for their Redis heartbeats before starting the
 scheduler. If systemd had to kill the old worker, the command compare-deletes
 only that exact Redis owner and recovers only tasks persisted with that owner.
 A delayed cleanup cannot remove a replacement worker lease. Any failure leaves
@@ -103,17 +105,17 @@ build keeps its initial settings. These are card-render timings, not full-releas
 timings.
 
 `/health/ready` is degraded when PostgreSQL or the Redis runtime registry is
-unavailable, or when either the worker or scheduler heartbeat is missing. It
+unavailable, or when any general-worker, AI-worker, or scheduler heartbeat is missing. It
 also reports queued/running counts and the age of the oldest queued task.
 
 For a hard worker failure:
 
-1. Stop the scheduler first so it cannot add work, then stop the worker.
+1. Stop the scheduler first so it cannot add work, then stop both workers.
 2. Inspect without writing: `venv/bin/python scripts/recover_stale_tasks.py`.
 3. Normally restart the worker and let its automatic recovery sweep run. For an
    explicit offline repair, run `venv/bin/python scripts/recover_stale_tasks.py
-   --apply` while the worker remains stopped.
-4. Start the worker, wait for its heartbeat, then start the scheduler. Confirm
+   --apply` while both workers remain stopped.
+4. Start both workers, wait for both heartbeats, then start the scheduler. Confirm
    `scripts/check_task_runtime.py` returns exit code 0.
 
 The recovery CLI refuses to write while a worker heartbeat is live or when the

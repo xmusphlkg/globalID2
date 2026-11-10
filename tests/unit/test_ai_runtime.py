@@ -990,7 +990,7 @@ async def test_parent_cancellation_persists_child_terminal_status(db):
 async def test_waiting_ai_parent_does_not_block_the_ordinary_worker_lane(
     db, monkeypatch
 ):
-    """AI organizer occupancy does not consume the independent crawl execution lane."""
+    """Separate role loops let collection run while AI waits on its dispatcher."""
     next_type = TaskType.CRAWL_DATA
     from unittest.mock import AsyncMock
 
@@ -1012,14 +1012,14 @@ async def test_waiting_ai_parent_does_not_block_the_ordinary_worker_lane(
     async def heartbeat(task_uuid, owner, finished):
         await finished.wait()
 
-    async def claim(owner, *, excluded_task_uuids, **kwargs):
-        if not claimed:
+    async def claim(owner, *, role, excluded_task_uuids, **kwargs):
+        if role == "ai" and "parent" not in claimed:
             claimed.append("parent")
             return "parent", TaskType.GENERATE_REPORT
-        if len(claimed) == 1:
+        if role == "general" and "next" not in claimed:
             if "parent" not in context.waiting_parent_uuids():
                 return None
-            assert "parent" in excluded_task_uuids
+            assert "parent" not in excluded_task_uuids
             assert next_type not in (kwargs.get("blocked_task_types") or ())
             claimed.append("next")
             return "next", next_type
@@ -1043,7 +1043,8 @@ async def test_waiting_ai_parent_does_not_block_the_ordinary_worker_lane(
             ordinary_started.set()
         completed.append(task_uuid)
         if len(completed) == 2:
-            stop_holder[0].set()
+            for stop in stop_holder:
+                stop.set()
 
     class Dispatcher:
         async def run(self, stop):
@@ -1112,6 +1113,7 @@ async def test_waiting_ai_parent_does_not_block_the_ordinary_worker_lane(
     monkeypatch.setattr(
         worker, "recover_interrupted_tasks_on_startup", AsyncMock(return_value=0)
     )
+    monkeypatch.setattr(worker, "_recover_orphaned_tasks", AsyncMock(return_value=0))
     monkeypatch.setattr(worker, "_recover_stale_tasks", recover)
     monkeypatch.setattr(worker, "_heartbeat_claimed_task", heartbeat)
     monkeypatch.setattr(worker, "_claim_next_task_uuid", claim)
@@ -1120,7 +1122,14 @@ async def test_waiting_ai_parent_does_not_block_the_ordinary_worker_lane(
     monkeypatch.setattr(
         asyncio.get_running_loop(), "add_signal_handler", lambda *args: None
     )
-    await asyncio.wait_for(worker.run_worker(), 5)
+    admission = worker.AIOrganizerAdmission(
+        configured=1, minimum=1, maximum=1, enabled=False, adjust_seconds=1,
+        route_loader=worker._load_runtime_routes,
+    )
+    await asyncio.wait_for(asyncio.gather(
+        worker._run_owned_worker("ai-worker", admission, role="ai"),
+        worker._run_owned_worker("general-worker", None, role="general"),
+    ), 5)
     assert completed == ["next", "parent"]
     assert not context.waiting_parent_uuids()
 

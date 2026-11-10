@@ -15,7 +15,7 @@ from sqlalchemy import select
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.control_plane.runtime import runtime_registry
+from src.control_plane.runtime import TASK_WORKER_SERVICES, runtime_registry
 from src.core import dispose_database, get_database, get_config
 from src.domain import Task, TaskStatus
 from src.services.task_executor import (
@@ -55,23 +55,25 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-async def _stale_rows(stale_after_seconds: int, *, owner: str | None = None) -> list[dict]:
+async def _stale_rows(
+    stale_after_seconds: int, *, owner: str | None = None
+) -> list[dict]:
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(seconds=stale_after_seconds)
     rows: list[dict] = []
     async with get_database() as db:
         tasks = (
-            await db.execute(select(Task).where(Task.status == TaskStatus.RUNNING))
-        ).scalars().all()
+            (await db.execute(select(Task).where(Task.status == TaskStatus.RUNNING)))
+            .scalars()
+            .all()
+        )
         for task in tasks:
             lease = (
                 (task.metadata_ or {}).get("task_lease")
                 if isinstance(task.metadata_, dict)
                 else None
             )
-            if owner and (
-                not isinstance(lease, dict) or lease.get("owner") != owner
-            ):
+            if owner and (not isinstance(lease, dict) or lease.get("owner") != owner):
                 continue
             heartbeat_at = _task_heartbeat_at(task)
             if heartbeat_at is None or heartbeat_at > cutoff:
@@ -110,33 +112,42 @@ async def _main() -> int:
     if args.stale_after_seconds < 30 and not immediate_owner_recovery:
         raise SystemExit("--stale-after-seconds must be at least 30")
     if args.confirmed_dead_owner and not immediate_owner_recovery:
-        raise SystemExit(
-            "--confirmed-dead-owner requires --apply and an exact --owner"
-        )
+        raise SystemExit("--confirmed-dead-owner requires --apply and an exact --owner")
     try:
         rows = await _stale_rows(args.stale_after_seconds, owner=args.owner)
         print(json.dumps({"stale_tasks": rows, "apply": args.apply}, indent=2))
         if not args.apply or not rows:
             return 0
 
-        worker_live, registry_available = await runtime_registry.service_is_live("worker")
+        states = await asyncio.gather(
+            *(
+                runtime_registry.service_is_live(service)
+                for service in TASK_WORKER_SERVICES
+            )
+        )
+        worker_live = any(state[0] for state in states)
+        registry_available = all(state[1] for state in states)
         if (worker_live or not registry_available) and not args.force:
-            reason = "a worker is live" if worker_live else "runtime registry is unavailable"
+            reason = (
+                "a worker is live" if worker_live else "runtime registry is unavailable"
+            )
             raise SystemExit(
                 f"Refusing recovery because {reason}. Stop the worker first; use --force only after independent verification."
             )
         if args.confirmed_dead_owner:
-            lease_owner, lease_registry_available = await runtime_registry.lease_owner(
-                "worker"
-            )
-            if not lease_registry_available:
-                raise SystemExit(
-                    "Refusing immediate recovery because the runtime registry is unavailable."
-                )
-            if lease_owner is not None:
-                raise SystemExit(
-                    "Refusing immediate recovery because a worker lease still exists."
-                )
+            for service in TASK_WORKER_SERVICES:
+                (
+                    lease_owner,
+                    lease_registry_available,
+                ) = await runtime_registry.lease_owner(service)
+                if not lease_registry_available:
+                    raise SystemExit(
+                        "Refusing immediate recovery because the runtime registry is unavailable."
+                    )
+                if lease_owner is not None:
+                    raise SystemExit(
+                        f"Refusing immediate recovery because a {service} lease still exists."
+                    )
         recovered = await recover_interrupted_tasks_on_startup(
             stale_after_seconds=args.stale_after_seconds,
             only_owner=args.owner,

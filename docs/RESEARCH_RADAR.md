@@ -66,14 +66,17 @@ contains aggregate progress; the accompanying ID snapshot is internal.
 The campaign's `initial_screen_complete` status does not mean that every
 record received a final relevance decision or that all papers were released.
 
-Model calls use the durable `ai_work_items` queue. The singleton dashboard
-worker and auxiliary `globalid-model-dispatch@` services consume the same
-queue; database leases enforce route capacity across processes. The worker
-drop-in in `deploy/systemd/globalid-dashboard-worker.service.d/` starts six
-auxiliary instances with the singleton, and the template binds them to its
-lifecycle so startup lease recovery does not race active consumers. Install the
-template with the same project/user substitutions as the other units and reload
-systemd after installing either unit. Failed routes can cool down, so configured
+Model calls use the durable `ai_work_items` queue. The independent
+`globalid-ai-worker.service` runs AI business organizers and a model dispatcher;
+twelve `globalid-model-dispatch@` services consume the same queue. Database
+leases enforce route capacity across processes. The auxiliary services are
+bound to the AI worker, while ordinary collection/export jobs run in
+`globalid-dashboard-worker.service` (`TASK_WORKER_ROLE=general`). Starting the
+general worker also requests the AI service; stopping it leaves the AI service
+running. Stop `globalid-stack.target` or use the task-runtime maintenance script
+to stop both roles. Install units using `scripts/install_systemd_services.sh`.
+Only the AI worker publishes model-runtime readiness and organizer capacity.
+Failed routes can cool down, so configured
 capacity and currently usable capacity are different. An empty model queue can
 also mean that the review producer is blocked or that records need more context;
 adding consumers alone cannot address those conditions.

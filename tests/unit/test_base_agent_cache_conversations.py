@@ -74,6 +74,24 @@ async def test_live_completion_and_cache_hit_record_selected_model(agent):
     base.record_model_call_log.assert_awaited_once()
 
 
+@pytest.mark.parametrize(
+    "status,active,should_recover",
+    [("available", False, False), ("rate_limited", False, True), ("available", True, True)],
+)
+async def test_success_only_recovers_pending_rate_limits(
+    agent, status, active, should_recover
+):
+    route = {
+        **ROUTE,
+        "rate_limit_count": 99,
+        "last_check_status": status,
+        "rate_limit_active": active,
+    }
+    assert await agent.complete("question", _scheduled_route=route) == "answer"
+    assert base.clear_route_rate_limit.await_count == int(should_recover)
+    assert route["rate_limit_count"] == 99
+
+
 async def test_invalidation_uses_replayed_route_cache_key_and_system_prompt(agent):
     await agent.complete("question", "system", _scheduled_route=ROUTE)
     await agent.complete("question", "other system", _scheduled_route=ROUTE)

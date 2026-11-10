@@ -981,20 +981,69 @@ async def mark_provider_authentication_failed(
 async def clear_route_rate_limit(
     route: dict[str, Any], message: str = "Connection successful"
 ) -> None:
-    """Clear the model route cooldown after that route has recovered."""
+    """Recover only the rate-limit generation observed by this successful call.
+
+    Historical counts are telemetry, not pending recovery. A newer 429 or a
+    concurrent recovery invalidates this snapshot before and after the lock.
+    """
+    if not (
+        route.get("rate_limit_active")
+        or route.get("last_check_status") == "rate_limited"
+    ):
+        return
     now = health._utcnow()
-    async with get_db() as db:
-        model = await db.get(
-            AIModelConfig, int(route["model_id"]), with_for_update=True
+    observed = health._rate_limit_state(route.get("extra_params"), now)
+    observed_at = health._parse_datetime(
+        route.get(
+            "model_last_rate_limit_at",
+            route.get("last_rate_limit_at", observed["last_rate_limit_at"]),
+        )
+    )
+    observed_count = _safe_int(
+        route.get(
+            "model_rate_limit_count",
+            route.get("rate_limit_count", observed["rate_limit_count"]),
+        )
+    )
+
+    def recovery_needed(params: Any, status: str) -> bool:
+        if status == "unavailable":
+            return False
+        state = health._rate_limit_state(params, now)
+        if (
+            state["last_rate_limit_at"] != observed_at
+            or state["rate_limit_count"] != observed_count
+        ):
+            return False
+        pending = health._extract_routing_state(params)
+        return status == "rate_limited" or bool(
+            pending.get("cooldown_until") or pending.get("rate_limit_streak")
         )
 
-        if model is not None:
-            model.last_check_status = "available"
-            model.last_check_message = message
-            model.last_checked_at = now
-            model.extra_params = health._clear_payload_rate_limit(
-                model.extra_params, now
+    async with get_db() as db:
+        current = (
+            await db.execute(
+                select(
+                    AIModelConfig.extra_params, AIModelConfig.last_check_status
+                ).where(AIModelConfig.id == int(route["model_id"]))
             )
+        ).one_or_none()
+        if current is None or not recovery_needed(*current):
+            return
+        model = await db.scalar(
+            select(AIModelConfig)
+            .where(AIModelConfig.id == int(route["model_id"]))
+            .with_for_update(skip_locked=True)
+            .execution_options(populate_existing=True)
+        )
+        if model is None or not recovery_needed(
+            model.extra_params, model.last_check_status
+        ):
+            return
+        model.last_check_status = "available"
+        model.last_check_message = message
+        model.last_checked_at = now
+        model.extra_params = health._clear_payload_rate_limit(model.extra_params, now)
 
         await db.commit()
 

@@ -242,11 +242,15 @@ class TaskQueryRepository:
         # heartbeat until its TTL elapses. Prefer the newest observation so the
         # operator never sees a dead PID when a replacement is already live.
         workers.sort(key=lambda item: str(item.get("last_seen_at") or ""), reverse=True)
-        worker_metadata = workers[0].get("metadata") if workers and isinstance(workers[0].get("metadata"), dict) else {}
+        ai_workers = sorted(
+            (item for item in services if item.get("service") == "ai-worker"),
+            key=lambda item: str(item.get("last_seen_at") or ""), reverse=True,
+        )
+        worker_metadata = ai_workers[0].get("metadata") if ai_workers and isinstance(ai_workers[0].get("metadata"), dict) else {}
         ai_concurrency_current = _runtime_metadata_int(
             worker_metadata,
             "ai_concurrency_current",
-            default=1,
+            default=0,
             minimum=0,
         )
         ai_concurrency_max = _runtime_metadata_int(

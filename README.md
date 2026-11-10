@@ -218,12 +218,12 @@ keeps the configured organizer budget. Situation tasks that explicitly skip AI
 use the ordinary collection lane. Runtime model occupancy comes from unexpired
 database leases across all dispatchers; it measures occupied permits, including
 request preparation, rather than live HTTP connections.
-The systemd worker drop-in starts 12 auxiliary model dispatchers alongside the
-main worker. The example configuration allows 12 AI organizers with
+The general-worker systemd drop-in starts the independent AI worker. The AI
+worker starts 12 auxiliary model dispatchers and publishes model readiness. The example configuration allows 12 AI organizers with
 `TASK_WORKER_CONCURRENCY=16`; organizer slots and dispatcher processes do not
 multiply the model center's global route limits. Service templates budget up to
-69 database pool connections across these dispatchers, the main worker, API,
-scheduler, and historical rescreen service. Keep additional clients within the
+81 database pool connections across these dispatchers, the general worker, AI
+worker, API, scheduler, and historical rescreen service. Keep additional clients within the
 database's connection limit when changing these settings. The installer also
 installs the managed service drop-ins so the dispatcher count survives reinstalls.
 The [AI runtime architecture and cutover notes](docs/AI_MODEL_CENTER_ARCHITECTURE_REVIEW_2026-11-10.md#重构实施记录2026-11-10)
@@ -232,7 +232,7 @@ and the coordinated migration from the previous scheduler.
 `TASK_WORKER_TASK_HEARTBEAT_SECONDS`, `TASK_WORKER_STALE_TASK_SECONDS`, and
 `TASK_WORKER_RECOVERY_SCAN_SECONDS` control task-lease recovery; keep the stale threshold
 comfortably above the heartbeat interval. `SCHEDULER_WORKER_GRACE_SECONDS` bounds how long
-the scheduler may remain active without a worker heartbeat.
+the scheduler may remain active without either worker role's heartbeat.
 
 For disease knowledge building, runtime routing comes from the dashboard model
 center. Environment model values only seed the model-center tables during first
@@ -431,10 +431,13 @@ Health endpoints:
 
 ### Task worker (recommended)
 
-Run task execution in a separate process so API reloads do not interrupt running tasks:
+Run general and AI tasks in separate terminals so collection work and API reloads
+do not block AI coordination:
 
 ```bash
-python -m src.services.task_worker
+TASK_WORKER_ROLE=general python -m src.services.task_worker
+# In another terminal:
+TASK_WORKER_ROLE=ai python -m src.services.task_worker
 ```
 
 Run scheduling in its own process so the API remains stateless:
@@ -495,10 +498,18 @@ This installs:
 
 - `globalid-docker.service`
 - `globalid-dashboard-api.service`
-- `globalid-dashboard-worker.service`
+- `globalid-dashboard-worker.service` (`TASK_WORKER_ROLE=general`)
+- `globalid-ai-worker.service` (`TASK_WORKER_ROLE=ai`)
+- `globalid-dashboard-scheduler.service`
 - `globalid-dashboard-web.service`
 - `globalid-site.service`
 - `globalid-stack.target`
+
+The AI worker owns AI business organizers, the main model dispatcher, and the
+model-runtime readiness signal. Twelve auxiliary dispatchers follow its lifecycle.
+General ingestion/export work has its own worker process and Redis lease; restarting
+it does not stop the AI worker. The checked-in database pool ceilings total 81
+connections (including AI worker 8 + 4), below PostgreSQL's 100-connection limit.
 
 Useful commands:
 

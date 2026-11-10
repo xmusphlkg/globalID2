@@ -243,7 +243,7 @@ class BaseAgent(ABC):
         try:
             await record_route_runtime_success(route, duration_seconds=elapsed)
             if (
-                route.get("rate_limit_count")
+                route.get("rate_limit_active")
                 or route.get("last_check_status") == "rate_limited"
             ):
                 await clear_route_rate_limit(
