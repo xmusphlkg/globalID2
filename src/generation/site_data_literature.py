@@ -1112,6 +1112,16 @@ def bibliographic_catalogue_records(articles: list[dict[str, Any]]) -> list[dict
     ]
 
 
+async def _load_article_links_in_batches(session: AsyncSession, model: Any, article_ids: list[str], *filters: Any) -> list[Any]:
+    """Keep expanding IN queries below the database driver's parameter limit."""
+    rows = []
+    for start in range(0, len(article_ids), 10000):
+        batch = article_ids[start:start + 10000]
+        result = await session.execute(select(model).where(model.article_id.in_(batch), *filters))
+        rows.extend(result.scalars().all())
+    return rows
+
+
 async def collect_literature_export(
     session: AsyncSession,
     *,
@@ -1205,18 +1215,8 @@ async def collect_literature_export(
             "estimate_method": "title_mention_only",
         })
     estimate_ids = [item["article_id"] for item in title_estimate_records]
-    estimated_disease_links = (
-        (await session.execute(
-            select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(estimate_ids))
-        )).scalars().all()
-        if estimate_ids else []
-    )
-    estimated_topic_links = (
-        (await session.execute(
-            select(LiteratureTopicLink).where(LiteratureTopicLink.article_id.in_(estimate_ids))
-        )).scalars().all()
-        if estimate_ids else []
-    )
+    estimated_disease_links = await _load_article_links_in_batches(session, LiteratureDiseaseLink, estimate_ids)
+    estimated_topic_links = await _load_article_links_in_batches(session, LiteratureTopicLink, estimate_ids)
     stored_diseases: dict[str, list[dict[str, Any]]] = defaultdict(list)
     stored_topics: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for link in estimated_disease_links:
@@ -1291,32 +1291,17 @@ async def collect_literature_export(
                     select(LiteratureArticle).where(LiteratureArticle.article_id.in_(integrity_article_ids))
                 )
             ).scalars().all()
-    disease_links = (
-        await session.execute(select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(article_ids)))
-    ).scalars().all() if article_ids else []
-    country_links = (
-        await session.execute(select(LiteratureCountryLink).where(LiteratureCountryLink.article_id.in_(article_ids)))
-    ).scalars().all() if article_ids else []
-    topic_links = (
-        await session.execute(select(LiteratureTopicLink).where(LiteratureTopicLink.article_id.in_(article_ids)))
-    ).scalars().all() if article_ids else []
-    summaries = (
-        await session.execute(
-            select(LiteratureSummary).where(
-                LiteratureSummary.article_id.in_(article_ids),
-                LiteratureSummary.status == "published",
-            )
-        )
-    ).scalars().all() if article_ids else []
+    disease_links = await _load_article_links_in_batches(session, LiteratureDiseaseLink, article_ids)
+    country_links = await _load_article_links_in_batches(session, LiteratureCountryLink, article_ids)
+    topic_links = await _load_article_links_in_batches(session, LiteratureTopicLink, article_ids)
+    summaries = await _load_article_links_in_batches(
+        session, LiteratureSummary, article_ids, LiteratureSummary.status == "published"
+    )
     signal_article_links = (
-        (
-            await session.execute(
-                select(LiteratureSignalArticleLink).where(
-                    LiteratureSignalArticleLink.article_id.in_(peer_reviewed_article_ids),
-                    LiteratureSignalArticleLink.status.in_(("confirmed", "rejected")),
-                )
-            )
-        ).scalars().all()
+        await _load_article_links_in_batches(
+            session, LiteratureSignalArticleLink, peer_reviewed_article_ids,
+            LiteratureSignalArticleLink.status.in_(("confirmed", "rejected")),
+        )
         if peer_reviewed_article_ids and await has_table(session, "literature_signal_article_links")
         else []
     )
