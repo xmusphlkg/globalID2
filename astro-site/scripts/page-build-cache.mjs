@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileHash } from './file-fingerprints.mjs';
 import { createSourceDependencyFingerprinter } from './source-dependencies.mjs';
@@ -7,6 +7,7 @@ import { selectDirectoryCandidates } from '../src/lib/directory-facts.ts';
 import { openDirectoryBuildCache, directoryFactsVersion } from './directory-build-cache.mjs';
 import { hasCountryDataSnapshot } from '../src/lib/country-coverage.ts';
 import { diseaseLiteratureFromIndex } from '../src/lib/research-literature-projection.ts';
+import { readResearchPublicFields } from '../src/lib/research-public-source.ts';
 import { toSeoSlug } from '../src/lib/seo.ts';
 import { buildPublishableReports } from '../src/lib/report-routes.ts';
 import { addSituationPages } from './situation-build-cache.mjs';
@@ -26,6 +27,15 @@ const safeSegment = value => {
   if (!/^[A-Za-z0-9][A-Za-z0-9_()\-]*$/.test(segment)) throw new Error(`Unsafe page cache segment: ${segment}`);
   return segment;
 };
+
+export function readResearchCacheIndex(dataRoot, env = process.env) {
+  const source = resolve(dataRoot, 'research/index.json');
+  if (!existsSync(source)) return {};
+  if (statSync(source).size <= 480 * 1024 * 1024 && !env.GIDS_RESEARCH_PUBLIC_ROOT)
+    return json(source, {});
+  return readResearchPublicFields(resolve(env.GIDS_RESEARCH_PUBLIC_ROOT || siteRoot + '/public/site-data/research'),
+    ['articles', 'bibliographic_articles', 'preprints', 'facets']);
+}
 
 export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), shared = sharedFingerprint(), reportDiseaseTemplateHash = hashFile(reportDiseaseTemplate), directoryCachePath, directoryStats, env = process.env } = {}) {
   const graph = createSourceDependencyFingerprinter({ siteRoot });
@@ -58,7 +68,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   };
   addSituationPages({ dataRoot, add, hashFile, env });
   const routes = json(resolve(dataRoot, 'research/routes.json'), {});
-  const researchIndex = json(resolve(dataRoot, 'research/index.json'), {});
+  const researchIndex = readResearchCacheIndex(dataRoot, env);
   const literature = diseaseLiteratureFromIndex(researchIndex);
   const literatureFingerprints = new Map([...literature.byDisease].map(([id, rows]) => [id, sha(JSON.stringify([literature.diseaseFacets.get(id), rows]))]));
   const facets = routes.facets ?? researchIndex.facets ?? {};

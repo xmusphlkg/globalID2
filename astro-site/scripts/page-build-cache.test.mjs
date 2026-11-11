@@ -1,15 +1,28 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { pageSourceSnapshot } from './page-build-cache.mjs';
+import { pageSourceSnapshot, readResearchCacheIndex } from './page-build-cache.mjs';
 
 const writeJson = (root, relativePath, value) => {
   const path = join(root, relativePath);
   mkdirSync(join(path, '..'), { recursive: true });
   writeFileSync(path, JSON.stringify(value));
 };
+
+test('large research sources use bounded public shards for cache planning', () => {
+  const root = mkdtempSync(join(tmpdir(), 'gids-page-cache-research-'));
+  try {
+    const dataRoot = join(root, 'data');
+    const publicRoot = join(root, 'public');
+    writeJson(dataRoot, 'research/index.json', {});
+    truncateSync(join(dataRoot, 'research/index.json'), 481 * 1024 * 1024);
+    writeJson(publicRoot, 'index.json', { articles: { sharded: true, kind: 'list', chunks: [{ file: 'shards/a.json' }] }, facets: {} });
+    writeJson(publicRoot, 'shards/a.json', { records: [{ id: 'one' }] });
+    assert.deepEqual(readResearchCacheIndex(dataRoot, { GIDS_RESEARCH_PUBLIC_ROOT: publicRoot }), { articles: [{ id: 'one' }], facets: {} });
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
 
 test('tracks report archive, overview, and disease page bundles independently', () => {
   const root = mkdtempSync(join(tmpdir(), 'gids-report-page-cache-'));
