@@ -18,22 +18,23 @@ from typing import Any
 from src.core.config import get_config
 
 CHANNELS = ("surveillance", "situation")
+LITERATURE_CHANNELS = ("literature",)
 
 
-def _channel(value: str) -> str:
-    if value not in CHANNELS:
+def _channel(value: str, channels=CHANNELS) -> str:
+    if value not in channels:
         raise ValueError("Unknown realtime publication channel")
     return value
 
 
 class ChannelControlStore:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, *, channels=CHANNELS):
         self.path = Path(path)
+        self.channels = tuple(channels)
 
-    @staticmethod
-    def _defaults(*, paused: bool = False, error_code: str | None = None) -> dict:
+    def _defaults(self, *, paused: bool = False, error_code: str | None = None) -> dict:
         return {line: {"paused": paused, "updated_at": None, "error_code": error_code}
-                for line in CHANNELS}
+                for line in self.channels}
 
     def snapshot(self) -> dict[str, dict[str, Any]]:
         try:
@@ -42,11 +43,11 @@ class ChannelControlStore:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
             if (not isinstance(payload, dict) or type(payload.get("schema_version")) is not int
                     or payload["schema_version"] != 1 or not isinstance(payload.get("channels"), dict)
-                    or set(payload["channels"]) != set(CHANNELS)):
+                    or set(payload["channels"]) != set(self.channels)):
                 raise ValueError("Invalid control state")
             result = self._defaults()
             for line, value in payload["channels"].items():
-                _channel(line)
+                _channel(line, self.channels)
                 if not isinstance(value, dict) or type(value.get("paused")) is not bool:
                     raise ValueError("Invalid pause value")
                 updated = value.get("updated_at")
@@ -74,7 +75,7 @@ class ChannelControlStore:
             os.close(descriptor)
 
     def set_paused(self, channel: str, paused: bool) -> dict[str, Any]:
-        _channel(channel)
+        _channel(channel, self.channels)
         if type(paused) is not bool:
             raise ValueError("paused must be a boolean")
         with self._write_lock():
@@ -104,7 +105,9 @@ class ChannelControlStore:
             return state[channel]
 
 
-def _store() -> ChannelControlStore:
+def _store(channel: str | None = None) -> ChannelControlStore:
+    if channel == "literature":
+        return ChannelControlStore(get_config().data_dir / "literature-publishing-control.json", channels=LITERATURE_CHANNELS)
     return ChannelControlStore(get_config().data_dir / "realtime-publishing-control.json")
 
 
@@ -113,8 +116,9 @@ def get_realtime_controls() -> dict[str, dict[str, Any]]:
 
 
 async def set_realtime_control(channel: str, paused: bool) -> dict[str, Any]:
-    return await asyncio.to_thread(_store().set_paused, channel, paused)
+    return await asyncio.to_thread(_store(channel).set_paused, channel, paused)
 
 
 def is_automatic_json_paused(channel: str) -> bool:
-    return bool(get_realtime_controls()[_channel(channel)]["paused"])
+    store = _store(channel)
+    return bool(store.snapshot()[_channel(channel, store.channels)]["paused"])

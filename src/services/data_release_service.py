@@ -82,7 +82,7 @@ logger = get_logger(__name__)
 
 def _data_line(input_data: dict[str, Any]) -> str:
     line = str(input_data.get("data_line") or "surveillance")
-    if line not in {"surveillance", "situation"}:
+    if line not in {"surveillance", "situation", "literature"}:
         raise ValueError(f"Unknown JSON publication line: {line}")
     return line
 
@@ -95,6 +95,7 @@ def _release_conflict_clause(input_data: dict[str, Any]):
     """Channel reservation, including legacy surveillance-exporting sites."""
     archive = Task.input_data["raw_archive_only"].as_boolean().is_(True)
     data = Task.input_data["data_only"].as_boolean().is_(True)
+    literature = and_(data, (Task.input_data["data_line"].as_string() == "literature").is_(True))
     static_safe = or_(
         Task.input_data["situation_detached" if input_data.get("data_only") and _data_line(input_data) == "situation" else "content_only"].as_boolean().is_(True),
         Task.input_data["reports_only"].as_boolean().is_(True),
@@ -103,7 +104,10 @@ def _release_conflict_clause(input_data: dict[str, Any]):
     if input_data.get("raw_archive_only"):
         return archive
     if input_data.get("data_only"):
-        conflict = and_(~archive, or_(data, ~static_safe))
+        if _data_line(input_data) == "literature":
+            # Research has private data artifacts but reads static site inputs.
+            return and_(~archive, or_(literature, ~data))
+        conflict = and_(~archive, ~literature, or_(data, ~static_safe))
         other = "surveillance" if _data_line(input_data) == "situation" else "situation"
         if is_automatic_json_paused(other):
             other_line = (Task.input_data["data_line"].as_string().is_distinct_from("situation")
@@ -114,14 +118,14 @@ def _release_conflict_clause(input_data: dict[str, Any]):
             conflict = and_(conflict, ~and_(Task.status == TaskStatus.RETRYING, data, other_line))
         return conflict
     if input_data.get("reports_only") or input_data.get("code_only"):
-        return and_(~archive, ~data)
+        return and_(~archive, or_(~data, literature))
     if input_data.get("content_only") or input_data.get("situation_detached"):
         conflicting_data = []
         if not input_data.get("content_only"):
             conflicting_data.append(and_(data, Task.input_data["data_line"].as_string().is_distinct_from("situation")))
         if not input_data.get("situation_detached"):
             conflicting_data.append(and_(data, Task.input_data["data_line"].as_string() == "situation"))
-        return and_(~archive, or_(~data, *conflicting_data))
+        return and_(~archive, or_(~data, literature, *conflicting_data))
     # An old site task can read/write observations and published curves. Until
     # it drains, it owns both the static and the surveillance channel.
     return ~archive
@@ -398,7 +402,7 @@ class DataReleaseService:
                 name="globalid-subscription-reconciliation",
             )
         cfg = self._config()
-        if not cfg.enabled and not getattr(cfg, "surveillance_json_enabled", False) and not getattr(cfg, "situation_json_enabled", False):
+        if not cfg.enabled and not any(getattr(cfg, f"{line}_json_enabled", False) for line in ("surveillance", "situation", "literature")):
             logger.info("Data release scheduler disabled by configuration")
             return
         await self.ensure_storage()
@@ -852,7 +856,7 @@ class DataReleaseService:
         trigger_task_type: str | TaskType,
     ) -> None:
         await self.ensure_storage()
-        if not self._config().enabled and not any(getattr(self._config(), f"{line}_json_enabled", False) for line in ("surveillance", "situation")):
+        if not self._config().enabled and not any(getattr(self._config(), f"{line}_json_enabled", False) for line in ("surveillance", "situation", "literature")):
             return
         try:
             normalized_task_type = TaskType(trigger_task_type)
@@ -1074,6 +1078,34 @@ class DataReleaseService:
                     # Bad scopes/configuration in one feed must not stop the
                     # other channel or the independent static release clock.
                     logger.exception("{} JSON reconciliation deferred: {}", line, error)
+        if _data_enabled(self._config(), {"data_line": "literature"}):
+            try:
+                await self.reconcile_pending_literature()
+            except Exception as error:
+                logger.exception("Literature publication reconciliation deferred: {}", error)
+
+    async def reconcile_pending_literature(self) -> None:
+        """Schedule at most one frozen literature candidate per interval."""
+        if not _data_enabled(self._config(), {"data_line": "literature"}) or is_automatic_json_paused("literature"):
+            return
+        jobs = [job for job in await self.load_jobs() if job.enabled]
+        if not jobs:
+            return
+        async with get_database() as db:
+            latest = (await db.execute(select(Task).where(
+                Task.task_type == TaskType.EXPORT_DATA,
+                Task.input_data["data_only"].as_boolean().is_(True),
+                (Task.input_data["data_line"].as_string() == "literature").is_(True),
+            ).order_by(Task.created_at.desc(), Task.id.desc()).limit(1))).scalar_one_or_none()
+        if latest is not None:
+            interval = int(getattr(self._config(), "literature_publish_interval_minutes", 360))
+            last = _as_aware_utc(latest.created_at)
+            if last and datetime.now(ZoneInfo("UTC")) < last + timedelta(minutes=interval):
+                return
+        job = jobs[0]
+        if await self._release_failure_cooldown_reason(job.job_id, data_only=True, data_line="literature"):
+            return
+        await self.trigger_job(job.job_id, manual=False, trigger="scheduled", data_only=True, data_line="literature")
 
     async def _reconcile_pending_json(self, line: str) -> None:
         """Recover committed dirty markers independently of site schedules."""
@@ -1178,8 +1210,10 @@ class DataReleaseService:
                     Task.input_data["reports_only"].as_boolean().is_not(True),
                     Task.input_data["code_only"].as_boolean().is_not(True),
                     Task.input_data["data_only"].as_boolean().is_(True) == data_only,
-                    ((Task.input_data["data_line"].as_string() == "situation")
-                        if data_line == "situation" else Task.input_data["data_line"].as_string().is_distinct_from("situation"))
+                    ((Task.input_data["data_line"].as_string() == data_line)
+                        if data_line in {"situation", "literature"} else
+                        and_(Task.input_data["data_line"].as_string().is_distinct_from("situation"),
+                             Task.input_data["data_line"].as_string().is_distinct_from("literature")))
                         if data_only else True,
                 )
                 .order_by(Task.completed_at.desc().nullslast(), Task.created_at.desc())
@@ -1213,6 +1247,7 @@ class DataReleaseService:
             raise ValueError("Release modes are mutually exclusive")
         _data_line({"data_line": data_line})
         situation_detached = bool(getattr(self._config(), "situation_json_enabled", False) and not any((data_only, code_only, reports_only)))
+        literature_detached = bool(getattr(self._config(), "literature_json_enabled", False) and not any((data_only, code_only, reports_only)))
         content_only = bool(
             getattr(self._config(), "surveillance_json_enabled", False)
             and not any((data_only, code_only, reports_only))
@@ -1232,7 +1267,7 @@ class DataReleaseService:
             selection_query = select(PublishDirty).where(PublishDirty.published_at.is_(None))
             if data_only:
                 selection_query = selection_query.where(PublishDirty.line == data_line)
-                if data_line == "situation":
+                if data_line in {"situation", "literature"}:
                     # The Situation exporter attests one global snapshot. Keep
                     # malformed/legacy scopes visible for operator review.
                     selection_query = selection_query.where(PublishDirty.scope_key == "*")
@@ -1241,6 +1276,8 @@ class DataReleaseService:
                     selection_query = selection_query.where(PublishDirty.line != "surveillance")
                 if situation_detached:
                     selection_query = selection_query.where(PublishDirty.line != "situation")
+                if literature_detached:
+                    selection_query = selection_query.where(PublishDirty.line != "literature")
             if pending_ids is not None:
                 selection_query = selection_query.where(PublishDirty.id.in_(pending_ids))
             dirty = [] if reports_only or code_only else list((await db.execute(selection_query.order_by(PublishDirty.id))).scalars().all())
@@ -1294,7 +1331,9 @@ class DataReleaseService:
         if reports_only:
             description_parts = ["Refresh report data, build report pages, publish changed files to Reports R2, and verify the public report host."]
         if data_only:
-            description_parts = [f"Publish changed {data_line} JSON snapshots and their manifest without rebuilding static pages."]
+            description_parts = (["Build and publish a frozen literature generation independently of AI analysis and other data channels."]
+                                 if data_line == "literature" else
+                                 [f"Publish changed {data_line} JSON snapshots and their manifest without rebuilding static pages."])
 
         input_data = {
             # Maintenance publications can refresh content/templates without
@@ -1324,6 +1363,7 @@ class DataReleaseService:
             "data_only": data_only,
             "data_line": data_line if data_only else None,
             "situation_detached": situation_detached,
+            "literature_detached": literature_detached,
             # Freeze the selected publication contract. A configuration change
             # before execution/retry must not turn a static content task into
             # a surveillance exporter (or acknowledge unselected data rows).
@@ -1395,18 +1435,20 @@ class DataReleaseService:
                 # reservation. Another completed publisher may have consumed
                 # those exact IDs while this enqueue waited; never create a
                 # stale JSON candidate from that older selection.
-                pending = set((await db.execute(select(PublishDirty.id).where(
-                    PublishDirty.id.in_(dirty_ids),
-                    PublishDirty.line == data_line,
-                    PublishDirty.published_at.is_(None),
-                ).with_for_update())).scalars())
+                from .data_release.global_selection import selection_batches
+                pending = set()
+                for batch in selection_batches(dirty_ids):
+                    pending.update((await db.execute(select(PublishDirty.id).where(
+                        PublishDirty.id.in_(batch), PublishDirty.line == data_line,
+                        PublishDirty.published_at.is_(None),
+                    ).order_by(PublishDirty.id).with_for_update())).scalars())
                 if pending != set(dirty_ids):
                     return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid,
                             "reason": "no_pending_changes" if not pending else "selection_changed"}
 
             task = Task(
                 task_type=TaskType.EXPORT_DATA,
-                task_name=f"{data_line.title() + ' JSON' if data_only else 'Data Release'}: {job.name}",
+                task_name=f"{('Literature Publication' if data_line == 'literature' else data_line.title() + ' JSON') if data_only else 'Data Release'}: {job.name}",
                 # A release always outranks collection and AI work in the queue,
                 # whatever priority the job row stores.
                 priority=TaskPriority.URGENT,

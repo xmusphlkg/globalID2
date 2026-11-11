@@ -79,6 +79,25 @@ def test_completed_week_uses_utc_and_year_boundary():
     assert release.completed_week(datetime(2027, 1, 4, tzinfo=timezone.utc)) == "2026-W53"
 
 
+def test_independent_digest_requires_current_pointer_and_active_public_route():
+    identity = {'release_id': 'literature-one', 'papers_generation_sha256': 'a' * 64}
+    class Reply(Response):
+        def __init__(self, body, headers=None):
+            super().__init__(body)
+            self.headers = headers or {}
+    def opener(request, timeout):
+        if request.full_url.endswith('/current.json'):
+            return Reply({'release_id': identity['release_id'], 'papers': {'papers_generation_sha256': 'a' * 64}})
+        return Reply({}, {'X-GIDS-Research-Release': identity['release_id']})
+    release._verify_live_literature_pointer('https://site.example.test', identity, opener=opener)
+    def not_active(request, timeout):
+        if request.full_url.endswith('/current.json'):
+            return Reply({'release_id': identity['release_id'], 'papers': {'papers_generation_sha256': 'a' * 64}})
+        return Reply({}, {})
+    with pytest.raises(release.ResearchSubscriptionError, match='pointer_mismatch'):
+        release._verify_live_literature_pointer('https://site.example.test', identity, opener=not_active)
+
+
 def test_no_send_before_activation_floor(tmp_path):
     def no_network(*_args, **_kwargs):
         raise AssertionError("must not access network")

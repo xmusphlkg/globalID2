@@ -15,7 +15,7 @@ const buildDiseaseLiteratureCatalogue = memoizeForBuild(() => {
 let developmentCache: { signature: string; catalogue: ReturnType<typeof buildDiseaseLiteratureCatalogue> } | undefined;
 export function diseaseLiteratureCatalogue() {
   if (process.env.GIDS_STATIC_RENDER === '1') return buildDiseaseLiteratureCatalogue();
-  const stat = statSync(resolve('./src/data/research/index.json'), { bigint: true });
+  const stat = statSync(resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', 'research/index.json'), { bigint: true });
   const signature = [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs].join(':');
   if (!developmentCache || developmentCache.signature !== signature) developmentCache = { signature, catalogue: buildDiseaseLiteratureCatalogue() };
   return developmentCache.catalogue;

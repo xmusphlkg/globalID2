@@ -126,6 +126,38 @@ def _payload_for_week(astro_dir: Path, week: str, public_base_url: str) -> dict[
     return payload
 
 
+def _payload_for_independent_week(astro_dir: Path, week: str, public_base_url: str) -> dict[str, Any]:
+    """Use the frozen publication input; no per-paper/page read-back is needed."""
+    path = astro_dir / "src" / "data" / "research" / "weekly" / f"{week}.json"
+    try:
+        brief = json.loads(path.read_bytes())
+        if not isinstance(brief, dict) or brief.get("week") != week:
+            raise ValueError("week mismatch")
+        return dispatcher.build_campaign_payload(brief, public_base_url)
+    except (OSError, ValueError, dispatcher.DispatchError) as exc:
+        raise ResearchSubscriptionError("research_digest_brief_unreadable") from exc
+
+
+def _verify_live_literature_pointer(origin: str, identity: Mapping[str, Any], *, opener: Callable[..., Any]) -> None:
+    origin = dispatcher._https_origin(origin, "public_base_url")
+    request = Request(origin + "/site-data/research-publication/current.json", headers={
+        "Accept": "application/json", "Cache-Control": "no-cache", "User-Agent": "GIDS-Research-Publication/1.0"})
+    try:
+        with opener(request, timeout=15) as response:
+            status = int(getattr(response, "status", 0) or response.getcode())
+            raw = response.read(2 * 1024 * 1024 + 1)
+        current = json.loads(raw)
+        if (status != 200 or len(raw) > 2 * 1024 * 1024 or current.get("release_id") != identity.get("release_id")
+                or (current.get("papers") or {}).get("papers_generation_sha256") != identity.get("papers_generation_sha256")):
+            raise ValueError("research publication changed")
+        with opener(Request(origin + "/research/", method="HEAD", headers={"Cache-Control": "no-cache"}), timeout=15) as response:
+            status = int(getattr(response, "status", 0) or response.getcode())
+            if status != 200 or response.headers.get("X-GIDS-Research-Release") != identity.get("release_id"):
+                raise ValueError("research routing is not active")
+    except Exception as exc:
+        raise ResearchSubscriptionError("research_publication_pointer_mismatch") from exc
+
+
 def _fingerprint(payload: Mapping[str, Any]) -> str:
     value = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(value.encode()).hexdigest()
@@ -199,6 +231,7 @@ def dispatch_after_release(
     *, root: Path, astro_dir: Path, identity: Mapping[str, Any],
     worker_base_url: str, public_base_url: str, token: str, start_week: str,
     now: datetime | None = None, opener: Callable[..., Any] = urlopen, mode: str = "full", guard_activation: bool = False,
+    independent_literature: bool = False,
 ) -> dict[str, Any]:
     """Queue/process only a completed week at or after the explicit activation floor.
 
@@ -243,11 +276,15 @@ def dispatch_after_release(
             pending.append(week)
         if not pending:
             return {"status": "already_completed" if week in records else "no_completed_week_brief", "week": week}
-        _verify_built_artifact(astro_dir, identity)
-        _verify_live_release(public_base_url, identity, opener=opener)
+        if independent_literature:
+            _verify_live_literature_pointer(public_base_url, identity, opener=opener)
+        else:
+            _verify_built_artifact(astro_dir, identity)
+            _verify_live_release(public_base_url, identity, opener=opener)
         completed: list[str] = []
         for pending_week in sorted(pending):
-            payload = _payload_for_week(astro_dir, pending_week, public_base_url)
+            payload = (_payload_for_independent_week(astro_dir, pending_week, public_base_url) if independent_literature
+                       else _payload_for_week(astro_dir, pending_week, public_base_url))
             if mode == "pilot":
                 payload["idempotency_key"] = "pilot:" + payload["idempotency_key"]
             fingerprint = _fingerprint(payload)

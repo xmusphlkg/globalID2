@@ -131,3 +131,23 @@ def test_corrupt_related_cache_is_recomputed(tmp_path):
     assert attach_related_research(source, cache_path=path) == expected
     path.write_text("invalid JSON")
     assert attach_related_research(source, cache_path=path) == expected
+
+
+def test_incremental_related_ranking_recomputes_only_affected_topics(tmp_path, monkeypatch):
+    path = tmp_path / 'related.json'
+    source = [_article('a', disease='D001', topic=None), _article('b', disease='D001', topic=None),
+              _article('c', disease='D002', topic=None), _article('d', disease='D002', topic=None)]
+    attach_related_research(source, cache_path=path)
+    changed = [*source, _article('new', disease='D001', topic=None)]
+    original = recommendations._score
+    seen = []
+    def score(left, right):
+        seen.append((left.diseases, right.diseases))
+        return original(left, right)
+    monkeypatch.setattr(recommendations, '_score', score)
+    result = attach_related_research(changed, cache_path=path)
+    assert seen and all('d002' not in left and 'd002' not in right for left, right in seen)
+    monkeypatch.setattr(recommendations, '_score', original)
+    assert result == attach_related_research(changed)
+    moved = [*changed[:2], _article('c', disease='D001', topic=None), changed[3]]
+    assert attach_related_research(moved, cache_path=path) == attach_related_research(moved)

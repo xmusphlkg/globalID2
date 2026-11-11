@@ -10,7 +10,7 @@ const { diseaseId, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const file = resolve(`./src/data/research/diseases/${diseaseId.toLowerCase()}.json`);
+const file = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/diseases/${diseaseId.toLowerCase()}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
 const articles = payload?.articles ?? [];
 const previewArticles = articles.slice(0, 5);

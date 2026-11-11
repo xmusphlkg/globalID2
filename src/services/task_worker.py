@@ -345,7 +345,9 @@ async def _claim_next_task_uuid(
         legacy_site = and_(Task.task_type == TaskType.EXPORT_DATA,
                            ~raw_archive_only, ~data_only, ~static_data_compatible)
         situation_data = and_(data_only, (Task.input_data["data_line"].as_string() == "situation").is_(True))
-        surveillance_data = and_(data_only, Task.input_data["data_line"].as_string().is_distinct_from("situation"))
+        literature_data = and_(data_only, (Task.input_data["data_line"].as_string() == "literature").is_(True))
+        surveillance_data = and_(data_only, Task.input_data["data_line"].as_string().is_distinct_from("situation"),
+                                 Task.input_data["data_line"].as_string().is_distinct_from("literature"))
         situation_legacy_site = and_(Task.task_type == TaskType.EXPORT_DATA,
             ~raw_archive_only, ~data_only, ~reports_only,
             Task.input_data["code_only"].as_boolean().is_not(True),
@@ -429,15 +431,27 @@ async def _claim_next_task_uuid(
             query = query.where(~raw_archive_only)
         active_data = [(line or "surveillance") for _uuid, task_type, _nonexclusive,
             _is_archive, is_data, _is_legacy, _is_situation_legacy, line, _status in active_tasks
-            if task_type == TaskType.EXPORT_DATA and is_data]
+            if task_type == TaskType.EXPORT_DATA and is_data and line != "literature"]
+        active_literature = any(task_type == TaskType.EXPORT_DATA and is_data and line == "literature"
+            for _uuid, task_type, _nonexclusive, _is_archive, is_data, _is_legacy,
+                _is_situation_legacy, line, _status in active_tasks)
+        if active_literature:
+            # A private research build may coexist with observation/Situation
+            # JSON, but not with a static build that changes its source inputs.
+            query = query.where(or_(Task.task_type != TaskType.EXPORT_DATA, raw_archive_only,
+                                    and_(data_only, ~literature_data)))
+        if any(task_type == TaskType.EXPORT_DATA and not is_archive and not is_data
+               for _uuid, task_type, _nonexclusive, is_archive, is_data, _is_legacy,
+                   _is_situation_legacy, _line, _status in active_tasks):
+            query = query.where(~literature_data)
         if active_data:
             slot_owned = any(task_type == TaskType.EXPORT_DATA and is_data and
-                (status != TaskStatus.RETRYING or (line or "surveillance") not in {"surveillance", "situation"}
+                line != "literature" and (status != TaskStatus.RETRYING or (line or "surveillance") not in {"surveillance", "situation"}
                  or not is_automatic_json_paused(line or "surveillance"))
                 for _uuid, task_type, _nonexclusive, _is_archive, is_data, _is_legacy,
                     _is_situation_legacy, line, status in active_tasks)
             if slot_owned:
-                query = query.where(~data_only)
+                query = query.where(or_(~data_only, literature_data))
             else:
                 # A paused, parked retry still reserves its own channel. It
                 # must not prevent the other JSON feed from using the slot.

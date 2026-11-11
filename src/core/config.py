@@ -410,6 +410,17 @@ class DataReleaseSettings(_BaseEnvSettings):
         description="启用Situation独立JSON发布；先初始化数据与同源Worker，再启用更新触发和动态页面",
     )
 
+    literature_json_enabled: bool = Field(
+        default=False,
+        validation_alias="DATA_RELEASE__LITERATURE_JSON_ENABLED",
+        description="启用独立文献发布；首次初始化并接通页面路由后再开启",
+    )
+    literature_publish_interval_minutes: int = Field(
+        default=360, ge=5, le=10080,
+        validation_alias="DATA_RELEASE__LITERATURE_PUBLISH_INTERVAL_MINUTES",
+        description="独立文献发布间隔，默认六小时",
+    )
+
     pages_data_worker_enabled: bool = Field(
         default=False,
         validation_alias="GIDS_PAGES_DATA_WORKER",

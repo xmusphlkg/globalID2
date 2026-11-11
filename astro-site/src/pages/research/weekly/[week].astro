@@ -21,7 +21,7 @@ const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
-const file = resolve(`./src/data/research/weekly/${facet.week}.json`);
+const file = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/weekly/${facet.week}.json`);
 const payloadBytes = existsSync(file) ? readFileSync(file) : null;
 const payload = payloadBytes ? JSON.parse(payloadBytes.toString('utf-8')) : { articles: [], top_topics: [] };
 // Records which exact public brief data produced this locale's built page.

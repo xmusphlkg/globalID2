@@ -84,6 +84,9 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     if data.get("data_line") == "situation":
         from .situation_data_pipeline import execute_situation_data_release
         return await execute_situation_data_release(service, task, runtime=runtime)
+    if data.get("data_line") == "literature":
+        from .literature_data_pipeline import execute_literature_data_release
+        return await execute_literature_data_release(service, task, runtime=runtime)
     if data.get("data_line") not in (None, "surveillance"):
         raise ValueError("Unknown JSON publication line")
     codes = sorted(data.get("incremental_country_codes") or [])

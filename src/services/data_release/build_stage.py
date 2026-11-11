@@ -95,6 +95,8 @@ async def build_release_site(
             "GIDS_RUNTIME_DATA_READY": "1" if getattr(config, "surveillance_json_enabled", False) else "0",
             "GIDS_RUNTIME_SITUATION_READY": "1" if getattr(config, "situation_json_enabled", False) else "0",
             "GIDS_PAGES_DATA_WORKER": "1" if getattr(config, "pages_data_worker_enabled", False) else "0",
+            "GIDS_RESEARCH_PUBLICATION_ENABLED": "1" if getattr(config, "literature_json_enabled", False) else "0",
+            "PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN": "1" if getattr(config, "literature_json_enabled", False) else "0",
             "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
             "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
             "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],

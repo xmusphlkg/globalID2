@@ -14,11 +14,15 @@ import json
 import re
 import os
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .artifact_index import ArtifactIndex
 from .papers_r2 import R2PapersConfig, R2S3Client, R2S3Error
+from src.core import get_logger
+
+logger = get_logger(__name__)
 
 DEFAULT_PREFIX = "site-data/surveillance"
 OBJECT = re.compile(r"objects/([a-f0-9]{64})\.json\Z")
@@ -140,24 +144,29 @@ def publish_surveillance_data(
     directory: Path, config: R2PapersConfig, *, prefix: str = DEFAULT_PREFIX,
     workers: int = 4, client=None, objects_dir: Path | None = None,
     require_starting_baseline: bool = False,
+    trust_frozen_objects: bool = False,
 ) -> dict:
     if not 1 <= workers <= 8:
         raise ValueError("Surveillance upload workers must be 1–8")
+    started = time.monotonic()
     directory, prefix = Path(directory), _prefix(prefix)
+    if trust_frozen_objects and (prefix != "site-data/research-publication" or not require_starting_baseline):
+        raise ValueError("Trusted frozen objects require a fenced research publication")
     body = (directory / "current.json").read_bytes()
     manifest, objects = validate_manifest(body)
     objects_root = objects_dir or directory / "objects"
-    index = ArtifactIndex(objects_root, cache_dir=objects_root.parent / ".surveillance-publish-index")
+    index = ArtifactIndex(objects_root, cache_dir=objects_root.parent / ".surveillance-publish-index") if not trust_frozen_objects else None
     # Validate every local reference before any external effect. The byte cache
     # reuses only stable inode/size/mtime/ctime receipts, never filenames alone.
-    for relative, expected in objects.items():
-        path = objects_root / relative.removeprefix("objects/")
-        if path.is_symlink() or not path.resolve().is_relative_to(objects_root.resolve()) or not path.is_file():
-            raise ValueError(f"Missing immutable surveillance object: {relative}")
-        actual = index.describe(path)
-        if any(actual[key] != expected[key] for key in ("sha256", "bytes")):
-            raise ValueError(f"Surveillance object checksum mismatch: {relative}")
-    index.save()
+    if index is not None:
+        for relative, expected in objects.items():
+            path = objects_root / relative.removeprefix("objects/")
+            if path.is_symlink() or not path.resolve().is_relative_to(objects_root.resolve()) or not path.is_file():
+                raise ValueError(f"Missing immutable surveillance object: {relative}")
+            actual = index.describe(path)
+            if any(actual[key] != expected[key] for key in ("sha256", "bytes")):
+                raise ValueError(f"Surveillance object checksum mismatch: {relative}")
+        index.save()
     active = client or R2S3Client(config)
     try:
         with _publication_lock(directory, config, prefix):
@@ -209,7 +218,7 @@ def publish_surveillance_data(
                 relative, expected = item
                 path = objects_root / relative.removeprefix("objects/")
                 payload = path.read_bytes()
-                if len(payload) != expected["bytes"] or hashlib.sha256(payload).hexdigest() != expected["sha256"]:
+                if not trust_frozen_objects and (len(payload) != expected["bytes"] or hashlib.sha256(payload).hexdigest() != expected["sha256"]):
                     raise ValueError(f"Surveillance object changed during upload: {relative}")
                 # Content-addressed keys are create-once; a failed prior attempt
                 # may already have uploaded one. Never overwrite different bytes.
@@ -222,7 +231,7 @@ def publish_surveillance_data(
                         cache_control="public, max-age=31536000, immutable",
                         content_encoding="gzip" if compressed else None)
                 except R2S3Error as error:
-                    if error.status != 412 or active.get_object(key) != payload:
+                    if error.status != 412 or (not trust_frozen_objects and active.get_object(key) != payload):
                         raise
                     return 0, 0
                 return 1, len(wire)
@@ -247,6 +256,10 @@ def publish_surveillance_data(
             except R2S3Error as error:
                 if error.status != 412 or active.get_object(pointer) != body:
                     raise
+            if trust_frozen_objects:
+                logger.info("Research JSON published: release={} uploaded={} reused={} bytes={} seconds={:.2f}",
+                            manifest["release_id"], uploaded, len(objects) - uploaded, transferred,
+                            time.monotonic() - started)
             return {"release_id": manifest["release_id"], "uploaded": uploaded,
                     "unchanged": len(objects) - uploaded, "bytes_uploaded": transferred,
                     "pointer_changed": True, "manifest_sha256": hashlib.sha256(body).hexdigest()}

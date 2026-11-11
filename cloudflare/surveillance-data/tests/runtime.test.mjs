@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { resolve } from 'node:path';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { gzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -55,15 +56,63 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
     const situationAlias = await runtime.dispatchFetch(`${origin}/situation/map-data.json`, { redirect: 'manual' });
     assert.equal(situationAlias.headers.get('location'), `/site-data/situation/objects/${first}.json`);
     assert.deepEqual(await (await runtime.dispatchFetch(`${origin}/site-data/situation/objects/${first}.json`)).json(), { points: [] });
+    await bucket.put(`site-data/research-publication/objects/${first}.json`, '{"articles":[]}');
+    await bucket.put('site-data/research-publication/current.json', JSON.stringify({ schema_version: 1, release_id: 'research-one',
+      files: { 'index.json': { url: `objects/${first}.json`, sha256: first } } }));
+    assert.equal((await (await runtime.dispatchFetch(`${origin}/site-data/research-publication/current.json`)).json()).release_id, 'research-one');
+    assert.deepEqual(await (await runtime.dispatchFetch(`${origin}/site-data/research-publication/objects/${first}.json`)).json(), { articles: [] });
+    assert.equal((await (await runtime.dispatchFetch(`${origin}/site-data/current.json`)).json()).release_id, 'two');
+    const logical = 'research/articles/example/';
+    const paperKey = `releases/sha256/objects/${first}/0123456789abcdef`;
+    const cssKey = `releases/sha256/objects/${second}/0123456789abcdef`;
+    const document = '<html><head><link rel="canonical" href="https://papers.globalinfectiousdisease.com/research/articles/example/"><link rel="stylesheet" href="/_astro/style.css"></head><body><a href="/research/">paper</a></body></html>';
+    await bucket.put(paperKey, document, { httpMetadata: { contentType: 'text/html' } });
+    await bucket.put(cssKey, 'body{src:url(/_astro/font.woff2)}', { httpMetadata: { contentType: 'text/css' } });
+    const groups = {};
+    for (const entry of [{ logical_key: logical, key: paperKey, content_type: 'text/html' },
+      { logical_key: '_astro/style.css', key: cssKey, content_type: 'text/css' }]) {
+      const group = createHash('sha256').update(entry.logical_key).digest('hex').slice(0, 2);
+      (groups[group] ??= []).push(entry);
+    }
+    const shards = {};
+    for (const [group, items] of Object.entries(groups)) {
+      const shardKey = `releases/sha256/catalogue-shards/${group.repeat(32)}.json`;
+      shards[group] = { key: shardKey };
+      await bucket.put(shardKey, JSON.stringify({ schema_version: 1, items }));
+    }
+    await bucket.put(`releases/sha256/catalogues/${first}.json`, JSON.stringify({ schema_version: 2, generation_sha256: first, shards }));
+    const paper = await runtime.dispatchFetch(`${origin}/research-publication/${first}/${logical}`);
+    const html = await paper.text();
+    assert.match(html, new RegExp(`/research-publication/${first}/_astro/style.css`));
+    assert.match(html, new RegExp(`/research-publication/${first}/research/`));
+    assert.match(html, /rel="canonical" href="https:\/\/papers.globalinfectiousdisease.com\/research\/articles\/example\/"/);
+    assert.match(paper.headers.get('cache-control'), /immutable/);
+    const css = await runtime.dispatchFetch(`${origin}/research-publication/${first}/_astro/style.css`);
+    assert.match(await css.text(), new RegExp(`/research-publication/${first}/_astro/font.woff2`));
+    await bucket.put('site-data/research-publication/current.json', JSON.stringify({ schema_version: 1, release_id: 'research-one',
+      papers: { papers_generation_sha256: first }, files: {} }));
+    const stable = await runtime.dispatchFetch(`${origin}/${logical}`, { headers: { 'If-None-Match': paper.headers.get('etag') } });
+    assert.equal(stable.status, 200);
+    assert.equal(stable.headers.get('cache-control'), 'no-store');
+    assert.equal(stable.headers.get('etag'), null);
+    assert.equal(stable.headers.get('x-gids-research-release'), 'research-one');
+    assert.match(await stable.text(), new RegExp(`<meta name="gids-research-generation" content="${first}">`));
+    const papersHost = await runtime.dispatchFetch(`https://papers.globalinfectiousdisease.com/${logical}`);
+    assert.match(await papersHost.text(), new RegExp(`https://globalinfectiousdisease.com/research-publication/${first}/_astro/style.css`));
   } finally { await runtime.dispose(); }
 });
 
 test('packaged Pages Worker routes live JSON while preserving ordinary static assets', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'gids-pages-data-'));
-  await buildPages(directory);
+  await buildPages(directory, { researchEnabled: false });
+  assert.equal(JSON.parse(readFileSync(join(directory, '_routes.json'), 'utf8')).include.includes('/research/*'), false);
+  await buildPages(directory, { researchEnabled: true });
   const routes = JSON.parse(readFileSync(join(directory, '_routes.json'), 'utf8'));
   assert.equal(routes.include.includes('/*'), false);
   assert.equal(routes.include.includes('/site-data/situation/*'), true);
+  assert.equal(routes.include.includes('/site-data/research-publication/*'), true);
+  assert.equal(routes.include.includes('/research-publication/*'), true);
+  assert.equal(routes.include.includes('/research/*'), true);
   assert.equal(routes.include.includes('/site-data/updates/*'), true);
   const runtime = new Miniflare(convertV4MiniflareOptions({
     modules: true, rootPath: directory, scriptPath: join(directory, '_worker.js'), compatibilityDate: '2026-11-07',

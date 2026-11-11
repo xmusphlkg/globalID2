@@ -12,7 +12,7 @@ import { diseaseLiteratureCatalogue } from './research-literature-server';
 // ranking and research facet histories, before discarding all other groups.
 export const siteSitemapGroups = memoizeForBuild(() => {
   const map = readSituationMap();
-  const researchFile = resolve('./src/data/research/index.json');
+  const researchFile = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', 'research/index.json');
   const research = existsSync(researchFile) ? readResearchIndex() : undefined;
   const library = research ? diseaseLiteratureCatalogue() : undefined;
   return buildSitemapGroups({

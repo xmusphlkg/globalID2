@@ -655,12 +655,17 @@ def test_literature_artifacts_keep_the_build_index_while_sharding_the_browser_co
     payload = {**empty_literature_export(), "articles": [article]}
     public_dir = tmp_path / "public"
 
-    write_literature_artifacts(payload, tmp_path / "build", public_site_data_dir=public_dir)
+    article_digests = {}
+    write_literature_artifacts(payload, tmp_path / "build", public_site_data_dir=public_dir,
+                               article_digests=article_digests)
 
     build_index = json.loads((tmp_path / "build/research/index.json").read_text(encoding="utf-8"))
     browser_index = json.loads((public_dir / "research/index.json").read_text(encoding="utf-8"))
     assert build_index["articles"][0]["slug"] == "published-article"
     assert browser_index["articles"][0]["slug"] == "published-article"
+    import hashlib
+    assert article_digests == {"published-article": hashlib.sha256(
+        (tmp_path / "build/research/articles/published-article.json").read_bytes()).hexdigest()}
     assert (public_dir / "research/index.json").stat().st_size <= 8 * 1024 * 1024
 
 

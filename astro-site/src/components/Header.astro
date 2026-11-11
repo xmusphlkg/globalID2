@@ -224,7 +224,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 </style>
 
 <script>
-  import { isPapersPath, isReportsPath } from '../lib/papers';
+  import { isPapersPath, isReportsPath, siteHref } from '../lib/papers';
   import { searchSiteEntries, searchTitle, searchSummary, type SiteSearchEntry, type SearchLocale } from '../lib/site-search';
   const language = document.documentElement.lang;
   const isChinese = language.startsWith('zh');
@@ -241,7 +241,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
     if (typeof href !== 'string' || !href.startsWith('/')) return href;
     if (import.meta.env.DEV && ![mainOrigin, papersOrigin, reportsOrigin].includes(location.origin)) return href;
     if (isReportsPath(href)) return reportsOrigin + href;
-    if (isPapersPath(href)) return papersOrigin + href;
+    if (isPapersPath(href)) return siteHref(href);
     return [papersOrigin, reportsOrigin].includes(location.origin) ? mainOrigin + href : href;
   };
   const themeButtons = [...document.querySelectorAll('[data-theme-toggle]')];
@@ -304,6 +304,17 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
         const payload = await response.json();
         if (!Array.isArray(payload.entries)) throw new Error('Invalid search index');
         searchEntries = payload.entries;
+        if (import.meta.env.PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN === '1') {
+          searchEntries = searchEntries.filter(entry => entry.kind !== 'research');
+          try {
+            const path = siteHref('/research/search-index.json');
+            const researchResponse = await fetch(path.startsWith('/') ? `${mainBase}${path}` : path);
+            if (!researchResponse.ok) throw new Error('Research search index unavailable');
+            const research = await researchResponse.json();
+            if (!Array.isArray(research.entries)) throw new Error('Invalid research search index');
+            searchEntries = [...searchEntries, ...research.entries];
+          } catch (error) { console.error('Research search unavailable', error); }
+        }
         searchState = 'ready';
       } catch {
         searchState = 'error';

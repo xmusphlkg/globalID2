@@ -20,7 +20,7 @@ export function getStaticPaths() {
 
 export const GET: APIRoute = async ({ props }) => {
   if (!researchSocialCardsEnabled) return new Response(null, { status: 404 });
-  const article: any = JSON.parse(readFileSync(resolve(`./src/data/research/articles/${props.slug}.json`), 'utf-8'));
+  const article: any = JSON.parse(readFileSync(resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/articles/${props.slug}.json`), 'utf-8'));
   const svg = renderResearchSocialCardSvg({
     title: article.title,
     studyType: article.study_type,

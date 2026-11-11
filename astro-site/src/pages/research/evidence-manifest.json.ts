@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 export const prerender = true;
 
 export function GET() {
-  const directory = resolve('./src/data/research/weekly');
+  const directory = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', 'research/weekly');
   return new Response(JSON.stringify(buildResearchEvidenceManifest(readResearchIndex(), week => {
     const path = resolve(directory, `${week}.json`);
     if (!lstatSync(path).isFile()) throw new Error('research_evidence_week_invalid');

@@ -445,10 +445,10 @@ export function renderSitemapXml(entries: SitemapEntry[], site: URL | string): s
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${namespace}>\n${body}\n</urlset>\n`;
 }
 
-export function renderSitemapIndexXml(groups: SitemapGroup[], site: URL | string): string {
+export function renderSitemapIndexXml(groups: SitemapGroup[], site: URL | string, { researchPublication = false } = {}): string {
   const siteUrl = site instanceof URL ? site : new URL(site);
-  const body = groups.map(group => (
+  const body = [...groups.map(group => (
     `  <sitemap>\n    <loc>${escapeXml(group === 'reports' ? `${REPORTS_ORIGIN}/sitemap.xml` : new URL(`/sitemaps/${group}.xml`, siteUrl).toString())}</loc>\n  </sitemap>`
-  )).join('\n');
+  )), ...(researchPublication ? [`  <sitemap>\n    <loc>${escapeXml(new URL('/research/sitemap.xml', siteUrl).toString())}</loc>\n  </sitemap>`] : [])].join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</sitemapindex>\n`;
 }

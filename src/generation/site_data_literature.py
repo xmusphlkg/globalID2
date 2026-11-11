@@ -1809,6 +1809,7 @@ def write_literature_artifacts(
     output_dir: Path,
     public_site_data_dir: Path | None = None,
     shard_max_bytes: int = PUBLIC_RESEARCH_SHARD_MAX_BYTES,
+    article_digests: dict[str, str] | None = None,
 ) -> None:
     phase_started = time.perf_counter()
 
@@ -1887,9 +1888,12 @@ def write_literature_artifacts(
         },
     )
     for article in public_article_details:
+        def record_detail(body: bytes, slug: str = article["slug"]) -> None:
+            article_digests[slug] = hashlib.sha256(body).hexdigest()
         write_pretty_json(
             article_dir / f"{article['slug']}.json",
             {**article, "knowledge_graph": build_knowledge_graph([article])},
+            **({"on_serialized": record_detail} if article_digests is not None else {}),
         )
     report_phase("article details")
     title_aliases = _load_title_disease_aliases()

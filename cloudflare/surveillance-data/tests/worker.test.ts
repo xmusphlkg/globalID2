@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import worker, { objectPath } from '../src/index.ts';
 import pages from '../src/pages.ts';
+import { createHash } from 'node:crypto';
 
 const hash = 'a'.repeat(64);
 function fixture(content: string | null = '{"schema_version":1}') {
@@ -89,6 +90,47 @@ test('Situation uses an independent pointer, immutable namespace and legacy alia
   assert.match(object.headers.get('cache-control')!, /immutable/);
   assert.deepEqual(f.keys, ['site-data/situation/current.json', 'site-data/situation/current.json', `site-data/situation/objects/${hash}.json`]);
   assert.equal((await worker.fetch(new Request('https://site.test/site-data/situation/objects/bad.json'), f.env)).status, 404);
+});
+
+test('research publication is isolated and exposes only its pointer and immutable objects', async () => {
+  const f = fixture();
+  const pointer = await worker.fetch(new Request('https://site.test/site-data/research-publication/current.json'), f.env);
+  assert.equal(pointer.status, 200);
+  assert.equal(pointer.headers.get('cache-control'), 'no-store');
+  const object = await worker.fetch(new Request(`https://site.test/site-data/research-publication/objects/${hash}.json`), f.env);
+  assert.equal(object.status, 200);
+  assert.match(object.headers.get('cache-control')!, /immutable/);
+  assert.equal((await worker.fetch(new Request('https://site.test/site-data/research-publication/private.json'), f.env)).status, 404);
+  assert.deepEqual(f.keys, ['site-data/research-publication/current.json', `site-data/research-publication/objects/${hash}.json`]);
+});
+
+test('versioned research pages resolve through the pinned catalogue and stream immutable content', async () => {
+  const generation = 'b'.repeat(64), shard = 'c'.repeat(64), content = 'd'.repeat(64);
+  const logical = 'research/articles/example/', group = createHash('sha256').update(logical).digest('hex').slice(0, 2);
+  const shardKey = `releases/sha256/catalogue-shards/${shard}.json`;
+  const objectKey = `releases/sha256/objects/${content}/0123456789abcdef`;
+  const stored = new Map([
+    [`releases/sha256/catalogues/${generation}.json`, JSON.stringify({ schema_version: 2, generation_sha256: generation, shards: { [group]: { key: shardKey } } })],
+    [shardKey, JSON.stringify({ schema_version: 1, items: [{ logical_key: logical, key: objectKey, content_type: 'text/html; charset=utf-8' }] })],
+    [objectKey, '<html>paper</html>'],
+  ]);
+  const keys: string[] = [];
+  const get = async (key: string) => {
+    keys.push(key); const body = stored.get(key);
+    return body === undefined ? null : { size: Buffer.byteLength(body), httpEtag: '"paper"',
+      body: new Response(body).body, json: async () => JSON.parse(body), text: async () => body };
+  };
+  const env = { DATA: { get, head: get } } as unknown as Env;
+  const url = `https://site.test/research-publication/${generation}/${logical}`;
+  const response = await worker.fetch(new Request(url), env);
+  assert.equal(await response.text(), '<html>paper</html>');
+  assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
+  assert.match(response.headers.get('cache-control')!, /immutable/);
+  assert.deepEqual(keys, [`releases/sha256/catalogues/${generation}.json`, shardKey, objectKey]);
+  const cached = await worker.fetch(new Request(url, { headers: { 'If-None-Match': '"paper"' } }), env);
+  assert.equal(cached.status, 304);
+  assert.equal((await worker.fetch(new Request(url, { method: 'POST' }), env)).status, 405);
+  assert.equal((await worker.fetch(new Request(`https://site.test/research-publication/${generation}/missing`), env)).status, 404);
 });
 
 test('Pages Advanced Mode preserves static routes and serves JSON through the same handler', async () => {

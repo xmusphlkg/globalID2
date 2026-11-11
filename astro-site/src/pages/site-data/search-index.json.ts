@@ -3,7 +3,8 @@ import { readResearchIndex } from '../../lib/generated-site-data.ts';
 import type { APIRoute } from 'astro';
 import { diseaseIndex, indexableDiseases, publishableReports, siteMeta } from '../../lib/seo-page-data';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
-import { articleHref, siteHref } from '../../lib/papers';
+import { siteHref } from '../../lib/papers';
+import { researchSearchEntries } from '../../lib/research-search-entries';
 import { localizedDynamicText, localizedRegionName } from '../../utils/i18n';
 
 export const prerender = true;
@@ -81,22 +82,8 @@ export const GET: APIRoute = () => {
     });
   }
 
-  const research: any = readResearchIndex();
-  for (const article of [...(research.articles ?? []), ...(research.preprints ?? [])]) {
-    if (article.indexable === false || !article.slug) continue;
-    const summaryEn = article.why_it_matters_en ?? article.summary?.en?.gids_interpretation ?? article.summary?.en?.main_findings;
-    const summaryZh = article.why_it_matters_zh ?? article.summary?.zh?.gids_interpretation ?? article.summary?.zh?.main_findings;
-    const summaryFr = article.why_it_matters_fr ?? article.summary?.fr?.gids_interpretation ?? article.summary?.fr?.main_findings;
-    entries.push({
-      id: `research:${article.article_id ?? article.slug}`,
-      kind: 'research',
-      href: { en: articleHref(article.slug, 'en'), zh: articleHref(article.slug, 'zh'), fr: articleHref(article.slug, 'fr') },
-      title: { en: article.title, zh: article.title_zh, fr: article.title_fr ?? article.title },
-      summary: { en: summaryEn, zh: summaryZh, fr: summaryFr },
-      aliases: clean([article.doi, article.pmid, article.journal, article.study_type, ...(article.diseases ?? []).flatMap((item: any) => [item.name_en, item.name_zh, item.name_fr]), ...(article.countries ?? []).flatMap((item: any) => [item.code, item.name_en, item.name_zh, item.name_fr])]),
-      updated_at: article.updated_at ?? article.published_at,
-    });
-  }
+  if (import.meta.env.PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN !== '1')
+    entries.push(...researchSearchEntries(readResearchIndex()));
 
   entries.push(
     { id: 'situation:latest', kind: 'situation', href: localized('/situation/'), title: { en: 'Current global situation', zh: '当前全球态势', fr: 'Situation mondiale actuelle' }, summary: { en: 'Review priorities, official events, coverage, and methods.', zh: '复核优先级、官方事件、覆盖范围和方法。', fr: 'Priorités, événements officiels, couverture et méthodes.' }, aliases: ['situation', 'signals', 'events', 'situation mondiale', '态势', '信号', '事件'] },

@@ -8,6 +8,7 @@
 
 export const PAPERS_ORIGIN = 'https://papers.globalinfectiousdisease.com';
 export const REPORTS_ORIGIN = 'https://reports.globalinfectiousdisease.com';
+const researchOnMain = import.meta.env?.PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN === '1';
 
 const PAPERS_PATH = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases)\/|^\/research\/catalogue\/(?:diseases|studies)\/|^\/research\/cards\/|^\/site-data\/research\//;
 const REPORTS_PATH = /^\/(?:(?:zh|fr)\/)?reports(?:\/|$)|^\/(?:(?:zh|fr)\/)?countries\/[^/]+\/reports(?:\/|$)|^\/site-data\/reports\//;
@@ -15,6 +16,16 @@ const REPORTS_PATH = /^\/(?:(?:zh|fr)\/)?reports(?:\/|$)|^\/(?:(?:zh|fr)\/)?coun
 type Locale = 'en' | 'zh' | 'fr';
 
 const localePrefix = (locale: Locale) => (locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '');
+
+/** Keep interactive research requests on the generation that rendered the page. */
+export function researchVersionedHref(path: string): string {
+  const current = typeof location === 'undefined' ? '' : location.pathname;
+  const fromPath = /^\/research-publication\/([a-f0-9]{64})\//.exec(current)?.[1];
+  const fromPage = typeof document === 'undefined' ? '' : document.querySelector<HTMLMetaElement>('meta[name="gids-research-generation"]')?.content;
+  const generation = fromPath || (/^[a-f0-9]{64}$/.test(fromPage || '') ? fromPage : undefined);
+  if (!generation || !/^\/(?:site-data\/research(?:\/|-graph\.json)|(?:zh\/|fr\/)?research(?:\/|$))/.test(path)) return path;
+  return `${mainSiteBase()}/research-publication/${generation}${path}`;
+}
 
 /** True when a root-relative path is published on the papers host. */
 export function isPapersPath(path: string): boolean {
@@ -48,10 +59,12 @@ export function articleHref(slug: string, locale: Locale = 'en'): string {
  * root-relative paths because the dev server renders articles itself.
  */
 export function siteHref(path: string): string {
+  const versioned = researchVersionedHref(path);
+  if (versioned !== path) return versioned;
   const dev = (import.meta as { env?: { DEV?: boolean } }).env?.DEV === true;
   if (dev) return path;
   if (isReportsPath(path)) return `${REPORTS_ORIGIN}${path}`;
-  return isPapersPath(path) ? `${PAPERS_ORIGIN}${path}` : path;
+  return isPapersPath(path) ? `${researchOnMain ? mainSiteBase() : PAPERS_ORIGIN}${path}` : path;
 }
 
 export const MAIN_ORIGIN = 'https://globalinfectiousdisease.com';
@@ -71,7 +84,7 @@ export function mainSiteBase(): string {
 export function absoluteSiteUrl(path: string, siteBase: string | URL): URL {
   const base = isReportsPath(path)
     ? REPORTS_ORIGIN
-    : isPapersPath(path)
+    : isPapersPath(path) && !researchOnMain
       ? PAPERS_ORIGIN
       : siteBase;
   return new URL(path, base);

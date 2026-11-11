@@ -29,7 +29,7 @@ const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
-const file = resolve(`./src/data/research/articles/${slug}.json`);
+const file = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/articles/${slug}.json`);
 const articleBytes = existsSync(file) ? readFileSync(file) : null;
 const article: any = articleBytes ? JSON.parse(articleBytes.toString('utf-8')) : null;
 const articleVersion = articleBytes ? researchArticleVersion(articleBytes) : '';

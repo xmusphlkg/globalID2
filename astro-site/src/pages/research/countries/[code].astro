@@ -14,7 +14,7 @@ interface Props { facet?: any; code?: string; locale?: 'en' | 'zh' | 'fr' }
 const { locale = 'en' } = Astro.props as Props;
 const code = (Astro.props as Props).code ?? '';
 const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.countries ?? []).find((item: any) => item.slug === code || String(item.code).toLowerCase() === code);
-const file = resolve(`./src/data/research/countries/${facet.slug}.json`);
+const file = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/countries/${facet.slug}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
 const description = `Published infectious-disease research classified with a high-confidence geographic relationship to ${facet.name_en}.`;
 const descriptionZh = `与${facet.name_zh ?? facet.name_en}形成高置信度地理分类关系的已发布传染病研究。`;

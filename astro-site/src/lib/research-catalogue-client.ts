@@ -1,4 +1,4 @@
-import { siteHref } from './papers.ts';
+import { researchVersionedHref, siteHref } from './papers.ts';
 import { researchQueryScopes, type ResearchQueryEntity } from './research-query-scope.ts';
 
 type CatalogueScope = 'disease' | 'country' | 'topic' | 'study' | 'week';
@@ -30,7 +30,7 @@ let manifestPromise: Promise<CatalogueManifest> | null = null;
 const chunkPromises = new Map<string, Promise<any[]>>();
 
 export async function loadResearchCatalogue({ limit, scope, value, facets, includeBibliographic = false, onProgress }: CatalogueRequest = {}): Promise<any[]> {
-  manifestPromise ??= fetch('/research/catalogue/manifest.json', { cache: 'no-store' })
+  manifestPromise ??= fetch(researchVersionedHref('/research/catalogue/manifest.json'), { cache: 'no-store' })
     .then(response => {
       if (!response.ok) throw new Error(`Research catalogue manifest failed: ${response.status}`);
       return response.json() as Promise<CatalogueManifest>;
@@ -74,7 +74,7 @@ export async function loadResearchCatalogue({ limit, scope, value, facets, inclu
       let promise = chunkPromises.get(chunk.path);
       if (!promise) {
         promise = queueChunkRequest(async () => {
-          const response = await fetch(chunk.path);
+          const response = await fetch(researchVersionedHref(chunk.path));
           if (!response.ok) throw new Error(`Research catalogue chunk failed: ${response.status}`);
           const payload = await response.json();
           if (!Array.isArray(payload.articles) || payload.articles.length !== chunk.count) throw new Error('Incomplete research catalogue chunk');
@@ -94,7 +94,7 @@ let entityPromise: Promise<ResearchQueryEntity[]> | undefined;
 const scopedPromises = new Map<string, Promise<any[]>>();
 /** Ask searches the complete disease/region/topic collection, not a date-limited preview. */
 export async function loadResearchQuestionCatalogue(query: string, { onProgress }: Pick<CatalogueRequest, 'onProgress'> = {}): Promise<any[]> {
-  entityPromise ??= fetch('/research/catalogue/entities.json', { cache: 'no-cache' }).then(async response => {
+  entityPromise ??= fetch(researchVersionedHref('/research/catalogue/entities.json'), { cache: 'no-cache' }).then(async response => {
     if (!response.ok) throw new Error('Research entities unavailable');
     const payload = await response.json();
     if (!Array.isArray(payload.entities)) throw new Error('Invalid research entities');

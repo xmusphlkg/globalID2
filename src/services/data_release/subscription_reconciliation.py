@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+import re
 import tempfile
 from types import SimpleNamespace
 from typing import Any
@@ -60,6 +61,36 @@ async def reconcile_once(service: Any, *, root: Path, astro_dir: Path) -> dict[s
 
     research = env("SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED", "false").lower() in TRUE
     notice = env("SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED", "false").lower() in TRUE
+    if research and getattr(service._config(), "literature_json_enabled", False):
+        try:
+            identity = json.loads((root / "exports/research-current-receipt.json").read_bytes())
+            task_uuid = identity.get("task_uuid")
+            generation = identity.get("papers_generation_sha256")
+            if (identity.get("schema") != 1 or not isinstance(task_uuid, str)
+                    or not re.fullmatch(r"[A-Za-z0-9-]{1,128}", task_uuid)
+                    or identity.get("release_id") != f"literature-{task_uuid}"
+                    or not isinstance(generation, str) or not re.fullmatch(r"[a-f0-9]{64}", generation)):
+                raise ValueError("invalid research publication receipt")
+            snapshot = root / "exports/research-runs" / task_uuid / "snapshot/build/research"
+            stage = root / "exports" / f"research-stage-{task_uuid}"
+            if not snapshot.is_dir() or not stage.is_dir():
+                raise ValueError("research publication inputs unavailable")
+        except (OSError, ValueError, TypeError, AttributeError):
+            results["research"] = {"status": "failed", "error_code": "research_publication_receipt_unavailable"}
+        else:
+            with tempfile.TemporaryDirectory(prefix="gids-research-subscription-") as temp:
+                workspace = Path(temp)
+                (workspace / "src/data").mkdir(parents=True)
+                (workspace / "src/data/research").symlink_to(snapshot.resolve(), target_is_directory=True)
+                (workspace / "dist").symlink_to(stage.resolve(), target_is_directory=True)
+                results["research"] = await dispatch_safely("research", research_subscription.dispatch_after_release,
+                    root=root, astro_dir=workspace, identity=identity,
+                    worker_base_url=env("SUBSCRIPTIONS__PUBLIC_BASE_URL"),
+                    public_base_url=env("GIDS_PUBLIC_BASE_URL", "https://globalinfectiousdisease.com"),
+                    mode=env("SUBSCRIPTIONS__DELIVERY_MODE", "pilot").strip().lower(), guard_activation=True,
+                    token=env("SUBSCRIPTIONS__ADMIN_API_TOKEN"), start_week=env("SUBSCRIPTIONS__RESEARCH_DIGEST_START_WEEK"),
+                    independent_literature=True)
+        research = False
     if research or notice:
         snapshot = root / "exports" / "verified-pages-snapshot"
         try:

@@ -1,4 +1,5 @@
 /** Same-origin, streaming JSON reads; publication never builds this Worker. */
+import { papersContentPath, researchCurrentPath, serveCurrentResearch, servePapersContent } from './papers-content-route.ts';
 export function objectPath(pathname: string): string | null {
   if (pathname === '/site-data/current.json') return 'current.json';
   const match = /^\/site-data\/(objects\/[a-f0-9]{64}\.json)$/.exec(pathname);
@@ -8,8 +9,14 @@ export function objectPath(pathname: string): string | null {
 }
 
 export function dataRoute(pathname: string) {
+  const papers = papersContentPath(pathname);
+  if (papers) return { channel: 'papers' as const, ...papers };
+  const researchPage = researchCurrentPath(pathname);
+  if (researchPage) return { channel: 'research-current' as const, key: researchPage };
   const updates = /^\/site-data\/updates\/(latest\.json|\d{4}-(?:0[1-9]|1[0-2])\.json)$/.exec(pathname);
   if (updates) return { channel: 'updates' as const, relative: updates[1], publicRoot: '/site-data/updates/' };
+  const research = /^\/site-data\/research-publication\/(current\.json|objects\/[a-f0-9]{64}\.json)$/.exec(pathname);
+  if (research) return { channel: 'research' as const, relative: research[1], publicRoot: '/site-data/research-publication/' };
   const publicRoot = '/site-data/situation/';
   const relative = pathname.startsWith(publicRoot) ? pathname.slice(publicRoot.length)
     : pathname === '/situation/map-data.json' ? 'map-data.json'
@@ -34,9 +41,11 @@ function headers(immutable = false): Headers {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const route = dataRoute(new URL(request.url).pathname);
     if (!route) return new Response('{"error":"not_found"}', { status: 404, headers: headers() });
+    if (route.channel === 'papers') return servePapersContent(request, env, route, ctx);
+    if (route.channel === 'research-current') return serveCurrentResearch(request, env, route.key, ctx);
     const { relative, channel, publicRoot } = route;
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: headers() });
     if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -44,7 +53,7 @@ export default {
       responseHeaders.set('Allow', 'GET, HEAD, OPTIONS');
       return new Response('{"error":"method_not_allowed"}', { status: 405, headers: responseHeaders });
     }
-    const prefix = (channel === 'updates' ? 'site-data/updates' : channel === 'situation' ? env.SITUATION_PREFIX || 'site-data/situation' : env.DATA_PREFIX || 'site-data/surveillance').replace(/^\/+|\/+$/g, '');
+    const prefix = (channel === 'updates' ? 'site-data/updates' : channel === 'research' ? 'site-data/research-publication' : channel === 'situation' ? env.SITUATION_PREFIX || 'site-data/situation' : env.DATA_PREFIX || 'site-data/surveillance').replace(/^\/+|\/+$/g, '');
     const key = `${prefix}/${relative}`;
     try {
       if (channel !== 'updates' && relative !== 'current.json' && !relative.startsWith('objects/')) {

@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { readResearchPublicFields } from './research-public-source.ts';
 
 const sourceRoot = fileURLToPath(new URL('../', import.meta.url));
 const readSource = (relativePath: string) => readFileSync(`${sourceRoot}/${relativePath}`, 'utf-8');
-const researchData = JSON.parse(readSource('data/research/index.json')) as Record<string, any>;
+const researchData = readResearchPublicFields(fileURLToPath(new URL('../../public/site-data/research/', import.meta.url)),
+  ['reviews_and_guidelines', 'emerging_topics', 'surveillance_evidence', 'metrics']);
 const hotspotData = JSON.parse(readSource('data/research/hotspots.json')) as Record<string, any>;
 
 test('current Research Radar data can populate every homepage intelligence section', () => {
