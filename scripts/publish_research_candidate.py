@@ -61,7 +61,7 @@ def main() -> None:
     parser.add_argument('--snapshot', type=Path, required=True)
     parser.add_argument('--stage', type=Path, required=True)
     parser.add_argument('--release-id', required=True)
-    parser.add_argument('--workers', type=int, default=16)
+    parser.add_argument('--workers', type=int, default=32)
     args = parser.parse_args()
     result = publish(run=args.run, snapshot=args.snapshot, stage=args.stage, release_id=args.release_id,
         shared=ROOT / 'exports/research-json', receipt=ROOT / 'data/cache/isolated-research-publication.json',
