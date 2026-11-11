@@ -217,6 +217,24 @@ def papers_redirect_rules(*, papers_origin: str = DEFAULT_PAPERS_ORIGIN) -> list
     return [rule.format(papers=base) for rule in PAPERS_REDIRECT_RULES]
 
 
+_PAPERS_REDIRECT_SOURCES = tuple(rule.split()[0] for rule in PAPERS_REDIRECT_RULES)
+
+
+def strip_papers_host_redirects(redirects_text: str) -> str:
+    """Remove papers-host bounces so main-origin research links stay on this site."""
+
+    kept = []
+    for line in redirects_text.splitlines():
+        source = line.strip().split("  ", 1)[0].strip()
+        if source in _PAPERS_REDIRECT_SOURCES:
+            continue
+        if line.strip() == "# Research article pages, cards, and research site-data live on the papers host.":
+            continue
+        kept.append(line)
+    text = "\n".join(kept).strip("\n")
+    return f"{text}\n" if text else ""
+
+
 def append_papers_redirects(
     redirects_text: str,
     *,
@@ -416,6 +434,7 @@ def split_papers_bundle(
     papers_origin: str = DEFAULT_PAPERS_ORIGIN,
     update_redirects: bool = True,
     update_headers: bool = True,
+    research_on_main: bool = False,
 ) -> PapersBundleResult:
     """Move papers assets out of ``dist_dir`` into ``papers_dir`` and rewrite HTML."""
 
@@ -519,10 +538,14 @@ def split_papers_bundle(
     if update_redirects:
         redirects_path = dist_dir / "_redirects"
         current = redirects_path.read_text(encoding="utf-8") if redirects_path.exists() else ""
-        redirects_path.write_text(
-            append_papers_redirects(current, papers_origin=papers_origin),
-            encoding="utf-8",
+        # The Pages worker serves /research/* on the main origin. Papers-host
+        # 301s would make weekly and catalogue links bounce to the old host.
+        updated = (
+            strip_papers_host_redirects(current)
+            if research_on_main
+            else append_papers_redirects(current, papers_origin=papers_origin)
         )
+        redirects_path.write_text(updated, encoding="utf-8")
 
     if update_headers:
         headers_path = dist_dir / "_headers"

@@ -344,6 +344,28 @@ def test_library_retention_ignores_arbitrary_paths_and_rejects_modified_shard_by
         papers_bundle.retain_library_shards(root, set(), {"files": [entry]}, index)
 
 
+def test_main_origin_research_keeps_article_links_and_drops_papers_redirects(tmp_path):
+    dist, papers = tmp_path / "dist", tmp_path / "papers"
+    weekly = dist / "research/weekly/index.html"
+    article = dist / "research/articles/example/index.html"
+    weekly.parent.mkdir(parents=True)
+    article.parent.mkdir(parents=True)
+    weekly.write_text('<a href="/research/articles/example/">paper</a>')
+    article.write_text("<p>article</p>")
+    (dist / "_redirects").write_text(
+        "/research/articles/*  https://papers.globalinfectiousdisease.com/research/articles/:splat  301\n"
+        "/zh/research/diseases/*  https://papers.globalinfectiousdisease.com/zh/research/diseases/:splat  301\n"
+        "/privacy/  /terms/  301\n"
+    )
+    split_papers_bundle(dist, papers_dir=papers, research_on_main=True)
+    redirects = (dist / "_redirects").read_text()
+    assert "papers.globalinfectiousdisease.com" not in redirects
+    assert "/privacy/  /terms/  301" in redirects
+    assert weekly.read_text() == '<a href="/research/articles/example/">paper</a>'
+    assert not article.exists()
+    assert (papers / "research/articles/example/index.html").is_file()
+
+
 def test_study_collections_move_to_papers_and_keep_host_aware_links(tmp_path):
     dist, papers = tmp_path / 'dist', tmp_path / 'papers'
     relative = 'research/catalogue/studies/mathematical-modelling-0123456789abcdef.json'

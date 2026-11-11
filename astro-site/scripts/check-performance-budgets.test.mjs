@@ -182,6 +182,42 @@ test('scales the all-site gzip allowance while preserving a per-page ceiling', (
   assert.ok(result.html.averageGzipBytes < 1_000);
 });
 
+test('independent research pages stay out of the main-site performance gate', (t) => {
+  const directory = fixture();
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  writeFileSync(join(directory, 'index.html'), '<main>home</main>');
+  for (const route of ['research', 'zh/research', 'fr/research/graph']) {
+    mkdirSync(join(directory, route), { recursive: true });
+    writeFileSync(join(directory, route, 'index.html'), `<main>${'research-page-'.repeat(400)}</main>`);
+  }
+  const budgets = {
+    maxJavaScriptChunkBytes: 1_000,
+    maxRouteCompressedAssetsBytes: 1_000,
+    maxAverageHtmlBytes: 200,
+    maxAverageHtmlGzipBytes: 1_000,
+    maxTotalHtmlGzipBytes: 1_000_000,
+    maxPageHtmlGzipBytes: 100_000,
+    maxWorldMapBytes: 1_000,
+    maxWorldMapBrotliBytes: 1_000,
+  };
+  const ignored = auditPerformance(directory, budgets, { independentResearch: true });
+  assert.equal(ignored.pages, 1);
+  assert.equal(ignored.passed, true);
+  const calibrated = auditPerformance(directory, {
+    maxJavaScriptChunkBytes: 1_000,
+    maxRouteCompressedAssetsBytes: 1_000,
+    maxWorldMapBytes: 1_000,
+    maxWorldMapBrotliBytes: 1_000,
+  }, { independentResearch: true });
+  assert.equal(calibrated.budgets.maxAverageHtmlBytes, 180_000);
+  assert.equal(calibrated.budgets.maxAverageHtmlGzipBytes, 22_000);
+  assert.equal(auditPerformance(directory, {}, { independentResearch: false }).budgets.maxAverageHtmlGzipBytes, 19_050);
+  const included = auditPerformance(directory, budgets, { independentResearch: false });
+  assert.equal(included.pages, 4);
+  assert.equal(included.passed, false);
+  assert.match(included.errors.join('\n'), /Generated HTML averages/);
+});
+
 test('cached compression sizes still enforce changed budgets', async t => {
   const {openGzipSizeCache}=await import('./gzip-size-cache.mjs');
   const directory=fixture();

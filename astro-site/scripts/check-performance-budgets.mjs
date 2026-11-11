@@ -5,6 +5,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { brotliCompressSync, gzipSync } from 'node:zlib';
 import { basename, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { isIndependentResearchRoute } from './check-seo-output.mjs';
 
 export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxJavaScriptChunkBytes: 350_000,
@@ -22,6 +23,12 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   // 2026-11-02 and is not the generated shape.
   maxPageHtmlGzipBytes: 115_000,
   maxAverageHtmlBytes: 105_000,
+  // Measured 2026-11-11 after independent research pages leave this gate:
+  // 4,109 main-site pages averaged 168,783 raw bytes and 20,731 gzip bytes.
+  // The old 105KB/19KB averages only held while small article pages diluted
+  // the catalogue. Per-page and route-asset caps stay unchanged.
+  maxMainSiteAverageHtmlBytes: 180_000,
+  maxMainSiteAverageHtmlGzipBytes: 22_000,
   // Use both a fixed site floor and a compressed per-page ceiling. The 18.7KB
   // baseline includes the complete en/zh/fr catalogue and deterministic CI
   // fixture while the independent
@@ -40,11 +47,12 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxWorldMapBrotliBytes: 140_000,
 });
 
-function walkHtml(directory, files = []) {
+function walkHtml(directory, files = [], root = directory, independentResearch = false) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const target = join(directory, entry.name);
+    if (independentResearch && isIndependentResearchRoute('/' + relative(root, target).replaceAll('\\', '/'))) continue;
     if (entry.isDirectory()) {
-      if (entry.name !== '_astro') walkHtml(target, files);
+      if (entry.name !== '_astro') walkHtml(target, files, root, independentResearch);
     } else if (entry.name.endsWith('.html')) {
       files.push(target);
     }
@@ -64,10 +72,17 @@ function addJavaScriptDependencies(assetName, assets, selected) {
   }
 }
 
-export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCache, pageCache } = {}) {
+export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCache, pageCache, independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' } = {}) {
   const dist = resolve(distDirectory);
   const assetDirectory = join(dist, '_astro');
-  const budgets = { ...DEFAULT_PERFORMANCE_BUDGETS, ...budgetOverrides };
+  const budgets = {
+    ...DEFAULT_PERFORMANCE_BUDGETS,
+    ...(independentResearch ? {
+      maxAverageHtmlBytes: DEFAULT_PERFORMANCE_BUDGETS.maxMainSiteAverageHtmlBytes,
+      maxAverageHtmlGzipBytes: DEFAULT_PERFORMANCE_BUDGETS.maxMainSiteAverageHtmlGzipBytes,
+    } : {}),
+    ...budgetOverrides,
+  };
   const errors = [];
 
   if (!existsSync(assetDirectory)) {
@@ -131,7 +146,7 @@ export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCach
     }
   }
 
-  const pages = walkHtml(dist);
+  const pages = walkHtml(dist, [], dist, independentResearch);
   if (pages.length === 0) errors.push(`No HTML pages found in ${dist}.`);
   let largestRoute = { path: '', gzipBytes: 0, assetCount: 0 };
   let largestOrdinaryRoute = { path: '', gzipBytes: 0, assetCount: 0 };

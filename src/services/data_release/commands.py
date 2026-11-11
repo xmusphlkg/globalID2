@@ -129,6 +129,7 @@ def build_split_papers_bundle_command(
     papers_origin: str,
     pages_file_budget: int,
     pages_file_warn: int,
+    research_on_main: bool = False,
 ) -> list[str]:
     """Slim Astro dist for Pages and stage the papers R2 bundle."""
 
@@ -147,6 +148,7 @@ def build_split_papers_bundle_command(
         str(pages_file_budget),
         "--pages-file-warn",
         str(pages_file_warn),
+        *(["--research-on-main"] if research_on_main else []),
     ]
 
 

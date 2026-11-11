@@ -2168,6 +2168,7 @@ class DataReleaseService:
             ),
             pages_file_budget=int(cfg.pages_file_budget),
             pages_file_warn=int(cfg.pages_file_warn),
+            research_on_main=bool(getattr(cfg, "literature_json_enabled", False)),
         )
 
     def _publish_papers_r2_command(self, *, python_path: Path) -> list[str]:

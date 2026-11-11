@@ -45,8 +45,24 @@ export function buildSituationRedirectRules(dataRoot = resolve(siteRoot, 'src', 
   return rules;
 }
 
-export function renderRedirects(baseRedirects, generatedRules) {
-  const base = baseRedirects.trimEnd();
+const PAPERS_HOST_REDIRECT = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|cards)\/\*|^\/site-data\/research\/\*/;
+
+/** Drop static papers-host bounces when the Pages worker serves research on the main origin. */
+export function withoutPapersHostRedirects(baseRedirects) {
+  return baseRedirects
+    .split('\n')
+    .filter((line) => {
+      const source = line.trim().split(/\s+/)[0] ?? '';
+      if (source === '#') return !line.includes('live on the papers host');
+      return !PAPERS_HOST_REDIRECT.test(source);
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
+}
+
+export function renderRedirects(baseRedirects, generatedRules, { researchOnMain = false } = {}) {
+  const base = (researchOnMain ? withoutPapersHostRedirects(baseRedirects) : baseRedirects).trimEnd();
   const generated = [...new Set(generatedRules)];
   return `${base}\n\n# Generated legacy Situation Room redirects\n${generated.join('\n')}\n`;
 }
@@ -58,7 +74,9 @@ export function writeBuildRedirects({
 } = {}) {
   const baseRedirects = readFileSync(publicFile, 'utf8');
   const rules = buildSituationRedirectRules(dataRoot);
-  writeFileSync(outputFile, renderRedirects(baseRedirects, rules));
+  writeFileSync(outputFile, renderRedirects(baseRedirects, rules, {
+    researchOnMain: process.env.PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN === '1',
+  }));
   return { outputFile, generatedRules: rules.length };
 }
 
