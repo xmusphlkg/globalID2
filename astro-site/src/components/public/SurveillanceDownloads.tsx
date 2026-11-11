@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { pick, type Language } from '../../lib/surveillance-presentation.ts';
 import '../download-dialog-shell.css';
@@ -28,11 +29,11 @@ export default function SurveillanceDownloads({ dataUrl, language }: { dataUrl: 
     </div>
     <dialog ref={dialog} className="download-dialog download-dialog--live" data-download-confirm-dialog aria-label={text('Choose data download', '选择数据下载', 'Choisir un téléchargement')} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close(); }}>
       <div className="download-dialog__toolbar"><div className="download-dialog__header"><div>
-        <p className="figure-kicker">{text('Partitioned public data', '分块公开数据', 'Données publiques partitionnées')}</p>
+        <p className="figure-kicker">{text('Partitioned public data', '监测数据下载', 'Données publiques partitionnées')}</p>
         <h2 className="download-dialog__title">{text('Choose a time range and format', '选择时间范围和格式', 'Choisir une période et un format')}</h2>
-        <p className="download-dialog__note">{text('Download archives have their own release date and may differ from the live curves.', '下载档案有独立发布日期，可能与实时曲线的版本不同。', 'Les archives ont leur propre date de publication et peuvent différer des courbes actuelles.')}</p>
+        <p className="download-dialog__note">{text('Download archives have their own release date and may differ from the live curves.', '下载文件与在线图表分别更新，使用前请核对文件版本和数据截止日期。', 'Les archives ont leur propre date de publication et peuvent différer des courbes actuelles.')}</p>
       </div><button type="button" className="download-dialog__close" data-download-modal-close aria-label={text('Close', '关闭', 'Fermer')} onClick={() => dialog.current?.close()}>×</button></div></div>
-      {open && <Suspense fallback={<p className="download-dialog__feedback" role="status">{text('Loading downloads…', '正在加载下载信息…', 'Chargement des téléchargements…')}</p>}><DownloadContents dataUrl={dataUrl} language={language} /></Suspense>}
+      {open && <Suspense fallback={<GIDSLoader language={language} />}><DownloadContents dataUrl={dataUrl} language={language} /></Suspense>}
     </dialog>
   </div>;
 }

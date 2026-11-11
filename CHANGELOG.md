@@ -16,6 +16,16 @@ This file records release-level changes to the GIDS application and its data ope
 - The control panel has a realtime publication workspace for Surveillance and Situation, with separate queue/backlog views, version and integrity receipts, task history, manual JSON publication and fresh retries. The site release center and shared task list identify JSON channels separately from template and report publication.
 - Automatic JSON publication can be paused per channel with durable cross-process state. Scheduler reconciliation, retries and continuation respect the pause; existing tasks and explicit manual runs remain available. Monitoring shows intentional pauses without treating their pending/retry age as an outage, while retaining integrity and execution alarms.
 
+## [0.18.2] - 2026-11-11
+
+- Accelerated disease-title association during literature export by skipping regex checks for absent literal aliases, preserving existing boundary, negation and specificity rules.
+- Cached unchanged title associations with policy-safe invalidation, tracked complete per-disease literature dependencies, and grouped card shards by publication month so ordinary additions reuse unrelated pages and older shards.
+- Added dedicated disease literature pages on the Papers R2 host, with real pagination, on-demand card shards, filters, publication trends and transparent PubMed/Europe PMC search strategies.
+- Added a lightweight GIDS signal-orbit loading animation with accessible status text and reduced-motion support across public data views.
+- Improved common disease aliases and compound searches, comparison selections, language-switch continuity and shared theme preferences across the public hosts.
+- Scoped chart source captions and observation dates to the selected series, aligned homepage and Situation counts to the same 30-day window, and clarified current-file versus full-history download totals.
+- Reduced focused Ask queries to relevant research collections, added recoverable search errors, and improved Chinese interface labels, evidence relationships and text contrast.
+
 ## [0.18.1] - 2026-11-07
 
 - Added a multilingual website and data update history with monthly archives, channel filters, published coverage metrics and links to release notes. Successful acknowledged publication markers are projected into small JSON files by a separate minute timer, without rebuilding the site or blocking data publication.

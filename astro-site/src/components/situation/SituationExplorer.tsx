@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 // Full-viewport situation stage. The map fills the page; filters, the place list
 // and the joined catalogue sit on top of it. Quotes load with the outbreak timeline.
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -5,7 +6,7 @@ import type { ComponentType, CSSProperties } from 'react';
 import './situation.css';
 import { situationData } from '../../lib/situation-data';
 import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SeriesGlance, SiteIndex, SituationAlertRecord, SituationMapDataFile } from '../../utils/situationTypes.ts';
-import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts, deduplicatePoints, filterPoints, placeLabel, recencyOf, sortPoints, type AlertGroup, type Filters, type GraphRow, type Lane, type WindowKey } from './model.ts';
+import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts, deduplicatePoints, filterPoints, placeLabel, recencyOf, sortPoints, visibleSituationPoints, type AlertGroup, type Filters, type GraphRow, type Lane, type WindowKey } from './model.ts';
 import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, countsLine, diseaseName, formatCount, formatDay, formatSignedPercent, sourceLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
 import type { CanvasProps, RegionTint } from './SituationMapCanvas.tsx';
@@ -346,7 +347,7 @@ export default function SituationExplorer({
     }
   }, [selection, filters]);
 
-  const visible = useMemo(() => deduplicatePoints(sortPoints(filterPoints(points, filters, asOf), asOf)), [points, filters, asOf]);
+  const visible = useMemo(() => visibleSituationPoints(points, asOf, filters), [points, filters, asOf]);
   const selected = selection?.kind === 'place' ? visible.find(point => point.alert_id === selection.id) ?? null : null;
   const selectedDisease = selected?.disease_id;
   useEffect(() => {
@@ -551,7 +552,7 @@ export default function SituationExplorer({
           {dataState === 'error' ? (
             <p className="sit-note" role="status">{copy.dataFailed}</p>
           ) : dataState !== 'ready' ? (
-            <p className="sit-note" role="status">{copy.mapLoading}</p>
+            <div className="sit-note"><GIDSLoader language={locale} label={copy.mapLoading} /></div>
           ) : Canvas ? (
             <Canvas
               points={visible}
@@ -566,7 +567,7 @@ export default function SituationExplorer({
               onSelectCountry={selectCountry}
             />
           ) : (
-            <p className="sit-note" role="status">{canvasFailed ? copy.mapFailed : copy.mapLoading}</p>
+            <div className="sit-note">{canvasFailed ? <p role="status">{copy.mapFailed}</p> : <GIDSLoader language={locale} label={copy.mapLoading} />}</div>
           )}
         </section>
 
@@ -687,7 +688,7 @@ export default function SituationExplorer({
                   </ul>
                 </details>
               )}
-              {remote === 'loading' && <p className="sit-muted" role="status">{copy.mapLoading}</p>}
+              {remote === 'loading' && <GIDSLoader language={locale} compact label={copy.mapLoading} />}
               {remote === 'error' && <p className="sit-muted" role="status">{copy.timelineFailed}</p>}
               {file && (
                 <section className="sit-timeline-wrap" aria-labelledby="sit-timeline-heading">

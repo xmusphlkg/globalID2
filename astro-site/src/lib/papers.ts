@@ -9,7 +9,7 @@
 export const PAPERS_ORIGIN = 'https://papers.globalinfectiousdisease.com';
 export const REPORTS_ORIGIN = 'https://reports.globalinfectiousdisease.com';
 
-const PAPERS_PATH = /^\/(?:(?:zh|fr)\/)?research\/articles\/|^\/research\/cards\/|^\/site-data\/research\//;
+const PAPERS_PATH = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases)\/|^\/research\/catalogue\/(?:diseases|studies)\/|^\/research\/cards\/|^\/site-data\/research\//;
 const REPORTS_PATH = /^\/(?:(?:zh|fr)\/)?reports(?:\/|$)|^\/(?:(?:zh|fr)\/)?countries\/[^/]+\/reports(?:\/|$)|^\/site-data\/reports\//;
 
 type Locale = 'en' | 'zh' | 'fr';

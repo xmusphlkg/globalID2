@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 // Interactive coverage map. Country dots stay quiet and compact; province dots
 // pulse only when a sub-national feed is available. Coordinates for countries
 // are derived from the bundled world GeoJSON and the MIT-licensed flag-icons
@@ -322,7 +323,7 @@ export default function CountriesMapView({ metaCountries: initialCountries = [],
   const zoom = (factor: number) => chartRef.current?.getEchartsInstance?.()?.dispatchAction({ type: 'geoRoam', geoIndex: 0, zoom: factor });
   const resetZoom = () => chartRef.current?.getEchartsInstance?.()?.setOption(option, { notMerge: true });
 
-  if (!mapReady) return <div style={{ height }} className="flex items-center justify-center text-sm text-[rgb(var(--text-muted))]">{initialLanguage === 'zh' ? '正在加载地图…' : initialLanguage === 'fr' ? 'Chargement de la carte…' : 'Loading map…'}</div>;
+  if (!mapReady) return <div style={{ height }} className="flex items-center justify-center text-sm text-[rgb(var(--text-muted))]"><GIDSLoader language={initialLanguage} label={initialLanguage === 'zh' ? '正在绘制覆盖地图…' : initialLanguage === 'fr' ? 'Chargement de la carte…' : 'Loading coverage map…'} /></div>;
   const lang = initialLanguage;
   const markerColor = (marker: DotPos) => marker.status === 'Unsupported' ? palette.unsupported : marker.status === 'Scheduled' ? palette.planned : palette.supported;
   return (

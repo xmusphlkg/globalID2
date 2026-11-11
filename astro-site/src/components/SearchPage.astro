@@ -20,40 +20,60 @@ const canonicalPath = zh ? '/zh/search/' : locale === 'fr' ? '/fr/search/' : '/s
   </section>
 </BaseLayout>
 
-<script is:inline define:vars={{ zh, fr }}>
+<script>
+  import { normalizeSearchText } from '../lib/disease-search';
+  import { searchSiteEntries, searchTitle, searchSummary, type SiteSearchEntry, type SearchLocale } from '../lib/site-search';
+  const locale: SearchLocale = document.documentElement.lang.startsWith('zh') ? 'zh' : document.documentElement.lang.startsWith('fr') ? 'fr' : 'en';
+  const zh = locale === 'zh';
+  const fr = locale === 'fr';
   const form = document.querySelector('.search-page-form');
-  const input = document.querySelector('#search-page-input');
+  const input = document.querySelector<HTMLInputElement>('#search-page-input');
   const status = document.querySelector('#search-page-status');
   const root = document.querySelector('#search-page-results');
-  const labels = { country: zh ? '国家与地区' : fr ? 'Pays et régions' : 'Countries', disease: zh ? '疾病' : fr ? 'Maladies' : 'Diseases', situation: zh ? '态势' : fr ? 'Situation' : 'Situation', report: zh ? '报告' : fr ? 'Rapports' : 'Reports', research: zh ? '研究' : fr ? 'Recherche' : 'Research', page: zh ? '页面' : fr ? 'Pages' : 'Pages' };
-  const normalized = value => String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-  let entries = [];
-  const localizedTitle = entry => zh ? (entry.title.zh || entry.title.en) : fr ? (entry.title.fr || 'Résultat sans titre français') : entry.title.en;
-  const localizedSummary = entry => zh ? (entry.summary?.zh || entry.summary?.en || '') : fr ? (entry.summary?.fr || 'Résumé français indisponible.') : (entry.summary?.en || '');
-  function rank(entry, query) {
-    const title = normalized(localizedTitle(entry));
-    const aliases = (entry.aliases || []).map(normalized);
-    const summary = normalized(localizedSummary(entry));
-    if (title === query) return 100; if (title.startsWith(query)) return 80;
-    if (aliases.includes(query)) return 70; if (aliases.some(value => value.startsWith(query))) return 60;
-    if (title.includes(query)) return 50; if (aliases.some(value => value.includes(query))) return 35;
-    if (summary.includes(query)) return 20; return 0;
-  }
-  function render(queryValue) {
+  const labels: Record<string, string> = { country: zh ? '国家与地区' : fr ? 'Pays et régions' : 'Countries', disease: zh ? '疾病' : fr ? 'Maladies' : 'Diseases', situation: zh ? '态势' : fr ? 'Situation' : 'Situation', report: zh ? '报告' : fr ? 'Rapports' : 'Reports', research: zh ? '文献' : fr ? 'Recherche' : 'Research', page: zh ? '探索' : fr ? 'Pages' : 'Pages' };
+  let entries: SiteSearchEntry[] = [];
+  let loaded = false;
+  let loading = false;
+  function render(queryValue: string) {
     if (!root || !status) return;
-    const query = normalized(queryValue); root.replaceChildren();
+    const query = normalizeSearchText(queryValue); root.replaceChildren();
     if (query.length < 2) { status.textContent = zh ? '请输入至少 2 个字符。' : fr ? 'Saisissez au moins 2 caractères.' : 'Enter at least 2 characters.'; return; }
-    const matches = entries.map(entry => ({ entry, score: rank(entry, query) })).filter(item => item.score > 0).sort((a,b) => b.score-a.score || String(a.entry.title.en).localeCompare(String(b.entry.title.en))).slice(0, 100);
-    status.textContent = zh ? `找到 ${matches.length} 条结果` : fr ? `${matches.length} résultat${matches.length === 1 ? '' : 's'}` : `${matches.length} result${matches.length === 1 ? '' : 's'} found`;
-    const groups = new Map(); for (const item of matches) { const list = groups.get(item.entry.kind) || []; list.push(item.entry); groups.set(item.entry.kind, list); }
+    const results = searchSiteEntries(entries, queryValue, locale, 100);
+    status.textContent = zh ? (results.total > results.entries.length ? `找到 ${results.total} 条结果，显示前 ${results.entries.length} 条` : `找到 ${results.total} 条结果`) : fr ? `${results.total} résultat(s)${results.total > 100 ? ' · 100 affichés' : ''}` : `${results.total} results found${results.total > 100 ? ' · showing first 100' : ''}`;
+    const groups = new Map<string, SiteSearchEntry[]>();
+    for (const entry of results.entries) { const list = groups.get(entry.kind) || []; list.push(entry); groups.set(entry.kind, list); }
     for (const [kind, list] of groups) {
-      const section=document.createElement('section'); section.className='search-result-group'; const heading=document.createElement('h2'); heading.textContent=`${labels[kind]} · ${list.length}`; section.append(heading);
+      const section=document.createElement('section'); section.className='search-result-group'; const heading=document.createElement('h2'); heading.textContent=`${labels[kind] || kind} · ${list.length}`; section.append(heading);
       const grid=document.createElement('div'); grid.className='search-result-grid';
-      for (const entry of list) { const link=document.createElement('a'); link.className='search-result-card'; link.href=zh&&entry.href.zh?entry.href.zh:fr&&entry.href.fr?entry.href.fr:entry.href.en; const title=document.createElement('strong'); title.textContent=localizedTitle(entry); const summary=document.createElement('span'); summary.textContent=localizedSummary(entry); link.append(title,summary); grid.append(link); }
+      for (const entry of list) { const link=document.createElement('a'); link.className='search-result-card'; link.href=entry.href[locale] || entry.href.en; const title=document.createElement('strong'); title.textContent=searchTitle(entry, locale); const summary=document.createElement('span'); summary.textContent=searchSummary(entry, locale); link.append(title,summary); grid.append(link); }
       section.append(grid); root.append(section);
     }
   }
-  async function initialize() { const params=new URLSearchParams(location.search); const query=params.get('q')||''; if(input instanceof HTMLInputElement) input.value=query; try { const response=await fetch('/site-data/search-index.json'); entries=(await response.json()).entries||[]; render(query); } catch { if(status) status.textContent=zh?'搜索索引暂时不可用。':fr?'L’index de recherche est temporairement indisponible.':'Search index is temporarily unavailable.'; } }
-  form?.addEventListener('submit', event => { event.preventDefault(); if (!(input instanceof HTMLInputElement)) return; const url=new URL(location.href); if(input.value.trim()) url.searchParams.set('q',input.value.trim()); else url.searchParams.delete('q'); history.replaceState({},'',url); render(input.value); });
-  initialize();
+  async function load() {
+    if (loading) return;
+    loading = true;
+    if (status) status.textContent = zh ? '正在准备搜索…' : fr ? 'Chargement de la recherche…' : 'Loading search…';
+    root?.replaceChildren();
+    try {
+      const response = await fetch('/site-data/search-index.json');
+      if (!response.ok) throw new Error('Search index unavailable');
+      const payload = await response.json();
+      if (!Array.isArray(payload.entries)) throw new Error('Invalid search index');
+      entries = payload.entries; loaded = true; render(input?.value || '');
+    } catch {
+      loaded = false;
+      if (status) {
+        status.textContent = zh ? '暂时无法加载搜索。' : fr ? 'La recherche est indisponible. ' : 'Search could not load. ';
+        const retry=document.createElement('button'); retry.type='button'; retry.className='underline'; retry.textContent=zh?'重试':fr?'Réessayer':'Retry'; retry.addEventListener('click',()=>void load()); status.append(retry);
+      }
+    } finally { loading = false; }
+  }
+  if (input) input.value = new URLSearchParams(location.search).get('q') || '';
+  form?.addEventListener('submit', event => {
+    event.preventDefault(); if (!input) return;
+    const url=new URL(location.href); if(input.value.trim()) url.searchParams.set('q',input.value.trim()); else url.searchParams.delete('q'); history.replaceState({},'',url);
+    window.dispatchEvent(new Event('gids:urlchange'));
+    if (loaded) render(input.value); else void load();
+  });
+  void load();
 </script>

@@ -1,4 +1,4 @@
-import { researchCatalogue } from '../../../lib/research-catalogue-shards';
+import { researchCatalogue, researchStudyCollections } from '../../../lib/research-catalogue-shards';
 
 export function GET() {
   const { researchCatalogueChunks, researchCatalogueChunkNames, researchCatalogueGeneratedAt, researchCatalogueArticles } = researchCatalogue();
@@ -7,12 +7,14 @@ export function GET() {
     disease: [...new Set(articles.flatMap(article => (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase())).filter(Boolean))],
     country: [...new Set(articles.flatMap(article => (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase())).filter(Boolean))],
     topic: [...new Set(articles.flatMap(article => (article.topics ?? []).map((item: any) => slugifyTopic(String(item.name ?? '')))).filter(Boolean))],
+    study: [...new Set(articles.map(article => String(article.study_type ?? '').trim().toLowerCase()).filter(Boolean))],
     week: [...new Set(articles.map(article => String(article.publication_week ?? '').toLowerCase()).filter(Boolean))],
   });
   return new Response(JSON.stringify({
     schema_version: 2,
     generated_at: researchCatalogueGeneratedAt,
     total: researchCatalogueArticles.length,
+    study_collections: Object.fromEntries(researchStudyCollections().map(({ study, count, chunks }) => [study, { count, chunks: chunks.map(({ path, count }) => ({ path, count })) }])),
     chunks: researchCatalogueChunks.map((articles, index) => ({ path: `/research/catalogue/${researchCatalogueChunkNames[index]}.json`, count: articles.length, facets: facets(articles) })),
   }), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 }

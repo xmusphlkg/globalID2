@@ -96,6 +96,21 @@ async def enqueue(maker, service, *, full=False):
         ).scalar_one()
 
 
+async def test_maintenance_release_freezes_explicit_subscription_suppression(release_db):
+    maker, service, _ = release_db
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site Release"),
+        manual=True, trigger="site_polish", trigger_task_uuid=None,
+        suppress_subscription_dispatch=True,
+    )
+    assert result["status"] == "queued"
+    async with maker() as session:
+        task = (await session.execute(select(Task).where(Task.task_uuid == result["task_uuid"]))).scalar_one()
+        assert task.input_data["suppress_subscription_dispatch"] is True
+        assert task.input_data["code_only"] is False
+        assert task.input_data["release_job_id"] == "site-release"
+
+
 @pytest.mark.parametrize("has_global", [False, True])
 async def test_situation_json_leaves_non_global_markers_for_operator_review(release_db, has_global):
     maker, service, _ = release_db

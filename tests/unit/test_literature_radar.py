@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import csv
+import inspect
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -58,6 +59,41 @@ from dashboard.api.routers.literature import _publication_blockers
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.mark.parametrize("title", [
+    "Vaccination surveillance and genomic epidemiology",
+    "ONE HEALTH: zoonotic animal reservoir monitoring",
+    "抗生素 antimicrobial-resistance and antibiotic resistance",
+    "epidemiology, incidence, prevalence and transmission",
+    "retesting nondiagnostic subcluster epidemicity",
+    "surveillance_2026 monitoring2 2monitoring",
+    "génomíc survéillance; íncidence; DIAGNOSTIC testing",
+    "登革热调查 2026 unrelated title",
+])
+def test_title_topic_prefilter_matches_previous_implementation(title):
+    source = inspect.getsource(literature_export_module._title_estimated_topics)
+    old_source = source.replace("term in normalized and ", "")
+    assert source != old_source
+    namespace = {}
+    exec(old_source, vars(literature_export_module), namespace)
+    assert literature_export_module._title_estimated_topics(title) == namespace["_title_estimated_topics"](title)
+
+
+def test_title_topic_prefilter_skips_absent_terms_and_retains_boundaries(monkeypatch):
+    called = []
+    original = literature_export_module._title_contains_term
+
+    def tracked(title, term):
+        called.append(term)
+        return original(title, term)
+
+    monkeypatch.setattr(literature_export_module, "_title_contains_term", tracked)
+    assert literature_export_module._title_estimated_topics("retesting monitoring2") == []
+    assert called == ["monitoring", "testing"]
+    called.clear()
+    assert literature_export_module._title_estimated_topics("Unrelated title") == []
+    assert called == []
 
 
 def test_research_chunk_boundaries_match_serialized_file_budget():
@@ -2276,3 +2312,27 @@ async def test_restore_parent_excluded_summaries_restores_and_respects_dry_run()
     assert summary_b.status == "archived"
     assert summary_d.status == "archived"
     assert db2.flushed
+
+
+def test_hib_guideline_does_not_inherit_an_unsupported_openalex_influenza_topic():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+    candidate.title = "Use of Haemophilus influenzae Type b-Containing Vaccines Among American Indian and Alaska Native Infants"
+    candidate.abstract_text = "Invasive Haemophilus influenzae type b (Hib) disease is a serious bacterial infection. A primary Hib vaccination series with DTaP-IPV-Hib-HepB is preferred."
+    candidate.source_payload = {"openalex": {"topics": [{"display_name": "Influenza Virus Research Studies", "score": 0.998}]}}
+    diseases = [
+        {"disease_id": "D100", "name_en": "Haemophilus influenzae", "name_zh": "流感嗜血杆菌", "aliases": ["Hib"]},
+        {"disease_id": "D038", "name_en": "Influenza", "name_zh": "流行性感冒", "aliases": ["influenza virus", "流感"]},
+    ]
+    def classify():
+        return {match.key for match in classify_candidate(candidate, diseases=diseases, countries=[], taxonomy={}).diseases}
+    assert classify() == {"D100"}
+    candidate.abstract_text += " Co-infection with influenza virus was also evaluated."
+    assert classify() == {"D100", "D038"}
+    candidate.abstract_text = "Haemophilus influenzae and influenza co-infections were studied."
+    assert classify() == {"D100", "D038"}
+    # A separate high-specificity controlled heading requires source review;
+    # this narrow coarse-topic guard does not overrule it.
+    candidate.abstract_text = "Haemophilus influenzae isolates were sequenced."
+    candidate.source_payload["europe_pmc"] = {"meshHeadingList": {"meshHeading": [{"descriptorName": "Influenza, Human", "majorTopic_YN": "Y"}]}}
+    assert classify() == {"D100", "D038"}

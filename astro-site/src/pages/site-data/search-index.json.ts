@@ -1,3 +1,4 @@
+import { diseaseSearchAliases } from '../../lib/disease-search';
 import { readResearchIndex } from '../../lib/generated-site-data.ts';
 import type { APIRoute } from 'astro';
 import { diseaseIndex, indexableDiseases, publishableReports, siteMeta } from '../../lib/seo-page-data';
@@ -56,7 +57,7 @@ export const GET: APIRoute = () => {
       href: localized(`/diseases/${slug}/`),
       title: { en: disease.name_en ?? slug, zh: disease.name_zh, fr: diseaseNameFr },
       summary: { en: disease.description ?? `${disease.category ?? ''} disease surveillance profile`, zh: `${disease.name_zh ?? disease.name_en}监测数据、趋势与证据说明`, fr: `Profil de surveillance de ${diseaseNameFr}` },
-      aliases: clean([disease.disease_id, disease.slug, disease.name_en, disease.name_zh, disease.name_fr, diseaseNameFr, disease.icd_10, disease.icd_11, disease.category]),
+      aliases: clean([...diseaseSearchAliases(disease), diseaseNameFr, disease.icd_10, disease.icd_11, disease.category]),
     });
   }
 

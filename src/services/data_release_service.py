@@ -784,6 +784,7 @@ class DataReleaseService:
         data_only: bool = False,
         data_line: str = "surveillance",
         pending_ids: list[int] | None = None,
+        suppress_subscription_dispatch: bool = False,
     ) -> dict[str, Any]:
         if sum(bool(value) for value in (full, reports_only, code_only, data_only)) > 1:
             raise ValueError("Full, reports-only, code-only and data-only release modes are mutually exclusive")
@@ -802,6 +803,7 @@ class DataReleaseService:
                     job, manual=manual, trigger=trigger,
                     trigger_task_uuid=trigger_task_uuid, data_only=True, data_line=data_line,
                     pending_ids=pending_ids,
+                    **({"suppress_subscription_dispatch": True} if suppress_subscription_dispatch else {}),
                 )
 
             tz_name = job.timezone or self._config().timezone
@@ -821,6 +823,7 @@ class DataReleaseService:
                     reports_only=reports_only,
                     code_only=code_only,
                     pending_ids=pending_ids,
+                    **({"suppress_subscription_dispatch": True} if suppress_subscription_dispatch else {}),
                 )
                 state.last_finished_at = datetime.now(ZoneInfo(tz_name))
                 state.last_task_uuid = result["task_uuid"]
@@ -970,6 +973,7 @@ class DataReleaseService:
             job_id, manual=False, trigger="upstream_completion",
             trigger_task_uuid=task_uuid, pending_ids=sorted(set(ids)),
             data_only=data_only, **({"data_line": _data_line(data)} if data_only else {}),
+            **({"suppress_subscription_dispatch": True} if data.get("suppress_subscription_dispatch") else {}),
         )
         if result.get("status") == "queued" or result.get("reason") == "continuation_already_queued":
             continuation = {"status": "queued", "task_uuid": result["task_uuid"]}
@@ -1203,6 +1207,7 @@ class DataReleaseService:
         data_only: bool = False,
         data_line: str = "surveillance",
         pending_ids: list[int] | None = None,
+        suppress_subscription_dispatch: bool = False,
     ) -> dict[str, Any]:
         if sum(bool(value) for value in (full, reports_only, code_only, data_only)) > 1:
             raise ValueError("Release modes are mutually exclusive")
@@ -1292,6 +1297,9 @@ class DataReleaseService:
             description_parts = [f"Publish changed {data_line} JSON snapshots and their manifest without rebuilding static pages."]
 
         input_data = {
+            # Maintenance publications can refresh content/templates without
+            # creating subscriber campaigns. Freeze this choice before queueing.
+            **({"suppress_subscription_dispatch": True} if suppress_subscription_dispatch else {}),
             "release_job_id": job.job_id,
             "release_job_name": job.name,
             "priority": job.priority,

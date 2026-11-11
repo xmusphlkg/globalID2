@@ -340,6 +340,59 @@ def test_public_indexes_wait_for_all_shards(tmp_path, fail_shard):
         assert client.objects[index_key] != b"previous index"
 
 
+@pytest.mark.parametrize("fail_shard", [False, True])
+def test_disease_library_shards_publish_before_index_and_html(tmp_path, fail_shard):
+    from src.services.data_release.papers_bundle import build_papers_manifest
+    papers = _seed_papers(tmp_path)
+    shard_key = "research/catalogue/diseases/d038/0-" + "a" * 16 + ".json"
+    index_key = "research/catalogue/diseases/d038.json"
+    html_key = "zh/research/diseases/influenza/"
+    shard = papers / shard_key
+    shard.parent.mkdir(parents=True)
+    shard.write_text('{"articles": []}')
+    (papers / index_key).write_text(json.dumps({"shard": shard_key}))
+    html = papers / html_key / "index.html"
+    html.parent.mkdir(parents=True)
+    html.write_text('<main>New disease library</main>')
+    (papers / "papers-manifest.json").write_text(json.dumps(build_papers_manifest(papers)))
+    calls = []
+
+    class CheckingR2(FakeR2):
+        def put_object(self, key, body, **kwargs):
+            calls.append(key)
+            if key == shard_key and fail_shard:
+                raise R2S3Error("library shard failed")
+            if key == index_key:
+                assert shard_key in self.objects
+            if key == html_key:
+                assert self.objects[index_key] != b"previous index"
+            super().put_object(key, body, **kwargs)
+
+    client = CheckingR2()
+    client.objects[index_key] = b"previous index"
+    client.objects[html_key] = b"previous library"
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    if fail_shard:
+        with pytest.raises(R2S3Error, match="library shard failed"):
+            publish_papers_site(papers, config, client=client, verify_public=False, workers=4)
+        assert client.objects[index_key] == b"previous index"
+        assert client.objects[html_key] == b"previous library"
+        assert index_key not in calls
+        assert html_key not in calls
+    else:
+        publish_papers_site(papers, config, client=client, verify_public=False, workers=4)
+        assert calls.index(shard_key) < calls.index(index_key) < calls.index(html_key)
+
+
+def test_only_content_named_library_pages_receive_immutable_cache_metadata():
+    shard = "research/catalogue/diseases/d038/0-" + "a" * 16 + ".json"
+    assert papers_r2._cache_control_for(shard) == "public, max-age=31536000, immutable"
+    study = "research/catalogue/studies/mathematical-modelling-" + "a" * 16 + ".json"
+    assert papers_r2._cache_control_for(study) == "public, max-age=31536000, immutable"
+    for mutable in ["research/catalogue/diseases/d038.json", "research/catalogue/diseases/d038/page-0.json", "site-data/research/index.json", "research/catalogue/studies/mathematical-modelling.json", "research/catalogue/studies/review-bad-hash.json", "research/catalogue/manifest.json"]:
+        assert "immutable" not in papers_r2._cache_control_for(mutable)
+
+
 def test_warm_publish_never_opens_unchanged_artifact_bodies(tmp_path, monkeypatch):
     papers = _seed_papers(tmp_path)
     time.sleep(1.01)  # stable timestamps before warming publication receipts

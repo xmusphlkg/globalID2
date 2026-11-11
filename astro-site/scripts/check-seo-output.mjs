@@ -3,7 +3,7 @@ import { extname, join, relative, resolve } from 'node:path';
 
 const SITE_ORIGIN = 'https://globalinfectiousdisease.com';
 // Mirrors PAPERS_PATH in src/lib/papers.ts: paths published on the papers host.
-const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/articles\/|^\/research\/cards\/|^\/site-data\/research\//;
+const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases)\/|^\/research\/catalogue\/diseases\/|^\/research\/cards\/|^\/site-data\/research\//;
 
 // Regex captures can be slices backed by an entire HTML document. The global
 // uniqueness maps must own small strings, otherwise one canonical per page

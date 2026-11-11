@@ -1,0 +1,46 @@
+.disease-literature-explorer { margin-top: 1.5rem; }
+.literature-trends, .literature-results { padding: clamp(1rem, 3vw, 2rem); border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+.literature-results { margin-top: 1.5rem; }
+.literature-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border)); }
+.literature-section-heading h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.3rem, 3vw, 1.8rem)/1.2 'IBM Plex Sans', sans-serif; }
+.literature-section-heading > span { color: rgb(var(--text-muted)); font-size: .8rem; white-space: nowrap; }
+.literature-note { margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.7; max-width: 60rem; }
+.literature-trend-chart { margin-top: 1rem; color: rgb(var(--color-teal)); }
+.literature-trend-chart svg { display: block; width: 100%; height: auto; min-height: 90px; }
+.literature-trend-chart text { fill: rgb(var(--text-muted)); font: 12px ui-monospace, monospace; }
+.literature-trend-table summary { cursor: pointer; color: rgb(var(--text-muted)); font-size: .8rem; padding: .7rem 0; }
+.literature-trend-table > div { max-height: 16rem; overflow-y: auto; }
+.literature-trend-table table { width: 100%; font-size: .8rem; text-align: left; border-collapse: collapse; }
+.literature-trend-table th, .literature-trend-table td { padding: .5rem; border-bottom: 1px solid rgb(var(--border)); }
+.literature-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .85rem; padding: 1.25rem 0; }
+.literature-filters label { min-width: 0; display: flex; flex-direction: column; gap: .4rem; font-size: .78rem; color: rgb(var(--text-muted)); }
+.literature-filters input, .literature-filters select { min-width: 0; width: 100%; height: 44px; padding: .55rem .7rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); color: rgb(var(--text)); border-radius: 0; font-size: .82rem; }
+.literature-filters input:focus-visible, .literature-filters select:focus-visible { outline: 2px solid rgb(var(--color-teal)); outline-offset: 2px; }
+.literature-filters:disabled { opacity: .6; }
+.literature-query { grid-column: span 2; }
+.literature-reset { align-self: end; min-height: 44px; padding: .55rem .8rem; border: 1px solid rgb(var(--border)); font-size: .8rem; }
+.literature-load-error { padding: 1rem 0; color: rgb(var(--text-muted)); font-size: .85rem; line-height: 1.6; }
+.literature-load-error button { color: rgb(var(--color-teal)); text-decoration: underline; padding: .5rem; }
+.literature-result-count { margin-bottom: 1rem; font-size: .8rem; color: rgb(var(--text-muted)); }
+.literature-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
+.literature-card { min-width: 0; padding: 1.1rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+.literature-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem .7rem; font-size: .7rem; color: rgb(var(--text-muted)); }
+.literature-open { color: rgb(var(--color-teal)); }
+.literature-card .research-card-title { margin-top: .7rem; font-size: 1rem; font-weight: 600; line-height: 1.5; color: rgb(var(--text-strong)); overflow-wrap: anywhere; }
+.literature-card .research-card-title a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.literature-authors, .literature-locations { margin-top: .6rem; font-size: .76rem; line-height: 1.6; color: rgb(var(--text-muted)); overflow-wrap: anywhere; }
+.literature-authors > span { display: block; }
+.literature-card-links { margin-top: .6rem; display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; }
+.literature-card-links a { display: inline-flex; min-height: 32px; align-items: center; font-size: .76rem; color: rgb(var(--color-teal)); text-decoration: underline; text-underline-offset: 3px; }
+.literature-card-links small { font-size: .7rem; color: rgb(var(--text-muted)); }
+.literature-empty { padding: 2rem 0; color: rgb(var(--text-muted)); line-height: 1.7; }
+.literature-empty h3 { color: rgb(var(--text)); font-weight: 600; }
+.literature-more { display: block; min-height: 44px; padding: .7rem 1.2rem; margin: 1.2rem auto 0; border: 1px solid rgb(var(--border)); }
+.literature-pagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: .65rem; margin-top: 1.5rem; font-size: .8rem; color: rgb(var(--text)); }
+.literature-pagination button, .literature-pagination select { min-height: 44px; padding: .5rem .8rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); color: rgb(var(--text)); }
+.literature-pagination button:disabled { opacity: .45; cursor: default; }
+.literature-pagination label { display: inline-flex; gap: .45rem; align-items: center; }
+#literature-results-title { scroll-margin-top: 6rem; }
+[data-theme='dark'] .disease-literature-page :is(.literature-hero-links a, .literature-database-links a, .literature-query-block button, .literature-card-links a, .literature-open, .literature-load-error button, .literature-trend-chart) { color: #6ee7d2; }
+@media (max-width: 800px) { .literature-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .literature-list { grid-template-columns: 1fr; } }
+@media (max-width: 440px) { .literature-section-heading { align-items: start; flex-direction: column; gap: .5rem; } .literature-filters { gap: .75rem .5rem; } .literature-filters input, .literature-filters select { font-size: .8rem; } }

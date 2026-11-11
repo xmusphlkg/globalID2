@@ -26,7 +26,7 @@ from xml.etree import ElementTree
 import httpx
 
 from .artifact_index import ArtifactIndex
-from .papers_bundle import DEFAULT_PAPERS_ORIGIN, build_papers_manifest
+from .papers_bundle import DEFAULT_PAPERS_ORIGIN, LIBRARY_SHARD_PATH, build_papers_manifest
 from .research_publishing import is_research_card, research_social_cards_enabled
 
 MANIFEST_KEY = "papers-manifest.json"
@@ -479,13 +479,15 @@ def _content_type_for(path: str) -> str:
 def _cache_control_for(path: str, *, manifest_key: str = MANIFEST_KEY) -> str:
     """Cache policy per object type; R2 custom domains ignore Pages ``_headers``.
 
-    Keys are stable names (not content-addressed), so nothing is ``immutable``.
-    Values mirror the main site's ``_headers`` rules.
+    Ordinary keys are mutable. Disease pages and study collections use content
+    hashes, so browsers can keep their payload without revalidation.
     """
 
     lowered = path.lower()
     if lowered == manifest_key.lower():
         return "no-store, max-age=0"
+    if LIBRARY_SHARD_PATH.fullmatch(path):
+        return "public, max-age=31536000, immutable"
     if lowered.endswith(".html"):
         return "public, max-age=0, must-revalidate"
     if lowered.endswith(".json"):
@@ -749,11 +751,21 @@ def _publish_papers_site(
     # every referenced object exists. Old shards remain in the local retention
     # window and therefore remain in the release manifest until safe to prune.
     indexes = {"site-data/research/index.json", "site-data/research/catalogue.json", "site-data/reports/index.json"}
+    indexes.update(str(item["key"]) for item in local_files if re.fullmatch(
+        r"research/catalogue/diseases/[a-z0-9_-]+\.json", str(item["key"]),
+    ))
     # Hydration modules and their lazy dependencies must exist before new HTML
     # can refer to them. Older hashed assets remain in the retained generation.
     transfer_batch([item for item in local_files if str(item["key"]).startswith("_astro/")])
-    transfer_batch([item for item in local_files if item["key"] not in indexes and not str(item["key"]).startswith("_astro/")])
+    # Disease libraries read these page indexes immediately on hydration. Delay
+    # their HTML until the pointers are ready; retain the existing publication
+    # batching for independent article pages. Each batch is a parallel barrier.
+    html = {str(item["key"]) for item in local_files if re.fullmatch(
+        r"(?:(?:zh|fr)/)?research/diseases/[^/]+/index\.html", str(item["path"]),
+    )}
+    transfer_batch([item for item in local_files if item["key"] not in indexes and item["key"] not in html and not str(item["key"]).startswith("_astro/")])
     transfer_batch([item for item in local_files if item["key"] in indexes])
+    transfer_batch([item for item in local_files if item["key"] in html])
 
     sample_url = None
     sample_ok = True

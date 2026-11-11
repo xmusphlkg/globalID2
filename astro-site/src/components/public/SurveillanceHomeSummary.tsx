@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import { useSurveillanceSummary } from './useSurveillanceSummary';
 import { getFlagAssetPath } from '../../lib/country-flag';
 import { cadence, countryLabel, number, coverage, pick as translate, type Language, type Summary } from '../../lib/surveillance-presentation';
@@ -8,7 +9,11 @@ export default function SurveillanceHomeSummary({ dataUrl, mode, language, repor
   const { data, version, error, retry } = useSurveillanceSummary(dataUrl);
   const pick = (en: string, zh: string, fr: string) => translate(language, en, zh, fr);
   const prefix = language === 'en' ? '' : `/${language}`;
-  if (!data) return mode === 'home-count' ? <span>—</span> : <p role="status">{error ? <>{pick('Current data is unavailable.', '当前数据暂不可用。', 'Les données actuelles sont indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></> : pick('Loading current data…', '正在加载最新数据…', 'Chargement des données actuelles…')}</p>;
+  if (!data) {
+    if (mode === 'home-count') return error ? <span>—</span> : <GIDSLoader language={language} compact label={pick('Loading…', '读取中…', 'Chargement…')} />;
+    if (error) return <p role="status">{pick('Current data is unavailable.', '当前数据暂时无法读取。', 'Les données actuelles sont indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></p>;
+    return <GIDSLoader language={language} compact={mode !== 'home-indicators'} className={mode === 'home-indicators' ? 'home-summary-loading' : ''} />;
+  }
   const national: Summary[] = nationalRows(data), subdivisions = subdivisionRows(data), sourceCount = officialSourceCount(data);
   if (mode === 'home-count') return <span data-surveillance-version={version}>{number(metric === 'countries' ? national.length : metric === 'sources' ? sourceCount : data.total_diseases, language)}</span>;
   if (mode === 'country-links' || mode === 'recent-countries') {

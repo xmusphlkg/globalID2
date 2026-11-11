@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import { useEffect, useMemo, useState } from 'react';
 import { useSurveillanceSummary } from './useSurveillanceSummary';
 import { COUNTRY_COVERAGE } from '../../lib/country-coverage.ts';
@@ -43,7 +44,7 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
     for (const [key, value] of Object.entries({ q: query, who, wb, income, status })) value ? url.searchParams.set(key, value) : url.searchParams.delete(key);
     window.history.replaceState({}, '', url);
   }, [filtered, query, who, wb, income, status, parentCode, publication.data]);
-  if (!publication.data) return <p role="status" className="figure-caption">{publication.error ? pick('Current coverage is unavailable.', '当前覆盖数据暂不可用。', 'La couverture actuelle est indisponible.') : pick('Loading current coverage…', '正在加载当前覆盖数据…', 'Chargement de la couverture…')}</p>;
+  if (!publication.data) return <p role="status" className="figure-caption">{publication.error ? pick('Current coverage is unavailable.', '当前覆盖数据暂不可用。', 'La couverture actuelle est indisponible.') : <GIDSLoader language={language} />}</p>;
   const regional = subdivisionRows(publication.data);
   const parents = [...new Set(regional.map((row: Row) => String(row.parent_code)))].map(code => ({
     ...((publication.data?.countries ?? []).find((row: Row) => row.code === code) || { code }),

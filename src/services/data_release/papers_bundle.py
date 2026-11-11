@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -29,16 +31,70 @@ DEFAULT_PAGES_FILE_WARN = 18_000
 # Directory in dist holding files that live at the root of the papers host.
 PAPERS_HOST_DIR = "papers-host"
 
+LIBRARY_SHARD_RETENTION_SECONDS = 48 * 60 * 60
+LIBRARY_SHARD_PATH = re.compile(
+    r"(?:research/catalogue/diseases/[a-z0-9_-]+/[0-9]+-[a-f0-9]{16,64}"
+    r"|research/catalogue/studies/[a-z0-9_-]+-[a-f0-9]{16,64})\.json"
+)
+
+
+def retain_library_shards(
+    papers_dir: Path, expected: set[Path], previous_manifest: dict,
+    index: ArtifactIndex, *, now: float | None = None,
+) -> dict[str, float]:
+    """Keep previously referenced immutable pages for cached catalogue indexes.
+
+    Only exact shard paths recorded by the preceding bundle are eligible.
+    Reusing an active shard clears its retirement clock; repeated splits never
+    extend the clock of a shard that remains retired.
+    """
+    instant = time.time() if now is None else now
+    retirements = previous_manifest.get("library_shard_retirements")
+    retirements = retirements if isinstance(retirements, dict) else {}
+    retained: dict[str, float] = {}
+    root = papers_dir.resolve()
+    for entry in previous_manifest.get("files", []):
+        if not isinstance(entry, dict):
+            continue
+        relative = entry.get("path")
+        if not isinstance(relative, str) or not LIBRARY_SHARD_PATH.fullmatch(relative):
+            continue
+        path = papers_dir / relative
+        if path in expected:
+            continue
+        retired = retirements.get(relative, instant)
+        if type(retired) not in (int, float) or not math.isfinite(retired) or retired > instant:
+            retired = instant
+        if instant - retired >= LIBRARY_SHARD_RETENTION_SECONDS:
+            continue
+        if not path.resolve().is_relative_to(root) or path.is_symlink():
+            raise ValueError(f"Invalid retained literature shard: {relative}")
+        if not path.is_file():
+            raise FileNotFoundError(f"Retained literature shard missing: {relative}")
+        description = index.describe(path)
+        if (description["sha256"] != entry.get("sha256")
+                or description["bytes"] != entry.get("bytes")):
+            raise ValueError(f"Retained literature shard checksum mismatch: {relative}")
+        expected.add(path)
+        retained[relative] = retired
+    return retained
+
 PAPERS_PREFIXES = (
     "research/articles/",
     "zh/research/articles/",
     "fr/research/articles/",
+    "research/diseases/",
+    "zh/research/diseases/",
+    "fr/research/diseases/",
+    "research/catalogue/diseases/",
+    "research/catalogue/studies/",
     "research/cards/",
     "site-data/research/",
 )
 
 _PAPERS_ROOT_PATH_RE = re.compile(
-    r"^/(?:zh/|fr/)?research/articles/"
+    r"^/(?:zh/|fr/)?research/(?:articles|diseases)/"
+    r"|^/research/catalogue/(?:diseases|studies)/"
     r"|^/research/cards/"
     r"|^/site-data/research/"
 )
@@ -53,7 +109,7 @@ _ATTR_ROOT_REF_RE = re.compile(
 _ABS_MAIN_PAPERS_RE = re.compile(
     r"""(?P<prefix>\b(?:href|src|content|poster)\s*=\s*["'])"""
     r"""(?P<origin>https?://(?:www\.)?globalinfectiousdisease\.com)"""
-    r"""(?P<path>/(?:zh/|fr/)?research/articles/[^"']*|/research/cards/[^"']*|/site-data/research/[^"']*)"""
+    r"""(?P<path>/(?:zh/|fr/)?research/(?:articles|diseases)/[^"']*|/research/catalogue/(?:diseases|studies)/[^"']*|/research/cards/[^"']*|/site-data/research/[^"']*)"""
     r"""(?P<suffix>["'])""",
     re.IGNORECASE,
 )
@@ -62,6 +118,11 @@ PAPERS_REDIRECT_RULES = (
     "/research/articles/*  {papers}/research/articles/:splat  301",
     "/zh/research/articles/*  {papers}/zh/research/articles/:splat  301",
     "/fr/research/articles/*  {papers}/fr/research/articles/:splat  301",
+    "/research/diseases/*  {papers}/research/diseases/:splat  301",
+    "/zh/research/diseases/*  {papers}/zh/research/diseases/:splat  301",
+    "/fr/research/diseases/*  {papers}/fr/research/diseases/:splat  301",
+    "/research/catalogue/diseases/*  {papers}/research/catalogue/diseases/:splat  301",
+    "/research/catalogue/studies/*  {papers}/research/catalogue/studies/:splat  301",
     "/research/cards/*  {papers}/research/cards/:splat  301",
     "/site-data/research/*  {papers}/site-data/research/:splat  301",
 )
@@ -440,6 +501,10 @@ def split_papers_bundle(
             if path.resolve().is_relative_to(papers_dir.resolve()) and path.is_file():
                 expected.add(path)
 
+    library_shard_retirements = retain_library_shards(
+        papers_dir, expected, previous_manifest, index,
+    )
+
     # Remove emptied directories left behind under dist.
     for directory in sorted(
         (path for path in dist_dir.rglob("*") if path.is_dir()),
@@ -474,6 +539,7 @@ def split_papers_bundle(
     manifest["rewrite_fingerprint"] = rewrite_fingerprint
     manifest["asset_generations"] = generations
     manifest["local_build_assets"] = True
+    manifest["library_shard_retirements"] = library_shard_retirements
     for item in manifest["files"]:
         if item["path"] in sources:
             item["source_sha256"] = sources[item["path"]]

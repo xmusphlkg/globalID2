@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import { useSurveillanceSummary } from './useSurveillanceSummary';
 import SurveillanceSources from './SurveillanceSources';
 import SurveillanceDownloads from './SurveillanceDownloads';
@@ -12,7 +13,7 @@ export default function SurveillanceDiseaseSummary({ dataUrl, mode, language, ro
     <SurveillanceDownloads dataUrl={dataUrl} language={language} />
     {data && <SurveillanceSources data={data} language={language} />}
   </div>;
-  if (!data) return <p role="status">{error ? <>{pick('Current data is unavailable.', '当前数据暂不可用。', 'Les données actuelles sont indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></> : pick('Loading current data…', '正在加载最新数据…', 'Chargement des données actuelles…')}</p>;
+  if (!data) return <p role="status">{error ? <>{pick('Current data is unavailable.', '当前数据暂不可用。', 'Les données actuelles sont indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></> : <GIDSLoader language={language} compact />}</p>;
   const revision = <p className="figure-caption mt-3" data-surveillance-version={version}>{pick('Data updated', '数据更新于', 'Données mises à jour')} {String(data.generated_at ?? '—').slice(0, 10)}</p>;
   if (mode === 'disease-coverage') return <div className="academic-meta-grid xl:grid-cols-2">
     {[[pick('Coverage window', '覆盖区间', 'Période couverte'), coverage(data)], [pick('Reporting countries', '报告国家数', 'Pays déclarants'), number(data.country_count, language)]].map(([name, value]) => <div className="academic-meta-item" key={name}><div className="academic-meta-label">{name}</div><div className="academic-meta-value text-sm">{value}</div></div>)}{revision}

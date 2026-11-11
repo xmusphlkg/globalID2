@@ -1,0 +1,15 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "https://globalinfectiousdisease.com",
+          "https://www.globalinfectiousdisease.com",
+          "https://papers.globalinfectiousdisease.com",
+          "https://reports.globalinfectiousdisease.com"
+        ],
+        "methods": ["GET", "HEAD"]
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 ---
 import { readResearchIndex } from '../../lib/generated-site-data.ts';
 import ReportLayout from '../../layouts/ReportLayout.astro';
+import GIDSLoading from '../../components/GIDSLoading.astro';
 import { buildAlternatePaths } from '../../lib/seo';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedRegionName, localizedResearchFacet, localizedResearchTopic, localizedStudyType, translateUi } from '../../utils/i18n';
@@ -35,6 +36,7 @@ const nodeTypeLabelsFr: Record<string, string> = {
   pathogen: 'agent pathogène', pathogen_type: 'type d’agent pathogène', policy: 'politique',
   population: 'population', population_setting: 'population et contexte', study_type: 'type d’étude', topic: 'thème',
 };
+const nodeTypeLabelsZh: Record<string, string> = { article: '文献', country: '国家或地区', disease: '疾病', intervention: '干预措施', pathogen: '病原体', pathogen_type: '病原体类型', policy: '政策领域', population: '研究人群', population_setting: '人群与场景', study_type: '研究类型', topic: '研究主题' };
 const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
   ABOUT_DISEASE: { en: 'About disease', zh: '涉及疾病', fr: 'Concerne la maladie' },
   STUDIED_IN: { en: 'Studied in', zh: '研究地区', fr: 'Étudié dans' },
@@ -66,9 +68,9 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
 >
   <div class="graph-page">
     <header class="academic-hero graph-hero">
-      <p class="academic-kicker">{pick('Auditable relationships', '可审计关系', 'Relations auditables')}</p>
+      <p class="academic-kicker">{pick('Auditable relationships', '可追溯的文献关联', 'Relations auditables')}</p>
       <h1>{pick('Research evidence graph', '研究证据图谱', 'Graphe des preuves de recherche')}</h1>
-      <p>{pick('Browse deterministic classifier links and quality-gated summary relationships. The graph does not infer causality or scientific credibility.', '浏览确定性分类关系与通过质量门控的摘要关系。本图谱不推断因果关系或科学可信度。', 'Parcourez les liens déterministes du classificateur et les relations de résumés contrôlées par la qualité. Le graphe n’infère ni causalité ni crédibilité scientifique.')}</p>
+      <p>{pick('Browse deterministic classifier links and quality-gated summary relationships. The graph does not infer causality or scientific credibility.', '查看文献与疾病、地区和研究主题之间的关联。关联来自分类结果及已通过质量检查的摘要，不代表因果关系或研究质量。', 'Parcourez les liens déterministes du classificateur et les relations de résumés contrôlées par la qualité. Le graphe n’infère ni causalité ni crédibilité scientifique.')}</p>
       <dl>
         <div><dt>{pick('Nodes', '节点', 'Nœuds')}</dt><dd>{graph.stats?.nodes ?? nodes.length}</dd></div>
         <div><dt>{pick('Relationships', '关系', 'Relations')}</dt><dd>{graph.stats?.edges ?? edgeCount}</dd></div>
@@ -87,7 +89,7 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
           <span>{pick('Node type', '节点类型', 'Type de nœud')}</span>
           <select class="site-control-input" data-graph-type>
             <option value="">{pick('All node types', '全部节点类型', 'Tous les types de nœuds')}</option>
-            {nodeTypes.map(type => <option value={type}>{fr ? nodeTypeLabelsFr[type] ?? 'entité' : type.replaceAll('_', ' ')}</option>)}
+            {nodeTypes.map(type => <option value={type}>{zh ? nodeTypeLabelsZh[type] ?? '实体' : fr ? nodeTypeLabelsFr[type] ?? 'entité' : type.replaceAll('_', ' ')}</option>)}
           </select>
         </label>
       </div>
@@ -100,21 +102,21 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
           <button class="graph-more" type="button" data-graph-more>{pick('Show more entities', '显示更多实体', 'Afficher davantage d’entités')}</button>
         </section>
         <section aria-labelledby="graph-relation-heading" class="graph-detail">
-          <div class="graph-section-heading"><h2 id="graph-relation-heading">{pick('Selected relationships', '所选关系', 'Relations sélectionnées')}</h2></div>
+          <div class="graph-section-heading"><h2 id="graph-relation-heading">{pick('Selected relationships', '关联详情', 'Relations sélectionnées')}</h2></div>
           <div data-graph-detail>
-            <p>{pick('Loading evidence graph relationships.', '正在加载证据图谱关系。', 'Chargement des relations du graphe des preuves.')}</p>
+            <GIDSLoading language={locale} label={pick('Loading evidence relationships…', '正在读取文献关联…', 'Chargement des relations du graphe…')} />
           </div>
         </section>
       </div>
     </section>
 
     <section class="graph-method card">
-      <h2>{pick('Provenance and limits', '来源与限制', 'Provenance et limites')}</h2>
-      <p>{pick('Disease, country, topic, pathogen, and study-design edges retain classifier confidence. Population-setting edges copy only a bilingual, quality-gated structured-summary field. Intervention and policy edges use a small published topic mapping. No raw abstracts, PDFs, or private source payloads are exported.', '疾病、国家、主题、病原体和研究设计关系保留分类置信度；人群与场景关系仅来自通过质量门控的双语结构化摘要；干预和政策关系使用小型公开主题映射。系统不会导出原始摘要、PDF 或私有来源负载。', 'Les liens de maladie, pays, thème, agent pathogène et plan d’étude conservent la confiance du classificateur. Les liens de population et de contexte ne reprennent qu’un champ de résumé structuré contrôlé par la qualité. Aucun résumé brut, PDF ou contenu privé n’est exporté.')}</p>
+      <h2>{pick('Provenance and limits', '关联来源与使用说明', 'Provenance et limites')}</h2>
+      <p>{pick('Disease, country, topic, pathogen, and study-design edges retain classifier confidence. Population-setting edges copy only a bilingual, quality-gated structured-summary field. Intervention and policy edges use a small published topic mapping. No raw abstracts, PDFs, or private source payloads are exported.', '疾病、地区、主题、病原体和研究设计的关联保留分类置信度。人群和场景信息来自已通过质量检查的结构化摘要，干预与政策关联依据公开主题映射。图谱用于查找相关资料，使用研究结论前请核对原文。', 'Les liens de maladie, pays, thème, agent pathogène et plan d’étude conservent la confiance du classificateur. Les liens de population et de contexte ne reprennent qu’un champ de résumé structuré contrôlé par la qualité. Aucun résumé brut, PDF ou contenu privé n’est exporté.')}</p>
     </section>
   </div>
 
-  <script is:inline define:vars={{ relationLabels, nodeTypeLabelsFr }}>
+  <script is:inline define:vars={{ relationLabels, nodeTypeLabelsFr, nodeTypeLabelsZh }}>
     (() => {
       const root = document.querySelector('[data-evidence-graph]');
       if (!root) return;
@@ -130,6 +132,8 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
       let selectedNodeId = '';
 
       const lang = () => root.dataset.graphLocale === 'zh' ? 'zh' : root.dataset.graphLocale === 'fr' ? 'fr' : 'en';
+      const nodeLabel = node => !node ? '' : lang() === 'zh' ? (node.label_zh || node.label) : lang() === 'fr' ? (node.label_fr || node.label) : node.label;
+      const nodeTypeLabel = node => lang() === 'zh' ? (nodeTypeLabelsZh[node.type] || '实体') : lang() === 'fr' ? (nodeTypeLabelsFr[node.type] || 'entité') : String(node.type || '').replaceAll('_', ' ');
       const routePrefix = root.dataset.graphPrefix || '';
       // Article pages are served from the papers host; local preview renders them itself.
       const papersHref = (path) => /^\/(?:(?:zh|fr)\/)?research\/articles\//.test(path) && !['localhost', '127.0.0.1'].includes(location.hostname)
@@ -145,7 +149,7 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
         const query = String(search?.value || '').trim().toLowerCase();
         const selectedType = String(type?.value || '');
         const matching = (graph.nodes || []).filter((node) => (!selectedType || node.type === selectedType)
-          && (!query || String(node.label || '').toLowerCase().includes(query)));
+          && (!query || `${node.label || ''} ${nodeLabel(node)}`.toLowerCase().includes(query)));
         const visible = matching.slice(0, visibleLimit);
         if (nodeList) {
           const fragment = document.createDocumentFragment();
@@ -155,9 +159,9 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
             button.dataset.nodeId = node.id;
             button.setAttribute('aria-pressed', String(node.id === selectedNodeId));
             const label = document.createElement('span');
-            label.textContent = lang() === 'fr' ? node.label_fr : node.label;
+            label.textContent = nodeLabel(node);
             const nodeType = document.createElement('small');
-            nodeType.textContent = lang() === 'fr' ? (nodeTypeLabelsFr[node.type] || 'entité') : String(node.type || '').replaceAll('_', ' ');
+            nodeType.textContent = nodeTypeLabel(node);
             button.append(label, nodeType);
             button.addEventListener('click', () => showNode(node.id));
             fragment.append(button);
@@ -174,9 +178,9 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
         root.querySelectorAll('[data-node-id]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.nodeId === nodeId)));
         const linked = (graph.edges || []).filter((edge) => edge.source === nodeId || edge.target === nodeId);
         const title = document.createElement('h3');
-        title.textContent = lang() === 'fr' ? node.label_fr : node.label;
+        title.textContent = nodeLabel(node);
         const meta = document.createElement('p');
-        meta.textContent = `${lang() === 'fr' ? (nodeTypeLabelsFr[node.type] || 'entité') : String(node.type || '').replaceAll('_', ' ')} · ${linked.length} ${lang() === 'zh' ? '条关系' : lang() === 'fr' ? 'relations' : 'relationships'}`;
+        meta.textContent = `${nodeTypeLabel(node)} · ${linked.length} ${lang() === 'zh' ? '条关系' : lang() === 'fr' ? 'relations' : 'relationships'}`;
         const list = document.createElement('ul');
         linked.forEach((edge) => {
           const outbound = edge.source === nodeId;
@@ -186,7 +190,7 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
           const label = document.createElement('span');
           label.textContent = `${outbound ? '→' : '←'} ${relation[lang()]}`;
           const target = other?.url ? document.createElement('a') : document.createElement('strong');
-          target.textContent = (lang() === 'fr' ? other?.label_fr : other?.label) || (outbound ? edge.target : edge.source);
+          target.textContent = nodeLabel(other) || (outbound ? edge.target : edge.source);
           if (other?.url) target.href = papersHref(routePrefix && other.url.startsWith('/') ? `${routePrefix}${other.url}` : other.url);
           const confidence = document.createElement('small');
           confidence.textContent = edge.confidence == null ? (edge.provenance || '') : `${Math.round(Number(edge.confidence) * 100)}%`;

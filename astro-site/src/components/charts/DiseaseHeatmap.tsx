@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import RuntimeChartSource from './RuntimeChartSource';
 // src/components/charts/DiseaseHeatmap.tsx
 // OWID-style heatmap with ECharts rendering, adaptive width, and scrollable disease axis.
@@ -538,6 +539,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     if (remoteDataset.isLoading) {
       return (
         <div className="chart-loading-shell" role="status" aria-busy="true" aria-label={lang === 'zh' ? '热图数据加载中' : 'Loading heatmap data'}>
+          <GIDSLoader language={lang} label={lang === 'zh' ? '正在读取热图数据…' : lang === 'fr' ? 'Chargement des données de la carte thermique…' : 'Loading heatmap data…'} />
           <div className="chart-loading-toolbar" aria-hidden="true">
             <span className="chart-loading-pill w-28" />
             <span className="chart-loading-pill w-36" />

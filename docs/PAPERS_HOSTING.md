@@ -1,6 +1,6 @@
 # Papers hosting channel (R2)
 
-Article HTML keeps `/_astro/` references on the Papers host. The splitter copies
+Article and disease-literature HTML keep `/_astro/` references on the Papers host. The splitter copies
 referenced CSS, scripts, hydration modules and their transitive fonts/imports
 into the R2 bundle; missing dependencies fail the split. Assets upload before
 HTML, and the preceding generation remains available for cached pages. Navigation,
@@ -15,9 +15,60 @@ Public hosting is therefore three channels:
 
 | Channel | Content | Target |
 | --- | --- | --- |
-| Pages main | Countries, diseases, situation, research list/index pages, `_astro`, scripts | Cloudflare Pages (`globalidv2`) |
+| Pages main | Countries, disease surveillance, situation, research overview and other collection pages, `_astro`, scripts | Cloudflare Pages (`globalidv2`) |
 | GitHub downloads | Time-partitioned CSV/JSON/XLSX | `globalID2_data_download` `main` |
-| R2 papers | Article HTML (en/zh/fr), card PNGs, `site-data/research/*` | R2 `globalid-papers` @ `papers.globalinfectiousdisease.com` |
+| R2 papers | Article and disease-literature HTML (en/zh/fr), slim disease literature catalogues, card PNGs, `site-data/research/*` | R2 `globalid-papers` @ `papers.globalinfectiousdisease.com` |
+
+## Disease literature pages
+
+The Papers bucket also needs a bucket-level CORS policy for main-site Ask
+requests. Pages `_headers` files do not configure R2 responses. The checked-in
+policy is [cloudflare/papers/cors.json](../cloudflare/papers/cors.json); apply it
+with `wrangler r2 bucket cors set globalid-papers --file ../cloudflare/papers/cors.json`
+from `astro-site`, then check the response using an `Origin` header for the main
+site. Only production GIDS origins and GET/HEAD are allowed. See the
+[Cloudflare R2 CORS documentation](https://developers.cloudflare.com/r2/buckets/cors/).
+
+Browser disease/country/topic Ask collections must be generated alongside the
+global browser index. `scripts/repair_browser_research_collections.py` can rebuild
+them from the existing canonical research snapshot without a database export or
+Astro render. Synchronize only those three directories into the existing Papers
+bundle, refresh its manifest, and run the normal incremental R2 publisher. Do not
+rerun the splitter against an already-split main bundle.
+
+The complete disease literature interface is published on the existing Papers
+host, beside the article summaries:
+
+- `/{locale/}research/diseases/{slug}/` — the disease-specific page, with English
+  at `/research/diseases/{slug}/` and Chinese/French at `/zh/` and `/fr/`.
+- `/research/catalogue/diseases/{disease_id}.json` — a compact schema-v2 index
+  for complete-catalogue filtering, sorting and publication trends. IDs are
+  lowercase in URLs. It carries the record IDs, searchable/filterable fields,
+  dates and shard references, rather than every full card or evidence summary.
+- `/research/catalogue/diseases/{disease_id}/{YYYYMM}{page_index}-{content_hash}.json`
+  — content-addressed card shards, each with at most 24 records. Pages are grouped
+  by publication month (`000000` for undated records), so adding a paper only
+  replaces its disease index and the affected month’s pages; historical months
+  and other diseases keep their existing shard URLs. The browser
+  loads only the shards needed for the current result page and reuses fetched
+  shards while paging. Reviewed cards link to existing article summaries;
+  bibliographic cards link to their original sources.
+
+Disease surveillance remains on the main site at `/{locale/}diseases/{slug}/`.
+Its literature link points to the Papers disease library. Legacy main-host
+literature URLs redirect to the same path on Papers; canonical URLs, alternate
+languages and sitemaps identify the Papers host directly.
+
+The disease library uses the existing `ReportLayout` → `BaseLayout` and shared
+`global.css`, header, footer, typography, theme and loading component. Its
+component stylesheet adds only library-specific layouts, filters and trend
+presentation. The split step copies the referenced shared CSS, React island,
+loader styles, scripts and transitive dependencies from that same build to
+Papers `/_astro/`; it does not maintain a second design system or fetch a later
+main-site stylesheet at runtime. The catalogue JSON and its HTML are staged in
+the same Papers bundle. New card shards are uploaded before the index and old
+shard URLs are retained for 48 hours so cached indexes can still resolve them.
+Main-site navigation and surveillance fetches continue to use the main origin.
 
 ## Release flow
 
@@ -115,7 +166,8 @@ downloads, and R2 papers readiness.
   retains the HTTP status in failure diagnostics. Authentication/403 failures
   remain terminal; verification is never skipped to complete a release.
 
-- Main-site `_redirects` send `/research/articles/*`, locale variants, cards, and
+- Main-site `_redirects` send `/research/articles/*`, `/research/diseases/*`,
+  their locale variants, `/research/catalogue/diseases/*`, cards, and
   `/site-data/research/*` to the papers host with 301.
 - Main-site `_headers` allow the papers origin to load `/_astro/*`, `/scripts/*`,
   and logos cross-origin. Papers pages also fetch `/site-data/*` and
@@ -130,12 +182,13 @@ downloads, and R2 papers readiness.
   `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and
   `Referrer-Policy: strict-origin-when-cross-origin`. This is a dashboard
   setting, not part of the release, so check it once after the first publish.
-- Article URLs without a trailing slash are redirected by the main site to the
+- Article and disease-library URLs without a trailing slash are redirected by the main site to the
   same path on the papers host, where the R2 key has the trailing slash. Add a
   Transform/Redirect Rule on the papers host that appends `/` to extensionless
-  paths, or check that `/research/articles/<slug>` resolves after the first
-  publish.
-- Failed releases write `exports/release-failures/<task_uuid>/dist-inventory.json`
-  before rolling back local artifacts.
+  paths, or check that `/research/articles/<slug>` and
+  `/research/diseases/<slug>` resolve after the first publish.
+- Failed releases retain generated bundles for checksummed retries and write
+  diagnostic inventories under `exports/release-failures/<task_uuid>/`. Local
+  artifacts are not rolled back after a channel has already been published.
 - Literature-only releases still publish R2 papers; they may skip GitHub
   downloads and the raw archive.

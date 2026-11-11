@@ -1,6 +1,7 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchAskSurveillance from '../../components/research/ResearchAskSurveillance';
+import GIDSLoading from '../../components/GIDSLoading.astro';
 import { buildAlternatePaths } from '../../lib/seo';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
 import { RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS, translateUi } from '../../utils/i18n';
@@ -76,6 +77,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
     </header>
 
     <section id="ask-status" class="card ask-status" role="status" aria-live="polite" hidden></section>
+    <template id="ask-loading-template"><GIDSLoading language={locale} label={pick('Searching the published catalogue…', '正在检索已发布文献…', 'Recherche dans le catalogue publié…')} compact /></template>
     <section id="ask-answer" class="ask-answer" aria-live="polite" hidden>
       <article class="card answer-summary">
         <div class="answer-heading"><div><p class="academic-kicker">{pick('Catalogue answer', '目录回答')}</p><h2>{pick('What the indexed evidence shows', '索引证据显示什么')}</h2></div><a href={`${prefix}/research/`}>{pick('Browse Research Radar', '浏览研究雷达')} <span aria-hidden="true">→</span></a></div>
@@ -113,7 +115,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
 </ReportLayout>
 
 <script>
-  import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
+  import { loadResearchQuestionCatalogue } from '../../lib/research-catalogue-client';
   import { answerResearchQuestion } from '../../lib/research-ask';
   import { siteHref } from '../../lib/papers';
 
@@ -182,7 +184,8 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
     status.dataset.kind = kind;
     status.textContent = message;
   };
-  const loadCatalogue = loadResearchCatalogue;
+  const loadCatalogue = loadResearchQuestionCatalogue;
+  let activeQuestion = 0;
 
   const normalizedFacet = (value: unknown) => String(value ?? '')
     .normalize('NFKD')
@@ -351,7 +354,19 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
         oa.textContent = isZh() ? '开放获取 ↗' : isFr() ? 'Accès ouvert ↗' : 'Open access ↗';
         citations.append(oa);
       }
-      body.append(rowHeader, heading, meta, matched, finding, citations);
+      body.append(rowHeader, heading, meta, matched);
+      if (item.sourceReview) {
+        const review = make('p', 'evidence-match');
+        review.dataset.sourceReview = '';
+        const original = make('a');
+        original.href = item.sourceReview.sourceUrl;
+        original.target = '_blank';
+        original.rel = 'noopener noreferrer';
+        original.textContent = isZh() ? item.sourceReview.noticeZh : isFr() ? item.sourceReview.noticeFr : item.sourceReview.noticeEn;
+        review.append(original);
+        body.append(review);
+      }
+      body.append(finding, citations);
       row.append(number, body);
       row.dataset.evidenceLevel = item.evidenceLevel;
       return row;
@@ -361,15 +376,27 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
   const ask = async (question: string) => {
     const query = question.trim();
     if (query.length < 2) return;
+    const request = ++activeQuestion;
     setStatus(isZh() ? '正在检索已发布目录…' : isFr() ? 'Recherche dans le catalogue publié…' : 'Searching the published catalogue…');
+    const loader = document.querySelector<HTMLTemplateElement>('#ask-loading-template');
+    if (status && loader) status.replaceChildren(loader.content.cloneNode(true));
     answer?.setAttribute('hidden', '');
     try {
-      const articles = await loadCatalogue();
+      const articles = await loadCatalogue(query, { onProgress: ({ mode, completed, total }) => {
+        if (request !== activeQuestion) return;
+        const label = status?.querySelector('.gids-loading__copy > span:last-child');
+        if (!label) return;
+        label.textContent = mode === 'catalogue'
+          ? (isZh() ? `此问题需检索全部已发布目录：已读取 ${completed} / ${total} 个文献分片，首次加载可能较慢。` : isFr() ? `Recherche dans le catalogue complet : ${completed} / ${total} fragments lus. Le premier chargement peut prendre du temps.` : `Searching the complete published catalogue: ${completed} / ${total} files loaded. The first search may take longer.`)
+          : (isZh() ? `正在读取相关文献集合：${completed} / ${total}…` : isFr() ? `Chargement des collections pertinentes : ${completed} / ${total}…` : `Loading relevant literature collections: ${completed} / ${total}…`);
+      } });
+      if (request !== activeQuestion) return;
       render(answerResearchQuestion(query, articles, { limit: 12 }));
       const url = new URL(location.href);
       url.searchParams.set('q', query);
       history.replaceState(null, '', url);
     } catch {
+      if (request !== activeQuestion) return;
       setStatus(isZh() ? '暂时无法读取研究目录，请稍后重试。' : isFr() ? 'Le catalogue de recherche est indisponible. Réessayez dans un instant.' : 'The research catalogue could not be loaded. Please try again shortly.', 'error');
     }
   };

@@ -19,7 +19,7 @@ import type { CountryDirectory, DiseaseDirectory } from './site-data-loaders.ts'
 export interface SitemapEntry {
   path: string;
   lastmod?: string;
-  alternates?: Array<{ locale: 'en' | 'zh-CN' | 'x-default'; path: string }>;
+  alternates?: Array<{ locale: 'en' | 'zh-CN' | 'fr-FR' | 'x-default'; path: string }>;
 }
 
 export interface SitemapMeta {
@@ -146,6 +146,14 @@ function localizedEntry(path: string, lastmod?: string): SitemapEntry[] {
     { path: englishPath, lastmod, alternates },
     { path: chinesePath, lastmod, alternates },
   ];
+}
+
+function diseaseLibraryEntries(path: string, lastmod?: string): SitemapEntry[] {
+  const alternates: NonNullable<SitemapEntry['alternates']> = [
+    { locale: 'en', path }, { locale: 'zh-CN', path: `/zh${path}` },
+    { locale: 'fr-FR', path: `/fr${path}` }, { locale: 'x-default', path },
+  ];
+  return [path, `/zh${path}`, `/fr${path}`].map(path => ({ path, lastmod, alternates }));
 }
 
 function diseaseIsIndexable(
@@ -303,7 +311,7 @@ export function buildSitemapGroups({
     for (const disease of research.facets?.diseases ?? []) {
       const slug = pathSegment(disease.slug, true);
       const count = Number(disease.count ?? 0);
-      if (slug && isIndexableResearchCollection(count)) groups.research.push(...localizedEntry(
+      if (slug && isIndexableResearchCollection(count)) groups[PAPERS_SITEMAP_GROUP].push(...diseaseLibraryEntries(
         `/research/diseases/${slug}/`,
         latestMatchingResearchUpdate(article => (article.diseases ?? []).some(item => (
           pathSegment(item.slug, true) === slug

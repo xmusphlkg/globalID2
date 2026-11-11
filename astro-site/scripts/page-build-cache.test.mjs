@@ -136,3 +136,46 @@ test('country changes invalidate only consumed data, alerts, reports and ranking
     assert.equal(child['country:c3'].fingerprint, ownFeeds['country:c3'].fingerprint);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test('libraries fingerprint all public literature per disease, including bibliography-only membership', () => {
+  const root = mkdtempSync(join(tmpdir(), 'gids-library-cache-'));
+  try {
+    const disease = (id, slug) => ({ disease_id: id, slug, name_en: slug });
+    const flu = disease('D038', 'influenza');
+    const other = disease('D100', 'other');
+    const article = (id, condition, extra = {}) => ({ article_id: id, title: id, peer_review_status: 'peer_reviewed', diseases: [condition], countries: [], ...extra });
+    const index = { articles: [article('reviewed', flu)], bibliographic_articles: [article('other-bib', other, { detail_available: false })], preprints: [] };
+    writeJson(root, 'research/routes.json', { facets: { diseases: [flu] } });
+    writeJson(root, 'research/diseases/d038.json', { articles: index.articles });
+    writeJson(root, 'diseases/index.json', [flu, other]);
+    const snapshot = () => {
+      writeJson(root, 'research/index.json', index);
+      return pageSourceSnapshot({ dataRoot: root, shared: 'templates' }).articles;
+    };
+    const first = snapshot();
+    assert.ok(first['research:diseases:other']);
+    index.bibliographic_articles.push(article('flu-bib', flu, { detail_available: false }));
+    const added = snapshot();
+    assert.notEqual(added['research:diseases:influenza'].fingerprint, first['research:diseases:influenza'].fingerprint);
+    assert.notEqual(added['disease:D038'].fingerprint, first['disease:D038'].fingerprint);
+    assert.equal(added['research:diseases:other'].fingerprint, first['research:diseases:other'].fingerprint);
+    index.last_updated = '2026-11-11';
+    assert.equal(snapshot()['research:diseases:other'].fingerprint, added['research:diseases:other'].fingerprint);
+    index.articles[0].detail_available = false;
+    const summary = snapshot();
+    assert.notEqual(summary['research:diseases:influenza'].fingerprint, added['research:diseases:influenza'].fingerprint);
+    index.bibliographic_articles[1].title = 'Corrected title';
+    assert.notEqual(snapshot()['research:diseases:influenza'].fingerprint, summary['research:diseases:influenza'].fingerprint);
+    const fresh = disease('D200', 'new-disease');
+    index.bibliographic_articles.push(article('new-bib', fresh));
+    assert.ok(snapshot()['research:diseases:new-disease']);
+    index.bibliographic_articles.pop();
+    assert.equal(snapshot()['research:diseases:new-disease'], undefined);
+    index.preprints.push(article('public-preprint', fresh, { peer_review_status: 'preprint', editorial_status: 'published' }));
+    assert.ok(snapshot()['research:diseases:new-disease']);
+    index.preprints[0].editorial_status = 'draft';
+    assert.equal(snapshot()['research:diseases:new-disease'], undefined);
+    index.bibliographic_articles.push(article('legacy', disease('D201', 'virus-infection-(rsv)')));
+    assert.ok(snapshot()['research:diseases:virus-infection-rsv']);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

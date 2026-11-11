@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import { useSurveillanceSummary } from './useSurveillanceSummary';
 import SurveillanceSources from './SurveillanceSources';
 import SurveillanceDownloads from './SurveillanceDownloads';
@@ -16,7 +17,7 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
   </div>;
   if (!data) return <div className="text-sm text-[rgb(var(--text-muted))]" role="status">
     {error ? <>{pick('Current data is unavailable.', '当前数据暂不可用。', 'Les données actuelles sont indisponibles.')} {mode !== 'country-card' && <button type="button" className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button>}</>
-      : pick('Loading current data…', '正在加载最新数据…', 'Chargement des données actuelles…')}
+      : <GIDSLoader language={language} compact />}
   </div>;
   const timestamp = data.generated_at;
   const revision = <p className="mt-3 text-xs text-[rgb(var(--text-muted))]" data-surveillance-version={version}>

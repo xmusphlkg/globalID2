@@ -1,3 +1,5 @@
+import GIDSLoader from '../GIDSLoader';
+import { formatFileSize } from '../../lib/download-presentation';
 import '../download-dialog.css';
 import { useEffect, useRef, useState } from 'react';
 import { mainSiteBase } from '../../lib/papers';
@@ -5,7 +7,7 @@ import { coverage, number, pick, safeUrl, type Language, type Summary } from '..
 
 const formats = ['csv', 'json', 'xlsx'] as const;
 type File = { url: string; filename?: string; bytes?: number };
-const size = (bytes?: number) => bytes === undefined ? '—' : bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : bytes >= 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${bytes} B`;
+const size = formatFileSize;
 
 function FileCard({ part, format, file, language }: { part: Summary; format: string; file: File; language: Language }) {
   const [busy, setBusy] = useState(false);
@@ -63,7 +65,7 @@ export default function SurveillanceDownloadContents({ dataUrl, language }: { da
     }).catch(() => { if (active) setError(true); }).finally(() => window.clearTimeout(timeout));
     return () => { active = false; controller.abort(); window.clearTimeout(timeout); };
   }, [url, attempt]);
-  if (!data) return <p className="download-dialog__feedback" role="status">{error ? <>{text('Download information is unavailable.', '下载信息暂不可用。', 'Informations de téléchargement indisponibles.')} <button className="underline" onClick={() => setAttempt(value => value + 1)}>{text('Retry', '重试', 'Réessayer')}</button> · <a className="underline" href={`${prefix}/downloads/`}>{text('Browse downloads', '浏览下载档案', 'Parcourir les téléchargements')}</a></> : text('Loading download information…', '正在加载下载信息…', 'Chargement des téléchargements…')}</p>;
+  if (!data) return <p className="download-dialog__feedback" role="status">{error ? <>{text('Download information is unavailable.', '下载信息暂不可用。', 'Informations de téléchargement indisponibles.')} <button className="underline" onClick={() => setAttempt(value => value + 1)}>{text('Retry', '重试', 'Réessayer')}</button> · <a className="underline" href={`${prefix}/downloads/`}>{text('Browse downloads', '浏览下载档案', 'Parcourir les téléchargements')}</a></> : <GIDSLoader language={language} />}</p>;
   const files = data.parts.filter((part: Summary) => period === 'all' || part.id === period).flatMap((part: Summary) => formats.filter(kind => format === 'all' || kind === format).flatMap(kind => {
     const file = part.files?.[kind];
     const url = safeUrl(file?.url);
@@ -75,7 +77,7 @@ export default function SurveillanceDownloadContents({ dataUrl, language }: { da
         <label className="download-filter"><span>{text('Time range', '时间范围', 'Période')}</span><select data-download-time-filter value={period} onChange={event => setPeriod(event.target.value)}><option value="all">{text('All time ranges', '全部时间范围', 'Toutes les périodes')}</option>{data.parts.map((part: Summary) => <option key={part.id} value={part.id}>{part.label || part.id}</option>)}</select></label>
         <label className="download-filter"><span>{text('File format', '文件格式', 'Format de fichier')}</span><select data-download-format-filter value={format} onChange={event => setFormat(event.target.value)}><option value="all">{text('All formats', '全部格式', 'Tous les formats')}</option>{formats.map(kind => <option key={kind} value={kind}>{kind.toUpperCase()}</option>)}</select></label>
       </div>
-      <p className="download-dialog__snapshot"><span>{text('Download snapshot', '下载文件版本', 'Version des téléchargements')}: {String(data.generated_at ?? '—').slice(0, 10)}</span><span>{number(data.record_count, language)} {text('rows', '行', 'lignes')}</span><span>{coverage(data)}</span></p>
+      <p className="download-dialog__snapshot"><span>{text('Download snapshot', '文件更新日期', 'Version des téléchargements')}: {String(data.generated_at ?? '—').slice(0, 10)}</span><span>{text('All periods', '全部历史', 'Toutes les périodes')}: {number(data.record_count, language)} {text('rows', '行', 'lignes')}</span><span>{coverage(data)}</span></p>
     </div>
     <div className="download-dialog__body"><div className="download-file-grid">{files.map(({ part, format, file }: { part: Summary; format: string; file: File }) => <FileCard key={`${part.id}-${format}`} part={part} format={format} file={file} language={language} />)}</div>
       {!files.length && <p className="download-dialog__empty">{text('No files match these filters.', '没有符合筛选条件的文件。', 'Aucun fichier ne correspond à ces filtres.')}</p>}

@@ -214,3 +214,46 @@ test('ranking is stable, field-weighted, and de-duplicates normalized DOI varian
   assert.equal(forward.filter((item) => item.citation.doi === '10.1000/duplicate').length, 1);
   assert.equal(forward.find((item) => item.citation.doi === '10.1000/duplicate')?.article.article_id, 'title-match');
 });
+
+test('Hib names do not become an exact influenza concept through Latin or Chinese substrings', () => {
+  const hib = { article_id: 'hib', title: 'Haemophilus influenzae type b vaccine in Japanese infants', diseases: [{ disease_id: 'D100', name_en: 'Haemophilus influenzae', name_zh: '流感嗜血杆菌' }], countries: [{ code: 'JP', name_en: 'Japan', name_zh: '日本' }] };
+  assert.equal(rankResearchArticles('influenza', [hib]).length, 0);
+  assert.equal(rankResearchArticles('日本流感', [hib]).some(row => row.evidenceLevel === 'exact'), false);
+  const specific = rankResearchArticles('日本流感嗜血杆菌', [hib]);
+  assert.equal(specific[0].evidenceLevel, 'exact');
+  assert.equal(specific[0].matchReasons.some(reason => reason.queryTerm === 'Influenza'), false);
+  const coinfection = { ...hib, article_id: 'coinfection', title: 'Influenza and Haemophilus influenzae co-infection', diseases: [...hib.diseases, { disease_id: 'D038', name_en: 'Influenza', name_zh: '流行性感冒' }] };
+  assert.equal(rankResearchArticles('influenza', [coinfection])[0].evidenceLevel, 'exact');
+  assert.equal(rankResearchArticles('流感与流感嗜血杆菌', [coinfection])[0].evidenceLevel, 'exact');
+});
+
+test('source-reviewed bacterial-genomics DOI stays background for influenza while genuine coinfection remains exact', () => {
+  // Actual canonical metadata and primary source: PMID37700242 / BMC Infectious
+  // Diseases 23:596 (2023). Its provider retains the conflicting major MeSH.
+  const genomic = {
+    article_id: 'lit_136e43b43576c91d0ccffaeb', doi: '10.1186/s12879-023-08560-x',
+    title: 'Genomic classification and antimicrobial resistance profiling of Streptococcus pneumoniae and Haemophilus influenzae isolates associated with paediatric otitis media and upper respiratory infection',
+    diseases: [{ disease_id: 'D100', name_en: 'Haemophilus influenzae', name_zh: '流感嗜血杆菌', confidence: 0.98 }, { disease_id: 'D038', name_en: 'Influenza', name_zh: '流行性感冒', confidence: 0.94 }],
+    peer_review_status: 'peer_reviewed',
+  };
+  // Genuine independent viral/bacterial study, verified against its publisher:
+  // https://doi.org/10.3389/fmicb.2023.1137369 . Do not generalize the exception.
+  const coinfection = { ...genomic, article_id: 'coinfection', doi: '10.3389/fmicb.2023.1137369', title: 'Coinfection with influenza virus and non-typeable Haemophilus influenzae aggregates inflammatory lung injury and alters gut microbiota in COPD mice' };
+  const original = JSON.stringify(genomic);
+  for (const query of ['influenza', '流感', 'grippe']) {
+    const ranked = rankResearchArticles(query, [genomic, coinfection]);
+    assert.equal(ranked[0].article.doi, coinfection.doi);
+    assert.equal(ranked[0].evidenceLevel, 'exact');
+    assert.equal(ranked[0].sourceReview, undefined);
+    const reviewed = ranked.find(row => row.article.doi === genomic.doi)!;
+    assert.equal(reviewed.evidenceLevel, 'background');
+    assert.match(reviewed.sourceReview!.noticeZh, /细菌分离株/);
+    assert.equal(reviewed.sourceReview!.sourceUrl, 'https://link.springer.com/article/10.1186/s12879-023-08560-x');
+  }
+  const bacterialQuery = rankResearchArticles('流感嗜血杆菌', [genomic])[0];
+  assert.equal(bacterialQuery.evidenceLevel, 'exact', 'other supported disease retrieval is unchanged');
+  assert.equal(bacterialQuery.sourceReview, undefined);
+  assert.equal(JSON.stringify(genomic), original, 'provider disease tags and source data are untouched');
+  const normalized = rankResearchArticles('influenza', [{ ...genomic, doi: 'https://doi.org/10.1186/S12879-023-08560-X' }])[0];
+  assert.equal(normalized.evidenceLevel, 'background');
+});

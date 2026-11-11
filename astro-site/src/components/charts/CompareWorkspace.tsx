@@ -5,7 +5,9 @@ import ChartResultActions from './ChartResultActions';
 import { pngFromCanvases } from './chartExport';
 import { loadDiseaseDataset, type DiseaseDataset, type DiseaseDatasetSeriesEntry } from './diseaseDataset';
 import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
-import { liveCompareDiseaseOptions, type CompareDiseaseOption } from './compareDiseaseOptions';
+import { matchesDiseaseSearch } from '../../lib/disease-search';
+import GIDSLoader from '../GIDSLoader';
+import { comparisonPoints, reconcileComparisonCountries, liveCompareDiseaseOptions, type CompareDiseaseOption } from './compareDiseaseOptions';
 
 type Lang = 'en' | 'zh' | 'fr';
 const t = {
@@ -56,6 +58,9 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
   const publication = useSurveillanceSummary('/site-data/meta.json');
   const diseases = useMemo(() => liveCompareDiseaseOptions(identities, publication.data?.disease_coverage, datasets), [identities, publication.data, datasets]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [removedCountries, setRemovedCountries] = useState<string[]>([]);
   const [dark, setDark] = useState(false);
   const [compact, setCompact] = useState(false);
   const [ready, setReady] = useState(false);
@@ -63,6 +68,8 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
   const [countryQuery, setCountryQuery] = useState('');
   const refs = useRef<Record<string, any>>({});
   const seededCountries = useRef(false);
+  const initialized = useRef(false);
+  const urlCountriesProvided = useRef(false);
   const urlCountries = useRef<string[]>([]);
   const label = t[language];
   const diseaseName = (id: string) => {
@@ -104,25 +111,27 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
     return () => window.removeEventListener('resize', resize);
   }, []);
   useEffect(() => {
-    if (!publication.data && !publication.error) return;
+    if (initialized.current || (!publication.data && !publication.error)) return;
+    initialized.current = true;
     const availableDiseases = liveCompareDiseaseOptions(identities, publication.data?.disease_coverage);
     const params = new URLSearchParams(location.search);
     const ids = params.get('d')?.split(',').filter(id => identities.some(d => d.id === id)).slice(0, 2) ?? [];
+    urlCountriesProvided.current = params.has('c');
     urlCountries.current = params.get('c')?.split(',').filter(code => /^[A-Z]{2}$/.test(code)).slice(0, 4) ?? [];
-    setSelected(ids.length ? ids : availableDiseases.slice(0, 1).map(d => d.id));
+    setSelected(params.has('d') ? ids : availableDiseases.filter(d => (d.countries ?? 0) > 0).slice(0, 1).map(d => d.id));
     setCountries(urlCountries.current);
     setUnit(params.get('u') === 'rate' ? 'rate' : 'count');
     setReady(true);
   }, [identities, publication.data, publication.error]);
   useEffect(() => {
-    if (!selected.length) return;
+    if (!selected.length) { setDatasets({}); setLoading(false); setLoadError(false); return; }
     let cancelled = false;
-    setLoading(true);
+    setLoading(true); setLoadError(false);
     Promise.all(selected.map(async id => [id, await loadDiseaseDataset(`/site-data/diseases/${id.toLowerCase()}.json`)] as const))
       .then(entries => { if (!cancelled) { setDatasets(Object.fromEntries(entries)); setLoading(false); } })
-      .catch(() => { if (!cancelled) setLoading(false); });
+      .catch(() => { if (!cancelled) { setDatasets({}); setLoading(false); setLoadError(true); } });
     return () => { cancelled = true; };
-  }, [selected]);
+  }, [selected, attempt]);
   const diseaseHref = (id: string) => diseases.find(item => item.id === id)?.href;
   const available = useMemo(() => {
     const map = new Map<string, DiseaseDatasetSeriesEntry>();
@@ -131,23 +140,37 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
     }));
     return [...map].sort((a, b) => a[1].name_en.localeCompare(b[1].name_en));
   }, [datasets, selected]);
-  const matchingDiseases = diseases.filter(disease => `${disease.en} ${disease.zh} ${disease.fr} ${disease.id}`.toLocaleLowerCase().includes(diseaseQuery.trim().toLocaleLowerCase()));
+  const matchingDiseases = diseases.filter(disease => matchesDiseaseSearch(disease, diseaseQuery));
   const matchingCountries = available.filter(([code, entry]) => `${code} ${entry.name_en} ${entry.name_zh} ${entry.name_fr ?? ''}`.toLocaleLowerCase().includes(countryQuery.trim().toLocaleLowerCase()));
   useEffect(() => {
-    if (!ready || seededCountries.current || !available.length) return;
-    seededCountries.current = true;
-    if (!urlCountries.current.length) setCountries(available.slice(0, 2).map(([code]) => code));
-  }, [available, ready]);
+    if (!ready || loading || loadError || !selected.length || selected.some(id => !datasets[id])) return;
+    if (!seededCountries.current) {
+      seededCountries.current = true;
+      if (!urlCountriesProvided.current) { setCountries(available.slice(0, 2).map(([code]) => code)); return; }
+    }
+    const next = reconcileComparisonCountries(countries, available.map(([code]) => code));
+    if (next.removed.length) { setCountries(next.countries); setRemovedCountries(next.removed); }
+  }, [available, ready, loading, loadError, countries, selected, datasets]);
+  useEffect(() => {
+    if (!ready) return;
+    const url = new URL(location.href);
+    url.searchParams.set('d', selected.join(',')); url.searchParams.set('c', countries.join(',')); url.searchParams.set('u', unit);
+    if (url.toString() !== location.href) {
+      history.replaceState(null, '', url);
+      window.dispatchEvent(new Event('gids:urlchange'));
+    }
+  }, [ready, selected, countries, unit]);
   const toggleDisease = (id: string) => setSelected(value => value.includes(id) ? value.filter(item => item !== id) : value.length < 2 ? [...value, id] : value);
   const toggleCountry = (code: string) => setCountries(value => value.includes(code) ? value.filter(item => item !== code) : value.length < 4 ? [...value, code] : value);
   const rowsFor = (id: string): Array<{ code: string; color: string; entry: DiseaseDatasetSeriesEntry }> => countries.flatMap((code, index) => {
     const entry = datasets[id]?.country_series?.[code];
-    return entry?.dates?.length ? [{ code, color: palette[index], entry }] : [];
+    const values = unit === 'rate' ? entry?.incidence_rates : entry?.cases;
+    return entry?.dates?.length && values?.some(value => Number.isFinite(value)) ? [{ code, color: palette[index], entry }] : [];
   });
   const chartOption = (id: string) => {
     const rows = rowsFor(id);
     const ink = dark ? '#8fa8ba' : '#526271';
-    return { animation: false, backgroundColor: 'transparent', color: rows.map(row => row.color), legend: { top: 0, type: 'scroll', textStyle: { color: ink } }, grid: { left: compact ? 46 : 64, right: compact ? 12 : 24, top: 45, bottom: 75 }, tooltip: { trigger: 'axis', valueFormatter: (value: number) => value == null ? '—' : value.toLocaleString(language) }, xAxis: { type: 'time', axisLabel: { color: ink, hideOverlap: true } }, yAxis: { type: 'value', min: 0, axisLabel: { color: ink, formatter: (value: number) => Intl.NumberFormat(language, { notation: 'compact' }).format(value) } }, dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 15, height: 20 }], series: rows.map(row => ({ name: `${placeName(row.entry)} · ${periodName(row.entry.period_granularity)}`, type: 'line', showSymbol: false, connectNulls: false, data: row.entry.dates.map((date, index) => [date, unit === 'rate' ? row.entry.incidence_rates?.[index] : row.entry.cases?.[index]]).filter(point => point[1] != null), lineStyle: { width: 2 }, emphasis: { focus: 'series' } })) };
+    return { animation: false, backgroundColor: 'transparent', color: rows.map(row => row.color), legend: { top: 0, type: 'scroll', textStyle: { color: ink } }, grid: { left: compact ? 46 : 64, right: compact ? 12 : 24, top: 45, bottom: 75 }, tooltip: { trigger: 'axis', valueFormatter: (value: number) => value == null ? '—' : value.toLocaleString(language) }, xAxis: { type: 'time', axisLabel: { color: ink, hideOverlap: true } }, yAxis: { type: 'value', min: 0, axisLabel: { color: ink, formatter: (value: number) => Intl.NumberFormat(language, { notation: 'compact' }).format(value) } }, dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 15, height: 20 }], series: rows.map(row => ({ name: `${placeName(row.entry)} · ${periodName(row.entry.period_granularity)}`, type: 'line', showSymbol: false, connectNulls: false, data: comparisonPoints(row.entry.dates, unit === 'rate' ? row.entry.incidence_rates ?? [] : row.entry.cases ?? []), lineStyle: { width: 2 }, emphasis: { focus: 'series' } })) };
   };
   const share = () => {
     const url = new URL(location.href);
@@ -158,13 +181,15 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
   };
   return <div className="compare-workspace">
     <div className="compare-method-note"><span className="figure-kicker">{language === 'zh' ? '解读提示' : language === 'fr' ? 'Note méthodologique' : 'Interpretation note'}</span><p>{label.note}</p></div>
+    {removedCountries.length > 0 && <p className="disease-trend-note" role="status">{language === 'zh' ? `当前疾病没有 ${removedCountries.join('、')} 的可用序列，已移除这些选择。请重新选择参与对比的国家。` : language === 'fr' ? `Sélections retirées, sans séries disponibles : ${removedCountries.join(', ')}. Choisissez d’autres pays.` : `Removed countries without available series: ${removedCountries.join(', ')}. Choose countries for the current diseases.`}</p>}
     <div className="compare-controls">
       <fieldset className="compare-filter-panel"><legend>{label.diseases} <span>{selected.length}/2</span></legend><p className="compare-filter-hint">{label.diseaseHint}</p><input className="compare-search" type="search" aria-label={label.searchDiseases} placeholder={label.searchDiseases} value={diseaseQuery} onChange={event => setDiseaseQuery(event.target.value)} /><div className="compare-choice-list">{matchingDiseases.map(d => <label key={d.id} className={selected.includes(d.id) ? 'is-selected' : ''}><input type="checkbox" checked={selected.includes(d.id)} disabled={!selected.includes(d.id) && selected.length >= 2} onChange={() => toggleDisease(d.id)} /><span>{diseaseName(d.id)}</span><small>{d.countries ?? '—'} {label.available}</small></label>)}{!matchingDiseases.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
-      <fieldset className="compare-filter-panel"><legend>{label.countries} <span>{countries.length}/4</span></legend><p className="compare-filter-hint">{label.countryHint}</p><input className="compare-search" type="search" aria-label={label.searchCountries} placeholder={label.searchCountries} value={countryQuery} onChange={event => setCountryQuery(event.target.value)} /><div className="compare-choice-list">{matchingCountries.map(([code, entry]) => <label key={code} className={countries.includes(code) ? 'is-selected' : ''}><input type="checkbox" checked={countries.includes(code)} disabled={!countries.includes(code) && countries.length >= 4} onChange={() => toggleCountry(code)} /><span>{placeName(entry)}</span><small>{code}</small></label>)}{!matchingCountries.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
+      <fieldset className="compare-filter-panel"><legend>{label.countries} <span>{countries.filter(code => available.some(([availableCode]) => availableCode === code)).length}/4</span></legend><p className="compare-filter-hint">{label.countryHint}</p><input className="compare-search" type="search" aria-label={label.searchCountries} placeholder={label.searchCountries} value={countryQuery} onChange={event => setCountryQuery(event.target.value)} /><div className="compare-choice-list">{matchingCountries.map(([code, entry]) => <label key={code} className={countries.includes(code) ? 'is-selected' : ''}><input type="checkbox" checked={countries.includes(code)} disabled={!countries.includes(code) && countries.length >= 4} onChange={() => toggleCountry(code)} /><span>{placeName(entry)}</span><small>{code}</small></label>)}{!matchingCountries.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
     </div>
     <div className="compare-results-heading"><div><p className="figure-kicker">{label.results}</p><h2 className="figure-title">{selected.map(diseaseName).join(' / ') || label.results}</h2></div><label className="chart-measure">{label.unit}<select aria-label={label.unit} value={unit} onChange={event => setUnit(event.target.value === 'rate' ? 'rate' : 'count')}><option value="count">{label.count}</option><option value="rate">{label.rate}</option></select></label></div>
     {unit === 'rate' && <p className="disease-trend-note">{label.missing}</p>}
-    {loading && <div className="chart-loading-panel" role="status" aria-busy="true" style={{ height: 280 }} />}
-    {!loading && selected.length && countries.length >= 2 ? selected.map(id => <CompareResultChart key={id} id={id} title={diseaseName(id)} names={diseaseNames(id)} option={chartOption(id)} lang={language} share={share} dataHref={diseaseHref(id)} register={instance => { refs.current[id] = instance; }} />) : !loading ? <p className="disease-trend-empty compare-chart">{label.empty}</p> : null}
+    {(!ready || loading) && <div className="chart-loading-panel" style={{ minHeight: 180 }}><GIDSLoader language={language} /></div>}
+    {loadError && <p className="disease-trend-empty compare-chart" role="status">{language === 'zh' ? '暂时无法读取对比数据。' : language === 'fr' ? 'Les données de comparaison sont indisponibles.' : 'Comparison data could not load.'} <button type="button" className="underline" onClick={() => setAttempt(value => value + 1)}>{language === 'zh' ? '重试' : language === 'fr' ? 'Réessayer' : 'Retry'}</button></p>}
+    {ready && !loading && !loadError && (selected.length && countries.length >= 2 ? selected.map(id => rowsFor(id).length >= 2 ? <CompareResultChart key={id} id={id} title={diseaseName(id)} names={diseaseNames(id)} option={chartOption(id)} lang={language} share={share} dataHref={diseaseHref(id)} register={instance => { refs.current[id] = instance; }} /> : <p key={id} className="disease-trend-empty compare-chart" role="status">{diseaseName(id)} · {language === 'zh' ? `当前指标仅有 ${rowsFor(id).length} 个已选国家有有效数据，请选择至少两个。` : language === 'fr' ? `Données valides pour ${rowsFor(id).length} pays sélectionné(s) ; choisissez-en au moins deux.` : `Only ${rowsFor(id).length} selected countries have data for this measure. Select at least two.`}</p>) : <p className="disease-trend-empty compare-chart">{label.empty}</p>)}
   </div>;
 }

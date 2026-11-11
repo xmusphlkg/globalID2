@@ -1584,6 +1584,7 @@ async def collect_site_export_context(
                 for item in disease_exports
             },
             limit=get_config().literature.public_article_limit,
+            title_cache_path=ROOT / "data/cache/literature-title-associations.json",
         )
 
     # The notice-based Situation module exports its own static shards; the

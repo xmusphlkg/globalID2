@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 // src/components/charts/DiseaseCoverageMap.tsx
 // Interactive choropleth that shows every country/territory reporting the
 // current disease, so a disease page opens with a picture instead of a
@@ -408,6 +409,7 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
         aria-busy="true"
         aria-label={ui(lang, 'Loading coverage map', '覆盖范围地图加载中', 'Chargement de la carte de couverture')}
       >
+        <GIDSLoader language={lang} label={ui(lang, 'Loading coverage map…', '正在读取覆盖范围…', 'Chargement de la carte de couverture…')} />
         <div className="chart-loading-toolbar" aria-hidden="true">
           <span className="chart-loading-pill w-20" />
           <span className="chart-loading-pill w-28" />

@@ -1,10 +1,11 @@
+import GIDSLoader from '../GIDSLoader';
 import { useSurveillanceSummary } from './useSurveillanceSummary';
 import { cadence, countryLabel, number, coverage, sourceEntries, pick as translate, type Language, type Summary } from '../../lib/surveillance-presentation';
 
 export default function SurveillanceCountryContext({ dataUrl, language }: { dataUrl: string; language: Language }) {
   const { data, version, error, retry } = useSurveillanceSummary(dataUrl);
   const pick = (en: string, zh: string, fr: string) => translate(language, en, zh, fr);
-  if (!data) return <p role="status">{error ? <>{pick('Current data is unavailable.', '当前数据暂不可用。', 'Les données actuelles sont indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></> : pick('Loading current data…', '正在加载最新数据…', 'Chargement des données actuelles…')}</p>;
+  if (!data) return <p role="status">{error ? <>{pick('Current data is unavailable.', '当前数据暂不可用。', 'Les données actuelles sont indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></> : <GIDSLoader language={language} compact />}</p>;
   const revision = <p className="figure-caption mt-3" data-surveillance-version={version}>{pick('Data updated', '数据更新于', 'Données mises à jour')} {String(data.generated_at ?? '—').slice(0, 10)}</p>;
     const name = countryLabel(data, language);
     const sources = sourceEntries(data.source_info).map(source => source.label).join(' · ');

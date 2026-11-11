@@ -26,6 +26,46 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.18.2',
+    date: '2026-11-11',
+    titleEn: 'Disease literature and a smoother public site',
+    titleZh: '疾病文献专题与公开站体验优化',
+    titleFr: 'Bibliothèques par maladie et navigation améliorée',
+    summaryEn: 'Explore disease-specific literature with filters, publication trends and ready-to-use search strategies. Search, comparisons, source captions and loading feedback are clearer and more consistent.',
+    summaryZh: '新增疾病文献专题，支持筛选文献、查看发文趋势，并提供可直接使用的检索策略；同时完善搜索、国家对比、来源说明和加载反馈。',
+    summaryFr: 'Explorez les publications par maladie avec des filtres, des tendances et des stratégies de recherche. La recherche, les comparaisons, les sources et le chargement sont plus clairs.',
+    sections: [{
+      kind: 'new', labelEn: 'New', labelZh: '新增', labelFr: 'Nouveautés',
+      items: [{
+        en: 'Disease literature pages on the Papers site offer paginated records, filters, yearly publication trends and transparent PubMed and Europe PMC searches.',
+        zh: '疾病文献专题部署于论文分站，支持分页浏览、按需加载、多条件筛选和年度发文趋势，并提供完整的 PubMed、Europe PMC 检索式。',
+        fr: 'Les bibliothèques par maladie réunissent les publications, les filtres, les tendances annuelles et les requêtes PubMed et Europe PMC.',
+      }, {
+        en: 'A lightweight GIDS signal-orbit animation accompanies data loading and respects reduced-motion preferences.',
+        zh: '新增轻量 GIDS 信号轨道加载动画；读取数据时显示状态，并适配减少动态效果的系统设置。',
+        fr: 'Une animation légère aux couleurs de GIDS accompagne le chargement et respecte la réduction des animations.',
+      }],
+    }, {
+      kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations',
+      items: [{
+        en: 'Focused Ask queries load relevant research collections. Literature updates reuse unchanged title associations, disease pages and monthly card shards. Common disease aliases, Chinese wording and relationship labels are clearer.',
+        zh: 'Ask 按问题读取相关文献；文献更新复用未变的标题关联、疾病页面和月度分片。补充疾病常用别名，优化中文界面和文献关系说明。',
+        fr: 'Ask charge les collections pertinentes. Les mises à jour réutilisent les associations, pages et fragments mensuels inchangés. Les alias et les libellés sont améliorés.',
+      }],
+    }, {
+      kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections',
+      items: [{
+        en: 'Comparisons validate selected countries when diseases change; language changes retain filters and public subdomains share the theme preference.',
+        zh: '切换疾病时重新校验对比国家；切换语言保留筛选条件，主站、论文站和报告站共享主题偏好。',
+        fr: 'Les comparaisons valident les pays sélectionnés. Le changement de langue conserve les filtres et les sous-domaines partagent le thème.',
+      }, {
+        en: 'Chart sources follow selected series, homepage counts use the map’s 30-day window, download totals distinguish current files from history, and failed searches can be retried.',
+        zh: '图表来源随所选曲线更新，首页与地图统一使用近 30 天口径；下载列表区分当前文件与历史总量，搜索加载失败时支持重试。',
+        fr: 'Les sources suivent les séries sélectionnées, les compteurs utilisent la même période de 30 jours, les téléchargements distinguent les fichiers courants de l’historique et les recherches peuvent être relancées.',
+      }],
+    }],
+  },
+  {
     version: '0.18.1',
     date: '2026-11-07',
     titleEn: 'Website and data publication history',
