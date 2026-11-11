@@ -2,14 +2,15 @@
 // before declaring the audit successful. Workers only read the frozen dist.
 import { availableParallelism } from 'node:os';
 import { readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { auditSeoOutput } from './check-seo-output.mjs';
+import { auditSeoOutput, isIndependentResearchRoute } from './check-seo-output.mjs';
 
-function htmlFiles(root) {
+function htmlFiles(root, dist = root) {
   return readdirSync(root, { withFileTypes: true }).flatMap(entry => {
     const path = join(root, entry.name);
-    return entry.isDirectory() ? htmlFiles(path) : entry.name.endsWith('.html') ? [path] : [];
+    if (process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' && isIndependentResearchRoute('/' + relative(dist, path).replaceAll('\\', '/'))) return [];
+    return entry.isDirectory() ? htmlFiles(path, dist) : entry.name.endsWith('.html') ? [path] : [];
   });
 }
 

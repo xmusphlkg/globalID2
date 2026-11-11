@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
 const SITE_ORIGIN = 'https://globalinfectiousdisease.com';
+export const isIndependentResearchRoute = pathname => /^\/(?:(?:zh|fr)\/)?research(?:\/|$)/.test(pathname);
 // Mirrors PAPERS_PATH in src/lib/papers.ts: paths published on the papers host.
 const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases)\/|^\/research\/catalogue\/diseases\/|^\/research\/cards\/|^\/site-data\/research\//;
 
@@ -86,7 +87,7 @@ function isRedirectSource(route, redirects) {
   return redirectFor(route, redirects) !== undefined;
 }
 
-export function auditSeoOutput(distDirectory, { files, partial = false, catalogue } = {}) {
+export function auditSeoOutput(distDirectory, { files, partial = false, catalogue, independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' } = {}) {
   const dist = resolve(distDirectory);
   const redirects = redirectMap(dist);
   // Shared navigation repeats across thousands of pages. Cache only within
@@ -94,10 +95,12 @@ export function auditSeoOutput(distDirectory, { files, partial = false, catalogu
   const targets = new Map();
   const redirectSources = new Map();
   const hasTarget = pathname => {
+    if (independentResearch && isIndependentResearchRoute(pathname)) return true;
     if (!targets.has(pathname)) targets.set(pathname, targetExists(pathname, dist));
     return targets.get(pathname);
   };
   const hasRedirect = pathname => {
+    if (independentResearch && isIndependentResearchRoute(pathname)) return false;
     if (!redirectSources.has(pathname)) redirectSources.set(pathname, isRedirectSource(pathname, redirects));
     return redirectSources.get(pathname);
   };
@@ -110,6 +113,7 @@ export function auditSeoOutput(distDirectory, { files, partial = false, catalogu
 
   for (const file of files ?? walk(dist, '.html')) {
     const route = routeFor(file, dist);
+    if (independentResearch && isIndependentResearchRoute(route)) continue;
     // Exact rules only: a wildcard rule (papers host) must not hide pages that
     // an unsplit build still contains from the audit.
     if (redirects.has(route)) continue;
@@ -199,6 +203,7 @@ export function auditSeoOutput(distDirectory, { files, partial = false, catalogu
       const url = new URL(decodeHtml(match[1]));
       // URLs on another host (the papers site) have no page in this dist.
       if (url.origin !== SITE_ORIGIN) continue;
+      if (independentResearch && isIndependentResearchRoute(url.pathname)) continue;
       const page = pages.get(url.pathname);
       if (!page && hasRedirect(url.pathname)) errors.push(`${relative(dist, file)}: sitemap URL redirects to another host ${url.pathname}`);
       else if (!page) errors.push(`${relative(dist, file)}: sitemap URL has no HTML page ${url.pathname}`);
@@ -207,6 +212,7 @@ export function auditSeoOutput(distDirectory, { files, partial = false, catalogu
   }
 
   for (const [source, destination] of redirects) {
+    if (independentResearch && isIndependentResearchRoute(source)) continue;
     if (destination.startsWith('/') && !destination.includes(':splat') && !hasTarget(destination)) errors.push(`_redirects: ${source} points to missing ${destination}`);
   }
 
