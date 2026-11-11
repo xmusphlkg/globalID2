@@ -188,7 +188,7 @@ class R2S3Client:
         self.config = config
         self.manifest_key = config.manifest_key
         self._http = None if opener else httpx.Client(
-            limits=httpx.Limits(max_connections=32, max_keepalive_connections=32),
+            limits=httpx.Limits(max_connections=96, max_keepalive_connections=96),
             follow_redirects=False,
         )
         self._opener = opener or self._pooled_open

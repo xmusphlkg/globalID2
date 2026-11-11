@@ -117,8 +117,8 @@ def publish_papers_content(candidate: PapersContentCandidate, *, client: Any,
     content-addressed keys are protected by the bucket's immutable policy.
     Objects are not downloaded again for verification; counters are logged.
     """
-    if type(workers) is not int or not 1 <= workers <= 32:
-        raise ValueError("Papers upload workers must be 1–32")
+    if type(workers) is not int or not 1 <= workers <= 96:
+        raise ValueError("Papers upload workers must be 1–96")
     known = previous_objects or set()
     uploaded = 0
     seen: set[str] = set()

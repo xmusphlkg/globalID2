@@ -89,7 +89,7 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
     publish_started = time.monotonic()
     await service._run_logged_command(task.task_uuid, title='Publish Literature Generation',
         cmd=[str(python), 'scripts/publish_research_candidate.py', '--run', str(run), '--snapshot', str(snapshot),
-             '--stage', str(stage), '--release-id', release_id, '--workers', '32'], cwd=root, env=env,
+             '--stage', str(stage), '--release-id', release_id, '--workers', '96'], cwd=root, env=env,
         metadata={'event': 'literature_publication_publish'}, timeout_seconds=max(runtime.download_publish_timeout_seconds, 3 * 60 * 60))
     published = json.loads((run / 'published.json').read_bytes())
     if published.get('release_id') != release_id:
