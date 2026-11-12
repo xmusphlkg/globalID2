@@ -2,7 +2,12 @@
 
 ## Deployment status
 
-The implementation now connects full-site releases and independent literature releases to the same research publication. The initial JSON records have been staged in R2; production cutover and legacy cleanup are being verified separately. Do not infer that routing or cleanup has completed from the presence of these files. The deployment record and cleanup receipt establish the live state.
+The shared-paper structure was activated on 2026-11-12 as `template-cutover-20261112`, using the same research publication pointer for full-site and independent literature updates. The research-only Worker serves 24 routes across the main, `www` and Papers hosts. Checks passed for all nine canonical host/locale article combinations, three versioned article locales, three versioned research homepages and nine referenced assets. The research homepage also passed a browser check without console errors. The fenced cleanup completed after those checks: 24,579 replaced static article objects and 2,146 inactive v1 prototype objects were deleted (26,725 total, 238,943,659 stored bytes). Shared assets, research data and historical immutable releases were retained.
+
+- Catalogue generation: `89b185ac744d79d60c1c303bf712405120ad46b669fcdd7483e8ec978ff41d74`.
+- Publication pointer SHA-256: `67252622c3ca37b6ddd70a59c983cb1ade21fa191dd63315100ac408f054d56e`.
+- Worker version: `8e65f5d5-a8df-46ec-9cf9-7238b6e78267`.
+- Final activation reused all 47,365 content objects and 418 public JSON artifacts; it uploaded no content payloads.
 
 ## Storage and serving
 
@@ -41,7 +46,7 @@ The initial 2026-11-12 audit reconstructed 24,579 pages exactly. Gzip level 6 co
 ## Cutover, cleanup and recovery
 
 1. Fence publication workers during the final cutover/cleanup window. Preserve the old pointer, canonical manifest, object inventory and a separate SHA-verified copy of every static article.
-2. Prepare and validate the unified candidate, reuse verified staged objects, publish every referenced payload, and switch the research pointer conditionally. Deploy the compatible Worker and verify the required routes.
+2. Prepare and validate the unified candidate, reuse verified staged objects, and publish every referenced payload. Verify the immutable-generation URLs, deploy compatible canonical Worker routes, then switch the research pointer conditionally.
 3. Verify template mode, original article digest and release identity in all three languages on the main, `www` and Papers hosts. Validate the complete article coverage before deleting any old page.
 4. Use `scripts/cleanup_legacy_papers.py` with its reviewed exact-key plan. It requires every replacement article's digest and size to equal the preserved original, checks public canaries, conditionally prunes the canonical static manifest, and checks the publication pointer before each deletion batch. Durable checkpoints make interrupted cleanup resumable.
 

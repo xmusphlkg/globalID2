@@ -191,7 +191,10 @@ def verify_public_samples(plan: dict, coverage: dict, current: dict, *, opener=u
         raise ValueError('Missing locale coverage')
     for public_origin in sorted(origins):
         for key in samples.values():
-            with opener(Request(public_origin + '/' + key, headers={'Cache-Control': 'no-cache'}), timeout=30) as response:
+            with opener(Request(public_origin + '/' + key, headers={
+                    'Cache-Control': 'no-cache',
+                    'User-Agent': 'GlobalIDReleaseVerifier/1.0 (+https://globalinfectiousdisease.com)',
+            }), timeout=30) as response:
                 if (response.status != 200 or response.headers.get('X-GIDS-Paper-Mode') != 'template'
                         or response.headers.get('X-GIDS-Paper-SHA256') != coverage[key]['sha256']
                         or response.headers.get('X-GIDS-Research-Release') != current['release_id']):
