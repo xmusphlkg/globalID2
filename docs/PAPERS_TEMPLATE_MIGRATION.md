@@ -2,7 +2,7 @@
 
 The current Papers site serves one pre-rendered HTML file per article and locale. A shared footer or stylesheet change therefore changes thousands of files. This candidate factors each already-public page into a per-locale shared HTML shell and one JSON record per article containing the public head and main fragments for all three languages. A Worker assembles the same HTML server-side, preserving canonical URLs, metadata and visible content. It is not a semantic export of the internal article model; it contains only content already present in the public page.
 
-The initial 2026-11-12 audit reconstructed all 24,579 pages byte-for-byte using three templates. A 100-paper sample of the combined multilingual records reduced compressed article bytes by approximately 64%. These are local measurements, not account-wide billing or request-latency estimates.
+The initial 2026-11-12 audit reconstructed all 24,579 pages byte-for-byte using three templates. Gzip level 6 compressed the current 24,579 HTML pages to 230,207,626 bytes and the combined multilingual article records to 85,773,356 bytes (about 63% less), excluding the relatively small templates and indexes. These are local measurements, not account-wide billing or request-latency estimates.
 
 ## Safety boundaries
 
@@ -11,7 +11,7 @@ The initial 2026-11-12 audit reconstructed all 24,579 pages byte-for-byte using 
 - Candidate records, index shards, templates and generation manifests are addressed by SHA-256; the only mutable key is `paper-template-v2/current.json`. Stage immutable objects before the conditional pointer switch. No R2 deletion is performed.
 - The Worker verifies each object hash, bounds decoded object sizes, preserves full HTML for crawlers, and falls back to the previous static R2 page if a template or record is absent or damaged. It currently has **no configured public route**.
 - Keep old generations and old static objects until an explicit rollback and retention policy has been established and production-verified. Adding a `papers.globalinfectiousdisease.com` Worker route needs the corresponding Cloudflare zone permission; the current production token returned HTTP 403 for the routes API.
-- Existing automatic site and literature releases still use static HTML by default. After a production canary and initial cutover, setting `R2_PAPERS_TEMPLATE_MODE=1` for the release worker enables generation and staging of immutable template objects, publication of assets while retaining static fallbacks, and a conditional pointer switch under the existing publication lock. This does **not** yet eliminate full article rendering. Verify the complete production pipeline, caching and rollback before enabling it; keep old objects until a safe retention policy exists.
+- Existing releases still use static HTML by default. `R2_PAPERS_TEMPLATE_MODE=1` provides an experimental path for a full-site release, but the independent literature-only publisher does not yet update this template generation. Enabling or routing it now would leave newly published literature stale. Integrate and test both publishers, their concurrency and pointer consistency, public caching, canary and rollback before enabling it. Full article rendering is not yet eliminated. Keep old objects until a safe retention policy exists.
 
 ## Local preparation and validation
 
