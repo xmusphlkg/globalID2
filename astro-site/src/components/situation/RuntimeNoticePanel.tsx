@@ -18,17 +18,21 @@ export default function RuntimeNoticePanel({ dataUrl, locale, limit = 8, mapHref
       <div>
         <h2 className="figure-title intl-panel-heading">{pick('Official outbreak alerts', '官方疫情通报', 'Alertes officielles de flambée')}</h2>
       </div>
-      {mapHref && <a className="research-card-action" href={mapHref}>{pick('Open on the situation map', '在态势地图中打开', 'Ouvrir sur la carte de situation')}</a>}
+      {mapHref && <a className="intl-panel-action" href={mapHref}>{pick('Open on the situation map', '在态势地图中打开', 'Ouvrir sur la carte de situation')}</a>}
     </div>
     {!rows.length && <p className="figure-caption">{pick('No official outbreak alert is available for this selection.', '此范围暂无官方疫情警报。', 'Aucune alerte officielle pour cette sélection.')}</p>}
-    <ul className="intl-panel-list">{rows.map(alert => <li className="research-card research-card-compact intl-panel-item" key={alert.alert_id}>
+    <ul className="intl-panel-list">{rows.map(alert => <li className="intl-panel-item" key={alert.alert_id}>
+      <p className="intl-panel-meta">
+        <time className="intl-panel-date" dateTime={alert.published_date}>{formatDay(alert.published_date, locale)}</time>
+        <span className="intl-panel-source">{sourceLabel(alert, locale)}</span>
+        <span className="intl-panel-status">{STATUS_LABELS[alert.status]?.[locale] ?? alert.status}</span>
+      </p>
       <a className="intl-panel-title" href={alert.url} target="_blank" rel="noopener noreferrer">{diseaseName(alert, locale)} · {alert.admin_area ? `${alert.admin_area}, ` : ''}{countryName(alert, locale)}</a>
-      <p className="intl-panel-meta"><span>{formatDay(alert.published_date, locale)}</span><span>{sourceLabel(alert, locale)}</span><span>{STATUS_LABELS[alert.status]?.[locale] ?? alert.status}</span></p>
       {countsLine(alert, locale) && <p className="intl-panel-counts">{countsLine(alert, locale)}</p>}
       {alertSummary(alert, locale) && <p className="intl-panel-summary">{alertSummary(alert, locale)}</p>}
       {alert.quote && <blockquote className="intl-panel-quote">{alert.quote}</blockquote>}
       <NoticeSnapshots alert={alert} locale={locale} contextCodes={contextCodes} />
-      <div className="research-card-actions"><a className="research-card-action" href={`${prefix}/situation/?place=${encodeURIComponent(alert.alert_id)}`}>{pick('Show on map', '在地图中显示', 'Afficher sur la carte')}</a></div>
+      <div className="intl-panel-actions"><a className="intl-panel-action" href={`${prefix}/situation/?place=${encodeURIComponent(alert.alert_id)}`}>{pick('Show on map', '在地图中显示', 'Afficher sur la carte')}</a></div>
     </li>)}</ul>
   </section>;
 }

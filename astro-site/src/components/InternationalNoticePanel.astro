@@ -58,10 +58,12 @@ const badgesFor = (alert: SituationAlertRecord) =>
 // inlined next to the markup rather than living in a static style block
 // that Astro emits for every importer.
 const PANEL_CSS = `  .intl-panel {
+    --intl-panel-accent: 94 234 212;
     padding: clamp(1.25rem, 2vw, 1.5rem);
     border: 1px solid rgb(var(--border));
     background: rgb(var(--surface));
   }
+  html[data-theme='light'] .intl-panel { --intl-panel-accent: var(--color-teal); }
   .intl-panel-header {
     display: flex;
     flex-wrap: wrap;
@@ -78,9 +80,30 @@ const PANEL_CSS = `  .intl-panel {
     padding: 0;
     list-style: none;
   }
+  .intl-panel-item {
+    position: relative;
+    min-width: 0;
+    padding: 1rem 1rem 1rem 1.2rem;
+    border: 1px solid rgb(var(--border) / 0.8);
+    background: linear-gradient(110deg, rgb(var(--intl-panel-accent) / 0.04), transparent 55%), rgb(var(--surface));
+    overflow-wrap: anywhere;
+  }
+  .intl-panel-item::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: linear-gradient(180deg, rgb(var(--intl-panel-accent)), rgb(var(--color-brand) / 0.2) 75%, transparent);
+    pointer-events: none;
+  }
+  .intl-panel-item:hover,
+  .intl-panel-item:focus-within { border-color: rgb(var(--intl-panel-accent) / 0.5); }
   .intl-panel-title {
-    font-size: 0.95rem;
+    display: block;
+    margin-top: 0.6rem;
+    font-size: 1rem;
     font-weight: 600;
+    line-height: 1.4;
     color: rgb(var(--text-strong));
     text-decoration: none;
   }
@@ -90,11 +113,40 @@ const PANEL_CSS = `  .intl-panel {
   .intl-panel-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
-    margin: 0.3rem 0 0;
-    font-size: 0.76rem;
+    align-items: center;
+    gap: 0.35rem 0.65rem;
+    margin: 0;
+    font-size: 0.7rem;
     color: rgb(var(--text-muted));
   }
+  .intl-panel-date { color: rgb(var(--intl-panel-accent)); font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .intl-panel-source { font-weight: 650; }
+  .intl-panel-status {
+    padding: 0.12rem 0.4rem;
+    border: 1px solid rgb(var(--border) / 0.75);
+    background: rgb(var(--surface-raised) / 0.5);
+    font-size: 0.65rem;
+  }
+  .intl-panel-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.8rem; }
+  .intl-panel-action {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    max-width: 100%;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid rgb(var(--intl-panel-accent) / 0.4);
+    border-radius: 0;
+    background: rgb(var(--intl-panel-accent) / 0.04);
+    color: rgb(var(--intl-panel-accent));
+    font-size: 0.7rem;
+    font-weight: 650;
+    line-height: 1.4;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  .intl-panel-action:hover { border-color: rgb(var(--intl-panel-accent) / 0.75); background: rgb(var(--intl-panel-accent) / 0.09); }
+  .intl-panel-action:focus-visible,
+  .intl-panel-title:focus-visible { outline: 2px solid rgb(var(--intl-panel-accent)); outline-offset: 3px; }
   .intl-panel-summary {
     margin: 0.4rem 0 0;
     font-size: 0.83rem;
@@ -109,9 +161,9 @@ const PANEL_CSS = `  .intl-panel {
   }
   .intl-panel-chip {
     padding: 0.1rem 0.45rem;
-    background: rgb(var(--color-teal) / 0.1);
+    background: rgb(var(--intl-panel-accent) / 0.1);
     font-size: 0.7rem;
-    color: rgb(var(--color-teal));
+    color: rgb(var(--intl-panel-accent));
   }
   .intl-panel-snapshot {
     display: flex;
@@ -123,7 +175,7 @@ const PANEL_CSS = `  .intl-panel {
     padding: 0.12rem 0.5rem;
     border: 1px solid rgb(var(--border));
     font-size: 0.7rem;
-    color: rgb(var(--color-teal));
+    color: rgb(var(--intl-panel-accent));
     background: rgb(var(--surface-raised));
   }
   .intl-panel-counts { margin: 0.35rem 0 0; font-size: 0.8rem; font-weight: 600; color: rgb(var(--text)); }
@@ -143,19 +195,19 @@ const PANEL_CSS = `  .intl-panel {
           <div>
             <h2 id="intl-panel-heading" class="figure-title intl-panel-heading">{copy.heading}</h2>
           </div>
-          {mapHref && <a class="research-card-action" href={mapHref}>{copy.map}</a>}
+          {mapHref && <a class="intl-panel-action" href={mapHref}>{copy.map}</a>}
         </div>
         <ul class="intl-panel-list">
           {rows.map((alert) => (
-            <li class="research-card research-card-compact intl-panel-item">
+            <li class="intl-panel-item">
+              <p class="intl-panel-meta">
+                <time class="intl-panel-date" datetime={alert.published_date}>{formatDay(alert.published_date, locale)}</time>
+                <span class="intl-panel-source">{sourceLabel(alert, locale)}</span>
+                <span class="intl-panel-status">{STATUS_LABELS[alert.status][locale]}</span>
+              </p>
               <a class="intl-panel-title" href={alert.url} target="_blank" rel="noopener noreferrer">
                 {diseaseName(alert, locale)} · {alert.admin_area ? `${alert.admin_area}, ` : ''}{countryName(alert, locale)}
               </a>
-              <p class="intl-panel-meta">
-                <span class="intl-panel-date">{formatDay(alert.published_date, locale)}</span>
-                <span class="intl-panel-source">{sourceLabel(alert, locale)}</span>
-                <span>{STATUS_LABELS[alert.status][locale]}</span>
-              </p>
               {countsLine(alert, locale) && <p class="intl-panel-counts">{countsLine(alert, locale)}</p>}
               {alertSummary(alert, locale) && <p class="intl-panel-summary">{alertSummary(alert, locale)}</p>}
               {alert.quote && <blockquote class="intl-panel-quote">{alert.quote}</blockquote>}
@@ -166,8 +218,8 @@ const PANEL_CSS = `  .intl-panel {
                   ))}
                 </p>
               )}
-              <div class="research-card-actions">
-                <a class="research-card-action" href={`${prefix}/situation/?place=${encodeURIComponent(alert.alert_id)}`}>{copy.place}</a>
+              <div class="intl-panel-actions">
+                <a class="intl-panel-action" href={`${prefix}/situation/?place=${encodeURIComponent(alert.alert_id)}`}>{copy.place}</a>
               </div>
             </li>
           ))}
