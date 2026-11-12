@@ -50,9 +50,9 @@ test('external search strategies encode disease-specific title/abstract phrases'
   assert.deepEqual(diseaseLiteratureSearchStrategy({ slug: 'haemophilus-influenzae', name_en: 'Haemophilus influenzae' }).terms, ['Haemophilus influenzae']);
 });
 const entities: ResearchQueryEntity[] = [
-  { scope: 'disease', value: 'd038', aliases: ['Influenza', 'flu', '流感'], path: '/influenza.json' },
-  { scope: 'disease', value: 'd014', aliases: ['Avian influenza', '禽流感'], path: '/avian.json' },
-  { scope: 'country', value: 'jp', aliases: ['Japan', '日本'], path: '/japan.json' },
+  { scope: 'disease', value: 'd038', aliases: ['Influenza', 'flu', '流感'] },
+  { scope: 'disease', value: 'd014', aliases: ['Avian influenza', '禽流感'] },
+  { scope: 'country', value: 'jp', aliases: ['Japan', '日本'] },
 ];
 test('Ask resolves CJK questions to scopes and rejects substring entity collisions', () => {
   assert.deepEqual(researchQueryScopes('日本流感', entities).map(x => x.value), ['d038']);

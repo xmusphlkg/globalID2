@@ -6,6 +6,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "routes": [
+    { "pattern": "globalinfectiousdisease.com/site-data/bootstrap.json*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/site-data/manifests/*", "zone_name": "globalinfectiousdisease.com" },
+    { "pattern": "globalinfectiousdisease.com/site-data/home-summary.json*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/site-data/current.json*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/site-data/objects/*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/site-data/countries/*", "zone_name": "globalinfectiousdisease.com" },

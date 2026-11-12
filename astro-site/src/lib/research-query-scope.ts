@@ -1,4 +1,4 @@
-export interface ResearchQueryEntity { scope: 'disease' | 'country' | 'topic'; value: string; aliases: string[]; path: string; }
+export interface ResearchQueryEntity { scope: 'disease' | 'country' | 'topic'; value: string; aliases: string[]; }
 const normalize = (value: string) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const matches = (query: string, alias: string) => /[\u3400-\u9fff]/.test(alias) ? query.includes(alias) : (` ${query} `).includes(` ${alias} `);
 

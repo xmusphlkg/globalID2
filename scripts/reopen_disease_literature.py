@@ -17,6 +17,8 @@ from src.domain import LiteratureArticle, LiteratureDiseaseLink, LiteratureStatu
 
 async def run(*, apply: bool, limit: int, after_id: int, journals: list[str], confidence: float,
               dois: list[str] | None = None):
+    if apply and not dois:
+        raise ValueError("Reopening requires explicit DOIs individually confirmed by a reviewer")
     if limit < 1 or limit > 1000 or after_id < 0 or not 0 <= confidence <= 1:
         raise ValueError("invalid batch size, cursor or confidence")
     disease_confidence = (

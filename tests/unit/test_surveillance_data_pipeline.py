@@ -43,6 +43,7 @@ def setup(tmp_path, monkeypatch):
 
     class Service:
         failure = False
+        download_failure = False
         _python_executable = lambda self: Path("python")
         _config = lambda self: SimpleNamespace()
         _cloudflare_account_id = lambda self: "account"
@@ -69,11 +70,21 @@ def setup(tmp_path, monkeypatch):
                     env_patch.setenv("GLOBALID_RELEASE_DB_SNAPSHOT", env["GLOBALID_RELEASE_DB_SNAPSHOT"])
                     write_projection_snapshot({"country_exports": [{"code": "JP", "country_data": {"disease_series": {}}}]},
                         tmp_path / "exports/surveillance-state/_release-projection", {})
+                if "--surveillance-downloads" in cmd:
+                    candidate = Path(cmd[cmd.index("--surveillance-downloads") + 1])
+                    candidate.mkdir(parents=True, exist_ok=True)
+                    (candidate / "manifest.json").write_text(json.dumps({"surveillance_release_id": f"data-{task_uuid}"}))
             elif title == "Publish Surveillance JSON":
                 assert not snapshot_state["open"]
                 assert "GLOBALID_RELEASE_DB_SNAPSHOT" not in env
                 if self.failure:
                     raise RuntimeError("upload failed")
+            elif title == "Publish Surveillance Downloads":
+                assert not snapshot_state["open"]
+                assert "--push" in cmd
+                assert not commit.await_count
+                if self.download_failure:
+                    raise RuntimeError("GitHub connection timed out")
             else:
                 raise AssertionError(f"JSON release must never run static work: {title}")
 
@@ -161,3 +172,61 @@ async def test_corrupt_candidate_receipt_never_reexports_or_uploads(setup):
     with pytest.raises(RuntimeError, match="receipt is damaged"):
         await execute_release_task(s.service, s.task, runtime=s.runtime)
     assert s.calls == []
+
+
+def enable_downloads(s):
+    s.task.input_data.update(include_git_push=True,
+        github_repo_url="git@github.com:example/downloads.git", download_repo_branch="main",
+        download_url_base="https://raw.githubusercontent.com/example/downloads/main")
+
+
+@pytest.mark.asyncio
+async def test_surveillance_publishes_matching_downloads_before_ack(setup):
+    s = setup
+    enable_downloads(s)
+    result = await execute_release_task(s.service, s.task, runtime=s.runtime)
+    assert [name for name, _ in s.calls][-2:] == ["Publish Surveillance JSON", "Publish Surveillance Downloads"]
+    assert result["direct_downloads_published"] and result["git_pushed"]
+    s.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_github_failure_retries_frozen_pair_without_ack_or_reexport(setup):
+    s = setup
+    enable_downloads(s)
+    s.service.download_failure = True
+    with pytest.raises(RuntimeError, match="GitHub"):
+        await execute_release_task(s.service, s.task, runtime=s.runtime)
+    s.commit.assert_not_awaited()
+    s.calls.clear()
+    s.service.download_failure = False
+    await execute_release_task(s.service, s.task, runtime=s.runtime)
+    assert [name for name, _ in s.calls] == ["Publish Surveillance JSON", "Publish Surveillance Downloads"]
+    assert s.snapshot["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_ack_retry_does_not_push_downloads_again(setup):
+    s = setup
+    enable_downloads(s)
+    s.db.commit.side_effect = RuntimeError("database unavailable")
+    with pytest.raises(RuntimeError, match="database unavailable"):
+        await execute_release_task(s.service, s.task, runtime=s.runtime)
+    s.calls.clear()
+    s.db.commit.side_effect = None
+    await execute_release_task(s.service, s.task, runtime=s.runtime)
+    assert [name for name, _ in s.calls] == ["Publish Surveillance JSON"]
+
+
+@pytest.mark.asyncio
+async def test_changed_download_manifest_blocks_retry_before_remote_publication(setup):
+    s = setup
+    enable_downloads(s)
+    s.service.failure = True
+    with pytest.raises(RuntimeError):
+        await execute_release_task(s.service, s.task, runtime=s.runtime)
+    (s.runtime.root_dir / "exports/surveillance-runs/json-task/downloads/manifest.json").write_text("{}")
+    s.calls.clear()
+    with pytest.raises(RuntimeError, match="Frozen download"):
+        await execute_release_task(s.service, s.task, runtime=s.runtime)
+    assert not s.calls

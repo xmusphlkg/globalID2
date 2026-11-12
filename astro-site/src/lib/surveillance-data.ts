@@ -6,9 +6,10 @@ export interface SurveillanceManifest {
   release_id: string;
   generated_at?: string;
   files: Record<string, SurveillanceFile>;
+  manifest?: SurveillanceFile;
 }
 
-export const DEFAULT_SURVEILLANCE_MANIFEST_URL = '/site-data/current.json';
+export const DEFAULT_SURVEILLANCE_MANIFEST_URL = '/site-data/bootstrap.json';
 const configuredManifestUrl = () => {
   const value = import.meta.env?.PUBLIC_GIDS_DATA_MANIFEST_URL || DEFAULT_SURVEILLANCE_MANIFEST_URL;
   return value.startsWith('/') ? `${mainSiteBase()}${value}` : value;
@@ -22,22 +23,28 @@ export function createSurveillanceDataClient({ manifestUrl = configuredManifestU
   }, baseUrl = typeof location === 'undefined' ? 'http://localhost/' : location.href } = {}) {
   const manifestLocation = new URL(manifestUrl, baseUrl);
   let publication: Promise<SurveillanceManifest | null> | undefined;
+  let completePublication: Promise<SurveillanceManifest> | undefined;
   const requests = new Map<string, Promise<unknown>>();
-  const manifest = () => {
-    if (!publication) publication = (async () => {
-      const response = await fetcher(manifestLocation.href, { cache: 'no-cache', credentials: 'same-origin' });
-      if (response.status === 404) return null; // Migration: the legacy site remains usable before the first data publication.
-      if (!response.ok) throw new Error(`Data publication unavailable (${response.status})`);
-      const value = await response.json() as SurveillanceManifest;
+  const validate = (value: SurveillanceManifest) => {
       if (value?.schema_version !== 1 || typeof value.release_id !== 'string' || !value.release_id
         || !value.files || Array.isArray(value.files) || typeof value.files !== 'object') throw new Error('Invalid data publication manifest');
-      for (const [key, file] of Object.entries(value.files)) {
+      for (const [key, file] of [...Object.entries(value.files), ...(value.manifest ? [['manifest.json', value.manifest] as const] : [])]) {
         if (!validKey(key) || typeof file?.url !== 'string' || !/^[a-f0-9]{64}$/i.test(file.sha256)
           || (file.bytes !== undefined && (!Number.isSafeInteger(file.bytes) || file.bytes < 0))) throw new Error('Invalid data publication file');
         const target = new URL(file.url, manifestLocation);
         if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password) throw new Error('Invalid data publication URL');
       }
       return value;
+  };
+  const manifest = () => {
+    if (!publication) publication = (async () => {
+      let response = await fetcher(manifestLocation.href, { cache: 'no-cache', credentials: 'same-origin' });
+      if (response.status === 404 && manifestLocation.pathname.endsWith('/bootstrap.json')) {
+        response = await fetcher(new URL('current.json', manifestLocation).href, { cache: 'no-cache', credentials: 'same-origin' });
+      }
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error(`Data publication unavailable (${response.status})`);
+      return validate(await response.json() as SurveillanceManifest);
     })().catch(error => { publication = undefined; throw error; });
     return publication;
   };
@@ -61,7 +68,21 @@ export function createSurveillanceDataClient({ manifestUrl = configuredManifestU
           if (!response.ok) throw new Error(`Dataset unavailable (${response.status})`);
           return response.json();
         }
-        const file = current.files[key];
+        let file = current.files[key];
+        if (!file && current.manifest) {
+          completePublication ??= (async () => {
+            const reference = current.manifest!;
+            const response = await fetcher(new URL(reference.url, manifestLocation).href, { credentials: 'same-origin', cache: 'force-cache' });
+            if (!response.ok) throw new Error(`Data publication unavailable (${response.status})`);
+            const body = await response.arrayBuffer();
+            if ((reference.bytes !== undefined && body.byteLength !== reference.bytes)
+              || (await digest(body)).toLowerCase() !== reference.sha256.toLowerCase()) throw new Error('Data publication checksum mismatch');
+            const full = validate(JSON.parse(new TextDecoder().decode(body)));
+            if (full.release_id !== current.release_id) throw new Error('Data publication version mismatch');
+            return full;
+          })().catch(error => { completePublication = undefined; throw error; });
+          file = (await completePublication).files[key];
+        }
         if (!file) throw new Error(`Dataset absent from publication ${current.release_id}: ${key}`);
         const response = await fetcher(new URL(file.url, manifestLocation).href, { signal, credentials: 'same-origin', cache: 'force-cache' });
         if (!response.ok) throw new Error(`Dataset unavailable (${response.status})`);

@@ -10,6 +10,7 @@ function fixture(content: string | null = '{"schema_version":1}') {
   const object = () => content === null ? null : {
     httpEtag: '"data-version"', size: new TextEncoder().encode(content).length,
     body: new Response(content).body!, json: async () => JSON.parse(content),
+    arrayBuffer: async () => new TextEncoder().encode(content).buffer,
   };
   const env = { DATA_PREFIX: 'site-data/surveillance', DATA: {
     async get(key: string) { keys.push(key); return object(); },
@@ -30,6 +31,25 @@ test('same-origin pointer bypasses caching; immutable objects stream independent
   assert.equal(object.headers.get('access-control-allow-origin'), '*');
   assert.deepEqual(f.keys, ['site-data/surveillance/current.json', `site-data/surveillance/objects/${hash}.json`]);
   assert.equal(await object.text(), '{"schema_version":1}');
+});
+
+test('bootstrap contains only early data and points to the exact immutable full manifest', async () => {
+  const entry = {url:`objects/${hash}.json`,sha256:hash,bytes:20};
+  const content = JSON.stringify({schema_version:1,release_id:'one',generated_at:'2026-11-12',files:{
+    'home-summary.json':entry,'home-influenza.json':entry,'site-status.json':entry,'countries/jp.json':entry,
+  }});
+  const f=fixture(content);
+  const response=await worker.fetch(new Request('https://site.test/site-data/bootstrap.json'),f.env);
+  const data=await response.json() as any;
+  assert.equal(data.release_id,'one');
+  assert.deepEqual(Object.keys(data.files),['home-summary.json','home-influenza.json','site-status.json']);
+  const sha=createHash('sha256').update(content).digest('hex');
+  assert.deepEqual(data.manifest,{url:`manifests/${sha}.json`,sha256:sha,bytes:Buffer.byteLength(content)});
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  const full=await worker.fetch(new Request(`https://site.test/site-data/manifests/${sha}.json`),f.env);
+  assert.equal(await full.text(),content);
+  assert.match(full.headers.get('cache-control')!,/immutable/);
+  assert.equal(objectPath('/site-data/manifests/not-a-hash.json'),null);
 });
 
 test('missing initialization is never negatively cached and invalid paths do not access R2', async () => {

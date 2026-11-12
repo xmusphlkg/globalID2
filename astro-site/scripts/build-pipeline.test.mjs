@@ -71,7 +71,7 @@ test('render overlaps source checks, writers stay ordered and check workers are 
     }
   } });
   assert.deepEqual(calls.map(stages => stages[0]), ['sync flags', 'render and restore',
-    'optimize map', 'performance audit', 'finalize page caches']);
+    'split research evidence', 'optimize map', 'performance audit', 'finalize page caches']);
   for (const value of ['0', '4', '1.5', 'NaN']) assert.throws(() => checkConcurrency(value));
   const controller = new AbortController(); controller.abort();
   await assert.rejects(runStages([{ name: 'never', args: ['-e', 'process.exit(0)'] }],

@@ -432,6 +432,31 @@ def _in_place_publication(tmp_path, monkeypatch):
     return publisher, args
 
 
+@pytest.mark.parametrize("corrupt", [False, True])
+def test_frozen_candidate_reuses_export_worktree_without_reset_and_checks_changes(tmp_path, monkeypatch, corrupt):
+    import shutil
+    publisher, args = _in_place_publication(tmp_path, monkeypatch)
+    publisher.publish(args)
+    candidate = tmp_path / "candidate"
+    shutil.copytree(args.workdir, candidate, ignore=shutil.ignore_patterns(".git"))
+    _write_source(candidate, b"new data")
+    sync_managed_assets(candidate, args.workdir)
+    if corrupt:
+        path = args.workdir / "diseases/d007/2026-2029.csv"
+        path.write_bytes(b"x" * path.stat().st_size)
+    args.source_dir = candidate
+    def forbid_reset(*_args):
+        raise AssertionError("Frozen candidate must preserve the export worktree")
+    monkeypatch.setattr(publisher, "ensure_repo", forbid_reset)
+    if corrupt:
+        with pytest.raises(RuntimeError, match="checksum mismatch"):
+            publisher.publish(args)
+    else:
+        publisher.publish(args)
+        assert run_git(["rev-parse", "main"], tmp_path / "remote.git") == run_git(["rev-parse", "HEAD"], args.workdir)
+        assert (args.workdir / "diseases/d007/2026-2029.csv").read_bytes() == b"new datacsv"
+
+
 def test_verified_in_place_noop_has_no_network_or_validation(tmp_path, monkeypatch):
     publisher, args = _in_place_publication(tmp_path, monkeypatch)
     def no_public_check(*_args):

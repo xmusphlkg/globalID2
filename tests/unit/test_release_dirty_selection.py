@@ -178,7 +178,7 @@ async def test_json_release_selects_surveillance_and_runs_beside_static_lane(rel
         assert task.metadata_["data_only"] is True
         assert task.input_data["incremental_country_codes"] == ["US"]
         assert not task.input_data["include_cloudflare_deploy"]
-        assert not task.input_data["include_git_push"]
+        assert task.input_data["include_git_push"]
         assert not task.input_data["raw_archive_enabled"]
     second = await service._enqueue_release_task(job, manual=True, trigger="test", trigger_task_uuid=None, data_only=True)
     assert second["status"] == "skipped"

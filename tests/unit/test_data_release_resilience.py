@@ -72,6 +72,17 @@ def test_classifier_retries_only_allowlisted_transient_external_failures():
     )
     assert build_timeout.retryable is False
 
+    literature_timeout = classify_release_failure(
+        _command_error("R2 PUT transport failed: The write operation timed out", stage="literature_publication_publish")
+    )
+    assert literature_timeout.retryable is True
+    assert not classify_release_failure(
+        _command_error("R2 PUT failed with HTTP 403 Forbidden", stage="literature_publication_publish")
+    ).retryable
+    assert not classify_release_failure(
+        _command_error("Research publication baseline changed", stage="literature_publication_publish")
+    ).retryable
+
 
 def test_classifier_keeps_preflight_syntax_and_credentials_terminal():
     syntax = classify_release_failure(

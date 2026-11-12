@@ -65,11 +65,11 @@ function rewriteHtml(response: Response, generation: string, publicBase: string)
   if (typeof HTMLRewriter === 'undefined') return response;
   return new HTMLRewriter().on('head', {
     element(element) { element.prepend(`<meta name="gids-research-generation" content="${generation}">`, { html: true }); },
-  }).on('[href], [src], [data-graph-src]', {
+  }).on('[href], [src], [data-graph-src], [component-url], [renderer-url]', {
     element(element) {
       // Search engines and social cards should retain their stable public URLs.
       if (element.tagName === 'link' && /(?:^|\s)(?:canonical|alternate)(?:\s|$)/i.test(element.getAttribute('rel') || '')) return;
-      for (const attribute of ['href', 'src', 'data-graph-src']) {
+      for (const attribute of ['href', 'src', 'data-graph-src', 'component-url', 'renderer-url']) {
         const value = element.getAttribute(attribute);
         const next = value && versionedPath(value, generation, publicBase);
         if (next) element.setAttribute(attribute, next);
@@ -137,16 +137,30 @@ export async function servePapersContent(request: Request, env: Env, route: { ge
       'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*' });
     const html = /^text\/html(?:;|$)/i.test(entry.content_type);
     const css = /^text\/css(?:;|$)/i.test(entry.content_type);
-    if (html || css) responseHeaders.delete('Content-Length');
+    const encoding = object.httpMetadata?.contentEncoding;
+    if (encoding && encoding !== 'gzip') throw new Error('Unsupported research object encoding');
+    if (html || css || encoding) responseHeaders.delete('Content-Length');
     if (request.headers.get('If-None-Match')?.split(',').map(value => value.trim()).includes(object.httpEtag)) {
       if (body) await body.cancel();
       responseHeaders.delete('Content-Length');
       return new Response(null, { status: 304, headers: responseHeaders });
     }
     if (request.method === 'HEAD') return new Response(null, { headers: responseHeaders });
+    // R2 bindings expose stored bytes, unlike fetch's decoded response body.
+    // Decode before HTMLRewriter/CSS rewriting and let the response negotiate
+    // its own HTTP encoding. Otherwise gzip bytes are served as HTML/JSON.
+    if (body && encoding === 'gzip') body = body.pipeThrough(new DecompressionStream('gzip'));
     if (css && body) {
       if (object.size > 4 * 1024 * 1024) throw new Error('Research stylesheet too large');
-      const stylesheet = await new Response(body).text();
+      let decodedBytes = 0;
+      const bounded = body.pipeThrough(new TransformStream({
+        transform(chunk, controller) {
+          decodedBytes += chunk.byteLength;
+          if (decodedBytes > 4 * 1024 * 1024) throw new Error('Research stylesheet too large');
+          controller.enqueue(chunk);
+        },
+      }));
+      const stylesheet = await new Response(bounded).text();
       return new Response(stylesheet.replaceAll('/_astro/', `/research-publication/${route.generation}/_astro/`), { headers: responseHeaders });
     }
     const response = new Response(body, { headers: responseHeaders });

@@ -145,7 +145,7 @@ Incremental publishing uses scoped data exports, deterministic download files,
 cached article, research collection, country and disease rendering, cached
 compression sizes, reusable rewritten paper HTML,
 and pooled R2 uploads
-with up to 32 concurrent transfers. Interrupted R2 uploads resume from actual
+with up to 96 concurrent transfers. Interrupted R2 uploads resume from actual
 remote object checksums. Validated release candidates retain their frozen curve
 projection so compatible retries can skip generation and rendering. Release
 timings record the 10-minute target; initial cache population and bulk uploads

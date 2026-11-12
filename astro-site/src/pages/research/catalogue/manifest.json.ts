@@ -1,4 +1,4 @@
-import { researchCatalogue, researchStudyCollections } from '../../../lib/research-catalogue-shards';
+import { researchCatalogue } from '../../../lib/research-catalogue-shards';
 
 export function GET() {
   const { researchCatalogueChunks, researchCatalogueChunkNames, researchCatalogueGeneratedAt, researchCatalogueArticles } = researchCatalogue();
@@ -14,7 +14,6 @@ export function GET() {
     schema_version: 2,
     generated_at: researchCatalogueGeneratedAt,
     total: researchCatalogueArticles.length,
-    study_collections: Object.fromEntries(researchStudyCollections().map(({ study, count, chunks }) => [study, { count, chunks: chunks.map(({ path, count }) => ({ path, count })) }])),
-    chunks: researchCatalogueChunks.map((articles, index) => ({ path: `/research/catalogue/${researchCatalogueChunkNames[index]}.json`, count: articles.length, facets: facets(articles) })),
+    chunks: researchCatalogueChunks.map((articles, index) => ({ path: `/research/catalogue/${researchCatalogueChunkNames[index]}.json`, count: articles.length, reviewed_count: articles.filter(article => article.detail_available !== false).length, facets: facets(articles) })),
   }), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 }

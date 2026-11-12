@@ -100,11 +100,18 @@ class SMTPEmailService:
 
         if config["smtp_use_tls"]:
             server = smtplib.SMTP(config["smtp_host"], config["smtp_port"], timeout=_SMTP_TIMEOUT_SECONDS)
-            server.starttls(context=context)
         else:
             server = smtplib.SMTP_SSL(config["smtp_host"], config["smtp_port"], context=context, timeout=_SMTP_TIMEOUT_SECONDS)
-
-        server.login(config["smtp_username"], config["smtp_password"])
+        try:
+            if config["smtp_use_tls"]:
+                server.starttls(context=context)
+            server.login(config["smtp_username"], config["smtp_password"])
+        except BaseException:
+            try:
+                server.close()
+            except Exception as exc:
+                logger.debug("SMTP connection close failed during setup: {}", exc)
+            raise
         return server
 
     def send_email(
@@ -131,6 +138,10 @@ class SMTPEmailService:
                 "SMTP auth configuration issue active; skipping send for {} more second(s).",
                 int(_smtp_auth_failure_retry_after - now),
             )
+            if raise_on_error:
+                raise smtplib.SMTPAuthenticationError(
+                    535, b"SMTP authentication failure cooldown is active"
+                )
             return False
 
         from_email = config["smtp_from_email"]

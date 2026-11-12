@@ -27,27 +27,24 @@ test('loads only requested catalogue chunks and narrows collection requests', as
   }
 });
 
-test('focused Ask loads complete scoped records and retries failed collections', async () => {
-  const { loadResearchQuestionCatalogue } = await import('../src/lib/research-catalogue-client.ts');
+test('focused Ask uses catalogue facets and exact membership', async () => {
+  const { loadResearchQuestionCatalogue } = await import('../src/lib/research-catalogue-client.ts?scoped');
   const originalFetch = globalThis.fetch, requests = [];
-  let failed = false;
-  globalThis.fetch = async path => {
-    requests.push(path);
-    if (path === '/research/catalogue/entities.json') return { ok: true, json: async () => ({ entities: [
-      { scope: 'disease', value: 'd038', aliases: ['flu', '流感'], path: '/site-data/research/diseases/d038.json' },
-      { scope: 'disease', value: 'd029', aliases: ['measles'], path: '/site-data/research/diseases/d029.json' },
-    ] }) };
-    if (String(path).endsWith('/d038.json')) return { ok: true, json: async () => ({ articles: Array.from({ length: 87 }, (_, i) => ({ article_id: String(i) })) }) };
-    if (String(path).endsWith('/d029.json') && !failed) { failed = true; return { ok: false }; }
-    return { ok: true, json: async () => ({ articles: [{ article_id: 'recovered' }] }) };
+  const fixtures = {
+    '/research/catalogue/entities.json': { entities: [{ scope: 'disease', value: 'd038', aliases: ['flu'] }] },
+    '/research/catalogue/manifest.json': { chunks: [
+      { path: '/matching.json', count: 2, facets: { disease: ['d038'] } },
+      { path: '/other.json', count: 1, facets: { disease: ['d999'] } },
+    ] },
+    '/matching.json': { articles: [
+      { article_id: 'one', diseases: [{ disease_id: 'D038' }] },
+      { article_id: 'other', diseases: [{ disease_id: 'D999' }] },
+    ] },
   };
+  globalThis.fetch = async path => { requests.push(path); return { ok: true, json: async () => fixtures[path] }; };
   try {
-    assert.equal((await loadResearchQuestionCatalogue('日本流感')).length, 87);
-    assert.equal((await loadResearchQuestionCatalogue('flu in Japan')).length, 87);
-    assert.equal(requests.length, 2);
-    assert.equal(requests.some(path => String(path).includes('/manifest.json')), false);
-    await assert.rejects(loadResearchQuestionCatalogue('measles'));
-    assert.equal((await loadResearchQuestionCatalogue('measles'))[0].article_id, 'recovered');
+    assert.deepEqual((await loadResearchQuestionCatalogue('flu')).map(item => item.article_id), ['one']);
+    assert.deepEqual(requests, ['/research/catalogue/entities.json', '/research/catalogue/manifest.json', '/matching.json']);
   } finally { globalThis.fetch = originalFetch; }
 });
 
@@ -157,54 +154,20 @@ test('failed filtered chunks can be retried without poisoning the global request
   } finally { globalThis.fetch = originalFetch; }
 });
 
-test('a complete 640-record study directory replaces hundreds of mixed chunks with seven immutable pages', async () => {
-  const { loadResearchCatalogue } = await import('../src/lib/research-catalogue-client.ts?complete-study');
-  const originalFetch = globalThis.fetch, requests = [], progress = [];
-  const records = Array.from({ length: 640 }, (_, index) => ({ article_id: `model-${index}`, study_type: 'Mathematical modelling', detail_available: index !== 639 }));
-  const pages = Array.from({ length: 7 }, (_, index) => ({ path: `/research/catalogue/studies/mathematical-modelling-all${index}-abcdef0123456789.json`, count: Math.min(100, 640 - index * 100) }));
-  let active = 0, maximum = 0;
+test('Ask skips bibliography-only chunks while the full catalogue and legacy chunks remain available', async () => {
+  const { loadResearchQuestionCatalogue, loadResearchCatalogue } = await import('../src/lib/research-catalogue-client.ts?reviewed-chunks');
+  const originalFetch = globalThis.fetch, requests = [];
+  const records = { '/reviewed.json': {article_id:'reviewed'}, '/bibliographic.json': {article_id:'bibliographic',detail_available:false}, '/legacy.json': {article_id:'legacy'} };
   globalThis.fetch = async path => {
     requests.push(path);
-    if (path === '/research/catalogue/manifest.json') return { ok: true, json: async () => ({
-      chunks: Array.from({ length: 482 }, (_, index) => ({ path: `/mixed-${index}.json`, count: 100, facets: { study: ['mathematical modelling'] } })),
-      study_collections: { 'mathematical modelling': { count: 640, chunks: pages } },
-    }) };
-    const page = pages.findIndex(page => String(path).endsWith(page.path));
-    assert.ok(page >= 0, `must not request mixed catalogue: ${path}`);
-    maximum = Math.max(maximum, ++active); await new Promise(resolve => setTimeout(resolve, 2)); active--;
-    return { ok: true, json: async () => ({ schema_version: 2, study: 'mathematical modelling', articles: records.slice(page * 100, (page + 1) * 100) }) };
+    const payload = path.endsWith('entities.json') ? {entities:[]} : path.endsWith('manifest.json') ? {chunks:[
+      {path:'/reviewed.json',count:1,reviewed_count:1}, {path:'/bibliographic.json',count:1,reviewed_count:0}, {path:'/legacy.json',count:1},
+    ]} : {articles:[records[path]]};
+    return {ok:true,json:async()=>payload};
   };
   try {
-    const result = await loadResearchCatalogue({ facets: { study: 'Mathematical modelling', country: 'JP' }, includeBibliographic: true, onProgress: event => progress.push(event) });
-    assert.deepEqual(result, records, 'complete study rows remain available for exact country filtering');
-    assert.equal(requests.length, 8);
-    assert.equal(maximum, 4);
-    assert.deepEqual(progress.map(event => event.completed), [0, 1, 2, 3, 4, 5, 6, 7]);
-    assert.ok(progress.every(event => event.total === 7));
-    assert.equal((await loadResearchCatalogue({ scope: 'study', value: 'mathematical modelling' })).length, 639);
-    assert.equal(requests.length, 8, 'study pages share the content-addressed cache');
-  } finally { globalThis.fetch = originalFetch; }
-});
-
-test('study page generation preserves every record and large collections keep old months stable', async () => {
-  const { buildResearchStudyCollections } = await import('../src/lib/research-catalogue-shards.ts');
-  const models = Array.from({ length: 640 }, (_, index) => ({ article_id: `model-${index}`, study_type: 'Mathematical modelling', published_at: '2026-11-01' }));
-  const study = buildResearchStudyCollections(models)[0];
-  assert.equal(study.count, 640);
-  assert.equal(study.chunks.length, 7);
-  assert.ok(study.chunks.every(page => page.count <= 100));
-  assert.deepEqual(new Set(study.chunks.flatMap(page => page.articles.map(article => article.article_id))), new Set(models.map(article => article.article_id)));
-  const journal = Array.from({ length: 1100 }, (_, index) => ({ article_id: `journal-${index}`, study_type: 'Journal article', published_at: index < 1000 ? '2025-01-01' : '2026-11-01' }));
-  journal.push({ article_id: 'undated', study_type: 'Journal article', published_at: '' });
-  const before = buildResearchStudyCollections(journal)[0];
-  const after = buildResearchStudyCollections([...journal, { article_id: 'added', study_type: 'Journal article', published_at: '2026-11-11' }])[0];
-  const bucket = (group, prefix) => group.chunks.filter(chunk => chunk.path.includes(prefix));
-  assert.deepEqual(bucket(before, '-202501'), bucket(after, '-202501'));
-  assert.deepEqual(bucket(before, '-000000'), bucket(after, '-000000'));
-  assert.notDeepEqual(bucket(before, '-202611'), bucket(after, '-202611'));
-  assert.deepEqual(buildResearchStudyCollections([...journal].reverse())[0], before, 'source iteration order does not churn monthly pages');
-  const atThreshold = buildResearchStudyCollections(journal.slice(0, 1000))[0];
-  assert.equal(atThreshold.chunks.length, 10);
-  assert.ok(atThreshold.chunks.every(page => page.path.includes('-all')));
-  assert.ok(before.chunks.every(page => !page.path.includes('-all')));
+    assert.deepEqual((await loadResearchQuestionCatalogue('unknown query')).map(x=>x.article_id),['reviewed','legacy']);
+    assert.equal(requests.includes('/bibliographic.json'),false);
+    assert.deepEqual((await loadResearchCatalogue({includeBibliographic:true})).map(x=>x.article_id),['reviewed','bibliographic','legacy']);
+  } finally { globalThis.fetch=originalFetch; }
 });

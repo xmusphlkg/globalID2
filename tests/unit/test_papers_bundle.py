@@ -35,6 +35,30 @@ def test_papers_path_classification() -> None:
     assert not is_papers_relative_path("_astro/BaseLayout.css")
 
 
+def test_build_only_research_indexes_are_excluded_from_both_bundles(tmp_path):
+    dist, papers = tmp_path / "dist", tmp_path / "papers"
+    obsolete = ["site-data/research/index.json", "site-data/research/catalogue.json",
+                "site-data/research/shards/articles-old.json",
+                "site-data/research/diseases/d038.json"]
+    for root in (dist, papers):
+        for name in obsolete:
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('{}')
+    collection = dist / "research/catalogue/diseases/d038.json"
+    collection.parent.mkdir(parents=True, exist_ok=True)
+    collection.write_text('{"articles":[]}')
+
+    split_papers_bundle(dist, papers_dir=papers)
+
+    for name in obsolete:
+        assert not (dist / name).exists()
+        assert not (papers / name).exists()
+    assert (papers / "research/catalogue/diseases/d038.json").exists()
+    manifest = json.loads((papers / "papers-manifest.json").read_text())
+    assert not set(obsolete) & {item["path"] for item in manifest["files"]}
+
+
 def test_disease_library_is_removed_from_pages_and_uses_same_build_styles_on_papers(tmp_path):
     dist, papers = tmp_path / "dist", tmp_path / "papers"
     files = {
@@ -251,7 +275,7 @@ def test_split_reuses_verified_html_and_removes_obsolete_files(tmp_path, monkeyp
         assert (papers / relative).stat().st_mtime_ns == modified
 
 
-@pytest.mark.parametrize("kind", ["disease", "study"])
+@pytest.mark.parametrize("kind", ["disease"])
 def test_library_shards_survive_cached_indexes_for_48_hours_without_extending_retirement(tmp_path, monkeypatch, kind):
     clock = [papers_bundle.time.time()]
     monkeypatch.setattr(papers_bundle.time, "time", lambda: clock[0])
@@ -287,7 +311,7 @@ def test_library_shards_survive_cached_indexes_for_48_hours_without_extending_re
     assert manifest["library_shard_retirements"] == {}
 
 
-@pytest.mark.parametrize("kind", ["disease", "study"])
+@pytest.mark.parametrize("kind", ["disease"])
 def test_library_shard_reactivation_clears_its_retirement_clock(tmp_path, monkeypatch, kind):
     clock = [papers_bundle.time.time()]
     monkeypatch.setattr(papers_bundle.time, "time", lambda: clock[0])
@@ -312,7 +336,7 @@ def test_library_shard_reactivation_clears_its_retirement_clock(tmp_path, monkey
     assert build(shards[1])["library_shard_retirements"][shards[0]] == clock[0]
 
 
-@pytest.mark.parametrize("kind", ["disease", "study"])
+@pytest.mark.parametrize("kind", ["disease"])
 def test_library_retention_ignores_arbitrary_paths_and_rejects_modified_shard_bytes(tmp_path, kind):
     from src.services.data_release.artifact_index import ArtifactIndex
     root = tmp_path / "papers"
@@ -366,28 +390,18 @@ def test_main_origin_research_keeps_article_links_and_drops_papers_redirects(tmp
     assert (papers / "research/articles/example/index.html").is_file()
 
 
-def test_study_collections_move_to_papers_and_keep_host_aware_links(tmp_path):
+def test_obsolete_study_collections_are_not_published(tmp_path):
     dist, papers = tmp_path / 'dist', tmp_path / 'papers'
     relative = 'research/catalogue/studies/mathematical-modelling-0123456789abcdef.json'
-    files = {
-        relative: '{"articles":[{"article_id":"model"}]}',
-        'research/catalogue/manifest.json': '{"study_collections":{}}',
-        'research/articles/model/index.html': (
-            f'<a href="/{relative}">Study</a>'
-            f'<a href="https://globalinfectiousdisease.com/{relative}">Absolute study</a>'
-            '<a href="/research/catalogue/manifest.json">Main index</a>'
-        ),
-    }
-    for name, body in files.items():
-        path = dist / name
+    for root in (dist, papers):
+        path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(body)
+        path.write_text('{"articles":[]}')
+    page = dist / 'research/articles/model/index.html'
+    page.parent.mkdir(parents=True)
+    page.write_text('<html>model</html>')
     split_papers_bundle(dist, papers_dir=papers)
     assert not (dist / relative).exists()
-    assert (papers / relative).read_text() == files[relative]
-    assert (dist / 'research/catalogue/manifest.json').is_file()
-    html = (papers / 'research/articles/model/index.html').read_text()
-    assert f'href="/{relative}"' in html
-    assert f'href="https://papers.globalinfectiousdisease.com/{relative}"' in html
-    assert 'href="https://globalinfectiousdisease.com/research/catalogue/manifest.json"' in html
-    assert '/research/catalogue/studies/*  https://papers.globalinfectiousdisease.com/research/catalogue/studies/:splat  301' in (dist / '_redirects').read_text()
+    assert not (papers / relative).exists()
+    manifest = json.loads((papers / 'papers-manifest.json').read_text())
+    assert all(item['path'] != relative for item in manifest['files'])

@@ -114,6 +114,10 @@ export default defineConfig({
             // as a stable cacheable vendor chunk prevents the shared graph
             // from collapsing back into a >500 kB monolith.
             if (id.includes('/node_modules/zrender/')) return 'zrender';
+            // Isolated research builds have fewer entry points. Without this
+            // boundary the shared ECharts engine merges into chartPreferences
+            // and exceeds the same chunk budget used by the main-site build.
+            if (id.includes('/node_modules/echarts/lib/core/')) return 'echarts-engine';
           },
         },
       },

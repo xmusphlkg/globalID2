@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { buildResearch, prepareResearchWorkspace } from './build-research.mjs';
@@ -31,8 +31,21 @@ test('isolated research build reads its own snapshot without writing main site d
       return { status: 0 };
     } });
     assert.equal(readFileSync(resolve(destination, 'index.html'), 'utf8'), 'rendered');
-    assert.equal(JSON.parse(readFileSync(resolve(destination, 'site-data/research/index.json'), 'utf8')).version, 'public-snapshot');
+    assert.equal(existsSync(resolve(destination, 'site-data/research/index.json')), false);
     assert.equal(JSON.parse(readFileSync(resolve(site, 'src/data/research/index.json'), 'utf8')).version, 'main');
+    const oldMode = process.env.GIDS_RESEARCH_STATIC_HOST;
+    try {
+      process.env.GIDS_RESEARCH_STATIC_HOST = '1';
+      buildResearch({ site, project: root, snapshot, work, destination: resolve(root, 'static-output'), run: (_cmd, _args, opts) => {
+        assert.equal(opts.env.PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN, '0');
+        mkdirSync(resolve(work, 'site/dist'), { recursive: true });
+        writeFileSync(resolve(work, 'site/dist/index.html'), 'static');
+        return { status: 0 };
+      } });
+    } finally {
+      if (oldMode === undefined) delete process.env.GIDS_RESEARCH_STATIC_HOST;
+      else process.env.GIDS_RESEARCH_STATIC_HOST = oldMode;
+    }
     assert.throws(() => buildResearch({ site, project: root, snapshot, work, destination: resolve(root, 'failed'), run: () => ({ status: 1 }) }), /build failed/);
     assert.throws(() => prepareResearchWorkspace({ site, snapshot, work: root }), /must be separate/);
     assert.equal(JSON.parse(readFileSync(resolve(site, 'src/data/research/index.json'), 'utf8')).version, 'main');

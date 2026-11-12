@@ -38,6 +38,14 @@ LIBRARY_SHARD_PATH = re.compile(
 )
 
 
+def is_obsolete_research_build_path(path: str) -> bool:
+    return path in {"site-data/research/index.json", "site-data/research/catalogue.json"} or path.startswith((
+        "site-data/research/shards/", "site-data/research/diseases/",
+        "site-data/research/countries/", "site-data/research/topics/",
+        "research/catalogue/studies/",
+    ))
+
+
 def retain_library_shards(
     papers_dir: Path, expected: set[Path], previous_manifest: dict,
     index: ArtifactIndex, *, now: float | None = None,
@@ -57,7 +65,7 @@ def retain_library_shards(
         if not isinstance(entry, dict):
             continue
         relative = entry.get("path")
-        if not isinstance(relative, str) or not LIBRARY_SHARD_PATH.fullmatch(relative):
+        if not isinstance(relative, str) or is_obsolete_research_build_path(relative) or not LIBRARY_SHARD_PATH.fullmatch(relative):
             continue
         path = papers_dir / relative
         if path in expected:
@@ -463,6 +471,10 @@ def split_papers_bundle(
     moved: list[str] = []
     cards_enabled = research_social_cards_enabled()
     for relative, path in artifact_files(dist_dir):
+        # Build inputs and obsolete Ask collections do not belong in releases.
+        if is_obsolete_research_build_path(relative):
+            path.unlink()
+            continue
         if not is_papers_relative_path(relative):
             continue
         if not cards_enabled and is_research_card(relative):

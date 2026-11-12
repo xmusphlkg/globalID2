@@ -1,7 +1,7 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.18.2",
+  "version": "0.18.3",
   "scripts": {
     "postinstall": "npm run sync:flags",
     "sync:flags": "node scripts/sync-flags.mjs",
@@ -16,7 +16,7 @@
     "test:monthly": "node --experimental-strip-types --test src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
     "test:charts": "npm run sync:flags && node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/chart-source-scope.test.ts src/lib/country-coverage.test.ts src/lib/country-classifications.test.ts src/lib/subdivision-map-points.test.ts src/components/charts/surveillance/__tests__/*.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts src/components/charts/reportFigureOptions.test.ts",
     "test:knowledge": "node --experimental-strip-types --test src/utils/knowledge.test.ts",
-    "test:research": "node --experimental-strip-types --test src/lib/research-ask.test.ts src/lib/research-ui.test.ts src/lib/research-signal-groups.test.ts src/lib/research-evidence-manifest.test.ts src/lib/research-literature.test.ts src/lib/research-relationships.test.ts scripts/research-catalogue-client.test.mjs src/lib/research-literature-client.test.ts src/lib/research-publication.test.ts src/lib/research-versioned-href.test.ts src/lib/research-sitemap.test.ts src/lib/research-search-entries.test.ts src/lib/research-public-source.test.ts",
+    "test:research": "node --experimental-strip-types --test src/lib/research-ask.test.ts src/lib/research-ui.test.ts src/lib/research-signal-groups.test.ts src/lib/research-evidence-manifest.test.ts src/lib/research-literature.test.ts src/lib/research-relationships.test.ts scripts/research-catalogue-client.test.mjs src/lib/research-catalogue-partition.test.ts src/lib/research-literature-client.test.ts src/lib/research-versioned-href.test.ts src/lib/research-sitemap.test.ts src/lib/research-search-entries.test.ts src/lib/research-public-source.test.ts",
     "test:i18n": "node --experimental-strip-types --test src/utils/i18n.test.ts",
     "test:perf": "node --test scripts/analytics-loader.test.mjs scripts/check-performance-budgets.test.mjs scripts/optimize-world-map.test.mjs",
     "test:seo": "node --experimental-strip-types --test scripts/build-redirects.test.mjs scripts/check-seo-output.test.mjs src/lib/report-routes.test.ts src/lib/research-catalogue.test.ts src/lib/research-feed.test.ts src/lib/research-integrity.test.ts src/lib/research-social-card.test.ts src/lib/research-publishing.test.ts src/lib/site-social-card.test.ts src/lib/seo.test.ts src/lib/sitemap-entries.test.ts src/lib/papers.test.ts",

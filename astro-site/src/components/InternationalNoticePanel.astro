@@ -61,37 +61,44 @@ const badgesFor = (alert: SituationAlertRecord) =>
 // inlined next to the markup rather than living in a static style block
 // that Astro emits for every importer.
 const PANEL_CSS = `  .intl-panel {
-    margin-top: 2rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.28));
+    padding: clamp(1.25rem, 2vw, 1.5rem);
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--surface));
   }
-  .intl-panel-heading {
-    margin: 0 0 0.35rem;
-    font-size: 1.1rem;
-    font-weight: 650;
+  .intl-panel-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
   }
-  .intl-panel-lead {
-    margin: 0 0 0.9rem;
-    font-size: 0.86rem;
-    color: var(--text-muted, #64748b);
+  .intl-panel-heading { margin-top: 0; }
+  .intl-panel-jump {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
   }
   .intl-panel-list {
     display: grid;
-    gap: 0.85rem;
+    gap: 0;
     margin: 0;
     padding: 0;
     list-style: none;
   }
   .intl-panel-item {
-    padding: 0.7rem 0.85rem;
-    border: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.22));
-    border-radius: 10px;
-    background: var(--surface-soft, rgba(248, 250, 252, 0.6));
+    padding: 1rem 0;
+    border-top: 1px solid rgb(var(--border));
+    min-width: 0;
   }
   .intl-panel-title {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--accent, #0f766e);
+    color: rgb(var(--text-strong));
     text-decoration: none;
   }
   .intl-panel-title:hover {
@@ -103,13 +110,13 @@ const PANEL_CSS = `  .intl-panel {
     gap: 0.6rem;
     margin: 0.3rem 0 0;
     font-size: 0.76rem;
-    color: var(--text-muted, #64748b);
+    color: rgb(var(--text-muted));
   }
   .intl-panel-summary {
     margin: 0.4rem 0 0;
     font-size: 0.83rem;
     line-height: 1.5;
-    color: var(--text-body, #334155);
+    color: rgb(var(--text));
   }
   .intl-panel-chips {
     display: flex;
@@ -119,10 +126,9 @@ const PANEL_CSS = `  .intl-panel {
   }
   .intl-panel-chip {
     padding: 0.1rem 0.45rem;
-    border-radius: 999px;
-    background: rgba(15, 118, 110, 0.1);
+    background: rgb(var(--color-teal) / 0.1);
     font-size: 0.7rem;
-    color: var(--accent-strong, #115e59);
+    color: rgb(var(--color-teal));
   }
   .intl-panel-snapshot {
     display: flex;
@@ -132,18 +138,16 @@ const PANEL_CSS = `  .intl-panel {
   }
   .intl-snapshot-badge {
     padding: 0.12rem 0.5rem;
-    border: 1px dashed rgba(15, 118, 110, 0.45);
-    border-radius: 8px;
+    border: 1px solid rgb(var(--border));
     font-size: 0.7rem;
-    color: var(--accent-strong, #115e59);
-    background: rgba(15, 118, 110, 0.06);
+    color: rgb(var(--color-teal));
+    background: rgb(var(--surface-raised));
   }
-  .intl-panel-jump { margin: -0.35rem 0 0.85rem; }
-  .intl-panel-jump a, .intl-panel-map { color: var(--accent, #0f766e); font-weight: 650; text-decoration: none; }
+  .intl-panel-map { color: rgb(var(--color-teal)); font-weight: 650; text-decoration: none; }
   .intl-panel-map { font-size: 0.72rem; }
-  .intl-panel-jump a:hover, .intl-panel-map:hover { text-decoration: underline; }
-  .intl-panel-counts { margin: 0.35rem 0 0; font-size: 0.8rem; font-weight: 600; color: var(--text-body, #334155); }
-  .intl-panel-quote { margin: 0.4rem 0 0; padding-left: 0.6rem; border-left: 2px solid rgba(15, 118, 110, 0.45); font-size: 0.8rem; font-style: italic; color: var(--text-muted, #64748b); }
+  .intl-panel-map:hover { text-decoration: underline; }
+  .intl-panel-counts { margin: 0.35rem 0 0; font-size: 0.8rem; font-weight: 600; color: rgb(var(--text)); }
+  .intl-panel-quote { margin: 0.4rem 0 0; padding-left: 0.6rem; border-left: 2px solid rgb(var(--border-soft)); font-size: 0.8rem; font-style: italic; color: rgb(var(--text-muted)); }
 `;
 ---
 
@@ -155,11 +159,13 @@ const PANEL_CSS = `  .intl-panel {
     <>
       <style set:html={PANEL_CSS} />
       <section class="intl-panel" aria-labelledby="intl-panel-heading">
-        <h2 id="intl-panel-heading" class="intl-panel-heading">
-          {copy.heading}
-        </h2>
-        <p class="intl-panel-lead">{copy.lead}</p>
-        {mapHref && <p class="intl-panel-jump"><a href={mapHref}>{copy.map}</a></p>}
+        <div class="intl-panel-header">
+          <div>
+            <h2 id="intl-panel-heading" class="figure-title intl-panel-heading">{copy.heading}</h2>
+            <p class="figure-caption">{copy.lead}</p>
+          </div>
+          {mapHref && <a class="site-action-secondary intl-panel-jump" href={mapHref}>{copy.map}</a>}
+        </div>
         <ul class="intl-panel-list">
           {rows.map((alert) => (
             <li class="intl-panel-item">

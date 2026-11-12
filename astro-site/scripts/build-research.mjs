@@ -67,7 +67,7 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
   // A full isolated candidate must not inherit another release's partial plan.
   const env = { ...process.env, GIDS_RESEARCH_BUILD_DIR: prepared.buildRoot,
     GIDS_SITE_DATA_ROOT: prepared.data, GIDS_RESEARCH_PUBLIC_ROOT: resolve(snapshot, 'public/research'),
-    GIDS_STATIC_RENDER: '1', PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN: '1' };
+    GIDS_STATIC_RENDER: '1', PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN: process.env.GIDS_RESEARCH_STATIC_HOST === '1' ? '0' : '1' };
   delete env.GIDS_RESEARCH_BUILD_PLAN;
   delete env.GIDS_PAGE_BUILD_PLAN;
   delete env.GIDS_REPORTS_BUILD_DIR;
@@ -103,9 +103,8 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
     }
   }
   const cacheVersion = inputs ? saveResearchCache({ cache: cacheDir, inputs, output: prepared.output }) : null;
-  const publicData = resolve(prepared.output, 'site-data/research');
-  mkdirSync(dirname(publicData), { recursive: true });
-  cpSync(resolve(snapshot, 'public/research'), publicData, { recursive: true });
+  // The sharded public snapshot is a build input only. Browser queries use
+  // the rendered research catalogue; do not copy the old data into releases.
   try { renameSync(prepared.output, destination); }
   catch (error) {
     if (error.code !== 'EXDEV') throw error;

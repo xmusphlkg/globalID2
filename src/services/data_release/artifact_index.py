@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 import time
 from pathlib import Path
@@ -74,6 +75,46 @@ class ArtifactIndex:
         stable = max(signature[3:]) < time.time_ns() - 1_000_000_000
         self.entries[self.key(path)] = {**digests, "stat": signature, "stable": stable}
         return digests
+
+    def cached_representation(self, path: Path, recipe: str) -> dict | None:
+        """Reuse wire digests only while the underlying file receipt is valid."""
+        source = self.cached(path)
+        if source is None:
+            return None
+        entry = self.entries.get(self.key(path), {})
+        representation = entry.get("representation")
+        if not isinstance(representation, dict) or representation.get("recipe") != recipe:
+            return None
+        if (representation.get("source_sha256") != source["sha256"]
+                or type(representation.get("bytes")) is not int
+                or representation["bytes"] < 0
+                or not isinstance(representation.get("md5"), str)
+                or re.fullmatch(r"[0-9a-f]{32}", representation["md5"]) is None
+                or representation.get("encoding") not in (None, "gzip")):
+            return None
+        return dict(representation)
+
+    def record_representation(
+        self, path: Path, recipe: str, source: dict, body: bytes, *, encoding: str | None,
+    ) -> None:
+        """Bind a deterministic representation to the source read that made it.
+
+        Each worker replaces its entry rather than mutating shared nested data.
+        Concurrent cache writers may lose a hint, but cannot combine receipts.
+        """
+        key = self.key(path)
+        entry = self.entries.get(key)
+        if (not isinstance(entry, dict) or entry.get("stat") != _signature(path)
+                or any(entry.get(field) != source.get(field) for field in ("bytes", "sha256", "md5"))):
+            return
+        self.entries[key] = {
+            **entry,
+            "representation": {
+                "recipe": recipe, "source_sha256": source["sha256"],
+                "bytes": len(body), "md5": hashlib.md5(body, usedforsecurity=False).hexdigest(),
+                "encoding": encoding,
+            },
+        }
 
     def read(self, path: Path) -> tuple[bytes, dict]:
         before = _signature(path)

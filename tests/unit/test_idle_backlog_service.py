@@ -163,6 +163,9 @@ def _review_lane(monkeypatch, tasks):
     async def load(uuid):
         return tasks.get(uuid)
 
+    config = idle.get_config()
+    config.literature.abstract_repair_enabled = False
+    monkeypatch.setattr(idle, "get_config", lambda: config)
     monkeypatch.setattr(model_operations, "enqueue_model_operation", enqueue)
     monkeypatch.setattr(idle, "_load_task", load)
     return idle.review_lane("articles", "articles"), queued
@@ -190,8 +193,11 @@ async def test_review_lane_waits_on_its_task_then_relaunches_after_progress(monk
 
     tasks["task-0"] = _task(TaskStatus.COMPLETED, {"published": 3, "rejected": 2})
     await service.process_once()
-    assert queued == ["task-0", "task-1"]  # progress: next stream starts at once
-    assert lane.pass_finalised == 5
+    assert queued == ["task-0"]  # repair runs before the next stream
+    assert lane.next_at <= time.monotonic() + 30
+    lane.next_at = 0
+    await service.process_once()
+    assert queued == ["task-0", "task-1"]
 
 
 async def test_review_lane_rests_when_its_task_made_no_progress(monkeypatch):
@@ -247,3 +253,43 @@ async def test_review_lane_failed_task_backs_off(monkeypatch):
     cycle = await service.process_once()
     assert queued == ["task-0"]
     assert lane.failures == 1 and "failed" in cycle["lanes"]["articles"]["outage"]
+
+
+async def test_abstract_repair_task_runs_before_empty_review_queue(monkeypatch):
+    from types import SimpleNamespace
+    from src.domain import TaskStatus
+    from src.services import idle_backlog_service as idle, model_operations
+
+    queued = []
+    async def enqueue(operation, arguments, *, priority):
+        queued.append(operation)
+        return SimpleNamespace(task_uuid=operation)
+    async def load(uuid):
+        return SimpleNamespace(status=TaskStatus.COMPLETED, output_data={"result": {"filled": 1}})
+    async def empty():
+        return {"articles": 0}
+    config = idle.get_config()
+    config.literature.abstract_repair_enabled = True
+    config.literature.abstract_repair_controller_enabled = False
+    monkeypatch.setattr(idle, "get_config", lambda: config)
+    monkeypatch.setattr(model_operations, "enqueue_model_operation", enqueue)
+    monkeypatch.setattr(idle, "_load_task", load)
+    lane = idle.review_lane("articles", "articles")
+    service, _ = make_service([lane], counts=empty)
+    await service.process_once()
+    assert queued == ["literature_abstract_repair"]
+    await service.process_once()
+    assert queued == ["literature_abstract_repair", "governance_stream"]
+
+
+async def test_filled_abstracts_force_rescan_after_zero_decision_stream(monkeypatch):
+    from src.domain import TaskStatus
+
+    tasks = {"task-0": _task(TaskStatus.COMPLETED, {"deferred": 9})}
+    lane, queued = _review_lane(monkeypatch, tasks)
+    lane.task_uuid = "task-0"
+    lane.repair_pending_rescan = True
+    service, _ = make_service([lane])
+    await service.process_once()
+    assert queued == ["task-0"]
+    assert lane.repair_pending_rescan is False

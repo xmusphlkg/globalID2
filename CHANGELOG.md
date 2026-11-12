@@ -4,6 +4,21 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.18.3] - 2026-11-12
+
+### Research and public data
+
+- Serve current research indexes as static Pages content and article/library assets directly from Papers R2. Partition catalogue and evidence payloads, load only relevant facets, and retain versioned compatibility routes for cached clients.
+- Compress static Papers uploads, reuse checksummed artifacts, retain older referenced assets and shards, and enforce a conservative bucket-size budget before publication.
+- Publish downloadable surveillance files from the same frozen snapshot as live JSON, with release-bound manifests, resumable publication and acknowledgement only after both channels succeed.
+- Add compact, independently refreshed homepage summaries and a bootstrap manifest to reduce initial data loading; improve notice layouts, map loading feedback, footer navigation and text contrast.
+
+### Background operations
+
+- Add bounded literature abstract repair and a resumable systemd backfill coordinator. Repaired records can return to review while historical exclusions require an explicit reopening decision.
+- Serialize AI failure-progress writes before acquiring database connections to avoid exhausting dispatcher pools under contention.
+- Close SMTP connections after TLS/authentication setup failures and propagate authentication cooldown errors when the caller requests failure reporting.
+
 ### Fixed
 
 - Completed tasks now persist and display 100% progress, including older successful JSON publications; failed and cancelled tasks retain their actual progress. Late progress callbacks cannot overwrite terminal task progress.

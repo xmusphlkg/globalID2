@@ -16,6 +16,23 @@ CONFIG = R2PapersConfig(
 )
 
 
+def test_bulk_delete_signs_checksum_and_rejects_partial_errors():
+    import base64
+    import hashlib
+    from xml.etree import ElementTree
+    seen = []
+    def opener(request, timeout):
+        seen.append(request)
+        return Response(b'<DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Error><Key>a</Key><Code>AccessDenied</Code></Error></DeleteResult>')
+    client = R2S3Client(CONFIG, opener=opener)
+    with pytest.raises(R2S3Error, match='batch deletion failed'):
+        client.delete_objects(['a', 'b&c'])
+    request = seen[0]
+    assert request.get_header('Content-md5') == base64.b64encode(hashlib.md5(request.data).digest()).decode()
+    assert 'content-md5' in request.get_header('Authorization')
+    assert [node.text for node in ElementTree.fromstring(request.data).findall('{*}Object/{*}Key')] == ['a', 'b&c']
+
+
 class Response:
     status = 200
 
@@ -84,6 +101,20 @@ def test_ordinary_object_bytes_are_not_changed():
     client.put_object("site-data/index.json", body)
     assert seen[0].data == body
     assert seen[0].get_header("Content-encoding") is None
+
+
+def test_static_gzip_encoding_is_signed_and_preserved():
+    seen = []
+    def opener(request, timeout):
+        seen.append(request)
+        return Response()
+    client = R2S3Client(CONFIG, opener=opener)
+    body = gzip.compress(b'<html>paper</html>', mtime=0)
+    client.put_object('research/articles/a/', body,
+                      content_type='text/html; charset=utf-8', content_encoding='gzip')
+    assert seen[0].data == body
+    assert seen[0].get_header('Content-encoding') == 'gzip'
+    assert 'content-encoding' in seen[0].get_header('Authorization')
 
 
 def test_invalid_compressed_manifest_is_terminal():

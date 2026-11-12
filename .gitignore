@@ -120,6 +120,7 @@ pnpm-debug.log*
 # Documentation build artifacts / large fixtures
 /site/
 /tests/fixtures/ai_test_data/
+/docs/benchmarks/
 
 # Local databases and temp files
 *.db

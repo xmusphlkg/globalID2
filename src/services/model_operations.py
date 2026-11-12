@@ -143,6 +143,14 @@ async def run_worker_operation(operation: str, arguments: dict[str, Any]) -> Any
 
 
 async def execute_model_operation(operation: str, arguments: dict[str, Any]) -> Any:
+    if operation == "literature_abstract_repair":
+        from src.literature.abstract_repair import repair_abstracts
+
+        return await repair_abstracts(
+            limit=int(arguments.get("limit", 200)),
+            retry_hours=int(arguments.get("retry_hours", 168)),
+            apply=True,
+        )
     if operation == "literature_replay":
         from src.literature.replay import execute_replay
 

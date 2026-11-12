@@ -106,3 +106,24 @@ def test_scanner_requires_verifier_to_cover_the_complete_reviewed_article_set(tm
     monkeypatch.setattr(scan, "verify_research_publication", lambda **_kwargs: incomplete)
     with pytest.raises(scan.ResearchObservationError, match="verified_article_inventory_mismatch"):
         run()
+
+
+def test_sharded_manifest_verifies_every_public_shard(tmp_path, monkeypatch):
+    state, save, run, _ = fixture(tmp_path, monkeypatch, reviewed=True)
+    root = tmp_path / 'astro/dist/research'
+    rows = state['manifest'].pop('articles')
+    raw = json.dumps(rows).encode()
+    digest = hashlib.sha256(raw).hexdigest()
+    name = f'evidence-shards/{digest}.json'
+    shard = root / name
+    shard.parent.mkdir()
+    shard.write_bytes(raw)
+    state['manifest']['schema_version'] = 'gids.research-evidence.v2'
+    state['manifest']['article_shards'] = [{'path': name, 'sha256': digest, 'count': len(rows)}]
+    save()
+    monkeypatch.setattr(scan.reports, '_get', lambda url, *_a, **_k: (root / 'evidence-manifest.json').read_bytes() if url.endswith('evidence-manifest.json') else shard.read_bytes())
+    items, _ = run()
+    assert [item['id'] for item in items] == ['research:one']
+    shard.write_bytes(b'[]')
+    with pytest.raises(scan.ResearchObservationError, match='shard_mismatch'):
+        run()

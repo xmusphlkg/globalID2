@@ -26,7 +26,8 @@ export function researchInputs({ site, project, snapshot }) {
   const supporting = ['src/data/meta.json', 'src/data/diseases/index.json', 'src/data/reports/index.json']
     .map(path => { const file = resolve(site, path); return existsSync(file) ? hash(readFileSync(file)) : ''; });
   const ownCode = hash(readFileSync(import.meta.filename)) + hash(readFileSync(resolve(site, 'scripts/build-research.mjs')));
-  return { schema: 1, shared: hash(JSON.stringify([sharedFingerprint(), templates, routes.diseases ?? [], supporting, ownCode])), articles };
+  return { schema: 1, shared: hash(JSON.stringify([sharedFingerprint(), templates, routes.diseases ?? [], supporting, ownCode,
+    process.env.GIDS_RESEARCH_STATIC_HOST === '1' ? 'static-papers' : 'main-research'])), articles };
 }
 
 export function planResearchArticles(inputs, previous) {

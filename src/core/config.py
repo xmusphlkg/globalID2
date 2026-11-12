@@ -778,6 +778,10 @@ class LiteratureSettings(_BaseEnvSettings):
         description="Maximum automatic generations per unchanged article/language before exception review",
     )
     ai_enrichment_languages_raw: str = Field(default="en,zh,fr")
+    abstract_repair_enabled: bool = True
+    abstract_repair_controller_enabled: bool = True
+    abstract_repair_batch_size: int = Field(default=200, ge=1, le=500)
+    abstract_repair_retry_after_hours: int = Field(default=168, ge=1)
     ai_min_abstract_characters: int = Field(default=180, ge=80, le=2000)
     ai_require_open_access: bool = Field(
         default=False,

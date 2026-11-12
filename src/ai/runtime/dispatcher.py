@@ -59,6 +59,9 @@ class AIWorkDispatcher:
         self.leases: dict[int, AIWorkItem] = {}
         self.outcomes: dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
         self.progress = SuccessProgressBuffer()
+        # A locked parent must not let a burst of failure-history writes occupy
+        # every connection in the dispatcher's small database pool.
+        self._failure_progress_lock = asyncio.Lock()
         self._tick_lock = asyncio.Lock()
         self._wake = asyncio.Event()
         self._renewed_at = 0.0
@@ -158,7 +161,13 @@ class AIWorkDispatcher:
                 if noted["status"] == "succeeded" and not noted["record_error"]:
                     self.progress.mark(noted)
                 else:
-                    await note_parent_work(noted)
+                    await self._note_failure_progress(noted)
+
+    async def _note_failure_progress(self, event: dict[str, Any]) -> None:
+        # Each failure remains a separate durable workbook entry. Wait for the
+        # previous writer before acquiring a database connection, not after.
+        async with self._failure_progress_lock:
+            await note_parent_work(event)
 
     async def _complete(
         self, item: AIWorkItem, route: dict[str, Any]

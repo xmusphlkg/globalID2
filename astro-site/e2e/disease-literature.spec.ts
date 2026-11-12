@@ -99,25 +99,26 @@ test('page failures hide old cards and can be retried without downloading the wh
   expect(requested).toEqual(['0-aaaaaaaaaaaaaaaa', '1-aaaaaaaaaaaaaaaa', '1-aaaaaaaaaaaaaaaa']);
 });
 
-test('focused Ask loads one complete scoped collection without fetching worldwide catalogue shards', async ({ page }) => {
+test('focused Ask loads only catalogue chunks matching its scope', async ({ page }) => {
   test.setTimeout(90_000);
-  const collections: string[] = [];
-  await page.route('**/research/catalogue/entities.json', route => route.fulfill({ json: { schema_version: 1, entities: [
-    { scope: 'disease', value: 'd038', aliases: ['Influenza', 'flu', '流感'], path: '/site-data/research/diseases/d038.json' },
+  const requested: string[] = [];
+  await page.route('**/research/catalogue/entities.json', route => route.fulfill({ json: { entities: [
+    { scope: 'disease', value: 'd038', aliases: ['Influenza', 'flu', '流感'] },
   ] } }));
-  await page.route('**/site-data/research/diseases/d038.json', async route => {
-    collections.push(route.request().url());
-    await new Promise(resolve => setTimeout(resolve, 150));
-    await route.fulfill({ json: { count: 87, articles: Array.from({ length: 87 }, (_, i) => article(i)) } });
+  await page.route('**/research/catalogue/manifest.json', route => route.fulfill({ json: { chunks: [
+    { path: '/research/catalogue/focused.json', count: 87, facets: { disease: ['d038'] } },
+    { path: '/research/catalogue/unrelated.json', count: 1, facets: { disease: ['d999'] } },
+  ] } }));
+  await page.route('**/research/catalogue/focused.json', route => {
+    requested.push(route.request().url());
+    return route.fulfill({ json: { articles: Array.from({ length: 87 }, (_, i) => article(i)) } });
   });
-  const worldwide: string[] = [];
-  page.on('request', request => { if (/\/research\/catalogue\/(?:manifest|\d[^/]*)\.json/.test(request.url())) worldwide.push(request.url()); });
+  await page.route('**/research/catalogue/unrelated.json', route => { requested.push(route.request().url()); return route.abort(); });
   await page.goto('/zh/research/ask/?q=日本流感', { timeout: 60_000 });
   await expect(page.locator('#answer-query-caption')).toContainText('日本流感');
   await expect(page.locator('#ask-answer')).toBeVisible();
   await expect(page.locator('#answer-exact-count')).not.toHaveText('0');
-  expect(collections).toHaveLength(1);
-  expect(worldwide).toHaveLength(0);
+  expect(requested).toHaveLength(1);
 });
 
 test('generic Ask shows complete-catalogue progress, bounds requests and ignores an older search finishing late', async ({ page }) => {
@@ -132,19 +133,22 @@ test('generic Ask shows complete-catalogue progress, bounds requests and ignores
   let requested = 0, active = 0, maximum = 0;
   await page.route('**/research/catalogue/generic-race-*.json', async route => {
     requested++; maximum = Math.max(maximum, ++active);
+    const index = Number(/generic-race-(\d+)\.json/.exec(route.request().url())![1]);
     await gate;
-    await route.fulfill({ json: { articles: [article(requested, { title: 'unstructured exposure' })] } });
+    await route.fulfill({ json: { articles: [article(index, {
+      title: 'unstructured exposure',
+      diseases: index === 0 ? [{ disease_id: 'D038', slug: 'influenza', name_en: 'Influenza', name_zh: '流行性感冒' }] : [{ disease_id: 'D999' }],
+    })] } });
     active--;
   });
-  await page.route('**/site-data/research/diseases/d038.json', route => route.fulfill({ json: { articles: [article(1000)] } }));
   await page.goto('/zh/research/ask/?q=unstructured%20exposure', { timeout: 60_000 });
   await expect.poll(() => requested).toBe(4);
   await expect(page.locator('#ask-status')).toContainText('已读取 0 / 7');
   await page.locator('#research-question').fill('日本流感');
   await page.locator('#research-question-form').evaluate(form => (form as HTMLFormElement).requestSubmit());
+  release();
   await expect(page.locator('#answer-query-caption')).toContainText('日本流感');
   await expect(page.locator('#ask-status')).toBeHidden();
-  release();
   await expect.poll(() => requested).toBe(7);
   await expect.poll(() => active).toBe(0);
   expect(maximum).toBeLessThanOrEqual(4);

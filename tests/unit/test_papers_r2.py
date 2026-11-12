@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import gzip
 import json
 import time
 from pathlib import Path
@@ -74,6 +75,7 @@ def test_derive_r2_credentials_rejects_inactive_or_blank_tokens(monkeypatch) -> 
 class FakeR2:
     def __init__(self) -> None:
         self.objects: dict[str, bytes] = {}
+        self.encodings: dict[str, str | None] = {}
 
     def get_object(self, key: str) -> bytes | None:
         return self.objects.get(key)
@@ -85,8 +87,10 @@ class FakeR2:
         *,
         content_type: str | None = None,
         cache_control: str | None = None,
+        content_encoding: str | None = None,
     ) -> None:
         self.objects[key] = body
+        self.encodings[key] = content_encoding
 
     def delete_object(self, key: str) -> None:
         self.objects.pop(key, None)
@@ -140,8 +144,55 @@ def test_incremental_papers_publish_uploads_then_skips_unchanged(tmp_path: Path)
     assert second.removed == 0
 
 
+def test_publisher_rejects_obsolete_bundle_before_upload(tmp_path):
+    papers = _seed_papers(tmp_path)
+    manifest_path = papers / "papers-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["files"].append({"path": "site-data/research/shards/old.json", "key": "site-data/research/shards/old.json"})
+    manifest_path.write_text(json.dumps(manifest))
+    client = FakeR2()
+    with pytest.raises(R2S3Error, match="Obsolete research files"):
+        publish_papers_site(papers, R2PapersConfig("acct", "bucket", "key", "secret"), client=client, verify_public=False)
+    assert not client.objects
+
+
+def test_storage_budget_accounts_for_other_channels_before_any_write(tmp_path):
+    papers = _seed_papers(tmp_path)
+    client = FakeR2()
+    client.objects['site-data/surveillance/current.json'] = b'x' * 1000
+    before = dict(client.objects)
+    with pytest.raises(R2S3Error, match='storage budget exceeded before upload'):
+        publish_papers_site(papers, R2PapersConfig('acct', 'bucket', 'key', 'secret'),
+                            client=client, verify_public=False, max_total_bytes=100)
+    assert client.objects == before
+
+
+def test_publisher_concurrency_is_bounded_by_the_connection_pool(tmp_path):
+    config = R2PapersConfig('acct', 'bucket', 'key', 'secret')
+    for workers in (0, 97):
+        with pytest.raises(ValueError, match='between 1 and 96'):
+            publish_papers_site(tmp_path, config, client=FakeR2(), workers=workers)
+
+
+def test_static_html_is_stored_gzipped_and_reused(tmp_path):
+    papers = _seed_papers(tmp_path)
+    page = papers / 'research/articles/slug/index.html'
+    original = ('<html>' + 'paper evidence ' * 500 + '</html>').encode()
+    page.write_bytes(original)
+    (papers / 'papers-manifest.json').unlink()
+    client = FakeR2()
+    config = R2PapersConfig('acct', 'bucket', 'key', 'secret')
+    publish_papers_site(papers, config, client=client, verify_public=False)
+    key = 'research/articles/slug/'
+    assert client.encodings[key] == 'gzip'
+    assert gzip.decompress(client.objects[key]) == original
+    assert len(client.objects[key]) < len(original)
+    again = publish_papers_site(papers, config, client=client, verify_public=False)
+    assert again.uploaded == 0
+
+
 @pytest.mark.parametrize("already_uploaded", [False, True])
-def test_disabled_cards_skip_legacy_upload_and_preserve_existing_remote_cards(tmp_path, monkeypatch, already_uploaded):
+def test_disabled_cards_remove_previous_remote_cards(tmp_path, monkeypatch, already_uploaded):
     papers = _seed_papers(tmp_path)
     config = R2PapersConfig(account_id="acct", bucket="papers", access_key_id="key", secret_access_key="secret")
     client = FakeR2()
@@ -151,11 +202,11 @@ def test_disabled_cards_skip_legacy_upload_and_preserve_existing_remote_cards(tm
     # Even missing/corrupt old local card files are not read for publication.
     (papers / "research/cards/slug.png").unlink()
     result = publish_papers_site(papers, config, client=client, verify_public=False)
-    assert result.removed == 0
-    assert client.objects.get("research/cards/slug.png") == (b"png-bytes" if already_uploaded else None)
+    assert result.removed == int(already_uploaded)
+    assert client.objects.get("research/cards/slug.png") is None
     manifest = json.loads(client.objects["papers-manifest.json"])
     assert manifest["article_social_cards_enabled"] is False
-    assert any(item["key"] == "research/cards/slug.png" for item in manifest["files"]) is already_uploaded
+    assert not any(item["key"] == "research/cards/slug.png" for item in manifest["files"])
     assert manifest["file_count"] == len(manifest["files"])
     repeat = publish_papers_site(papers, config, client=client, verify_public=False)
     assert repeat.uploaded == 0
@@ -203,6 +254,7 @@ def test_papers_publish_removes_orphans_and_verifies_sample(tmp_path: Path) -> N
             return False
 
     def public_opener(request, timeout):
+        assert request.get_header("User-agent") == "GIDS-Release-Verifier/1.0"
         seen_urls.append(request.full_url)
         return PublicResponse()
 
@@ -311,8 +363,8 @@ def test_changed_local_bytes_fail_without_manifest_or_deletion(tmp_path):
 def test_public_indexes_wait_for_all_shards(tmp_path, fail_shard):
     from src.services.data_release.papers_bundle import build_papers_manifest
     papers = _seed_papers(tmp_path)
-    shard_key = "site-data/research/shards/new.json"
-    index_key = "site-data/research/index.json"
+    shard_key = "site-data/reports/shards/new.json"
+    index_key = "site-data/reports/index.json"
     shard = papers / shard_key
     shard.parent.mkdir(parents=True)
     shard.write_text('{"records": []}')
@@ -393,8 +445,15 @@ def test_only_content_named_library_pages_receive_immutable_cache_metadata():
         assert "immutable" not in papers_r2._cache_control_for(mutable)
 
 
-def test_warm_publish_never_opens_unchanged_artifact_bodies(tmp_path, monkeypatch):
+@pytest.mark.parametrize("content", ["small", "gzip", "incompressible"])
+def test_warm_publish_never_opens_unchanged_artifact_bodies(tmp_path, monkeypatch, content):
     papers = _seed_papers(tmp_path)
+    if content != "small":
+        import random
+        body = (random.Random(42).randbytes(2048) if content == "incompressible"
+                else b"<html>" + b"evidence " * 1000 + b"</html>")
+        (papers / "research/articles/slug/index.html").write_bytes(body)
+        (papers / "papers-manifest.json").unlink()
     time.sleep(1.01)  # stable timestamps before warming publication receipts
     client = FakeR2()
     config = R2PapersConfig("acct", "bucket", "key", "secret")
@@ -408,9 +467,44 @@ def test_warm_publish_never_opens_unchanged_artifact_bodies(tmp_path, monkeypatc
         return original_read(path)
 
     monkeypatch.setattr(Path, "read_bytes", record_read)
+    monkeypatch.setattr(papers_r2.gzip, "compress", lambda *a, **kw: pytest.fail("Unchanged artifact was compressed again"))
     result = publish_papers_site(papers, config, client=client, verify_public=False)
     assert (result.uploaded, result.unchanged, result.bytes_uploaded) == (0, 2, 0)
     assert reads == []
+
+
+def test_cached_gzip_receipt_still_repairs_changed_remote_object(tmp_path, monkeypatch):
+    import os
+    papers = _seed_papers(tmp_path)
+    page = papers / "research/articles/slug/index.html"
+    page.write_bytes(b"<html>" + b"evidence " * 1000 + b"</html>")
+    (papers / "papers-manifest.json").unlink()
+    time.sleep(1.01)
+    client = FakeR2()
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    publish_papers_site(papers, config, client=client, verify_public=False)
+    key = "research/articles/slug/"
+    original = client.objects[key]
+    client.objects[key] = b"x" * len(original)  # same size, different remote ETag
+    reads = []
+    original_read = Path.read_bytes
+
+    def record_read(path):
+        if path.is_relative_to(papers):
+            reads.append(path)
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", record_read)
+    result = publish_papers_site(papers, config, client=client, verify_public=False)
+    assert (result.uploaded, result.unchanged) == (1, 1)
+    assert reads == [page]
+    assert client.objects[key] == original
+    before = page.stat()
+    page.write_bytes(b"x" * before.st_size)
+    os.utime(page, ns=(before.st_atime_ns, before.st_mtime_ns))
+    with pytest.raises(R2S3Error, match="checksum"):
+        publish_papers_site(papers, config, client=client, verify_public=False)
+    assert client.objects[key] == original
 
 
 def test_one_changed_file_only_reads_and_uploads_that_file(tmp_path, monkeypatch):

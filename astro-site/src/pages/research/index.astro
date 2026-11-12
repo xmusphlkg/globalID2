@@ -126,7 +126,7 @@ const itemList = {
   mainEntity: {
     '@type': 'ItemList',
     numberOfItems: articles.length,
-    itemListElement: articles.slice(0, 100).map((article: any, index: number) => ({
+    itemListElement: articles.slice(0, initialVisibleArticles).map((article: any, index: number) => ({
       '@type': 'ListItem',
       position: index + 1,
       url: absoluteSiteUrl(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),

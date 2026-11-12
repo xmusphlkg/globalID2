@@ -56,6 +56,9 @@ class Lane:
     failures: int = 0
     pass_finalised: int = 0
     task_uuid: str | None = None
+    repair_abstracts: bool = False
+    repair_task_uuid: str | None = None
+    repair_pending_rescan: bool = False
 
 
 async def foreground_pressure(max_running_ai_tasks: int) -> str | None:
@@ -135,6 +138,15 @@ def _queued_lane(name: str, operation: str, options) -> Lane:
                     lane.task_uuid = task.task_uuid
                     return SliceResult(detail={"queued_task_uuid": task.task_uuid, "after_cancelled": True})
                 finalised = _finalised(task)
+                if lane.repair_pending_rescan and task.status == TaskStatus.COMPLETED:
+                    lane.repair_pending_rescan = False
+                    lane.pass_finalised += finalised
+                    task = await enqueue_model_operation(operation, options(slice_size, buffer_size), priority=TaskPriority.LOW)
+                    lane.task_uuid = task.task_uuid
+                    return SliceResult(detail={"queued_task_uuid": task.task_uuid, "after_abstract_repair": True})
+                if lane.repair_abstracts and task.status == TaskStatus.COMPLETED and finalised:
+                    # Return to the scheduler so repair runs before the next pass.
+                    return SliceResult(finalised=finalised, exhausted=True)
                 if task.status != TaskStatus.COMPLETED or not finalised:
                     # No progress: rest instead of re-claiming rows that keep deferring.
                     return SliceResult(exhausted=True, detail={"finished_task_uuid": task.task_uuid})
@@ -146,7 +158,9 @@ def _queued_lane(name: str, operation: str, options) -> Lane:
 
 
 def review_lane(name: str, kind: str) -> Lane:
-    return _queued_lane(name, "governance_stream", lambda _size, buffer_size: {"kind": kind, "buffer_size": buffer_size})
+    lane = _queued_lane(name, "governance_stream", lambda _size, buffer_size: {"kind": kind, "buffer_size": buffer_size})
+    lane.repair_abstracts = kind == "articles"
+    return lane
 
 
 def simple_lane(name: str, method: str) -> Lane:
@@ -258,9 +272,42 @@ class IdleBacklogService:
         for lane in due:
             if self._stop.is_set():
                 break
-            if lane.task_uuid is None and not counts.get(lane.name):
+            if lane.task_uuid is None and not counts.get(lane.name) and not lane.repair_abstracts:
                 self._rest(lane, cfg.idle_backlog_rest_seconds)
                 continue
+            if lane.repair_abstracts and lane.task_uuid is None:
+                literature_cfg = get_config().literature
+                if (literature_cfg.abstract_repair_enabled
+                        and not literature_cfg.abstract_repair_controller_enabled):
+                    if lane.repair_task_uuid is None:
+                        from src.domain import TaskPriority
+                        from src.services.model_operations import enqueue_model_operation
+
+                        task = await enqueue_model_operation(
+                            "literature_abstract_repair",
+                            {"limit": literature_cfg.abstract_repair_batch_size,
+                             "retry_hours": literature_cfg.abstract_repair_retry_after_hours},
+                            priority=TaskPriority.LOW,
+                        )
+                        lane.repair_task_uuid = task.task_uuid
+                        cycle["lanes"][lane.name] = {"repair_task_uuid": task.task_uuid}
+                        continue
+                    task = await _load_task(lane.repair_task_uuid)
+                    if task is not None and task.status in _ACTIVE_TASK_STATUSES:
+                        continue
+                    lane.repair_task_uuid = None
+                    if task is None or task.status != TaskStatus.COMPLETED:
+                        self._schedule(lane, SliceResult(outage="abstract repair task failed or disappeared"),
+                                       cfg.idle_backlog_interval_seconds, cfg.idle_backlog_rest_seconds)
+                        continue
+                    result_data = (task.output_data or {}).get("result") or {}
+                    lane.repair_pending_rescan = bool(result_data.get("filled"))
+                    if not counts.get(lane.name) and not result_data.get("filled"):
+                        self._rest(lane, cfg.idle_backlog_rest_seconds)
+                        continue
+                elif not counts.get(lane.name):
+                    self._rest(lane, cfg.idle_backlog_rest_seconds)
+                    continue
             result = await self._run_slice(lane, cfg.idle_backlog_slice_size, cfg.idle_backlog_review_buffer_size)
             self._schedule(lane, result, cfg.idle_backlog_interval_seconds, cfg.idle_backlog_rest_seconds)
             cycle["lanes"][lane.name] = {

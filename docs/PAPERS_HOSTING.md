@@ -17,7 +17,7 @@ Public hosting is therefore three channels:
 | --- | --- | --- |
 | Pages main | Countries, disease surveillance, situation, research overview and other collection pages, `_astro`, scripts | Cloudflare Pages (`globalidv2`) |
 | GitHub downloads | Time-partitioned CSV/JSON/XLSX | `globalID2_data_download` `main` |
-| R2 papers | Article and disease-literature HTML (en/zh/fr), slim disease literature catalogues, card PNGs, `site-data/research/*` | R2 `globalid-papers` @ `papers.globalinfectiousdisease.com` |
+| R2 papers | Article and disease-literature HTML (en/zh/fr), slim disease literature catalogues, card PNGs | R2 `globalid-papers` @ `papers.globalinfectiousdisease.com` |
 
 ## Disease literature pages
 
@@ -29,12 +29,83 @@ from `astro-site`, then check the response using an `Origin` header for the main
 site. Only production GIDS origins and GET/HEAD are allowed. See the
 [Cloudflare R2 CORS documentation](https://developers.cloudflare.com/r2/buckets/cors/).
 
-Browser disease/country/topic Ask collections must be generated alongside the
-global browser index. `scripts/repair_browser_research_collections.py` can rebuild
-them from the existing canonical research snapshot without a database export or
-Astro render. Synchronize only those three directories into the existing Papers
-bundle, refresh its manifest, and run the normal incremental R2 publisher. Do not
-rerun the splitter against an already-split main bundle.
+Ask reads the shared research catalogue. Its chunk facets select candidate
+pages, and the client checks actual disease, country or topic membership before
+returning results. No separate per-scope or per-study article copies are published.
+The shared catalogue partitions records by evidence availability and study type
+(at most 100 per chunk),
+so a study filter does not download hundreds of unrelated date-mixed chunks.
+The manifest counts reviewed records in each chunk. Ask skips bibliography-only
+chunks, while the full research catalogue still includes them; older manifests
+without that count remain readable. Each record occurs once in the active
+manifest, and the browser retains its existing result sorting.
+The large sharded snapshot is a build input and is not included in the static
+Papers bundle.
+
+The Papers R2 publisher stores compressible static text as deterministic gzip
+and sets `Content-Encoding: gzip` on each object. The public R2 domain serves
+the object directly; clients decode it without a Worker. The manifest records
+the original source bytes, while inventory matching checks the stored bytes.
+
+Warm publications cache the compressed size and MD5 alongside the local file's
+stat and source SHA256 receipt. The cache also identifies the Python/zlib version
+and gzip settings. When those receipts and the actual R2 inventory still match,
+unchanged text files need neither another file read nor another gzip pass.
+Missing receipts, changed source metadata or different remote ETags fall back to
+reading and validating the source. Shared R2 HTTP connections remain reusable
+for 30 seconds between batches. The versioned Papers content publisher also
+compresses new text objects when smaller; its catalogue and content hashes still
+describe decoded bytes, and existing immutable objects are left intact.
+
+On the publisher host, network selection is managed outside this repository by
+`/usr/local/sbin/netpath-select`, configured in `/etc/netpath-select.json`, with
+source copies in `/home/likangguo/server-setup/192.168.30.20/source/`.
+`netpath-select.timer` refreshes choices every ten minutes. R2 uploads use the
+account S3 endpoint, not `api.cloudflare.com`: optimizing only the latter does
+not optimize object uploads. The previous four-domain configuration omitted R2,
+whose system DNS resolution used the proxy's fake-IP range. The selector now
+discovers configured R2 endpoints and probes them with certificate-verified,
+read-only HTTPS HEAD requests, accepting authentication errors as connectivity
+evidence. It updates local hosts and routes, not authoritative Cloudflare DNS.
+Unmetered paths retain priority; metered proxy paths are fallback options.
+When ordinary DNS yields unusable candidates, the selector retries with
+certificate-verified DNS over HTTPS. If direct encrypted DNS is also blocked,
+it may use the fallback gateway for that small DNS query, then tests the real
+target over unmetered paths again before selecting a business-traffic proxy.
+These probes measure reachability and response latency, not upload throughput.
+
+For this direct static hosting mode, set `DATA_RELEASE__LITERATURE_JSON_ENABLED=false`.
+Literature then follows the existing scheduled site release (currently every six
+hours), including dirty-marker selection, Papers upload and Pages deployment.
+Surveillance and Situation retain their independent JSON channels. Leaving the
+legacy literature switch enabled would keep writing content-addressed versions
+that the static research pages no longer read, and a later main-site build could
+restore the old Worker routes. Reload the scheduler, API and general worker after
+changing the setting; allow active collection tasks to drain.
+Version-pinned `/research-publication/*` URLs remain on the Worker for cached
+clients. That compatibility handler decodes gzip R2 bodies before HTML/CSS
+rewriting; current `/research/*` URLs are static.
+
+`R2_PAPERS_MAX_TOTAL_BYTES` defaults to 8,000,000,000 bytes in the publisher CLI.
+Before any upload it checks a conservative final bucket size: raw candidate
+bytes, retained dependencies, the completion manifest and all other objects in
+the same bucket. A breach fails publication before mutation. This reserves
+headroom for Reports and the account's other buckets; it is not an account-wide
+billing guarantee. Cloudflare's free allowance is monthly storage and operation
+usage, so monitor Class A/B usage as well as bytes. The budget may reject a
+compressible candidate conservatively; do not raise it without reviewing the
+account's complete usage.
+
+For a direct static research candidate, build with `GIDS_RESEARCH_STATIC_HOST=1`
+and run `scripts/prepare_static_research_release.py` against a verified Pages
+snapshot. It removes research paths from the Pages Worker routes, retains other
+data routes, and splits the research pages between Pages and the Papers bucket.
+The generated `review.json` identifies the base release and marks the release
+identity for refresh; the preparation command does not deploy or switch traffic.
+Preparation includes Papers robots and sitemaps, excludes noindex pages and
+partitions the sitemap above 45,000 URLs. Run `node
+astro-site/scripts/split-research-evidence.mjs <stage>` on a fresh isolated stage
+before preparation so the evidence manifest respects Pages' per-file limit.
 
 The complete disease literature interface is published on the existing Papers
 host, beside the article summaries:
@@ -91,9 +162,9 @@ controls PNG generation, incremental build paths, bundle splitting and the R2
 upload boundary, including older staged bundles. It is included in build cache
 fingerprints so the next build replaces cached article metadata.
 
-Disabling cards does not delete existing R2 cards: prior manifest entries are
-retained for cached-page compatibility, without uploading their bodies again.
-Existing storage usage therefore does not immediately fall. Set the shared
+Disabling cards removes prior card entries owned by the completion manifest
+after public verification. Objects outside that manifest require a separate
+reference audit before cleanup. Set the shared
 value to `true` and rebuild/publish to restore per-article cards.
 
 ```text
@@ -108,8 +179,9 @@ R2_SECRET_ACCESS_KEY=…
 # optional; defaults to CLOUDFLARE_ACCOUNT_ID
 R2_ACCOUNT_ID=
 R2_ENDPOINT_URL=
-# bounded concurrency, 1–32; persistent HTTP connection pool
+# bounded concurrency, 1–96; persistent HTTP connection pool
 R2_PAPERS_UPLOAD_WORKERS=32
+R2_PAPERS_MAX_TOTAL_BYTES=8000000000
 ```
 
 Create an R2 S3 API token (Object Read & Write on `globalid-papers`) and put the
@@ -141,12 +213,15 @@ downloads, and R2 papers readiness.
 - Public verification precedes deletion of obsolete keys declared in the prior
   manifest. The new manifest is written last. This is a completion marker;
   independent objects are updated in place, not switched atomically as a site.
-- Browser research shards use record-derived boundaries and content hashes in
-  filenames, preserving the existing ordered-list client contract. The uploader
-  finishes shard uploads before updating `research/index.json` and
-  `research/catalogue.json`. Generation retains retired shards for 48 hours
-  after their last active reference, including legacy numbered shards during
-  migration, so cached indexes keep resolving. Cleanup remains manifest-scoped.
+  Deletions use explicit batches of up to 500 keys and fail on per-key errors.
+  Fresh isolated bundles also retain the prior asset generation and unexpired
+  disease shards from the remote manifest, without downloading those bodies.
+- The build uses `site-data/research/index.json`, `catalogue.json`, and their
+  `shards/` locally. The splitter excludes these build inputs from both public
+  bundles; the shared research catalogue remains published.
+  The uploader deletes obsolete objects recorded by the prior papers manifest;
+  objects absent from that manifest require a separate bucket inventory and
+  reference audit before removal.
 - For legacy bundles referencing main-site hashed `/_astro/` files, publish a compatibility
   Pages artifact containing the prior site plus those files before uploading R2
   HTML. Verify the new asset bytes and CORS on the public origin first. Unchanged
@@ -163,7 +238,12 @@ downloads, and R2 papers readiness.
   transfer metadata; no existing HTML, PNG or JSON bodies are downloaded.
 - The public probe also uses HTTPX. It retries transient transport/429/5xx
   failures, falls back to a one-byte range GET when HEAD is unsupported, and
-  retains the HTTP status in failure diagnostics. Authentication/403 failures
+  identifies itself as `GIDS-Release-Verifier/1.0`, like the other release
+  verifiers. Bot Fight Mode can challenge generic HTTPX or headless-browser
+  clients independently of application health; inspect `cf-mitigated` and
+  Security Events before treating such a response as a broken route. This
+  identifier is not authentication or a guarantee of bypassing challenges.
+  The probe retains the HTTP status in failure diagnostics. Authentication/403 failures
   remain terminal; verification is never skipped to complete a release.
 
 - Main-site `_redirects` send `/research/articles/*`, `/research/diseases/*`,

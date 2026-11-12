@@ -62,7 +62,7 @@ const typeLabelsFr: Record<string, string> = {
   <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-brand-500 via-brand-400 to-transparent opacity-80"></div>
   <div class="flex items-center justify-between gap-3 mb-3">
     <div class="flex items-center gap-2">
-      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20">
+      <span class="inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-bold tracking-wider uppercase bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20">
         {locale === 'zh' ? (typeLabelsZh[reportType] ?? reportType) : locale === 'fr' ? (typeLabelsFr[reportType] ?? reportType) : (typeLabels[reportType] ?? reportType)}
       </span>
       {countryName && (

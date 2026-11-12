@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import hashlib
+import gzip
 import json
 from pathlib import Path
 import re
@@ -16,7 +17,7 @@ from typing import Any
 
 from scripts.automation.dispatch_research_digest import _https_origin
 from src.core import get_logger
-from .papers_bundle import _object_key_for_papers
+from .papers_bundle import _object_key_for_papers, is_obsolete_research_build_path
 from .papers_immutable import ImmutablePapersCandidate, ImmutablePapersFile, _source
 from .papers_r2 import R2S3Error, _content_type_for
 
@@ -65,6 +66,8 @@ def prepare_papers_content_from_manifest(root: Path, manifest: dict[str, Any], *
     seen = set()
     for entry in manifest["files"]:
         path, key = entry["path"], entry["key"]
+        if isinstance(path, str) and is_obsolete_research_build_path(path):
+            raise ValueError("Obsolete research files in papers bundle; rebuild the bundle")
         if (not isinstance(path, str) or path.startswith("/") or "\\" in path
                 or any(part in {"", ".", ".."} for part in path.split("/"))
                 or not isinstance(key, str) or key in seen or _object_key_for_papers(path) != key
@@ -84,6 +87,8 @@ def _prepare(root: Path, origin: str, files: tuple[ImmutablePapersFile, ...], *,
     groups: dict[str, list[dict[str, Any]]] = {}
     entries: list[dict[str, Any]] = []
     for item in files:
+        if is_obsolete_research_build_path(item.path):
+            raise ValueError("Obsolete research files in papers bundle; rebuild the bundle")
         content_type = _content_type_for(item.path)
         # Equal bytes with different MIME types must not share R2 metadata.
         kind = _hash(content_type.encode())[:16]
@@ -139,9 +144,22 @@ def publish_papers_content(candidate: PapersContentCandidate, *, client: Any,
         key = entry["key"]
         path = _source(candidate.root, entry["path"])
         body = path.read_bytes()
+        if len(body) != entry["bytes"] or _hash(body) != entry["sha256"]:
+            raise ValueError(f"Papers source changed during publish: {entry['path']}")
+        # Keys and catalogue digests describe decoded content. The reader
+        # already decodes Content-Encoding before rewriting HTML/CSS, so new
+        # text objects can use fewer wire bytes without changing generations.
+        metadata = {}
+        if len(body) >= 1024 and entry["content_type"].startswith((
+            "text/", "application/json", "application/xml", "image/svg+xml",
+        )):
+            encoded = gzip.compress(body, compresslevel=6, mtime=0)
+            if len(encoded) < len(body):
+                body = encoded
+                metadata["content_encoding"] = "gzip"
         try:
             client.put_object_conditional(key, body, previous=None, content_type=entry["content_type"],
-                                          cache_control="public, max-age=31536000, immutable")
+                                          cache_control="public, max-age=31536000, immutable", **metadata)
             return True
         except R2S3Error as error:
             if error.status != 412:

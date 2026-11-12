@@ -142,3 +142,38 @@ def test_auth_failure_blocks_follow_up_sends_within_cooldown(monkeypatch) -> Non
         )
         is False
     )
+
+
+def test_auth_cooldown_preserves_raise_on_error_contract(monkeypatch) -> None:
+    service = _service()
+    monkeypatch.setattr(smtp_module, "_smtp_auth_failure_retry_after", 2000.0)
+    monkeypatch.setattr(smtp_module.time, "time", lambda: 1000.0)
+    monkeypatch.setattr(service, "_create_connection", lambda: pytest.fail("must not connect"))
+    with pytest.raises(smtplib.SMTPAuthenticationError, match="cooldown"):
+        service.send_email(
+            recipients=["ops@example.test"], subject="Alert", body_html="test",
+            raise_on_error=True,
+        )
+
+
+@pytest.mark.parametrize("failure_stage", ["starttls", "login"])
+def test_connection_is_closed_when_smtp_setup_fails(monkeypatch, failure_stage) -> None:
+    service = _service()
+    calls = []
+
+    class SetupConnection:
+        def starttls(self, **_kwargs):
+            if failure_stage == "starttls":
+                raise smtplib.SMTPServerDisconnected("TLS failed")
+
+        def login(self, *_args):
+            if failure_stage == "login":
+                raise smtplib.SMTPAuthenticationError(535, b"bad credentials")
+
+        def close(self):
+            calls.append("closed")
+
+    monkeypatch.setattr(smtp_module.smtplib, "SMTP", lambda *_args, **_kwargs: SetupConnection())
+    with pytest.raises(smtplib.SMTPException):
+        service._create_connection()
+    assert calls == ["closed"]

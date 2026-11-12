@@ -1,5 +1,14 @@
-@import 'tailwindcss/index.css';
+@import 'tailwindcss/index.css' source(none);
 @config '../../tailwind.config.mjs';
+/* Only interface source defines utilities; generated data and build artifacts
+   must not grow the stylesheet as the catalogue grows. */
+@source '../components';
+@source '../layouts';
+@source '../pages';
+@source '../lib';
+@source '../utils';
+@source not '../data';
+@source not '../**/*.test.*';
 
 .disease-trend-heading, .disease-trend-controls, .disease-trend-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; }
 .disease-trend-heading { justify-content: space-between; align-items: flex-start; gap: 1rem; }
@@ -1364,8 +1373,11 @@
 
   .chart-loading-panel {
     min-height: 220px;
+    display: grid;
+    place-items: center;
     @apply rounded-none;
   }
+  .chart-loading-panel > .gids-loading { position: relative; z-index: 1; }
 }
 
 @media (min-width: 1280px) {

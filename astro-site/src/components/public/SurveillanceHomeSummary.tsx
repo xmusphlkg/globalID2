@@ -9,15 +9,22 @@ export default function SurveillanceHomeSummary({ dataUrl, mode, language, repor
   const { data, version, error, retry } = useSurveillanceSummary(dataUrl);
   const pick = (en: string, zh: string, fr: string) => translate(language, en, zh, fr);
   const prefix = language === 'en' ? '' : `/${language}`;
+  const metricLabels = [pick('National jurisdictions', '国家级辖区', 'Juridictions nationales'), pick('Subnational datasets', '省级／地区数据集', 'Jeux infranationaux'), pick('Diseases tracked', '追踪疾病数', 'Maladies suivies'), pick('Official sources', '官方来源', 'Sources officielles'), ...(reportCount !== undefined ? [pick('Published reports', '已发布报告', 'Rapports publiés')] : [])];
   if (!data) {
-    if (mode === 'home-count') return error ? <span>—</span> : <GIDSLoader language={language} compact label={pick('Loading…', '读取中…', 'Chargement…')} />;
+    if (mode === 'home-count') return <span aria-label={pick('Not loaded', '尚未加载', 'Non chargé')}>—</span>;
     if (error) return <p role="status">{pick('Current data is unavailable.', '当前数据暂时无法读取。', 'Les données actuelles sont indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></p>;
-    return <GIDSLoader language={language} compact={mode !== 'home-indicators'} className={mode === 'home-indicators' ? 'home-summary-loading' : ''} />;
+    if (mode === 'home-indicators') return <div className="home-summary" aria-busy="true">
+      <dl className="asset-grid">{metricLabels.map((label, index) => <div key={label}><dt className="academic-kicker mb-2">{label}</dt><dd className="font-semibold tabular-nums">{index === 4 ? number(reportCount, language) : '—'}</dd></div>)}</dl>
+      <p className="home-summary-status"><GIDSLoader language={language} compact label={pick('Updating statistics…', '正在更新统计…', 'Actualisation des statistiques…')} /></p>
+      <p className="figure-caption mt-2">{pick('National and subnational coverage are counted separately.', '国家级与省级／地区覆盖分别统计，地区数据不叠加到全国总量。', 'Les couvertures nationale et infranationale sont comptées séparément, sans additionner leurs totaux.')}</p>
+    </div>;
+    return <div className={`home-list-placeholder home-list-placeholder--${mode}`} aria-busy="true"><GIDSLoader language={language} label={pick('Loading countries…', '正在读取国家概览…', 'Chargement des pays…')} /></div>;
   }
   const national: Summary[] = nationalRows(data), subdivisions = subdivisionRows(data), sourceCount = officialSourceCount(data);
-  if (mode === 'home-count') return <span data-surveillance-version={version}>{number(metric === 'countries' ? national.length : metric === 'sources' ? sourceCount : data.total_diseases, language)}</span>;
+  const nationalCount = data.national_count ?? national.length, subdivisionCount = data.subdivision_count ?? subdivisions.length, sources = data.official_source_count ?? sourceCount;
+  if (mode === 'home-count') return <span data-surveillance-version={version}>{number(metric === 'countries' ? nationalCount : metric === 'sources' ? sources : data.total_diseases, language)}</span>;
   if (mode === 'country-links' || mode === 'recent-countries') {
-    const rows = [...national].sort((a, b) => mode === 'recent-countries'
+    const rows: Summary[] = (mode === 'recent-countries' ? data.recent_countries : data.featured_countries) ?? [...national].sort((a, b) => mode === 'recent-countries'
       ? String(b.date_range?.end ?? '').localeCompare(String(a.date_range?.end ?? ''))
       : Number(b.record_count ?? 0) - Number(a.record_count ?? 0)).slice(0, mode === 'recent-countries' ? 3 : 6);
     return <div className={mode === 'recent-countries' ? 'home-recent' : 'home-countries'} data-surveillance-version={version}>{rows.map(row => <a key={row.code} href={`${prefix}/countries/${String(row.code).toLowerCase()}/`}>
@@ -30,13 +37,13 @@ export default function SurveillanceHomeSummary({ dataUrl, mode, language, repor
 
   return <div className="home-summary" data-surveillance-version={version}>
     <dl className="asset-grid">{[
-      [pick('National jurisdictions', '国家级辖区', 'Juridictions nationales'), national.length],
-      [pick('Subnational datasets', '省级／地区数据集', 'Jeux infranationaux'), subdivisions.length],
+      [metricLabels[0], nationalCount],
+      [metricLabels[1], subdivisionCount],
       [pick('Diseases tracked', '追踪疾病数', 'Maladies suivies'), data.total_diseases],
-      [pick('Official sources', '官方来源', 'Sources officielles'), sourceCount],
+      [metricLabels[3], sources],
       ...(reportCount !== undefined ? [[pick('Published reports', '已发布报告', 'Rapports publiés'), reportCount]] : []),
     ].map(([name, value]) => <div key={String(name)}><dt className="academic-kicker mb-2">{name}</dt><dd className="font-semibold tabular-nums">{number(value, language)}</dd></div>)}</dl>
-    <p className="figure-caption mt-3">{pick('Data updated', '数据更新于', 'Données mises à jour')} {String(data.generated_at ?? '—').slice(0, 10)}</p>
+    <p className="figure-caption home-summary-status">{pick('Data updated', '数据更新于', 'Données mises à jour')} {String(data.generated_at ?? '—').slice(0, 10)}</p>
     <p className="figure-caption mt-2">{pick('National and subnational coverage are counted separately.', '国家级与省级／地区覆盖分别统计，地区数据不叠加到全国总量。', 'Les couvertures nationale et infranationale sont comptées séparément, sans additionner leurs totaux.')}</p>
   </div>;
 }

@@ -282,6 +282,7 @@ def main():
     parser.add_argument("--wait-for-new-worker-pid", type=int,
                         help="Wait until this old worker is replaced by an active new worker")
     args = parser.parse_args()
+    parser.error("Bulk reopening of exclusions is disabled; reopen only individually confirmed articles")
     if not args.apply:
         parser.error("--apply is required; inspect the database before starting")
     if not 1 <= args.batch_size <= 500 or args.max_backlog < args.batch_size or args.interval < 5:

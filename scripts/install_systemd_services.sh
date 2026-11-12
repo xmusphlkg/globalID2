@@ -23,6 +23,7 @@ UNIT_NAMES=(
   globalid-ai-worker.service
   globalid-model-dispatch@.service
   globalid-literature-historical-rescreen.service
+  globalid-literature-abstract-backfill.service
   globalid-dashboard-web.service
   globalid-site.service
   globalid-population-refresh.service

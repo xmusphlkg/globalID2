@@ -226,3 +226,37 @@ async def test_failure_history_is_not_coalesced_or_lost_across_generations(datab
         assert [row.metadata_["execution_generation"] for row in history] == [0, 1]
         assert all(row.error_message == "test failure" for row in history)
         assert await db.scalar(select(Task.progress)) == 0
+
+
+async def test_locked_parent_failure_burst_does_not_exhaust_pool(database):
+    factory, engine = database
+    worker = dispatcher.AIWorkDispatcher(owner="failure-writer")
+    events = [
+        {"parent": "parent", "execution_generation": 1, "work_id": i,
+         "line": "content_governance", "attempt": 1, "status": "failed",
+         "record_error": True, "error": "provider failed"}
+        for i in range(6)
+    ]
+    pending = []
+    try:
+        async with factory() as lock:
+            await lock.scalar(select(Task).where(Task.task_uuid == "parent").with_for_update())
+            pending = [asyncio.create_task(worker._note_failure_progress(event)) for event in events]
+            async with asyncio.timeout(2):
+                while engine.pool.checkedout() < 2:
+                    await asyncio.sleep(0.01)
+                # Allow queued writers to attempt entry while the first one is blocked.
+                await asyncio.sleep(0.05)
+                assert engine.pool.checkedout() == 2
+                async with factory() as independent:
+                    assert await independent.scalar(select(Task.id).where(Task.task_uuid == "parent"))
+        async with asyncio.timeout(5):
+            await asyncio.gather(*pending)
+        async with factory() as db:
+            history = (await db.scalars(select(TaskWorkbook))).all()
+            assert {row.metadata_["work_id"] for row in history} == set(range(6))
+    finally:
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
+        await worker.transport.close()

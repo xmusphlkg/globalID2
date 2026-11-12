@@ -1334,6 +1334,8 @@ class DataReleaseService:
             description_parts = (["Build and publish a frozen literature generation independently of AI analysis and other data channels."]
                                  if data_line == "literature" else
                                  [f"Publish changed {data_line} JSON snapshots and their manifest without rebuilding static pages."])
+            if data_line == "surveillance" and job.include_git_push:
+                description_parts.append("Incrementally export and push matching CSV/JSON/XLSX downloads to GitHub before acknowledging these changes.")
 
         input_data = {
             # Maintenance publications can refresh content/templates without
@@ -1343,7 +1345,7 @@ class DataReleaseService:
             "release_job_name": job.name,
             "priority": job.priority,
             "auto_after_crawls": job.auto_after_crawls,
-            "include_git_push": bool(job.include_git_push and not reports_only and not code_only and not data_only),
+            "include_git_push": bool(job.include_git_push and not reports_only and not code_only and (not data_only or data_line == "surveillance")),
             "include_cloudflare_deploy": bool(job.include_cloudflare_deploy and not reports_only and not data_only),
             "require_clean_worktree": job.require_clean_worktree,
             "download_repo_branch": branch,

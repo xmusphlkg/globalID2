@@ -65,7 +65,6 @@ from src.generation.research_shards import (
     publish_browser_research_index,
 )
 from src.generation.site_data_queries import has_table
-from src.generation.browser_research_collections import publish_browser_research_collections
 from src.generation.literature_title_cache import LiteratureTitleCache, title_cache_identity
 from src.generation.site_data_writer import (
     remove_stale_json_files,
@@ -1860,7 +1859,6 @@ def write_literature_artifacts(
             public_site_data_dir / "research",
             max_bytes=shard_max_bytes,
         )
-        publish_browser_research_collections(payload, public_site_data_dir / "research")
     report_phase("browser sharded index")
     public_article_details = [
         *(payload.get("articles") or []),

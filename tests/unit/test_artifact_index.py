@@ -49,3 +49,25 @@ def test_damaged_cache_falls_back_to_content(tmp_path, payload):
     recovered = ArtifactIndex(tmp_path, cache_dir=tmp_path / "cache")
     assert recovered.describe(path)["bytes"] == 4
     assert recovered.read_files == 1
+
+
+def test_wire_receipt_is_bound_to_source_and_codec_across_restarts(tmp_path):
+    path = tmp_path / "page.html"
+    path.write_bytes(b"page")
+    time.sleep(1.01)
+    index = ArtifactIndex(tmp_path, cache_dir=tmp_path / "cache")
+    _, source = index.read(path)
+    index.record_representation(path, "gzip-v1", source, b"encoded", encoding="gzip")
+    index.save()
+    restarted = ArtifactIndex(tmp_path, cache_dir=tmp_path / "cache")
+    assert restarted.cached_representation(path, "gzip-v1")["md5"] == hashlib.md5(b"encoded").hexdigest()
+    assert restarted.cached_representation(path, "gzip-v2") is None
+    before = path.stat()
+    path.write_bytes(b"EDIT")
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    assert restarted.cached_representation(path, "gzip-v1") is None
+    # Recording an old compression result after a concurrent edit cannot make
+    # the receipt usable for the newly observed source bytes.
+    restarted.read(path)
+    restarted.record_representation(path, "gzip-v1", source, b"encoded", encoding="gzip")
+    assert "representation" not in restarted.entries[restarted.key(path)]

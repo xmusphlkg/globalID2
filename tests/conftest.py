@@ -1,7 +1,16 @@
 """Shared pytest configuration."""
 
+import atexit
 import os
+import shutil
 import signal
+import tempfile
+
+# Application modules can initialize Loguru during test collection. Set a
+# separate directory before those imports, including in inherited subprocesses.
+_test_log_dir = tempfile.mkdtemp(prefix="globalid-pytest-logs-")
+os.environ["LOG_DIR"] = _test_log_dir
+atexit.register(shutil.rmtree, _test_log_dir, ignore_errors=True)
 
 import pytest
 

@@ -533,13 +533,13 @@ const concerns = zh ? [
   .copyright-table-wrap tbody tr:nth-child(even) { background: rgb(var(--bg-soft) / .35); }
   .copyright-table-wrap tr:last-child th, .copyright-table-wrap tr:last-child td { border-bottom: 0; }
   .copyright-decision { display: inline-flex; max-width: 100%; padding: .16rem .44rem; border: 1px solid rgb(var(--border)); border-radius: 0; color: rgb(var(--text-strong)); background: rgb(var(--bg-soft)); font-size: .68rem; font-weight: 750; line-height: 1.45; }
-  .copyright-decision-allow { border-color: rgb(var(--accent) / .35); color: rgb(var(--accent-strong)); background: rgb(var(--accent) / .07); }
+  .copyright-decision-allow { border-color: rgb(var(--color-teal) / .35); color: rgb(var(--text-strong)); background: rgb(var(--color-teal) / .07); }
   .copyright-note { margin: 1rem 0 0; padding-left: .9rem; border-left: 2px solid rgb(var(--border-soft)); color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.68; }
   .copyright-material-grid { display: grid; gap: .75rem; margin-top: 1.5rem; }
   .copyright-material-grid article { min-width: 0; padding: 1.15rem; border: 1px solid rgb(var(--border)); border-radius: 0; background: rgb(var(--surface)); }
   .copyright-material-top { display: flex; justify-content: space-between; gap: .75rem; align-items: start; }
   .copyright-material-top span { color: rgb(var(--text-faint)); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .7rem; font-weight: 700; }
-  .copyright-material-top strong { max-width: 70%; color: rgb(var(--accent-strong)); font-size: .7rem; font-weight: 750; line-height: 1.4; text-align: right; }
+  .copyright-material-top strong { max-width: 70%; color: rgb(var(--text-strong)); font-size: .7rem; font-weight: 750; line-height: 1.4; text-align: right; }
   .copyright-material-grid h3 { margin: .8rem 0 0; color: rgb(var(--text-strong)); font-size: 1rem; font-weight: 700; line-height: 1.4; }
   .copyright-material-grid p { margin: .5rem 0 0; color: rgb(var(--text-muted)); font-size: .84rem; line-height: 1.68; }
   .copyright-material-grid .copyright-material-summary { color: rgb(var(--text)); font-weight: 600; }
@@ -556,10 +556,10 @@ const concerns = zh ? [
   .copyright-citation-header strong { color: rgb(var(--text-strong)); font-size: .86rem; }
   .copyright-copy-button { min-height: 2.25rem; padding: .35rem .7rem; border: 1px solid rgb(var(--text-strong)); border-radius: 0; color: rgb(var(--surface)); background: rgb(var(--text-strong)); font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; }
   .copyright-copy-button:hover { opacity: .84; }
-  .copyright-copy-button:focus-visible, .copyright-citation-tabs button:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
+  .copyright-copy-button:focus-visible, .copyright-citation-tabs button:focus-visible { outline: 2px solid rgb(var(--color-teal)); outline-offset: 2px; }
   .copyright-citation-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--bg-soft)); }
   .copyright-citation-tabs button { min-height: 2.6rem; padding: .5rem .9rem; border: 0; border-right: 1px solid rgb(var(--border)); color: rgb(var(--text-muted)); background: transparent; font: inherit; font-size: .75rem; font-weight: 700; cursor: pointer; }
-  .copyright-citation-tabs button[aria-selected="true"] { color: rgb(var(--text-strong)); background: rgb(var(--surface)); box-shadow: inset 0 -2px rgb(var(--accent)); }
+  .copyright-citation-tabs button[aria-selected="true"] { color: rgb(var(--text-strong)); background: rgb(var(--surface)); box-shadow: inset 0 -2px rgb(var(--color-teal)); }
   .copyright-citation-panel pre { min-height: 8rem; margin: 0; overflow-x: auto; padding: 1rem; white-space: pre-wrap; overflow-wrap: anywhere; color: rgb(var(--text)); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .76rem; line-height: 1.65; }
   .copyright-modified-note { margin: 0; padding: .8rem 1rem; border-top: 1px solid rgb(var(--border)); color: rgb(var(--text-muted)); background: rgb(var(--bg-soft) / .5); font-size: .76rem; line-height: 1.6; }
   .copyright-modified-note strong { color: rgb(var(--text-strong)); }
@@ -570,7 +570,7 @@ const concerns = zh ? [
   .copyright-checklist h3 { margin: 0; color: rgb(var(--text-strong)); font-size: .9rem; }
   .copyright-checklist ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem 1.5rem; margin: .8rem 0 0; padding: 0; list-style: none; }
   .copyright-checklist li { position: relative; padding-left: 1rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.55; }
-  .copyright-checklist li::before { position: absolute; left: 0; content: '✓'; color: rgb(var(--accent-strong)); font-weight: 800; }
+  .copyright-checklist li::before { position: absolute; left: 0; content: '✓'; color: rgb(var(--text-strong)); font-weight: 800; }
   .copyright-prose-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
   .copyright-inline-link { display: inline-block; margin-top: 1rem; }
   .copyright-concern-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 1.5rem; border-top: 1px solid rgb(var(--border)); }
@@ -594,7 +594,7 @@ const concerns = zh ? [
     .copyright-toc { position: sticky; top: 5.5rem; display: block; align-self: start; padding: 3.6rem 0; }
     .copyright-toc nav { display: grid; gap: .05rem; margin-top: .7rem; border-left: 1px solid rgb(var(--border)); }
     .copyright-toc nav a { display: grid; grid-template-columns: 1.7rem minmax(0, 1fr); padding: .4rem 0 .4rem .65rem; color: rgb(var(--text-muted)); font-size: .76rem; line-height: 1.4; text-decoration: none; }
-    .copyright-toc nav a:hover { color: rgb(var(--text-strong)); border-left: 2px solid rgb(var(--accent)); margin-left: -1px; }
+    .copyright-toc nav a:hover { color: rgb(var(--text-strong)); border-left: 2px solid rgb(var(--color-teal)); margin-left: -1px; }
     .copyright-toc nav span { color: rgb(var(--text-faint)); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .66rem; }
     .copyright-terms-link { display: block; margin-top: 1.25rem; font-size: .72rem; line-height: 1.5; }
   }

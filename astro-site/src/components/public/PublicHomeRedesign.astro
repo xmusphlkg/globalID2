@@ -151,7 +151,7 @@ const explorePaths = [
 
 <div class:list={['public-home-redesign', zh && 'is-zh']}>
   <section class="home-hero">
-    <HomeInfluenza client:load language={locale} />
+    <HomeInfluenza client:idle language={locale} />
     <div class="page-wrap hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">{t.eyebrow}</p>
@@ -188,10 +188,10 @@ const explorePaths = [
           </div>
           <span class="release-pill"><i></i>{t.updated}</span>
         </header>
-        <SurveillanceHomeSummary client:load dataUrl="/site-data/meta.json" mode="home-indicators" language={locale} reportCount={reportsRaw.length} />
+        <SurveillanceHomeSummary client:load dataUrl="/site-data/home-summary.json" mode="home-indicators" language={locale} reportCount={reportsRaw.length} />
         <div class="source-board">
           <h3>{t.recentBoard}</h3>
-          <SurveillanceHomeSummary client:load dataUrl="/site-data/meta.json" mode="recent-countries" language={locale} />
+          <SurveillanceHomeSummary client:load dataUrl="/site-data/home-summary.json" mode="recent-countries" language={locale} />
         </div>
         <p class="source-note">{t.sourceNote}</p>
         <a class="text-link console-link" href={href('/about/')}>{t.methods} <span aria-hidden="true">-&gt;</span></a>
@@ -202,11 +202,11 @@ const explorePaths = [
     <section class="situation-strip">
       <div class="page-wrap situation-grid">
         <div>
-          <p class="eyebrow">{t.review} · <SituationMetrics client:load mode="date" locale={locale} /></p>
+          <p class="eyebrow">{t.review} · <SituationMetrics client:visible mode="date" locale={locale} /></p>
           <h2>{t.attention}</h2>
           <p>{t.reviewText}</p>
         </div>
-        <SituationMetrics client:load locale={locale} />
+        <SituationMetrics client:visible locale={locale} />
         <a href={href('/situation/')}>{t.fullReview} <span aria-hidden="true">-&gt;</span></a>
       </div>
     </section>
@@ -229,7 +229,7 @@ const explorePaths = [
           <a class="path-card" href={path.href}>
             <span class="path-index">{path.index}</span>
             <span class="path-copy"><strong>{path.title}</strong><small>{path.text}</small></span>
-            <span class="path-stat"><b>{path.index === '04' ? path.stat : <SurveillanceHomeSummary client:visible dataUrl="/site-data/meta.json" mode="home-count" metric={path.stat as 'countries' | 'diseases' | 'sources'} language={locale} />}</b><small>{path.metric}</small></span>
+            <span class="path-stat"><b>{path.index === '04' ? path.stat : <SurveillanceHomeSummary client:visible dataUrl="/site-data/home-summary.json" mode="home-count" metric={path.stat as 'countries' | 'diseases' | 'sources'} language={locale} />}</b><small>{path.metric}</small></span>
           </a>
         ))}
       </div>
@@ -243,7 +243,7 @@ const explorePaths = [
           <h2>{t.countryList}</h2>
           <a href={href('/countries/')}>{t.viewAll}</a>
         </div>
-        <SurveillanceHomeSummary client:visible dataUrl="/site-data/meta.json" mode="country-links" language={locale} />
+        <SurveillanceHomeSummary client:visible dataUrl="/site-data/home-summary.json" mode="country-links" language={locale} />
       </div>
       <div>
         <div class="subheading">

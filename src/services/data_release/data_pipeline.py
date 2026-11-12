@@ -9,9 +9,10 @@ import time
 from pathlib import Path
 
 from src.generation.release_projection_snapshot import validate_read_snapshot_projection
+
+from .data_selection import validate_data_selection
 from .projection import commit_release_projection
 from .surveillance_publish import validate_manifest
-from .data_selection import validate_data_selection
 
 
 def _validate_projection_scopes(directory: Path, codes: list[str], *, full: bool, available_codes: list[str] | None = None) -> dict:
@@ -24,7 +25,7 @@ def _validate_projection_scopes(directory: Path, codes: list[str], *, full: bool
     return projection
 
 
-def _ready_candidate(run: Path, *, task_uuid: str, codes: list[str], dirty_ids: list[int], available_codes: list[str] | None = None) -> dict | None:
+def _ready_candidate(run: Path, *, task_uuid: str, codes: list[str], dirty_ids: list[int], available_codes: list[str] | None = None, downloads: bool = False) -> dict | None:
     try:
         receipt = json.loads((run / "ready.json").read_text())
     except FileNotFoundError:
@@ -41,11 +42,16 @@ def _ready_candidate(run: Path, *, task_uuid: str, codes: list[str], dirty_ids: 
     if manifest["release_id"] != f"data-{task_uuid}":
         raise ValueError("Frozen JSON manifest has a different task identity")
     _validate_projection_scopes(run / "_release-projection", codes, full=receipt["projection_full"], available_codes=available_codes)
+    if downloads:
+        body = (run / "downloads/manifest.json").read_bytes()
+        if (hashlib.sha256(body).hexdigest() != receipt.get("downloads_manifest_sha256")
+                or json.loads(body).get("surveillance_release_id") != f"data-{task_uuid}"):
+            raise RuntimeError("Frozen download candidate does not match surveillance release")
     return receipt
 
 
 def _freeze_candidate(run: Path, state: Path, public: Path, *, task_uuid: str,
-                      codes: list[str], dirty_ids: list[int], full: bool, available_codes: list[str] | None = None) -> dict:
+                      codes: list[str], dirty_ids: list[int], full: bool, available_codes: list[str] | None = None, downloads: bool = False) -> dict:
     body = (public / "current.json").read_bytes()
     manifest, objects = validate_manifest(body)
     if manifest["release_id"] != f"data-{task_uuid}":
@@ -71,6 +77,11 @@ def _freeze_candidate(run: Path, state: Path, public: Path, *, task_uuid: str,
     receipt = {"schema": 1, "task_uuid": task_uuid, "country_codes": sorted(codes),
         "dirty_ids": sorted(dirty_ids), "projection_full": full,
         "manifest_sha256": hashlib.sha256(body).hexdigest()}
+    if downloads:
+        download_body = (run / "downloads/manifest.json").read_bytes()
+        if json.loads(download_body).get("surveillance_release_id") != f"data-{task_uuid}":
+            raise ValueError("Download candidate has a different release identity")
+        receipt["downloads_manifest_sha256"] = hashlib.sha256(download_body).hexdigest()
     temporary = run / ".ready.json"
     temporary.write_text(json.dumps(receipt, sort_keys=True))
     temporary.replace(run / "ready.json")
@@ -101,8 +112,9 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     root = runtime.root_dir
     state, public = root / "exports/surveillance-state", root / "exports/surveillance-data"
     run = root / "exports/surveillance-runs" / task.task_uuid
+    downloads = bool(data.get("include_git_push"))
     receipt = await asyncio.to_thread(_ready_candidate, run, task_uuid=task.task_uuid,
-        codes=codes, dirty_ids=dirty_ids, available_codes=selected_plan["available_country_codes"])
+        codes=codes, dirty_ids=dirty_ids, available_codes=selected_plan["available_country_codes"], downloads=downloads)
     python = service._python_executable()
     config = service._config()
     env = {"CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
@@ -115,7 +127,10 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     export_seconds = 0.0
     if receipt is None:
         from src.generation.surveillance_data_export import completed_generation
-        from src.generation.surveillance_lock import LOCKED_ENV, surveillance_output_lock
+        from src.generation.surveillance_lock import (
+            LOCKED_ENV,
+            surveillance_output_lock,
+        )
         export_started = time.monotonic()
         run.mkdir(parents=True, exist_ok=True)
         await service._run_logged_command(task.task_uuid, title="Capture Surveillance Publication Baseline",
@@ -125,9 +140,18 @@ async def execute_data_release(service, task, *, runtime) -> dict:
             timeout_seconds=runtime.download_publish_timeout_seconds)
         async with surveillance_output_lock(state, public):
             full = await asyncio.to_thread(completed_generation, state, public) is None
+            if downloads:
+                from src.generation.surveillance_downloads import downloads_initialized
+                # First coupled publication catches up the old standalone
+                # archive, including countries outside this batch's dirty IDs.
+                full = full or not downloads_initialized(root / "exports/site-downloads")
             cmd = [str(python), "scripts/generate_site_data.py", "--data-only",
                 "--surveillance-state", str(state), "--surveillance-output", str(public),
                 "--data-release-id", f"data-{task.task_uuid}", "--exact-country-scopes"]
+            if downloads:
+                cmd.extend(["--surveillance-downloads", str(run / "downloads"),
+                    "--direct-download-output", str(root / "exports/site-downloads"),
+                    "--direct-download-url-base", data["download_url_base"]])
             changes = selected_plan.get("changes")
             if changes:
                 run.mkdir(parents=True, exist_ok=True)
@@ -144,7 +168,7 @@ async def execute_data_release(service, task, *, runtime) -> dict:
                     timeout_seconds=runtime.generate_timeout_seconds)
             receipt = await asyncio.to_thread(_freeze_candidate, run, state, public,
                 task_uuid=task.task_uuid, codes=codes, dirty_ids=dirty_ids, full=full,
-                available_codes=selected_plan["available_country_codes"])
+                available_codes=selected_plan["available_country_codes"], downloads=downloads)
         export_seconds = time.monotonic() - export_started
     async with runtime.get_database() as db:
         before_publish = await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid)
@@ -157,6 +181,10 @@ async def execute_data_release(service, task, *, runtime) -> dict:
              "--objects-dir", str(public / "objects"), "--require-starting-baseline"],
         cwd=root, env=env, metadata={"event": "surveillance_json_publish"},
         timeout_seconds=runtime.download_publish_timeout_seconds)
+    if downloads:
+        from .surveillance_downloads import publish_download_candidate
+        await publish_download_candidate(service, task, runtime=runtime, run=run,
+            manifest_sha256=receipt["downloads_manifest_sha256"])
     # Upload success publishes only the frozen database snapshot. New dirty IDs
     # arriving during export/upload remain pending for the next JSON release.
     async with runtime.get_database() as db:
@@ -166,6 +194,8 @@ async def execute_data_release(service, task, *, runtime) -> dict:
             prepared_dir=run / "_release-projection", require_prepared=True)
         result = {"data_only": True, "data_line": "surveillance", "release_id": f"data-{task.task_uuid}",
             "country_codes": codes, "manifest_sha256": receipt["manifest_sha256"],
+            "direct_downloads_published": downloads, "git_pushed": downloads,
+            "downloads_manifest_sha256": receipt.get("downloads_manifest_sha256"),
             "release_timing": {"export_seconds": round(export_seconds, 3),
                 "publish_and_ack_seconds": round(time.monotonic() - publish_started, 3),
                 "elapsed_seconds": round(time.monotonic() - started, 3)}, "pages_deployed": False}
@@ -177,4 +207,9 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     await runtime.task_manager.add_workbook_entry(task.task_uuid, entry_type="info",
         title="Surveillance JSON Published", content=json.dumps(result), content_type="json",
         metadata={"event": "surveillance_json_completed", **result})
+    if downloads:
+        # The durable publication receipt makes finalization retries safe even
+        # after these private hard links have been removed.
+        for name in ("countries", "diseases"):
+            await asyncio.to_thread(shutil.rmtree, run / "downloads" / name, True)
     return result

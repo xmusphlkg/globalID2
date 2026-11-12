@@ -409,14 +409,13 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
         aria-busy="true"
         aria-label={ui(lang, 'Loading coverage map', '覆盖范围地图加载中', 'Chargement de la carte de couverture')}
       >
-        <GIDSLoader language={lang} label={ui(lang, 'Loading coverage map…', '正在读取覆盖范围…', 'Chargement de la carte de couverture…')} />
         <div className="chart-loading-toolbar" aria-hidden="true">
           <span className="chart-loading-pill w-20" />
           <span className="chart-loading-pill w-28" />
           <span className="chart-loading-pill w-24" />
         </div>
         <div className="chart-loading-line w-3/5" aria-hidden="true" />
-        <div className="chart-loading-panel" style={{ height }} aria-hidden="true" />
+        <div className="chart-loading-panel" style={{ height }}><GIDSLoader language={lang} label={ui(lang, 'Loading coverage map…', '正在读取覆盖范围…', 'Chargement de la carte de couverture…')} /></div>
       </div>
     );
   }

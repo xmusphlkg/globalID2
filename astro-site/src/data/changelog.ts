@@ -26,6 +26,39 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.18.3',
+    date: '2026-11-12',
+    titleEn: 'Faster research access and synchronized downloads',
+    titleZh: '文献访问提速与下载数据同步',
+    titleFr: 'Accès aux publications et téléchargements synchronisés',
+    summaryEn: 'Research catalogues load in smaller pieces, homepage summaries use lighter requests, and surveillance downloads follow the same published snapshot as live data.',
+    summaryZh: '文献目录按需分片加载，首页使用轻量摘要；监测数据下载与实时数据采用同一发布快照，并完善后台修复与发布监控。',
+    summaryFr: 'Les catalogues se chargent par fragments, les résumés sont plus légers et les téléchargements suivent le même instantané que les données en ligne.',
+    sections: [{
+      kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations',
+      items: [{
+        en: 'Research indexes, article pages and disease libraries use static hosting, compressed assets and focused catalogue requests. Older cached links remain supported.',
+        zh: '文献索引、文章与疾病文献专题采用静态托管、资源压缩和定向目录请求，并保留旧缓存链接的兼容访问。',
+        fr: 'Les index, articles et bibliothèques utilisent un hébergement statique, des ressources compressées et des requêtes ciblées. Les anciens liens restent accessibles.',
+      }, {
+        en: 'Homepage summaries load with smaller requests; notice cards, map loading feedback, footer links and text contrast are clearer.',
+        zh: '首页摘要减少初始请求体积，完善通报卡片、地图加载反馈、页脚链接与文字对比度。',
+        fr: 'Les résumés nécessitent moins de données ; les avis, le chargement des cartes, les liens et le contraste sont améliorés.',
+      }],
+    }, {
+      kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections',
+      items: [{
+        en: 'Surveillance downloads and live JSON share a frozen publication snapshot, with checks that support safe retries after interrupted uploads.',
+        zh: '监测下载文件与实时 JSON 使用同一冻结快照，并校验发布版本，支持上传中断后的安全重试。',
+        fr: 'Les téléchargements et le JSON partagent un instantané de publication vérifié, avec reprise après interruption.',
+      }, {
+        en: 'Background abstract repair feeds eligible records back into review without automatically reopening excluded publications. Task progress and publication monitoring handle terminal and warning states more consistently.',
+        zh: '后台补全缺失摘要后将符合条件的文献送回审核，不自动重新开启已排除文献；任务进度与发布监控更准确地区分完成、取消和警告状态。',
+        fr: 'La réparation des résumés remet les documents admissibles en examen sans rouvrir automatiquement les exclusions. Le suivi distingue mieux les tâches terminées, annulées et les avertissements.',
+      }],
+    }],
+  },
+  {
     version: '0.18.2',
     date: '2026-11-11',
     titleEn: 'Disease literature and a smoother public site',

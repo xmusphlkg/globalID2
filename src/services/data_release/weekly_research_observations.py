@@ -46,6 +46,34 @@ def scan_public_research(*, astro_dir: Path, identity: Mapping[str, Any], public
         if reports._get(origin + "/research/evidence-manifest.json", opener, limit=20_000_000) != raw:
             raise ResearchObservationError("research_evidence_manifest_mismatch")
         manifest = json.loads(raw)
+        if isinstance(manifest, dict) and manifest.get("schema_version") == "gids.research-evidence.v2":
+            shards = manifest.get("article_shards")
+            if not isinstance(shards, list) or len(shards) > 100:
+                raise ResearchObservationError("research_evidence_shards_invalid")
+            articles = []
+            seen = set()
+            for shard in shards:
+                if not isinstance(shard, dict):
+                    raise ResearchObservationError("research_evidence_shard_invalid")
+                digest, name, count = shard.get("sha256"), shard.get("path"), shard.get("count")
+                if (not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest)
+                        or name != f"evidence-shards/{digest}.json" or name in seen
+                        or type(count) is not int or not 0 < count <= 5000):
+                    raise ResearchObservationError("research_evidence_shard_invalid")
+                seen.add(name)
+                shard_path = path.parent / name
+                if shard_path.is_symlink() or not shard_path.is_file() or shard_path.stat().st_size > 20_000_000:
+                    raise ResearchObservationError("research_evidence_shard_unavailable")
+                shard_raw = shard_path.read_bytes()
+                if (_sha(shard_raw) != digest
+                        or reports._get(origin + "/research/" + name, opener, limit=20_000_000) != shard_raw):
+                    raise ResearchObservationError("research_evidence_shard_mismatch")
+                rows = json.loads(shard_raw)
+                if not isinstance(rows, list) or len(rows) != count:
+                    raise ResearchObservationError("research_evidence_shard_invalid")
+                articles.extend(rows)
+            manifest["articles"] = articles
+            manifest["schema_version"] = "gids.research-evidence.v1"
         if (not isinstance(manifest, dict) or manifest.get("schema_version") != "gids.research-evidence.v1"
                 or manifest.get("weekly_inventory_complete") is not True
                 or not isinstance(manifest.get("weekly_briefs"), list)

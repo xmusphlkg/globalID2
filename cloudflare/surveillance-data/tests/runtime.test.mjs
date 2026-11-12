@@ -28,6 +28,22 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
     const pointer = await runtime.dispatchFetch(`${origin}/site-data/current.json`);
     assert.equal((await pointer.json()).release_id, 'one');
     assert.equal(pointer.headers.get('cache-control'), 'no-store');
+    const fullBody = JSON.stringify({ schema_version: 1, release_id: 'summary-one', generated_at: '2026-11-12',
+      files: { 'home-summary.json': { url: `objects/${first}.json`, sha256: first, bytes: 11 },
+        'countries/us.json': { url: `objects/${first}.json`, sha256: first, bytes: 11 } } });
+    const fullHash = createHash('sha256').update(fullBody).digest('hex');
+    await bucket.put('site-data/surveillance/current.json', fullBody);
+    await bucket.put(`site-data/surveillance/manifests/${fullHash}.json`, fullBody);
+    const boot = await runtime.dispatchFetch(`${origin}/site-data/bootstrap.json`);
+    const bootJson = await boot.json();
+    assert.equal(boot.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(Object.keys(bootJson.files), ['home-summary.json']);
+    assert.equal(bootJson.manifest.url, `manifests/${fullHash}.json`);
+    assert.equal(bootJson.manifest.bytes, Buffer.byteLength(fullBody));
+    assert.equal(await (await runtime.dispatchFetch(`${origin}/site-data/bootstrap.json`, { method: 'HEAD' })).text(), '');
+    const fullResponse = await runtime.dispatchFetch(`${origin}/site-data/${bootJson.manifest.url}`);
+    assert.equal(await fullResponse.text(), fullBody);
+    assert.match(fullResponse.headers.get('cache-control'), /immutable/);
     await bucket.put(`site-data/surveillance/objects/${second}.json`, gzipSync('{"cases":2}'),
       { httpMetadata: { contentEncoding: 'gzip', contentType: 'application/json' } });
     await bucket.put('site-data/surveillance/current.json', JSON.stringify({ schema_version: 1, release_id: 'two',
@@ -65,12 +81,15 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
     const logical = 'research/articles/example/';
     const paperKey = `releases/sha256/objects/${first}/0123456789abcdef`;
     const cssKey = `releases/sha256/objects/${second}/0123456789abcdef`;
-    const document = '<html><head><link rel="canonical" href="https://papers.globalinfectiousdisease.com/research/articles/example/"><link rel="stylesheet" href="/_astro/style.css"></head><body><a href="/research/">paper</a></body></html>';
-    await bucket.put(paperKey, document, { httpMetadata: { contentType: 'text/html' } });
-    await bucket.put(cssKey, 'body{src:url(/_astro/font.woff2)}', { httpMetadata: { contentType: 'text/css' } });
+    const document = '<html><head><link rel="canonical" href="https://papers.globalinfectiousdisease.com/research/articles/example/"><link rel="stylesheet" href="/_astro/style.css"></head><body><a href="/research/">paper</a><astro-island component-url="/_astro/island.js" renderer-url="/_astro/renderer.js"></astro-island></body></html>';
+    await bucket.put(paperKey, gzipSync(document), { httpMetadata: { contentType: 'text/html', contentEncoding: 'gzip' } });
+    await bucket.put(cssKey, gzipSync('body{src:url(/_astro/font.woff2)}'), { httpMetadata: { contentType: 'text/css', contentEncoding: 'gzip' } });
+    const jsonKey = `releases/sha256/objects/${'c'.repeat(64)}/0123456789abcdef`;
+    await bucket.put(jsonKey, gzipSync('{"articles":[]}'), { httpMetadata: { contentType: 'application/json', contentEncoding: 'gzip' } });
     const groups = {};
     for (const entry of [{ logical_key: logical, key: paperKey, content_type: 'text/html' },
-      { logical_key: '_astro/style.css', key: cssKey, content_type: 'text/css' }]) {
+      { logical_key: '_astro/style.css', key: cssKey, content_type: 'text/css' },
+      { logical_key: 'research/catalogue/manifest.json', key: jsonKey, content_type: 'application/json' }]) {
       const group = createHash('sha256').update(entry.logical_key).digest('hex').slice(0, 2);
       (groups[group] ??= []).push(entry);
     }
@@ -83,6 +102,12 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
     await bucket.put(`releases/sha256/catalogues/${first}.json`, JSON.stringify({ schema_version: 2, generation_sha256: first, shards }));
     const paper = await runtime.dispatchFetch(`${origin}/research-publication/${first}/${logical}`);
     const html = await paper.text();
+    assert.match(html, /<html>/);
+    assert.match(html, new RegExp(`component-url="/research-publication/${first}/_astro/island.js"`));
+    assert.match(html, new RegExp(`renderer-url="/research-publication/${first}/_astro/renderer.js"`));
+    const catalogue = await runtime.dispatchFetch(`${origin}/research-publication/${first}/research/catalogue/manifest.json`);
+    assert.deepEqual(await catalogue.json(), { articles: [] });
+    assert.equal(catalogue.headers.get('content-length'), null);
     assert.match(html, new RegExp(`/research-publication/${first}/_astro/style.css`));
     assert.match(html, new RegExp(`/research-publication/${first}/research/`));
     assert.match(html, /rel="canonical" href="https:\/\/papers.globalinfectiousdisease.com\/research\/articles\/example\/"/);

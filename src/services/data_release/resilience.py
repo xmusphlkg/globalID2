@@ -25,6 +25,7 @@ _EXTERNAL_RETRY_STAGES = frozenset(
         "r2_reports_publish",
         "surveillance_json_publish",
         "situation_json_publish",
+        "literature_publication_publish",
         "subscription_options_sync",
         "research_digest_dispatch",
         "report_digest_dispatch",

@@ -14,9 +14,13 @@ export default function RuntimeNoticePanel({ dataUrl, locale, limit = 8, mapHref
   const rows = [...(data.alerts ?? [])].filter(row => !diseaseId || row.disease_id?.toUpperCase() === diseaseId.toUpperCase())
     .sort((a, b) => b.published_date.localeCompare(a.published_date) || a.alert_id.localeCompare(b.alert_id)).slice(0, limit);
   return <section className="intl-panel" data-situation-version={version}>
-    <h2 className="intl-panel-heading">{pick('Official outbreak alerts', '官方疫情通报', 'Alertes officielles de flambée')}</h2>
-    <p className="intl-panel-lead">{pick('Reviewed official reports, newest first.', '经复核的官方通报，按最新发布时间排列。', 'Rapports officiels relus, du plus récent au plus ancien.')}</p>
-    {mapHref && <p className="intl-panel-jump"><a href={mapHref}>{pick('Open on the situation map', '在态势地图中打开', 'Ouvrir sur la carte de situation')}</a></p>}
+    <div className="intl-panel-header">
+      <div>
+        <h2 className="figure-title intl-panel-heading">{pick('Official outbreak alerts', '官方疫情通报', 'Alertes officielles de flambée')}</h2>
+        <p className="figure-caption">{pick('Reviewed official reports, newest first.', '经复核的官方通报，按最新发布时间排列。', 'Rapports officiels relus, du plus récent au plus ancien.')}</p>
+      </div>
+      {mapHref && <a className="site-action-secondary intl-panel-jump" href={mapHref}>{pick('Open on the situation map', '在态势地图中打开', 'Ouvrir sur la carte de situation')}</a>}
+    </div>
     {!rows.length && <p className="figure-caption">{pick('No official outbreak alert is available for this selection.', '此范围暂无官方疫情警报。', 'Aucune alerte officielle pour cette sélection.')}</p>}
     <ul className="intl-panel-list">{rows.map(alert => <li className="intl-panel-item" key={alert.alert_id}>
       <a className="intl-panel-title" href={alert.url} target="_blank" rel="noopener noreferrer">{diseaseName(alert, locale)} · {alert.admin_area ? `${alert.admin_area}, ` : ''}{countryName(alert, locale)}</a>

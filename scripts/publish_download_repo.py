@@ -848,7 +848,13 @@ def publish(args) -> None:
                 raise RuntimeError(f"Manifest checksum mismatch: {path}")
     phase_started = time.perf_counter()
     if not in_place:
-        ensure_repo(args.repo_url, args.branch, args.workdir)
+        if (args.workdir / ".git").is_file():
+            # Frozen surveillance candidates share the persistent export Git
+            # worktree. Preserve its local commits/index and generated files;
+            # the push checks the remote fast-forward boundary once needed.
+            prepare_export_repo(args.repo_url, args.branch, args.workdir)
+        else:
+            ensure_repo(args.repo_url, args.branch, args.workdir)
     print(f"Download repository sync completed in {time.perf_counter() - phase_started:.1f}s", flush=True)
     identity = ensure_commit_identity(args.workdir)
     print(
@@ -857,13 +863,13 @@ def publish(args) -> None:
     )
     phase_started = time.perf_counter()
     sync_result = {"copied": 0, "removed": 0} if in_place else sync_managed_assets(args.source_dir, args.workdir)
-    if in_place and not args.verify_checksums:
+    if (in_place or (args.workdir / ".git").is_file()) and not args.verify_checksums:
         # Check new/modified files only; Git already knows unchanged blobs.
         from src.generation.direct_download_files import _git_unchanged_paths
 
         trusted = _git_unchanged_paths(args.workdir)
         for relative, (_size, expected) in _manifest_assets(args.source_dir / "manifest.json").items():
-            if relative not in trusted and _sha256_file(args.source_dir / relative) != expected:
+            if relative not in trusted and _sha256_file(args.workdir / relative) != expected:
                 raise RuntimeError(f"Manifest checksum mismatch: {relative}")
     if in_place:
         print(f"Using export Git worktree directly; changed-file validation completed in {time.perf_counter() - phase_started:.1f}s", flush=True)

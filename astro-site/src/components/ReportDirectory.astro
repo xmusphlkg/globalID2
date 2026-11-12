@@ -64,20 +64,20 @@ const countLabel = zh ? '份报告' : fr ? 'rapports' : 'reports';
               : country?.country_name_en ?? code;
           const latestType = String(latest?.summary.report_type ?? '');
           return (
-            <article class="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-5 shadow-sm">
+            <article class="card p-5">
               <div class="flex items-center gap-3 mb-4">
                 <CountryFlag code={code} sizeClass="w-9 h-7" name={String(name)} />
                 <div class="min-w-0 flex-1">
                   <h2 class="font-semibold text-[rgb(var(--text-strong))] truncate">{name}</h2>
                   <p class="text-xs text-[rgb(var(--text-muted))]">{items.length} {countLabel}</p>
                 </div>
-                <span class="rounded-full bg-brand-500/10 px-2.5 py-1 text-xs font-medium text-brand-500">{typeLabel(latestType)}</span>
+                <span class="border border-[rgb(var(--border))] bg-[rgb(var(--surface-raised))] px-2.5 py-1 text-xs font-medium text-[rgb(var(--text-muted))]">{typeLabel(latestType)}</span>
               </div>
-              <a class="block text-sm font-medium text-[rgb(var(--text-strong))] hover:text-brand-500 transition-colors" href={href(`/countries/${code}/reports/`)}>
+              <a class="block text-sm font-medium text-[rgb(var(--text-strong))] hover:underline transition-colors" href={href(`/countries/${code}/reports/`)}>
                 {latest?.summary.title ?? (zh ? '浏览国家报告' : fr ? 'Voir les rapports' : 'Browse country reports')}
               </a>
               <p class="mt-2 text-xs text-[rgb(var(--text-muted))]">{latest?.summary.period_start} – {latest?.summary.period_end}</p>
-              <a class="mt-4 inline-flex text-sm font-semibold text-brand-500 hover:text-brand-400 transition-colors" href={href(`/countries/${code}/reports/`)}>
+              <a class="mt-4 inline-flex text-sm font-semibold text-[rgb(var(--text-strong))] underline decoration-[rgb(var(--border-soft))] underline-offset-4 hover:decoration-current transition-colors" href={href(`/countries/${code}/reports/`)}>
                 {zh ? '查看全部报告 →' : fr ? 'Tous les rapports →' : 'View all reports →'}
               </a>
             </article>
@@ -85,7 +85,7 @@ const countLabel = zh ? '份报告' : fr ? 'rapports' : 'reports';
         })}
       </div>
     ) : (
-      <div class="rounded-2xl border border-[rgb(var(--border))] p-10 text-center text-[rgb(var(--text-muted))]">
+      <div class="card p-10 text-center text-[rgb(var(--text-muted))]">
         {zh ? '目前还没有可公开的报告。' : fr ? 'Aucun rapport public pour le moment.' : 'No public reports are available yet.'}
       </div>
     )}

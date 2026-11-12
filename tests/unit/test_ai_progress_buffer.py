@@ -75,6 +75,32 @@ async def test_completion_during_projection_survives_previous_flush(monkeypatch)
     assert not buffer._pending
 
 
+async def test_failure_progress_waits_before_entering_database_writer(monkeypatch):
+    entered, release = asyncio.Event(), asyncio.Event()
+    seen = []
+
+    async def write(event):
+        seen.append(event["work_id"])
+        if event["work_id"] == 1:
+            entered.set()
+            await release.wait()
+
+    monkeypatch.setattr(dispatcher, "note_parent_work", write)
+    worker = dispatcher.AIWorkDispatcher(route_loader=AsyncMock(return_value=[]))
+    first = asyncio.create_task(worker._note_failure_progress({"work_id": 1}))
+    await entered.wait()
+    others = [asyncio.create_task(worker._note_failure_progress({"work_id": i})) for i in (2, 3)]
+    try:
+        await asyncio.sleep(0)
+        assert seen == [1]
+        release.set()
+        await asyncio.gather(first, *others)
+        assert seen == [1, 2, 3]
+    finally:
+        release.set()
+        await worker.transport.close()
+
+
 async def test_shutdown_closes_transport_before_bounded_projection(monkeypatch):
     order = []
 

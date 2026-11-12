@@ -13,4 +13,6 @@
 .home-countries > a { border: 1px solid rgb(var(--border)); padding: 1rem; }
 @media (max-width: 600px) { .home-countries { grid-template-columns: 1fr; } .home-recent > a { flex-wrap: wrap; } }
 
-.home-summary-loading { min-height: 20rem; }
+.home-summary-status { min-height: 2rem; display: flex; align-items: center; }
+.home-list-placeholder { display: grid; place-items: center; min-height: 14.25rem; }
+.home-list-placeholder--country-links { min-height: 20rem; }
