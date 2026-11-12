@@ -146,7 +146,7 @@ Main-site navigation and surveillance fetches continue to use the main origin.
 1. Generate site data and build the full Astro `dist` (unchanged for local `npm run build`).
 2. `scripts/split_papers_bundle.py` moves papers paths into `exports/papers-site/`, keeps build assets local while sending navigation to the main origin, appends redirects/CORS, and enforces the Pages file budget.
 3. Digest and deploy use the **slim** `dist` only.
-4. `scripts/publish_papers_r2.py` incrementally syncs `exports/papers-site` to R2, in parallel with GitHub downloads / raw archive. It lists object metadata, verifies local SHA-256 checksums, and compares single-PUT ETags with local MD5 hashes. Matching objects transfer no body bytes, including objects left by an interrupted attempt.
+4. The dashboard freezes a research candidate and `scripts/publish_papers_r2.py` publishes content-addressed multilingual paper records, shared templates, and assets. A receipt bound to the committed generation lets subsequent releases reuse unchanged objects. Full-site and independent literature releases both use the same conditional `site-data/research-publication/current.json` pointer. See [Papers JSON publication](PAPERS_TEMPLATE_MIGRATION.md).
 5. Cloudflare Pages deploy + production verification, then dirty-marker commit.
 
 The report directory and report pages use a separate R2 bucket and direct
