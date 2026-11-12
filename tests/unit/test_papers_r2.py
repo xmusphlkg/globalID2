@@ -191,6 +191,31 @@ def test_static_html_is_stored_gzipped_and_reused(tmp_path):
     assert again.uploaded == 0
 
 
+def test_existing_uncompressed_content_is_reused_only_if_remote_bytes_match(tmp_path):
+    papers = _seed_papers(tmp_path)
+    page = papers / 'research/articles/slug/index.html'
+    original = ('<html>' + 'published evidence ' * 300 + '</html>').encode()
+    page.write_bytes(original)
+    (papers / 'papers-manifest.json').unlink()
+    client = FakeR2()
+    config = R2PapersConfig('acct', 'bucket', 'key', 'secret')
+    publish_papers_site(papers, config, client=client, verify_public=False)
+    key = 'research/articles/slug/'
+    # Simulate a prior release stored without gzip, with the same logical
+    # source digest in its published manifest.
+    client.objects[key] = original
+    client.encodings[key] = None
+    again = publish_papers_site(papers, config, client=client, verify_public=False)
+    assert again.uploaded == 0
+    assert client.objects[key] == original
+    assert client.encodings[key] is None
+    # A stale manifest does not authorize reuse of a modified object.
+    client.objects[key] = b'x' * len(original)
+    repaired = publish_papers_site(papers, config, client=client, verify_public=False)
+    assert repaired.uploaded == 1
+    assert gzip.decompress(client.objects[key]) == original
+
+
 @pytest.mark.parametrize("already_uploaded", [False, True])
 def test_disabled_cards_remove_previous_remote_cards(tmp_path, monkeypatch, already_uploaded):
     papers = _seed_papers(tmp_path)

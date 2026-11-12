@@ -735,6 +735,18 @@ def _publish_papers_site(
         compress = digests["bytes"] >= 1024 and content_type.startswith((
             "text/", "application/json", "application/xml", "image/svg+xml",
         ))
+        # A previously published uncompressed representation is already a
+        # valid object.  Do not rewrite unchanged content merely to migrate
+        # it to gzip: that turns a format change into a bulk publication.
+        # Check the live inventory as well as the previous manifest so an
+        # interrupted upload cannot make an obsolete manifest look current.
+        if compress and inventory is not None:
+            previous = remote_by_key.get(key) or {}
+            stored = inventory.get(key) or {}
+            if (previous.get("sha256") == digests["sha256"]
+                    and stored.get("bytes") == digests["bytes"]
+                    and stored.get("etag") == digests["md5"]):
+                return False, 0
         # A warm compressed publish needs only local stat + actual remote ETag.
         # Recompress only when a receipt is missing/stale or the remote differs.
         if compress and inventory is not None:
