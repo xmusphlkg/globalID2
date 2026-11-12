@@ -28,128 +28,127 @@ export interface NotificationEmailContent {
   markdown: string;
 }
 
+export type NotificationKind = "update" | "report" | "research" | "alert";
+
+export interface ManagementEmailLink {
+  name: string;
+  url: string;
+}
+
+const BRAND = "GIDS - Global Infectious Disease Surveillance";
+
+/** Inline styles and presentation tables work in clients that remove CSS. */
+function emailLayout(locale: string, subject: string, section: string, body: string, footer: string): string {
+  const lang = normalizeLocale(locale, "en") || "en";
+  return `<!doctype html>
+<html lang="${escapeHtml(lang)}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f2f6f5;color:#172e2d;font-family:Arial,'Helvetica Neue',sans-serif;word-break:break-word">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;background-color:#f2f6f5">
+<tr><td align="center" style="padding:28px 12px">
+<!--[if mso]><table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0"><tr><td><![endif]-->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;max-width:640px;background-color:#ffffff;border:1px solid #d9e6e2">
+<tr><td style="padding:22px 28px 18px;background-color:#123d3a;color:#ffffff">
+<p style="margin:0;font-size:20px;line-height:26px;font-weight:bold;letter-spacing:1px">GIDS</p>
+<p style="margin:3px 0 0;font-size:12px;line-height:18px;color:#d5eae4">Global Infectious Disease Surveillance</p>
+</td></tr>
+<tr><td style="padding:28px 28px 12px;font-size:16px;line-height:1.6">
+<p style="margin:0 0 10px;font-size:12px;line-height:18px;color:#176b60;font-weight:bold;letter-spacing:0.5px">${escapeHtml(section)}</p>
+<h1 style="margin:0 0 22px;font-size:25px;line-height:1.3;color:#163b37">${escapeHtml(subject)}</h1>
+${body}
+</td></tr>
+<tr><td style="padding:18px 28px 24px;border-top:1px solid #e3ece9;font-size:13px;line-height:1.6;color:#526965">${footer}</td></tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+<p style="margin:16px 0 0;font-size:12px;line-height:18px;color:#526965">${BRAND}</p>
+</td></tr></table>
+</body></html>`;
+}
+
+function actionLink(label: string, url: string): string {
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;margin:8px 0 16px"><tr><td bgcolor="#176b60" style="background-color:#176b60"><a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 20px;color:#ffffff;font-size:15px;font-weight:bold;line-height:20px;text-decoration:none">${escapeHtml(label)}</a></td></tr></table>`;
+}
+
+function plainMarkdown(markdown: string): string {
+  return markdown
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1 ($2)")
+    .replace(/^#{1,4}\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/\x60([^\x60]+)\x60/g, "$1");
+}
+
 export function buildNotificationEmail(
   locale: string,
   content: NotificationEmailContent,
   unsubscribeUrl: string,
   manageUrl?: string,
+  kind: NotificationKind = "update",
 ): EmailContent {
-  const labels = notificationTemplateLabels(locale);
+  const normalized = normalizeLocale(locale, "en");
+  const labels = notificationTemplateLabels(normalized);
   const subject = cleanHeaderValue(content.subject, 200) || labels.title;
   const markdown = cleanMarkdown(content.markdown);
-  const bodyHtml = markdownToHtml(markdown);
-  const manageLabel = locale === "zh" ? "管理订阅偏好" : locale === "fr" ? "Gérer les préférences" : "Manage preferences";
-  const text = [
-    subject,
-    "",
-    markdown,
-    "",
+  const manageLabel = normalized === "zh" ? "管理订阅偏好" : normalized === "fr" ? "Gérer les préférences" : "Manage preferences";
+  const sections: Record<NotificationKind, { en: string; zh: string }> = {
+    update: { en: "GIDS UPDATE", zh: "GIDS 更新" },
+    report: { en: "SURVEILLANCE REPORTS", zh: "监测报告" },
+    research: { en: "RESEARCH RADAR", zh: "研究雷达" },
+    alert: { en: "OFFICIAL NOTICE", zh: "官方通报" },
+  };
+  const section = sections[kind][normalized === "zh" ? "zh" : "en"];
+  const text = [subject, "", plainMarkdown(markdown), "", labels.reason,
     `${labels.unsubscribe}: ${unsubscribeUrl}`,
-    ...(manageUrl ? [`${manageLabel}: ${manageUrl}`] : []),
-    "",
-    "GIDS - Global Infectious Disease Surveillance",
-  ].join("\n");
-  const html = `<!doctype html>
-<html lang="${escapeHtml(locale)}">
-  <head>
-    <meta charset="utf-8">
-    <title>${escapeHtml(subject)}</title>
-  </head>
-  <body style="margin:0;background:#f8fafc;color:#0f172a;font-family:Arial,'Helvetica Neue',sans-serif;line-height:1.6">
-    <div style="max-width:680px;margin:0 auto;padding:28px 20px">
-      <div style="border:1px solid #dbe5e1;background:#ffffff;padding:26px">
-        <p style="margin:0 0 12px;color:#0f766e;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">GIDS Alerts</p>
-        <h1 style="margin:0 0 18px;font-size:24px;line-height:1.25">${escapeHtml(subject)}</h1>
-        <div style="font-size:15px;color:#0f172a">${bodyHtml}</div>
-        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 14px">
-        <p style="margin:0;color:#64748b;font-size:12px">${escapeHtml(labels.reason)}</p>
-        <p style="margin:8px 0 0;color:#64748b;font-size:12px">
-          <a href="${escapeHtml(unsubscribeUrl)}" style="color:#0f766e">${escapeHtml(labels.unsubscribe)}</a>
-        </p>
-        ${manageUrl ? `<p style="margin:8px 0 0;font-size:12px"><a href="${escapeHtml(manageUrl)}" style="color:#0f766e">${escapeHtml(manageLabel)}</a></p>` : ""}
-      </div>
-      <p style="margin:14px 0 0;color:#64748b;font-size:12px">GIDS - Global Infectious Disease Surveillance</p>
-    </div>
-  </body>
-</html>`;
-
-  return { subject, text, html, unsubscribeUrl };
+    ...(manageUrl ? [`${manageLabel}: ${manageUrl}`] : []), "", BRAND].join("\n");
+  const footer = `<p style="margin:0 0 8px">${escapeHtml(labels.reason)}</p>
+<p style="margin:0"><a href="${escapeHtml(unsubscribeUrl)}" style="color:#176b60;text-decoration:underline">${escapeHtml(labels.unsubscribe)}</a>${manageUrl ? ` &nbsp;·&nbsp; <a href="${escapeHtml(manageUrl)}" style="color:#176b60;text-decoration:underline">${escapeHtml(manageLabel)}</a>` : ""}</p>`;
+  return { subject, text, html: emailLayout(normalized, subject, section, markdownToHtml(markdown), footer), unsubscribeUrl };
 }
 
-export function buildConfirmationEmail(
-  locale: string,
-  subscriptions: EmailSubscriptionItem[],
-): EmailContent {
-  const lang = locale === "zh" ? "zh" : "en";
-  const subject = lang === "zh"
-    ? "请确认你的 GIDS 订阅"
-    : "Confirm your GIDS subscription";
-  const textLines = lang === "zh"
-    ? [
-        "你好，",
-        "",
-        "我们已收到你的 GIDS 订阅请求。这封邮件用于确认你的邮箱可以接收 GIDS 更新。",
-        "请点击下面的链接确认订阅：",
-        "",
-        ...subscriptions.flatMap((subscription) => [
-          `${listDisplayName(subscription.listCode, "zh")}：${subscription.confirmUrl}`,
-        ]),
-        "",
-        "如果不是你本人操作，可以忽略本邮件。",
-        "",
-        "GIDS Alerts",
-      ]
-    : [
-        "Hello,",
-        "",
-        "We received your GIDS subscription request. This message confirms that your inbox can receive GIDS updates.",
-        "Confirm your subscription using the link below:",
-        "",
-        ...subscriptions.flatMap((subscription) => [
-          `${listDisplayName(subscription.listCode, "en")}: ${subscription.confirmUrl}`,
-        ]),
-        "",
-        "If you did not request this subscription, you can ignore this email.",
-        "",
-        "GIDS Alerts",
-      ];
+export function buildConfirmationEmail(locale: string, subscriptions: EmailSubscriptionItem[]): EmailContent {
+  const lang = normalizeLocale(locale, "en") === "zh" ? "zh" : "en";
+  const zh = lang === "zh";
+  const subject = zh ? "请确认你的 GIDS 订阅" : "Confirm your GIDS subscription";
+  const intro = zh ? "我们收到了你的订阅请求。请分别确认以下订阅，确认后才会收到对应更新。"
+    : "We received your subscription request. Confirm each subscription below to start receiving its updates.";
+  const action = zh ? "确认订阅" : "Confirm subscription";
+  const ignore = zh ? "如果不是你本人操作，可以忽略本邮件。" : "If you did not request this subscription, you can ignore this email.";
+  const frequencies: Record<string, { en: string; zh: string }> = {
+    instant: { en: "Instant", zh: "即时" }, weekly: { en: "Weekly", zh: "每周" }, monthly: { en: "Monthly", zh: "每月" },
+  };
+  const frequency = (item: EmailSubscriptionItem) => frequencies[item.frequency]?.[lang] || "";
+  const itemsText = subscriptions.flatMap(item => [
+    `${listDisplayName(item.listCode, lang)}${zh ? "：" : ": "}${item.confirmUrl}`,
+    ...(frequency(item) ? [`${zh ? "频率" : "Frequency"}: ${frequency(item)}`] : []),
+  ]);
+  const itemsHtml = subscriptions.map(item => `<div style="margin:0 0 18px;padding:0 0 12px;border-bottom:1px solid #e3ece9"><p style="margin:0 0 4px;font-size:16px;font-weight:bold">${escapeHtml(listDisplayName(item.listCode, lang))}</p>${frequency(item) ? `<p style="margin:0;color:#526965;font-size:14px">${zh ? "频率" : "Frequency"}: ${escapeHtml(frequency(item))}</p>` : ""}${actionLink(`${action}: ${listDisplayName(item.listCode, lang)}`, item.confirmUrl)}</div>`).join("");
+  const text = [subject, "", intro, "", ...itemsText, "", ignore, "", BRAND].join("\n");
+  const html = emailLayout(lang, subject, zh ? "订阅确认" : "SUBSCRIPTION CONFIRMATION",
+    `<p style="margin:0 0 20px">${escapeHtml(intro)}</p>${itemsHtml}`,
+    `<p style="margin:0">${escapeHtml(ignore)}</p>`);
+  return { subject, text, html };
+}
 
-  const intro = lang === "zh"
-    ? "我们已收到你的 GIDS 订阅请求。这封邮件用于确认你的邮箱可以接收 GIDS 更新。"
-    : "We received your GIDS subscription request. This message confirms that your inbox can receive GIDS updates.";
-  const action = lang === "zh" ? "确认订阅" : "Confirm subscription";
-  const ignore = lang === "zh"
-    ? "如果不是你本人操作，可以忽略本邮件。"
-    : "If you did not request this subscription, you can ignore this email.";
-
-  const links = subscriptions.map((subscription) => `
-    <li style="margin:12px 0">
-      <strong>${escapeHtml(listDisplayName(subscription.listCode, lang))}</strong><br>
-      <a href="${escapeHtml(subscription.confirmUrl)}" style="display:inline-block;margin-top:6px;color:#0f766e">${escapeHtml(action)}</a>
-    </li>
-  `).join("");
-
-  const html = `<!doctype html>
-<html lang="${lang}">
-  <head>
-    <meta charset="utf-8">
-    <title>${escapeHtml(subject)}</title>
-  </head>
-  <body style="margin:0;background:#f8fafc;color:#0f172a;font-family:Arial,'Helvetica Neue',sans-serif;line-height:1.6">
-    <div style="max-width:620px;margin:0 auto;padding:28px 20px">
-      <div style="border:1px solid #dbe5e1;background:#ffffff;padding:24px">
-        <p style="margin:0 0 12px;color:#0f766e;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">GIDS Alerts</p>
-        <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25">${escapeHtml(subject)}</h1>
-        <p style="margin:0 0 18px">${escapeHtml(intro)}</p>
-        <ul style="margin:0 0 18px 20px;padding:0">${links}</ul>
-        <p style="margin:18px 0 0;color:#475569;font-size:13px">${escapeHtml(ignore)}</p>
-      </div>
-      <p style="margin:14px 0 0;color:#64748b;font-size:12px">GIDS - Global Infectious Disease Surveillance</p>
-    </div>
-  </body>
-</html>`;
-
-  return { subject, text: textLines.join("\n"), html };
+export function buildManagementEmail(locale: string, links: ManagementEmailLink[]): EmailContent {
+  const lang = normalizeLocale(locale, "en") === "zh" ? "zh" : "en";
+  const zh = lang === "zh";
+  const subject = zh ? "管理你的 GIDS 订阅" : "Manage your GIDS subscriptions";
+  const intro = zh ? "你可以修改偏好、暂停或退订。请选择要管理的订阅。"
+    : "Choose a subscription to change preferences, pause, or unsubscribe.";
+  const expiry = zh ? "这些链接将在 30 分钟后失效。如果不是你本人操作，可以忽略本邮件。"
+    : "These links expire in 30 minutes. If you did not request them, you can ignore this email.";
+  const action = zh ? "管理订阅" : "Manage subscription";
+  const text = [subject, "", intro, "", ...links.map(link => `${link.name}: ${link.url}`), "", expiry, "", BRAND].join("\n");
+  const body = `<p style="margin:0 0 20px">${escapeHtml(intro)}</p>` + links.map(link =>
+    `<div style="margin:0 0 18px;padding:0 0 12px;border-bottom:1px solid #e3ece9"><p style="margin:0 0 4px;font-size:16px;font-weight:bold">${escapeHtml(link.name)}</p>${actionLink(`${action}: ${link.name}`, link.url)}</div>`).join("");
+  const html = emailLayout(lang, subject, zh ? "订阅管理" : "SUBSCRIPTION MANAGEMENT", body,
+    `<p style="margin:0">${escapeHtml(expiry)}</p>`);
+  return { subject, text, html };
 }
 
 export function buildRawEmail(

@@ -30,7 +30,7 @@ def test_json_generation_pins_immutable_objects_and_keeps_old_snapshot(tmp_path)
     context = _context()
     logical = dynamic.write_surveillance_artifacts(context, state, public)
     first = dynamic.freeze_public_generation(public, state, logical, release_id="first", generated_at=context["generated_at"])
-    assert set(first["files"]) == {"meta.json", "site-status.json", "home-influenza.json", "countries/ca.json", "countries/ca-source-series.json", "countries/ca-summary.json", "diseases/d001.json", "diseases/d001-summary.json"}
+    assert set(first["files"]) == {"meta.json", "site-status.json", "home-influenza.json", "home-summary.json", "countries/ca.json", "countries/ca-source-series.json", "countries/ca-summary.json", "diseases/d001.json", "diseases/d001-summary.json"}
     previous = {entry["url"]: (public / entry["url"]).read_bytes() for entry in first["files"].values()}
     summary = json.loads(previous[first["files"]["countries/ca-summary.json"]["url"]])
     assert summary["total_cases"] == 7
@@ -87,7 +87,8 @@ def test_projection_rule_change_invalidates_completed_baseline(tmp_path, monkeyp
     assert dynamic.completed_generation(state, public) is None
 
 
-async def test_data_export_uses_surveillance_collection_and_freezes_ack_projection(tmp_path, monkeypatch):
+@pytest.mark.parametrize("with_downloads", [False, True])
+async def test_data_export_uses_surveillance_collection_and_freezes_ack_projection(tmp_path, monkeypatch, with_downloads):
     from src.generation import site_data_export
     from src.core import database
     context = _context()
@@ -99,7 +100,21 @@ async def test_data_export_uses_surveillance_collection_and_freezes_ack_projecti
         yield db
     monkeypatch.setattr(database, "get_db", session)
     state, public = tmp_path / "private", tmp_path / "public"
-    manifest = await dynamic.export_surveillance_data(state, public, release_id="dynamic-release", public_url_base="https://data.example/surveillance")
+    options = {}
+    if with_downloads:
+        from src.generation import surveillance_downloads
+        def generate(selected, output, candidate, **kwargs):
+            assert selected is context  # No second database read/projection.
+            assert kwargs["release_id"] == "dynamic-release"
+            return {"countries": [{"code": "CA", "record_count": 1}],
+                "diseases": [{"disease_id": "D001", "record_count": 1}]}
+        monkeypatch.setattr(surveillance_downloads, "generate_download_candidate", generate)
+        options = {"download_candidate": tmp_path / "candidate", "download_output": tmp_path / "downloads"}
+    manifest = await dynamic.export_surveillance_data(state, public, release_id="dynamic-release", public_url_base="https://data.example/surveillance", **options)
+    collector.assert_awaited_once()
+    if with_downloads:
+        assert json.loads((public / "countries/ca-summary.json").read_text())["download"]["record_count"] == 1
+        assert json.loads((public / "diseases/d001-summary.json").read_text())["download"]["record_count"] == 1
     assert collector.await_args.kwargs["surveillance_only"] is True
     assert manifest["files"]["meta.json"]["url"].startswith("https://data.example/surveillance/objects/")
     frozen = json.loads((state / "_release-projection/manifest.json").read_text())

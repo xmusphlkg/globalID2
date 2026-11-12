@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -12,10 +13,51 @@ from urllib.request import Request, urlopen
 
 from scripts.automation import dispatch_research_digest as transport
 from .research_subscription import ResearchSubscriptionError, _fingerprint, _outbox_lock, _save, _verify_built_artifact, _verify_live_release, outbox_directory, guarded_floor, verify_worker_mode
+from .surveillance_publish import validate_manifest
 
 
 class NoticeSubscriptionError(RuntimeError):
     release_stage = "notice_alert_dispatch"
+
+
+def _published_outbreaks(root: Path, origin: str, opener: Callable[..., Any]) -> tuple[list[dict], bytes]:
+    """Read objects named by the public pointer, never an unpublished local export."""
+    body = _situation_pointer(origin, opener)
+    try:
+        manifest, _ = validate_manifest(body)
+        objects = root / "exports" / "situation-data" / "objects"
+        result = []
+        for logical, entry in manifest["files"].items():
+            if not logical.startswith("outbreaks/"):
+                continue
+            path = objects / Path(entry["url"]).name
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("missing object")
+            data = path.read_bytes()
+            if len(data) != entry["bytes"] or hashlib.sha256(data).hexdigest() != entry["sha256"]:
+                raise ValueError("object checksum mismatch")
+            value = json.loads(data)
+            if not isinstance(value, dict) or value.get("schema_version") != "gids.situation_alerts.v1" or not isinstance(value.get("alerts"), list):
+                raise ValueError("invalid outbreak")
+            result.append(value)
+        return result, body
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise NoticeSubscriptionError("situation_export_invalid") from exc
+
+
+def _situation_pointer(origin: str, opener: Callable[..., Any]) -> bytes:
+    try:
+        request = Request(origin + "/site-data/situation/current.json", headers={
+            "Accept": "application/json", "Cache-Control": "no-cache", "User-Agent": "GIDS-Release-Verifier/1.0",
+        })
+        with opener(request, timeout=15) as response:
+            status = int(getattr(response, "status", 0) or response.getcode())
+            body = response.read(2 * 1024 * 1024 + 1)
+        if status != 200 or len(body) > 2 * 1024 * 1024:
+            raise ValueError("invalid public pointer")
+        return body
+    except Exception as exc:
+        raise NoticeSubscriptionError("situation_export_unavailable") from exc
 
 
 def _capability(worker: str, opener: Callable[..., Any]) -> None:
@@ -105,8 +147,14 @@ def dispatch_after_release(
     # may be regenerated while a release is uploading; matching release.json
     # alone does not prove that a later src/data snapshot was ever published.
     source = astro_dir / "dist" / "situation" / "outbreaks"
-    if not source.is_dir():
-        raise NoticeSubscriptionError("situation_export_unavailable")
+    pointer = None
+    if source.is_dir():
+        try:
+            outbreaks = [json.loads(path.read_text(encoding="utf-8")) for path in source.glob("*.json")]
+        except (OSError, ValueError) as exc:
+            raise NoticeSubscriptionError("situation_export_invalid") from exc
+    else:
+        outbreaks, pointer = _published_outbreaks(root, origin, opener)
     directory = outbox_directory(root, "official-notices", mode)
     with _outbox_lock(directory):
         if guard_activation:
@@ -126,11 +174,7 @@ def dispatch_after_release(
                 raise NoticeSubscriptionError("notice_dispatch_outbox_invalid")
             existing[path.stem] = (path, record)
         eligible: dict[str, Mapping[str, Any]] = {}
-        for path in source.glob("*.json"):
-            try:
-                obj = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, ValueError) as exc:
-                raise NoticeSubscriptionError("situation_export_invalid") from exc
+        for obj in outbreaks:
             if not isinstance(obj, dict) or obj.get("schema_version") != "gids.situation_alerts.v1" or not isinstance(obj.get("alerts"), list):
                 raise NoticeSubscriptionError("situation_export_invalid")
             for alert in obj["alerts"]:
@@ -158,13 +202,17 @@ def dispatch_after_release(
         pending_ids = [key for key, (_, rec) in existing.items() if rec["status"] == "pending"]
         if any(key not in eligible for key in pending_ids):
             raise NoticeSubscriptionError("pending_official_notice_no_longer_published")
-        if not new_ids and not pending_ids:
-            return {"status": "no_new_notices", "accepted": 0}
         try:
             _verify_built_artifact(astro_dir, identity)
             _verify_live_release(origin, identity, opener=opener)
         except ResearchSubscriptionError as exc:
             raise NoticeSubscriptionError(str(exc)) from exc
+        if pointer is not None and _situation_pointer(origin, opener) != pointer:
+            raise NoticeSubscriptionError("situation_publication_changed")
+        # An empty scan is meaningful only after verifying the exact public
+        # release and, for independently published data, a stable pointer.
+        if not new_ids and not pending_ids:
+            return {"status": "no_new_notices", "accepted": 0}
         staged = {key: _event(eligible[key], release_id=str(identity["release_id"]), origin=origin, mode=mode)
                   for key in new_ids}
         for key in pending_ids:

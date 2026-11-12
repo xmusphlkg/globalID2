@@ -323,6 +323,7 @@ async def test_same_model_for_both_roles_is_refused_unless_single_model_is_allow
 
     lenient = ScriptedCompleter([_draft(_alert())], [_review("accept")], author_model="m", reviewer_model="m")
     lenient.single_model = True
+    lenient.allow_single_model = True
     result = await _run(lenient)
     assert result.status == "published"
     assert review_mode(result.author_model, result.reviewer_model) == "single_model"

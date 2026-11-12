@@ -22,6 +22,8 @@ from src.control_plane.runtime import runtime_registry  # noqa: E402
 
 API_UNIT = "globalid-dashboard-api.service"
 WORKER_UNIT = "globalid-dashboard-worker.service"
+AI_WORKER_UNIT = "globalid-ai-worker.service"
+WORKER_UNITS = {"worker": WORKER_UNIT, "ai-worker": AI_WORKER_UNIT}
 SCHEDULER_UNIT = "globalid-dashboard-scheduler.service"
 
 
@@ -29,7 +31,9 @@ def _emit(event: str, **values: object) -> None:
     print(json.dumps({"event": event, **values}, sort_keys=True), flush=True)
 
 
-def _run_systemctl(*arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+def _run_systemctl(
+    *arguments: str, check: bool = True
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["sudo", "-n", "systemctl", *arguments],
         cwd=ROOT,
@@ -62,15 +66,15 @@ def _pid_is_alive(pid: int) -> bool:
     return True
 
 
-async def _wait_unit_stopped(timeout_seconds: int) -> str:
+async def _wait_unit_stopped(unit: str, timeout_seconds: int) -> str:
     deadline = time.monotonic() + timeout_seconds
     last_reported = ""
     while time.monotonic() < deadline:
-        state = _unit_property(WORKER_UNIT, "ActiveState")
+        state = _unit_property(unit, "ActiveState")
         if state in {"inactive", "failed"}:
             return state
         if state != last_reported:
-            _emit("worker_draining", state=state)
+            _emit("worker_draining", unit=unit, state=state)
             last_reported = state
         await asyncio.sleep(2)
     raise TimeoutError(
@@ -87,8 +91,7 @@ async def _wait_runtime_service(
         if not available:
             raise RuntimeError("runtime registry became unavailable")
         if any(
-            item.get("service") == service
-            and int(item.get("pid") or 0) == expected_pid
+            item.get("service") == service and int(item.get("pid") or 0) == expected_pid
             for item in services
         ):
             return
@@ -139,61 +142,64 @@ def _recover_owner(owner: str) -> None:
 
 
 async def _restart(args: argparse.Namespace) -> int:
-    old_owner, registry_available = await runtime_registry.lease_owner("worker")
-    if not registry_available:
-        raise RuntimeError("runtime registry is unavailable; refusing maintenance restart")
-    old_pid = int(_unit_property(WORKER_UNIT, "MainPID") or 0)
-    if old_owner and old_pid and f"-{old_pid}-" not in old_owner:
-        raise RuntimeError("worker PID does not match Redis lease owner")
+    previous = {}
+    for service, unit in WORKER_UNITS.items():
+        owner, available = await runtime_registry.lease_owner(service)
+        if not available:
+            raise RuntimeError(
+                "runtime registry is unavailable; refusing maintenance restart"
+            )
+        pid = int(_unit_property(unit, "MainPID") or 0)
+        if owner and pid and f"-{pid}-" not in owner:
+            raise RuntimeError(f"{service} PID does not match Redis lease owner")
+        previous[service] = (owner, pid)
 
     _emit("scheduler_freeze_started")
     _run_systemctl("stop", SCHEDULER_UNIT)
     _emit("scheduler_frozen")
-
-    # SIGTERM immediately stops new claims; the worker then drains tasks under
-    # the unit's 15-minute TimeoutStopSec. Queued work remains durable.
-    _run_systemctl("stop", "--no-block", WORKER_UNIT)
-    stopped_state = await _wait_unit_stopped(args.drain_timeout_seconds)
-    stop_result = _unit_property(WORKER_UNIT, "Result")
-    _emit("worker_stopped", state=stopped_state, result=stop_result)
-
-    if _pid_is_alive(old_pid):
-        raise RuntimeError("old worker PID is still alive after systemd stop")
-
-    remaining_owner, available = await runtime_registry.lease_owner("worker")
-    if not available:
-        raise RuntimeError("runtime registry became unavailable after worker stop")
-    owner_was_cleaned = False
-    if remaining_owner:
-        if remaining_owner != old_owner or not old_owner:
-            raise RuntimeError("a different worker acquired the lease during maintenance")
-        cleaned = await runtime_registry.release_stopped_instance(
-            "worker", old_owner
+    _run_systemctl("stop", "--no-block", *WORKER_UNITS.values())
+    await asyncio.gather(
+        *(
+            _wait_unit_stopped(unit, args.drain_timeout_seconds)
+            for unit in WORKER_UNITS.values()
         )
-        if not cleaned:
-            raise RuntimeError("failed to compare-delete the stopped worker lease")
-        owner_was_cleaned = True
-        _emit("stopped_owner_released", owner=old_owner)
-    elif old_owner:
-        # Graceful shutdown releases the lease itself; remove the exact old
-        # heartbeat immediately instead of waiting for its TTL.
-        await runtime_registry.remove_heartbeat("worker", old_owner)
-    hard_stop = stop_result not in {"", "success"}
-    if old_owner:
-        _recover_owner(old_owner)
+    )
+    for service, unit in WORKER_UNITS.items():
+        owner, pid = previous[service]
+        if _pid_is_alive(pid):
+            raise RuntimeError(f"old {service} PID is still alive after systemd stop")
+        remaining, available = await runtime_registry.lease_owner(service)
+        if not available:
+            raise RuntimeError("runtime registry became unavailable after worker stop")
+        if remaining:
+            if remaining != owner or not owner:
+                raise RuntimeError(
+                    f"a different {service} acquired the lease during maintenance"
+                )
+            if not await runtime_registry.release_stopped_instance(service, owner):
+                raise RuntimeError(
+                    f"failed to compare-delete the stopped {service} lease"
+                )
+        elif owner:
+            await runtime_registry.remove_heartbeat(service, owner)
+        _emit("worker_stopped", service=service, result=_unit_property(unit, "Result"))
+    # Recover only after both roles are verified stopped and their exact leases
+    # are removed. The recovery CLI deliberately refuses any live task worker.
+    for owner, _pid in previous.values():
+        if owner:
+            _recover_owner(owner)
 
     if args.include_api:
         _emit("api_restart_started")
         _run_systemctl("restart", API_UNIT)
         _emit("api_restarted", pid=int(_unit_property(API_UNIT, "MainPID") or 0))
 
-    _run_systemctl("reset-failed", WORKER_UNIT, check=False)
-    _run_systemctl("start", WORKER_UNIT)
-    worker_pid = int(_unit_property(WORKER_UNIT, "MainPID") or 0)
-    await _wait_runtime_service(
-        "worker", worker_pid, args.readiness_timeout_seconds
-    )
-    _emit("worker_started", pid=worker_pid)
+    _run_systemctl("reset-failed", *WORKER_UNITS.values(), check=False)
+    _run_systemctl("start", *WORKER_UNITS.values())
+    for service, unit in WORKER_UNITS.items():
+        worker_pid = int(_unit_property(unit, "MainPID") or 0)
+        await _wait_runtime_service(service, worker_pid, args.readiness_timeout_seconds)
+        _emit("worker_started", service=service, pid=worker_pid)
 
     _run_systemctl("start", SCHEDULER_UNIT)
     scheduler_pid = int(_unit_property(SCHEDULER_UNIT, "MainPID") or 0)
@@ -242,9 +248,10 @@ def main(argv: list[str] | None = None) -> int:
         scheduler_stopped = False
         try:
             _run_systemctl("stop", SCHEDULER_UNIT)
-            scheduler_stopped = _unit_property(
-                SCHEDULER_UNIT, "ActiveState"
-            ) in {"inactive", "failed"}
+            scheduler_stopped = _unit_property(SCHEDULER_UNIT, "ActiveState") in {
+                "inactive",
+                "failed",
+            }
         except Exception:
             scheduler_stopped = False
         _emit(

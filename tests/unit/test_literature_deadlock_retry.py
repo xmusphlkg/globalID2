@@ -83,7 +83,7 @@ async def test_reconciliation_retries_transaction_without_export(monkeypatch) ->
     monkeypatch.setattr(service, "_reconcile_database", transaction)
     monkeypatch.setattr(pipeline_module.asyncio, "sleep", AsyncMock())
 
-    from src.ai import work_queue
+    from src.ai import runtime as work_queue
     monkeypatch.setattr(work_queue, "current_parent", lambda: SimpleNamespace(task_uuid="11111111-1111-4111-8111-111111111111"))
     result = await service.reconcile()
 
@@ -107,7 +107,7 @@ async def test_reconciliation_failure_does_not_export(monkeypatch, error) -> Non
     monkeypatch.setattr(service, "_reconcile_database", transaction)
     monkeypatch.setattr(pipeline_module.asyncio, "sleep", AsyncMock())
 
-    from src.ai import work_queue
+    from src.ai import runtime as work_queue
     monkeypatch.setattr(work_queue, "current_parent", lambda: SimpleNamespace(task_uuid="11111111-1111-4111-8111-111111111111"))
     with pytest.raises(type(error)):
         await service.reconcile()

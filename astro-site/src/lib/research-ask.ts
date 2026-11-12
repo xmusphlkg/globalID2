@@ -48,6 +48,7 @@ export interface ResearchAskEvidence {
   findingEn: string | null;
   findingZh: string | null;
   findingFr: string | null;
+  sourceReview?: { noticeEn: string; noticeZh: string; noticeFr: string; sourceUrl: string };
 }
 
 export interface ResearchAskMatchReason {
@@ -207,7 +208,7 @@ function articleFieldText(article: ResearchAskArticle) {
 
 function containsTerm(haystack: string, term: string): boolean {
   if (!term) return false;
-  if (/^[a-z0-9]+$/.test(term)) return (` ${haystack} `).includes(` ${term} `) || (term.length >= 5 && haystack.includes(term));
+  if (!/[\p{Script=Han}]/u.test(term)) return (` ${haystack} `).includes(` ${term} `);
   return haystack.includes(term);
 }
 
@@ -264,9 +265,27 @@ function catalogueAliasGroups(articles: ResearchAskArticle[]): AliasGroup[] {
 
 function searchUnits(query: string, articles: ResearchAskArticle[]): SearchUnit[] {
   const normalizedQuery = normalizeText(query);
-  const matchedGroups = catalogueAliasGroups(articles).filter((group) => (
+  const candidates = catalogueAliasGroups(articles).filter((group) => (
     group.aliases.some((alias) => containsTerm(normalizedQuery, alias))
   ));
+  // A shorter disease alias inside a specific disease name is not a second
+  // query concept (流感嗜血杆菌 does not independently request 流感).
+  const matchedGroups = candidates.filter(group => group.aliases.some(alias => {
+    if (!containsTerm(normalizedQuery, alias)) return false;
+    for (let at = normalizedQuery.indexOf(alias); at >= 0; at = normalizedQuery.indexOf(alias, at + 1)) {
+      const latin = !/[\p{Script=Han}]/u.test(alias);
+      if (latin && ((at > 0 && normalizedQuery[at - 1] !== ' ') || (at + alias.length < normalizedQuery.length && normalizedQuery[at + alias.length] !== ' '))) continue;
+      const shadowed = candidates.some(other => other !== group && other.kind === group.kind && other.aliases.some(longer => {
+        if (longer.length <= alias.length || !containsTerm(normalizedQuery, longer)) return false;
+        for (let start = normalizedQuery.indexOf(longer); start >= 0; start = normalizedQuery.indexOf(longer, start + 1)) {
+          if (start <= at && at + alias.length <= start + longer.length) return true;
+        }
+        return false;
+      }));
+      if (!shadowed) return true;
+    }
+    return false;
+  }));
   let residualQuery = normalizedQuery;
   for (const alias of matchedGroups.flatMap((group) => group.aliases).sort((left, right) => right.length - left.length)) {
     if (!containsTerm(normalizedQuery, alias)) continue;
@@ -359,6 +378,22 @@ function citationFor(article: ResearchAskArticle, index: number): ResearchAskCit
   };
 }
 
+// This narrow, source-reviewed exception does not change provider metadata.
+// Publisher full text and Europe PMC (PMID37700242) were checked 2026-11-11:
+// the paper studies bacterial-isolate genomics, while its provider MeSH still
+// includes Influenza, Human. Preserve that heading without implying confirmed
+// influenza-virus evidence in an Ask answer.
+function sourceAboutnessReview(article: ResearchAskArticle, units: SearchUnit[]): ResearchAskEvidence['sourceReview'] {
+  if (normalizedDoi(article.doi) !== '10.1186/s12879-023-08560-x') return undefined;
+  if (!units.some(unit => unit.kind === 'disease' && (unit.aliases.includes('d038') || normalizeText(unit.label) === 'influenza'))) return undefined;
+  return {
+    noticeEn: 'The source includes an influenza subject heading, but this paper studies bacterial isolates. Independent influenza-virus evidence has not been established; this record is retained as background. Check the paper.',
+    noticeZh: '来源含有流感标引，但原文研究对象为细菌分离株，尚未核实独立的流感病毒研究依据；本条保留为背景。核对原文。',
+    noticeFr: 'La source comporte une indexation grippale, mais cette étude porte sur des isolats bactériens. Aucune preuve indépendante sur le virus grippal n’a été établie ; cette référence est conservée comme contexte. Consulter l’article.',
+    sourceUrl: 'https://link.springer.com/article/10.1186/s12879-023-08560-x',
+  };
+}
+
 function expectedFacetField(kind: ResearchFacetKind): keyof ReturnType<typeof articleFieldText> | null {
   if (kind === 'disease') return 'diseases';
   if (kind === 'country') return 'countries';
@@ -385,7 +420,9 @@ export function rankResearchArticles(
         const matchedAliases = new Set<string>();
         let points = 0;
         for (const [field, weight] of Object.entries(FIELD_WEIGHTS)) {
-          const aliases = unit.aliases.filter((candidate) => containsTerm(fields[field as keyof typeof fields], candidate));
+          const aliases = unit.aliases.filter((candidate) => field === 'diseases' && unit.kind === 'disease'
+            ? (article.diseases ?? []).filter(confident).some(disease => [disease.disease_id, disease.name_en, disease.name_zh, disease.name_fr].some(value => normalizeText(value) === candidate))
+            : containsTerm(fields[field as keyof typeof fields], candidate));
           if (!aliases.length) continue;
           aliases.forEach((alias) => matchedAliases.add(alias));
           matchedFields.push(field);
@@ -414,7 +451,8 @@ export function rankResearchArticles(
           reason.kind === unit.kind && reason.queryTerm === unit.label && reason.fields.includes(expected)
         ));
       });
-      const evidenceLevel = allUnitsMatched && allFacetsExact ? 'exact' : 'background';
+      const sourceReview = sourceAboutnessReview(article, units);
+      const evidenceLevel = allUnitsMatched && allFacetsExact && !sourceReview ? 'exact' : 'background';
       score += (matchReasons.length / units.length) * 5;
       if (evidenceLevel === 'exact') score += 8;
       const normalizedQuery = normalizeText(query);
@@ -432,6 +470,7 @@ export function rankResearchArticles(
         findingEn: evidenceFinding(article, 'en'),
         findingZh: evidenceFinding(article, 'zh'),
         findingFr: evidenceFinding(article, 'fr'),
+        ...(sourceReview ? { sourceReview } : {}),
       } satisfies ResearchAskEvidence;
     })
     .filter((item): item is ResearchAskEvidence => item !== null)

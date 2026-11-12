@@ -29,7 +29,6 @@ class ReviewerAgent(BaseAgent):
 
         super().__init__(
             name="Reviewer",
-            # No explicit model - BaseAgent uses config.ai.default_model and respects model_chain
             temperature=0.2,  # Reviewing tasks need low temperature (strict, objective)
             max_tokens=2000,
         )
@@ -37,8 +36,6 @@ class ReviewerAgent(BaseAgent):
         # Load reviewer-specific configuration
         # reviewer_threshold can be set via .env or configuration (default 0.7)
         self.reviewer_threshold = float(getattr(config.ai, "reviewer_threshold", 0.7))
-        # max_retries preference for writer-review loop, fallback to ai.max_retries
-        self.max_retries = int(getattr(config.ai, "max_retries", config.ai.max_retries))
 
         # Load system prompt
         self.system_prompt = self._load_system_prompt()

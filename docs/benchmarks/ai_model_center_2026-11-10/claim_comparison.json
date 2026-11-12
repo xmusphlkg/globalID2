@@ -1,0 +1,546 @@
+{
+  "baseline": [
+    {
+      "label": "baseline",
+      "capacities": [
+        227
+      ],
+      "execution": false,
+      "repeat": 0,
+      "claimed": 227,
+      "transactions": 231,
+      "sql": {
+        "SELECT": 918,
+        "UPDATE": 227
+      },
+      "tick_ms": 11083.93,
+      "first_start_ms": 124.76,
+      "p50_start_ms": 6195.98,
+      "p95_start_ms": 10672.15,
+      "last_start_ms": 11083.89
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        227
+      ],
+      "execution": false,
+      "repeat": 1,
+      "claimed": 227,
+      "transactions": 231,
+      "sql": {
+        "SELECT": 918,
+        "UPDATE": 227
+      },
+      "tick_ms": 11693.07,
+      "first_start_ms": 132.58,
+      "p50_start_ms": 5398.25,
+      "p95_start_ms": 11163.92,
+      "last_start_ms": 11693.03
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        227
+      ],
+      "execution": false,
+      "repeat": 2,
+      "claimed": 227,
+      "transactions": 231,
+      "sql": {
+        "SELECT": 918,
+        "UPDATE": 227
+      },
+      "tick_ms": 12551.52,
+      "first_start_ms": 73.39,
+      "p50_start_ms": 6918.26,
+      "p95_start_ms": 12138.84,
+      "last_start_ms": 12551.48
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        227
+      ],
+      "execution": true,
+      "repeat": 0,
+      "claimed": 227,
+      "transactions": 458,
+      "sql": {
+        "SELECT": 1372,
+        "UPDATE": 227
+      },
+      "tick_ms": 12921.86,
+      "first_start_ms": 175.95,
+      "p50_start_ms": 5517.59,
+      "p95_start_ms": 12308.59,
+      "last_start_ms": 12931.95
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        227
+      ],
+      "execution": true,
+      "repeat": 1,
+      "claimed": 227,
+      "transactions": 458,
+      "sql": {
+        "SELECT": 1372,
+        "UPDATE": 227
+      },
+      "tick_ms": 10853.57,
+      "first_start_ms": 114.6,
+      "p50_start_ms": 5317.52,
+      "p95_start_ms": 10377.21,
+      "last_start_ms": 10859.32
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        227
+      ],
+      "execution": true,
+      "repeat": 2,
+      "claimed": 227,
+      "transactions": 458,
+      "sql": {
+        "SELECT": 1372,
+        "UPDATE": 227
+      },
+      "tick_ms": 11330.95,
+      "first_start_ms": 81.82,
+      "p50_start_ms": 6151.2,
+      "p95_start_ms": 10774.87,
+      "last_start_ms": 11339.29
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": false,
+      "repeat": 0,
+      "claimed": 227,
+      "transactions": 231,
+      "sql": {
+        "SELECT": 918,
+        "UPDATE": 227
+      },
+      "tick_ms": 12358.82,
+      "first_start_ms": 78.94,
+      "p50_start_ms": 5950.62,
+      "p95_start_ms": 11302.29,
+      "last_start_ms": 12358.78
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": false,
+      "repeat": 1,
+      "claimed": 227,
+      "transactions": 231,
+      "sql": {
+        "SELECT": 918,
+        "UPDATE": 227
+      },
+      "tick_ms": 10361.74,
+      "first_start_ms": 49.77,
+      "p50_start_ms": 4915.71,
+      "p95_start_ms": 9936.97,
+      "last_start_ms": 10361.68
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": false,
+      "repeat": 2,
+      "claimed": 227,
+      "transactions": 231,
+      "sql": {
+        "SELECT": 918,
+        "UPDATE": 227
+      },
+      "tick_ms": 11966.61,
+      "first_start_ms": 69.05,
+      "p50_start_ms": 5298.91,
+      "p95_start_ms": 11443.32,
+      "last_start_ms": 11966.56
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": true,
+      "repeat": 0,
+      "claimed": 227,
+      "transactions": 458,
+      "sql": {
+        "SELECT": 1372,
+        "UPDATE": 227
+      },
+      "tick_ms": 12246.32,
+      "first_start_ms": 136.18,
+      "p50_start_ms": 6798.18,
+      "p95_start_ms": 11820.21,
+      "last_start_ms": 12253.83
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": true,
+      "repeat": 1,
+      "claimed": 227,
+      "transactions": 458,
+      "sql": {
+        "SELECT": 1372,
+        "UPDATE": 227
+      },
+      "tick_ms": 11339.86,
+      "first_start_ms": 123.08,
+      "p50_start_ms": 5767.87,
+      "p95_start_ms": 10837.04,
+      "last_start_ms": 11347.43
+    },
+    {
+      "label": "baseline",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": true,
+      "repeat": 2,
+      "claimed": 227,
+      "transactions": 458,
+      "sql": {
+        "SELECT": 1372,
+        "UPDATE": 227
+      },
+      "tick_ms": 14134.22,
+      "first_start_ms": 87.97,
+      "p50_start_ms": 7827.86,
+      "p95_start_ms": 13468.51,
+      "last_start_ms": 14140.57
+    }
+  ],
+  "batch16": [
+    {
+      "label": "batch16",
+      "capacities": [
+        227
+      ],
+      "execution": false,
+      "repeat": 0,
+      "claimed": 227,
+      "transactions": 19,
+      "sql": {
+        "SELECT": 70,
+        "UPDATE": 15
+      },
+      "tick_ms": 959.8,
+      "first_start_ms": 137.16,
+      "p50_start_ms": 544.0,
+      "p95_start_ms": 841.48,
+      "last_start_ms": 959.74
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        227
+      ],
+      "execution": false,
+      "repeat": 1,
+      "claimed": 227,
+      "transactions": 19,
+      "sql": {
+        "SELECT": 70,
+        "UPDATE": 15
+      },
+      "tick_ms": 943.64,
+      "first_start_ms": 92.46,
+      "p50_start_ms": 620.4,
+      "p95_start_ms": 907.91,
+      "last_start_ms": 943.59
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        227
+      ],
+      "execution": false,
+      "repeat": 2,
+      "claimed": 227,
+      "transactions": 19,
+      "sql": {
+        "SELECT": 70,
+        "UPDATE": 15
+      },
+      "tick_ms": 979.64,
+      "first_start_ms": 100.62,
+      "p50_start_ms": 508.93,
+      "p95_start_ms": 874.18,
+      "last_start_ms": 979.58
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        227
+      ],
+      "execution": true,
+      "repeat": 0,
+      "claimed": 227,
+      "transactions": 246,
+      "sql": {
+        "SELECT": 524,
+        "UPDATE": 15
+      },
+      "tick_ms": 1724.93,
+      "first_start_ms": 270.27,
+      "p50_start_ms": 925.91,
+      "p95_start_ms": 1678.94,
+      "last_start_ms": 1741.68
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        227
+      ],
+      "execution": true,
+      "repeat": 1,
+      "claimed": 227,
+      "transactions": 246,
+      "sql": {
+        "SELECT": 524,
+        "UPDATE": 15
+      },
+      "tick_ms": 1403.96,
+      "first_start_ms": 193.09,
+      "p50_start_ms": 869.76,
+      "p95_start_ms": 1366.89,
+      "last_start_ms": 1418.5
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        227
+      ],
+      "execution": true,
+      "repeat": 2,
+      "claimed": 227,
+      "transactions": 246,
+      "sql": {
+        "SELECT": 524,
+        "UPDATE": 15
+      },
+      "tick_ms": 1284.6,
+      "first_start_ms": 142.51,
+      "p50_start_ms": 759.91,
+      "p95_start_ms": 1242.76,
+      "last_start_ms": 1298.31
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": false,
+      "repeat": 0,
+      "claimed": 227,
+      "transactions": 23,
+      "sql": {
+        "SELECT": 86,
+        "UPDATE": 19
+      },
+      "tick_ms": 1594.14,
+      "first_start_ms": 252.42,
+      "p50_start_ms": 908.74,
+      "p95_start_ms": 1541.11,
+      "last_start_ms": 1594.07
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": false,
+      "repeat": 1,
+      "claimed": 227,
+      "transactions": 23,
+      "sql": {
+        "SELECT": 86,
+        "UPDATE": 19
+      },
+      "tick_ms": 1795.05,
+      "first_start_ms": 105.24,
+      "p50_start_ms": 1152.09,
+      "p95_start_ms": 1728.97,
+      "last_start_ms": 1794.97
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": false,
+      "repeat": 2,
+      "claimed": 227,
+      "transactions": 23,
+      "sql": {
+        "SELECT": 86,
+        "UPDATE": 19
+      },
+      "tick_ms": 1212.39,
+      "first_start_ms": 95.66,
+      "p50_start_ms": 500.12,
+      "p95_start_ms": 1158.66,
+      "last_start_ms": 1212.32
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": true,
+      "repeat": 0,
+      "claimed": 227,
+      "transactions": 250,
+      "sql": {
+        "SELECT": 540,
+        "UPDATE": 19
+      },
+      "tick_ms": 1893.99,
+      "first_start_ms": 167.04,
+      "p50_start_ms": 964.56,
+      "p95_start_ms": 1837.32,
+      "last_start_ms": 1905.52
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": true,
+      "repeat": 1,
+      "claimed": 227,
+      "transactions": 250,
+      "sql": {
+        "SELECT": 540,
+        "UPDATE": 19
+      },
+      "tick_ms": 1726.54,
+      "first_start_ms": 306.07,
+      "p50_start_ms": 909.62,
+      "p95_start_ms": 1639.48,
+      "last_start_ms": 1737.14
+    },
+    {
+      "label": "batch16",
+      "capacities": [
+        100,
+        50,
+        30,
+        20,
+        10,
+        10,
+        5,
+        2
+      ],
+      "execution": true,
+      "repeat": 2,
+      "claimed": 227,
+      "transactions": 250,
+      "sql": {
+        "SELECT": 540,
+        "UPDATE": 19
+      },
+      "tick_ms": 1767.2,
+      "first_start_ms": 157.47,
+      "p50_start_ms": 848.51,
+      "p95_start_ms": 1740.93,
+      "last_start_ms": 1779.65
+    }
+  ]
+}

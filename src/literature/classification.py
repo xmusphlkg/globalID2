@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from functools import lru_cache
 import re
 from typing import Any, Iterable
 
@@ -81,6 +82,11 @@ def _is_short_acronym(term: str) -> bool:
     return 2 <= len(letters) <= 3 and letters.isupper()
 
 
+@lru_cache(maxsize=32768)
+def _term_pattern(term: str, flags: int) -> re.Pattern[str]:
+    return re.compile(rf"(?<![A-Za-z0-9]){re.escape(term)}(?![A-Za-z0-9])", flags)
+
+
 def _contains(text: str, term: str) -> bool:
     """Match a term at token boundaries without turning ``us`` into ``US``.
 
@@ -93,21 +99,14 @@ def _contains(text: str, term: str) -> bool:
     if not normalized:
         return False
     if _is_short_acronym(normalized):
-        return re.search(
-            rf"(?<![A-Za-z0-9]){re.escape(normalized)}(?![A-Za-z0-9])",
-            text,
-        ) is not None
+        return _term_pattern(normalized, 0).search(text) is not None
     if (
         len(normalized) < 3
         and not _is_short_acronym(normalized)
         and not (_CJK_RE.search(normalized) and len(normalized) >= 2)
     ):
         return False
-    return re.search(
-        rf"(?<![A-Za-z0-9]){re.escape(normalized)}(?![A-Za-z0-9])",
-        text,
-        re.IGNORECASE,
-    ) is not None
+    return _term_pattern(normalized, re.IGNORECASE).search(text) is not None
 
 
 def _term_spans(text: str, term: str) -> list[tuple[int, int]]:
@@ -123,11 +122,7 @@ def _term_spans(text: str, term: str) -> list[tuple[int, int]]:
         return []
     return [
         match.span()
-        for match in re.finditer(
-            rf"(?<![A-Za-z0-9]){re.escape(normalized)}(?![A-Za-z0-9])",
-            text,
-            flags,
-        )
+        for match in _term_pattern(normalized, flags).finditer(text)
     ]
 
 
@@ -424,6 +419,34 @@ def _controlled_entity_matches(
     return sorted(matches, key=lambda item: item.confidence, reverse=True)
 
 
+def _drop_unsupported_influenza_match(
+    matches: list[Match], body_text: str, diseases: list[dict[str, Any]],
+) -> list[Match]:
+    """Do not turn a Hib article's broad provider topic into influenza evidence.
+
+    Hib and influenza are distinct concepts. Provider topics can be noisy: a
+    high-scoring OpenAlex influenza topic alone does not establish aboutness
+    when the supplied title/abstract discusses Hib and never independently
+    mentions influenza. Genuine co-infection mentions remain eligible.
+    """
+    hib = next((match for match in matches if match.key == "D100"), None)
+    influenza = next((match for match in matches if match.key == "D038"), None)
+    if not hib or not influenza or not any(term.startswith("lexical:") for term in hib.terms):
+        return matches
+    # The verified failure is a coarse OpenAlex topic. Preserve MeSH/other
+    # independent evidence for source review rather than silently discarding it.
+    if not influenza.terms or not all(term.startswith("semantic:openalex.topic") for term in influenza.terms):
+        return matches
+    # Erase only the bacterial name; influenza elsewhere in the abstract still
+    # counts. CJK names need explicit removal because they have no word spaces.
+    independent_text = re.sub(r"(?:haemophilus|h\.)\s+influenzae|流感嗜血杆菌|嗜血流感杆菌", " ", body_text, flags=re.IGNORECASE)
+    disease = next((disease for disease in diseases if str(disease.get("disease_id")) == "D038"), {})
+    terms = [str(disease.get("name_en") or ""), str(disease.get("name_zh") or ""), *[str(term) for term in disease.get("aliases") or []]]
+    if any(_contains(independent_text, term) for term in terms if term):
+        return matches
+    return [match for match in matches if match.key != "D038"]
+
+
 def classify_candidate(
     candidate: ArticleCandidate,
     *,
@@ -461,6 +484,8 @@ def classify_candidate(
             confidence=_match_confidence(hits),
             terms=list(dict.fromkeys(hit.trace for hit in hits)),
         ))
+
+    disease_matches = _drop_unsupported_influenza_match(disease_matches, body_text, diseases)
 
     country_matches: list[Match] = []
     for country in countries:
@@ -595,15 +620,10 @@ def classify_candidate(
     discovery_score = _total_discovery_score(discovery_score_components)
     if candidate.integrity_status in {"retracted", "expression_of_concern"}:
         publication_status = "review"
-    elif research_domain == "plant_only":
-        publication_status = "excluded"
-    elif research_domain in {"animal_only", "basic_research"}:
-        publication_status = "review"
-    elif not disease_matches or relevance_score < 0.5:
-        publication_status = "excluded"
-    elif discovery_score >= auto_publish_min_score and disease_relevance >= 0.8:
-        publication_status = "published"
     else:
+        # Classification supplies evidence; absence of a match is uncertainty,
+        # not evidence of irrelevance. Publication is decided separately after
+        # bibliographic, integrity and disease-confidence checks.
         publication_status = "review"
     return Classification(
         diseases=sorted(disease_matches, key=lambda item: item.confidence, reverse=True),

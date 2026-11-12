@@ -2,31 +2,36 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchArticleCard from './ResearchArticleCard.astro';
+import { diseaseLiteratureCatalogue } from '../../lib/research-literature-server';
+import { siteHref } from '../../lib/papers';
 
 interface Props { diseaseId: string; locale?: 'en' | 'zh' | 'fr' }
 const { diseaseId, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const file = resolve(`./src/data/research/diseases/${diseaseId.toLowerCase()}.json`);
+const file = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/diseases/${diseaseId.toLowerCase()}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
 const articles = payload?.articles ?? [];
 const previewArticles = articles.slice(0, 5);
+const { byDisease, diseaseFacets } = diseaseLiteratureCatalogue();
+const allArticles = byDisease.get(diseaseId.toLowerCase()) ?? [];
+const diseaseFacet = diseaseFacets.get(diseaseId.toLowerCase());
 ---
 
-{articles.length > 0 && (
+{allArticles.length > 0 && diseaseFacet && (
   <section class="figure-panel disease-research-panel">
     <div class="research-panel-heading">
       <div>
         <p class="academic-kicker">{zh ? '研究雷达' : fr ? 'Radar de recherche' : 'Research Radar'}</p>
         <h2 class="figure-title mt-1">{zh ? '近期相关研究' : fr ? 'Recherches récentes associées' : 'Recent related research'}</h2>
       </div>
-      <a href={`${prefix}/research/?disease=${diseaseId}`}>{zh ? '查看全部研究 →' : fr ? 'Voir toutes les recherches →' : 'View all research →'}</a>
+      <a href={siteHref(`${prefix}/research/diseases/${diseaseFacet.slug}/`)}>{zh ? `查看全部 ${allArticles.length.toLocaleString('zh-CN')} 篇文献 →` : fr ? `Voir les ${allArticles.length.toLocaleString('fr-FR')} publications →` : `View all ${allArticles.length.toLocaleString('en-US')} publications →`}</a>
     </div>
     <div class="research-panel-list mt-5">{previewArticles.map((article: any) => <ResearchArticleCard article={article} compact locale={locale} focusDiseaseId={diseaseId} />)}</div>
-    {articles.length > previewArticles.length && (
+    {allArticles.length > previewArticles.length && (
       <p class="research-panel-count">
-        {zh ? `显示 ${articles.length} 篇相关论文中的 ${previewArticles.length} 篇。` : fr ? `${previewArticles.length} publications associées sur ${articles.length} affichées.` : `Showing ${previewArticles.length} of ${articles.length} related publications.`}
+        {zh ? `此处展示 ${previewArticles.length} 篇近期证据摘要，疾病文献专题共收录 ${allArticles.length.toLocaleString('zh-CN')} 篇相关文献，可继续筛选和查看发文趋势。` : fr ? `${previewArticles.length} synthèses récentes présentées ici. Le dossier contient ${allArticles.length.toLocaleString('fr-FR')} publications associées avec filtres et tendances.` : `Previewing ${previewArticles.length} recent evidence summaries. The disease literature page contains ${allArticles.length.toLocaleString('en-US')} related publications with filters and trends.`}
       </p>
     )}
     <p class="research-panel-note">{zh ? '文献链接仅用于发现研究，不会改变或验证上方的监测序列。' : fr ? 'Les liens bibliographiques servent à découvrir des travaux et ne modifient ni ne valident la série de surveillance ci-dessus.' : 'Literature links are provided for discovery and do not alter or validate the surveillance series above.'}</p>

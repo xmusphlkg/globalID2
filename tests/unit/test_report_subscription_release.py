@@ -72,7 +72,7 @@ class PublishedReports:
 
     def __call__(self, request, *, timeout):
         if request.full_url == f"{WORKER}/health":
-            return Response({"ok": True, "capabilities": {"research_content_items_v1": True}})
+            return Response({"ok": True, "capabilities": {"research_content_items_v1": True, "research_personalized_items_v1": True}})
         if request.full_url == f"{WORKER}/api/admin/notifications":
             payload = json.loads(request.data)
             self.worker_calls.append(payload)
@@ -102,7 +102,10 @@ def test_published_reports_are_baselined_then_dispatched_once_after_week_end(tmp
     assert [p["list_codes"] for p in published.worker_calls] == [["reports"], ["weekly_digest"]]
     for payload in published.worker_calls:
         assert payload["frequency"] == "weekly"
-        assert payload["content_items"] == [{"id": "2", "countries": ["JP"], "diseases": ["influenza", "measles"]}]
+        item = payload["content_items"][0]
+        assert {k: v for k, v in item.items() if k != "localized_markdown"} == {"id": "2", "countries": ["JP"], "diseases": ["influenza", "measles"]}
+        assert "/countries/jp/reports/2/" in item["localized_markdown"]["en"]
+        assert payload["personalized_templates"]["zh"].count("{{GIDS_PERSONALIZED_ITEMS}}") == 1
         assert "/countries/jp/reports/2/" in payload["contents"]["en"]["markdown"]
     assert dispatch(tmp_path, published, MONDAY)["status"] == "no_completed_reports"
     assert len(published.worker_calls) == 2
@@ -123,6 +126,81 @@ def test_pending_report_campaign_is_retried_with_the_same_payload(tmp_path):
     published.worker_fails = False
     assert dispatch(tmp_path, published, MONDAY)["status"] == "completed"
     assert first == published.worker_calls[1]
+
+
+def test_integrated_cutover_only_stops_legacy_weekly_list(tmp_path):
+    published = PublishedReports(tmp_path / "reports")
+    published.publish([report(1)])
+    args = dict(root=tmp_path, reports_dir=published.reports_dir, worker_base_url=WORKER,
+                reports_base_url=ORIGIN, token="test-only", start_week="2026-W45",
+                opener=published, integrated_week_start="2026-W45")
+    release.dispatch_after_release(**args, now=WEDNESDAY)
+    published.publish([report(1), report(2)])
+    release.dispatch_after_release(**args, now=WEDNESDAY)
+    assert release.dispatch_after_release(**args, now=MONDAY)["completed_weeks"] == ["2026-W45"]
+    assert [item["list_codes"] for item in published.worker_calls] == [["reports"]]
+
+
+def test_integrated_cutover_does_not_change_earlier_week(tmp_path):
+    published = PublishedReports(tmp_path / "reports")
+    published.publish([report(1)])
+    args = dict(root=tmp_path, reports_dir=published.reports_dir, worker_base_url=WORKER,
+                reports_base_url=ORIGIN, token="test-only", start_week="2026-W45",
+                opener=published, integrated_week_start="2026-W46")
+    release.dispatch_after_release(**args, now=WEDNESDAY)
+    published.publish([report(1), report(2)])
+    release.dispatch_after_release(**args, now=WEDNESDAY)
+    release.dispatch_after_release(**args, now=MONDAY)
+    assert [item["list_codes"] for item in published.worker_calls] == [["reports"], ["weekly_digest"]]
+
+
+def test_integrated_cutover_refuses_pending_legacy_outbox(tmp_path):
+    published = PublishedReports(tmp_path / "reports")
+    published.publish([report(1)])
+    dispatch(tmp_path, published)
+    published.publish([report(1), report(2)])
+    dispatch(tmp_path, published)
+    published.worker_fails = True
+    with pytest.raises(release.ReportSubscriptionError):
+        dispatch(tmp_path, published, MONDAY)
+    before = len(published.worker_calls)
+    published.worker_fails = False
+    with pytest.raises(release.ReportSubscriptionError, match="cutover_pending_requires_reconciliation"):
+        release.dispatch_after_release(root=tmp_path, reports_dir=published.reports_dir,
+            worker_base_url=WORKER, reports_base_url=ORIGIN, token="test-only", start_week="2026-W45",
+            now=MONDAY, opener=published, integrated_week_start="2026-W45")
+    assert len(published.worker_calls) == before
+
+
+def test_integrated_cutover_rejects_invalid_week(tmp_path):
+    published = PublishedReports(tmp_path / "reports")
+    with pytest.raises(release.ReportSubscriptionError, match="integrated_week_start_invalid"):
+        release.dispatch_after_release(root=tmp_path, reports_dir=published.reports_dir,
+            worker_base_url=WORKER, reports_base_url=ORIGIN, token="test-only", start_week="2026-W45",
+            now=MONDAY, opener=published, integrated_week_start="2026-W54")
+
+
+def test_legacy_pending_report_outbox_resumes_without_changing_its_payload(tmp_path):
+    published = PublishedReports(tmp_path / "reports")
+    published.publish([report(1)])
+    dispatch(tmp_path, published)
+    published.publish([report(1), report(2)])
+    dispatch(tmp_path, published)
+    published.worker_fails = True
+    with pytest.raises(release.ReportSubscriptionError, match="worker_transport_error"):
+        dispatch(tmp_path, published, MONDAY)
+    path = tmp_path / "exports/subscription-outbox/full/reports/2026-W45.json"
+    record = json.loads(path.read_text())
+    for payload in record["payloads"].values():
+        payload.pop("personalized_templates")
+        for item in payload["content_items"]:
+            item.pop("localized_markdown")
+    record["payload_sha256"] = release._fingerprint(record["payloads"])
+    path.write_text(json.dumps(record))
+    published.worker_calls.clear()
+    published.worker_fails = False
+    assert dispatch(tmp_path, published, MONDAY)["status"] == "completed"
+    assert published.worker_calls == list(record["payloads"].values())
 
 
 def test_public_index_and_pages_must_match_manifest_before_queueing(tmp_path):

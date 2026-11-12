@@ -13,6 +13,7 @@ import httpx
 
 from .artifact_checkpoint import link_immutable_or_copy
 from .papers_bundle import evaluate_pages_budget
+from .release_binding import papers_binding_matches
 
 
 class SharedAssetVerificationError(RuntimeError):
@@ -31,6 +32,7 @@ def verified_snapshot(snapshot: Path, live_identity: dict) -> bool:
             and identity.get("release_id")
             and identity.get("release_id") == live_identity.get("release_id")
             and digest == live_identity.get("build_digest")
+            and papers_binding_matches(identity, live_identity)
             and _built_site_digest(snapshot) == digest
         )
     except (OSError, ValueError, TypeError, RuntimeError):

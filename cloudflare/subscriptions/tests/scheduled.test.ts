@@ -13,6 +13,7 @@ test("scheduled tasks use independent same-origin authenticated requests and con
   });
   assert.deepEqual(calls.map(call => new URL(call.url).pathname), [
     "/api/internal/scheduled/maintenance", "/api/internal/scheduled/confirmation",
+    "/api/internal/scheduled/management",
     "/api/internal/scheduled/campaign", "/api/internal/scheduled/situation", "/api/internal/scheduled/feedback",
   ]);
   for (const call of calls) {

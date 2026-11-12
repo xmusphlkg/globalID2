@@ -7,7 +7,7 @@ from tests.contract.monthly_helpers import artifact, assert_same_facts
 FIXTURE = Path(__file__).parents[1] / "fixtures/ingestion/TW/monthly.csv"
 
 
-def test_tw_observation_contract_retains_local_imported_counts(tmp_path, monkeypatch):
+def test_tw_observation_contract_does_not_treat_nationality_as_origin(tmp_path, monkeypatch):
     raw = FIXTURE.read_bytes()
     source = TWDiseaseSource("042", "後天免疫缺乏症候群", "https://od.cdc.gov.tw/eic/Age_County_Gender_042.csv", "")
     monkeypatch.setattr(TaiwanNIDSSCrawler, "fetch_disease_index", lambda self: [source])
@@ -19,4 +19,6 @@ def test_tw_observation_contract_retains_local_imported_counts(tmp_path, monkeyp
     monkeypatch.setattr(TaiwanNIDSSCrawler, "get", lambda *args, **kwargs: pytest.fail("organize fetched source"))
     actual = organize([saved], updater=updater, source="nidss_open_data", months=[(2026, 1), (2026, 2)], output_csv=updater.output_csv)
     assert_same_facts(actual, expected, "TW", "SRC_TW_NIDSS")
-    assert actual.rows[0]["LocalCases"] == "5"
+    assert actual.rows[0]["Cases"] == "5"
+    assert actual.rows[0]["LocalCases"] == ""
+    assert actual.rows[0]["ImportedCases"] == ""

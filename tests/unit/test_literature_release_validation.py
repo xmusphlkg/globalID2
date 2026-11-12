@@ -107,7 +107,7 @@ def test_release_validator_blocks_stale_classification_versions():
     )
 
 
-def test_release_validator_blocks_non_public_research_domains():
+def test_release_validator_accepts_disease_relevant_animal_research_but_blocks_plant_only():
     article = _article()
     article["research_domain"] = "animal_only"
     payload = {
@@ -118,6 +118,11 @@ def test_release_validator_blocks_non_public_research_domains():
         "surveillance_evidence": {"signals": [], "evidence_gaps": []},
     }
 
+    assert not any(
+        "non-public research domain" in blocker
+        for blocker in validate_public_research_payload(payload)
+    )
+    article["research_domain"] = "plant_only"
     assert any(
         "non-public research domain" in blocker
         for blocker in validate_public_research_payload(payload)

@@ -20,6 +20,10 @@ UNIT_NAMES=(
   globalid-dashboard-api.service
   globalid-dashboard-scheduler.service
   globalid-dashboard-worker.service
+  globalid-ai-worker.service
+  globalid-model-dispatch@.service
+  globalid-literature-historical-rescreen.service
+  globalid-literature-abstract-backfill.service
   globalid-dashboard-web.service
   globalid-site.service
   globalid-population-refresh.service
@@ -58,6 +62,7 @@ EOF
 render_unit() {
   local template_name="$1"
   local output_dir="$2"
+  mkdir -p "$(dirname "$output_dir/$template_name")"
   sed \
     -e "s#__PROJECT_DIR__#$PROJECT_DIR#g" \
     -e "s#__RUN_AS_USER__#$RUN_USER#g" \
@@ -142,6 +147,10 @@ if [[ "$UNINSTALL_SERVICES" == "1" ]]; then
   for unit_name in "${UNIT_NAMES[@]}"; do
     rm -f "$SYSTEMD_DIR/$unit_name"
   done
+  for drop_in in "$TEMPLATE_DIR"/*.service.d/*.conf; do
+    [[ -f "$drop_in" ]] || continue
+    rm -f "$SYSTEMD_DIR/${drop_in#"$TEMPLATE_DIR/"}"
+  done
 
   systemctl daemon-reload
   echo "Removed GlobalID systemd units."
@@ -179,6 +188,10 @@ fi
 for unit_name in "${UNIT_NAMES[@]}"; do
   render_unit "$unit_name" "$OUTPUT_DIR"
 done
+for drop_in in "$TEMPLATE_DIR"/*.service.d/*.conf; do
+  [[ -f "$drop_in" ]] || continue
+  render_unit "${drop_in#"$TEMPLATE_DIR/"}" "$OUTPUT_DIR"
+done
 
 if [[ "$DRY_RUN" == "1" ]]; then
   echo "Rendered unit files to: $OUTPUT_DIR"
@@ -202,5 +215,6 @@ echo "Run these commands to inspect the stack:"
 echo "  systemctl status globalid-stack.target"
 echo "  journalctl -u globalid-dashboard-api.service -f"
 echo "  journalctl -u globalid-dashboard-worker.service -f"
+echo "  journalctl -u globalid-ai-worker.service -f"
 echo "  journalctl -u globalid-dashboard-scheduler.service -f"
 echo "  journalctl -u globalid-dashboard-web.service -f"

@@ -167,6 +167,8 @@ class TaskManager:
         task_uuid: str,
         status: TaskStatus,
         error_message: Optional[str] = None,
+        *,
+        expected_ai_generation: int | None = None,
     ) -> Optional[Task]:
         """更新任务状态"""
         async with get_db() as db:
@@ -176,6 +178,13 @@ class TaskManager:
             
             if not task:
                 return None
+
+            if expected_ai_generation is not None:
+                from src.services.exceptions import TaskExecutionSupersededError
+
+                generation = int((task.metadata_ or {}).get("ai_execution_generation", 0))
+                if generation != expected_ai_generation:
+                    raise TaskExecutionSupersededError("Task execution replaced by a newer retry")
             
             now = datetime.now(timezone.utc)
             previous_status = task.status
@@ -430,8 +439,14 @@ class TaskManager:
         return await self.get_task_by_uuid(task_uuid)
 
     async def is_cancel_requested(self, task_uuid: str) -> bool:
-        """Check whether a task has a pending cancellation request."""
+        """Cancellation checkpoints also stop a superseded business execution."""
         task = await self.get_task_by_uuid(task_uuid)
+        from src.ai.runtime.context import current_parent, parent_execution_generation
+
+        parent = current_parent()
+        if parent is not None and parent.task_uuid == task_uuid:
+            if task is None or parent_execution_generation(task) != parent.generation:
+                return True
         if not task:
             return False
         metadata = self._task_metadata(task)

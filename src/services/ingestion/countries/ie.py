@@ -119,7 +119,11 @@ async def collect(
     existing_years=None,
 ):
     if updater.public_release_enabled:
-        raise ValueError("HPSC source public release must remain disabled")
+        from src.core.country_library import get_country_bootstrap_config
+
+        cfg = get_country_bootstrap_config("IE").get("crawler_config", {})
+        if cfg.get("operator_authorized_public_release") is not True:
+            raise ValueError("HPSC public release requires the recorded operator decision")
     if updater.output_csv.exists():
         await writer.write(
             await asyncio.to_thread(updater.output_csv.read_bytes),

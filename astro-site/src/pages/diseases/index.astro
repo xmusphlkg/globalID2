@@ -128,7 +128,7 @@ const catCounts = Object.fromEntries(
             <span class="diseases-category-count">{catDiseases.length}</span>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id={`grid-${cat.toLowerCase().replace(/\s+/g, '-')}`}>
+          <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4" id={`grid-${cat.toLowerCase().replace(/\s+/g, '-')}`}>
             {catDiseases.map((d) => (
               <div
                 class="disease-card-wrap"

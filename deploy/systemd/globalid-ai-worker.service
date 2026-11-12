@@ -1,0 +1,28 @@
+[Unit]
+Description=GlobalID AI business worker and model dispatcher
+After=globalid-docker.service globalid-dashboard-api.service
+Wants=globalid-docker.service globalid-dashboard-api.service
+Wants=globalid-model-dispatch@1.service globalid-model-dispatch@2.service globalid-model-dispatch@3.service globalid-model-dispatch@4.service globalid-model-dispatch@5.service globalid-model-dispatch@6.service globalid-model-dispatch@7.service globalid-model-dispatch@8.service globalid-model-dispatch@9.service globalid-model-dispatch@10.service globalid-model-dispatch@11.service globalid-model-dispatch@12.service
+PartOf=globalid-stack.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+OnFailure=globalid-notify-failure@%n.service
+
+[Service]
+Type=simple
+User=__RUN_AS_USER__
+Group=__RUN_AS_GROUP__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=-__PROJECT_DIR__/.env
+Environment=TASK_WORKER_ROLE=ai
+Environment=DATABASE__POOL_SIZE=8
+Environment=DATABASE__MAX_OVERFLOW=4
+ExecStart=__PROJECT_DIR__/scripts/run_ai_worker_service.sh
+Restart=on-failure
+RestartSec=10
+RestartPreventExitStatus=75
+SuccessExitStatus=143
+MemoryHigh=6G
+MemoryMax=8G
+TimeoutStopSec=900
+KillMode=mixed

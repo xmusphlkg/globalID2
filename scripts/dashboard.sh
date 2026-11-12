@@ -9,10 +9,12 @@ LOG_DIR="$ROOT_DIR/logs"
 API_LOG="$LOG_DIR/dashboard-api.log"
 WEB_LOG="$LOG_DIR/dashboard-web.log"
 WORKER_LOG="$LOG_DIR/dashboard-worker.log"
+AI_WORKER_LOG="$LOG_DIR/dashboard-ai-worker.log"
 SCHEDULER_LOG="$LOG_DIR/dashboard-scheduler.log"
 API_PID_FILE="$LOG_DIR/dashboard-api.pid"
 WEB_PID_FILE="$LOG_DIR/dashboard-web.pid"
 WORKER_PID_FILE="$LOG_DIR/dashboard-worker.pid"
+AI_WORKER_PID_FILE="$LOG_DIR/dashboard-ai-worker.pid"
 SCHEDULER_PID_FILE="$LOG_DIR/dashboard-scheduler.pid"
 API_PORT="${GLOBALID_API_PORT:-8000}"
 WEB_PORT="${GLOBALID_DASHBOARD_PORT:-3000}"
@@ -25,16 +27,17 @@ mkdir -p "$LOG_DIR"
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/dashboard.sh start [all|api|scheduler|worker|web]
-  ./scripts/dashboard.sh stop [all|api|scheduler|worker|web]
-  ./scripts/dashboard.sh restart [all|api|scheduler|worker|web]
+  ./scripts/dashboard.sh start [all|api|scheduler|worker|ai-worker|web]
+  ./scripts/dashboard.sh stop [all|api|scheduler|worker|ai-worker|web]
+  ./scripts/dashboard.sh restart [all|api|scheduler|worker|ai-worker|web]
   ./scripts/dashboard.sh status
-  ./scripts/dashboard.sh logs [api|scheduler|worker|web]
+  ./scripts/dashboard.sh logs [api|scheduler|worker|ai-worker|web]
 
 Examples:
   ./scripts/dashboard.sh start
   ./scripts/dashboard.sh start api
   ./scripts/dashboard.sh start worker
+  ./scripts/dashboard.sh start ai-worker
   ./scripts/dashboard.sh start scheduler
   DASHBOARD_API_RELOAD=1 ./scripts/dashboard.sh start api
   ./scripts/dashboard.sh stop web
@@ -49,6 +52,7 @@ have_command() {
 systemd_owns_service() {
   local service="$1"
   local unit="globalid-dashboard-${service}.service"
+  [[ "$service" != "ai-worker" ]] || unit="globalid-ai-worker.service"
   have_command systemctl && systemctl is-active --quiet "$unit" 2>/dev/null
 }
 
@@ -56,7 +60,7 @@ skip_if_systemd_owned() {
   local service="$1"
   local operation="$2"
   if systemd_owns_service "$service"; then
-    if [[ "$service" == "worker" || "$service" == "scheduler" ]]; then
+    if [[ "$service" == "worker" || "$service" == "ai-worker" || "$service" == "scheduler" ]]; then
       echo "${service}: owned by systemd; use 'venv/bin/python scripts/restart_task_runtime.py --include-api' for a planned task-runtime restart."
     else
       echo "${service}: owned by systemd; use 'sudo systemctl ${operation} globalid-dashboard-${service}.service'."
@@ -111,9 +115,18 @@ is_managed_api_pid() {
 
 is_managed_worker_pid() {
   local pid="$1"
+  local role="${2:-general}"
   local cmd
   cmd="$(pid_cmdline "$pid")"
-  [[ "$cmd" == *"src.services.task_worker"* ]]
+  [[ "$cmd" == *"src.services.task_worker"* ]] && worker_pid_has_role "$pid" "$role"
+}
+
+worker_pid_has_role() {
+  local pid="$1" role="$2" actual
+  [[ -r "/proc/$pid/environ" ]] || return 1
+  # Only the role leaves this pipeline; never print a process's environment.
+  actual="$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^TASK_WORKER_ROLE=//p')"
+  [[ "${actual:-general}" == "$role" ]]
 }
 
 is_managed_scheduler_pid() {
@@ -138,6 +151,7 @@ is_managed_web_pid() {
 
 find_python_module_pid() {
   local module="$1"
+  local role="${2:-}"
   local cmdline
   local pid
   for cmdline in /proc/[0-9]*/cmdline; do
@@ -148,6 +162,9 @@ find_python_module_pid() {
     if tr '\0' '\n' < "$cmdline" 2>/dev/null | grep -Fxq -- "$module"; then
       pid="${cmdline#/proc/}"
       pid="${pid%/cmdline}"
+      if [[ -n "$role" ]] && ! worker_pid_has_role "$pid" "$role"; then
+        continue
+      fi
       echo "$pid"
       return
     fi
@@ -155,7 +172,7 @@ find_python_module_pid() {
 }
 
 find_worker_pid() {
-  find_python_module_pid "src.services.task_worker"
+  find_python_module_pid "src.services.task_worker" "${1:-general}"
 }
 
 find_scheduler_pid() {
@@ -185,6 +202,9 @@ find_managed_service_pid() {
     worker)
       find_worker_pid
       ;;
+    ai-worker)
+      find_worker_pid ai
+      ;;
     scheduler)
       find_scheduler_pid
       ;;
@@ -200,7 +220,16 @@ adopt_managed_pid_if_needed() {
   local pid
   pid="$(read_pid "$pid_file")"
   if [[ -n "$pid" ]] && pid_is_running "$pid"; then
-    return
+    # PID files can outlive a previous process or a role change. Never adopt
+    # or signal the other worker merely because its Python module matches.
+    if [[ "$service" == "worker" ]]; then
+      is_managed_worker_pid "$pid" general && return
+    elif [[ "$service" == "ai-worker" ]]; then
+      is_managed_worker_pid "$pid" ai && return
+    else
+      return
+    fi
+    rm -f "$pid_file"
   fi
 
   local managed_pid
@@ -437,46 +466,55 @@ start_web() {
 }
 
 start_worker() {
-  adopt_managed_pid_if_needed "worker" "$WORKER_PID_FILE"
-  cleanup_pid_file_if_stale "$WORKER_PID_FILE"
+  local role="${1:-general}" service="worker" label="General task worker"
+  local pid_file="$WORKER_PID_FILE" log_file="$WORKER_LOG"
+  if [[ "$role" == "ai" ]]; then
+    service="ai-worker"
+    label="AI task worker"
+    pid_file="$AI_WORKER_PID_FILE"
+    log_file="$AI_WORKER_LOG"
+  fi
+  adopt_managed_pid_if_needed "$service" "$pid_file"
+  cleanup_pid_file_if_stale "$pid_file"
   local pid
-  pid="$(read_pid "$WORKER_PID_FILE")"
+  pid="$(read_pid "$pid_file")"
   if [[ -n "$pid" ]] && pid_is_running "$pid"; then
-    echo "Task worker is already running (PID $pid)"
+    echo "$label is already running (PID $pid)"
     return
   fi
 
   local managed_pid
-  managed_pid="$(find_managed_service_pid "worker")"
+  managed_pid="$(find_managed_service_pid "$service")"
   if [[ -n "$managed_pid" ]] && pid_is_running "$managed_pid"; then
-    echo "$managed_pid" > "$WORKER_PID_FILE"
-    echo "Task worker is already running (PID $managed_pid)"
+    echo "$managed_pid" > "$pid_file"
+    echo "$label is already running (PID $managed_pid)"
     return
   fi
 
   local python_bin
   python_bin="$(resolve_python)"
 
-  echo "Starting task worker"
+  echo "Starting $label"
   (
     cd "$ROOT_DIR"
+    export TASK_WORKER_ROLE="$role"
     if have_command setsid; then
       nohup setsid "$python_bin" -m src.services.task_worker \
-        </dev/null > "$WORKER_LOG" 2>&1 &
+        </dev/null > "$log_file" 2>&1 &
     else
       nohup "$python_bin" -m src.services.task_worker \
-        </dev/null > "$WORKER_LOG" 2>&1 &
+        </dev/null > "$log_file" 2>&1 &
     fi
-    echo $! > "$WORKER_PID_FILE"
+    echo $! > "$pid_file"
   )
   sleep 2
 
-  pid="$(read_pid "$WORKER_PID_FILE")"
+  pid="$(read_pid "$pid_file")"
   if [[ -n "$pid" ]] && pid_is_running "$pid"; then
-    echo "Task worker started (PID $pid)"
+    echo "$label started (PID $pid)"
   else
-    echo "Task worker failed to start. Check $WORKER_LOG" >&2
-    rm -f "$WORKER_PID_FILE"
+    echo "$label failed to start. Check $log_file" >&2
+    rm -f "$pid_file"
     exit 1
   fi
 }
@@ -550,7 +588,11 @@ stop_one() {
   echo "Stopping $name (PID $pid)"
   kill "$pid" >/dev/null 2>&1 || true
 
-  for _ in {1..20}; do
+  local stop_timeout=10
+  [[ "$service" != "worker" ]] || stop_timeout=900
+  [[ "$service" != "ai-worker" ]] || stop_timeout=60
+  local stop_deadline=$((SECONDS + stop_timeout))
+  while (( SECONDS < stop_deadline )); do
     if ! pid_is_running "$pid"; then
       rm -f "$pid_file"
       echo "$name stopped"
@@ -605,6 +647,10 @@ show_logs() {
       touch "$WORKER_LOG"
       tail -f "$WORKER_LOG"
       ;;
+    ai-worker)
+      touch "$AI_WORKER_LOG"
+      tail -f "$AI_WORKER_LOG"
+      ;;
     scheduler)
       touch "$SCHEDULER_LOG"
       tail -f "$SCHEDULER_LOG"
@@ -614,7 +660,7 @@ show_logs() {
       tail -f "$WEB_LOG"
       ;;
     *)
-      echo "logs requires one target: api, scheduler, worker, or web" >&2
+      echo "logs requires one target: api, scheduler, worker, ai-worker, or web" >&2
       exit 1
       ;;
   esac
@@ -625,11 +671,12 @@ run_for_target() {
   case "$TARGET" in
     all)
       "$operation" api
+      "$operation" ai-worker
       "$operation" worker
       "$operation" scheduler
       "$operation" web
       ;;
-    api|scheduler|worker|web)
+    api|scheduler|worker|ai-worker|web)
       "$operation" "$TARGET"
       ;;
     *)
@@ -648,6 +695,7 @@ dispatch_start() {
     api) start_api ;;
     scheduler) start_scheduler ;;
     worker) start_worker ;;
+    ai-worker) start_worker ai ;;
     web) start_web ;;
   esac
 }
@@ -660,6 +708,7 @@ dispatch_stop() {
     api) stop_one "API" "$API_PID_FILE" "api" ;;
     scheduler) stop_one "Control-plane scheduler" "$SCHEDULER_PID_FILE" "scheduler" ;;
     worker) stop_one "Task worker" "$WORKER_PID_FILE" "worker" ;;
+    ai-worker) stop_one "AI task worker" "$AI_WORKER_PID_FILE" "ai-worker" ;;
     web) stop_one "Dashboard web" "$WEB_PID_FILE" "web" ;;
   esac
 }
@@ -667,15 +716,20 @@ dispatch_stop() {
 dispatch_status() {
   case "$1" in
     api) status_one "API" "$API_PID_FILE" "http://localhost:$API_PORT/api/v1/health" "$API_PORT" "api" ;;
-    worker)
-      adopt_managed_pid_if_needed "worker" "$WORKER_PID_FILE"
-      cleanup_pid_file_if_stale "$WORKER_PID_FILE"
+    worker|ai-worker)
+      local pid_file="$WORKER_PID_FILE" label="General task worker"
+      if [[ "$1" == "ai-worker" ]]; then
+        pid_file="$AI_WORKER_PID_FILE"
+        label="AI task worker"
+      fi
+      adopt_managed_pid_if_needed "$1" "$pid_file"
+      cleanup_pid_file_if_stale "$pid_file"
       local pid
-      pid="$(read_pid "$WORKER_PID_FILE")"
+      pid="$(read_pid "$pid_file")"
       if [[ -n "$pid" ]] && pid_is_running "$pid"; then
-        echo "Task worker: running (PID $pid) - background queue consumer"
+        echo "$label: running (PID $pid) - background queue consumer"
       else
-        echo "Task worker: stopped"
+        echo "$label: stopped"
       fi
       ;;
     scheduler)
@@ -702,6 +756,7 @@ case "$ACTION" in
       dispatch_stop web
       dispatch_stop scheduler
       dispatch_stop worker
+      dispatch_stop ai-worker
       dispatch_stop api
     else
       run_for_target dispatch_stop
@@ -712,8 +767,10 @@ case "$ACTION" in
       dispatch_stop web
       dispatch_stop scheduler
       dispatch_stop worker
+      dispatch_stop ai-worker
       dispatch_stop api
       dispatch_start api
+      dispatch_start ai-worker
       dispatch_start worker
       dispatch_start scheduler
       dispatch_start web
@@ -726,6 +783,7 @@ case "$ACTION" in
     dispatch_status api
     dispatch_status scheduler
     dispatch_status worker
+    dispatch_status ai-worker
     dispatch_status web
     ;;
   logs)

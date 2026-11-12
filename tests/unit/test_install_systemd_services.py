@@ -56,9 +56,24 @@ def test_installer_manifest_and_dry_run_include_every_systemd_template(
         if line.startswith("Rendered unit files to: ")
     )
     output_dir = Path(output_dir_line.removeprefix("Rendered unit files to: "))
-    rendered_units = {path.name for path in output_dir.iterdir()}
+    rendered_units = {path.name for path in output_dir.iterdir() if path.is_file()}
     assert rendered_units == template_units
     assert (output_dir / "globalid-notify-failure@.service").is_file()
+    for template in TEMPLATE_DIR.glob("*.service.d/*.conf"):
+        rendered = output_dir / template.relative_to(TEMPLATE_DIR)
+        assert rendered.read_text() == template.read_text()
+    dispatch = output_dir / "globalid-dashboard-worker.service.d/70-model-dispatch.conf"
+    assert "Wants=globalid-ai-worker.service" in dispatch.read_text()
+    ai = (output_dir / "globalid-ai-worker.service").read_text()
+    assert "globalid-model-dispatch@12.service" in ai
+    assert "BindsTo=globalid-dashboard-worker" not in ai
+    assert "After=globalid-dashboard-worker" not in ai
+    assert "DATABASE__POOL_SIZE=8" in ai
+    assert "DATABASE__MAX_OVERFLOW=4" in ai
+    auxiliary = (output_dir / "globalid-model-dispatch@.service").read_text()
+    assert "BindsTo=globalid-ai-worker.service" in auxiliary
+    assert "PartOf=globalid-ai-worker.service" in auxiliary
+    assert "globalid-dashboard-worker.service" not in auxiliary
 
 
 def test_long_running_services_treat_sigterm_exit_as_success() -> None:
@@ -66,6 +81,7 @@ def test_long_running_services_treat_sigterm_exit_as_success() -> None:
         "globalid-dashboard-api.service",
         "globalid-dashboard-web.service",
         "globalid-dashboard-worker.service",
+        "globalid-ai-worker.service",
         "globalid-dashboard-scheduler.service",
     ):
         text = (TEMPLATE_DIR / name).read_text(encoding="utf-8")

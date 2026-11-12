@@ -1,0 +1,22 @@
+[Unit]
+Description=GlobalID literature abstract backfill and review coordinator
+After=globalid-ai-worker.service globalid-dashboard-worker.service
+Wants=globalid-ai-worker.service globalid-dashboard-worker.service
+PartOf=globalid-stack.target
+
+[Service]
+Type=simple
+User=__RUN_AS_USER__
+Group=__RUN_AS_GROUP__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=-__PROJECT_DIR__/.env
+Environment=DATABASE__POOL_SIZE=1
+Environment=DATABASE__MAX_OVERFLOW=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=__PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/run_abstract_backfill.py
+Restart=on-failure
+RestartSec=120
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

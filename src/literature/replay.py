@@ -190,7 +190,7 @@ class LiteratureReplayPipeline(LiteraturePipeline):
 
 async def execute_replay(arguments: dict[str, Any]) -> dict[str, Any]:
     """Worker-only entry point: current task owns stages, artifacts and writes."""
-    from src.ai.work_queue import current_parent
+    from src.ai.runtime import current_parent
     from src.core.config import get_config
 
     parent = current_parent()

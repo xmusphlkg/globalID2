@@ -21,6 +21,8 @@ from src.core.logging import get_logger
 logger = get_logger(__name__)
 
 RuntimeMetadata = dict[str, Any] | Callable[[], dict[str, Any]]
+TASK_WORKER_SERVICES = ("worker", "ai-worker")
+REQUIRED_RUNTIME_SERVICES = (*TASK_WORKER_SERVICES, "scheduler")
 
 
 class ThreadedRuntimeGuard:
@@ -527,4 +529,4 @@ class RuntimeRegistry:
 
 runtime_registry = RuntimeRegistry()
 
-__all__ = ["RuntimeRegistry", "ThreadedRuntimeGuard", "runtime_registry"]
+__all__ = ["RuntimeRegistry", "ThreadedRuntimeGuard", "runtime_registry", "TASK_WORKER_SERVICES", "REQUIRED_RUNTIME_SERVICES"]

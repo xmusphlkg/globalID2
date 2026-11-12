@@ -125,6 +125,25 @@ async def worker_database(tmp_path, monkeypatch):
     await engine.dispose()
 
 
+@pytest.mark.parametrize('active_flags,queued_flags,expected', [
+    ({'data_only': True, 'data_line': 'literature'}, {'data_only': True, 'data_line': 'surveillance'}, True),
+    ({'data_only': True, 'data_line': 'surveillance'}, {'data_only': True, 'data_line': 'literature'}, True),
+    ({'data_only': True, 'data_line': 'situation'}, {'data_only': True, 'data_line': 'literature'}, True),
+    ({'data_only': True, 'data_line': 'literature'}, {'data_only': True, 'data_line': 'literature'}, False),
+    ({'content_only': True}, {'data_only': True, 'data_line': 'literature'}, False),
+    ({'data_only': True, 'data_line': 'literature'}, {'content_only': True}, False),
+])
+async def test_literature_lane_is_independent_of_json_but_excludes_static_builds(worker_database, active_flags, queued_flags, expected):
+    async with worker_database() as db:
+        db.add_all([Task(task_uuid='active-literature-test', task_name='active', task_type=TaskType.EXPORT_DATA,
+                         status=TaskStatus.RUNNING, input_data=active_flags),
+                    Task(task_uuid='queued-literature-test', task_name='queued', task_type=TaskType.EXPORT_DATA,
+                         status=TaskStatus.QUEUED, input_data=queued_flags)])
+        await db.commit()
+    claimed = await task_worker._claim_next_task_uuid('worker')
+    assert (claimed is not None) is expected
+
+
 @pytest.mark.parametrize("active_status", [TaskStatus.RUNNING, TaskStatus.RETRYING])
 @pytest.mark.parametrize("active_flags,queued_flags,blocked,expected", [
     ({"content_only": True}, {"data_only": True}, {TaskType.EXPORT_DATA}, True),

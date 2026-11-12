@@ -1,10 +1,18 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { WORLD_CENTER, ageDays, buildAnchors, buildGraph, deduplicateAlerts, deduplicatePoints, filterPoints, fitView, placePoints, recencyOf, sortPoints } from './model.ts';
+import { WORLD_CENTER, ageDays, buildAnchors, buildGraph, deduplicateAlerts, deduplicatePoints, filterPoints, fitView, placePoints, recencyOf, sortPoints, visibleSituationPoints } from './model.ts';
 
 const AS_OF = '2026-10-28';
 const point = (id: string, day: string, extra: Record<string, unknown> = {}) =>
   ({ alert_id: id, published_date: day, country_code: 'CD', disease_id: 'D050', disease_label: 'Ebola', source_id: 'who_don', ...extra }) as any;
+
+test('homepage and map default counts use the same 30-day window and deduplication', () => {
+  const recent = point('a', '2026-10-27', { outbreak_id: 'OB-1', admin_area: 'Goma', status: 'ongoing' });
+  const duplicate = { ...recent, alert_id: 'b', source_id: 'ecdc_cdtr' };
+  const old = point('old', '2026-08-01');
+  const future = point('future', '2026-11-01');
+  assert.deepEqual(visibleSituationPoints([old, duplicate, recent, future], AS_OF).map(item => item.alert_id), ['a']);
+});
 
 test('recency buckets follow the age of the report, not any severity', () => {
   assert.equal(ageDays('2026-10-21', AS_OF), 7);

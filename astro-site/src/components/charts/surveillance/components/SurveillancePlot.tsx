@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import EChartsReact from "../../../../lib/echartsReact";
-import echarts from "../../../../lib/echarts";
+import echarts from "../../../../lib/echartsSurveillance";
 import { useChartTheme } from "../../chartPreferences";
 import { DAY, periodFor } from "../domain/calendar";
 import {

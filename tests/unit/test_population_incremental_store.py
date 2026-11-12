@@ -140,11 +140,14 @@ async def test_unregistered_geography_never_commits_partial_changes(database):
     assert after[1] == after[2] == after[3] == []
 
 
-async def test_population_dirty_is_consumed_as_exact_incremental_rate_scope(database,monkeypatch):
+@pytest.mark.parametrize("data_only", [False, True])
+async def test_population_dirty_is_consumed_as_exact_incremental_rate_scope(database,monkeypatch,data_only):
     from types import SimpleNamespace
     from src.services import data_release_service as releases
     await importer.apply_rows([row(),row("CN-ZJ",210)], {"NBS":"updated-snapshot"})
     service=releases.DataReleaseService()
+    config = service._config().model_copy(update={"surveillance_json_enabled": data_only})
+    monkeypatch.setattr(service,"_config",lambda:config)
     monkeypatch.setattr(releases,"get_database",database)
     monkeypatch.setattr(service,"_download_repo_branch",lambda job:"data")
     monkeypatch.setattr(service,"_download_repo_url",lambda:"https://example.org/data.git")
@@ -153,7 +156,7 @@ async def test_population_dirty_is_consumed_as_exact_incremental_rate_scope(data
     monkeypatch.setattr(service,"_raw_archive_runtime",lambda:SimpleNamespace(enabled=False,branch="raw",repo_url="https://example.org/raw.git"))
     monkeypatch.setattr(service,"_automatic_retry_settings",lambda:(3,30,300))
     monkeypatch.setattr(releases.task_manager,"_broadcast",AsyncMock())
-    result=await service._enqueue_release_task(releases.DataReleaseJobConfig("site-release","Fixture",include_git_push=False,include_cloudflare_deploy=False),manual=True,trigger="population-test",trigger_task_uuid=None)
+    result=await service._enqueue_release_task(releases.DataReleaseJobConfig("site-release","Fixture",include_git_push=False,include_cloudflare_deploy=False),manual=True,trigger="population-test",trigger_task_uuid=None,data_only=data_only)
     async with database() as db:
         release=(await db.execute(select(Task).where(Task.task_type==TaskType.EXPORT_DATA))).scalar_one()
         pending=(await db.execute(select(PublishDirty))).scalar_one()

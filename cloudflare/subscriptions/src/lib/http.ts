@@ -30,9 +30,9 @@ export function publicBaseUrl(request: Request, env: HttpEnv): string {
   return (env.PUBLIC_BASE_URL || new URL(request.url).origin).replace(/\/+$/, "");
 }
 
-export function htmlPage(title: string, message: string): Response {
+export function htmlPage(title: string, message: string, locale: "en" | "zh" = "en"): Response {
   const body = `<!doctype html>
-<html lang="en">
+<html lang="${locale}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -55,7 +55,7 @@ export function htmlPage(title: string, message: string): Response {
   </body>
 </html>`;
   return new Response(body, {
-    headers: { "content-type": "text/html; charset=utf-8" },
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer" },
   });
 }
 

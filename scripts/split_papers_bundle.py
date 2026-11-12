@@ -44,6 +44,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Split without enforcing the Pages file-count budget",
     )
+    parser.add_argument(
+        "--research-on-main",
+        action="store_true",
+        help="Keep research URLs on the main origin instead of redirecting them to the papers host",
+    )
     args = parser.parse_args(argv)
 
     result = split_papers_bundle(
@@ -51,6 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         papers_dir=args.papers_dir,
         main_origin=args.main_origin,
         papers_origin=args.papers_origin,
+        research_on_main=args.research_on_main,
     )
     budget = None
     if not args.skip_budget:

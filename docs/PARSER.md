@@ -288,9 +288,9 @@ for result in tqdm(crawler_results, desc="处理数据"):
 
 ## 📚 相关文档
 
-- [Architecture V2](../docs/ARCHITECTURE_V2.md) - 整体架构设计
-- [Crawler 文档](./CRAWLER.md) - 爬虫模块使用
-- [API 文档](../docs/API.md) - API接口文档
+- [数据线与控制面](./DATA_LINE_AND_CONTROL_PLANE_REFACTOR.md) - 数据处理架构
+- [新增国家指南](./ADD_NEW_COUNTRY_GUIDE.md) - 数据采集接入
+- [控制面 API 指南](./control-center/api-guide.md) - API 接口文档
 
 ## 🤝 贡献
 

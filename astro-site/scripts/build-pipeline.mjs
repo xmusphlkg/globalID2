@@ -102,6 +102,7 @@ export async function buildPipeline({ cwd = resolve(import.meta.dirname, '..'), 
     check('source translations', 'check-i18n'),
     check('map ISO mapping', 'build-world-feature-iso', '--check'),
   ], { ...options, concurrency: concurrency + 1 });
+  await run([stage('split research evidence', 'split-research-evidence')], options);
   await run([stage('optimize map', 'optimize-world-map')], options);
   await run([
     check('performance audit', 'check-performance-budgets'),

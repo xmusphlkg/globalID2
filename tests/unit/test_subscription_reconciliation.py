@@ -124,3 +124,27 @@ async def test_report_failure_does_not_block_other_subscription_streams(tmp_path
     assert result["reports"]["status"] == "failed"
     assert result["research"]["status"] == "completed"
     assert result["notices"]["status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_research_digest_uses_the_independent_published_snapshot(tmp_path, monkeypatch):
+    task_uuid = 'research-1'
+    snapshot = tmp_path / f'exports/research-runs/{task_uuid}/snapshot/build/research'
+    stage = tmp_path / f'exports/research-stage-{task_uuid}'
+    snapshot.mkdir(parents=True)
+    stage.mkdir(parents=True)
+    (snapshot / 'marker.json').write_text('{"source":"independent"}')
+    (tmp_path / 'exports/research-current-receipt.json').write_text(json.dumps({
+        'schema': 1, 'task_uuid': task_uuid, 'release_id': f'literature-{task_uuid}',
+        'papers_generation_sha256': 'a' * 64}))
+    values = {'SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED': 'true', 'SUBSCRIPTIONS__RESEARCH_DIGEST_START_WEEK': '2026-W45'}
+    service = SimpleNamespace(_env_value=lambda name, default='': values.get(name, default),
+                              _config=lambda: SimpleNamespace(literature_json_enabled=True))
+    def dispatch(**kwargs):
+        assert kwargs['independent_literature'] is True
+        assert json.loads((kwargs['astro_dir'] / 'src/data/research/marker.json').read_text())['source'] == 'independent'
+        assert kwargs['identity']['papers_generation_sha256'] == 'a' * 64
+        return {'status': 'completed'}
+    monkeypatch.setattr(reconcile.research_subscription, 'dispatch_after_release', dispatch)
+    result = await reconcile.reconcile_once(service, root=tmp_path, astro_dir=tmp_path / 'astro-site')
+    assert result['research']['status'] == 'completed'

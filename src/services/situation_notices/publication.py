@@ -61,7 +61,9 @@ async def _export(state_dir: Path, public_dir: Path, *, release_id: str) -> dict
             "disease_name_zh", "first_published", "country_codes",
         )} for oid in ids if oid in outbreaks]
         _write(path, week)
-    logical = ["map.json", "map-data.json", "monitoring.json", "sources.json"]
+    from src.generation.home_summary import situation_home_summary
+    _write(public_dir / "summary.json", situation_home_summary(read('map-data.json')))
+    logical = ["map.json", "map-data.json", "monitoring.json", "sources.json", "summary.json"]
     logical.extend(str(path.relative_to(public_dir)) for folder in
         ("outbreaks", "by-country", "by-disease", "weekly") for path in (public_dir / folder).glob("*.json"))
     files = {}

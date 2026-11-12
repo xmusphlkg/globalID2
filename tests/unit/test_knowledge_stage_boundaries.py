@@ -17,7 +17,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 pytest.importorskip("aiosqlite")
 
-from src.ai import work_queue
+from src.ai import runtime as work_queue
+from src.ai.runtime.context import ParentContext, _PARENT
 from src.domain import Base, DiseaseKnowledgeBrief, DiseaseKnowledgeSource, PublishDirty, RunStage
 from src.knowledge import DiseaseKnowledgeFetcher, SourceFetchReport, attach_profile_schema
 from src.services import disease_knowledge_service as knowledge
@@ -232,7 +233,7 @@ async def test_any_model_child_failure_fails_parent_without_brief_writes(harness
     h = harness
     await h.seed()
     original = h.generator.generate_with_trace
-    parent = work_queue.ParentContext("brief", "knowledge_brief", "low")
+    parent = ParentContext("brief", "knowledge_brief", "low")
 
     async def generate(**kwargs):
         assert h.active_sessions == 0
@@ -243,13 +244,13 @@ async def test_any_model_child_failure_fails_parent_without_brief_writes(harness
         return await original(**kwargs)
 
     monkeypatch.setattr(h.generator, "generate_with_trace", generate)
-    token = work_queue._PARENT.set(parent)
+    token = _PARENT.set(parent)
     h.observe = True
     try:
         with pytest.raises(work_queue.AIWorkFailed, match="ZH child failed"):
             await h.service.execute_task(task())
     finally:
-        work_queue._PARENT.reset(token)
+        _PARENT.reset(token)
     assert not await h.rows(DiseaseKnowledgeBrief)
     assert not await h.rows(PublishDirty)
     assert_stages(await h.rows(RunStage), failed="organize")

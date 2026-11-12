@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 import json
 
 import pytest
@@ -109,7 +110,7 @@ def test_start_date_is_required_and_old_backfill_is_never_dispatched(tmp_path):
     astro = files(tmp_path, [notice("old", "2026-10-01")])
     with pytest.raises(release.NoticeSubscriptionError, match="start_date_required"):
         call(tmp_path, astro, lambda *_a, **_k: None, start_date="")
-    assert call(tmp_path, astro, lambda *_a, **_k: None, start_date="2026-09-01")["status"] == "no_new_notices"
+    assert call(tmp_path, astro, lambda *_a, **_k: Response(IDENTITY), start_date="2026-09-01")["status"] == "no_new_notices"
 
 
 def test_uses_built_release_data_even_if_source_export_changes_after_build(tmp_path):
@@ -162,5 +163,87 @@ def test_full_activation_starts_next_day_without_replaying_pilot_notices(tmp_pat
     result = release.dispatch_after_release(root=tmp_path, astro_dir=astro, identity=IDENTITY,
         worker_base_url='https://worker.example.test', public_base_url='https://site.example.test',
         token='unit-secret', start_date='2026-11-01', now=datetime(2026, 11, 5, tzinfo=timezone.utc),
-        mode='full', guard_activation=True, opener=lambda request, timeout: Response({'delivery_mode': 'full'}))
+        mode='full', guard_activation=True, opener=lambda request, timeout: Response(IDENTITY if request.full_url.endswith('/release.json') else {'delivery_mode': 'full'}))
     assert result['status'] == 'no_new_notices'
+
+
+def test_independent_publication_uses_verified_objects_and_rejects_corruption(tmp_path):
+    astro = files(tmp_path, [])
+    (astro / 'dist/situation/outbreaks/OB-1.json').unlink()
+    (astro / 'dist/situation/outbreaks').rmdir()
+    from src.services.data_release.pipeline import _built_site_digest
+    IDENTITY['build_digest'] = _built_site_digest(astro / 'dist')
+    body = json.dumps({'schema_version': 'gids.situation_alerts.v1', 'alerts': [notice()]}).encode()
+    digest = hashlib.sha256(body).hexdigest()
+    obj = tmp_path / 'exports/situation-data/objects' / (digest + '.json')
+    obj.parent.mkdir(parents=True)
+    obj.write_bytes(body)
+    manifest = {'schema_version': 1, 'release_id': 'situation-1', 'files': {
+        'outbreaks/OB-1.json': {'url': f'objects/{digest}.json', 'sha256': digest, 'bytes': len(body)}}}
+    sent = []
+    def opener(request, *, timeout):
+        if request.full_url.endswith('/site-data/situation/current.json'): return Response(manifest)
+        if request.full_url.endswith('/release.json'): return Response(IDENTITY)
+        if request.full_url.endswith('/health'): return Response({'capabilities': {'official_notice_alert_v1': True}})
+        sent.append(json.loads(request.data))
+        return Response({'ok': True})
+    assert call(tmp_path, astro, opener)['accepted'] == 1
+    assert [item['alert_id'] for item in sent] == ['a1']
+    obj.write_bytes(b'corrupt')
+    with pytest.raises(release.NoticeSubscriptionError, match='situation_export_invalid'):
+        call(tmp_path, astro, opener)
+
+
+def test_independent_publication_change_is_rejected_before_staging(tmp_path):
+    astro = files(tmp_path, [])
+    (astro / 'dist/situation/outbreaks/OB-1.json').unlink()
+    (astro / 'dist/situation/outbreaks').rmdir()
+    from src.services.data_release.pipeline import _built_site_digest
+    IDENTITY['build_digest'] = _built_site_digest(astro / 'dist')
+    body = json.dumps({'schema_version': 'gids.situation_alerts.v1', 'alerts': [notice()]}).encode()
+    digest = hashlib.sha256(body).hexdigest()
+    obj = tmp_path / 'exports/situation-data/objects' / (digest + '.json')
+    obj.parent.mkdir(parents=True)
+    obj.write_bytes(body)
+    manifest = {'schema_version': 1, 'release_id': 'situation-1', 'files': {
+        'outbreaks/OB-1.json': {'url': f'objects/{digest}.json', 'sha256': digest, 'bytes': len(body)}}}
+    calls = 0
+    def opener(request, *, timeout):
+        nonlocal calls
+        if request.full_url.endswith('/site-data/situation/current.json'):
+            calls += 1
+            return Response({**manifest, 'release_id': f'situation-{calls}'})
+        if request.full_url.endswith('/release.json'): return Response(IDENTITY)
+        pytest.fail('must not dispatch')
+    with pytest.raises(release.NoticeSubscriptionError, match='situation_publication_changed'):
+        call(tmp_path, astro, opener)
+    assert not (tmp_path / 'exports/subscription-outbox/full/official-notices/a1.json').exists()
+
+
+def test_empty_independent_scan_requires_matching_public_release_and_stable_pointer(tmp_path):
+    astro = files(tmp_path, [])
+    (astro / 'dist/situation/outbreaks/OB-1.json').unlink()
+    (astro / 'dist/situation/outbreaks').rmdir()
+    from src.services.data_release.pipeline import _built_site_digest
+    IDENTITY['build_digest'] = _built_site_digest(astro / 'dist')
+    body = json.dumps({'schema_version': 'gids.situation_alerts.v1', 'alerts': []}).encode()
+    digest = hashlib.sha256(body).hexdigest()
+    obj = tmp_path / 'exports/situation-data/objects' / (digest + '.json')
+    obj.parent.mkdir(parents=True)
+    obj.write_bytes(body)
+    manifest = {'schema_version': 1, 'release_id': 'situation-1', 'files': {
+        'outbreaks/OB-1.json': {'url': f'objects/{digest}.json', 'sha256': digest, 'bytes': len(body)}}}
+    calls = []
+    changed = False
+    def opener(request, *, timeout):
+        calls.append(request.full_url)
+        if request.full_url.endswith('/site-data/situation/current.json'):
+            return Response({**manifest, 'release_id': 'situation-2'} if changed and calls.count(request.full_url) == 2 else manifest)
+        if request.full_url.endswith('/release.json'): return Response(IDENTITY)
+        pytest.fail('an empty scan must not dispatch')
+    assert call(tmp_path, astro, opener)['status'] == 'no_new_notices'
+    assert len(calls) == 3 and calls[0] == calls[2]
+    calls.clear()
+    changed = True
+    with pytest.raises(release.NoticeSubscriptionError, match='situation_publication_changed'):
+        call(tmp_path, astro, opener)

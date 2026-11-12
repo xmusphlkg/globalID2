@@ -50,8 +50,33 @@ async def test_readiness_reports_runtime_and_queue_state(monkeypatch):
     assert payload["db"] == "ok"
     assert payload["runtime"]["required_services"] == {
         "worker": "ok",
+        "ai-worker": "missing",
         "scheduler": "missing",
     }
     assert payload["task_queue"]["queued"] == 3
     assert payload["task_queue"]["running"] == 1
     assert payload["task_queue"]["oldest_queued_age_seconds"] >= 299
+
+
+@pytest.mark.parametrize("ai_live", [False, True])
+async def test_readiness_requires_ai_consumer_even_when_general_worker_is_live(
+    monkeypatch, ai_live
+):
+    async def services():
+        return (
+            [
+                {"service": name}
+                for name in (
+                    "worker",
+                    "scheduler",
+                    *(("ai-worker",) if ai_live else ()),
+                )
+            ],
+            True,
+        )
+
+    monkeypatch.setattr(health_module, "get_database", lambda: _Database([0, 0, None]))
+    monkeypatch.setattr(health_module.runtime_registry, "list_services", services)
+    monkeypatch.setattr(health_module, "get_disease_cutover_config", lambda: _Cutover())
+    payload = await health_module.readiness_payload()
+    assert payload["status"] == ("ok" if ai_live else "degraded")

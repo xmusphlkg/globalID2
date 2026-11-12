@@ -163,8 +163,52 @@ async def test_transport_failure_retains_history(artifact_db, monkeypatch, count
     history = Path("history.csv")
     history.write_bytes(history_bytes(country))
     writer = ArtifactWriter(str(uuid4()), 1, country.lower())
+    if country == "BR":
+        with pytest.raises(RuntimeError, match="refusing to aggregate an incomplete file set"):
+            await br.collect(writer, **options(country, history))
+        assert [a.kind for a in writer.artifacts] == ["history_csv"]
+        return
     result = await MODULES[country].collect(writer, **options(country, history))
     assert [a.kind for a in result] == ["history_csv"]
+
+
+def test_br_failed_file_never_produces_partial_national_totals(tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    other = replace(SINAN, filename="AIDABR25-extra.dbc", url="ftp://fixture/extra.dbc")
+    crawler = BrazilSINANCrawler(cache_dir=tmp_path / "cache")
+
+    def aggregate(item, **kwargs):
+        if item == other:
+            raise ValueError("corrupt file")
+        return [{"Date": "2025-01-01", "RawDiseaseLabel": item.disease_name,
+                 "DiseaseCode": item.prefix, "Year": "2025", "Month": "1",
+                 "Cases": "3", "DatasetStatus": item.dataset_status,
+                 "SourceFile": item.filename, "SourceURL": item.url}]
+
+    monkeypatch.setattr(crawler, "aggregate_file", aggregate)
+    with pytest.raises(RuntimeError, match="refusing incomplete totals"):
+        crawler.crawl_monthly_national(tmp_path / "out.csv", months=MONTHS,
+                                      file_index=[SINAN, other], write_csv=False)
+
+
+async def test_br_partial_download_fails_even_with_history(artifact_db, monkeypatch):
+    from dataclasses import replace
+
+    other = replace(SINAN, prefix="BOTU", filename="BOTUBR25.dbc", url="ftp://fixture/BOTUBR25.dbc")
+    monkeypatch.setattr(BrazilSINANCrawler, "fetch_file_index", lambda self: [SINAN, other])
+    def download(self, item, directory):
+        if item == other:
+            raise requests.ConnectionError("source disconnected")
+        return FIXTURES / "BR/AIDABR25.dbc"
+    monkeypatch.setattr(BrazilSINANCrawler, "_download_file", download)
+    history = Path("history.csv")
+    history.write_bytes(history_bytes("BR"))
+    writer = ArtifactWriter(str(uuid4()), 1, "br")
+    with pytest.raises(RuntimeError, match="BOTUBR25.dbc") as caught:
+        await br.collect(writer, **options("BR", history))
+    assert isinstance(caught.value.__cause__, requests.ConnectionError)
+    assert [a.kind for a in writer.artifacts] == ["history_csv", "sinan_dbc"]
 
 
 @pytest.mark.parametrize("country", MODULES)

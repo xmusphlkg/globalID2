@@ -76,13 +76,14 @@ const astroBinary = resolve(
   process.platform === 'win32' ? 'astro.cmd' : 'astro',
 );
 const planningStarted = performance.now();
-const snapshot = sourceSnapshot();
+const independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1';
+const snapshot = independentResearch ? { schema: 1, shared: 'independent', articles: {} } : sourceSnapshot();
 const directoryStats = {};
 const pageSnapshot = pageSourceSnapshot({ directoryStats });
 process.stdout.write(`[directory-cache] ${JSON.stringify(directoryStats)}\n`);
 const incremental = Boolean(process.env.PUBLIC_GIDS_RELEASE_ID || process.env.GIDS_RESEARCH_INCREMENTAL === '1');
 let pagePlan = planSitePages(pageSnapshot, incremental);
-let plan = planResearchBuild({
+let plan = independentResearch ? { mode: 'incremental', selected: [], reused: [], removed: [], reasons: {}, snapshot } : planResearchBuild({
   incremental,
   snapshot,
 });
@@ -165,7 +166,7 @@ if (researchFingerprintAfter !== researchFingerprintBefore) {
   );
   process.exit(3);
 }
-if ((result.status ?? 1) === 0 && (JSON.stringify(sourceSnapshot()) !== JSON.stringify(snapshot)
+if ((result.status ?? 1) === 0 && ((!independentResearch && JSON.stringify(sourceSnapshot()) !== JSON.stringify(snapshot))
   || JSON.stringify(pageSourceSnapshot()) !== JSON.stringify(pageSnapshot))) {
   process.stderr.write('Research detail data or shared templates changed during the Astro build.\n');
   process.exit(3);
@@ -178,7 +179,7 @@ if ((result.status ?? 1) === 0) {
     assetCachePath,
   );
   process.stdout.write(`[asset-cache] saved ${cachedAssets} shared assets\n`);
-  writePending(plan);
+  if (!independentResearch) writePending(plan);
   writePagePending(pagePlan);
   process.stdout.write(`[build-timing] save shared assets and pending plans ${elapsedSeconds(cacheStarted)}s\n`);
 }

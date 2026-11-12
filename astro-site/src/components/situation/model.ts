@@ -80,6 +80,11 @@ export function deduplicatePoints(points: MapPoint[]): MapPoint[] {
   });
 }
 
+/** Shared count and map list scope, including the default 30-day window. */
+export function visibleSituationPoints(points: MapPoint[], asOf: string, filters: Filters = DEFAULT_FILTERS): MapPoint[] {
+  return deduplicatePoints(sortPoints(filterPoints(points, filters, asOf), asOf));
+}
+
 export type AlertGroup = SituationAlertRecord & { reports: SituationAlertRecord[] };
 
 /**

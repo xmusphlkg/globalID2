@@ -100,6 +100,18 @@ function pageDist(pages) {
 
 const linkErrors = errors => errors.filter(error => /redirect|broken internal link/.test(error));
 
+test('independent research routes are excluded while main-site links remain valid', () => {
+  const dist = pageDist({
+    'research/weekly/w1': '<a href="/research/articles/missing/">article</a>',
+    'about': '<a href="/research/articles/missing/">research</a>',
+  });
+  try {
+    const result = auditSeoOutput(dist, { independentResearch: true });
+    assert.equal(result.pages, 1);
+    assert.deepEqual(linkErrors(result.errors), []);
+  } finally { rmSync(dist, { recursive: true, force: true }); }
+});
+
 test('links between papers pages share one host and are not flagged as redirects', () => {
   const dist = pageDist({
     'research/articles/a': '<a href="/research/articles/b/">b</a>',

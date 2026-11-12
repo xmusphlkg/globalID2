@@ -129,20 +129,21 @@ def _read_cached_related(path: Path, identity: str, count: int) -> list | None:
     try:
         saved = json.loads(path.read_bytes())
         rows = saved["related"]
+        checksum_input = {"records": saved["records"], "related": rows} if saved.get("schema") == 2 else rows
         if (saved["identity"] == identity and isinstance(rows, list) and len(rows) == count
                 and all(isinstance(row, list) and all(isinstance(item, dict) for item in row) for row in rows)
-                and saved["sha256"] == hashlib.sha256(_json_bytes(rows)).hexdigest()):
+                and saved["sha256"] == hashlib.sha256(_json_bytes(checksum_input)).hexdigest()):
             return rows
     except (OSError, ValueError, KeyError, TypeError):
         pass
     return None
 
 
-def _write_cached_related(path: Path, identity: str, related: list) -> None:
-    body = _json_bytes({
-        "identity": identity, "related": related,
-        "sha256": hashlib.sha256(_json_bytes(related)).hexdigest(),
-    })
+def _write_cached_related(path: Path, identity: str, related: list, *, records: list | None, limit: int) -> None:
+    content = {"records": records, "related": related}
+    body = _json_bytes({"schema": 2, "identity": identity, "related": related, "records": records,
+        "limit": limit, "implementation": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "sha256": hashlib.sha256(_json_bytes(content)).hexdigest()})
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     try:
@@ -150,6 +151,22 @@ def _write_cached_related(path: Path, identity: str, related: list) -> None:
         temporary.replace(path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _incremental_related(path: Path, limit: int) -> dict[str, tuple[dict, list]] | None:
+    """Read a prior ranking and its input receipts, or recompute on cache loss."""
+    try:
+        saved = json.loads(path.read_bytes())
+        records, rows = saved["records"], saved["related"]
+        if (saved.get("schema") != 2 or saved.get("limit") != limit
+                or saved.get("implementation") != hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+                or not isinstance(records, list) or not isinstance(rows, list) or len(records) != len(rows)
+                or saved.get("sha256") != hashlib.sha256(_json_bytes({"records": records, "related": rows})).hexdigest()):
+            return None
+        result = {record["id"]: (record, row) for record, row in zip(records, rows)}
+        return result if len(result) == len(records) and all(isinstance(key, str) and key for key in result) else None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 def attach_related_research(
@@ -175,8 +192,34 @@ def attach_related_research(
             by_disease[disease].add(index)
         for topic in feature.topics:
             by_topic[topic].add(index)
+    ids = [str(article.get("article_id") or "") for article in source]
+    cacheable = bool(all(ids) and len(set(ids)) == len(ids))
+    records = [{"id": ids[index],
+        "digest": hashlib.sha256(_json_bytes({key: article.get(key) for key in _RELATED_INPUT_FIELDS})).hexdigest(),
+        "diseases": sorted(features[index].diseases), "topics": sorted(features[index].topics)}
+        for index, article in enumerate(source)] if cacheable and cache_path is not None else None
+    previous = _incremental_related(cache_path, limit) if records is not None and cache_path is not None else None
+    reusable: dict[str, list] = {}
+    if previous is not None:
+        current = {record["id"]: record for record in records}
+        changed = {key for key in previous.keys() | current.keys()
+                   if previous.get(key, ({}, []))[0].get("digest") != current.get(key, {}).get("digest")}
+        affected: set[int] = set()
+        for key in changed:
+            old = previous.get(key, ({}, []))[0]
+            new = current.get(key, {})
+            for disease in set(old.get("diseases") or []) | set(new.get("diseases") or []):
+                affected.update(by_disease.get(disease, ()))
+            for topic in set(old.get("topics") or []) | set(new.get("topics") or []):
+                affected.update(by_topic.get(topic, ()))
+        reusable = {record["id"]: previous[record["id"]][1] for index, record in enumerate(records)
+                    if index not in affected and record["id"] not in changed and record["id"] in previous}
+        print(f"  Related research cache: {len(reusable)} reused, {len(source) - len(reusable)} recomputed", flush=True)
     output: list[dict[str, Any]] = []
     for article_index, article in enumerate(source):
+        if ids[article_index] in reusable:
+            output.append({**article, "related_articles": reusable[ids[article_index]]})
+            continue
         feature = features[article_index]
         # The aboutness gate requires a shared disease or topic. All other
         # articles have score zero, so their pairwise comparison is unnecessary.
@@ -220,7 +263,7 @@ def attach_related_research(
             })
         output.append({**article, "related_articles": related})
     if cache_path is not None:
-        _write_cached_related(cache_path, identity, [article["related_articles"] for article in output])
+        _write_cached_related(cache_path, identity, [article["related_articles"] for article in output], records=records, limit=limit)
     return output
 
 

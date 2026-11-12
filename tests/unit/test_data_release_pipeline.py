@@ -99,6 +99,25 @@ async def test_repository_publisher_preserves_release_stage_for_retry_classifica
 
 
 @pytest.mark.asyncio
+async def test_repository_pool_timeout_is_retryable_but_mixed_failures_are_not():
+    from sqlalchemy.exc import TimeoutError as PoolTimeout
+    from src.services.data_release.resilience import classify_release_failure
+
+    async def pool_failure():
+        raise PoolTimeout("QueuePool limit of size 10 overflow 20 reached, connection timed out")
+
+    async def other_failure():
+        raise RuntimeError("invalid output")
+
+    with pytest.raises(RuntimeError) as single:
+        await pipeline._run_repository_publications([("papers", pool_failure())])
+    assert classify_release_failure(single.value).retryable
+    with pytest.raises(RuntimeError) as mixed:
+        await pipeline._run_repository_publications([("papers", pool_failure()), ("other", other_failure())])
+    assert not classify_release_failure(mixed.value).retryable
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("resume", [False, True])
 async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monkeypatch, resume):
     commands = []

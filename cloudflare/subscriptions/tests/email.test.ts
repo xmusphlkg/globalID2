@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildConfirmationEmail,
+  buildManagementEmail,
   buildNotificationEmail,
   buildRawEmail,
 } from "../src/lib/email.ts";
@@ -39,6 +40,43 @@ test("renders notification markdown and localized unsubscribe copy", () => {
   assert.match(email.html, /<h3[^>]*>摘要<\/h3>/);
   assert.match(email.html, /token=a&amp;locale=zh/);
   assert.match(email.html, />退订<\/a>/);
+});
+
+test("notification variants retain readable linked content and subscriber controls in both formats", () => {
+  const unsubscribe = "https://example.test/unsubscribe?token=abc";
+  const manage = "https://example.test/manage?token=abc";
+  for (const [kind, label] of [["report", "监测报告"], ["research", "研究雷达"], ["alert", "官方通报"]] as const) {
+    const email = buildNotificationEmail("zh", {
+      subject: "本周动态", markdown: "# 标题\n\n- [原始来源](https://example.test/article?id=1&lang=zh)",
+    }, unsubscribe, manage, kind);
+    assert.match(email.html, new RegExp(label));
+    assert.match(email.html, /<html lang="zh">/);
+    assert.match(email.html, /name="viewport"/);
+    assert.match(email.html, /role="presentation"/);
+    assert.match(email.html, /href="https:\/\/example\.test\/article\?id=1&amp;lang=zh"/);
+    assert.match(email.text, /原始来源 \(https:\/\/example\.test\/article\?id=1&lang=zh\)/);
+    assert.ok(email.text.includes(unsubscribe));
+    assert.ok(email.text.includes(manage));
+  }
+});
+
+test("management messages localize expiry and keep each escaped list name tied to its link", () => {
+  const links = [
+    { name: "研究 & <雷达>", url: "https://example.test/manage?token=a&locale=zh" },
+    { name: "报告更新", url: "https://example.test/manage?token=b" },
+  ];
+  const email = buildManagementEmail("zh", links);
+  assert.match(email.subject, /管理/);
+  assert.match(email.text, /30 分钟/);
+  assert.ok(email.text.includes(links[0].url));
+  assert.ok(email.text.includes(links[1].url));
+  assert.match(email.html, /研究 &amp; &lt;雷达&gt;/);
+  assert.doesNotMatch(email.html, /<雷达>/);
+  assert.match(email.html, /href="https:\/\/example\.test\/manage\?token=a&amp;locale=zh"/);
+  assert.match(email.html, /管理订阅: 研究 &amp; &lt;雷达&gt;/);
+  const english = buildManagementEmail("en", links);
+  assert.match(english.text, /expire in 30 minutes/);
+  assert.match(english.html, /<html lang="en">/);
 });
 
 test("builds the established multipart MIME shape", () => {

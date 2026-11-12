@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import fcntl
+import base64
 import gzip
 import hashlib
 import hmac
 import io
 import json
 import re
+import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import contextmanager
@@ -26,7 +29,7 @@ from xml.etree import ElementTree
 import httpx
 
 from .artifact_index import ArtifactIndex
-from .papers_bundle import DEFAULT_PAPERS_ORIGIN, build_papers_manifest
+from .papers_bundle import DEFAULT_PAPERS_ORIGIN, LIBRARY_SHARD_PATH, build_papers_manifest, is_obsolete_research_build_path
 from .research_publishing import is_research_card, research_social_cards_enabled
 
 MANIFEST_KEY = "papers-manifest.json"
@@ -34,6 +37,8 @@ MANIFEST_KEY = "papers-manifest.json"
 # Retry a few times inside the publisher so one EOF does not fail the release.
 _TRANSPORT_RETRY_ATTEMPTS = 5
 _TRANSPORT_RETRY_BASE_DELAY_SECONDS = 1.0
+# Python and zlib changes can change deterministic gzip bytes (and their ETag).
+_STATIC_GZIP_RECIPE = f"gzip:level=6:mtime=0:python={sys.version_info[:3]}:zlib={zlib.ZLIB_RUNTIME_VERSION}"
 
 _TOKEN_VERIFY_URL = "https://api.cloudflare.com/client/v4/user/tokens/verify"
 _derived_credentials: dict[str, tuple[str, str]] = {}
@@ -188,7 +193,7 @@ class R2S3Client:
         self.config = config
         self.manifest_key = config.manifest_key
         self._http = None if opener else httpx.Client(
-            limits=httpx.Limits(max_connections=32, max_keepalive_connections=32),
+            limits=httpx.Limits(max_connections=96, max_keepalive_connections=96, keepalive_expiry=30.0),
             follow_redirects=False,
         )
         self._opener = opener or self._pooled_open
@@ -254,6 +259,8 @@ class R2S3Client:
             headers["cache-control"] = cache_control
         if content_encoding:
             headers["content-encoding"] = content_encoding
+        if method == "POST" and query == "delete=":
+            headers["content-md5"] = base64.b64encode(hashlib.md5(body, usedforsecurity=False).digest()).decode()
         if body:
             headers["content-length"] = str(len(body))
         signed_header_names = ";".join(sorted(headers))
@@ -347,12 +354,12 @@ class R2S3Client:
         *,
         content_type: str | None = None,
         cache_control: str | None = None,
+        content_encoding: str | None = None,
     ) -> None:
         # The complete manifest remains JSON to callers. Compress its HTTP
         # representation to avoid transferring ~11 MB of repeated paths and
         # metadata on every changed release; ordinary object ETags stay intact.
-        content_encoding = None
-        if key == self.manifest_key and len(body) > 1024:
+        if key == self.manifest_key and content_encoding is None and len(body) > 1024:
             encoded = gzip.compress(body, compresslevel=6, mtime=0)
             if len(encoded) < len(body):
                 print(f"R2 manifest transport: raw_bytes={len(body)}, encoded_bytes={len(encoded)}", flush=True)
@@ -372,6 +379,21 @@ class R2S3Client:
         status, _payload = self._request("DELETE", key)
         if status not in {200, 204}:
             raise R2S3Error(f"R2 DELETE {key!r} returned HTTP {status}")
+
+    def delete_objects(self, keys: list[str]) -> None:
+        """Delete an explicit manifest-derived batch; fail on partial errors."""
+        if not keys or len(keys) > 1000 or len(set(keys)) != len(keys):
+            raise ValueError("R2 delete batch requires 1–1000 distinct keys")
+        root = ElementTree.Element("Delete", xmlns="http://s3.amazonaws.com/doc/2006-03-01/")
+        for key in keys:
+            ElementTree.SubElement(ElementTree.SubElement(root, "Object"), "Key").text = key
+        ElementTree.SubElement(root, "Quiet").text = "true"
+        status, payload = self._request("POST", "", query="delete=",
+            body=ElementTree.tostring(root, encoding="utf-8", xml_declaration=True), content_type="application/xml")
+        result = ElementTree.fromstring(payload)
+        errors = result.findall("{*}Error")
+        if status != 200 or errors or result.tag.split('}')[-1] != 'DeleteResult':
+            raise R2S3Error(f"R2 batch deletion failed: HTTP {status}, errors={len(errors)}")
 
     def put_object_conditional(
         self, key: str, body: bytes, *, previous: bytes | None,
@@ -479,13 +501,15 @@ def _content_type_for(path: str) -> str:
 def _cache_control_for(path: str, *, manifest_key: str = MANIFEST_KEY) -> str:
     """Cache policy per object type; R2 custom domains ignore Pages ``_headers``.
 
-    Keys are stable names (not content-addressed), so nothing is ``immutable``.
-    Values mirror the main site's ``_headers`` rules.
+    Ordinary keys are mutable. Disease pages and study collections use content
+    hashes, so browsers can keep their payload without revalidation.
     """
 
     lowered = path.lower()
     if lowered == manifest_key.lower():
         return "no-store, max-age=0"
+    if LIBRARY_SHARD_PATH.fullmatch(path):
+        return "public, max-age=31536000, immutable"
     if lowered.endswith(".html"):
         return "public, max-age=0, must-revalidate"
     if lowered.endswith(".json"):
@@ -526,14 +550,14 @@ def _verify_public_sample(url: str, opener=None) -> None:
             retryable = False
             try:
                 try:
-                    with call(Request(url, method="HEAD"), 30.0) as response:
+                    with call(Request(url, method="HEAD", headers={"User-Agent": "GIDS-Release-Verifier/1.0"}), 30.0) as response:
                         status = int(getattr(response, "status", 200))
                         if status in {200, 204}:
                             return
                 except urllib.error.HTTPError as exc:
                     if exc.code != 405:
                         raise
-                    with call(Request(url, method="GET", headers={"Range": "bytes=0-0"}), 30.0) as response:
+                    with call(Request(url, method="GET", headers={"Range": "bytes=0-0", "User-Agent": "GIDS-Release-Verifier/1.0"}), 30.0) as response:
                         status = int(getattr(response, "status", 200))
                         if status in {200, 206}:
                             return
@@ -565,10 +589,13 @@ def publish_papers_site(
     public_opener: Callable[[Request, float | None], Any] | None = None,
     workers: int = 32,
     lock_dir: Path | None = None,
+    max_total_bytes: int | None = None,
 ) -> PapersPublishResult:
     """Publish with one writer per target and bounded parallel object transfers."""
-    if not 1 <= workers <= 32:
-        raise ValueError("R2 upload workers must be between 1 and 32")
+    if not 1 <= workers <= 96:
+        raise ValueError("R2 upload workers must be between 1 and 96")
+    if max_total_bytes is not None and (type(max_total_bytes) is not int or max_total_bytes <= 0):
+        raise ValueError("R2 storage budget must be a positive byte count")
     directory = lock_dir or Path(__file__).resolve().parents[3] / "data/cache/r2-publish"
     directory.mkdir(parents=True, exist_ok=True)
     target = _sha256_hex(f"{config.s3_endpoint}/{config.bucket}".encode())
@@ -580,6 +607,7 @@ def publish_papers_site(
             return _publish_papers_site(
                 papers_dir, config, client=active, verify_public=verify_public,
                 public_opener=public_opener, workers=workers, artifacts=artifacts,
+                max_total_bytes=max_total_bytes,
             )
         finally:
             try:
@@ -598,6 +626,7 @@ def _publish_papers_site(
     public_opener: Callable[[Request, float | None], Any] | None,
     workers: int,
     artifacts: ArtifactIndex,
+    max_total_bytes: int | None = None,
 ) -> PapersPublishResult:
     started = time.monotonic()
 
@@ -627,15 +656,13 @@ def _publish_papers_site(
     local_files = [
         item for item in local_manifest.get("files") or [] if isinstance(item, dict)
     ]
+    if any(is_obsolete_research_build_path(str(item.get("path", ""))) for item in local_files):
+        raise R2S3Error("Obsolete research files in papers bundle; rebuild the bundle before publishing")
     cards_disabled = manifest_key == MANIFEST_KEY and not research_social_cards_enabled()
     if cards_disabled:
         # Enforce the switch even for bundles built before it was disabled.
         local_files = [item for item in local_files if not is_research_card(str(item.get("key", "")))]
-        # Disabling new cards is not a request to delete existing R2 objects.
-        # Keep their manifest ownership and cached-page compatibility without
-        # reading their bodies or uploading them again.
-        retained_cards = [item for key, item in remote_by_key.items() if is_research_card(key)]
-        published_files = sorted([*local_files, *retained_cards], key=lambda item: str(item.get("key", "")))
+        published_files = sorted(local_files, key=lambda item: str(item.get("key", "")))
         local_manifest = {
             **local_manifest,
             "files": published_files,
@@ -668,6 +695,25 @@ def _publish_papers_site(
     # final manifest, and detects objects overwritten by an incomplete release.
     inventory = active.list_objects() if hasattr(active, "list_objects") else None
 
+    retained_keys: set[str] = set()
+    if inventory is not None and config.manifest_key == MANIFEST_KEY:
+        from .papers_retention import retain_remote_dependencies
+        local_manifest = retain_remote_dependencies(local_manifest, remote_manifest, inventory)
+        retained_keys = {item['key'] for item in local_manifest['files']} - set(local_by_key)
+    if max_total_bytes is not None:
+        if inventory is None:
+            raise R2S3Error("R2 storage budget requires a complete bucket inventory")
+        # Raw local sizes conservatively bound compressed uploads. Include
+        # other channels and retained generations in this shared bucket.
+        obsolete = set(remote_by_key) - set(local_by_key) - retained_keys
+        upper_bound = sum(int(item['bytes']) for item in local_files) + sum(
+            int(item['bytes']) for key, item in inventory.items()
+            if key not in local_by_key and key not in obsolete and key != manifest_key
+        ) + len(json.dumps(local_manifest).encode())
+        print(f"R2 storage upper bound: {upper_bound} bytes; budget={max_total_bytes}", flush=True)
+        if upper_bound > max_total_bytes:
+            raise R2S3Error(f"R2 storage budget exceeded before upload: {upper_bound} > {max_total_bytes}")
+
     uploaded = 0
     unchanged = 0
     bytes_uploaded = 0
@@ -685,28 +731,55 @@ def _publish_papers_site(
                 or digests["sha256"] != item["sha256"]
                 or (item.get("md5") and digests["md5"] != item["md5"])):
             raise R2S3Error(f"Papers checksum changed after build: {item['path']}")
+        content_type = _content_type_for(str(item["path"]))
+        compress = digests["bytes"] >= 1024 and content_type.startswith((
+            "text/", "application/json", "application/xml", "image/svg+xml",
+        ))
+        # A warm compressed publish needs only local stat + actual remote ETag.
+        # Recompress only when a receipt is missing/stale or the remote differs.
+        if compress and inventory is not None:
+            representation = artifacts.cached_representation(source_path, _STATIC_GZIP_RECIPE)
+            stored = inventory.get(key) or {}
+            if (representation is not None and representation["source_sha256"] == digests["sha256"]
+                    and stored.get("bytes") == representation["bytes"]
+                    and stored.get("etag") == representation["md5"]):
+                return False, 0
+        if compress:
+            if body is None:
+                body, current = artifacts.read(source_path)
+                if current != digests:
+                    raise R2S3Error(f"Papers checksum changed during publish: {item['path']}")
+            encoded = gzip.compress(body, compresslevel=6, mtime=0)
+            if len(encoded) < len(body):
+                body = encoded
+            else:
+                compress = False
+            artifacts.record_representation(
+                source_path, _STATIC_GZIP_RECIPE, digests, body,
+                encoding="gzip" if compress else None,
+            )
         if inventory is not None:
             stored = inventory.get(key) or {}
             etag = str(stored.get("etag") or "")
-            if (stored.get("bytes") == digests["bytes"] and re.fullmatch(r"[0-9a-f]{32}", etag)
-                    and digests["md5"] == etag):
+            expected_bytes = len(body) if compress else digests["bytes"]
+            expected_md5 = hashlib.md5(body, usedforsecurity=False).hexdigest() if compress else digests["md5"]
+            if (stored.get("bytes") == expected_bytes and re.fullmatch(r"[0-9a-f]{32}", etag)
+                    and expected_md5 == etag):
                 return False, 0
         else:
             # Compatibility with injected legacy clients; production always
             # checks the actual object inventory, never only the manifest.
             remote = remote_by_key.get(key) or {}
-            if remote.get("bytes") == digests["bytes"] and remote.get("sha256") == item["sha256"]:
+            if not compress and remote.get("bytes") == digests["bytes"] and remote.get("sha256") == item["sha256"]:
                 return False, 0
         if body is None:
             body, current = artifacts.read(source_path)
             if current != digests:
                 raise R2S3Error(f"Papers checksum changed during publish: {item['path']}")
-        active.put_object(
-            key,
-            body,
-            content_type=_content_type_for(str(item["path"])),
-            cache_control=_cache_control_for(str(item["path"])),
-        )
+        kwargs = {"content_type": content_type, "cache_control": _cache_control_for(str(item["path"]))}
+        if compress:
+            kwargs["content_encoding"] = "gzip"
+        active.put_object(key, body, **kwargs)
         return True, len(body)
 
     # At most 2 * workers futures (and workers file bodies) remain in memory.
@@ -749,11 +822,21 @@ def _publish_papers_site(
     # every referenced object exists. Old shards remain in the local retention
     # window and therefore remain in the release manifest until safe to prune.
     indexes = {"site-data/research/index.json", "site-data/research/catalogue.json", "site-data/reports/index.json"}
+    indexes.update(str(item["key"]) for item in local_files if re.fullmatch(
+        r"research/catalogue/diseases/[a-z0-9_-]+\.json", str(item["key"]),
+    ))
     # Hydration modules and their lazy dependencies must exist before new HTML
     # can refer to them. Older hashed assets remain in the retained generation.
     transfer_batch([item for item in local_files if str(item["key"]).startswith("_astro/")])
-    transfer_batch([item for item in local_files if item["key"] not in indexes and not str(item["key"]).startswith("_astro/")])
+    # Disease libraries read these page indexes immediately on hydration. Delay
+    # their HTML until the pointers are ready; retain the existing publication
+    # batching for independent article pages. Each batch is a parallel barrier.
+    html = {str(item["key"]) for item in local_files if re.fullmatch(
+        r"(?:(?:zh|fr)/)?research/diseases/[^/]+/index\.html", str(item["path"]),
+    )}
+    transfer_batch([item for item in local_files if item["key"] not in indexes and item["key"] not in html and not str(item["key"]).startswith("_astro/")])
     transfer_batch([item for item in local_files if item["key"] in indexes])
+    transfer_batch([item for item in local_files if item["key"] in html])
 
     sample_url = None
     sample_ok = True
@@ -772,10 +855,14 @@ def _publish_papers_site(
             _verify_public_sample(sample_url, public_opener)
 
     removed = 0
-    for key in sorted(set(remote_by_key) - set(local_by_key)):
-        if cards_disabled and is_research_card(key):
-            continue
-        if key != manifest_key:
+    obsolete = sorted(set(remote_by_key) - set(local_by_key) - retained_keys - {manifest_key})
+    if hasattr(active, 'delete_objects'):
+        for start in range(0, len(obsolete), 500):
+            batch = obsolete[start:start + 500]
+            active.delete_objects(batch)
+            removed += len(batch)
+    else:
+        for key in obsolete:
             active.delete_object(key)
             removed += 1
     manifest_body = json.dumps(

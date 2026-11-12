@@ -219,8 +219,10 @@ def main() -> None:
         ),
     )
     parser.add_argument("--reports-only", action="store_true", help="Refresh report index and changed details only; reuse all other data")
-    parser.add_argument("--data-only", action="store_true", help="Export versioned surveillance browser JSON without HTML, reports, literature or download formats")
+    parser.add_argument("--data-only", action="store_true", help="Export versioned surveillance browser JSON without HTML, reports or literature")
+    parser.add_argument("--surveillance-downloads", type=Path, help="Freeze matching CSV/JSON/XLSX downloads for this surveillance release")
     parser.add_argument("--content-only", action="store_true", help="Refresh static content using the frozen local surveillance baseline; never read live observations or generate downloads")
+    parser.add_argument("--reuse-published-research", action="store_true", help="Reuse the last published research snapshot instead of regenerating literature")
     parser.add_argument("--surveillance-state", type=Path, default=ROOT / "exports/surveillance-state")
     parser.add_argument("--surveillance-output", type=Path, default=ROOT / "exports/surveillance-data")
     parser.add_argument("--data-release-id", help="Stable data release identity (queued jobs use their task UUID)")
@@ -229,6 +231,8 @@ def main() -> None:
         help="Independent country projection processes, 1–8 (default: CPU/cgroup memory budget)")
     parser.add_argument("--exact-country-scopes", action="store_true", help="Country selection is already expanded by the release planner")
     args = parser.parse_args()
+    if args.surveillance_downloads and not args.data_only:
+        parser.error("--surveillance-downloads requires --data-only")
     if args.data_only:
         if args.reports_only or args.content_only or args.incremental_site or args.recorded_at_as_of:
             parser.error("--data-only cannot be combined with reports, literature or historical site export modes")
@@ -248,6 +252,9 @@ def main() -> None:
                     publication_changes=(json.loads(args.surveillance_changes_file.read_text())
                         if args.surveillance_changes_file else None),
                     country_workers=args.surveillance_workers or default_country_workers(),
+                    download_candidate=args.surveillance_downloads,
+                    download_output=args.direct_download_output,
+                    download_url_base=args.direct_download_url_base,
                 )
             if os.environ.get(SNAPSHOT_ENV):
                 return await generate()
@@ -263,6 +270,14 @@ def main() -> None:
         return
     if args.content_only and (args.reports_only or args.incremental_country_codes or args.recorded_at_as_of):
         parser.error("--content-only cannot select surveillance or historical export scopes")
+    if args.content_only and not args.reuse_published_research:
+        from src.core.config import get_config
+        args.reuse_published_research = bool(get_config().data_release.literature_json_enabled)
+    if args.reuse_published_research:
+        if not args.content_only:
+            parser.error("--reuse-published-research requires --content-only")
+        from src.generation.published_research_reuse import install_published_research
+        install_published_research(ROOT, args.output, args.public_site_data_output)
     if args.reports_only:
         if args.incremental_site or args.incremental_country_codes or args.recorded_at_as_of:
             parser.error("--reports-only cannot be combined with other export scopes")
@@ -297,6 +312,7 @@ def main() -> None:
             incremental_site=args.incremental_site,
             country_scopes_exact=args.exact_country_scopes,
             content_only=args.content_only,
+            reuse_published_research=args.reuse_published_research,
         )
     )
 

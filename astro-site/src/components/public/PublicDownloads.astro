@@ -5,6 +5,8 @@ import metaRaw from '../../data/meta.json';
 import { toSeoSlug } from '../../lib/seo';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedRegionName } from '../../utils/i18n';
+import { formatFileSize, downloadPartRecordCount } from '../../lib/download-presentation';
+import { diseaseSearchAliases } from '../../lib/disease-search';
 
 interface Props {
   locale?: 'en' | 'zh' | 'fr';
@@ -40,18 +42,19 @@ const countries = downloadableCountries
     const part = entry.parts?.find((item: any) => item.is_current) ?? entry.parts?.at(-1);
     const partsCount = entry.parts?.length ?? 0;
     const recordCount = Number(entry.record_count ?? 0);
+    const currentCount = downloadPartRecordCount(entry).current;
     return {
       kind: 'country',
       id: entry.code,
       name: zh
-        ? entry.name_zh ?? entry.name_en ?? entry.code
+        ? localizedRegionName('zh', entry.code, { zh: entry.name_zh, en: entry.name_en ?? entry.name })
         : fr
           ? entry.name_fr ?? localizedRegionName('fr', entry.code, { en: entry.name_en ?? entry.name })
           : entry.name_en ?? entry.name ?? entry.code,
       aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.name_fr ?? ''}`,
       detail: zh
-        ? `${recordCount.toLocaleString('zh-CN')} 条记录 · ${partsCount} 个时间范围`
-        : `${recordCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'enregistrements' : 'records'} · ${partsCount} ${fr ? 'périodes' : 'time ranges'}`,
+        ? `当前文件 ${currentCount.toLocaleString('zh-CN')} 条 · 全部历史 ${recordCount.toLocaleString('zh-CN')} 条（${partsCount} 个时间范围）`
+        : `${currentCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'lignes dans ce fichier' : 'rows in this file'} · ${recordCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'lignes au total' : 'rows across all periods'}`,
       files: part?.files ?? {},
       period: part?.label ?? (zh ? '最新可用' : fr ? 'Dernière période disponible' : 'Latest available'),
       pageHref: `${prefix}/countries/${String(entry.code).toLowerCase()}/#downloads`,
@@ -63,6 +66,7 @@ const diseases = (downloads.diseases ?? []).map((entry: any) => {
   const part = entry.parts?.find((item: any) => item.is_current) ?? entry.parts?.at(-1);
   const countryCount = entry.country_count ?? entry.countries?.length ?? 0;
   const recordCount = Number(entry.record_count ?? 0);
+    const currentCount = downloadPartRecordCount(entry).current;
   return {
     kind: 'disease',
     id: entry.disease_id ?? entry.id,
@@ -71,10 +75,10 @@ const diseases = (downloads.diseases ?? []).map((entry: any) => {
       : fr
         ? localizedDiseaseName({ ...entry, disease_id: entry.disease_id ?? entry.id }, 'fr')
         : entry.name_en ?? entry.slug ?? entry.id,
-    aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.name_fr ?? ''} ${entry.slug ?? ''}`,
+    aliases: diseaseSearchAliases(entry).join(' '),
     detail: zh
-      ? `${recordCount.toLocaleString('zh-CN')} 条记录 · ${countryCount} 个国家/地区`
-      : `${recordCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'enregistrements' : 'records'} · ${countryCount} ${fr ? 'pays/régions' : 'countries/regions'}`,
+      ? `当前文件 ${currentCount.toLocaleString('zh-CN')} 条 · 全部历史 ${recordCount.toLocaleString('zh-CN')} 条 · ${countryCount} 个国家/地区`
+      : `${currentCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'lignes dans ce fichier' : 'rows in this file'} · ${recordCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'lignes au total' : 'rows across all periods'} · ${countryCount} ${fr ? 'pays/régions' : 'countries/regions'}`,
     files: part?.files ?? {},
     period: part?.label ?? (zh ? '最新可用' : fr ? 'Dernière période disponible' : 'Latest available'),
     pageHref: `${prefix}/diseases/${toSeoSlug(entry.slug)}/#downloads`,
@@ -101,12 +105,7 @@ const compact = (value: number) =>
     notation: 'compact',
     maximumFractionDigits: 1,
   }).format(value);
-const bytes = (value?: number) =>
-  !value
-    ? ''
-    : value >= 1_000_000
-      ? `${(value / 1_000_000).toFixed(1)} MB`
-      : `${Math.max(1, Math.round(value / 1000))} KB`;
+const bytes = formatFileSize;
 const copy = zh
   ? {
       kicker: '开放监测数据',
@@ -114,12 +113,13 @@ const copy = zh
       lead: '查找国家或疾病数据集，下载最新 CSV、JSON 或 XLSX 文件。',
       countrySets: '国家数据集',
       diseaseSets: '疾病数据集',
-      records: '公开记录',
+      records: '目录行数（含重复）',
+      recordsNote: '国家与疾病数据集的历史行数之和，同一观测可能重复计入。',
       date: '快照日期',
       catalogue: '数据目录',
       choose: '选择数据集',
-      intro: '列表默认显示最新时间范围；详情页提供历史周期和来源说明。',
-      subdivisionTitle: '分省数据按国家归档',
+      intro: '每行提供当前文件及全部历史的记录数，点击详情可选择其他时间范围。国家与疾病目录可能包含相同记录。',
+      subdivisionTitle: '按国家查找省级和地区数据',
       subdivisionNote: `${subdivisionCount} 个分省/州级数据集已接入，可从所属国家页面下载。`,
       subdivisionLink: '浏览国家与地区目录 →',
       search: '搜索数据集',
@@ -136,13 +136,13 @@ const copy = zh
       showing: '显示',
       of: '共',
       dataset: '个数据集',
-      range: '当前范围',
+      range: '当前文件与历史范围',
       formats: '格式',
       details: '全部周期与来源说明',
       empty: '没有匹配的数据集。',
       more: '显示更多',
       before: '使用数据之前',
-      context: '保留来源背景',
+      context: '使用时请保留来源信息',
       guidance:
         '比较地区或合并时间序列前，请保留每个数据集的来源、口径和修订背景。',
       methods: '阅读方法与局限',
@@ -155,7 +155,8 @@ const copy = zh
       lead: 'Find country and disease datasets. Download the latest CSV, JSON, or XLSX files.',
       countrySets: 'Country datasets',
       diseaseSets: 'Disease datasets',
-      records: 'Published records',
+      records: 'Catalogue rows (with repeats)',
+      recordsNote: 'Historical rows summed across country and disease datasets. Shared observations count again.',
       date: 'Snapshot date',
       catalogue: 'Dataset catalogue',
       choose: 'Choose a dataset',
@@ -195,7 +196,8 @@ const copy = zh
 if (fr) Object.assign(copy, {
   kicker: 'Données de surveillance ouvertes', title: 'Téléchargement des données',
   lead: 'Trouvez les jeux de données par pays et par maladie. Téléchargez les derniers fichiers CSV, JSON ou XLSX.',
-  countrySets: 'Jeux de données par pays', diseaseSets: 'Jeux de données par maladie', records: 'Enregistrements publiés', date: 'Date de l’instantané',
+  countrySets: 'Jeux de données par pays', diseaseSets: 'Jeux de données par maladie', records: 'Lignes du catalogue (avec doublons)', date: 'Date de l’instantané',
+  recordsNote: 'Somme des lignes historiques des jeux par pays et par maladie. Une même observation peut être comptée plusieurs fois.',
   catalogue: 'Catalogue des données', choose: 'Choisir un jeu de données', intro: 'Le tableau renvoie vers la période la plus récente. Les pages de détail présentent les périodes historiques et les sources.',
   subdivisionTitle: 'Les données infranationales sont regroupées par pays', subdivisionNote: `${subdivisionCount} jeux de données régionaux sont disponibles depuis la page de leur pays.`, subdivisionLink: 'Parcourir les pays et régions →',
   search: 'Rechercher des jeux de données', placeholder: 'Pays, maladie ou code', type: 'Type de jeu de données', all: 'Tous', countries: 'Pays', diseases: 'Maladies', sort: 'Trier', featured: 'Ordre recommandé', nameAsc: 'Nom A-Z', recordsDesc: 'Plus d’enregistrements', kindSort: 'Type et nom', showing: 'Affichage', of: 'sur', dataset: 'jeux de données', range: 'Période actuelle', formats: 'Formats', details: 'Toutes les périodes et sources', empty: 'Aucun jeu de données ne correspond à cette recherche.', more: 'Afficher davantage', before: 'Avant d’utiliser les données', context: 'Conserver le contexte de la source', guidance: 'Avant de comparer des lieux ou de combiner des séries temporelles, conservez la source, la définition et le contexte de révision de chaque jeu de données.', methods: 'Lire les méthodes et limites', terms: 'Lire les règles d’utilisation des données', download: 'Télécharger',
@@ -221,7 +223,7 @@ if (fr) Object.assign(copy, {
         </div>
         <div>
           <dt>{copy.records}</dt>
-          <dd>{compact(totalRecords)}</dd>
+          <dd>{compact(totalRecords)}<small class="records-note">{copy.recordsNote}</small></dd>
         </div>
         <div>
           <dt>{copy.date}</dt>
@@ -562,6 +564,14 @@ if (fr) Object.assign(copy, {
   }
   .hero .date {
     font-size: .86rem;
+  }
+  .hero .records-note {
+    display: block;
+    margin-top: .35rem;
+    color: rgb(var(--text-muted));
+    font-size: .68rem;
+    font-weight: 400;
+    line-height: 1.5;
   }
   .catalogue {
     min-width: 0;

@@ -5,26 +5,14 @@ import asyncio
 import hashlib
 import json
 import time
-from datetime import datetime, timezone
 from pathlib import Path
-
-from sqlalchemy import select, update
-
-from src.domain.collection import PublishDirty
 from src.generation.surveillance_lock import LOCKED_ENV, surveillance_output_lock
 from .surveillance_publish import validate_manifest
+from .global_selection import acknowledge_global_selection, validate_global_selection
 
 
 async def validate_situation_selection(db, dirty_ids: list[int], *, task_uuid: str | None = None) -> None:
-    if (not dirty_ids or any(type(value) is not int or value <= 0 for value in dirty_ids)
-            or len(set(dirty_ids)) != len(dirty_ids)):
-        raise ValueError("Situation JSON requires exact positive dirty IDs")
-    rows = list((await db.execute(select(PublishDirty).where(PublishDirty.id.in_(dirty_ids)))).scalars())
-    if (set(row.id for row in rows) != set(dirty_ids)
-            or any(row.line != "situation" or row.scope_key != "*" for row in rows)):
-        raise ValueError("Situation JSON selection does not match actual dirty rows")
-    if task_uuid and any(row.published_at is not None and row.published_task_uuid != task_uuid for row in rows):
-        raise ValueError("Another Situation publication already consumed this selection")
+    await validate_global_selection(db, dirty_ids, line="situation", task_uuid=task_uuid)
 
 
 def _ready_candidate(run: Path, *, task_uuid: str, dirty_ids: list[int]) -> dict | None:
@@ -116,10 +104,7 @@ async def execute_situation_data_release(service, task, *, runtime) -> dict:
         cwd=root, env=env, metadata={"event": "situation_json_publish"},
         timeout_seconds=runtime.download_publish_timeout_seconds)
     async with runtime.get_database() as db:
-        await validate_situation_selection(db, dirty_ids, task_uuid=task.task_uuid)
-        await db.execute(update(PublishDirty).where(PublishDirty.id.in_(dirty_ids),
-            PublishDirty.line == "situation", PublishDirty.published_at.is_(None)).values(
-                published_at=datetime.now(timezone.utc), published_task_uuid=task.task_uuid))
+        await acknowledge_global_selection(db, dirty_ids, line="situation", task_uuid=task.task_uuid)
         result = {"data_only": True, "data_line": "situation", "release_id": f"situation-{task.task_uuid}",
             "manifest_sha256": receipt["manifest_sha256"], "publish_dirty_ids": dirty_ids,
             "release_timing": {"export_seconds": round(export_seconds, 3),

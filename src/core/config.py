@@ -6,7 +6,7 @@ GlobalID V2 Core Configuration
 from functools import lru_cache
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -97,11 +97,7 @@ class AISettings(_BaseEnvSettings):
     fallback_model: str = Field(default="glm-4-plus", description="降级模型")
     model_chain_raw: str = Field(
         default="",
-        description="模型优先级列表，逗号分隔（高→低），为空则使用 default_model + fallback_model",
-    )
-    knowledge_model_shards_raw: str = Field(
-        default="",
-        description="知识库任务的模型分流列表，逗号分隔；为空时回退到 model_chain",
+        description="环境初始化的显式模型列表，逗号分隔；为空时仅初始化提供商，不创建模型",
     )
     knowledge_generation_timeout_seconds: int = Field(
         default=300,
@@ -121,27 +117,11 @@ class AISettings(_BaseEnvSettings):
         le=600,
         description="知识库生成单条模型请求的运行时上限，防止旧环境值让个人额度长时间阻塞",
     )
-    knowledge_model_attempts_per_route: int = Field(
-        default=1,
-        ge=1,
-        le=3,
-        description="知识库生成中单条模型路由的最大尝试次数；额度和超时错误仍立即切换",
-    )
-    knowledge_wait_for_model_recovery: bool = Field(
-        default=True,
-        description="知识库生成在模型中心暂无候选路由时是否等待一次冷却恢复",
-    )
-    knowledge_quota_recovery_rounds: int = Field(
-        default=1,
-        ge=0,
-        le=4,
-        description="知识库生成遇到额度/限流时允许的模型中心恢复等待轮数",
-    )
     knowledge_timeout_cooldown_seconds: int = Field(
         default=60,
         ge=0,
         le=600,
-        description="知识模型超时后的进程内冷却秒数，避免双语连续撞击同一路由",
+        description="知识模型超时后的持久化冷却秒数，避免双语连续撞击同一路由",
     )
     knowledge_output_repair_attempts: int = Field(
         default=1,
@@ -260,12 +240,12 @@ class AISettings(_BaseEnvSettings):
         validation_alias="AI__IDLE_BACKLOG_SLICE_SIZE",
         description="每次切片最多领取的条目数；切片之间会重新检查前台任务",
     )
-    idle_backlog_workers: int = Field(
-        default=24,
+    idle_backlog_review_buffer_size: int = Field(
+        default=512,
         ge=1,
-        le=192,
-        validation_alias="AI__IDLE_BACKLOG_WORKERS",
-        description="闲时积压处理同时在飞的模型调用数",
+        le=512,
+        validation_alias="AI__IDLE_BACKLOG_REVIEW_BUFFER_SIZE",
+        description="闲时文献审核业务缓冲上限；目标随可用文本模型许可的两倍调整，模型并发由持久运行时控制",
     )
     idle_backlog_max_running_ai_tasks: int = Field(
         default=2,
@@ -286,31 +266,18 @@ class AISettings(_BaseEnvSettings):
     # 模型配置
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="生成温度")
     max_tokens: int = Field(default=2000, gt=0, description="最大生成tokens")
-    max_retries: int = Field(default=3, ge=1, le=5, description="最大重试次数")
     # Reviewer threshold for approval (0.0-1.0)
     reviewer_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Reviewer approval threshold")
     
     # 成本控制
     enable_cache: bool = Field(default=True, description="是否启用缓存")
     cache_ttl: int = Field(default=168, description="缓存过期时间（小时）")
-    enable_rate_limiting: bool = Field(default=True, description="是否启用限流")
-    rate_limit: int = Field(default=50, description="每分钟请求限制")
     rate_limit_cooldown_seconds: int = Field(default=10, gt=0, description="命中429/额度限制后的冷却秒数（连续限流时递增的上限）")
-    rate_limit_wait_cap_seconds: int = Field(
-        default=900,
-        gt=0,
-        description="限流恢复阶段单次最大等待秒数（建议大于等于冷却时间）",
-    )
-    route_cache_ttl_seconds: int = Field(default=15, gt=0, description="模型中心运行时路由缓存秒数")
     prompt_auto_reload: bool = Field(
         default=False,
         description="是否启用提示词模板热刷新（开发环境建议开启）",
     )
     
-    # 测试配置
-    enable_api_test: bool = Field(default=True, description="是否启用API连通性测试")
-    test_prompt: str = Field(default="测试成功", description="API测试提示")
-
     @property
     def model_chain(self) -> list[str]:
         """
@@ -329,25 +296,6 @@ class AISettings(_BaseEnvSettings):
             if m and m not in seen:
                 seen.add(m)
                 ordered.append(m)
-        return ordered
-
-    @property
-    def knowledge_model_shards(self) -> list[str]:
-        """
-        返回知识库生成的候选分流模型列表。
-
-        若未显式配置 knowledge_model_shards_raw，则回退到通用 model_chain。
-        """
-        raw = self.knowledge_model_shards_raw.strip()
-        if not raw:
-            return list(self.model_chain)
-
-        seen: set[str] = set()
-        ordered: list[str] = []
-        for item in [m.strip() for m in raw.split(",") if m.strip()]:
-            if item not in seen:
-                seen.add(item)
-                ordered.append(item)
         return ordered
 
     @property
@@ -460,6 +408,17 @@ class DataReleaseSettings(_BaseEnvSettings):
         default=False,
         validation_alias="DATA_RELEASE__SITUATION_JSON_ENABLED",
         description="启用Situation独立JSON发布；先初始化数据与同源Worker，再启用更新触发和动态页面",
+    )
+
+    literature_json_enabled: bool = Field(
+        default=False,
+        validation_alias="DATA_RELEASE__LITERATURE_JSON_ENABLED",
+        description="启用独立文献发布；首次初始化并接通页面路由后再开启",
+    )
+    literature_publish_interval_minutes: int = Field(
+        default=360, ge=5, le=10080,
+        validation_alias="DATA_RELEASE__LITERATURE_PUBLISH_INTERVAL_MINUTES",
+        description="独立文献发布间隔，默认六小时",
     )
 
     pages_data_worker_enabled: bool = Field(
@@ -819,28 +778,16 @@ class LiteratureSettings(_BaseEnvSettings):
         description="Maximum automatic generations per unchanged article/language before exception review",
     )
     ai_enrichment_languages_raw: str = Field(default="en,zh,fr")
+    abstract_repair_enabled: bool = True
+    abstract_repair_controller_enabled: bool = True
+    abstract_repair_batch_size: int = Field(default=200, ge=1, le=500)
+    abstract_repair_retry_after_hours: int = Field(default=168, ge=1)
     ai_min_abstract_characters: int = Field(default=180, ge=80, le=2000)
     ai_require_open_access: bool = Field(
         default=False,
         description="Send any eligible abstract to an external model route, regardless of open-access status",
     )
     ai_model_request_timeout_seconds: int = Field(default=420, ge=10, le=600)
-    ai_wait_for_model_recovery: bool = Field(
-        default=True,
-        description="Wait once for Model Center route recovery before failing literature AI enrichment",
-    )
-    ai_literature_max_attempts_per_model: int = Field(
-        default=2,
-        ge=1,
-        le=3,
-        description="Maximum retries per model for literature enrichment requests",
-    )
-    ai_quota_recovery_rounds: int = Field(
-        default=1,
-        ge=0,
-        le=4,
-        description="Quota/rate-limit recovery rounds allowed for literature AI enrichment",
-    )
     weekly_ai_review_enabled: bool = Field(
         default=False,
         description="Run a distinct, content-bound AI quality review for generated weekly briefs",
@@ -992,6 +939,11 @@ class CrawlerSettings(BaseSettings):
 class TaskWorkerSettings(_BaseEnvSettings):
     """后台任务 worker 配置"""
 
+    role: Literal["general", "ai"] = Field(
+        default="general",
+        validation_alias="TASK_WORKER_ROLE",
+        description="general 执行采集和发布；ai 独立执行 AI 业务组织与模型调度",
+    )
     concurrency: int = Field(
         default=2,
         validation_alias="TASK_WORKER_CONCURRENCY",
@@ -1018,40 +970,26 @@ class TaskWorkerSettings(_BaseEnvSettings):
         validation_alias="TASK_WORKER_AI_CONCURRENCY",
         ge=1,
         le=64,
-        description="AI 父任务车道配置值。认领时以各模型运行时容量之和为准，不用它把模型调用收成 1",
+        description="AI 业务组织者的并发上限，包含等待模型的父任务；模型调用容量独立由模型中心控制",
     )
     ai_dynamic_concurrency_enabled: bool = Field(
         default=True,
         validation_alias="TASK_WORKER_AI_DYNAMIC_CONCURRENCY_ENABLED",
-        description="根据模型中心路由健康度自适应调节 AI 任务并发",
+        description="模型中心无可用路线时暂停新的 AI 业务任务；关闭后始终使用配置的组织者上限",
     )
     ai_concurrency_min: int = Field(
         default=1,
         validation_alias="TASK_WORKER_AI_CONCURRENCY_MIN",
         ge=1,
         le=64,
-        description="自适应 AI 并发的保底值",
-    )
-    ai_concurrency_per_route: int = Field(
-        default=2,
-        validation_alias="TASK_WORKER_AI_CONCURRENCY_PER_ROUTE",
-        ge=1,
-        le=16,
-        description="每条健康模型路由在稳定后可承载的最大任务槽位数",
-    )
-    ai_concurrency_scale_up_successes: int = Field(
-        default=2,
-        validation_alias="TASK_WORKER_AI_CONCURRENCY_SCALE_UP_SUCCESSES",
-        ge=1,
-        le=100,
-        description="连续成功多少个 AI 任务后增加一个并发槽位",
+        description="AI 组织者配置值的下界；动态模式在无可用路线时可暂停至 0",
     )
     ai_concurrency_adjust_seconds: int = Field(
         default=20,
         validation_alias="TASK_WORKER_AI_CONCURRENCY_ADJUST_SECONDS",
         ge=1,
         le=3600,
-        description="重新读取模型路由和扩容的最小间隔（秒）",
+        description="重新读取模型路线可用性的最小间隔（秒）",
     )
     knowledge_source_concurrency: int = Field(
         default=3,
@@ -1249,7 +1187,6 @@ if __name__ == "__main__":
     table.add_row("OpenAI Key", "✓" if cfg.ai.openai_api_key else "✗")
     table.add_row("Anthropic Key", "✓" if cfg.ai.anthropic_api_key else "✗")
     table.add_row("Cache Enabled", str(cfg.ai.enable_cache))
-    table.add_row("Rate Limiting", str(cfg.ai.enable_rate_limiting))
     
     rprint(table)
     

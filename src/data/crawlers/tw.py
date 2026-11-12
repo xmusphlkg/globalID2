@@ -177,7 +177,7 @@ def parse_monthly_export(payload: bytes, *, disease: TWDiseaseSource, months, da
             raise ValueError("NIDSS monthly export has a missing or invalid count")
         count = int(count_text)
         imported = population == "境外移入病例"
-        unsplit = population == "本土病例及境外移入病例"
+        unsplit = population in {"本土病例及境外移入病例", "本國籍及非本國籍"}
         output.append({
             "Date": date(current_year, month, 1).isoformat(),
             "RawDiseaseLabel": disease.name, "DiseaseCode": disease.code,
@@ -228,7 +228,7 @@ def aggregate_monthly_csv_rows(
     months: Optional[Set[Tuple[int, int]]] = None,
 ) -> List[Dict[str, str]]:
     """Aggregate Taiwan, China CDC detail rows to national monthly rows."""
-    aggregate: Dict[Tuple[int, int], Dict[str, int]] = {}
+    aggregate: Dict[Tuple[int, int], Dict[str, Any]] = {}
 
     for row in rows:
         # Most NIDSS extracts use onset year/month, while a small set of
@@ -246,7 +246,7 @@ def aggregate_monthly_csv_rows(
 
         bucket = aggregate.setdefault(
             (year, month),
-            {"cases": 0, "local_cases": 0, "imported_cases": 0},
+            {"cases": 0, "local_cases": 0, "imported_cases": 0, "split_known": True},
         )
         safe_cases = max(0, cases)
         bucket["cases"] += safe_cases
@@ -254,8 +254,12 @@ def aggregate_monthly_csv_rows(
         imported_flag = _norm_text(row.get("是否為境外移入"))
         if imported_flag == "1":
             bucket["imported_cases"] += safe_cases
-        else:
+        elif imported_flag == "0":
             bucket["local_cases"] += safe_cases
+        else:
+            # Nationality and an absent or unknown origin are not evidence
+            # that a case was acquired locally. A partial split is misleading.
+            bucket["split_known"] = False
 
     output_rows: List[Dict[str, str]] = []
     for year, month in sorted(aggregate):
@@ -268,8 +272,8 @@ def aggregate_monthly_csv_rows(
                 "Year": str(year),
                 "Month": str(month),
                 "Cases": str(totals["cases"]),
-                "LocalCases": str(totals["local_cases"]),
-                "ImportedCases": str(totals["imported_cases"]),
+                "LocalCases": str(totals["local_cases"]) if totals["split_known"] else "",
+                "ImportedCases": str(totals["imported_cases"]) if totals["split_known"] else "",
                 "Source": DEFAULT_SOURCE_NAME,
                 "SourceURL": disease.monthly_csv_url,
             }

@@ -1146,3 +1146,103 @@ CREATE INDEX idx_agent_evidence_created ON agent_evidence (created_at);
 CREATE UNIQUE INDEX idx_agent_evidence_hash ON agent_evidence (run_id, content_hash);
 CREATE INDEX idx_agent_evidence_run ON agent_evidence (run_id);
 CREATE INDEX idx_agent_evidence_step ON agent_evidence (step_id);
+
+CREATE TABLE ai_work_items (
+	id BIGSERIAL NOT NULL,
+	parent_task_uuid VARCHAR(36) NOT NULL,
+	line VARCHAR(64) NOT NULL,
+	priority VARCHAR(16) NOT NULL,
+	capability VARCHAR(64) DEFAULT 'text' NOT NULL,
+	status VARCHAR(16) DEFAULT 'queued' NOT NULL,
+	payload JSONB NOT NULL,
+	result JSONB,
+	route_key VARCHAR(200),
+	attempt INTEGER DEFAULT '1' NOT NULL,
+	error TEXT,
+	cancel_requested BOOLEAN DEFAULT false NOT NULL,
+	available_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	lease_expires_at TIMESTAMP WITH TIME ZONE,
+	lease_owner VARCHAR(64),
+	lease_token VARCHAR(36),
+	leased_at TIMESTAMP WITH TIME ZONE,
+	deadline_at TIMESTAMP WITH TIME ZONE,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	finished_at TIMESTAMP WITH TIME ZONE,
+	PRIMARY KEY (id),
+	CONSTRAINT ck_ai_work_items_status CHECK (status IN ('queued','leased','succeeded','failed','cancelled')),
+	CONSTRAINT ck_ai_work_items_priority CHECK (priority IN ('urgent','high','normal','low')),
+	CONSTRAINT ck_ai_work_items_attempt CHECK (attempt BETWEEN 1 AND 3)
+);
+CREATE INDEX ix_ai_work_items_claim ON ai_work_items (priority, created_at) WHERE status = 'queued';
+CREATE INDEX ix_ai_work_items_leased_route_expiry ON ai_work_items (route_key, lease_expires_at) WHERE status = 'leased';
+CREATE INDEX ix_ai_work_items_owner ON ai_work_items (lease_owner, status);
+CREATE INDEX ix_ai_work_items_parent ON ai_work_items (parent_task_uuid, status);
+CREATE INDEX ix_ai_work_items_parent_request ON ai_work_items (parent_task_uuid, (payload ->> 'request_key'), id DESC);
+
+CREATE TABLE ai_review_drains (
+	parent_task_uuid VARCHAR(36) NOT NULL,
+	kind VARCHAR(16) NOT NULL,
+	generation INTEGER DEFAULT '0' NOT NULL,
+	cursor BIGINT DEFAULT '0' NOT NULL,
+	high_watermark BIGINT NOT NULL,
+	scanned BIGINT DEFAULT '0' NOT NULL,
+	admitted BIGINT DEFAULT '0' NOT NULL,
+	exhausted BOOLEAN DEFAULT false NOT NULL,
+	settings JSONB NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+	PRIMARY KEY (parent_task_uuid, kind, generation),
+	CONSTRAINT ck_ai_review_drain_kind CHECK (kind IN ('articles','summaries')),
+	FOREIGN KEY(parent_task_uuid) REFERENCES tasks (task_uuid) ON DELETE CASCADE
+);
+
+CREATE TABLE ai_review_workflows (
+	id BIGSERIAL NOT NULL,
+	parent_task_uuid VARCHAR(36) NOT NULL,
+	kind VARCHAR(16) NOT NULL,
+	generation INTEGER DEFAULT '0' NOT NULL,
+	subject_id VARCHAR(64) NOT NULL,
+	input_fingerprint VARCHAR(64) NOT NULL,
+	policy_version VARCHAR(80) NOT NULL,
+	status VARCHAR(16) DEFAULT 'open' NOT NULL,
+	step VARCHAR(16) DEFAULT 'ready' NOT NULL,
+	outcome VARCHAR(16),
+	state JSONB NOT NULL,
+	activity_id BIGINT,
+	version INTEGER DEFAULT '0' NOT NULL,
+	deadline_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+	updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+	finished_at TIMESTAMP WITH TIME ZONE,
+	PRIMARY KEY (id),
+	CONSTRAINT ck_ai_review_workflow_kind CHECK (kind IN ('articles','summaries')),
+	CONSTRAINT ck_ai_review_workflow_status CHECK (status IN ('open','terminal')),
+	CONSTRAINT ck_ai_review_workflow_step CHECK (step IN ('ready','author','reviewer','terminal')),
+	FOREIGN KEY(parent_task_uuid) REFERENCES tasks (task_uuid) ON DELETE CASCADE,
+	FOREIGN KEY(activity_id) REFERENCES ai_work_items (id)
+);
+CREATE INDEX ix_ai_review_workflow_parent ON ai_review_workflows (parent_task_uuid, generation, status, id);
+CREATE INDEX ix_ai_review_workflow_subject ON ai_review_workflows (kind, subject_id, input_fingerprint, policy_version);
+CREATE UNIQUE INDEX uq_ai_review_workflow_open_subject ON ai_review_workflows (kind, subject_id) WHERE status = 'open';
+
+CREATE TABLE ai_model_call_logs (
+	request_id VARCHAR(36) NOT NULL,
+	model_id INTEGER,
+	provider_id INTEGER,
+	model_key VARCHAR(200) NOT NULL,
+	model_name VARCHAR(120) NOT NULL,
+	provider_key VARCHAR(120) NOT NULL,
+	agent_name VARCHAR(160) NOT NULL,
+	status VARCHAR(20) NOT NULL,
+	latency_ms FLOAT NOT NULL,
+	error_type VARCHAR(160),
+	error_message TEXT,
+	id SERIAL NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	PRIMARY KEY (id)
+);
+CREATE INDEX idx_ai_model_call_logs_created ON ai_model_call_logs (created_at);
+CREATE INDEX idx_ai_model_call_logs_model_created ON ai_model_call_logs (model_key, created_at);
+CREATE INDEX idx_ai_model_call_logs_provider_created ON ai_model_call_logs (provider_key, created_at);
+CREATE INDEX idx_ai_model_call_logs_request ON ai_model_call_logs (request_id);
+CREATE INDEX idx_ai_model_call_logs_success_model ON ai_model_call_logs (model_key) WHERE status = 'success';

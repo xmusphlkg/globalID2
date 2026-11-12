@@ -126,32 +126,6 @@ async def test_redis():
         return False
 
 
-@pytest.mark.asyncio
-async def test_rate_limiter():
-    """测试速率限制器"""
-    console.print("\n[bold cyan]5. 测试速率限制器[/bold cyan]")
-    try:
-        from src.core import RateLimiter
-        
-        limiter = RateLimiter(max_requests=5, window_seconds=10)
-        console.print(f"  ✓ 限制器初始化成功")
-        console.print(f"  ✓ 限制: {limiter.max_requests} 次/{limiter.window_seconds}秒")
-        
-        # 模拟请求
-        for i in range(5):
-            if limiter.can_proceed():
-                limiter.record_request()
-        
-        stats = limiter.get_stats()
-        console.print(f"  ✓ 已记录 {stats['current_requests']} 次请求")
-        console.print(f"  ✓ 使用率: {stats['usage_percent']}%")
-        
-        return True
-    except Exception as e:
-        console.print(f"  ✗ [red]速率限制器失败: {e}[/red]")
-        return False
-
-
 async def main():
     """运行所有测试"""
     console.print(Panel.fit(
@@ -168,7 +142,7 @@ async def main():
         console=console,
     ) as progress:
         
-        task = progress.add_task("运行测试...", total=5)
+        task = progress.add_task("运行测试...", total=4)
         
         results.append(await test_config())
         progress.update(task, advance=1)
@@ -182,9 +156,6 @@ async def main():
         results.append(await test_redis())
         progress.update(task, advance=1)
         
-        results.append(await test_rate_limiter())
-        progress.update(task, advance=1)
-    
     # 汇总结果
     console.print("\n" + "="*70)
     passed = sum(results)

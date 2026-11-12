@@ -118,6 +118,15 @@ async def _run_repository_publications(
                 returncode=getattr(primary, "returncode", None),
                 timed_out=bool(getattr(primary, "timed_out", False)),
             ) from primary
+        # Preserve the typed cause for a single failure. For several failures,
+        # keep the aggregate terminal unless every failure is a pool timeout.
+        from sqlalchemy.exc import TimeoutError as SQLAlchemyTimeoutError
+        if len(stage_errors) == 1 or all(
+            isinstance(error, SQLAlchemyTimeoutError)
+            and "queuepool limit of size" in str(error).casefold()
+            for error in stage_errors
+        ):
+            raise RuntimeError(message) from primary
         raise RuntimeError(message)
     return completed
 
@@ -196,8 +205,11 @@ async def _execute_release_task(
     content_only = bool(input_data.get("content_only"))
     dispatch_subscriptions = not code_only and not bool(input_data.get("suppress_subscription_dispatch"))
     situation_detached = bool(getattr(getattr(service, "_config", lambda: None)(), "situation_json_enabled", False))
+    literature_detached = bool(getattr(getattr(service, "_config", lambda: None)(), "literature_json_enabled", False))
     if situation_detached and not code_only and not input_data.get("situation_detached"):
         raise RuntimeError("Static release predates the independent Situation JSON contract; enqueue a new static release")
+    if literature_detached and not code_only and not input_data.get("literature_detached"):
+        raise RuntimeError("Static release predates the independent literature contract; enqueue a new static release")
     if ((runtime.astro_dir / "src/lib/surveillance-data.ts").is_file()
             and not getattr(service._config(), "surveillance_json_enabled", False)):
         # Check before any retained generation/render receipt can skip npm.
@@ -415,7 +427,7 @@ async def _execute_release_task(
     )
     await runtime.task_manager.update_task_progress(task.task_uuid, 60)
 
-    if r2_papers_enabled and job.include_cloudflare_deploy:
+    if r2_papers_enabled and not literature_detached and job.include_cloudflare_deploy:
         from .shared_assets import publish_shared_assets
 
         await publish_shared_assets(
@@ -433,7 +445,7 @@ async def _execute_release_task(
         publish_commit_message=publish_commit_message,
         download_git_timeout_seconds=DOWNLOAD_GIT_PUBLISH_TIMEOUT_SECONDS,
         literature_only=literature_only or content_only, code_only=code_only,
-        r2_papers_enabled=r2_papers_enabled, r2_reports_enabled=r2_reports_enabled,
+        r2_papers_enabled=r2_papers_enabled and not literature_detached, r2_reports_enabled=r2_reports_enabled,
     )
     completed_publications = await _run_repository_publications(repository_publications)
     raw_archive_published = "raw_archive" in completed_publications
@@ -477,7 +489,7 @@ async def _execute_release_task(
         env_value = getattr(service, "_env_value", lambda _name, default="": default)
         from .subscription_reconciliation import dispatch_safely
 
-        if dispatch_subscriptions and env_value("SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
+        if dispatch_subscriptions and not literature_detached and env_value("SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
             from .research_subscription import dispatch_after_release
 
             research_subscription_dispatch = await dispatch_safely(
@@ -543,10 +555,16 @@ async def _execute_release_task(
         # Static content never advances surveillance projections or consumes
         # surveillance markers, even if an old/manual task supplied their IDs.
         async with runtime.get_database() as db:
+            excluded_lines = ["surveillance"]
+            if situation_detached:
+                excluded_lines.append("situation")
+            if literature_detached:
+                excluded_lines.append("literature")
+            line_filter = (PublishDirty.line != "surveillance" if len(excluded_lines) == 1
+                           else PublishDirty.line.not_in(excluded_lines))
             await db.execute(update(PublishDirty).where(
                 PublishDirty.id.in_(input_data.get("publish_dirty_ids") or []),
-                (PublishDirty.line.not_in(["surveillance", "situation"]) if situation_detached
-                 else PublishDirty.line != "surveillance"), PublishDirty.published_at.is_(None),
+                line_filter, PublishDirty.published_at.is_(None),
             ).values(published_at=datetime.now(timezone.utc), published_task_uuid=task.task_uuid))
             await db.commit()
     elif pages_deployed and not code_only:

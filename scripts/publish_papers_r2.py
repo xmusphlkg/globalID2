@@ -57,7 +57,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--workers", type=int, default=int(os.environ.get("R2_PAPERS_UPLOAD_WORKERS", "32")),
-        help="Concurrent pooled R2 transfers (1–32; default: 32)",
+        help="Concurrent pooled R2 transfers (1–96; default: 32)",
+    )
+    parser.add_argument(
+        "--max-total-bytes", type=int, default=int(os.environ.get("R2_PAPERS_MAX_TOTAL_BYTES", "8000000000")),
+        help="Conservative total bucket budget, including other data channels (default: 8 GB)",
     )
     parser.add_argument(
         "--skip-public-verify",
@@ -71,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         config,
         verify_public=not args.skip_public_verify,
         workers=args.workers,
+        max_total_bytes=args.max_total_bytes,
     )
     print(
         json.dumps(

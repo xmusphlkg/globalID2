@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import { useState } from 'react';
 import { situationData } from '../../lib/situation-data';
 import { weeklyDiff } from './text';
@@ -25,7 +26,7 @@ function ArchiveOutbreak({ outbreak, period, locale }: { outbreak: OutbreakSumma
     <summary className="cursor-pointer font-semibold">{diseaseName(outbreak, locale)} · {(outbreak.country_codes ?? []).map(code => countryLabel({ code }, locale)).join(' · ')}</summary>
     <p className="text-xs mt-2 text-[rgb(var(--text-muted))]">{pick('First reported', '首次报告', 'Premier signalement')} {formatDay(outbreak.first_published, locale)} · <a className="underline" href={`${prefix}/situation/?outbreak=${encodeURIComponent(outbreak.outbreak_id)}`}>{pick('Show on map', '在地图中显示', 'Afficher sur la carte')}</a></p>
     {error && <p role="status">{pick('Details are unavailable.', '详情暂不可用。', 'Détails indisponibles.')} <button className="underline" onClick={load}>{pick('Retry', '重试', 'Réessayer')}</button></p>}
-    {loading && <p role="status">{pick('Loading…', '正在加载…', 'Chargement…')}</p>}
+    {loading && <p role="status">{<GIDSLoader language={locale} compact />}</p>}
     <ul className="mt-3 space-y-3">{(file?.alerts ?? []).filter(alert => weekOfDay(alert.published_date) === period).map(alert => <li className="border-t pt-3" key={alert.alert_id}>
       <strong>{alert.admin_area ? `${alert.admin_area}, ` : ''}{countryName(alert, locale)}</strong> · {formatDay(alert.published_date, locale)} · {STATUS_LABELS[alert.status]?.[locale] ?? alert.status}
       {countsLine(alert, locale) && <p>{countsLine(alert, locale)}</p>}
@@ -39,7 +40,7 @@ function ArchiveOutbreak({ outbreak, period, locale }: { outbreak: OutbreakSumma
 function WeekOutbreaks({ period, locale }: { period: string; locale: Locale }) {
   const { data, error, retry } = useSituationData<WeekDetails>(`/situation/weekly/${period}.json`);
   const pick = (en: string, zh: string, fr: string) => translate(locale, en, zh, fr);
-  if (!data) return <p role="status">{error ? <>{pick('Weekly details are unavailable.', '本周详情暂不可用。', 'Détails hebdomadaires indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></> : pick('Loading outbreak names…', '正在加载疫情目录…', 'Chargement des flambées…')}</p>;
+  if (!data) return <p role="status">{error ? <>{pick('Weekly details are unavailable.', '本周详情暂不可用。', 'Détails hebdomadaires indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></> : <GIDSLoader language={locale} compact />}</p>;
   const index = new Map((data.outbreaks ?? []).map(row => [row.outbreak_id, row]));
   return <>{[
     { name: pick('New outbreaks', '新增疫情', 'Nouvelles flambées'), ids: data.new_outbreaks },
@@ -52,7 +53,7 @@ export default function SituationArchive({ locale, mode, period: fixedPeriod, mo
   const query = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const pick = (en: string, zh: string, fr: string) => translate(locale, en, zh, fr);
   const prefix = locale === 'en' ? '' : `/${locale}`;
-  if (!data) return <p role="status">{error ? <>{pick('Situation archive is unavailable.', '态势归档暂不可用。', 'Archive indisponible.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></> : pick('Loading archive…', '正在加载归档…', 'Chargement des archives…')}</p>;
+  if (!data) return <p role="status">{error ? <>{pick('Situation archive is unavailable.', '态势归档暂不可用。', 'Archive indisponible.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></> : <GIDSLoader language={locale} compact />}</p>;
   const weeks = [...(data.periods ?? [])].filter(row => /^\d{4}-W\d{2}$/.test(row.period_key)).sort((a, b) => b.period_key.localeCompare(a.period_key));
   const month = fixedMonth || query.get('month') || '', period = fixedPeriod || query.get('period') || '';
   const selected = weeks.find(row => row.period_key === period);

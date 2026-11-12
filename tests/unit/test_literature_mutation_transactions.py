@@ -17,7 +17,7 @@ from starlette.requests import Request
 
 from dashboard.api.routers import literature as router
 from dashboard.api.schemas.literature import LiteratureArticleUpdate
-from src.ai import work_queue
+from src.ai import runtime as work_queue
 from src.core.config import LiteratureSettings
 from src.domain import (
     Base, LiteratureArticle, LiteratureEvidenceGap, LiteratureIngestRun,

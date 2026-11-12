@@ -14,6 +14,20 @@ from .monthly_common import normalized_csv
 
 ODS_CONSECUTIVE_TRANSPORT_FAILURE_LIMIT = 3
 ODS_MAX_WINDOW_MONTHS = 12
+ODS_TRANSPORT_ATTEMPTS = 3
+
+
+async def _fetch_monthly_exports_with_retry(crawler, disease, window):
+    """Retry only transport failures; never change the requested source scope."""
+    for attempt in range(1, ODS_TRANSPORT_ATTEMPTS + 1):
+        try:
+            return await asyncio.to_thread(crawler.fetch_monthly_exports, disease, months=window)
+        except requests.RequestException as exc:
+            if not is_tw_ods_transient_error(exc) or attempt == ODS_TRANSPORT_ATTEMPTS:
+                raise
+            logger.warning("[TW-NIDSS] Monthly export transport retry | code={} attempt={}/{} error={}",
+                           disease.code, attempt, ODS_TRANSPORT_ATTEMPTS, exc)
+            await asyncio.sleep(attempt)
 
 
 def _ods_month_windows(months):
@@ -51,31 +65,28 @@ async def collect(writer, *, source, months=None, output_csv):
                 diseases = await asyncio.to_thread(crawler.fetch_disease_index)
             except requests.RequestException:
                 capture.verify()
-                prior = [item for item in writer.artifacts if item.kind in {"prior_csv", "cached_monthly_csv"}]
-                if prior:
-                    return prior
                 raise
             capture.verify()
         if not diseases:
-            prior = [item for item in writer.artifacts if item.kind in {"prior_csv", "cached_monthly_csv"}]
-            if prior:
-                return prior
             raise RuntimeError("[TW-NIDSS] No diseases discovered from NIDSS dashboard")
         expected_disease_codes = [disease.code for disease in diseases]
         consecutive_ods_failures = 0
+        unresolved_transport = []
         windows = _ods_month_windows(months)
         for disease in diseases:
             raw = await asyncio.to_thread(crawler.download_csv_bytes, disease)
             if raw is not None:
+                consecutive_ods_failures = 0
                 actual_url = getattr(crawler, "last_csv_transport_url", None) or disease.monthly_csv_url
                 await writer.write(raw, source_url=actual_url, kind="monthly_csv", metadata={"code": disease.code, "name": disease.name, "weekly_csv_url": disease.weekly_csv_url, "expected_disease_codes": expected_disease_codes, "canonical_source_url": disease.monthly_csv_url, "transport_security": "https" if actual_url.lower().startswith("https://") else "http"})
             else:
                 for window in windows:
                     try:
-                        exports = await asyncio.to_thread(crawler.fetch_monthly_exports, disease, months=window)
+                        exports = await _fetch_monthly_exports_with_retry(crawler, disease, window)
                     except (requests.RequestException, ValueError) as exc:
                         if is_tw_ods_transient_error(exc):
                             consecutive_ods_failures += 1
+                            unresolved_transport.append(disease.code)
                             if consecutive_ods_failures >= ODS_CONSECUTIVE_TRANSPORT_FAILURE_LIMIT:
                                 raise requests.ConnectionError(
                                     "TW NIDSS monthly export temporarily unavailable after "
@@ -89,6 +100,12 @@ async def collect(writer, *, source, months=None, output_csv):
                     consecutive_ods_failures = 0
                     for item in exports:
                         await writer.write(item["payload"], source_url=item["source_url"], kind="monthly_ods", metadata={**item["metadata"], "expected_disease_codes": expected_disease_codes})
+        if unresolved_transport:
+            raise requests.ConnectionError(
+                "TW NIDSS monthly export temporarily unavailable after retries for "
+                + ", ".join(sorted(set(unresolved_transport)))
+                + "; partial source artifacts were retained for diagnosis"
+            )
     finally:
         crawler.session.close()
     return writer.artifacts
@@ -195,4 +212,4 @@ def organize(artifacts, *, updater, source, months=None, output_csv):
     missing_codes = sorted(expected_codes - live_codes)
     insecure_codes = sorted({artifact.metadata_["code"] for artifact in artifacts if artifact.kind == "monthly_csv" and (getattr(artifact, "metadata_", None) or {}).get("transport_security") == "http"})
     audit = {"status": "partial" if fallback_rows or missing_codes or rejected_exports or excluded or insecure_codes else "fresh", "live_disease_codes": sorted(live_codes), "missing_live_disease_codes": missing_codes, "live_rows": len(live_keys), "fallback_rows": len(fallback_rows), "fallback_disease_dates": [{"code": row.get("DiseaseCode"), "date": row["Date"]} for row in fallback_rows], "rejected_exports": rejected_exports, "excluded_rows": excluded, "unverified_transport_disease_codes": insecure_codes}
-    return TWUpdateFetchResult(rows, updater._latest_row_date(rows), Path(output_csv), [f"[organize] live_rows={len(live_keys)} fallback_rows={len(fallback_rows)}"], source_audit=audit)
+    return TWUpdateFetchResult(rows, updater._latest_row_date(live_rows), Path(output_csv), [f"[organize] live_rows={len(live_keys)} fallback_rows={len(fallback_rows)}"], source_audit=audit, store_rows=live_rows)

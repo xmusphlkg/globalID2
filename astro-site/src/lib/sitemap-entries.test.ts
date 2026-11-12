@@ -20,6 +20,19 @@ import {
 } from './sitemap-entries.ts';
 import { toSeoSlug } from './seo.ts';
 
+test('disease literature belongs to the Papers sitemap in all supported languages', () => {
+  const groups = buildSitemapGroups({ meta: {}, diseases: [], reports: [], loadReport: () => null,
+    research: { facets: { diseases: [{ disease_id: 'D146', slug: 'disseminated-cryptococcosis', count: 5 }] } },
+  });
+  assert.equal(groups.research.some(entry => entry.path.includes('/research/diseases/')), false);
+  assert.deepEqual(groups.papers.map(entry => entry.path), [
+    '/research/diseases/disseminated-cryptococcosis/', '/zh/research/diseases/disseminated-cryptococcosis/', '/fr/research/diseases/disseminated-cryptococcosis/',
+  ]);
+  const xml = renderSitemapXml(groups.papers, 'https://papers.globalinfectiousdisease.com');
+  assert.match(xml, /<loc>https:\/\/papers\.globalinfectiousdisease\.com\/zh\/research\/diseases\//);
+  assert.match(xml, /hreflang="fr-FR"/);
+});
+
 test('isolated reports sitemap matches the full sitemap without reading country data', () => {
   const options = {
     meta: { generated_at: '2026-11-05', countries: [{ code: 'JP', data_available: true }] },

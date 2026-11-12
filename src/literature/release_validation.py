@@ -19,6 +19,17 @@ def validate_public_research_payload(payload: dict[str, Any]) -> list[str]:
     article_ids: set[str] = set()
     dois: set[str] = set()
 
+    for article in payload.get("bibliographic_articles") or []:
+        label = str(article.get("article_id") or "bibliographic record")
+        if PRIVATE_ARTICLE_FIELDS & set(article):
+            blockers.append(f"{label} exports private bibliographic fields")
+        if article.get("editorial_status") != "published" or article.get("peer_review_status") != "peer_reviewed":
+            blockers.append(f"{label} is not an approved peer-reviewed bibliographic record")
+        if article.get("integrity_status") in {"retracted", "expression_of_concern"}:
+            blockers.append(f"{label} has blocked bibliographic integrity status")
+        if not (article.get("doi") or article.get("pmid")) or article.get("detail_available") is not False:
+            blockers.append(f"{label} lacks an external bibliographic source")
+
     for collection_name, collection in (("articles", articles), ("preprints", preprints)):
         for index, article in enumerate(collection):
             identity = str(article.get("article_id") or "")
@@ -54,7 +65,7 @@ def validate_public_research_payload(payload: dict[str, Any]) -> list[str]:
                 if classification_version < CLASSIFICATION_VERSION:
                     blockers.append(f"{label} has stale or missing classification evidence")
                 research_domain = str(article.get("research_domain") or "")
-                if research_domain not in {"human_health", "one_health", "not_determined"}:
+                if research_domain not in {"human_health", "one_health", "not_determined", "animal_only", "basic_research"}:
                     blockers.append(f"{label} has a non-public research domain: {research_domain or 'missing'}")
             related_ids = {str(item.get("article_id") or "") for item in article.get("related_articles") or []}
             if identity and identity in related_ids:

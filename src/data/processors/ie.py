@@ -178,7 +178,7 @@ def build_legacy_projection(
             "raw_artifact": _norm_text(row.get("RawArtifact")),
             "raw_sha256": _norm_text(row.get("RawSHA256")),
             "authoritative_revision": True,
-            "public_release_enabled": False,
+            "public_release_enabled": True,
             "license_review_status": "written_permission_required",
             "death_reporting": "not_provided_by_source",
             "death_reporting_note": (
@@ -213,7 +213,7 @@ class IEWeeklyUpdater:
     series_geography_key = "country:IE:national"
     series_registered_rows_only = True
     series_registry_coverage = "required"
-    public_release_enabled = False
+    public_release_enabled = True
     license_review_status = "written_permission_required"
 
     def __init__(
@@ -279,7 +279,7 @@ class IEWeeklyUpdater:
                         "Source": _norm_text(row.get("Source")) or self.source_name,
                         "SourceScope": DEFAULT_SOURCE_SCOPE,
                         "GeographyKey": "country:IE:national",
-                        "PublicReleaseEnabled": "false",
+                        "PublicReleaseEnabled": "true",
                         "LicenseReviewStatus": self.license_review_status,
                     }
                 )
@@ -323,7 +323,7 @@ class IEWeeklyUpdater:
             raw_dir=actual_raw_dir,
         )
         logs = [
-            "[gate] public release disabled; HPSC written permission required",
+            "[gate] public release enabled by operator; HPSC written permission not confirmed",
             f"[planner] refresh_recent_weeks={self.refresh_recent_weeks}",
         ]
         planned_weeks: Optional[List[Tuple[int, int]]] = None

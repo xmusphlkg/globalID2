@@ -185,7 +185,7 @@ async def test_replay_initial_audit_contains_scope_before_collection(monkeypatch
 
 @pytest.mark.parametrize("complete", [False, True])
 async def test_replay_worker_completed_window_is_a_noop(monkeypatch, complete):
-    from src.ai import work_queue
+    from src.ai import runtime as work_queue
     from src.core import config as config_module
     from src.domain import Task
 

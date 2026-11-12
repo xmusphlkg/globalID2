@@ -1,6 +1,7 @@
 import { visibleText, visibleTranslationPlaceholders } from './html-visible-text.mjs';
+import { isIndependentResearchRoute } from './check-seo-output.mjs';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 import {
   FR_UI,
   LOCALES,
@@ -162,12 +163,17 @@ if (report50) {
   }
 }
 
-const walkHtml = (directory) => {
+const walkHtml = (directory, root = directory) => {
   if (!existsSync(directory)) return [];
   const files = [];
+  const independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1';
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const path = resolve(directory, entry.name);
-    if (entry.isDirectory()) files.push(...walkHtml(path));
+    const route = `/${relative(root, path).replaceAll('\\', '/')}`;
+    // Research pages ship on their own publication. The main-site translation
+    // gate must not fail on a placeholder that only exists in that tree.
+    if (independentResearch && isIndependentResearchRoute(route)) continue;
+    if (entry.isDirectory()) files.push(...walkHtml(path, root));
     else if (entry.isFile() && entry.name === 'index.html') files.push(path);
   }
   return files;

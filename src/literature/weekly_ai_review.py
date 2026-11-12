@@ -18,6 +18,7 @@ import tempfile
 from typing import Any, Mapping
 
 from src.ai.agents.base import BaseAgent
+from src.ai.runtime.contracts import RoutingRequirements
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -75,10 +76,7 @@ class WeeklyBriefReviewAgent(BaseAgent):
             prompt=kwargs["prompt"],
             system=kwargs["system"],
             use_cache=True,
-            preferred_models=kwargs.get("preferred_models"),
-            wait_for_model_recovery=False,
-            max_attempts_per_model=1,
-            max_quota_recovery_rounds=0,
+            routing=RoutingRequirements(preferred_models=tuple(kwargs.get("preferred_models") or ())),
             model_request_timeout_seconds=kwargs.get("timeout_seconds", 60),
         )
         return {"raw_response": response}
@@ -442,7 +440,7 @@ class WeeklyAIReviewRunner:
         }
         last_error: Exception | None = None
         try:
-            from src.ai.work_queue import current_parent
+            from src.ai.runtime import current_parent
             async with asyncio.timeout(None if current_parent() is not None else timeout_seconds):
                 for _ in range(max(1, min(int(max_attempts), 2))):
                     try:

@@ -1,0 +1,121 @@
+{
+  "seconds": 30.022563,
+  "wal_delta": {
+    "wal_records": 527551.0,
+    "wal_fpi": 287591.0,
+    "wal_bytes": 731692374.0,
+    "wal_buffers_full": 0.0,
+    "wal_write": 7785.0,
+    "wal_sync": 7720.0,
+    "wal_write_time": 0.0,
+    "wal_sync_time": 0.0
+  },
+  "bgwriter_delta": {
+    "checkpoints_timed": 0.0,
+    "checkpoints_req": 0.0,
+    "checkpoint_write_time": 0.0,
+    "checkpoint_sync_time": 0.0,
+    "buffers_checkpoint": 8871.0,
+    "buffers_clean": 98.0,
+    "maxwritten_clean": 0.0,
+    "buffers_backend": 12852.0,
+    "buffers_backend_fsync": 0.0,
+    "buffers_alloc": 7340.0
+  },
+  "observations_delta": {
+    "n_live_tup": -748691.0,
+    "n_dead_tup": -1327713.0,
+    "n_tup_ins": 0.0,
+    "n_tup_upd": 1800.0,
+    "n_tup_del": 0.0,
+    "n_tup_hot_upd": 361.0,
+    "vacuum_count": 0.0,
+    "autovacuum_count": 1.0,
+    "analyze_count": 0.0,
+    "autoanalyze_count": 0.0
+  },
+  "database_delta": {
+    "xact_commit": 4521.0,
+    "xact_rollback": 4176.0,
+    "blks_read": 534999.0,
+    "blks_hit": 9371740.0,
+    "tup_inserted": 833.0,
+    "tup_updated": 2813.0,
+    "tup_deleted": 37.0,
+    "temp_files": 0.0,
+    "temp_bytes": 0.0,
+    "blk_read_time": 0.0,
+    "blk_write_time": 0.0
+  },
+  "disk_delta": {
+    "read_MB_s": 0.8069877311940357,
+    "write_MB_s": 13.602688884356741,
+    "read_iops": 45.199338910538714,
+    "write_iops": 341.7429751084209,
+    "read_await_ms": 0.4075165806927045,
+    "write_await_ms": 14.930799220272904,
+    "io_busy_percent": 71.55951342328767,
+    "avg_queue": 7.068617026467726,
+    "flush_iops": 50.02903982581367,
+    "flush_await_ms": 38.91744340878828
+  },
+  "io_pressure_last": "some avg10=7.23 avg60=7.68 avg300=7.58 total=18087541056\nfull avg10=6.43 avg60=6.79 avg300=6.62 total=17317781989",
+  "long_final": [
+    {
+      "pid": 2638476,
+      "backend_type": "client backend",
+      "state": "idle in transaction",
+      "wait_event_type": "Client",
+      "wait_event": "ClientRead",
+      "xact_age_s": "46.080930",
+      "query_age_s": "4.466573",
+      "client_pid": 1218595,
+      "cgroup": "globalid-dashboard-worker.service",
+      "observations_relation": false,
+      "copy": false,
+      "command": "select"
+    },
+    {
+      "pid": 2636924,
+      "backend_type": "client backend",
+      "state": "active",
+      "wait_event_type": "Lock",
+      "wait_event": "advisory",
+      "xact_age_s": "42.123560",
+      "query_age_s": "42.117546",
+      "client_pid": 1218595,
+      "cgroup": "globalid-dashboard-worker.service",
+      "observations_relation": false,
+      "copy": false,
+      "command": "select"
+    },
+    {
+      "pid": 2634386,
+      "backend_type": "client backend",
+      "state": "active",
+      "wait_event_type": "Lock",
+      "wait_event": "advisory",
+      "xact_age_s": "42.123271",
+      "query_age_s": "42.114721",
+      "client_pid": 1218595,
+      "cgroup": "globalid-dashboard-worker.service",
+      "observations_relation": false,
+      "copy": false,
+      "command": "select"
+    },
+    {
+      "pid": 2634349,
+      "backend_type": "client backend",
+      "state": "idle in transaction",
+      "wait_event_type": "Client",
+      "wait_event": "ClientRead",
+      "xact_age_s": "1133.183096",
+      "query_age_s": "5.321833",
+      "client_pid": 1218595,
+      "cgroup": "globalid-dashboard-worker.service",
+      "observations_relation": false,
+      "copy": false,
+      "command": "select"
+    }
+  ]
+}

@@ -195,8 +195,14 @@ const structuredData = {
     <!-- Apply theme before first paint to avoid flashing -->
     <script is:inline>
       (() => {
-        const storedTheme = localStorage.getItem('theme');
-        const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'light';
+        const sharedHost = location.hostname === 'globalinfectiousdisease.com' || location.hostname.endsWith('.globalinfectiousdisease.com');
+        const sharedTheme = sharedHost ? document.cookie.match(/(?:^|;\s*)gids_theme=(dark|light)(?:;|$)/)?.[1] : undefined;
+        let storedTheme;
+        try { storedTheme = localStorage.getItem('theme'); } catch { /* Storage can be disabled. */ }
+        const theme = sharedTheme || (storedTheme === 'dark' ? 'dark' : 'light');
+        if (sharedHost && !sharedTheme && (storedTheme === 'dark' || storedTheme === 'light')) {
+          document.cookie = `gids_theme=${theme}; Path=/; Domain=globalinfectiousdisease.com; Max-Age=31536000; SameSite=Lax; Secure`;
+        }
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.classList.toggle('dark', theme === 'dark');
       })();

@@ -8,7 +8,7 @@
 | 读者 | 按 PR 实施的工程师 |
 | Alembic 头 | `0021_situation_alerts`（`down_revision = 0020_drop_legacy_situation`） |
 
-本文是实施说明。公开站页面结构、Postgres / Redis / systemd 进程模型、疾病本体和 mapping v3 的产品规则保持不动。过时文档 `docs/REFACTORING_PLAN.md`、`docs/ARCHITECTURE_V2.md`、`src/data/README.md` 只作历史，不按它们实施。
+本文是实施说明。公开站页面结构、Postgres / Redis / systemd 进程模型、疾病本体和 mapping v3 的产品规则保持不动。`src/data/README.md` 只作历史参考，不按它实施。
 
 ## 1. 要改成什么样
 
@@ -67,9 +67,9 @@ flowchart TB
 | 态势任务 | `src/services/task_executor.py` `_run_situation_sources_refresh()` | 默认 `export=False`，只写数据库 |
 | 态势发布命令 | `src/services/data_release/commands.py` `build_update_situation_notices_command()` | 已是 `scripts/run_situation_notices.py --export-only` |
 | 模型准入 | `src/ai/model_center.py` | 按模型限流冷却、失败冷却、可路由判断 |
-| AI 槽位 | `task_worker.AdaptiveAIConcurrencyController` | 槽位数等于可路由路线的 `runtime_model_capacity` 之和。没有可路由路线时槽位为 0 |
+| AI 组织者槽位 | `task_worker.AIOrganizerAdmission` | 由 `TASK_WORKER_AI_CONCURRENCY` 控制，包含等待模型的父任务；动态模式无可用路线时暂停。模型 HTTP 许可由队列独立控制 |
 | 任务优先级 | `src/domain/task.py` `TaskPriority` | `urgent`、`high`、`normal`、`low`。领取顺序见 `_claim_next_task_uuid()` |
-| 评审选路 | `src/ai/peer_review_completer.py` `ReviewRoutePool` | 按空闲额度和近期成功率挑路线，目前只存在于单次运行内部 |
+| 评审选路 | `src/ai/runtime/`、`src/ai/model_identity.py` | 按全局路线租约容量领取活动；复审排除作者模型的规范身份，不再维护单次运行内的路线池 |
 
 Scheduler 的 schedule 适配器只有四类：`ingestion`、`release`、`literature`、`situation`。id 形式是 `{kind}:{job_id}`。知识 autopilot、mapping automation、idle backlog 由 scheduler 自己循环，不出现在 `GET /schedules`。
 

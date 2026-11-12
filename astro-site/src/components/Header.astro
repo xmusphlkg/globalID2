@@ -1,5 +1,6 @@
 ---
 import BrandLogo from './BrandLogo.astro';
+import GIDSLoading from './GIDSLoading.astro';
 import { createTranslator, localizedPath, LOCALES, stripLocalePrefix, type Lang } from '../utils/i18n';
 import { siteHref } from '../lib/papers';
 import { existsSync } from 'node:fs';
@@ -120,6 +121,8 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
       <input id="site-search-input" name="q" type="search" autocomplete="off" placeholder={copy('Search countries, diseases, reports, research…', '搜索国家、疾病、报告、研究…', 'Rechercher des pays, maladies, rapports, études…')} aria-describedby="site-search-help" />
     </div>
     <p id="site-search-help" class="site-search-help">{copy('Type at least 2 characters. Use arrow keys to review and Enter to open.', '输入至少 2 个字符。使用方向键浏览，Enter 打开。', 'Saisissez au moins 2 caractères. Utilisez les flèches puis Entrée pour ouvrir.')}</p>
+    <div id="site-search-loading" hidden><GIDSLoading language={currentLanguage} compact label={copy('Loading search…', '正在准备搜索…', 'Chargement de la recherche…')} /></div>
+    <p id="site-search-feedback" class="site-search-help" role="status" aria-live="polite"></p>
     <div id="site-search-results" class="site-search-results" role="listbox" aria-label={copy('Search results', '搜索结果', 'Résultats de recherche')}></div>
     <footer class="site-search-footer"><a id="site-search-all" href={localize('/search/')}>{copy('View all results', '查看全部结果', 'Voir tous les résultats')} <span aria-hidden="true">→</span></a></footer>
   </form>
@@ -220,45 +223,60 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   }
 </style>
 
-<script is:inline define:vars={{ isChinese, isFrench, languagePrefix: isChinese ? '/zh' : isFrench ? '/fr' : '' }}>
-  const localized = (en, zh, fr) => isChinese ? zh : isFrench ? fr : en;
+<script>
+  import { isPapersPath, isReportsPath, siteHref } from '../lib/papers';
+  import { searchSiteEntries, searchTitle, searchSummary, type SiteSearchEntry, type SearchLocale } from '../lib/site-search';
+  const language = document.documentElement.lang;
+  const isChinese = language.startsWith('zh');
+  const isFrench = language.startsWith('fr');
+  const languagePrefix = isChinese ? '/zh' : isFrench ? '/fr' : '';
+  const searchLocale: SearchLocale = isChinese ? 'zh' : isFrench ? 'fr' : 'en';
+  const localized = (en: string, zh: string, fr: string) => isChinese ? zh : isFrench ? fr : en;
   // Search results may point to pages on any of the three public hosts.
   const mainOrigin = 'https://globalinfectiousdisease.com';
   const papersOrigin = 'https://papers.globalinfectiousdisease.com';
   const reportsOrigin = 'https://reports.globalinfectiousdisease.com';
   const mainBase = [papersOrigin, reportsOrigin].includes(location.origin) ? mainOrigin : '';
-  const siteUrl = href => {
+  const siteUrl = (href: string) => {
     if (typeof href !== 'string' || !href.startsWith('/')) return href;
-    if (/^\/(?:(?:zh|fr)\/)?countries\/[^/]+\/reports(?:\/|$)|^\/site-data\/reports\//.test(href)) return reportsOrigin + href;
-    if (/^\/(?:(?:zh|fr)\/)?research\/articles\/|^\/research\/cards\/|^\/site-data\/research\//.test(href)) return papersOrigin + href;
+    if (import.meta.env.DEV && ![mainOrigin, papersOrigin, reportsOrigin].includes(location.origin)) return href;
+    if (isReportsPath(href)) return reportsOrigin + href;
+    if (isPapersPath(href)) return siteHref(href);
     return [papersOrigin, reportsOrigin].includes(location.origin) ? mainOrigin + href : href;
   };
   const themeButtons = [...document.querySelectorAll('[data-theme-toggle]')];
-  const themeLabel = document.querySelector('#theme-toggle-label');
-  const mobileButton = document.querySelector('#mobile-menu-toggle');
-  const mobileMenu = document.querySelector('#mobile-menu');
+  const themeLabel = document.querySelector<HTMLElement>('#theme-toggle-label');
+  const mobileButton = document.querySelector<HTMLButtonElement>('#mobile-menu-toggle');
+  const mobileMenu = document.querySelector<HTMLElement>('#mobile-menu');
   const siteHeader = document.querySelector('.site-header');
-  const dataMenu = document.querySelector('.site-nav-menu');
-  const languageMenus = [...document.querySelectorAll('.site-language-selector')];
-  const searchDialog = document.querySelector('#site-search-dialog');
-  const searchOpen = document.querySelector('#site-search-open');
-  const searchInput = document.querySelector('#site-search-input');
-  const searchResults = document.querySelector('#site-search-results');
-  const searchAll = document.querySelector('#site-search-all');
-  let searchEntries = [];
-  let searchLoaded = false;
+  const dataMenu = document.querySelector<HTMLDetailsElement>('.site-nav-menu');
+  const languageMenus = [...document.querySelectorAll<HTMLDetailsElement>('.site-language-selector')];
+  const searchDialog = document.querySelector<HTMLDialogElement>('#site-search-dialog');
+  const searchOpen = document.querySelector<HTMLButtonElement>('#site-search-open');
+  const searchInput = document.querySelector<HTMLInputElement>('#site-search-input');
+  const searchResults = document.querySelector<HTMLElement>('#site-search-results');
+  const searchAll = document.querySelector<HTMLAnchorElement>('#site-search-all');
+  let searchEntries: SiteSearchEntry[] = [];
+  let searchState: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+  let searchRequest: Promise<void> | null = null;
+  const searchLoading = document.querySelector('#site-search-loading');
+  const searchFeedback = document.querySelector('#site-search-feedback');
 
-  function applyTheme(theme) {
+  function applyTheme(theme: 'dark' | 'light') {
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', theme === 'dark');
     const next = theme === 'dark' ? 'Light' : 'Dark';
     if (themeLabel) themeLabel.textContent = next;
     themeButtons.forEach(button => button.setAttribute('aria-label', localized(theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme', theme === 'dark' ? '切换到浅色主题' : '切换到深色主题', theme === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre')));
   }
-  applyTheme(localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
   themeButtons.forEach(button => button.addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('theme', next); applyTheme(next);
+      try { localStorage.setItem('theme', next); } catch { /* Storage can be disabled. */ }
+      if (location.hostname === 'globalinfectiousdisease.com' || location.hostname.endsWith('.globalinfectiousdisease.com')) {
+        document.cookie = `gids_theme=${next}; Path=/; Domain=globalinfectiousdisease.com; Max-Age=31536000; SameSite=Lax; Secure`;
+      }
+      applyTheme(next);
     }));
 
   function closeMobileMenu(restoreFocus = false) {
@@ -275,11 +293,52 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   });
 
   async function loadSearch() {
-    if (searchLoaded) return;
-    try { const response = await fetch(`${mainBase}/site-data/search-index.json`); const payload = await response.json(); searchEntries = payload.entries || []; }
-    catch { searchEntries = []; }
-    searchLoaded = true;
+    if (searchState === 'ready') return;
+    if (searchRequest) return searchRequest;
+    searchState = 'loading';
+    renderSearch();
+    searchRequest = (async () => {
+      try {
+        const response = await fetch(`${mainBase}/site-data/search-index.json`);
+        if (!response.ok) throw new Error('Search index unavailable');
+        const payload = await response.json();
+        if (!Array.isArray(payload.entries)) throw new Error('Invalid search index');
+        searchEntries = payload.entries;
+        if (import.meta.env.PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN === '1') {
+          searchEntries = searchEntries.filter(entry => entry.kind !== 'research');
+          try {
+            const path = siteHref('/research/search-index.json');
+            const researchResponse = await fetch(path.startsWith('/') ? `${mainBase}${path}` : path);
+            if (!researchResponse.ok) throw new Error('Research search index unavailable');
+            const research = await researchResponse.json();
+            if (!Array.isArray(research.entries)) throw new Error('Invalid research search index');
+            searchEntries = [...searchEntries, ...research.entries];
+          } catch (error) { console.error('Research search unavailable', error); }
+        }
+        searchState = 'ready';
+      } catch {
+        searchState = 'error';
+      } finally {
+        searchRequest = null;
+        renderSearch();
+      }
+    })();
+    return searchRequest;
   }
+  function updateLanguageLinks() {
+    document.querySelectorAll<HTMLAnchorElement>('.site-language-option, .site-mobile-language-options a').forEach(anchor => {
+      const target = new URL(anchor.href);
+      target.search = location.search;
+      target.hash = location.hash;
+      anchor.href = target.toString();
+    });
+  }
+  updateLanguageLinks();
+  languageMenus.forEach(menu => menu.addEventListener('toggle', updateLanguageLinks));
+  window.addEventListener('gids:urlchange', updateLanguageLinks);
+  document.addEventListener('click', event => {
+    if (event.target instanceof Element && event.target.closest('.site-language-option, .site-mobile-language-options a')) updateLanguageLinks();
+  }, true);
   function openSearch() {
     closeMobileMenu();
     if (searchDialog instanceof HTMLDialogElement && !searchDialog.open) searchDialog.showModal();
@@ -318,35 +377,41 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   });
   window.matchMedia('(min-width: 1024px)').addEventListener('change', event => { if (event.matches) closeMobileMenu(); });
 
-  const normalized = value => String(value || '').normalize('NFKD').toLowerCase().trim();
-  const localizedSearchTitle = entry => isChinese ? (entry.title.zh || entry.title.en) : isFrench ? (entry.title.fr || 'Résultat sans titre français') : entry.title.en;
-  const localizedSearchSummary = entry => isChinese ? (entry.summary?.zh || entry.summary?.en || '') : isFrench ? (entry.summary?.fr || 'Résumé français indisponible.') : (entry.summary?.en || '');
-  function score(entry, query) {
-    const title = normalized(localizedSearchTitle(entry));
-    const aliases = (entry.aliases || []).map(normalized);
-    const summary = normalized(localizedSearchSummary(entry));
-    if (title === query) return 100;
-    if (title.startsWith(query)) return 80;
-    if (aliases.some(alias => alias === query)) return 70;
-    if (aliases.some(alias => alias.startsWith(query))) return 60;
-    if (title.includes(query)) return 50;
-    if (summary.includes(query)) return 20;
-    return 0;
-  }
   function renderSearch() {
     if (!(searchInput instanceof HTMLInputElement) || !searchResults) return;
-    const query = normalized(searchInput.value);
-    if (searchAll instanceof HTMLAnchorElement) searchAll.href = siteUrl(`${languagePrefix}/search/?q=${encodeURIComponent(searchInput.value.trim())}`);
+    const query = searchInput.value.trim();
+    if (searchAll instanceof HTMLAnchorElement) searchAll.href = siteUrl(`${languagePrefix}/search/?q=${encodeURIComponent(query)}`);
     searchResults.replaceChildren();
-    if (query.length < 2) return;
-    const matches = searchEntries.map(entry => ({ entry, rank: score(entry, query) })).filter(item => item.rank > 0).sort((a,b) => b.rank-a.rank).slice(0, 8);
-    if (!matches.length) { const empty = document.createElement('p'); empty.className='site-search-empty'; empty.textContent=localized('No matching evidence found.', '未找到匹配内容。', 'Aucun résultat trouvé.'); searchResults.append(empty); return; }
-    for (const { entry } of matches) {
+    if (searchLoading instanceof HTMLElement) searchLoading.hidden = searchState !== 'loading';
+    if (searchFeedback) searchFeedback.replaceChildren();
+    if (searchState === 'error') {
+      if (searchFeedback) {
+        searchFeedback.textContent = localized('Search could not load. ', '暂时无法加载搜索。', 'La recherche est indisponible. ');
+        const retry = document.createElement('button');
+        retry.type = 'button'; retry.className = 'underline';
+        retry.textContent = localized('Retry', '重试', 'Réessayer');
+        retry.addEventListener('click', () => void loadSearch());
+        searchFeedback.append(retry);
+      }
+      return;
+    }
+    if (searchState !== 'ready' || query.length < 2) return;
+    const matches = searchSiteEntries(searchEntries, query, searchLocale, 8).entries;
+    if (!matches.length) {
+      if (searchFeedback) searchFeedback.textContent = localized('No matching evidence found.', '没有找到相关内容，可尝试其他关键词。', 'Aucun résultat trouvé.');
+      return;
+    }
+    const kinds: Record<string, string> = {
+      country: localized('Countries', '国家与地区', 'Pays'), disease: localized('Disease', '疾病', 'Maladie'),
+      situation: localized('Situation', '态势', 'Situation'), report: localized('Report', '报告', 'Rapport'),
+      research: localized('Research', '文献', 'Recherche'), page: localized('Explore', '探索', 'Explorer'),
+    };
+    for (const entry of matches) {
       const link = document.createElement('a'); link.className='site-search-result'; link.setAttribute('role','option');
-      link.href = siteUrl(isChinese && entry.href.zh ? entry.href.zh : isFrench && entry.href.fr ? entry.href.fr : entry.href.en);
-      const kind = document.createElement('span'); kind.className='site-search-result-kind'; kind.textContent=entry.kind;
-      const title = document.createElement('strong'); title.textContent=localizedSearchTitle(entry);
-      const summary = document.createElement('small'); summary.textContent=localizedSearchSummary(entry);
+      link.href = siteUrl(entry.href[searchLocale] || entry.href.en);
+      const kind = document.createElement('span'); kind.className='site-search-result-kind'; kind.textContent=kinds[entry.kind] || entry.kind;
+      const title = document.createElement('strong'); title.textContent=searchTitle(entry, searchLocale);
+      const summary = document.createElement('small'); summary.textContent=searchSummary(entry, searchLocale);
       link.append(kind,title,summary); searchResults.append(link);
     }
   }
@@ -358,8 +423,8 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   });
   searchResults?.addEventListener('keydown', event => {
     if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
-    const links = [...searchResults.querySelectorAll('.site-search-result')];
-    const index = links.indexOf(document.activeElement);
+    const links = [...searchResults.querySelectorAll<HTMLAnchorElement>('.site-search-result')];
+    const index = links.findIndex(link => link === document.activeElement);
     if (index < 0) return;
     event.preventDefault();
     const nextIndex = event.key === 'ArrowDown' ? (index + 1) % links.length : (index - 1 + links.length) % links.length;

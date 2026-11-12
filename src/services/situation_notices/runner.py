@@ -121,11 +121,11 @@ async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, do
     await stages.transition("organize", metrics={"step": "extract"})
     summary["review_mode"] = None
     if not skip_ai:
-        from src.ai.peer_review_completer import QueuedModelCompleter
+        from src.ai.peer_review_completer import ModelCenterCompleter
 
-        def new_completer() -> QueuedModelCompleter:
+        def new_completer() -> ModelCenterCompleter:
             # One per report: it remembers which model wrote the draft.
-            return QueuedModelCompleter(line="situation_notice", allow_single_model=not require_cross_model)
+            return ModelCenterCompleter(line="situation_notice", allow_single_model=not require_cross_model)
 
         workers = concurrency or await model_pool_size()
         summary["review_mode"] = "scheduled"

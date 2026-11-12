@@ -3,7 +3,7 @@ import {
   DataZoomComponent,
   GridComponent,
   TooltipComponent,
-  VisualMapComponent,
+  VisualMapContinuousComponent,
 } from 'echarts/components';
 import echarts from './echartsCore';
 
@@ -13,7 +13,7 @@ echarts.use([
   DataZoomComponent,
   GridComponent,
   TooltipComponent,
-  VisualMapComponent,
+  VisualMapContinuousComponent,
 ]);
 
 export default echarts;

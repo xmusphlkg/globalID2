@@ -64,7 +64,7 @@ test('the site index prefixes catalogue links and sparks only the requested pair
   assert.equal(site.countries.KE?.href, undefined);
   assert.equal(site.countries.KE?.researchHref, '/zh/research/countries/ke/');
   assert.equal(site.diseases.D038?.href, '/zh/diseases/influenza/');
-  assert.equal(site.diseases.D038?.researchHref, '/zh/research/diseases/influenza/');
+  assert.equal(site.diseases.D038?.researchHref, 'https://papers.globalinfectiousdisease.com/zh/research/diseases/influenza/');
   assert.equal(site.series['JP:D038']?.curveHref, '/zh/countries/jp/diseases/influenza/');
   assert.deepEqual(site.series['JP:D038']?.spark, [1, 2, 3]);
   assert.equal(site.series['JP:D038']?.value, 3);

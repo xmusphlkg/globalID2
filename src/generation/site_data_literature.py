@@ -65,6 +65,7 @@ from src.generation.research_shards import (
     publish_browser_research_index,
 )
 from src.generation.site_data_queries import has_table
+from src.generation.literature_title_cache import LiteratureTitleCache, title_cache_identity
 from src.generation.site_data_writer import (
     remove_stale_json_files,
     write_compact_json,
@@ -96,6 +97,10 @@ def _title_estimated_literature_links(
     for disease_id, raw_term, term, pattern in prepared_aliases or _prepare_title_disease_aliases(
         diseases_by_id, aliases_by_id or {}
     ):
+        # Every pattern wraps this escaped literal in optional word boundaries.
+        # An absent literal cannot match; avoid a regex scan for every alias.
+        if term not in normalized:
+            continue
         for match in pattern.finditer(normalized):
             candidates.append((disease_id, raw_term, term, match.start(), match.end()))
 
@@ -154,7 +159,7 @@ def _prepare_title_disease_aliases(
             for key in ("name_en", "standard_name_en", "name_zh", "standard_name_zh", "name_fr", "standard_name_fr")
         }
         terms.update(str(term).strip() for term in aliases_by_id.get(str(disease_id), []))
-        for raw_term in terms:
+        for raw_term in sorted(terms):
             term = _normalize_title_match_text(raw_term)
             if not _usable_title_alias(term):
                 continue
@@ -239,7 +244,7 @@ def _title_estimated_topics(title: str) -> list[dict[str, str]]:
     normalized = re.sub(r"[^a-z0-9\u3400-\u9fff]+", " ", title.casefold())
     results = []
     for topic, terms in vocabulary.items():
-        matched = next((term for term in terms if _title_contains_term(normalized, term)), None)
+        matched = next((term for term in terms if term in normalized and _title_contains_term(normalized, term)), None)
         if matched:
             results.append({"name": topic, "source": "title_estimate", "matched_term": matched})
     return results
@@ -1015,6 +1020,7 @@ def empty_literature_export() -> dict[str, Any]:
         },
         "featured": [],
         "articles": [],
+        "bibliographic_articles": [],
         "title_estimated_related_records": [],
         "preprints": [],
         "related_only_articles": [],
@@ -1089,12 +1095,45 @@ def apply_public_summary_gate(
     )
 
 
+def bibliographic_catalogue_records(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Project approved records without evidence pages to a source-linked tier."""
+    fields = (
+        "article_id", "slug", "title", "doi", "pmid", "journal", "publisher",
+        "authors", "study_type", "published_at", "publication_week", "open_access_status",
+        "open_access_url", "peer_review_status", "discovery_score", "diseases", "countries",
+        "topics", "pathogens", "pathogen_types", "populations", "publication_date_label_en",
+        "publication_date_label_zh", "publication_date_label_fr", "integrity_status", "editorial_status",
+    )
+    return [
+        {**{key: article.get(key) for key in fields},
+         "content_tier": "bibliographic", "detail_available": False}
+        for article in articles
+        if article.get("editorial_status") == "published"
+        and article.get("peer_review_status") == "peer_reviewed"
+        and article.get("integrity_status") not in {"retracted", "expression_of_concern"}
+        and article.get("indexable") is not True
+        and (article.get("doi") or article.get("pmid"))
+        and article.get("research_domain") != "plant_only"
+    ]
+
+
+async def _load_article_links_in_batches(session: AsyncSession, model: Any, article_ids: list[str], *filters: Any) -> list[Any]:
+    """Keep expanding IN queries below the database driver's parameter limit."""
+    rows = []
+    for start in range(0, len(article_ids), 10000):
+        batch = article_ids[start:start + 10000]
+        result = await session.execute(select(model).where(model.article_id.in_(batch), *filters))
+        rows.extend(result.scalars().all())
+    return rows
+
+
 async def collect_literature_export(
     session: AsyncSession,
     *,
     diseases_by_id: dict[str, dict[str, Any]],
     surveillance_coverage: dict[str, set[str]] | None = None,
     limit: int = 500,
+    title_cache_path: Path | None = None,
 ) -> dict[str, Any]:
     if not await has_table(session, "literature_articles"):
         return empty_literature_export()
@@ -1153,6 +1192,12 @@ async def collect_literature_export(
     prepared_title_disease_aliases = _prepare_title_disease_aliases(
         diseases_by_id, title_disease_aliases
     )
+    title_cache = LiteratureTitleCache(title_cache_path, title_cache_identity(
+        diseases=diseases_by_id,
+        aliases=title_disease_aliases,
+        implementation=Path(__file__).read_bytes(),
+        prepared=prepared_title_disease_aliases,
+    ))
     title_estimate_records = []
     for article in review_candidates:
         policy = content_policy(article)
@@ -1175,25 +1220,21 @@ async def collect_literature_export(
             "detail_available": False,
             "diseases": [],
             "topics": [],
-            "title_estimated_diseases": _title_estimated_literature_links(
-                article.title, diseases_by_id, title_disease_aliases, prepared_title_disease_aliases
+            "title_estimated_diseases": title_cache.links(
+                article.article_id, article.title,
+                lambda: _title_estimated_literature_links(
+                    article.title, diseases_by_id, title_disease_aliases, prepared_title_disease_aliases
+                ),
             ),
             "title_estimated_topics": _title_estimated_topics(article.title),
             "estimate_method": "title_mention_only",
         })
+    title_cache.save()
+    if title_cache_path is not None:
+        print(f"  Literature title cache: {title_cache.hits} reused, {title_cache.misses} computed", flush=True)
     estimate_ids = [item["article_id"] for item in title_estimate_records]
-    estimated_disease_links = (
-        (await session.execute(
-            select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(estimate_ids))
-        )).scalars().all()
-        if estimate_ids else []
-    )
-    estimated_topic_links = (
-        (await session.execute(
-            select(LiteratureTopicLink).where(LiteratureTopicLink.article_id.in_(estimate_ids))
-        )).scalars().all()
-        if estimate_ids else []
-    )
+    estimated_disease_links = await _load_article_links_in_batches(session, LiteratureDiseaseLink, estimate_ids)
+    estimated_topic_links = await _load_article_links_in_batches(session, LiteratureTopicLink, estimate_ids)
     stored_diseases: dict[str, list[dict[str, Any]]] = defaultdict(list)
     stored_topics: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for link in estimated_disease_links:
@@ -1268,32 +1309,17 @@ async def collect_literature_export(
                     select(LiteratureArticle).where(LiteratureArticle.article_id.in_(integrity_article_ids))
                 )
             ).scalars().all()
-    disease_links = (
-        await session.execute(select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(article_ids)))
-    ).scalars().all() if article_ids else []
-    country_links = (
-        await session.execute(select(LiteratureCountryLink).where(LiteratureCountryLink.article_id.in_(article_ids)))
-    ).scalars().all() if article_ids else []
-    topic_links = (
-        await session.execute(select(LiteratureTopicLink).where(LiteratureTopicLink.article_id.in_(article_ids)))
-    ).scalars().all() if article_ids else []
-    summaries = (
-        await session.execute(
-            select(LiteratureSummary).where(
-                LiteratureSummary.article_id.in_(article_ids),
-                LiteratureSummary.status == "published",
-            )
-        )
-    ).scalars().all() if article_ids else []
+    disease_links = await _load_article_links_in_batches(session, LiteratureDiseaseLink, article_ids)
+    country_links = await _load_article_links_in_batches(session, LiteratureCountryLink, article_ids)
+    topic_links = await _load_article_links_in_batches(session, LiteratureTopicLink, article_ids)
+    summaries = await _load_article_links_in_batches(
+        session, LiteratureSummary, article_ids, LiteratureSummary.status == "published"
+    )
     signal_article_links = (
-        (
-            await session.execute(
-                select(LiteratureSignalArticleLink).where(
-                    LiteratureSignalArticleLink.article_id.in_(peer_reviewed_article_ids),
-                    LiteratureSignalArticleLink.status.in_(("confirmed", "rejected")),
-                )
-            )
-        ).scalars().all()
+        await _load_article_links_in_batches(
+            session, LiteratureSignalArticleLink, peer_reviewed_article_ids,
+            LiteratureSignalArticleLink.status.in_(("confirmed", "rejected")),
+        )
         if peer_reviewed_article_ids and await has_table(session, "literature_signal_article_links")
         else []
     )
@@ -1489,6 +1515,10 @@ async def collect_literature_export(
         })
 
     projected, preprints = partition_public_literature_articles(projected)
+    # Bibliographic records can be useful even when no detailed GIDS summary
+    # is available. They link to their original source, not to an evidence
+    # page, and never contain private abstracts or provider payloads.
+    bibliographic_articles = bibliographic_catalogue_records(projected)
     related_only_articles = [
         article
         for article in [*projected, *preprints]
@@ -1698,6 +1728,7 @@ async def collect_literature_export(
             reverse=True,
         )[:6],
         "articles": projected,
+        "bibliographic_articles": bibliographic_articles,
         "title_estimated_related_records": title_estimate_records,
         "preprints": preprints,
         "related_only_articles": related_only_articles,
@@ -1777,6 +1808,7 @@ def write_literature_artifacts(
     output_dir: Path,
     public_site_data_dir: Path | None = None,
     shard_max_bytes: int = PUBLIC_RESEARCH_SHARD_MAX_BYTES,
+    article_digests: dict[str, str] | None = None,
 ) -> None:
     phase_started = time.perf_counter()
 
@@ -1800,7 +1832,8 @@ def write_literature_artifacts(
     public_index = {
         key: value
         for key, value in payload.items()
-        if key not in {"disease_articles", "country_articles", "topic_articles"} and not key.startswith("_")
+        if key not in {"disease_articles", "country_articles", "topic_articles", "title_estimated_related_records"}
+        and not key.startswith("_")
     }
     public_index["weekly_briefs"] = [
         {key: value for key, value in brief.items() if key != "articles"}
@@ -1816,7 +1849,7 @@ def write_literature_artifacts(
         {
             "schema_version": public_index.get("schema_version"),
             "last_updated": public_index.get("last_updated"),
-            "articles": payload.get("articles") or [],
+            "articles": [*(payload.get("articles") or []), *(payload.get("bibliographic_articles") or [])],
         },
     )
     report_phase("build-time indexes")
@@ -1853,9 +1886,12 @@ def write_literature_artifacts(
         },
     )
     for article in public_article_details:
+        def record_detail(body: bytes, slug: str = article["slug"]) -> None:
+            article_digests[slug] = hashlib.sha256(body).hexdigest()
         write_pretty_json(
             article_dir / f"{article['slug']}.json",
             {**article, "knowledge_graph": build_knowledge_graph([article])},
+            **({"on_serialized": record_detail} if article_digests is not None else {}),
         )
     report_phase("article details")
     title_aliases = _load_title_disease_aliases()

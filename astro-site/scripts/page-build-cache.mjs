@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileHash } from './file-fingerprints.mjs';
 import { createSourceDependencyFingerprinter } from './source-dependencies.mjs';
 import { selectDirectoryCandidates } from '../src/lib/directory-facts.ts';
 import { openDirectoryBuildCache, directoryFactsVersion } from './directory-build-cache.mjs';
 import { hasCountryDataSnapshot } from '../src/lib/country-coverage.ts';
+import { diseaseLiteratureFromIndex } from '../src/lib/research-literature-projection.ts';
+import { readResearchPublicFields } from '../src/lib/research-public-source.ts';
 import { toSeoSlug } from '../src/lib/seo.ts';
 import { buildPublishableReports } from '../src/lib/report-routes.ts';
 import { addSituationPages } from './situation-build-cache.mjs';
@@ -25,6 +27,15 @@ const safeSegment = value => {
   if (!/^[A-Za-z0-9][A-Za-z0-9_()\-]*$/.test(segment)) throw new Error(`Unsafe page cache segment: ${segment}`);
   return segment;
 };
+
+export function readResearchCacheIndex(dataRoot, env = process.env) {
+  const source = resolve(dataRoot, 'research/index.json');
+  if (!existsSync(source)) return {};
+  if (statSync(source).size <= 480 * 1024 * 1024 && !env.GIDS_RESEARCH_PUBLIC_ROOT)
+    return json(source, {});
+  return readResearchPublicFields(resolve(env.GIDS_RESEARCH_PUBLIC_ROOT || siteRoot + '/public/site-data/research'),
+    ['articles', 'bibliographic_articles', 'preprints', 'facets']);
+}
 
 export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), shared = sharedFingerprint(), reportDiseaseTemplateHash = hashFile(reportDiseaseTemplate), directoryCachePath, directoryStats, env = process.env } = {}) {
   const graph = createSourceDependencyFingerprinter({ siteRoot });
@@ -57,13 +68,22 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   };
   addSituationPages({ dataRoot, add, hashFile, env });
   const routes = json(resolve(dataRoot, 'research/routes.json'), {});
-  const facets = routes.facets ?? json(resolve(dataRoot, 'research/index.json'), {}).facets ?? {};
-  for (const [group, facetGroup] of Object.entries({ countries: 'countries', diseases: 'diseases', topics: 'topics', weekly: 'weeks' })) {
+  const researchIndex = readResearchCacheIndex(dataRoot, env);
+  const literature = diseaseLiteratureFromIndex(researchIndex);
+  const literatureFingerprints = new Map([...literature.byDisease].map(([id, rows]) => [id, sha(JSON.stringify([literature.diseaseFacets.get(id), rows]))]));
+  const facets = routes.facets ?? researchIndex.facets ?? {};
+  for (const [group, facetGroup] of Object.entries(env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' ? {} : { countries: 'countries', topics: 'topics', weekly: 'weeks' })) {
     for (const facet of facets[facetGroup] ?? []) {
       const slug = safeSegment(group === 'weekly' ? facet.week : facet.slug);
       const file = group === 'diseases' ? safeSegment(String(facet.disease_id).toLowerCase()) : slug;
       add(`research:${group}:${slug}`, `research/${group}/${slug}`, [facet, hashFile(resolve(dataRoot, 'research', group, `${file}.json`))]);
     }
+  }
+
+  // Library facets include bibliographic-only diseases; curated collections do not.
+  for (const [id, facet] of env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' ? [] : literature.diseaseFacets) {
+    const slug = safeSegment(facet.slug);
+    add(`research:diseases:${slug}`, `research/diseases/${slug}`, [literatureFingerprints.get(id)]);
   }
 
   const countries = json(resolve(dataRoot, 'meta.json'), {}).countries ?? [];
@@ -93,6 +113,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
       add(`country-disease:${code}:${slug}`, `countries/${code}/diseases/${slug}`, [
         hashFile(resolve(dataRoot, 'countries', `${code}.json`)), countryAlerts,
         hashFile(resolve(dataRoot, 'research/diseases', `${safeSegment(diseaseId || slug).toLowerCase()}.json`)),
+        literatureFingerprints.get(String(diseaseId || slug).toLowerCase()) ?? null,
         downloads.countries?.find(entry => entry.code?.toLowerCase() === code) ?? null,
       ]);
     }
@@ -153,6 +174,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
       hashFile(resolve(dataRoot, 'diseases', `${id.toLowerCase()}.json`)),
       hashFile(resolve(dataRoot, 'disease-knowledge', `${id.toLowerCase()}.json`)),
       hashFile(resolve(dataRoot, 'research/diseases', `${id.toLowerCase()}.json`)),
+      literatureFingerprints.get(id.toLowerCase()) ?? null,
       alertHash(resolve(alertsDir, 'by-disease', `${id}.json`)),
       downloads.diseases?.find(entry => entry.disease_id === id || entry.slug === slug || entry.id === id.toLowerCase()) ?? null]);
   }

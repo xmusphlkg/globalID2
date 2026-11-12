@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import { useEffect, useMemo, useState } from 'react';
 import { loadDiseaseDataset, type DiseaseDatasetSeriesEntry, type DiseaseDatasetMonthlyData } from './diseaseDataset';
 import DiseaseSeasonalityHeatmap from './DiseaseSeasonalityHeatmap';
@@ -27,7 +28,7 @@ export default function CountrySeasonalityPicker({ dataUrl, language = 'en', ini
   const options = useMemo(() => Object.entries(series).filter(([code, entry]) => /^[A-Z]{2}$/.test(code) && monthlySeries(entry)).sort((a, b) => a[1].name_en.localeCompare(b[1].name_en)), [series]);
   const active = options.some(([code]) => code === country) ? country : options[0]?.[0];
   const data = active ? monthlySeries(series[active]) : null;
-  if (loading) return <div className="chart-loading-panel" role="status" aria-busy="true" style={{ height: 260 }} />;
+  if (loading) return <div className="chart-loading-panel" style={{ height: 260 }}><GIDSLoader language={language} /></div>;
   if (!data) return <p className="disease-trend-empty">{language === 'zh' ? '暂无可用的国家级月度序列。' : language === 'fr' ? 'Aucune série mensuelle nationale disponible.' : 'No national monthly series is available.'}</p>;
   return <div><div className="disease-seasonality-toolbar"><label className="disease-seasonality-select">{language === 'zh' ? '报告国家/地区' : language === 'fr' ? 'Pays déclarant' : 'Reporting country'} <select value={active} onChange={event => setCountry(event.target.value)}>{options.map(([code, entry]) => <option key={code} value={code}>{language === 'zh' ? entry.name_zh : language === 'fr' ? entry.name_fr : entry.name_en} ({code})</option>)}</select></label><span>{data.months[0]} — {data.months[data.months.length - 1]}</span></div><DiseaseSeasonalityHeatmap key={active} data={data} dataUrl={`/site-data/countries/${active.toLowerCase()}.json`} language={language} filename={`gids-${active.toLowerCase()}-seasonality`} /></div>;
 }

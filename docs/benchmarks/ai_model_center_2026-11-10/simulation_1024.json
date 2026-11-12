@@ -1,0 +1,2638 @@
+{
+  "at": "2026-11-10T15:05:57.676859+00:00",
+  "mode": "simulated",
+  "seed": 7,
+  "input_identity_sha256": "cd0f0e43a42d8b789f5e0e0123d097ed9da40b4d33ab0ed530b3a5c3dfb74264",
+  "source_revision": "0026_publish_dirty_changes",
+  "source_rows_copied": 1024,
+  "buffer_size": 512,
+  "capacity": 217,
+  "routes": [
+    {
+      "model_key": "simulation:model-0",
+      "capacity": 55,
+      "source_leased": 0
+    },
+    {
+      "model_key": "simulation:model-1",
+      "capacity": 54,
+      "source_leased": 0
+    },
+    {
+      "model_key": "simulation:model-2",
+      "capacity": 54,
+      "source_leased": 0
+    },
+    {
+      "model_key": "simulation:model-3",
+      "capacity": 54,
+      "source_leased": 0
+    }
+  ],
+  "simulated_latency_seconds": 5.0,
+  "elapsed_seconds": 94.207,
+  "timed_out": false,
+  "call_budget_reached": false,
+  "activity_attempts": 2048,
+  "activity_attempt_outcomes": {
+    "succeeded": 2048
+  },
+  "peak_active_executions": 217,
+  "background_errors": [],
+  "supply_ceiling": 217,
+  "distinct_model_count": 4,
+  "seconds_to_full_capacity": 4.922,
+  "whole_run_execution_occupancy": 0.5017,
+  "interior_sampled_occupancy": 0.5905,
+  "terminal_workflows": 1024,
+  "terminal_workflows_per_minute": 652.18,
+  "reviewed_workflows": 1024,
+  "workflow_outcomes": {
+    "held": 1005,
+    "published": 19
+  },
+  "activity_statuses": {
+    "succeeded": 2048
+  },
+  "execution_latency_p50_seconds": 5.004,
+  "execution_latency_p95_seconds": 5.021,
+  "ready_queue_wait_p50_seconds": 0.331,
+  "ready_queue_wait_p95_seconds": 5.751,
+  "tick_p95_seconds": 2.026,
+  "sql_statements": {
+    "SELECT": 16524,
+    "INSERT": 327,
+    "UPDATE": 2895
+  },
+  "totals": {
+    "published": 19,
+    "archived": 0,
+    "rejected": 0,
+    "held": 1005,
+    "deferred": 0,
+    "stale": 0,
+    "waiting": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "generation": 0,
+    "claimed": 1024,
+    "scanned": 1024,
+    "cursor": 2264,
+    "exhausted": true,
+    "pending": 0,
+    "buffer_budget": 512,
+    "buffer_target": 434
+  },
+  "samples": [
+    {
+      "t": 0.044,
+      "inflight": 0,
+      "valid_text_leases": 0,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 0.352,
+      "inflight": 0,
+      "valid_text_leases": 0,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 0.613,
+      "queued": 8,
+      "inflight": 0,
+      "valid_text_leases": 0,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 0.912,
+      "queued": 16,
+      "leased": 16,
+      "inflight": 1,
+      "valid_text_leases": 32,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 1.181,
+      "queued": 8,
+      "leased": 48,
+      "inflight": 48,
+      "valid_text_leases": 48,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 1.466,
+      "leased": 64,
+      "inflight": 64,
+      "valid_text_leases": 64,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 1.732,
+      "queued": 8,
+      "leased": 64,
+      "inflight": 64,
+      "valid_text_leases": 64,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 2.014,
+      "queued": 32,
+      "leased": 64,
+      "inflight": 64,
+      "valid_text_leases": 64,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 2.31,
+      "queued": 8,
+      "leased": 112,
+      "inflight": 95,
+      "valid_text_leases": 112,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 2.611,
+      "leased": 128,
+      "inflight": 128,
+      "valid_text_leases": 128,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 2.878,
+      "queued": 8,
+      "leased": 128,
+      "inflight": 128,
+      "valid_text_leases": 128,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 3.143,
+      "queued": 24,
+      "leased": 128,
+      "inflight": 128,
+      "valid_text_leases": 128,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 3.581,
+      "queued": 18,
+      "leased": 142,
+      "inflight": 136,
+      "valid_text_leases": 142,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 3.877,
+      "queued": 12,
+      "leased": 172,
+      "inflight": 169,
+      "valid_text_leases": 172,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 4.138,
+      "queued": 8,
+      "leased": 184,
+      "inflight": 184,
+      "valid_text_leases": 184,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 4.411,
+      "queued": 8,
+      "leased": 184,
+      "inflight": 184,
+      "valid_text_leases": 184,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 4.744,
+      "queued": 16,
+      "leased": 200,
+      "inflight": 192,
+      "valid_text_leases": 200,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 5.014,
+      "queued": 23,
+      "leased": 217,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 5.277,
+      "queued": 39,
+      "leased": 217,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 5.55,
+      "queued": 39,
+      "leased": 217,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 5.809,
+      "queued": 63,
+      "leased": 217,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 6.343,
+      "queued": 87,
+      "succeeded": 14,
+      "leased": 203,
+      "inflight": 153,
+      "valid_text_leases": 202,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 6.949,
+      "queued": 94,
+      "succeeded": 46,
+      "leased": 172,
+      "inflight": 154,
+      "valid_text_leases": 171,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 7.262,
+      "queued": 102,
+      "succeeded": 64,
+      "leased": 154,
+      "inflight": 124,
+      "valid_text_leases": 152,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 8.223,
+      "queued": 102,
+      "succeeded": 110,
+      "leased": 108,
+      "inflight": 90,
+      "valid_text_leases": 108,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 9.035,
+      "queued": 57,
+      "succeeded": 122,
+      "leased": 141,
+      "inflight": 60,
+      "valid_text_leases": 141,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 9.603,
+      "queued": 57,
+      "succeeded": 166,
+      "leased": 105,
+      "inflight": 79,
+      "valid_text_leases": 103,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 9.942,
+      "queued": 42,
+      "succeeded": 195,
+      "leased": 99,
+      "inflight": 77,
+      "valid_text_leases": 99,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 10.211,
+      "queued": 18,
+      "succeeded": 214,
+      "leased": 112,
+      "inflight": 109,
+      "valid_text_leases": 112,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 10.5,
+      "succeeded": 217,
+      "leased": 143,
+      "inflight": 143,
+      "valid_text_leases": 143,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 10.765,
+      "queued": 8,
+      "succeeded": 217,
+      "leased": 159,
+      "inflight": 159,
+      "valid_text_leases": 159,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 11.029,
+      "queued": 8,
+      "succeeded": 217,
+      "leased": 159,
+      "inflight": 159,
+      "valid_text_leases": 159,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 11.289,
+      "queued": 24,
+      "succeeded": 217,
+      "leased": 159,
+      "inflight": 159,
+      "valid_text_leases": 159,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 11.564,
+      "queued": 10,
+      "succeeded": 217,
+      "leased": 189,
+      "inflight": 188,
+      "valid_text_leases": 189,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 11.838,
+      "queued": 20,
+      "succeeded": 217,
+      "leased": 203,
+      "inflight": 203,
+      "valid_text_leases": 203,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 12.146,
+      "queued": 35,
+      "succeeded": 218,
+      "leased": 211,
+      "inflight": 211,
+      "valid_text_leases": 211,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 12.413,
+      "queued": 59,
+      "succeeded": 218,
+      "leased": 211,
+      "inflight": 211,
+      "valid_text_leases": 211,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 12.672,
+      "queued": 75,
+      "succeeded": 218,
+      "leased": 211,
+      "inflight": 211,
+      "valid_text_leases": 211,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 12.94,
+      "queued": 85,
+      "succeeded": 218,
+      "leased": 217,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 13.207,
+      "queued": 117,
+      "succeeded": 218,
+      "leased": 217,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 13.465,
+      "queued": 133,
+      "succeeded": 222,
+      "leased": 213,
+      "inflight": 201,
+      "valid_text_leases": 213,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 13.743,
+      "queued": 133,
+      "succeeded": 228,
+      "leased": 207,
+      "inflight": 201,
+      "valid_text_leases": 207,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 14.017,
+      "queued": 133,
+      "succeeded": 231,
+      "leased": 204,
+      "inflight": 195,
+      "valid_text_leases": 204,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 14.277,
+      "queued": 141,
+      "succeeded": 234,
+      "leased": 201,
+      "inflight": 191,
+      "valid_text_leases": 201,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 14.989,
+      "queued": 133,
+      "succeeded": 259,
+      "leased": 192,
+      "inflight": 157,
+      "valid_text_leases": 192,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 15.972,
+      "queued": 141,
+      "succeeded": 307,
+      "leased": 144,
+      "inflight": 75,
+      "valid_text_leases": 144,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 17.525,
+      "queued": 141,
+      "succeeded": 358,
+      "leased": 93,
+      "inflight": 22,
+      "valid_text_leases": 92,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 18.355,
+      "queued": 119,
+      "succeeded": 415,
+      "leased": 66,
+      "inflight": 32,
+      "valid_text_leases": 65,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 18.612,
+      "queued": 88,
+      "succeeded": 424,
+      "leased": 88,
+      "inflight": 77,
+      "valid_text_leases": 88,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 18.881,
+      "queued": 88,
+      "succeeded": 425,
+      "leased": 87,
+      "inflight": 77,
+      "valid_text_leases": 87,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 19.144,
+      "queued": 88,
+      "succeeded": 425,
+      "leased": 87,
+      "inflight": 77,
+      "valid_text_leases": 87,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 19.554,
+      "queued": 67,
+      "succeeded": 430,
+      "leased": 103,
+      "inflight": 69,
+      "valid_text_leases": 103,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 19.833,
+      "queued": 75,
+      "succeeded": 448,
+      "leased": 85,
+      "inflight": 82,
+      "valid_text_leases": 84,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 20.098,
+      "queued": 75,
+      "succeeded": 451,
+      "leased": 98,
+      "inflight": 91,
+      "valid_text_leases": 98,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 20.423,
+      "queued": 43,
+      "succeeded": 451,
+      "leased": 146,
+      "inflight": 142,
+      "valid_text_leases": 146,
+      "http_inflight": 0,
+      "completed": 0
+    },
+    {
+      "t": 20.686,
+      "queued": 4,
+      "succeeded": 451,
+      "leased": 185,
+      "inflight": 185,
+      "valid_text_leases": 185,
+      "http_inflight": 0,
+      "completed": 16
+    },
+    {
+      "t": 20.952,
+      "succeeded": 451,
+      "leased": 189,
+      "inflight": 189,
+      "valid_text_leases": 189,
+      "http_inflight": 0,
+      "completed": 32
+    },
+    {
+      "t": 21.23,
+      "succeeded": 451,
+      "leased": 189,
+      "inflight": 189,
+      "valid_text_leases": 189,
+      "http_inflight": 0,
+      "completed": 56
+    },
+    {
+      "t": 21.489,
+      "succeeded": 451,
+      "leased": 189,
+      "inflight": 189,
+      "valid_text_leases": 189,
+      "http_inflight": 0,
+      "completed": 64
+    },
+    {
+      "t": 21.765,
+      "succeeded": 451,
+      "leased": 189,
+      "inflight": 189,
+      "valid_text_leases": 189,
+      "http_inflight": 0,
+      "completed": 80
+    },
+    {
+      "t": 22.043,
+      "succeeded": 451,
+      "leased": 189,
+      "inflight": 189,
+      "valid_text_leases": 189,
+      "http_inflight": 0,
+      "completed": 96
+    },
+    {
+      "t": 22.317,
+      "succeeded": 451,
+      "leased": 189,
+      "inflight": 189,
+      "valid_text_leases": 189,
+      "http_inflight": 0,
+      "completed": 120
+    },
+    {
+      "t": 22.595,
+      "succeeded": 451,
+      "leased": 189,
+      "inflight": 189,
+      "valid_text_leases": 189,
+      "http_inflight": 0,
+      "completed": 128
+    },
+    {
+      "t": 22.868,
+      "queued": 8,
+      "succeeded": 451,
+      "leased": 194,
+      "inflight": 194,
+      "valid_text_leases": 194,
+      "http_inflight": 0,
+      "completed": 131
+    },
+    {
+      "t": 23.129,
+      "queued": 8,
+      "succeeded": 451,
+      "leased": 210,
+      "inflight": 210,
+      "valid_text_leases": 210,
+      "http_inflight": 0,
+      "completed": 131
+    },
+    {
+      "t": 23.428,
+      "queued": 32,
+      "succeeded": 453,
+      "leased": 208,
+      "inflight": 180,
+      "valid_text_leases": 208,
+      "http_inflight": 0,
+      "completed": 131
+    },
+    {
+      "t": 24.579,
+      "queued": 40,
+      "succeeded": 493,
+      "leased": 168,
+      "inflight": 141,
+      "valid_text_leases": 168,
+      "http_inflight": 0,
+      "completed": 131
+    },
+    {
+      "t": 24.845,
+      "queued": 40,
+      "succeeded": 516,
+      "leased": 145,
+      "inflight": 128,
+      "valid_text_leases": 144,
+      "http_inflight": 0,
+      "completed": 131
+    },
+    {
+      "t": 25.221,
+      "queued": 2,
+      "succeeded": 535,
+      "leased": 164,
+      "inflight": 131,
+      "valid_text_leases": 162,
+      "http_inflight": 0,
+      "completed": 155
+    },
+    {
+      "t": 25.773,
+      "succeeded": 577,
+      "leased": 124,
+      "inflight": 61,
+      "valid_text_leases": 123,
+      "http_inflight": 0,
+      "completed": 171
+    },
+    {
+      "t": 26.541,
+      "succeeded": 622,
+      "leased": 79,
+      "inflight": 61,
+      "valid_text_leases": 79,
+      "http_inflight": 0,
+      "completed": 179
+    },
+    {
+      "t": 26.805,
+      "succeeded": 631,
+      "leased": 70,
+      "inflight": 61,
+      "valid_text_leases": 69,
+      "http_inflight": 0,
+      "completed": 179
+    },
+    {
+      "t": 27.078,
+      "queued": 6,
+      "succeeded": 640,
+      "leased": 61,
+      "inflight": 61,
+      "valid_text_leases": 61,
+      "http_inflight": 0,
+      "completed": 181
+    },
+    {
+      "t": 27.355,
+      "succeeded": 640,
+      "leased": 75,
+      "inflight": 75,
+      "valid_text_leases": 75,
+      "http_inflight": 0,
+      "completed": 181
+    },
+    {
+      "t": 27.624,
+      "succeeded": 640,
+      "leased": 75,
+      "inflight": 75,
+      "valid_text_leases": 75,
+      "http_inflight": 0,
+      "completed": 197
+    },
+    {
+      "t": 27.901,
+      "succeeded": 640,
+      "leased": 75,
+      "inflight": 70,
+      "valid_text_leases": 75,
+      "http_inflight": 0,
+      "completed": 213
+    },
+    {
+      "t": 28.17,
+      "succeeded": 653,
+      "leased": 62,
+      "inflight": 54,
+      "valid_text_leases": 61,
+      "http_inflight": 0,
+      "completed": 229
+    },
+    {
+      "t": 28.488,
+      "queued": 8,
+      "succeeded": 661,
+      "leased": 56,
+      "inflight": 56,
+      "valid_text_leases": 64,
+      "http_inflight": 0,
+      "completed": 235
+    },
+    {
+      "t": 28.756,
+      "succeeded": 661,
+      "leased": 64,
+      "inflight": 64,
+      "valid_text_leases": 64,
+      "http_inflight": 0,
+      "completed": 251
+    },
+    {
+      "t": 29.022,
+      "queued": 3,
+      "succeeded": 661,
+      "leased": 64,
+      "inflight": 64,
+      "valid_text_leases": 64,
+      "http_inflight": 0,
+      "completed": 256
+    },
+    {
+      "t": 29.285,
+      "queued": 11,
+      "succeeded": 661,
+      "leased": 64,
+      "inflight": 64,
+      "valid_text_leases": 64,
+      "http_inflight": 0,
+      "completed": 256
+    },
+    {
+      "t": 29.573,
+      "queued": 16,
+      "succeeded": 661,
+      "leased": 75,
+      "inflight": 72,
+      "valid_text_leases": 75,
+      "http_inflight": 0,
+      "completed": 256
+    },
+    {
+      "t": 30.045,
+      "queued": 8,
+      "succeeded": 661,
+      "leased": 91,
+      "inflight": 50,
+      "valid_text_leases": 91,
+      "http_inflight": 0,
+      "completed": 256
+    },
+    {
+      "t": 30.624,
+      "queued": 8,
+      "succeeded": 682,
+      "leased": 78,
+      "inflight": 59,
+      "valid_text_leases": 78,
+      "http_inflight": 0,
+      "completed": 256
+    },
+    {
+      "t": 30.89,
+      "succeeded": 686,
+      "leased": 82,
+      "inflight": 67,
+      "valid_text_leases": 82,
+      "http_inflight": 0,
+      "completed": 256
+    },
+    {
+      "t": 31.166,
+      "succeeded": 691,
+      "leased": 77,
+      "inflight": 67,
+      "valid_text_leases": 77,
+      "http_inflight": 0,
+      "completed": 272
+    },
+    {
+      "t": 31.434,
+      "succeeded": 699,
+      "leased": 69,
+      "inflight": 67,
+      "valid_text_leases": 69,
+      "http_inflight": 0,
+      "completed": 280
+    },
+    {
+      "t": 31.727,
+      "queued": 8,
+      "succeeded": 701,
+      "leased": 74,
+      "inflight": 74,
+      "valid_text_leases": 74,
+      "http_inflight": 0,
+      "completed": 281
+    },
+    {
+      "t": 31.997,
+      "queued": 16,
+      "succeeded": 701,
+      "leased": 90,
+      "inflight": 90,
+      "valid_text_leases": 90,
+      "http_inflight": 0,
+      "completed": 281
+    },
+    {
+      "t": 32.257,
+      "succeeded": 703,
+      "leased": 104,
+      "inflight": 94,
+      "valid_text_leases": 104,
+      "http_inflight": 0,
+      "completed": 281
+    },
+    {
+      "t": 32.542,
+      "queued": 1,
+      "succeeded": 715,
+      "leased": 92,
+      "inflight": 92,
+      "valid_text_leases": 92,
+      "http_inflight": 0,
+      "completed": 296
+    },
+    {
+      "t": 32.877,
+      "succeeded": 715,
+      "leased": 117,
+      "inflight": 117,
+      "valid_text_leases": 117,
+      "http_inflight": 0,
+      "completed": 296
+    },
+    {
+      "t": 33.148,
+      "queued": 16,
+      "succeeded": 715,
+      "leased": 117,
+      "inflight": 117,
+      "valid_text_leases": 117,
+      "http_inflight": 0,
+      "completed": 296
+    },
+    {
+      "t": 33.408,
+      "queued": 24,
+      "succeeded": 715,
+      "leased": 117,
+      "inflight": 116,
+      "valid_text_leases": 117,
+      "http_inflight": 0,
+      "completed": 296
+    },
+    {
+      "t": 33.67,
+      "succeeded": 721,
+      "leased": 135,
+      "inflight": 131,
+      "valid_text_leases": 134,
+      "http_inflight": 0,
+      "completed": 304
+    },
+    {
+      "t": 33.934,
+      "queued": 8,
+      "succeeded": 725,
+      "leased": 141,
+      "inflight": 141,
+      "valid_text_leases": 141,
+      "http_inflight": 0,
+      "completed": 310
+    },
+    {
+      "t": 34.199,
+      "queued": 8,
+      "succeeded": 725,
+      "leased": 157,
+      "inflight": 157,
+      "valid_text_leases": 157,
+      "http_inflight": 0,
+      "completed": 310
+    },
+    {
+      "t": 34.512,
+      "succeeded": 725,
+      "leased": 181,
+      "inflight": 181,
+      "valid_text_leases": 181,
+      "http_inflight": 0,
+      "completed": 310
+    },
+    {
+      "t": 34.786,
+      "succeeded": 727,
+      "leased": 179,
+      "inflight": 173,
+      "valid_text_leases": 179,
+      "http_inflight": 0,
+      "completed": 318
+    },
+    {
+      "t": 35.107,
+      "succeeded": 733,
+      "leased": 173,
+      "inflight": 162,
+      "valid_text_leases": 173,
+      "http_inflight": 0,
+      "completed": 318
+    },
+    {
+      "t": 35.377,
+      "succeeded": 741,
+      "leased": 171,
+      "inflight": 160,
+      "valid_text_leases": 171,
+      "http_inflight": 0,
+      "completed": 320
+    },
+    {
+      "t": 35.653,
+      "succeeded": 750,
+      "leased": 162,
+      "queued": 8,
+      "inflight": 152,
+      "valid_text_leases": 161,
+      "http_inflight": 0,
+      "completed": 320
+    },
+    {
+      "t": 35.921,
+      "succeeded": 757,
+      "leased": 163,
+      "inflight": 152,
+      "valid_text_leases": 163,
+      "http_inflight": 0,
+      "completed": 320
+    },
+    {
+      "t": 36.182,
+      "succeeded": 765,
+      "leased": 155,
+      "queued": 8,
+      "inflight": 152,
+      "valid_text_leases": 155,
+      "http_inflight": 0,
+      "completed": 320
+    },
+    {
+      "t": 36.462,
+      "succeeded": 768,
+      "leased": 168,
+      "queued": 8,
+      "inflight": 161,
+      "valid_text_leases": 168,
+      "http_inflight": 0,
+      "completed": 320
+    },
+    {
+      "t": 36.732,
+      "succeeded": 771,
+      "leased": 181,
+      "queued": 8,
+      "inflight": 174,
+      "valid_text_leases": 181,
+      "http_inflight": 0,
+      "completed": 320
+    },
+    {
+      "t": 37.02,
+      "succeeded": 775,
+      "leased": 185,
+      "inflight": 169,
+      "valid_text_leases": 185,
+      "http_inflight": 0,
+      "completed": 328
+    },
+    {
+      "t": 37.392,
+      "succeeded": 783,
+      "leased": 177,
+      "inflight": 153,
+      "valid_text_leases": 175,
+      "http_inflight": 0,
+      "completed": 336
+    },
+    {
+      "t": 37.682,
+      "succeeded": 793,
+      "leased": 167,
+      "inflight": 144,
+      "valid_text_leases": 167,
+      "http_inflight": 0,
+      "completed": 344
+    },
+    {
+      "t": 38.134,
+      "succeeded": 814,
+      "leased": 146,
+      "inflight": 128,
+      "valid_text_leases": 144,
+      "http_inflight": 0,
+      "completed": 360
+    },
+    {
+      "t": 38.398,
+      "succeeded": 827,
+      "leased": 133,
+      "inflight": 128,
+      "valid_text_leases": 133,
+      "http_inflight": 0,
+      "completed": 360
+    },
+    {
+      "t": 38.744,
+      "succeeded": 835,
+      "leased": 126,
+      "inflight": 104,
+      "valid_text_leases": 125,
+      "http_inflight": 0,
+      "completed": 367
+    },
+    {
+      "t": 39.102,
+      "succeeded": 856,
+      "leased": 113,
+      "queued": 8,
+      "inflight": 95,
+      "valid_text_leases": 112,
+      "http_inflight": 0,
+      "completed": 367
+    },
+    {
+      "t": 39.949,
+      "succeeded": 871,
+      "leased": 98,
+      "queued": 8,
+      "inflight": 63,
+      "valid_text_leases": 98,
+      "http_inflight": 0,
+      "completed": 367
+    },
+    {
+      "t": 40.313,
+      "succeeded": 890,
+      "leased": 79,
+      "queued": 8,
+      "inflight": 57,
+      "valid_text_leases": 79,
+      "http_inflight": 0,
+      "completed": 367
+    },
+    {
+      "t": 40.592,
+      "succeeded": 895,
+      "leased": 74,
+      "queued": 8,
+      "inflight": 57,
+      "valid_text_leases": 73,
+      "http_inflight": 0,
+      "completed": 375
+    },
+    {
+      "t": 40.877,
+      "succeeded": 905,
+      "leased": 72,
+      "inflight": 57,
+      "valid_text_leases": 71,
+      "http_inflight": 0,
+      "completed": 391
+    },
+    {
+      "t": 41.136,
+      "succeeded": 914,
+      "leased": 63,
+      "inflight": 57,
+      "valid_text_leases": 63,
+      "http_inflight": 0,
+      "completed": 399
+    },
+    {
+      "t": 41.398,
+      "succeeded": 920,
+      "leased": 57,
+      "queued": 10,
+      "inflight": 57,
+      "valid_text_leases": 57,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 41.7,
+      "succeeded": 927,
+      "leased": 68,
+      "inflight": 43,
+      "valid_text_leases": 68,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 41.967,
+      "succeeded": 943,
+      "leased": 60,
+      "inflight": 43,
+      "valid_text_leases": 59,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 42.24,
+      "succeeded": 956,
+      "leased": 47,
+      "inflight": 43,
+      "valid_text_leases": 46,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 42.523,
+      "succeeded": 960,
+      "leased": 43,
+      "queued": 8,
+      "inflight": 43,
+      "valid_text_leases": 51,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 42.852,
+      "succeeded": 960,
+      "leased": 63,
+      "queued": 12,
+      "inflight": 59,
+      "valid_text_leases": 63,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 43.155,
+      "succeeded": 960,
+      "leased": 91,
+      "queued": 8,
+      "inflight": 91,
+      "valid_text_leases": 91,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 43.432,
+      "succeeded": 960,
+      "leased": 107,
+      "queued": 8,
+      "inflight": 107,
+      "valid_text_leases": 107,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 43.708,
+      "succeeded": 960,
+      "leased": 107,
+      "queued": 32,
+      "inflight": 107,
+      "valid_text_leases": 107,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 43.994,
+      "succeeded": 961,
+      "leased": 106,
+      "queued": 40,
+      "inflight": 98,
+      "valid_text_leases": 105,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 44.288,
+      "succeeded": 969,
+      "leased": 136,
+      "queued": 2,
+      "inflight": 129,
+      "valid_text_leases": 136,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 44.55,
+      "succeeded": 969,
+      "leased": 136,
+      "queued": 10,
+      "inflight": 136,
+      "valid_text_leases": 136,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 44.825,
+      "succeeded": 969,
+      "leased": 154,
+      "inflight": 154,
+      "valid_text_leases": 154,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 45.102,
+      "succeeded": 969,
+      "leased": 162,
+      "queued": 8,
+      "inflight": 162,
+      "valid_text_leases": 162,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 45.37,
+      "succeeded": 969,
+      "leased": 186,
+      "queued": 8,
+      "inflight": 186,
+      "valid_text_leases": 186,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 45.687,
+      "succeeded": 969,
+      "leased": 202,
+      "queued": 8,
+      "inflight": 194,
+      "valid_text_leases": 202,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 45.953,
+      "succeeded": 977,
+      "leased": 201,
+      "queued": 17,
+      "inflight": 201,
+      "valid_text_leases": 201,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 46.224,
+      "succeeded": 977,
+      "leased": 217,
+      "queued": 9,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 46.493,
+      "succeeded": 977,
+      "leased": 217,
+      "queued": 25,
+      "inflight": 215,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 46.773,
+      "succeeded": 982,
+      "leased": 214,
+      "queued": 39,
+      "inflight": 199,
+      "valid_text_leases": 214,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 47.061,
+      "succeeded": 996,
+      "leased": 208,
+      "queued": 39,
+      "inflight": 201,
+      "valid_text_leases": 207,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 47.356,
+      "succeeded": 1003,
+      "leased": 206,
+      "queued": 42,
+      "inflight": 206,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 405
+    },
+    {
+      "t": 47.638,
+      "succeeded": 1005,
+      "leased": 215,
+      "queued": 39,
+      "inflight": 209,
+      "valid_text_leases": 214,
+      "http_inflight": 0,
+      "completed": 413
+    },
+    {
+      "t": 47.925,
+      "succeeded": 1015,
+      "leased": 213,
+      "queued": 31,
+      "inflight": 190,
+      "valid_text_leases": 212,
+      "http_inflight": 0,
+      "completed": 429
+    },
+    {
+      "t": 48.387,
+      "succeeded": 1033,
+      "leased": 195,
+      "queued": 37,
+      "inflight": 161,
+      "valid_text_leases": 193,
+      "http_inflight": 0,
+      "completed": 431
+    },
+    {
+      "t": 48.653,
+      "succeeded": 1051,
+      "leased": 182,
+      "queued": 40,
+      "inflight": 166,
+      "valid_text_leases": 182,
+      "http_inflight": 0,
+      "completed": 431
+    },
+    {
+      "t": 48.918,
+      "succeeded": 1067,
+      "leased": 175,
+      "queued": 39,
+      "inflight": 175,
+      "valid_text_leases": 175,
+      "http_inflight": 0,
+      "completed": 431
+    },
+    {
+      "t": 49.228,
+      "succeeded": 1072,
+      "leased": 212,
+      "queued": 13,
+      "inflight": 193,
+      "valid_text_leases": 211,
+      "http_inflight": 0,
+      "completed": 431
+    },
+    {
+      "t": 50.029,
+      "succeeded": 1087,
+      "leased": 197,
+      "queued": 13,
+      "inflight": 153,
+      "valid_text_leases": 196,
+      "http_inflight": 0,
+      "completed": 439
+    },
+    {
+      "t": 50.291,
+      "succeeded": 1110,
+      "leased": 174,
+      "queued": 13,
+      "inflight": 138,
+      "valid_text_leases": 174,
+      "http_inflight": 0,
+      "completed": 447
+    },
+    {
+      "t": 50.87,
+      "succeeded": 1143,
+      "leased": 141,
+      "queued": 13,
+      "inflight": 106,
+      "valid_text_leases": 141,
+      "http_inflight": 0,
+      "completed": 463
+    },
+    {
+      "t": 51.227,
+      "succeeded": 1169,
+      "leased": 115,
+      "queued": 13,
+      "inflight": 90,
+      "valid_text_leases": 115,
+      "http_inflight": 0,
+      "completed": 471
+    },
+    {
+      "t": 51.499,
+      "succeeded": 1185,
+      "leased": 112,
+      "inflight": 103,
+      "valid_text_leases": 111,
+      "http_inflight": 0,
+      "completed": 487
+    },
+    {
+      "t": 51.822,
+      "succeeded": 1194,
+      "leased": 103,
+      "inflight": 102,
+      "valid_text_leases": 103,
+      "http_inflight": 0,
+      "completed": 495
+    },
+    {
+      "t": 52.081,
+      "succeeded": 1197,
+      "leased": 100,
+      "inflight": 93,
+      "valid_text_leases": 100,
+      "http_inflight": 0,
+      "completed": 503
+    },
+    {
+      "t": 52.636,
+      "succeeded": 1209,
+      "leased": 88,
+      "inflight": 77,
+      "valid_text_leases": 88,
+      "http_inflight": 0,
+      "completed": 519
+    },
+    {
+      "t": 52.902,
+      "succeeded": 1216,
+      "leased": 81,
+      "inflight": 76,
+      "valid_text_leases": 81,
+      "http_inflight": 0,
+      "completed": 535
+    },
+    {
+      "t": 53.182,
+      "succeeded": 1226,
+      "leased": 71,
+      "inflight": 69,
+      "valid_text_leases": 70,
+      "http_inflight": 0,
+      "completed": 551
+    },
+    {
+      "t": 53.466,
+      "succeeded": 1228,
+      "leased": 69,
+      "inflight": 69,
+      "valid_text_leases": 69,
+      "http_inflight": 0,
+      "completed": 559
+    },
+    {
+      "t": 53.799,
+      "succeeded": 1233,
+      "leased": 64,
+      "inflight": 55,
+      "valid_text_leases": 64,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 54.185,
+      "succeeded": 1242,
+      "leased": 58,
+      "queued": 8,
+      "inflight": 19,
+      "valid_text_leases": 58,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 55.411,
+      "succeeded": 1266,
+      "leased": 34,
+      "queued": 8,
+      "inflight": 16,
+      "valid_text_leases": 33,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 55.682,
+      "succeeded": 1284,
+      "leased": 32,
+      "inflight": 32,
+      "valid_text_leases": 32,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 55.959,
+      "succeeded": 1284,
+      "leased": 40,
+      "queued": 16,
+      "inflight": 40,
+      "valid_text_leases": 40,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 56.225,
+      "succeeded": 1284,
+      "leased": 64,
+      "inflight": 64,
+      "valid_text_leases": 64,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 56.49,
+      "succeeded": 1291,
+      "leased": 57,
+      "queued": 8,
+      "inflight": 51,
+      "valid_text_leases": 56,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 56.818,
+      "succeeded": 1297,
+      "leased": 83,
+      "inflight": 81,
+      "valid_text_leases": 83,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 57.112,
+      "succeeded": 1297,
+      "leased": 107,
+      "queued": 8,
+      "inflight": 100,
+      "valid_text_leases": 107,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 57.382,
+      "succeeded": 1297,
+      "leased": 123,
+      "queued": 8,
+      "inflight": 123,
+      "valid_text_leases": 123,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 57.667,
+      "succeeded": 1297,
+      "leased": 123,
+      "queued": 24,
+      "inflight": 123,
+      "valid_text_leases": 123,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 57.933,
+      "succeeded": 1297,
+      "leased": 123,
+      "queued": 40,
+      "inflight": 123,
+      "valid_text_leases": 123,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 58.296,
+      "succeeded": 1297,
+      "leased": 155,
+      "queued": 24,
+      "inflight": 151,
+      "valid_text_leases": 155,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 58.599,
+      "succeeded": 1297,
+      "leased": 187,
+      "queued": 8,
+      "inflight": 195,
+      "valid_text_leases": 195,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 58.874,
+      "succeeded": 1297,
+      "leased": 195,
+      "queued": 24,
+      "inflight": 195,
+      "valid_text_leases": 195,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 59.193,
+      "succeeded": 1300,
+      "leased": 200,
+      "queued": 40,
+      "inflight": 200,
+      "valid_text_leases": 200,
+      "http_inflight": 0,
+      "completed": 572
+    },
+    {
+      "t": 59.46,
+      "succeeded": 1300,
+      "leased": 217,
+      "queued": 36,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 59.724,
+      "succeeded": 1300,
+      "leased": 217,
+      "queued": 52,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 59.986,
+      "succeeded": 1300,
+      "leased": 217,
+      "queued": 60,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 60.255,
+      "succeeded": 1300,
+      "leased": 217,
+      "queued": 84,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 60.52,
+      "succeeded": 1300,
+      "leased": 217,
+      "queued": 92,
+      "inflight": 209,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 60.779,
+      "succeeded": 1312,
+      "leased": 212,
+      "queued": 109,
+      "inflight": 202,
+      "valid_text_leases": 212,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 61.17,
+      "succeeded": 1321,
+      "leased": 212,
+      "queued": 116,
+      "inflight": 193,
+      "valid_text_leases": 212,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 61.488,
+      "succeeded": 1330,
+      "leased": 203,
+      "queued": 124,
+      "inflight": 185,
+      "valid_text_leases": 202,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 61.748,
+      "succeeded": 1348,
+      "leased": 193,
+      "queued": 116,
+      "inflight": 177,
+      "valid_text_leases": 193,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 62.447,
+      "succeeded": 1362,
+      "leased": 194,
+      "queued": 109,
+      "inflight": 135,
+      "valid_text_leases": 193,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 63.251,
+      "succeeded": 1403,
+      "leased": 153,
+      "queued": 109,
+      "inflight": 120,
+      "valid_text_leases": 153,
+      "http_inflight": 0,
+      "completed": 575
+    },
+    {
+      "t": 63.897,
+      "succeeded": 1458,
+      "leased": 98,
+      "queued": 109,
+      "inflight": 64,
+      "valid_text_leases": 98,
+      "http_inflight": 0,
+      "completed": 591
+    },
+    {
+      "t": 64.178,
+      "succeeded": 1474,
+      "leased": 82,
+      "queued": 109,
+      "inflight": 56,
+      "valid_text_leases": 81,
+      "http_inflight": 0,
+      "completed": 599
+    },
+    {
+      "t": 65.515,
+      "succeeded": 1496,
+      "leased": 76,
+      "queued": 93,
+      "inflight": 39,
+      "valid_text_leases": 76,
+      "http_inflight": 0,
+      "completed": 615
+    },
+    {
+      "t": 65.83,
+      "succeeded": 1503,
+      "leased": 85,
+      "queued": 77,
+      "inflight": 67,
+      "valid_text_leases": 85,
+      "http_inflight": 0,
+      "completed": 615
+    },
+    {
+      "t": 66.206,
+      "succeeded": 1512,
+      "leased": 124,
+      "queued": 29,
+      "inflight": 87,
+      "valid_text_leases": 124,
+      "http_inflight": 0,
+      "completed": 631
+    },
+    {
+      "t": 66.53,
+      "succeeded": 1522,
+      "leased": 143,
+      "inflight": 132,
+      "valid_text_leases": 142,
+      "http_inflight": 0,
+      "completed": 639
+    },
+    {
+      "t": 66.814,
+      "succeeded": 1533,
+      "leased": 132,
+      "inflight": 124,
+      "valid_text_leases": 131,
+      "http_inflight": 0,
+      "completed": 647
+    },
+    {
+      "t": 67.129,
+      "succeeded": 1539,
+      "leased": 126,
+      "inflight": 112,
+      "valid_text_leases": 126,
+      "http_inflight": 0,
+      "completed": 663
+    },
+    {
+      "t": 67.413,
+      "succeeded": 1546,
+      "leased": 119,
+      "inflight": 110,
+      "valid_text_leases": 119,
+      "http_inflight": 0,
+      "completed": 687
+    },
+    {
+      "t": 67.677,
+      "succeeded": 1555,
+      "leased": 110,
+      "inflight": 109,
+      "valid_text_leases": 109,
+      "http_inflight": 0,
+      "completed": 703
+    },
+    {
+      "t": 67.94,
+      "succeeded": 1556,
+      "leased": 109,
+      "inflight": 109,
+      "valid_text_leases": 109,
+      "http_inflight": 0,
+      "completed": 719
+    },
+    {
+      "t": 68.22,
+      "succeeded": 1556,
+      "leased": 109,
+      "queued": 26,
+      "inflight": 109,
+      "valid_text_leases": 109,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 68.518,
+      "succeeded": 1556,
+      "leased": 125,
+      "queued": 26,
+      "inflight": 117,
+      "valid_text_leases": 125,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 68.788,
+      "succeeded": 1556,
+      "leased": 151,
+      "queued": 8,
+      "inflight": 151,
+      "valid_text_leases": 151,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 69.073,
+      "succeeded": 1556,
+      "leased": 173,
+      "queued": 2,
+      "inflight": 173,
+      "valid_text_leases": 173,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 69.356,
+      "succeeded": 1556,
+      "leased": 191,
+      "queued": 8,
+      "inflight": 191,
+      "valid_text_leases": 191,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 69.625,
+      "succeeded": 1556,
+      "leased": 217,
+      "queued": 6,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 69.893,
+      "succeeded": 1556,
+      "leased": 217,
+      "queued": 30,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 70.165,
+      "succeeded": 1556,
+      "leased": 217,
+      "queued": 54,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 70.434,
+      "succeeded": 1556,
+      "leased": 217,
+      "queued": 70,
+      "inflight": 217,
+      "valid_text_leases": 217,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 70.756,
+      "succeeded": 1557,
+      "leased": 216,
+      "queued": 82,
+      "inflight": 201,
+      "valid_text_leases": 215,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 71.38,
+      "succeeded": 1578,
+      "leased": 195,
+      "queued": 82,
+      "inflight": 148,
+      "valid_text_leases": 195,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 73.381,
+      "succeeded": 1646,
+      "leased": 127,
+      "queued": 90,
+      "inflight": 108,
+      "valid_text_leases": 126,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 74.426,
+      "succeeded": 1671,
+      "leased": 150,
+      "queued": 48,
+      "inflight": 49,
+      "valid_text_leases": 150,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 76.605,
+      "succeeded": 1754,
+      "leased": 79,
+      "queued": 36,
+      "inflight": 48,
+      "valid_text_leases": 79,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 76.868,
+      "succeeded": 1760,
+      "leased": 87,
+      "queued": 22,
+      "inflight": 74,
+      "valid_text_leases": 87,
+      "http_inflight": 0,
+      "completed": 725
+    },
+    {
+      "t": 77.152,
+      "succeeded": 1762,
+      "leased": 86,
+      "queued": 21,
+      "inflight": 75,
+      "valid_text_leases": 86,
+      "http_inflight": 0,
+      "completed": 741
+    },
+    {
+      "t": 77.418,
+      "succeeded": 1766,
+      "leased": 82,
+      "queued": 21,
+      "inflight": 75,
+      "valid_text_leases": 82,
+      "http_inflight": 0,
+      "completed": 749
+    },
+    {
+      "t": 77.693,
+      "succeeded": 1768,
+      "leased": 80,
+      "queued": 21,
+      "inflight": 75,
+      "valid_text_leases": 80,
+      "http_inflight": 0,
+      "completed": 765
+    },
+    {
+      "t": 77.966,
+      "succeeded": 1771,
+      "leased": 77,
+      "queued": 21,
+      "inflight": 75,
+      "valid_text_leases": 77,
+      "http_inflight": 0,
+      "completed": 773
+    },
+    {
+      "t": 78.246,
+      "succeeded": 1773,
+      "leased": 91,
+      "queued": 5,
+      "inflight": 84,
+      "valid_text_leases": 91,
+      "http_inflight": 0,
+      "completed": 789
+    },
+    {
+      "t": 78.568,
+      "succeeded": 1773,
+      "leased": 96,
+      "inflight": 83,
+      "valid_text_leases": 96,
+      "http_inflight": 0,
+      "completed": 805
+    },
+    {
+      "t": 78.987,
+      "succeeded": 1786,
+      "leased": 83,
+      "inflight": 65,
+      "valid_text_leases": 82,
+      "http_inflight": 0,
+      "completed": 821
+    },
+    {
+      "t": 79.26,
+      "succeeded": 1795,
+      "leased": 74,
+      "inflight": 65,
+      "valid_text_leases": 74,
+      "http_inflight": 0,
+      "completed": 829
+    },
+    {
+      "t": 79.548,
+      "succeeded": 1804,
+      "leased": 65,
+      "queued": 6,
+      "inflight": 65,
+      "valid_text_leases": 65,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 79.867,
+      "succeeded": 1804,
+      "leased": 71,
+      "queued": 16,
+      "inflight": 71,
+      "valid_text_leases": 87,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 80.143,
+      "succeeded": 1805,
+      "leased": 86,
+      "queued": 8,
+      "inflight": 86,
+      "valid_text_leases": 86,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 80.414,
+      "succeeded": 1805,
+      "leased": 86,
+      "queued": 16,
+      "inflight": 86,
+      "valid_text_leases": 86,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 80.686,
+      "succeeded": 1811,
+      "leased": 96,
+      "queued": 8,
+      "inflight": 86,
+      "valid_text_leases": 95,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 80.948,
+      "succeeded": 1815,
+      "leased": 100,
+      "inflight": 94,
+      "valid_text_leases": 100,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 81.225,
+      "succeeded": 1818,
+      "leased": 97,
+      "inflight": 94,
+      "valid_text_leases": 97,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 81.498,
+      "succeeded": 1821,
+      "leased": 94,
+      "inflight": 94,
+      "valid_text_leases": 94,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 82.448,
+      "succeeded": 1828,
+      "leased": 91,
+      "queued": 12,
+      "inflight": 67,
+      "valid_text_leases": 91,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 82.732,
+      "succeeded": 1830,
+      "leased": 101,
+      "inflight": 71,
+      "valid_text_leases": 101,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 83.001,
+      "succeeded": 1833,
+      "leased": 98,
+      "inflight": 83,
+      "valid_text_leases": 98,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 83.351,
+      "succeeded": 1840,
+      "leased": 91,
+      "inflight": 64,
+      "valid_text_leases": 91,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 83.618,
+      "succeeded": 1852,
+      "leased": 79,
+      "queued": 8,
+      "inflight": 62,
+      "valid_text_leases": 79,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 83.88,
+      "succeeded": 1856,
+      "leased": 75,
+      "queued": 8,
+      "inflight": 62,
+      "valid_text_leases": 75,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 84.17,
+      "succeeded": 1865,
+      "leased": 66,
+      "queued": 8,
+      "inflight": 62,
+      "valid_text_leases": 65,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 84.604,
+      "succeeded": 1869,
+      "leased": 62,
+      "queued": 16,
+      "inflight": 62,
+      "valid_text_leases": 62,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 84.874,
+      "succeeded": 1873,
+      "leased": 82,
+      "inflight": 80,
+      "valid_text_leases": 81,
+      "http_inflight": 0,
+      "completed": 831
+    },
+    {
+      "t": 85.141,
+      "succeeded": 1881,
+      "leased": 74,
+      "inflight": 64,
+      "valid_text_leases": 74,
+      "http_inflight": 0,
+      "completed": 839
+    },
+    {
+      "t": 85.411,
+      "succeeded": 1883,
+      "leased": 72,
+      "inflight": 64,
+      "valid_text_leases": 72,
+      "http_inflight": 0,
+      "completed": 839
+    },
+    {
+      "t": 85.861,
+      "succeeded": 1889,
+      "leased": 66,
+      "queued": 1,
+      "inflight": 40,
+      "valid_text_leases": 65,
+      "http_inflight": 0,
+      "completed": 846
+    },
+    {
+      "t": 86.125,
+      "succeeded": 1903,
+      "leased": 61,
+      "inflight": 49,
+      "valid_text_leases": 61,
+      "http_inflight": 0,
+      "completed": 846
+    },
+    {
+      "t": 86.399,
+      "succeeded": 1915,
+      "leased": 49,
+      "queued": 8,
+      "inflight": 49,
+      "valid_text_leases": 49,
+      "http_inflight": 0,
+      "completed": 846
+    },
+    {
+      "t": 86.673,
+      "succeeded": 1915,
+      "leased": 73,
+      "queued": 16,
+      "inflight": 73,
+      "valid_text_leases": 81,
+      "http_inflight": 0,
+      "completed": 846
+    },
+    {
+      "t": 86.957,
+      "succeeded": 1915,
+      "leased": 89,
+      "inflight": 89,
+      "valid_text_leases": 89,
+      "http_inflight": 0,
+      "completed": 862
+    },
+    {
+      "t": 87.224,
+      "succeeded": 1915,
+      "leased": 89,
+      "inflight": 89,
+      "valid_text_leases": 89,
+      "http_inflight": 0,
+      "completed": 878
+    },
+    {
+      "t": 87.498,
+      "succeeded": 1915,
+      "leased": 89,
+      "queued": 3,
+      "inflight": 89,
+      "valid_text_leases": 89,
+      "http_inflight": 0,
+      "completed": 891
+    },
+    {
+      "t": 87.91,
+      "succeeded": 1919,
+      "leased": 101,
+      "queued": 3,
+      "inflight": 80,
+      "valid_text_leases": 100,
+      "http_inflight": 0,
+      "completed": 891
+    },
+    {
+      "t": 88.2,
+      "succeeded": 1931,
+      "leased": 92,
+      "queued": 7,
+      "inflight": 92,
+      "valid_text_leases": 92,
+      "http_inflight": 0,
+      "completed": 892
+    },
+    {
+      "t": 88.481,
+      "succeeded": 1931,
+      "leased": 115,
+      "queued": 2,
+      "inflight": 109,
+      "valid_text_leases": 115,
+      "http_inflight": 0,
+      "completed": 892
+    },
+    {
+      "t": 88.754,
+      "succeeded": 1931,
+      "leased": 117,
+      "inflight": 117,
+      "valid_text_leases": 117,
+      "http_inflight": 0,
+      "completed": 907
+    },
+    {
+      "t": 89.02,
+      "succeeded": 1931,
+      "leased": 117,
+      "inflight": 117,
+      "valid_text_leases": 117,
+      "http_inflight": 0,
+      "completed": 907
+    },
+    {
+      "t": 89.285,
+      "succeeded": 1931,
+      "leased": 117,
+      "inflight": 117,
+      "valid_text_leases": 117,
+      "http_inflight": 0,
+      "completed": 907
+    },
+    {
+      "t": 89.557,
+      "succeeded": 1931,
+      "leased": 117,
+      "inflight": 117,
+      "valid_text_leases": 117,
+      "http_inflight": 0,
+      "completed": 907
+    },
+    {
+      "t": 89.992,
+      "succeeded": 1937,
+      "leased": 111,
+      "inflight": 93,
+      "valid_text_leases": 111,
+      "http_inflight": 0,
+      "completed": 907
+    },
+    {
+      "t": 90.266,
+      "succeeded": 1947,
+      "leased": 101,
+      "inflight": 93,
+      "valid_text_leases": 101,
+      "http_inflight": 0,
+      "completed": 914
+    },
+    {
+      "t": 90.532,
+      "succeeded": 1949,
+      "leased": 99,
+      "inflight": 93,
+      "valid_text_leases": 99,
+      "http_inflight": 0,
+      "completed": 914
+    },
+    {
+      "t": 90.797,
+      "succeeded": 1950,
+      "leased": 98,
+      "inflight": 93,
+      "valid_text_leases": 98,
+      "http_inflight": 0,
+      "completed": 920
+    },
+    {
+      "t": 91.069,
+      "succeeded": 1955,
+      "leased": 93,
+      "inflight": 93,
+      "valid_text_leases": 93,
+      "http_inflight": 0,
+      "completed": 920
+    },
+    {
+      "t": 91.34,
+      "succeeded": 1959,
+      "leased": 89,
+      "inflight": 84,
+      "valid_text_leases": 89,
+      "http_inflight": 0,
+      "completed": 929
+    },
+    {
+      "t": 91.609,
+      "succeeded": 1972,
+      "leased": 76,
+      "inflight": 66,
+      "valid_text_leases": 76,
+      "http_inflight": 0,
+      "completed": 941
+    },
+    {
+      "t": 92.028,
+      "succeeded": 1985,
+      "leased": 63,
+      "inflight": 44,
+      "valid_text_leases": 63,
+      "http_inflight": 0,
+      "completed": 955
+    },
+    {
+      "t": 92.297,
+      "succeeded": 1990,
+      "leased": 58,
+      "inflight": 44,
+      "valid_text_leases": 58,
+      "http_inflight": 0,
+      "completed": 962
+    },
+    {
+      "t": 92.601,
+      "succeeded": 2002,
+      "leased": 46,
+      "inflight": 44,
+      "valid_text_leases": 44,
+      "http_inflight": 0,
+      "completed": 966
+    },
+    {
+      "t": 92.888,
+      "succeeded": 2004,
+      "leased": 44,
+      "inflight": 37,
+      "valid_text_leases": 44,
+      "http_inflight": 0,
+      "completed": 980
+    },
+    {
+      "t": 93.156,
+      "succeeded": 2018,
+      "leased": 30,
+      "inflight": 25,
+      "valid_text_leases": 30,
+      "http_inflight": 0,
+      "completed": 982
+    },
+    {
+      "t": 93.472,
+      "succeeded": 2025,
+      "leased": 23,
+      "inflight": 8,
+      "valid_text_leases": 18,
+      "http_inflight": 0,
+      "completed": 994
+    },
+    {
+      "t": 93.771,
+      "succeeded": 2042,
+      "leased": 6,
+      "inflight": 0,
+      "valid_text_leases": 5,
+      "http_inflight": 0,
+      "completed": 1009
+    },
+    {
+      "t": 94.043,
+      "succeeded": 2048,
+      "inflight": 0,
+      "valid_text_leases": 0,
+      "http_inflight": 0,
+      "completed": 1016
+    }
+  ],
+  "http_requests": 0,
+  "http_outcomes": {},
+  "http_latency_p50_seconds": null,
+  "http_latency_p95_seconds": null,
+  "limits": [
+    "Decisions and health updates remain in a disposable database.",
+    "Occupancy includes warmup and finite-batch drain; this is not sustained provider throughput.",
+    "Simulated replies do not measure model quality; live calls use a per-route cap and total call budget."
+  ]
+}

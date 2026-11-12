@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from src.ai import work_queue
+from src.ai import runtime as work_queue
 from src.core.config import LiteratureSettings
 from src.domain import (
     Base,

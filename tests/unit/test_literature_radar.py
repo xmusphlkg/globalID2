@@ -1,9 +1,12 @@
 from datetime import datetime, timezone
+import csv
+import inspect
 import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import src.generation.site_data_literature as literature_export_module
 
 from src.generation.site_data_literature import (
     _chunk_records,
@@ -56,6 +59,41 @@ from dashboard.api.routers.literature import _publication_blockers
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.mark.parametrize("title", [
+    "Vaccination surveillance and genomic epidemiology",
+    "ONE HEALTH: zoonotic animal reservoir monitoring",
+    "抗生素 antimicrobial-resistance and antibiotic resistance",
+    "epidemiology, incidence, prevalence and transmission",
+    "retesting nondiagnostic subcluster epidemicity",
+    "surveillance_2026 monitoring2 2monitoring",
+    "génomíc survéillance; íncidence; DIAGNOSTIC testing",
+    "登革热调查 2026 unrelated title",
+])
+def test_title_topic_prefilter_matches_previous_implementation(title):
+    source = inspect.getsource(literature_export_module._title_estimated_topics)
+    old_source = source.replace("term in normalized and ", "")
+    assert source != old_source
+    namespace = {}
+    exec(old_source, vars(literature_export_module), namespace)
+    assert literature_export_module._title_estimated_topics(title) == namespace["_title_estimated_topics"](title)
+
+
+def test_title_topic_prefilter_skips_absent_terms_and_retains_boundaries(monkeypatch):
+    called = []
+    original = literature_export_module._title_contains_term
+
+    def tracked(title, term):
+        called.append(term)
+        return original(title, term)
+
+    monkeypatch.setattr(literature_export_module, "_title_contains_term", tracked)
+    assert literature_export_module._title_estimated_topics("retesting monitoring2") == []
+    assert called == ["monitoring", "testing"]
+    called.clear()
+    assert literature_export_module._title_estimated_topics("Unrelated title") == []
+    assert called == []
 
 
 def test_research_chunk_boundaries_match_serialized_file_budget():
@@ -111,6 +149,59 @@ def test_title_disease_aliases_use_correct_ids_and_specific_mentions():
 
     h5n1 = _title_estimated_literature_links("Study of H5N1 avian influenza", diseases, aliases)
     assert [item["disease_id"] for item in h5n1] == ["D014"]
+
+
+class _UnfilteredRegexText(str):
+    """Disable only the literal prefilter to reproduce the previous regex scan."""
+
+    def __contains__(self, _term):
+        return True
+
+
+def test_title_literal_prefilter_preserves_config_alias_boundaries_and_specificity(monkeypatch):
+    with (ROOT / "configs/standard_diseases.csv").open(encoding="utf-8", newline="") as stream:
+        diseases = {row["disease_id"]: row for row in csv.DictReader(stream)}
+    diseases["TEST_ACCENT"] = {"name_en": "Fièvre Q", "name_zh": "测试热病"}
+    aliases = _load_title_disease_aliases()
+    prepared = literature_export_module._prepare_title_disease_aliases(diseases, aliases)
+    # Real configured aliases exercise every supported preparation form; fixed
+    # cases cover CJK substring matches, Latin boundaries, accents and negation.
+    titles = [
+        "SARS-CoV-2 infection and SARS outbreak",
+        "Study of H5N1 avian influenza",
+        "A non-HIV cohort with HIV infection",
+        "HIV negative controls and hepatitis B infection",
+        "HIVpositive and antidengue vaccine candidates",
+        "dengue-negative controls without malaria",
+        "A cohort free of dengue infection",
+        "我国登革热与流感调查",
+        "抗登革热疫苗的研究进展",
+        "Fièvre Q outbreaks", "FIEVRE Q outbreaks", "Fie\u0300vre Q outbreaks",
+        "No disease terms in this title.",
+        *[f"Research on {raw_term} infection" for _, raw_term, _, _ in prepared[::17]],
+    ]
+    expected = []
+    normalize = literature_export_module._normalize_title_match_text
+    with monkeypatch.context() as baseline:
+        baseline.setattr(literature_export_module, "_normalize_title_match_text", lambda value: _UnfilteredRegexText(normalize(value)))
+        for title in titles:
+            expected.append(_title_estimated_literature_links(title, diseases, aliases, prepared))
+    actual = [_title_estimated_literature_links(title, diseases, aliases, prepared) for title in titles]
+    assert actual == expected
+    assert "TEST_ACCENT" in {entry["disease_id"] for entry in actual[9]}
+    assert actual[9] == actual[10] == actual[11]
+
+
+def test_title_literal_prefilter_skips_absent_regexes_but_retains_boundary_checks():
+    class AbsentPattern:
+        def finditer(self, _value):
+            raise AssertionError("An absent literal must not scan the title")
+
+    diseases = {"D162": {"name_en": "HIV infection"}}
+    prepared = [("D162", "HIV", "hiv", AbsentPattern())]
+    assert _title_estimated_literature_links("A dengue study", diseases, prepared_aliases=prepared) == []
+    normal = literature_export_module._prepare_title_disease_aliases(diseases, {"D162": ["HIV"]})
+    assert _title_estimated_literature_links("HIVpositive controls", diseases, prepared_aliases=normal) == []
 
 
 def test_autopilot_summary_reconciliation_does_not_load_heavy_article_payloads():
@@ -398,7 +489,7 @@ def test_classifier_links_disease_country_topics_and_study_type():
     assert [item.key for item in result.countries] == ["JP"]
     assert {item.key for item in result.topics} == {"Surveillance", "Vaccination", "Outbreak investigation"}
     assert result.study_type == "Outbreak investigation"
-    assert result.publication_status == "published"
+    assert result.publication_status == "review"
     assert 0.75 <= result.discovery_score <= 0.85
     assert result.surveillance_relation_score == 0.0
 
@@ -413,7 +504,7 @@ def test_short_terms_do_not_create_substring_false_positives():
         taxonomy={},
     )
     assert result.diseases == []
-    assert result.publication_status == "excluded"
+    assert result.publication_status == "review"
 
 
 def test_aggregate_catalogue_rows_never_become_literature_diseases():
@@ -427,7 +518,7 @@ def test_aggregate_catalogue_rows_never_become_literature_diseases():
         taxonomy={"topics": {"Surveillance": ["surveillance"]}},
     )
     assert result.diseases == []
-    assert result.publication_status == "excluded"
+    assert result.publication_status == "review"
 
 
 def test_recommendations_in_prose_do_not_misclassify_an_article_as_a_guideline():
@@ -564,12 +655,17 @@ def test_literature_artifacts_keep_the_build_index_while_sharding_the_browser_co
     payload = {**empty_literature_export(), "articles": [article]}
     public_dir = tmp_path / "public"
 
-    write_literature_artifacts(payload, tmp_path / "build", public_site_data_dir=public_dir)
+    article_digests = {}
+    write_literature_artifacts(payload, tmp_path / "build", public_site_data_dir=public_dir,
+                               article_digests=article_digests)
 
     build_index = json.loads((tmp_path / "build/research/index.json").read_text(encoding="utf-8"))
     browser_index = json.loads((public_dir / "research/index.json").read_text(encoding="utf-8"))
     assert build_index["articles"][0]["slug"] == "published-article"
     assert browser_index["articles"][0]["slug"] == "published-article"
+    import hashlib
+    assert article_digests == {"published-article": hashlib.sha256(
+        (tmp_path / "build/research/articles/published-article.json").read_bytes()).hexdigest()}
     assert (public_dir / "research/index.json").stat().st_size <= 8 * 1024 * 1024
 
 
@@ -1359,22 +1455,13 @@ def test_parse_json_extracts_first_json_object_from_messy_text() -> None:
 
 
 @pytest.mark.asyncio
-async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeypatch):
+async def test_literature_evidence_agent_submits_routing_requirements(monkeypatch):
     captured = {}
 
     async def fake_complete(self, **kwargs):
         captured.update(kwargs)
         return "{}"
 
-    monkeypatch.setattr(
-        "src.literature.enrichment.get_config",
-        lambda: SimpleNamespace(
-            literature=SimpleNamespace(
-                ai_wait_for_model_recovery=True,
-                ai_quota_recovery_rounds=1,
-            )
-        ),
-    )
     monkeypatch.setattr(LiteratureEvidenceAgent, "complete", fake_complete)
 
     await LiteratureEvidenceAgent().process(
@@ -1384,9 +1471,9 @@ async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeyp
         timeout_seconds=30,
     )
 
-    assert captured["wait_for_model_recovery"] is True
-    assert captured["max_quota_recovery_rounds"] == 1
-    assert captured["max_attempts_per_model"] == 2
+    assert captured["routing"].preferred_models == ("qwen3.8-flash",)
+    assert captured["model_request_timeout_seconds"] == 30
+    assert set(captured) == {"prompt", "system", "use_cache", "routing", "model_request_timeout_seconds"}
 
 
 @pytest.mark.asyncio
@@ -1678,7 +1765,7 @@ def test_manual_publication_gate_blocks_future_and_incomplete_records():
     assert "authors are missing" in blockers
 
 
-def test_autopilot_confirms_exact_relationship_and_publishes_eligible_article():
+def test_autopilot_relation_is_only_a_candidate_for_contextual_review():
     article = _autopilot_article()
     link = SimpleNamespace(
         status="review",
@@ -1699,7 +1786,7 @@ def test_autopilot_confirms_exact_relationship_and_publishes_eligible_article():
         now=datetime(2026, 8, 13, tzinfo=timezone.utc),
     )
     assert relation.action == "confirm"
-    assert publication.action == "publish"
+    assert publication.action == "hold"
 
 
 def test_autopilot_holds_preprints_and_rejects_weak_relationships():
@@ -1731,10 +1818,10 @@ def test_autopilot_defers_future_only_records_and_re_evaluates_after_publication
 
     assert deferred.action == "defer"
     assert "scheduled for automatic re-evaluation" in deferred.reasons[0]
-    assert eligible.action == "publish"
+    assert eligible.action == "hold"
 
 
-def test_future_date_does_not_hide_an_independent_incomplete_record_exclusion():
+def test_future_date_and_incomplete_metadata_are_held_for_review():
     article = _autopilot_article(
         published_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
         authors=[],
@@ -1748,7 +1835,7 @@ def test_future_date_does_not_hide_an_independent_incomplete_record_exclusion():
         now=datetime(2026, 8, 17, tzinfo=timezone.utc),
     )
 
-    assert decision.action == "exclude"
+    assert decision.action == "hold"
     assert "authors are missing" in decision.reasons
 
 
@@ -1791,7 +1878,7 @@ def test_correction_notice_requires_both_title_marker_and_explicit_parent_relati
     assert decision(corrected_primary).action == "hold"
 
 
-def test_animal_only_exclusion_requires_no_disease_link_and_extremely_low_score():
+def test_animal_only_records_are_held_even_with_low_discovery_score():
     metadata = {"classification_evidence": {"research_domain": {"value": "animal_only"}}}
 
     def decision(*, score, disease_confidence):
@@ -1807,13 +1894,13 @@ def test_animal_only_exclusion_requires_no_disease_link_and_extremely_low_score(
             now=datetime(2026, 8, 17, tzinfo=timezone.utc),
         )
 
-    assert decision(score=0.15, disease_confidence=0.0).action == "exclude"
+    assert decision(score=0.15, disease_confidence=0.0).action == "hold"
     assert decision(score=0.15, disease_confidence=0.80).action == "hold"
     assert decision(score=0.30, disease_confidence=0.0).action == "hold"
     assert decision(score=0.74, disease_confidence=0.95).action == "hold"
 
 
-def test_non_public_research_domains_cannot_auto_publish():
+def test_animal_and_basic_research_are_not_excluded_before_contextual_review():
     for domain in ("animal_only", "basic_research"):
         article = _autopilot_article(
             discovery_score=0.95,
@@ -1827,7 +1914,6 @@ def test_non_public_research_domains_cannot_auto_publish():
             now=datetime(2026, 8, 17, tzinfo=timezone.utc),
         )
         assert decision.action == "hold"
-        assert domain in decision.reasons[0]
 
     plant = _autopilot_article(
         discovery_score=0.95,
@@ -1839,7 +1925,7 @@ def test_non_public_research_domains_cannot_auto_publish():
         max_disease_confidence=0.99,
         confirmed_relation_levels={"exact_disease_geography"},
         now=datetime(2026, 8, 17, tzinfo=timezone.utc),
-    ).action == "exclude"
+    ).action == "hold"
 
 
 def test_published_revalidation_only_reopens_hard_public_boundary_failures():
@@ -1872,7 +1958,7 @@ def test_published_revalidation_only_reopens_hard_public_boundary_failures():
         confirmed_relation_levels={"exact_disease_geography"},
         now=now,
     )
-    assert _published_revalidation_status(animal_only, animal_decision, now=now) == "review"
+    assert _published_revalidation_status(animal_only, animal_decision, now=now) == "published"
 
     plant_only = _autopilot_article(
         publication_status="published",
@@ -1889,7 +1975,7 @@ def test_published_revalidation_only_reopens_hard_public_boundary_failures():
     assert _published_revalidation_status(plant_only, plant_decision, now=now) == "excluded"
 
 
-def test_relevance_exception_band_remains_fail_closed_for_human_health_research():
+def test_high_disease_confidence_does_not_replace_contextual_review():
     article = _autopilot_article(
         discovery_score=0.65,
         metadata_={"classification_evidence": {"research_domain": {"value": "human_health"}}},
@@ -1904,7 +1990,7 @@ def test_relevance_exception_band_remains_fail_closed_for_human_health_research(
     )
 
     assert decision.action == "hold"
-    assert decision.reasons == ("article relevance is inside the exception-review band",)
+    assert "contextual review" in decision.reasons[-1]
 
 
 def test_non_public_summary_review_is_deferred_by_article_state():
@@ -2083,12 +2169,8 @@ async def test_french_enrichment_uses_canonical_english_contract():
 # Problem 1 new tests: article exclusion gate
 # ---------------------------------------------------------------------------
 
-def test_low_discovery_with_disease_link_becomes_hold_not_exclude():
-    """High-relevance but low-discovery paper must go to hold, not exclude.
-
-    Mirrors the motivating case: relevance 1.0, discovery 0.579 — previously
-    excluded by the discovery score gate, now must be held for AI peer review.
-    """
+def test_low_discovery_with_strong_disease_link_requires_contextual_review():
+    """Discovery score is not a disease relevance or publication gate."""
     article = _autopilot_article(
         discovery_score=0.579,
         # default domain is not set → treated as human_health by _research_domain
@@ -2102,12 +2184,11 @@ def test_low_discovery_with_disease_link_becomes_hold_not_exclude():
         now=datetime(2026, 8, 17, tzinfo=timezone.utc),
     )
     assert decision.action == "hold"
-    assert "below the automatic publication gate" in decision.reasons[0]
-    assert "AI review decides" in decision.reasons[0]
+    assert "contextual review" in decision.reasons[-1]
 
 
-def test_low_discovery_no_disease_link_still_excluded():
-    """An article with no disease link and a sub-threshold score must still be excluded."""
+def test_low_discovery_without_disease_link_requires_review():
+    """No disease match is uncertainty rather than proof of irrelevance."""
     article = _autopilot_article(
         discovery_score=0.50,
         metadata_={},
@@ -2119,8 +2200,8 @@ def test_low_discovery_no_disease_link_still_excluded():
         confirmed_relation_levels=set(),
         now=datetime(2026, 8, 17, tzinfo=timezone.utc),
     )
-    assert decision.action == "exclude"
-    assert "no disease link" in decision.reasons[0]
+    assert decision.action == "hold"
+    assert "contextual review" in decision.reasons[0]
 
 
 # ---------------------------------------------------------------------------
@@ -2236,3 +2317,27 @@ async def test_restore_parent_excluded_summaries_restores_and_respects_dry_run()
     assert summary_b.status == "archived"
     assert summary_d.status == "archived"
     assert db2.flushed
+
+
+def test_hib_guideline_does_not_inherit_an_unsupported_openalex_influenza_topic():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+    candidate.title = "Use of Haemophilus influenzae Type b-Containing Vaccines Among American Indian and Alaska Native Infants"
+    candidate.abstract_text = "Invasive Haemophilus influenzae type b (Hib) disease is a serious bacterial infection. A primary Hib vaccination series with DTaP-IPV-Hib-HepB is preferred."
+    candidate.source_payload = {"openalex": {"topics": [{"display_name": "Influenza Virus Research Studies", "score": 0.998}]}}
+    diseases = [
+        {"disease_id": "D100", "name_en": "Haemophilus influenzae", "name_zh": "流感嗜血杆菌", "aliases": ["Hib"]},
+        {"disease_id": "D038", "name_en": "Influenza", "name_zh": "流行性感冒", "aliases": ["influenza virus", "流感"]},
+    ]
+    def classify():
+        return {match.key for match in classify_candidate(candidate, diseases=diseases, countries=[], taxonomy={}).diseases}
+    assert classify() == {"D100"}
+    candidate.abstract_text += " Co-infection with influenza virus was also evaluated."
+    assert classify() == {"D100", "D038"}
+    candidate.abstract_text = "Haemophilus influenzae and influenza co-infections were studied."
+    assert classify() == {"D100", "D038"}
+    # A separate high-specificity controlled heading requires source review;
+    # this narrow coarse-topic guard does not overrule it.
+    candidate.abstract_text = "Haemophilus influenzae isolates were sequenced."
+    candidate.source_payload["europe_pmc"] = {"meshHeadingList": {"meshHeading": [{"descriptorName": "Influenza, Human", "majorTopic_YN": "Y"}]}}
+    assert classify() == {"D100", "D038"}

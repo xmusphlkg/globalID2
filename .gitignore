@@ -21,6 +21,10 @@ ENV/
 .env.*
 !.env.example
 !.env.*.example
+# Wrangler local secrets are runtime-only; examples can remain versioned.
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
 /cloudflare/subscriptions/wrangler.toml
 /cloudflare/subscriptions/wrangler.generated.toml
 
@@ -43,6 +47,7 @@ coverage.xml
 
 # Node.js dependencies (dashboard, Astro and subscription worker)
 node_modules/
+.next/
 
 # Next.js control plane (including isolated GLOBALID_NEXT_DIST_DIR builds)
 /dashboard/.next/
@@ -61,6 +66,7 @@ playwright-report/
 blob-report/
 **/.wrangler/
 *.tsbuildinfo
+*.log
 .eslintcache
 npm-debug.log*
 yarn-debug.log*
@@ -105,6 +111,8 @@ pnpm-debug.log*
 /data/backups/
 /backups/
 /data/system-settings.json
+/data/realtime-publishing-control.json
+/data/literature-publishing-control.json
 /data/*.lock
 !/data/.gitkeep
 /configs/literature/weekly_ai_reviews.json.lock
@@ -112,6 +120,7 @@ pnpm-debug.log*
 # Documentation build artifacts / large fixtures
 /site/
 /tests/fixtures/ai_test_data/
+/docs/benchmarks/
 
 # Local databases and temp files
 *.db

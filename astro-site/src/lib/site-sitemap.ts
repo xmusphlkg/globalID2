@@ -5,13 +5,17 @@ import { diseaseIndex, loadCountryDirectory, loadDiseaseDirectory, loadCountry, 
 import { listMonths, listWeeks, readSituationMap } from '../utils/international';
 import { readResearchIndex } from './generated-site-data';
 import { memoizeForBuild } from './build-memo';
+import { diseaseLiteratureCatalogue } from './research-literature-server';
+import { independentResearchPages } from './page-build-plan';
 
 // Every sitemap partition and the papers host share one derived catalogue.
 // Previously each endpoint recomputed every group, including full surveillance
 // ranking and research facet histories, before discarding all other groups.
 export const siteSitemapGroups = memoizeForBuild(() => {
   const map = readSituationMap();
-  const researchFile = resolve('./src/data/research/index.json');
+  const researchFile = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', 'research/index.json');
+  const research = !independentResearchPages() && existsSync(researchFile) ? readResearchIndex() : undefined;
+  const library = research ? diseaseLiteratureCatalogue() : undefined;
   return buildSitemapGroups({
     meta: siteMeta, diseases: diseaseIndex, reports: reportIndex,
     loadReport, loadDisease, loadKnowledge, loadCountry, loadCountryDirectory, loadDiseaseDirectory,
@@ -22,6 +26,11 @@ export const siteSitemapGroups = memoizeForBuild(() => {
     },
     // Share the frozen research index with the other static routes. Parsing it
     // again here can temporarily retain two copies of this very large file.
-    research: existsSync(researchFile) ? readResearchIndex() : undefined,
+    research: research && library ? {
+      ...research,
+      facets: { ...research.facets, diseases: [...library.diseaseFacets.values()].map((disease: any) => ({
+        ...disease, count: library.byDisease.get(String(disease.disease_id).toLowerCase())?.length ?? 0,
+      })) },
+    } : undefined,
   });
 });

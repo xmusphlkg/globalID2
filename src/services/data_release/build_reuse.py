@@ -111,6 +111,7 @@ class BuildReuse:
                        if (key.startswith("PUBLIC_") and key not in ignored_identity) or key in {
                            "GLOBALID_SITE_URL", "SITE_URL", "SITUATION_SHADOW_PREVIEW", "NODE_ENV", "TZ",
                            "GIDS_PAGES_DATA_WORKER", "GIDS_RUNTIME_DATA_READY", "GIDS_RUNTIME_SITUATION_READY",
+                           "GIDS_RESEARCH_PUBLICATION_ENABLED",
                            "GIDS_EXTERNAL_SURVEILLANCE_DATA",
                            "SUBSCRIPTIONS__PUBLIC_BASE_URL"}}
         return {

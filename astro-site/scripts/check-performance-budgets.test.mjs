@@ -30,7 +30,7 @@ test('persisted asset facts do not retain the complete HTML catalogue', t => {
     if(result.pages!==96 || cache.stats.misses!==96) throw new Error('Missing catalogue entries');
     cache.save();`;
   const result = spawnSync(process.execPath, ['--max-old-space-size=64', '--input-type=module', '-e', script, directory],
-    { encoding: 'utf8', timeout: 30000 });
+    { encoding: 'utf8', timeout: 30000, env: { ...process.env, GIDS_BUILD_FINGERPRINT_CACHE: join(directory, 'fingerprints.json') } });
   assert.equal(result.status, 0, result.stderr || String(result.error));
 });
 
@@ -180,6 +180,42 @@ test('scales the all-site gzip allowance while preserving a per-page ceiling', (
   assert.equal(result.passed, true);
   assert.equal(result.html.gzipBudgetBytes, 2_000);
   assert.ok(result.html.averageGzipBytes < 1_000);
+});
+
+test('independent research pages stay out of the main-site performance gate', (t) => {
+  const directory = fixture();
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  writeFileSync(join(directory, 'index.html'), '<main>home</main>');
+  for (const route of ['research', 'zh/research', 'fr/research/graph']) {
+    mkdirSync(join(directory, route), { recursive: true });
+    writeFileSync(join(directory, route, 'index.html'), `<main>${'research-page-'.repeat(400)}</main>`);
+  }
+  const budgets = {
+    maxJavaScriptChunkBytes: 1_000,
+    maxRouteCompressedAssetsBytes: 1_000,
+    maxAverageHtmlBytes: 200,
+    maxAverageHtmlGzipBytes: 1_000,
+    maxTotalHtmlGzipBytes: 1_000_000,
+    maxPageHtmlGzipBytes: 100_000,
+    maxWorldMapBytes: 1_000,
+    maxWorldMapBrotliBytes: 1_000,
+  };
+  const ignored = auditPerformance(directory, budgets, { independentResearch: true });
+  assert.equal(ignored.pages, 1);
+  assert.equal(ignored.passed, true);
+  const calibrated = auditPerformance(directory, {
+    maxJavaScriptChunkBytes: 1_000,
+    maxRouteCompressedAssetsBytes: 1_000,
+    maxWorldMapBytes: 1_000,
+    maxWorldMapBrotliBytes: 1_000,
+  }, { independentResearch: true });
+  assert.equal(calibrated.budgets.maxAverageHtmlBytes, 180_000);
+  assert.equal(calibrated.budgets.maxAverageHtmlGzipBytes, 22_000);
+  assert.equal(auditPerformance(directory, {}, { independentResearch: false }).budgets.maxAverageHtmlGzipBytes, 19_050);
+  const included = auditPerformance(directory, budgets, { independentResearch: false });
+  assert.equal(included.pages, 4);
+  assert.equal(included.passed, false);
+  assert.match(included.errors.join('\n'), /Generated HTML averages/);
 });
 
 test('cached compression sizes still enforce changed budgets', async t => {

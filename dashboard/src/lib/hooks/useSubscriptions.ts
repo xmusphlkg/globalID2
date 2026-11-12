@@ -8,6 +8,7 @@ export interface SubscriptionListOption {
   description_en?: string;
   description_zh?: string;
   default_frequency: string;
+  available?: boolean;
 }
 
 export interface SubscriptionFilterOption {
@@ -20,6 +21,7 @@ export interface SubscriptionFilterOption {
 
 export interface SubscriptionOptions {
   ok?: boolean;
+  pilot_mode?: boolean;
   lists: SubscriptionListOption[];
   locales: SubscriptionFilterOption[];
   frequencies: SubscriptionFilterOption[];
@@ -42,6 +44,10 @@ export interface SubscriptionStats {
   subscriptions?: Record<string, number>;
   contacts?: Record<string, number>;
   deliveries_last_7_days?: Record<string, number>;
+  campaign_deliveries_last_7_days?: Record<string, number>;
+  provider_feedback_last_7_days?: Record<string, number>;
+  management_outbox?: Record<string, number>;
+  delivery_acceptance_rate_last_7_days?: number | null;
   stale_pending_subscriptions?: number;
   pending_expiry_days?: number;
 }

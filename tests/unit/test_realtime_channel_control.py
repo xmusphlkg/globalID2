@@ -29,6 +29,19 @@ def test_missing_control_state_is_read_only_and_defaults_to_automatic(tmp_path):
     assert not list(tmp_path.iterdir())
 
 
+def test_literature_pause_uses_an_independent_state_file(tmp_path):
+    path = tmp_path / 'controls.json'
+    path.write_text(json.dumps({'schema_version': 1, 'channels': {
+        'surveillance': {'paused': True, 'updated_at': None},
+        'situation': {'paused': False, 'updated_at': None}}}))
+    state = ChannelControlStore(path).snapshot()
+    assert state['surveillance']['paused'] and not state['situation']['paused']
+    literature = ChannelControlStore(tmp_path / 'literature.json', channels=('literature',))
+    literature.set_paused('literature', True)
+    assert literature.snapshot()['literature']['paused']
+    assert ChannelControlStore(path).snapshot() == state
+
+
 def test_pause_is_durable_isolated_and_private(tmp_path):
     path = tmp_path / "controls.json"
     first = ChannelControlStore(path)

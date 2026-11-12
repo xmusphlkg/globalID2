@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
 from src.ai.task_progress import AI_TASK_TYPES, displayed_progress, task_type_name
-from src.domain import RunStage
+from src.domain import RunStage, Task
 from src.domain.ai_work_item import AIWorkItem
 
 _LEASE_SECONDS = 15 * 60
@@ -173,12 +173,18 @@ async def stage_counts(db: AsyncSession, task_uuids: list[str]) -> dict[str, dic
 
 
 async def work_counts(db: AsyncSession, task_uuids: list[str]) -> dict[str, dict[str, int]]:
+    """Count only the current execution; historical activities remain in the trace."""
     if not task_uuids:
         return {}
     rows = (
         await db.execute(
             select(AIWorkItem.parent_task_uuid, AIWorkItem.status, func.count())
-            .where(AIWorkItem.parent_task_uuid.in_(task_uuids))
+            .join(Task, Task.task_uuid == AIWorkItem.parent_task_uuid)
+            .where(
+                AIWorkItem.parent_task_uuid.in_(task_uuids),
+                func.coalesce(AIWorkItem.payload["execution_generation"].as_integer(), 0)
+                == func.coalesce(Task.metadata_["ai_execution_generation"].as_integer(), 0),
+            )
             .group_by(AIWorkItem.parent_task_uuid, AIWorkItem.status)
         )
     ).all()
@@ -333,6 +339,7 @@ def build_ai_task_entries(
         error_text = str(error)[:_ERROR_LIMIT] if error else None
         route = getattr(item, "route_key", None)
         agent = _agent_name(getattr(item, "payload", None))
+        generation = int((getattr(item, "payload", None) or {}).get("execution_generation") or 0)
         failed = item_status in {"failed", "cancelled"} or bool(error_text)
         entry_type = "error" if item_status == "failed" else "warning" if failed or item_status == "cancelled" else "info"
         entries.append(
@@ -343,6 +350,7 @@ def build_ai_task_entries(
                 content=_lines(
                     [
                         ("work_id", getattr(item, "id", None)),
+                        ("execution_generation", generation),
                         ("line", getattr(item, "line", None)),
                         ("agent", agent),
                         ("route", route),
@@ -356,7 +364,8 @@ def build_ai_task_entries(
                 model_used=str(route) if route else None,
                 error_message=error_text if failed else None,
                 duration=_duration(created, finished),
-                metadata={"source": "ai_work_item", "work_id": getattr(item, "id", None)},
+                metadata={"source": "ai_work_item", "work_id": getattr(item, "id", None),
+                          "execution_generation": generation},
             )
         )
 
@@ -429,7 +438,7 @@ async def trace_for_task(db: AsyncSession, task: Any) -> tuple[int, list[dict[st
     entries: list[dict[str, Any]] = []
     stages: list[Any] = []
     if kind in AI_TASK_TYPES or counts:
-        items = await _work_items(db, task.task_uuid) if counts else []
+        items = await _work_items(db, task.task_uuid)
         stages = await _stages(db, task.task_uuid) if kind in AI_TASK_TYPES else []
         entries = build_ai_task_entries(
             task_type=task.task_type,

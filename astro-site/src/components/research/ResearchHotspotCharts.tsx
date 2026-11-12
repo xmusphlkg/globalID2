@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import { useEffect, useMemo, useState } from 'react';
 import EChartsReact from '../../lib/echartsReact';
 import echarts from '../../lib/echartsResearch';
@@ -738,7 +739,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
                 })}
               </div>
             )}
-            {!isChartReady && <div className="research-hotspot-loading" role="status">{t('Loading chart…', '正在加载图表…', 'Chargement du graphique…')}</div>}
+            {!isChartReady && <div className="research-hotspot-loading" role="status"><GIDSLoader language={lang} label={t('Loading chart…', '正在绘制文献趋势…', 'Chargement du graphique…')} /></div>}
             <EChartsReact
               key={active}
               echarts={echarts}

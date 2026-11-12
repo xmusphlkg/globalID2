@@ -1,0 +1,125 @@
+{
+  "at": "2026-11-10T14:50:38.542584+00:00",
+  "mode": "live",
+  "source_revision": "0026_publish_dirty_changes",
+  "source_rows_copied": 24,
+  "buffer_size": 64,
+  "capacity": 8,
+  "routes": [
+    {
+      "model_key": "zzshuccc:gemini-3.5-flash-lite",
+      "capacity": 2,
+      "source_leased": 1
+    },
+    {
+      "model_key": "zzshuc:gpt-6.1-terra",
+      "capacity": 2,
+      "source_leased": 4
+    },
+    {
+      "model_key": "kiro:hy3",
+      "capacity": 2,
+      "source_leased": 0
+    },
+    {
+      "model_key": "kiro:hy4free",
+      "capacity": 2,
+      "source_leased": 1
+    }
+  ],
+  "simulated_latency_seconds": null,
+  "elapsed_seconds": 215.85,
+  "timed_out": false,
+  "call_budget_reached": true,
+  "activity_attempts": 80,
+  "activity_attempt_outcomes": {
+    "succeeded": 75,
+    "failed": 4,
+    "cancelled": 1
+  },
+  "peak_active_executions": 8,
+  "background_errors": [],
+  "supply_ceiling": 8,
+  "distinct_model_count": 4,
+  "seconds_to_full_capacity": 1.509,
+  "whole_run_execution_occupancy": 0.5854,
+  "interior_sampled_occupancy": 0.6384,
+  "terminal_workflows": 22,
+  "terminal_workflows_per_minute": 6.12,
+  "reviewed_workflows": 22,
+  "workflow_outcomes": {
+    "published": 9,
+    "None": 2,
+    "held": 6,
+    "rejected": 7
+  },
+  "activity_statuses": {
+    "succeeded": 75,
+    "failed": 1,
+    "leased": 1
+  },
+  "execution_latency_p50_seconds": 3.101,
+  "execution_latency_p95_seconds": 85.157,
+  "ready_queue_wait_p50_seconds": 4.193,
+  "ready_queue_wait_p95_seconds": 42.981,
+  "tick_p95_seconds": 0.16,
+  "sql_statements": {
+    "SELECT": 12152,
+    "INSERT": 191,
+    "UPDATE": 494
+  },
+  "totals": null,
+  "http_requests": 80,
+  "http_outcomes": {
+    "succeeded": 75,
+    "cancelled": 5
+  },
+  "http_latency_p50_seconds": 3.006,
+  "http_latency_p95_seconds": 85.022,
+  "limits": [
+    "Decisions and health updates remain in a disposable database.",
+    "Occupancy includes warmup and finite-batch drain; this is not sustained provider throughput.",
+    "Simulated replies do not measure model quality; live calls use a per-route cap and total call budget."
+  ],
+  "per_route": [
+    {
+      "route": "kiro:hy3",
+      "requests": 8,
+      "outcomes": {
+        "succeeded": 7,
+        "cancelled": 1
+      },
+      "success_latency_median_seconds": 45.478
+    },
+    {
+      "route": "kiro:hy4free",
+      "requests": 4,
+      "outcomes": {
+        "cancelled": 4
+      },
+      "success_latency_median_seconds": null
+    },
+    {
+      "route": "zzshuc:gpt-6.1-terra",
+      "requests": 31,
+      "outcomes": {
+        "succeeded": 31
+      },
+      "success_latency_median_seconds": 7.011
+    },
+    {
+      "route": "zzshuccc:gemini-3.5-flash-lite",
+      "requests": 37,
+      "outcomes": {
+        "succeeded": 37
+      },
+      "success_latency_median_seconds": 1.833
+    }
+  ],
+  "reported_success_tokens": {
+    "prompt": 262668,
+    "completion": 26966,
+    "total": 289634
+  },
+  "note": "Bounded live validation at 8 test permits; 80 actual HTTP sends, 75 succeeded, 4 timed out at the test 90s limit, 1 cancelled at the budget cutoff. No production decisions or health state were written. This run preceded the successful-progress coalescing optimization."
+}

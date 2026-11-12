@@ -47,10 +47,13 @@ async def collect(writer, *, source, months, history_csv, start_year=None, count
             for item in selected:
                 try:
                     path = await asyncio.to_thread(crawler._download_file, item, Path(temporary))
-                except Exception:
+                except Exception as exc:
                     if subdivision:
                         raise
-                    continue
+                    raise RuntimeError(
+                        f"[BR-SINAN] Failed to download {item.filename}; "
+                        "refusing to aggregate an incomplete file set"
+                    ) from exc
                 metadata = asdict(item)
                 metadata["modified_at"] = item.modified_at.isoformat() if item.modified_at else None
                 await writer.write(await asyncio.to_thread(path.read_bytes), source_url=item.url, kind="sinan_dbc", metadata={"file": metadata})

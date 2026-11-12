@@ -298,6 +298,22 @@ async def test_content_only_export_never_queries_surveillance_or_builds_download
     assert (snapshot.output / "static-surveillance-coverage.json").is_file()
 
 
+async def test_content_only_reuses_published_research_without_querying_or_rewriting(snapshot, monkeypatch):
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("published research must remain untouched")
+
+    monkeypatch.setattr(export, "write_literature_artifacts", forbidden)
+    monkeypatch.setattr(export, "attach_surveillance_evidence", forbidden)
+    context = await export.collect_site_export_context(
+        snapshot.output, public_site_data_dir=snapshot.public,
+        static_content_only=True, reuse_published_research=True,
+    )
+    assert context["reuse_published_research"] is True
+    snapshot.literature.assert_not_awaited()
+    monkeypatch.setattr(export, "build_about_snapshot", lambda **_: {})
+    export.write_incremental_site_export_artifacts(context, snapshot.output, snapshot.public)
+
+
 async def test_content_only_without_baseline_fails_before_database(snapshot, monkeypatch):
     (snapshot.output / "meta.json").unlink()
     monkeypatch.setattr(export, "get_db", lambda: (_ for _ in ()).throw(AssertionError("no database access")))

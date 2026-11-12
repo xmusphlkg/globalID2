@@ -68,13 +68,16 @@ def test_builds_bilingual_cited_weekly_campaign_without_recipient_data():
     assert payload["list_codes"] == ["research_digest"]
     assert payload["frequency"] == "weekly"
     assert payload["target_locales"] == ["en", "zh"]
-    assert payload["content_items"] == [{
+    item = payload["content_items"][0]
+    assert {key: value for key, value in item.items() if key != "localized_markdown"} == {
         "id": "lit-one", "countries": ["CN"], "diseases": ["malaria"],
         "research_topics": ["surveillance"], "study_types": ["systematic-review"],
         "peer_review_statuses": ["peer-reviewed"],
-    }]
+    }
     for locale in ("en", "zh"):
         markdown = payload["contents"][locale]["markdown"]
+        assert payload["personalized_templates"][locale].count("{{GIDS_PERSONALIZED_ITEMS}}") == 1
+        assert "https://doi.org/10.1000/example" in item["localized_markdown"][locale]
         assert "https://globalinfectiousdisease.com/research/articles/a-systematic-review/" in markdown
         assert "https://doi.org/10.1000/example" in markdown
         assert "https://globalinfectiousdisease.com/research/weekly/2026-W33/" in markdown
@@ -230,7 +233,7 @@ def test_apply_posts_once_with_bearer_and_emits_only_safe_campaign_projection(tm
     def opener(request, *, timeout):
         calls.append((request, timeout))
         if request.full_url.endswith("/health"):
-            return _Response({"ok": True, "capabilities": {"research_content_items_v1": True}}, status=200)
+            return _Response({"ok": True, "capabilities": {"research_content_items_v1": True, "research_personalized_items_v1": True}}, status=200)
         return _Response({
             "ok": True,
             "duplicate": False,
@@ -300,7 +303,7 @@ def test_process_requires_apply_without_opening_network(tmp_path, capsys):
 def test_apply_and_process_uses_bounded_campaign_endpoint(tmp_path, capsys):
     calls = []
     responses = [
-        _Response({"ok": True, "capabilities": {"research_content_items_v1": True}}, status=200),
+        _Response({"ok": True, "capabilities": {"research_content_items_v1": True, "research_personalized_items_v1": True}}, status=200),
         _Response({
             "ok": True,
             "duplicate": True,
@@ -362,3 +365,13 @@ def test_apply_rejects_old_worker_before_creating_campaign(tmp_path, capsys):
     assert result == 2
     assert methods == ["GET"]
     assert "worker_research_content_items_capability_required" in capsys.readouterr().err
+
+
+def test_personalized_payload_rejects_worker_that_only_supports_audience_matching():
+    requests = []
+    def opener(request, *, timeout):
+        requests.append(request.get_method())
+        return _Response({"ok": True, "capabilities": {"research_content_items_v1": True}}, status=200)
+    with pytest.raises(dispatcher.DispatchError, match="worker_research_personalized_items_capability_required"):
+        dispatcher.queue_campaign("https://subscriptions.example.test", "test", dispatcher.build_campaign_payload(_brief()), timeout_seconds=1, opener=opener)
+    assert requests == ["GET"]

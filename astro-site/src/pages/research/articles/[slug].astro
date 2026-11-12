@@ -9,8 +9,12 @@ import { buildAlternatePaths, clampSeoDescription, clampSeoTitle, normalizeDisea
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/diseaseNames';
 import { localizedRegionName, translateUi } from '../../../utils/i18n';
 import { researchSocialImage } from '../../../lib/research-publishing';
+import { researchArticleVersion } from '../../../lib/research-article-version';
+import { researchRelationships, researchTermLabel } from '../../../lib/research-relationships';
+import { independentResearchPages } from '../../../lib/page-build-plan';
 
 export function getStaticPaths() {
+  if (independentResearchPages()) return [];
   const plan = process.env.GIDS_RESEARCH_BUILD_PLAN
     ? new Set(JSON.parse(readFileSync(process.env.GIDS_RESEARCH_BUILD_PLAN, 'utf8')).selected as string[])
     : null;
@@ -27,10 +31,10 @@ const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
-const file = resolve(`./src/data/research/articles/${slug}.json`);
-const article: any = existsSync(file)
-  ? JSON.parse(readFileSync(file, 'utf-8'))
-  : null;
+const file = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/articles/${slug}.json`);
+const articleBytes = existsSync(file) ? readFileSync(file) : null;
+const article: any = articleBytes ? JSON.parse(articleBytes.toString('utf-8')) : null;
+const articleVersion = articleBytes ? researchArticleVersion(articleBytes) : '';
 if (!article) return Astro.redirect(localeHref('/research/'));
 const isPreprint = article.peer_review_status === 'preprint';
 const versionRelation = (article.version_relations ?? []).find((relation: any) => (
@@ -121,13 +125,16 @@ const structuredArticle = {
   inLanguage: zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en',
 };
 const graph = article.knowledge_graph ?? { stats: {}, edges: [] };
+const relationships = researchRelationships(graph, locale);
+const integrityLabel = ({ current: pick('No known notices', '未发现完整性通知', 'Aucune notification connue'), corrected: pick('Corrected', '已更正', 'Corrigé'), retracted: pick('Retracted', '已撤稿', 'Rétracté'), expression_of_concern: pick('Expression of concern', '已发布关注声明', 'Expression de préoccupation') } as Record<string, string>)[article.integrity_status] ?? article.integrity_status;
+const articleTypeLabel = ({ 'journal-article': pick('Journal article', '期刊论文', 'Article de revue'), 'posted-content': pick('Posted content', '预印本或公开稿件', 'Contenu déposé'), review: pick('Review', '综述', 'Revue'), 'book-chapter': pick('Book chapter', '书籍章节', 'Chapitre de livre') } as Record<string, string>)[article.article_type] ?? article.article_type;
 const summaryProvenance = summaryEn.provenance ?? summaryZh.provenance ?? summaryFr.provenance ?? null;
 const provenanceDisclosureEn = summaryProvenance?.editorially_approved
   ? 'This bilingual evidence summary was AI-assisted and subsequently editorially approved.'
   : 'This bilingual evidence summary was generated with AI and passed an automated quality gate; it has not been editorially approved.';
 const provenanceDisclosureZh = summaryProvenance?.editorially_approved
   ? '本双语证据摘要由 AI 辅助生成，随后已通过编辑审核。'
-  : '本双语证据摘要由 AI 生成并通过自动质量门控；尚未经过编辑审核。';
+  : '本双语证据摘要由 AI 生成并通过自动质量检查，尚未经过编辑审核。';
 const provenanceDisclosureFr = summaryProvenance?.editorially_approved
   ? 'Ce résumé de preuves multilingue a été assisté par IA puis approuvé par la rédaction.'
   : 'Ce résumé de preuves multilingue a été généré par IA et a passé un contrôle qualité automatisé ; il n’a pas encore été approuvé par la rédaction.';
@@ -140,7 +147,7 @@ const surveillanceGroups = Array.from(relatedSurveillance.reduce((groups: Map<st
   groups.get(key).countries.set(link.country_code ?? link.country_name_en, link);
   return groups;
 }, new Map<string, any>()).values()) as any[];
-const placeName = (place: any) => pick(place.name_en, place.name_zh ?? place.name_en, countryNameFr(place));
+const placeName = (place: any) => localizedRegionName(locale, place.code ?? place.country_code, { en: place.name_en ?? place.country_name_en, zh: place.name_zh ?? place.country_name_zh, fr: place.name_fr ?? place.country_name_fr });
 const relatedArticles = article.related_articles ?? [];
 const isIndexableEvidencePage = article.indexable !== false
   && Boolean(article.summary?.en)
@@ -185,7 +192,7 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
     { label: 'Evidence summary', labelZh: '证据摘要', labelFr: 'Résumé des preuves' },
   ]}
 >
-  <article class="evidence-page">
+  <article class="evidence-page" data-research-article-id={article.article_id} data-research-article-sha256={articleVersion}>
     <header class="academic-hero evidence-header">
       <div class="evidence-badges">
         <span>{article.peer_review_status === 'peer_reviewed' ? pick('Peer reviewed', '同行评议', 'Évalué par les pairs') : pick('Preprint', '预印本', 'Prépublication')}</span>
@@ -203,10 +210,10 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
         <div><dt>PMID</dt><dd>{article.pmid ?? '—'}</dd></div>
         <div><dt>PMCID</dt><dd>{article.pmcid ?? '—'}</dd></div>
         <div><dt>OpenAlex</dt><dd>{article.openalex_id ?? '—'}</dd></div>
-        <div><dt>{pick('Study type', '研究类型', 'Type d’étude')}</dt><dd>{fr ? (studyTypeFr[article.study_type] ?? article.study_type ?? 'Article de revue') : article.study_type ?? pick('Journal article', '期刊论文', 'Article de revue')}</dd></div>
+        <div><dt>{pick('Study type', '研究类型', 'Type d’étude')}</dt><dd>{researchTermLabel(article.study_type ?? 'Journal article', locale)}</dd></div>
         <div><dt>{fr ? 'Éditeur' : pick('Publisher', '出版商')}</dt><dd>{article.publisher ?? (fr ? 'Éditeur indisponible' : pick('Publisher unavailable', '出版商暂缺'))}</dd></div>
-        <div><dt>{pick('Article type', '文章类型')}</dt><dd>{article.article_type ?? 'journal-article'}</dd></div>
-        <div><dt>{pick('Integrity', '完整性状态')}</dt><dd>{article.integrity_status === 'corrected' ? pick('Corrected', '已更正') : article.integrity_status}</dd></div>
+        <div><dt>{pick('Article type', '文章类型')}</dt><dd>{articleTypeLabel ?? researchTermLabel('Journal article', locale)}</dd></div>
+        <div><dt>{pick('Integrity', '更正与撤稿状态')}</dt><dd>{integrityLabel}</dd></div>
       </dl>
     </header>
 
@@ -324,17 +331,17 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
         )}
         <section class="evidence-surveillance evidence-graph">
           <div class="section-title"><span>03</span><h2>{pick('Evidence relationships', '证据关系')}</h2></div>
-          <p>{pick(`This article has ${graph.stats?.edges ?? 0} auditable classifier relationships to diseases, places, topics, and study design.`, `本文与疾病、地区、主题及研究设计之间有 ${graph.stats?.edges ?? 0} 条可审计分类关系。`, `Cet article comporte ${graph.stats?.edges ?? 0} relations de classification auditables avec des maladies, des lieux, des thèmes et des plans d’étude.`)}</p>
-          <div class="relationship-list">{(graph.edges ?? []).map((edge: any) => <span>{String(edge.relation).replaceAll('_', ' ').toLowerCase()}</span>)}</div>
+          <p>{pick(`This article has ${graph.stats?.edges ?? 0} auditable classifier relationships to diseases, places, topics, and study design.`, `以下 ${relationships.length} 项关联展示了本文涉及的疾病、地区、主题和研究设计。点击实体可继续查阅相关资料。`, `Cet article comporte ${graph.stats?.edges ?? 0} relations de classification auditables avec des maladies, des lieux, des thèmes et des plans d’étude.`)}</p>
+          <div class="relationship-list">{relationships.map(relation => relation.href ? <a href={localeHref(normalizeDiseaseHref(relation.href))}><small>{relation.relation}</small><strong>{relation.target}</strong><i aria-hidden="true">↗</i></a> : <span><small>{relation.relation}</small><strong>{relation.target}</strong></span>)}</div>
         </section>
         {relatedArticles.length > 0 && (
           <section class="evidence-surveillance related-research" aria-labelledby="related-research-title">
             <div class="section-title"><span>04</span><h2 id="related-research-title">{pick('Related research', '相关文章')}</h2></div>
-            <p class="related-research-method">{pick('Ranked deterministically by shared disease, geography, topic, study design, and publication proximity. This is a discovery aid, not a quality judgment.', '根据相同疾病、地区、主题、研究设计和发表时间邻近性进行确定性排序。该功能仅用于文献发现，不代表质量判断。')}</p>
+            <p class="related-research-method">{pick('Ranked deterministically by shared disease, geography, topic, study design, and publication proximity. This is a discovery aid, not a quality judgment.', '按共同涉及的疾病、地区、主题、研究设计和发表时间排序，帮助你继续查找相关文献。排序不代表研究质量。')}</p>
             <ol>
               {relatedArticles.map((related: any) => (
                 <li>
-                  <a href={localeHref(`/research/articles/${related.slug}/`)}><strong>{related.title}</strong><span>{related.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {related.study_type ?? pick('Journal article', '期刊论文')}</span></a>
+                  <a href={localeHref(`/research/articles/${related.slug}/`)}><strong>{related.title}</strong><span>{related.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {researchTermLabel(related.study_type ?? 'Journal article', locale)}</span></a>
                   <p>{pick((related.reasons_en ?? []).join(' · '), (related.reasons_zh ?? related.reasons_en ?? []).join(' · '), (related.reasons_en ?? []).map(relatedReasonFr).join(' · '))}</p>
                 </li>
               ))}
@@ -344,12 +351,12 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
       </div>
 
       <aside>
-        <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Topics', '主题')}</p><div class="topic-tags">{(article.topics ?? []).map((topic: any) => <a href={localeHref(`/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`)}>{topic.name}</a>)}</div></div>
+        <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Topics', '主题')}</p><div class="topic-tags">{(article.topics ?? []).map((topic: any) => <a href={localeHref(`/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`)}>{researchTermLabel(topic.name, locale)}</a>)}</div></div>
         {(article.pathogens ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Pathogens', '病原体')}</p><ul>{article.pathogens.map((pathogen: any) => <li>{pathogen.name}</li>)}</ul></div>}
-        {(article.populations ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Populations', '研究人群')}</p><ul>{article.populations.map((population: any) => <li>{population.name}</li>)}</ul></div>}
-        {(article.countries ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Geographic scope', '地理范围')}</p><ul>{article.countries.map((country: any) => <li><a href={localeHref(`/research/countries/${country.code.toLowerCase()}/`)}>{pick(country.name_en, country.name_zh ?? country.name_en, countryNameFr(country))} <span>→</span></a></li>)}</ul></div>}
+        {(article.populations ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Populations', '研究人群')}</p><ul>{article.populations.map((population: any) => <li>{researchTermLabel(population.name, locale)}</li>)}</ul></div>}
+        {(article.countries ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Geographic scope', '地理范围')}</p><ul>{article.countries.map((country: any) => <li><a href={localeHref(`/research/countries/${country.code.toLowerCase()}/`)}>{localizedRegionName(locale, country.code, { en: country.name_en, zh: country.name_zh, fr: country.name_fr })} <span>→</span></a></li>)}</ul></div>}
         <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Original sources', '原始来源')}</p><div class="source-links">{article.doi && <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">{pick('DOI record ↗', 'DOI 记录 ↗')}</a>}{article.source_urls?.pubmed && <a href={article.source_urls.pubmed} target="_blank" rel="noopener noreferrer">PubMed ↗</a>}{article.open_access_url && <a href={article.open_access_url} target="_blank" rel="noopener noreferrer">{pick('Open access ↗', '开放获取 ↗')}</a>}</div></div>
-        <div class="evidence-aside-block evidence-score"><p class="evidence-kicker">{pick('GIDS Discovery Score', 'GIDS 发现分数')}</p><strong>{Math.round((article.discovery_score ?? 0) * 100)}</strong><p>{pick('A transparent discovery ranking, not a scientific quality or credibility score.', '这是透明的发现排序，并非科学质量或可信度评分。')}</p></div>
+        <div class="evidence-aside-block evidence-score"><p class="evidence-kicker">{pick('GIDS Discovery Score', 'GIDS 发现分数')}</p><strong>{Math.round((article.discovery_score ?? 0) * 100)}</strong><p>{pick('A transparent discovery ranking, not a scientific quality or credibility score.', '该分数用于排列相关文献，不代表研究质量或可信度。')}</p></div>
         {summaryProvenance && <div class="evidence-aside-block evidence-provenance"><p class="evidence-kicker">{pick('Summary transparency', '摘要透明度', 'Transparence du résumé')}</p><p>{pick(provenanceDisclosureEn, provenanceDisclosureZh, provenanceDisclosureFr)}</p>{summaryProvenance.quality_score != null && <p>{pick('Automated quality checks passed before publication.', '发布前已通过自动质量检查。', 'Les contrôles qualité automatisés ont été réussis avant publication.')}</p>}</div>}
       </aside>
     </div>
@@ -364,6 +371,10 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
   .evidence-badges .history { border-color: rgb(var(--color-accent) / .58); color: rgb(var(--color-accent)); background: rgb(var(--color-accent) / .08); }
   .evidence-badges .oa { border-color: rgb(var(--color-teal) / .55); color: rgb(var(--color-teal)); }
   .evidence-badges .integrity-corrected { border-color: rgb(var(--color-teal) / .58); color: rgb(var(--color-teal)); background: rgb(var(--color-teal) / .08); }
+  :global(html[data-theme='dark']) .evidence-badges .oa,
+  :global(html[data-theme='dark']) .evidence-badges .integrity-corrected,
+  :global(html[data-theme='dark']) .integrity-correction-notice > a,
+  :global(html[data-theme='dark']) .article-integrity-history strong { color: #6ee7d2; }
   .evidence-badges .version-available { border-color: rgb(var(--color-brand) / .58); color: rgb(var(--color-brand)); background: rgb(var(--color-brand) / .08); }
   .evidence-header h1 { max-width: 55rem; margin-top: 1.2rem; font: 600 var(--page-title-size)/1.04 'IBM Plex Sans', sans-serif; letter-spacing: -.035em; color: rgb(var(--text-strong)); }
   .evidence-citation { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.15rem; color: rgb(var(--text-muted)); font-size: .85rem; }
@@ -394,6 +405,13 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
   .evidence-sections, .evidence-surveillance { margin-top: 1.5rem; padding: clamp(1.35rem, 3vw, 2.2rem); }
   .section-title { display: flex; align-items: baseline; gap: .9rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
   .section-title span { color: rgb(var(--color-accent)); font: 500 .65rem/1 ui-monospace, monospace; }
+  :global(html[data-theme='dark']) .evidence-register dt,
+  :global(html[data-theme='dark']) .evidence-kicker,
+  :global(html[data-theme='dark']) .section-title span,
+  :global(html[data-theme='dark']) .signal-group-details strong,
+  :global(html[data-theme='dark']) .evidence-badges .history { color: #f0a086; }
+  :global(html[data-theme='dark']) .signal-expand,
+  :global(html[data-theme='dark']) .signal-more-places { color: #cbd8e2; }
   .section-title h2 { font: 600 1.6rem/1.1 'IBM Plex Sans', sans-serif; color: rgb(var(--text-strong)); }
   .evidence-section { display: grid; grid-template-columns: 12rem 1fr; gap: 1.4rem; padding: 1.25rem 0; border-top: 1px solid rgb(var(--border) / .55); }
   .section-title + .evidence-section { border-top: 0; }
@@ -429,8 +447,12 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
   .surveillance-links i { position: absolute; right: 1rem; top: 50%; color: rgb(var(--color-brand)); transform: translateY(-50%); }
   .evidence-disclaimer { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.5; }
   .evidence-graph > p { margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.65; }
+  .relationship-list small { color: rgb(var(--text-muted)); font-size: .67rem; }
+  .relationship-list strong { font-size: .78rem; font-weight: 600; overflow-wrap: anywhere; }
+  .relationship-list > span, .relationship-list > a { display: flex; align-items: baseline; flex-wrap: wrap; gap: .35rem; max-width: 100%; }
+  .relationship-list > a:hover { border-color: rgb(var(--color-teal)); }
   .relationship-list { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
-  .relationship-list span { border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .48); padding: .25rem .5rem; color: rgb(var(--text-muted)); font-size: .66rem; }
+  .relationship-list > span, .relationship-list > a { border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .48); padding: .25rem .5rem; color: rgb(var(--text-muted)); font-size: .66rem; }
   .related-research-method { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.55; }
   .related-research ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin-top: 1rem; }
   .related-research li { border: 1px solid rgb(var(--border) / .68); background: rgb(var(--surface-raised) / .28); padding: .9rem; }

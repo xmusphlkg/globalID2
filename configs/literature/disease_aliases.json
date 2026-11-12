@@ -18,6 +18,10 @@
     "D065": ["mpox", "monkeypox", "monkeypox virus", "MPXV"],
     "D014": ["influenza A(H5N1)", "avian influenza A(H5N1)"],
     "D015": ["influenza A(H7N9)", "avian influenza A(H7N9)"],
-    "D162": ["human immunodeficiency virus", "HIV", "HIV infection", "HIV-1", "HIV-2"]
+    "D162": ["human immunodeficiency virus", "HIV", "HIV infection", "HIV-1", "HIV-2"],
+    "D129": ["Oropouche virus", "Oropouche fever", "Oropouche virus infection"],
+    "D142": ["respiratory syncytial virus", "RSV infection", "RSV immunisation", "RSV immunization"],
+    "D238": ["HTLV-1", "HTLV-2", "human T-cell lymphotropic virus type 1", "human T-cell lymphotropic virus type 2"],
+    "D245": ["neonatal group B streptococcus disease", "neonatal group B streptococcal infection"]
   }
 }

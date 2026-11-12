@@ -1,817 +1,220 @@
+"""An admitted attempt is independent of cache and observability availability."""
 import asyncio
-import time
-from unittest.mock import AsyncMock, Mock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
-from redis.exceptions import ConnectionError as RedisConnectionError
 
+from src.ai.agents import base
 from src.ai.agents.base import BaseAgent
-from src.core.cache import CacheService
+from src.ai.runtime.context import _DISPATCHING
 
 
-class DummyCache:
-    def __init__(self, cached_value=None):
-        self.cached_value = cached_value
-        self.last_set_key = None
-        self.last_set_value = None
-        self.last_set_ttl = None
-        self.deleted_keys = []
+class Agent(BaseAgent):
+    async def process(self, **kwargs):
+        return {}
 
-    async def get(self, key: str):
-        return self.cached_value
 
-    async def set(self, key: str, value, ttl=None):
-        self.last_set_key = key
-        self.last_set_value = value
-        self.last_set_ttl = ttl
+class Cache:
+    def __init__(self):
+        self.values = {}
+        self.deleted = []
+
+    async def get(self, key):
+        return self.values.get(key)
+
+    async def set(self, key, value, ttl):
+        self.values[key] = value
         return True
 
-    async def delete(self, key: str):
-        self.deleted_keys.append(key)
-        return True
+    async def delete(self, key):
+        self.deleted.append(key)
+        return self.values.pop(key, None) is not None
 
 
-class DummyAgent(BaseAgent):
-    def __init__(self):
-        super().__init__(name="Dummy", model="dummy-model", provider="dummy-provider")
-        self.provider_calls = 0
-
-    async def process(self, **kwargs):
-        return {}
-
-    async def _complete_with_provider(self, provider: str, prompt: str, system: str | None, **kwargs):
-        self.provider_calls += 1
-        return "live-response", {"prompt": 4, "completion": 5, "total": 9}
-
-    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
-        self.provider_calls += 1
-        return "live-response", {"prompt": 4, "completion": 5, "total": 9}
-
-
-class UnavailableFallbackAgent(BaseAgent):
-    def __init__(self):
-        super().__init__(name="Fallback", model="bad-model", provider="dummy-provider")
-        self.provider_calls = 0
-        self.call_models = []
-
-    async def process(self, **kwargs):
-        return {}
-
-    async def _complete_with_provider(self, provider: str, prompt: str, system: str | None, **kwargs):
-        self.provider_calls += 1
-        self.call_models.append(self.model)
-        if self.model == "bad-model":
-            raise Exception(
-                "Error code: 404 - {'error': {'message': 'The model `bad-model` does not exist or you do not have access to it.', 'code': 'model_not_found'}}"
-            )
-        return "fallback-response", {"prompt": 2, "completion": 3, "total": 5}
-
-    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
-        return await self._complete_with_provider(
-            str(route.get("provider_key") or "runtime"),
-            prompt,
-            system,
-            **kwargs,
-        )
-
-
-class ProviderAuthenticationFallbackAgent(BaseAgent):
-    def __init__(self):
-        super().__init__(name="ProviderAuthenticationFallback", model="bad-a", provider="bad-provider")
-        self.call_models = []
-
-    async def process(self, **kwargs):
-        return {}
-
-    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
-        model_name = str(route.get("model_name") or self.model)
-        self.call_models.append(model_name)
-        if model_name in {"bad-a", "bad-b"}:
-            raise RuntimeError("Error code: 401 - {'error': {'message': 'Invalid token'}}")
-        return "healthy-provider-response", {"prompt": 1, "completion": 1, "total": 2}
-
-
-class QuotaRecoveryAgent(BaseAgent):
-    def __init__(self):
-        super().__init__(name="QuotaRecovery", model="hunyuan-pro", provider="dummy-provider")
-        self.provider_calls = 0
-
-    async def process(self, **kwargs):
-        return {}
-
-    async def _complete_with_provider(self, provider: str, prompt: str, system: str | None, **kwargs):
-        self.provider_calls += 1
-        if self.provider_calls < 3:
-            raise Exception(
-                "Error code: 400 - {'error': {'message': '请求限频，请稍后重试', 'code': '2003'}}"
-            )
-        return "quota-recovered", {"prompt": 1, "completion": 1, "total": 2}
-
-    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
-        return await self._complete_with_provider(
-            str(route.get("provider_key") or "runtime"),
-            prompt,
-            system,
-            **kwargs,
-        )
-
-
-class ProbeFallbackAgent(BaseAgent):
-    def __init__(self):
-        super().__init__(name="ProbeFallback", model="qwen-flash-character", provider="dummy-provider")
-        self.call_models = []
-
-    async def process(self, **kwargs):
-        return {}
-
-    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
-        model_name = str(route.get("model_name") or self.model)
-        self.call_models.append(model_name)
-        if model_name == "qwen-flash-character":
-            raise Exception("Error code: 400 - {'error': {'message': '请求限频，请稍后重试', 'code': '2003'}}")
-        return "glm-ok", {"prompt": 1, "completion": 1, "total": 2}
-
-
-class TimeoutFallbackAgent(BaseAgent):
-    def __init__(self):
-        super().__init__(name="TimeoutFallback", model="slow-model", provider="dummy-provider")
-        self.call_models = []
-
-    async def process(self, **kwargs):
-        return {}
-
-    async def _complete_with_provider(self, provider: str, prompt: str, system: str | None, **kwargs):
-        self.call_models.append(self.model)
-        if self.model == "slow-model":
-            await asyncio.Event().wait()
-        return "fast-response", {"prompt": 1, "completion": 1, "total": 2}
-
-    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
-        request_timeout_seconds = kwargs.pop("request_timeout_seconds", None)
-        request = self._complete_with_provider(
-            str(route.get("provider_key") or "runtime"),
-            prompt,
-            system,
-            **kwargs,
-        )
-        if request_timeout_seconds is not None:
-            return await asyncio.wait_for(request, timeout=request_timeout_seconds)
-        return await request
-
-
-class AdmissionBoundaryAgent(BaseAgent):
-    async def process(self, **kwargs):
-        return {}
-
-    async def _complete_with_admitted_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
-        return "admitted-response", {"prompt": 1, "completion": 1, "total": 2}
-
-
-class EmptyResponseFallbackAgent(BaseAgent):
-    def __init__(self):
-        super().__init__(name="EmptyResponseFallback", model="empty-model", provider="dummy-provider")
-        self.call_models = []
-
-    async def process(self, **kwargs):
-        return {}
-
-    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
-        model_name = str(route.get("model_name") or self.model)
-        self.call_models.append(model_name)
-        if model_name == "empty-model":
-            return "", {"prompt": 1, "completion": 0, "total": 1}
-        return "fallback-response", {"prompt": 1, "completion": 1, "total": 2}
-
-
-def runtime_route(
-    model_name: str,
-    *,
-    available: bool = True,
-    status: str = "available",
-    provider_key: str = "runtime",
-    provider_id: int = 999999,
-) -> dict[str, object]:
-    return {
-        "model_key": f"{provider_key}:{model_name}",
-        "model_name": model_name,
-        "provider_key": provider_key,
-        "provider_name": provider_key,
-        "model_id": 999999,
-        "provider_id": provider_id,
-        "available_for_routing": available,
-        "last_check_status": status,
-        "has_api_key": True,
-    }
-
-
-@pytest.fixture(autouse=True)
-def _stub_persisted_runtime_health(monkeypatch):
-    """Keep agent unit tests focused on routing decisions, not the database."""
-    async def _success(*_args, **_kwargs):
-        return {"recorded": True}
-
-    async def _failure(*_args, **_kwargs):
-        return {"recorded": True}
-
-    async def _call_log(*_args, **_kwargs):
-        return None
-
-    async def _rate_limited(*_args, **_kwargs):
-        # No persisted value: the agent keeps its configured cooldown.
-        return {}
-
-    monkeypatch.setattr("src.ai.agents.base.mark_route_rate_limited", _rate_limited)
-    monkeypatch.setattr("src.ai.agents.base.record_route_runtime_success", _success)
-    monkeypatch.setattr("src.ai.agents.base.record_route_runtime_failure", _failure)
-    monkeypatch.setattr("src.ai.agents.base.record_model_call_log", _call_log)
+ROUTE = {
+    "model_key": "provider:chosen", "model_name": "chosen", "model_id": "m1",
+    "provider_key": "provider", "provider_id": "p1", "temperature": None,
+    "available_for_routing": True,
+}
 
 
 @pytest.fixture
-def live_agent(monkeypatch):
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [runtime_route("dummy-model")])
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time())
-    agent = DummyAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", True)
-    return agent
-
-
-async def test_redis_outage_does_not_abort_or_repeat_model_request(live_agent, monkeypatch):
-    monkeypatch.setattr(live_agent.config.ai, "enable_cache", True)
-    live_agent.cache = CacheService()
-    monkeypatch.setattr(
-        "src.core.cache.redis.from_url",
-        Mock(side_effect=RedisConnectionError("offline")),
-    )
-
-    result = await live_agent._complete_transport(prompt="hello")
-
-    assert result == "live-response"
-    assert live_agent.provider_calls == 1
-    assert len(live_agent.conversation_history) == 1
-
-
-@pytest.mark.parametrize("fallback", [False, True])
-async def test_each_retry_and_fallback_reserves_a_rate_limit_slot(live_agent, monkeypatch, fallback):
-    if fallback:
-        monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [
-            runtime_route("dummy-model"), runtime_route("fallback-model"),
-        ])
-    live_agent.max_retries = 2
-    provider = AsyncMock(side_effect=[RuntimeError("temporary upstream failure"), ("ok", {})])
-    monkeypatch.setattr(live_agent, "_complete_with_runtime_route", provider)
-    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", AsyncMock())
-
-    result = await live_agent._complete_transport(
-        prompt="hello", max_attempts_per_model=1 if fallback else 2,
-        max_quota_recovery_rounds=0, wait_for_model_recovery=False,
-    )
-
-    assert result == "ok"
-    assert provider.await_count == 2
-    assert live_agent.rate_limiter.get_stats()["current_requests"] == 2
-
-
-async def test_cache_hit_does_not_consume_rate_limit_slot(live_agent, monkeypatch):
-    monkeypatch.setattr(live_agent.config.ai, "enable_cache", True)
-    live_agent.cache = DummyCache({"response": "cached"})
-    assert await live_agent._complete_transport(prompt="hello") == "cached"
-    assert live_agent.rate_limiter.get_stats()["current_requests"] == 0
-    assert live_agent.provider_calls == 0
-
-
-def test_runtime_candidates_do_not_include_configured_model_failover(monkeypatch):
-    agent = DummyAgent()
-
-    candidates, chain = agent._build_candidates(
-        [
-                runtime_route("available-model")
-            ]
-        )
-
-    assert [candidate["model_name"] for candidate in candidates] == ["available-model"]
-    assert all(candidate["route"] is not None for candidate in candidates)
-    assert chain == ["available-model"]
-
-
-def test_preferred_direct_fallback_does_not_jump_ahead_of_healthy_runtime_route() -> None:
-    runtime_route = {
-        "route_key": "runtime:healthy-model",
-        "model_name": "healthy-model",
-        "route": {"model_name": "healthy-model"},
-    }
-    direct_fallback = {
-        "route_key": "configured-model",
-        "model_name": "configured-model",
-        "route": None,
-    }
-
-    ordered = BaseAgent._prioritize_candidates(
-        [runtime_route, direct_fallback],
-        ["configured-model"],
-    )
-
-    assert ordered == [runtime_route, direct_fallback]
-
-
-def test_preferred_runtime_route_key_selects_matching_shard() -> None:
-    slow_shard = {
-        "route_key": "provider-a:model-shared",
-        "model_name": "model-shared",
-        "route": {"model_name": "model-shared"},
-    }
-    preferred_shard = {
-        "route_key": "provider-b:model-shared",
-        "model_name": "model-shared",
-        "route": {"model_name": "model-shared"},
-    }
-
-    ordered = BaseAgent._prioritize_candidates(
-        [slow_shard, preferred_shard],
-        ["provider-b:model-shared"],
-    )
-
-    assert ordered == [preferred_shard, slow_shard]
-
-
-def test_empty_candidate_wait_uses_model_center_runtime_cooldown() -> None:
-    wait_seconds = BaseAgent._estimate_wait_seconds_for_empty_candidates(
-        runtime_routes=[
-            {
-                "model_key": "runtime:cooling",
-                "model_name": "cooling",
-                "runtime_failure_remaining_seconds": 47,
-            }
-        ],
-        chain=[],
-        wait_cap_seconds=90,
-    )
-
-    assert wait_seconds == 47
-
-
-@pytest.mark.asyncio
-async def test_cache_hit_records_conversation_history(monkeypatch):
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-
-    agent = DummyAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", True, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-    agent.cache = DummyCache(
-        {
-            "response": "cached-response",
-            "token_usage": {"total": 7},
-            "model": "cached-model",
-            "provider": "cached-provider",
-        }
-    )
-
-    result = await agent._complete_transport(prompt="hello", system="system")
-
-    assert result == "cached-response"
-    assert agent.provider_calls == 0
-    assert len(agent.conversation_history) == 1
-    assert agent.conversation_history[0]["response"] == "cached-response"
-    assert agent.conversation_history[0]["model"] == "cached-model"
-    assert agent.conversation_history[0]["provider"] == "cached-provider"
-    assert agent.conversation_history[0]["metadata"]["cache_hit"] is True
-
-
-@pytest.mark.asyncio
-async def test_live_completion_caches_structured_payload(monkeypatch):
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [runtime_route("dummy-model")], raising=False)
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-
-    agent = DummyAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", True, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "cache_ttl", 1, raising=False)
-    agent.cache = DummyCache()
-
-    result = await agent._complete_transport(prompt="hello", system="system")
-
-    assert result == "live-response"
-    assert agent.provider_calls == 1
-    assert agent.cache.last_set_value == {
-        "response": "live-response",
-        "token_usage": {"prompt": 4, "completion": 5, "total": 9},
-        "model": "dummy-model",
-        "provider": "runtime",
-        "temperature": agent.temperature,
-        "max_tokens": agent.max_tokens,
-    }
-    assert len(agent.conversation_history) == 1
-    assert agent.conversation_history[0]["tokens"]["total"] == 9
-    assert agent.conversation_history[0]["metadata"]["runtime_route"]["model_name"] == "dummy-model"
-
-
-@pytest.mark.asyncio
-async def test_completion_cache_can_be_invalidated_after_post_generation_rejection(monkeypatch):
-    agent = DummyAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", True, raising=False)
-    agent.cache = DummyCache()
-
-    deleted = await agent.invalidate_completion_cache(prompt="hello", system="system")
-
-    assert deleted is True
-    assert agent.cache.deleted_keys == [agent._make_cache_key("hello", "system")]
-
-
-@pytest.mark.asyncio
-async def test_empty_candidates_wait_then_probe(monkeypatch):
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-
-    async def _empty_routes():
-        return []
-
-    waited = []
-
-    async def _fake_sleep(seconds):
-        waited.append(seconds)
-
-    monkeypatch.setattr("src.ai.agents.base.get_active_model_routes", _empty_routes)
-    monkeypatch.setattr("src.ai.agents.base.get_runtime_routes", _empty_routes)
-    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _fake_sleep)
-
-    agent = DummyAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "rate_limit_cooldown_seconds", 30, raising=False)
-
-    with pytest.raises(Exception, match="Agent completion failed"):
-        await agent._complete_transport(prompt="hello", system="system")
-
-    assert agent.provider_calls == 0
-    assert waited
-    assert waited[0] >= 1
-
-
-@pytest.mark.asyncio
-async def test_empty_candidates_can_fail_without_waiting_for_recovery(monkeypatch):
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-    monkeypatch.setattr(
-        BaseAgent,
-        "MODEL_COOLDOWNS",
-        {"dummy-model": time.time() + 30},
-        raising=False,
-    )
-
-    async def _unexpected_sleep(_seconds):
-        raise AssertionError("recovery wait must be skipped")
-
-    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _unexpected_sleep)
-
-    agent = DummyAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-
-    with pytest.raises(Exception, match="Agent completion failed"):
-        await agent._complete_transport(
-            prompt="hello",
-            system="system",
-            max_quota_recovery_rounds=0,
-            wait_for_model_recovery=False,
-        )
-
-    assert agent.provider_calls == 0
-
-
-@pytest.mark.asyncio
-async def test_model_not_found_fast_falls_through_to_next_model(monkeypatch):
-    monkeypatch.setattr(
-        BaseAgent,
-        "AVAILABLE_MODEL_ROUTES",
-        [runtime_route("bad-model"), runtime_route("good-model")],
-        raising=False,
-    )
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-
-    persisted = []
-
-    async def _fake_mark_route_unavailable(route, message: str):
-        persisted.append((route["model_name"], message))
-
-    monkeypatch.setattr(
-        "src.ai.agents.base.mark_route_unavailable",
-        _fake_mark_route_unavailable,
-    )
-
-    agent = UnavailableFallbackAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "fallback_model", "good-model", raising=False)
-
-    result = await agent._complete_transport(prompt="hello", system="system")
-
-    assert result == "fallback-response"
-    assert agent.provider_calls == 2
-    assert agent.call_models == ["bad-model", "good-model"]
-    assert persisted
-    assert persisted[0][0] == "bad-model"
-
-
-@pytest.mark.asyncio
-async def test_provider_auth_failure_skips_siblings_without_retry_and_uses_other_provider(monkeypatch):
-    monkeypatch.setattr(
-        BaseAgent,
-        "AVAILABLE_MODEL_ROUTES",
-        [
-            runtime_route("bad-a", provider_key="rejected", provider_id=10),
-            runtime_route("bad-b", provider_key="rejected", provider_id=10),
-            runtime_route("healthy-model", provider_key="healthy", provider_id=20),
-        ],
-        raising=False,
-    )
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-
-    persisted = []
-
-    async def _fake_mark_provider_authentication_failed(route, error=None):
-        persisted.append((route["provider_id"], str(error)))
-        return {"recorded": True}
-
-    async def _unexpected_sleep(_seconds):
-        raise AssertionError("credential failures must not retry or back off")
-
-    async def _unexpected_runtime_failure_record(*_args, **_kwargs):
-        raise AssertionError("credential failures must not be recorded as transport failures")
-
-    monkeypatch.setattr(
-        "src.ai.agents.base.mark_provider_authentication_failed",
-        _fake_mark_provider_authentication_failed,
-    )
-    monkeypatch.setattr(
-        "src.ai.agents.base.record_route_runtime_failure",
-        _unexpected_runtime_failure_record,
-    )
-    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _unexpected_sleep)
-
-    agent = ProviderAuthenticationFallbackAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-
-    result = await agent._complete_transport(
-        prompt="hello",
-        system="system",
-        max_attempts_per_model=3,
-        max_quota_recovery_rounds=0,
-        wait_for_model_recovery=False,
-    )
-
-    assert result == "healthy-provider-response"
-    assert agent.call_models == ["bad-a", "healthy-model"]
-    assert persisted == [(10, "Error code: 401 - {'error': {'message': 'Invalid token'}}")]
-
-
-@pytest.mark.asyncio
-async def test_per_route_timeout_falls_through_to_next_model(monkeypatch):
-    monkeypatch.setattr(
-        BaseAgent,
-        "AVAILABLE_MODEL_ROUTES",
-        [runtime_route("slow-model"), runtime_route("fast-model")],
-        raising=False,
-    )
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-
-    recorded_failures = []
-
-    async def _record_failure(route, error, **kwargs):
-        recorded_failures.append(
-            (str(route.get("model_name") or ""), type(error).__name__, kwargs.get("cooldown_seconds"))
-        )
-        return {"recorded": True}
-
-    monkeypatch.setattr("src.ai.agents.base.record_route_runtime_failure", _record_failure)
-
-    agent = TimeoutFallbackAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-
-    result = await agent._complete_transport(
-        prompt="hello",
-        system="system",
-        model_request_timeout_seconds=0.01,
-        timeout_cooldown_seconds=30,
-    )
-
-    assert result == "fast-response"
-    assert agent.call_models == ["slow-model", "fast-model"]
-    assert recorded_failures and recorded_failures[0][0] == "slow-model"
-    assert recorded_failures[0][1] == "TimeoutError"
-    assert recorded_failures[0][2] == 30
-    assert BaseAgent.AVAILABLE_MODEL_ROUTES is None
-
-
-@pytest.mark.asyncio
-async def test_single_route_timeout_retains_error_type_and_cause(monkeypatch):
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [runtime_route("slow-model")], raising=False)
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-    agent = TimeoutFallbackAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-
-    with pytest.raises(Exception, match="TimeoutError") as raised:
-        await agent._complete_transport(
-            prompt="hello", system="system", model_request_timeout_seconds=0.01,
-            max_attempts_per_model=1, max_quota_recovery_rounds=0,
-            wait_for_model_recovery=False,
-        )
-
-    assert isinstance(raised.value.__cause__, TimeoutError)
-
-
-@pytest.mark.asyncio
-async def test_runtime_request_timeout_starts_after_model_center_admission(monkeypatch):
-    agent = AdmissionBoundaryAgent(name="AdmissionBoundary", model="dummy", provider="dummy")
-
-    class Lease:
-        async def release(self, *, success: bool):
-            assert success is True
-
-    async def delayed_admission(_route):
-        await asyncio.sleep(0.03)
-        return Lease()
-
-    monkeypatch.setattr("src.ai.agents.base.acquire_runtime_route_admission", delayed_admission)
-
-    result = await agent._complete_with_runtime_route(
-        runtime_route("dummy"),
-        "hello",
-        request_timeout_seconds=0.01,
-    )
-
-    assert result[0] == "admitted-response"
-    assert 0 <= agent._runtime_route_request_duration_seconds < 0.01
-
-
-@pytest.mark.asyncio
-async def test_empty_runtime_completion_releases_admission_as_failure(monkeypatch):
-    agent = AdmissionBoundaryAgent(name="AdmissionBoundary", model="dummy", provider="dummy")
-    releases = []
-
-    class Lease:
-        async def release(self, *, success: bool, error=None):
-            releases.append((success, str(error) if error else None))
-
-    async def acquire(_route):
-        return Lease()
-
-    async def empty_response(*_args, **_kwargs):
-        return "", {}
-
-    monkeypatch.setattr("src.ai.agents.base.acquire_runtime_route_admission", acquire)
-    monkeypatch.setattr(agent, "_complete_with_admitted_runtime_route", empty_response)
-
-    with pytest.raises(RuntimeError, match="empty completion response"):
-        await agent._complete_with_runtime_route(runtime_route("dummy"), "hello")
-
-    assert releases == [(False, "Model returned an empty completion response")]
-
-
-@pytest.mark.asyncio
-async def test_empty_runtime_completion_falls_through_to_next_model(monkeypatch):
-    routes = [runtime_route("empty-model"), runtime_route("fallback-model")]
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", routes, raising=False)
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-
-    agent = EmptyResponseFallbackAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-
-    result = await agent._complete_transport(
-        prompt="hello",
-        system="system",
-        max_attempts_per_model=1,
-        max_quota_recovery_rounds=0,
-        wait_for_model_recovery=False,
-    )
-
-    assert result == "fallback-response"
-    assert agent.call_models == ["empty-model", "fallback-model"]
-
-
-@pytest.mark.asyncio
-async def test_per_model_attempt_limit_avoids_blind_transient_retries(monkeypatch):
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [runtime_route("dummy-model")], raising=False)
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-
-    calls = []
-
-    async def fail_once(route, prompt, system, **kwargs):
-        calls.append((route, prompt, system, kwargs))
-        raise RuntimeError("temporary upstream failure")
-
-    agent = DummyAgent()
-    monkeypatch.setattr(agent, "_complete_with_runtime_route", fail_once)
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-
-    with pytest.raises(Exception, match="Agent completion failed"):
-        await agent._complete_transport(
-            prompt="hello",
-            system="system",
-            max_attempts_per_model=1,
-            max_quota_recovery_rounds=0,
-            wait_for_model_recovery=False,
-        )
-
-    assert len(calls) == 1
-
-
-@pytest.mark.asyncio
-async def test_quota_failure_fails_the_pass_without_reentering_transport(monkeypatch):
-    route = runtime_route("hunyuan-pro")
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [route], raising=False)
-    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
-
-    waited = []
-
-    async def _fake_sleep(seconds):
-        waited.append(int(seconds))
-
-    async def _runtime_routes():
-        return [route]
-
-    monkeypatch.setattr("src.ai.agents.base.get_active_model_routes", _runtime_routes)
-    monkeypatch.setattr("src.ai.agents.base.get_runtime_routes", _runtime_routes)
-    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _fake_sleep)
-
-    agent = QuotaRecoveryAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "fallback_model", "", raising=False)
-    monkeypatch.setattr(agent.config.ai, "rate_limit_cooldown_seconds", 300, raising=False)
-    monkeypatch.setattr(agent.config.ai, "rate_limit_wait_cap_seconds", 900, raising=False)
-
-    with pytest.raises(Exception, match="Agent completion failed"):
-        await agent._complete_transport(prompt="hello", system="system")
-
-    # A quota failure cools the route down and fails the pass. Waiting and
-    # retrying belongs to the work queue, so the transport never re-enters itself.
-    assert agent.provider_calls == 1
-
-
-@pytest.mark.asyncio
-async def test_probe_candidates_never_bypass_durable_rate_limit_cooldown(monkeypatch):
-
-    runtime_routes = [
-        {
-            "model_key": "qianwen-default:qwen-flash-character",
-            "model_name": "qwen-flash-character",
-            "provider_key": "qianwen-default",
-            "provider_name": "qianwen",
-            "available_for_routing": False,
-            "last_check_status": "rate_limited",
-            "rate_limit_remaining_seconds": 120,
-        },
-        {
-            "model_key": "qianwen-default:glm-5",
-            "model_name": "glm-5",
-            "provider_key": "qianwen-default",
-            "provider_name": "qianwen",
-            "available_for_routing": False,
-            "last_check_status": "available",
-            "rate_limit_remaining_seconds": 120,
-        },
-    ]
-
-    async def _empty_active_routes():
-        return []
-
-    async def _all_runtime_routes():
-        return runtime_routes
-
-    waited = []
-
-    async def _fake_sleep(seconds):
-        waited.append(int(seconds))
-
-    monkeypatch.setattr("src.ai.agents.base.get_active_model_routes", _empty_active_routes)
-    monkeypatch.setattr("src.ai.agents.base.get_runtime_routes", _all_runtime_routes)
-    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _fake_sleep)
-
-    agent = ProbeFallbackAgent()
-    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
-    monkeypatch.setattr(agent.config.ai, "rate_limit_cooldown_seconds", 120, raising=False)
-    monkeypatch.setattr(agent.config.ai, "rate_limit_wait_cap_seconds", 120, raising=False)
-
-    with pytest.raises(Exception, match="Agent completion failed"):
-        await agent._complete_transport(prompt="hello", system="system")
-
-    assert agent.call_models == []
-    assert waited
-
-
-@pytest.fixture(autouse=True)
-def dispatcher_transport_context():
-    """These tests exercise provider internals, never a business caller."""
-    from src.ai.work_queue import _DISPATCHING
+def agent(monkeypatch):
+    monkeypatch.setattr(base, "get_cache", Cache)
+    monkeypatch.setattr(base, "get_config", lambda: SimpleNamespace(ai=SimpleNamespace(
+        model_chain=[], default_model="bootstrap", default_provider="default",
+        enable_cache=True, cache_ttl=1, rate_limit_cooldown_seconds=60,
+    )))
+    for name in ("record_route_runtime_success", "record_route_runtime_failure", "record_model_call_log",
+                 "mark_provider_authentication_failed", "mark_route_rate_limited", "mark_route_unavailable",
+                 "clear_route_rate_limit"):
+        monkeypatch.setattr(base, name, AsyncMock())
+    instance = Agent(name="test")
+    instance.transport = SimpleNamespace(complete=AsyncMock(return_value=("answer", {"total": 9}, None)))
     token = _DISPATCHING.set(True)
     try:
-        yield
+        yield instance
     finally:
         _DISPATCHING.reset(token)
+
+
+async def test_live_completion_and_cache_hit_record_selected_model(agent):
+    for _ in range(2):
+        assert await agent.complete("question", "system", _scheduled_route=ROUTE) == "answer"
+    agent.transport.complete.assert_awaited_once()
+    live, cached = agent.get_conversation_history()
+    assert live["model"] == cached["model"] == "chosen"
+    assert live["provider"] == cached["provider"] == "provider"
+    assert live["metadata"]["cache_hit"] is False
+    assert cached["metadata"]["cache_hit"] is True
+    assert cached["tokens"] == {"total": 9}
+    assert cached["system_prompt"] == "system"
+    assert cached["metadata"]["runtime_route"] == live["metadata"]["runtime_route"]
+    base.record_model_call_log.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "status,active,should_recover",
+    [("available", False, False), ("rate_limited", False, True), ("available", True, True)],
+)
+async def test_success_only_recovers_pending_rate_limits(
+    agent, status, active, should_recover
+):
+    route = {
+        **ROUTE,
+        "rate_limit_count": 99,
+        "last_check_status": status,
+        "rate_limit_active": active,
+    }
+    assert await agent.complete("question", _scheduled_route=route) == "answer"
+    assert base.clear_route_rate_limit.await_count == int(should_recover)
+    assert route["rate_limit_count"] == 99
+
+
+async def test_invalidation_uses_replayed_route_cache_key_and_system_prompt(agent):
+    await agent.complete("question", "system", _scheduled_route=ROUTE)
+    await agent.complete("question", "other system", _scheduled_route=ROUTE)
+    await agent.complete("question", "system", _scheduled_route=ROUTE)
+    key = agent.get_latest_conversation()["metadata"]["cache_key"]
+    assert await agent.invalidate_completion_cache(prompt="question", system="system") is True
+    assert agent.cache.deleted == [key]
+    assert len(agent.cache.values) == 1
+    await agent.complete("question", "system", _scheduled_route=ROUTE)
+    assert agent.transport.complete.await_count == 3
+
+
+async def test_cache_is_partitioned_by_actual_route_and_generation(agent):
+    await agent.complete("question", _scheduled_route=ROUTE)
+    await agent.complete("question", _scheduled_route={**ROUTE, "model_key": "provider:other", "model_name": "other"})
+    agent.temperature = .1
+    await agent.complete("question", _scheduled_route=ROUTE)
+    await agent.complete("question", _scheduled_route=ROUTE, response_format={"type": "json_object"})
+    assert agent.transport.complete.await_count == 4
+    assert len(agent.cache.values) == 4
+
+
+async def test_cached_provenance_distinguishes_providers_with_the_same_model_name(agent):
+    other = {**ROUTE, "provider_id": "p2", "provider_key": "other", "model_key": "other:chosen"}
+    for route in (ROUTE, other, ROUTE, other):
+        await agent.complete("question", _scheduled_route=route)
+        entry = agent.get_latest_conversation()
+        assert entry["metadata"]["runtime_route"]["model_key"] == route["model_key"]
+        assert entry["provider"] == route["provider_key"]
+    assert agent.transport.complete.await_count == 2
+
+
+async def test_cache_and_telemetry_outage_do_not_repeat_success(agent, monkeypatch):
+    agent.cache.get = AsyncMock(side_effect=ConnectionError("redis unavailable"))
+    agent.cache.set = AsyncMock(side_effect=ConnectionError("redis unavailable"))
+    monkeypatch.setattr(base, "record_model_call_log", AsyncMock(side_effect=RuntimeError("db unavailable")))
+    monkeypatch.setattr(base, "record_route_runtime_success", AsyncMock(side_effect=RuntimeError("db unavailable")))
+    assert await agent.complete("question", _scheduled_route=ROUTE) == "answer"
+    agent.transport.complete.assert_awaited_once()
+    assert agent.get_latest_conversation()["response"] == "answer"
+
+
+@pytest.mark.parametrize("error", [TimeoutError("timed out"), ConnectionError("network down"),
+                                  RuntimeError("429 rate limit reached"), RuntimeError("401 invalid token")])
+async def test_failure_identity_is_preserved_and_one_route_is_tried(agent, monkeypatch, error):
+    agent.transport.complete.side_effect = error
+    monkeypatch.setattr(base, "record_model_call_log", AsyncMock(side_effect=RuntimeError("db unavailable")))
+    with pytest.raises(type(error)) as raised:
+        await agent.complete("question", _scheduled_route=ROUTE)
+    assert raised.value is error
+    agent.transport.complete.assert_awaited_once()
+    assert not agent.cache.values and not agent.conversation_history
+
+
+async def test_cloudflare_block_is_one_attempt_with_model_scoped_retry_hint(agent):
+    import httpx
+    from openai import PermissionDeniedError
+
+    page = "<html><title>Attention Required! | Cloudflare</title></html>"
+    error = PermissionDeniedError(
+        page,
+        response=httpx.Response(
+            403,
+            request=httpx.Request("POST", "https://provider.invalid/chat/completions"),
+            headers={"content-type": "text/html", "retry-after": "600"},
+            text=page,
+        ),
+        body=page,
+    )
+    agent.transport.complete.side_effect = error
+    with pytest.raises(PermissionDeniedError) as raised:
+        await agent.complete("question", _scheduled_route=ROUTE)
+    assert raised.value is error
+    agent.transport.complete.assert_awaited_once()
+    base.mark_provider_authentication_failed.assert_not_awaited()
+    base.mark_route_unavailable.assert_not_awaited()
+    base.record_route_runtime_failure.assert_awaited_once()
+    assert base.record_route_runtime_failure.await_args.kwargs["retry_after_seconds"] == 600
+    assert base.record_route_runtime_failure.await_args.kwargs["cooldown_seconds"] >= 600
+
+
+async def test_cancellation_propagates_without_model_health_penalty(agent):
+    entered = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def pending(*args, **kwargs):
+        entered.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    agent.transport.complete.side_effect = pending
+    task = asyncio.create_task(agent.complete("question", _scheduled_route=ROUTE))
+    await entered.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert cancelled.is_set()
+    base.record_route_runtime_failure.assert_not_awaited()
+    base.record_model_call_log.assert_not_awaited()
+    assert not agent.cache.values
+
+
+async def test_empty_response_is_failed_once_and_never_cached(agent):
+    agent.transport.complete.return_value = ("  ", {}, None)
+    with pytest.raises(RuntimeError, match="empty completion"):
+        await agent.complete("question", _scheduled_route=ROUTE)
+    agent.transport.complete.assert_awaited_once()
+    assert not agent.cache.values
+    assert base.record_model_call_log.await_args.kwargs["status"] == "failed"
+
+
+async def test_attachments_bypass_text_cache(agent):
+    agent.transport.complete.return_value = ("document answer", {}, "native_file")
+    for _ in range(2):
+        await agent.complete("question", _scheduled_route=ROUTE, attachments=[object()])
+    assert agent.transport.complete.await_count == 2
+    assert not agent.cache.values
+    assert agent._last_input_mode == "native_file"
+
+
+async def test_dispatcher_cannot_execute_without_selected_route(agent):
+    with pytest.raises(RuntimeError, match="pin an admitted route"):
+        await agent.complete("question")
+    agent.transport.complete.assert_not_awaited()

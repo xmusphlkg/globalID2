@@ -3788,14 +3788,12 @@ def test_ai_brief_json_parser_uses_the_first_complete_object_when_two_are_return
     assert parsed == {"brief": "A"}
 
 
-def test_ai_settings_knowledge_model_shards_falls_back_to_model_chain() -> None:
+def test_ai_settings_bootstrap_model_chain_preserves_order_without_duplicates() -> None:
     settings = AISettings(
         model_chain_raw="model-a,model-b,model-a",
-        knowledge_model_shards_raw="",
     )
 
     assert settings.model_chain == ["model-a", "model-b"]
-    assert settings.knowledge_model_shards == ["model-a", "model-b"]
 
 
 def test_ai_brief_preferred_models_follow_model_center_shard_rotation(monkeypatch) -> None:
@@ -3977,7 +3975,7 @@ def test_report_v4_disease_context_is_locale_first_and_evidence_bound() -> None:
 
 @pytest.mark.parametrize("failure_at", [1, 2])
 def test_durable_model_failure_is_not_converted_to_scaffold_or_retried(monkeypatch, failure_at):
-    from src.ai.work_queue import AIWorkFailed
+    from src.ai.runtime import AIWorkFailed
 
     class FailedWorkAgent:
         def __init__(self):
@@ -4024,7 +4022,7 @@ def test_durable_model_failure_is_not_converted_to_scaffold_or_retried(monkeypat
 
 
 def test_peer_review_durable_failure_propagates_to_parent(monkeypatch):
-    from src.ai.work_queue import AIWorkFailed
+    from src.ai.runtime import AIWorkFailed
     from src.knowledge import peer_review
 
     async def failed_review(*_args, **_kwargs):

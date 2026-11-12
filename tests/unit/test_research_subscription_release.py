@@ -79,6 +79,25 @@ def test_completed_week_uses_utc_and_year_boundary():
     assert release.completed_week(datetime(2027, 1, 4, tzinfo=timezone.utc)) == "2026-W53"
 
 
+def test_independent_digest_requires_current_pointer_and_active_public_route():
+    identity = {'release_id': 'literature-one', 'papers_generation_sha256': 'a' * 64}
+    class Reply(Response):
+        def __init__(self, body, headers=None):
+            super().__init__(body)
+            self.headers = headers or {}
+    def opener(request, timeout):
+        if request.full_url.endswith('/current.json'):
+            return Reply({'release_id': identity['release_id'], 'papers': {'papers_generation_sha256': 'a' * 64}})
+        return Reply({}, {'X-GIDS-Research-Release': identity['release_id']})
+    release._verify_live_literature_pointer('https://site.example.test', identity, opener=opener)
+    def not_active(request, timeout):
+        if request.full_url.endswith('/current.json'):
+            return Reply({'release_id': identity['release_id'], 'papers': {'papers_generation_sha256': 'a' * 64}})
+        return Reply({}, {})
+    with pytest.raises(release.ResearchSubscriptionError, match='pointer_mismatch'):
+        release._verify_live_literature_pointer('https://site.example.test', identity, opener=not_active)
+
+
 def test_no_send_before_activation_floor(tmp_path):
     def no_network(*_args, **_kwargs):
         raise AssertionError("must not access network")
@@ -97,7 +116,7 @@ def test_immutable_outbox_retries_after_failure_and_never_recreates_completed(tm
         if request.full_url.endswith("/release.json"):
             return Response(IDENTITY)
         if request.full_url.endswith("/health"):
-            return Response({"ok": True, "capabilities": {"research_content_items_v1": True}})
+            return Response({"ok": True, "capabilities": {"research_content_items_v1": True, "research_personalized_items_v1": True}})
         if fail_once:
             fail_once = False
             raise TimeoutError("connection timeout")
@@ -114,6 +133,32 @@ def test_immutable_outbox_retries_after_failure_and_never_recreates_completed(tm
     assert call(tmp_path, astro, opener)["status"] == "completed"
     assert call(tmp_path, astro, opener)["status"] == "already_completed"
     assert calls.count("https://worker.example.test/api/admin/notifications") == 2
+
+
+def test_legacy_pending_outbox_resumes_its_exact_original_payload(tmp_path):
+    astro = files(tmp_path)
+    payload = release._payload_for_week(astro, "2026-W44", "https://site.example.test")
+    payload.pop("personalized_templates")
+    for item in payload["content_items"]:
+        item.pop("localized_markdown")
+    directory = tmp_path / "exports/subscription-outbox/full/research"
+    directory.mkdir(parents=True)
+    (directory / "2026-W44.json").write_text(json.dumps({
+        "week": "2026-W44", "payload": payload, "payload_sha256": release._fingerprint(payload),
+        "release_id": "r-1", "status": "pending",
+    }), encoding="utf-8")
+    posted = []
+    def opener(request, *, timeout):
+        if request.full_url.endswith("/release.json"):
+            return Response(IDENTITY)
+        if request.full_url.endswith("/health"):
+            return Response({"ok": True, "capabilities": {"research_content_items_v1": True}})
+        posted.append(json.loads(request.data))
+        return Response({"ok": True, "duplicate": True, "campaign": {
+            "id": "legacy", "status": "sent", "progress": {"total": 1, "sent": 1},
+        }})
+    assert call(tmp_path, astro, opener)["status"] == "completed"
+    assert posted == [payload]
 
 
 def test_release_mismatch_rejects_before_any_worker_request(tmp_path):
@@ -137,7 +182,7 @@ def test_pending_outbox_survives_the_next_week(tmp_path):
         if request.full_url.endswith("/release.json"):
             return Response(IDENTITY)
         if request.full_url.endswith("/health"):
-            return Response({"ok": True, "capabilities": {"research_content_items_v1": True}})
+            return Response({"ok": True, "capabilities": {"research_content_items_v1": True, "research_personalized_items_v1": True}})
         if failing:
             raise TimeoutError()
         return Response({"ok": True, "duplicate": True, "campaign": {
@@ -163,7 +208,7 @@ def test_content_changes_do_not_automatically_create_a_second_campaign(tmp_path)
         if request.full_url.endswith("/release.json"):
             return Response(IDENTITY)
         if request.full_url.endswith("/health"):
-            return Response({"ok": True, "capabilities": {"research_content_items_v1": True}})
+            return Response({"ok": True, "capabilities": {"research_content_items_v1": True, "research_personalized_items_v1": True}})
         raise TimeoutError()
 
     with pytest.raises(release.ResearchSubscriptionError):
@@ -190,7 +235,7 @@ def test_pilot_outbox_and_key_are_isolated_from_full_delivery(tmp_path):
         if request.full_url.endswith('/release.json'):
             return Response(IDENTITY)
         if request.full_url.endswith('/health'):
-            return Response({'delivery_mode': 'pilot', 'capabilities': {'research_content_items_v1': True}})
+            return Response({'delivery_mode': 'pilot', 'capabilities': {'research_content_items_v1': True, 'research_personalized_items_v1': True}})
         keys.append(json.loads(request.data)['idempotency_key'])
         return Response({'ok': True, 'campaign': {'id': 'c1', 'status': 'sent', 'progress': {'total': 0}}})
 

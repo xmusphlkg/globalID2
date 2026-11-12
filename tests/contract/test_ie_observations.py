@@ -22,6 +22,16 @@ from tests.contract.test_no_observations import Writer
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/ingestion/IE"
 
 
+@pytest.mark.asyncio
+async def test_public_release_requires_recorded_operator_decision(monkeypatch):
+    from types import SimpleNamespace
+    import src.core.country_library as library
+
+    monkeypatch.setattr(library, "get_country_bootstrap_config", lambda _: {"crawler_config": {}})
+    with pytest.raises(ValueError, match="recorded operator decision"):
+        await ie.collect(None, updater=SimpleNamespace(public_release_enabled=True), source="hpsc_ndh")
+
+
 def install(monkeypatch):
     annual = {
         report.url: FIXTURES / f"{report.report_id}.pdf" for report in ANNUAL_REPORTS
@@ -192,8 +202,8 @@ async def test_hpsc_all_source_contracts_keep_observations_and_permission_gate(
         for row in rows
     ]
     assert strip(actual.rows) == strip(expected.rows)
-    assert updater.public_release_enabled is False
-    assert all(row["PublicReleaseEnabled"] == "false" for row in actual.rows)
+    assert updater.public_release_enabled is True
+    assert all(row["PublicReleaseEnabled"] == "true" for row in actual.rows)
     assert any(row["Cases"] == "0" for row in actual.rows)
     store = SeriesObservationStore()
     actual_obs = store.build_observations(

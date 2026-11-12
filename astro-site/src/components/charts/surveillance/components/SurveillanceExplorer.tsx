@@ -1,3 +1,4 @@
+import GIDSLoader from '../../../GIDSLoader';
 import RuntimeChartSource from '../../RuntimeChartSource';
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { analyze, selectedSeries } from "../analysis/engine";
@@ -46,7 +47,7 @@ export default function SurveillanceExplorer(props: Props) {
   if (data.status === "loading")
     return (
       <div className="surveillance-loading" role="status" aria-busy="true">
-        {label("loading", lang)}
+        <GIDSLoader language={lang} label={label("loading", lang)} />
       </div>
     );
   if (data.status === "error")
@@ -240,9 +241,9 @@ function ExplorerWorkspace({
       data-context={catalog.contextId}
       data-result-id={result.id}
       data-chart-title={title || undefined}
-      data-source-label={sourceMeta?.label || undefined}
-      data-source-coverage={sourceMeta?.coverage || undefined}
-      data-source-updated={sourceMeta?.updatedAt || undefined}
+      data-source-label={!dataUrl || catalog.snapshot ? sourceMeta?.label || undefined : undefined}
+      data-source-coverage={!dataUrl || catalog.snapshot ? sourceMeta?.coverage || undefined : undefined}
+      data-source-updated={!dataUrl || catalog.snapshot ? sourceMeta?.updatedAt || undefined : undefined}
     >
       <div className="surveillance-heading">
         {(title || presentation === "compact") && <strong>{title ?? label("title", lang)}</strong>}
@@ -467,8 +468,8 @@ function ExplorerWorkspace({
           </details>
         </div>
       </div>
-      {!sourceMeta && dataUrl && <RuntimeChartSource dataUrl={dataUrl} language={lang} />}
-      {sourceMeta && (
+      {dataUrl && !catalog.snapshot && <RuntimeChartSource dataUrl={dataUrl} language={lang} catalog={catalog} result={result} />}
+      {sourceMeta && (!dataUrl || catalog.snapshot) && (
         <p className="surveillance-note">
           {sourceMeta.href && /^https?:\/\//i.test(sourceMeta.href) ? (
             <a href={sourceMeta.href} target="_blank" rel="noreferrer">

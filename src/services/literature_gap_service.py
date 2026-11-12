@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+import asyncio
 import hashlib
 import json
 from pathlib import Path
@@ -388,7 +389,7 @@ class LiteratureGapService:
         cfg = get_config().literature
         if not cfg.gap_discovery_enabled:
             raise ValueError("Literature evidence-gap discovery is disabled")
-        from src.ai.work_queue import current_parent
+        from src.ai.runtime import current_parent
 
         parent = current_parent()
         source_task_uuid = task.task_uuid if task else parent.task_uuid if parent else None
@@ -595,7 +596,8 @@ class LiteratureGapService:
             repository = LiteratureRepository(db)
             ranked_candidates: list[dict[str, Any]] = []
             for candidate in candidates.values():
-                classification = classify_candidate(
+                classification = await asyncio.to_thread(
+                    classify_candidate,
                     candidate,
                     diseases=disease_catalogue,
                     countries=country_catalogue,

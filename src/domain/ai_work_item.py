@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     Index,
@@ -40,10 +41,17 @@ class AIWorkItem(Base):
         Integer, nullable=False, default=1, server_default="1"
     )
     error: Mapped[str | None] = mapped_column(Text)
+    cancel_requested: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     available_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now
     )
     lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_owner: Mapped[str | None] = mapped_column(String(64))
+    lease_token: Mapped[str | None] = mapped_column(String(36))
+    leased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now
     )
@@ -65,4 +73,18 @@ class AIWorkItem(Base):
             postgresql_where=text("status = 'queued'"),
         ),
         Index("ix_ai_work_items_parent", "parent_task_uuid", "status"),
+        Index("ix_ai_work_items_owner", "lease_owner", "status"),
+        Index(
+            "ix_ai_work_items_parent_request",
+            parent_task_uuid,
+            payload.op("->>")("request_key"),
+            id.desc(),
+        ).ddl_if(dialect="postgresql"),
+        Index(
+            "ix_ai_work_items_leased_route_expiry",
+            "route_key",
+            "lease_expires_at",
+            postgresql_where=text("status = 'leased'"),
+            sqlite_where=text("status = 'leased'"),
+        ),
     )

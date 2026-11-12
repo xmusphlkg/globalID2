@@ -1,6 +1,7 @@
 /** Join a situation place to the public catalogue. No filesystem and no React. */
 
 import { toSeoSlug } from '../../lib/seo.ts';
+import { siteHref } from '../../lib/papers.ts';
 import type { CountryGlance, DiseaseGlance, SeriesGlance, SiteIndex } from '../../utils/situationTypes.ts';
 
 const SPARK_LIMIT = 16;
@@ -111,7 +112,7 @@ export function buildSituationSite(input: {
     if (country.latestDate) glance.latestDate = country.latestDate;
     if (country.page) glance.href = `${prefix}/countries/${code.toLowerCase()}/`;
     const researchHref = withPrefix(prefix, country.researchUrl);
-    if (researchHref) glance.researchHref = researchHref;
+    if (researchHref) glance.researchHref = siteHref(researchHref);
     countries[code] = glance;
 
     for (const [diseaseId, entry] of Object.entries(country.series)) {
@@ -139,7 +140,7 @@ export function buildSituationSite(input: {
     if (disease.name_zh) glance.name_zh = disease.name_zh;
     if (slug) glance.href = `${prefix}/diseases/${slug}/`;
     const researchHref = withPrefix(prefix, disease.researchUrl);
-    if (researchHref) glance.researchHref = researchHref;
+    if (researchHref) glance.researchHref = siteHref(researchHref);
     diseases[id] = glance;
   }
 

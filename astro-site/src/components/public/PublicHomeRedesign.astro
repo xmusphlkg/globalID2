@@ -6,6 +6,7 @@ import { localizedRegionName } from '../../utils/i18n';
 import SituationMetrics from '../situation/SituationMetrics';
 import diseasesRaw from '../../data/diseases/index.json';
 import reportsRaw from '../../data/reports/index.json';
+import researchRoutes from '../../data/research/routes.json';
 import SurveillanceHomeSummary from './SurveillanceHomeSummary';
 import HomeInfluenza from './HomeInfluenza';
 
@@ -19,17 +20,17 @@ const href = (path: string) => `${prefix}${path}`;
 const t = zh ? {
   eyebrow: 'GIDS · 官方来源监测',
   titleLines: ['发现信号', '追溯来源'],
-  sloganPrefix: '继续',
-  sloganWords: ['比较趋势', '复用数据', '核对证据', '更快研判'],
-  summary: '检索官方监测记录、态势复核、研究背景与可下载数据集，在同一个入口完成查源、比较和复用。',
+  sloganPrefix: '从数据出发',
+  sloganWords: ['比较趋势', '复用数据', '核对证据', '了解研究'],
+  summary: '汇集官方监测数据、疫情动态和相关研究，方便你查找来源、比较趋势、下载数据。',
   searchLabel: '搜索 GIDS',
   searchPlaceholder: '搜索国家、疾病、报告或研究',
   search: '搜索',
   situation: '查看当前态势',
   countries: '浏览国家与地区',
   downloads: '下载数据',
-  release: '本次公开发布',
-  updated: '快照已生成',
+  release: '公开数据概览',
+  updated: '已发布',
   observations: '监测记录',
   reportedCases: '报告病例',
   jurisdictions: '国家与地区',
@@ -40,28 +41,28 @@ const t = zh ? {
   cadence: '报告频率',
   sourceNote: '覆盖、指标定义和发布时间因来源而异；缺失值不应自动解释为零。',
   methods: '来源与方法',
-  review: '态势复核',
+  review: '疫情动态',
   attention: '当前关注',
-  reviewText: '读取世卫组织、欧洲疾控中心、非洲疾控中心与泛美卫生组织的完整官方报告，抽取“某病在某地”的警报并标在地图上，经两个模型互审后发布。',
+  reviewText: '汇集世卫组织、欧洲疾控中心、非洲疾控中心和泛美卫生组织等机构的官方通报，提取疾病、地点及最新进展，经双模型复核后展示。',
   events: '有新消息的地点',
   signals: '活跃疫情',
   reviewed: '贡献来源',
   fullReview: '打开态势地图',
   explore: '开始探索',
-  exploreTitle: '像使用数据目录一样进入公共卫生证据',
-  exploreText: '从国家、疾病或研究进入数据，沿着来源、趋势与下载继续查证。',
+  exploreTitle: '按你的问题查找数据和研究',
+  exploreText: '选择国家或疾病，查看监测趋势、核对官方来源，再了解相关研究。',
   countryPath: '按地区看',
   countryPathText: '查看国家和地区的监测范围、来源、疾病列表与时间跨度。',
   diseasePath: '按疾病看',
   diseasePathText: '从疾病目录进入跨地区记录，比较同一疾病在不同来源中的覆盖。',
-  downloadPath: '直接复用',
+  downloadPath: '下载与使用',
   downloadPathText: '获取可下载数据集，并在引用前查看字段说明和限制。',
-  researchPath: '连接研究',
-  researchPathText: '浏览研究雷达，把监测信号放到文献与证据背景中理解。',
-  countryList: '覆盖较多的地区',
+  researchPath: '查阅相关研究',
+  researchPathText: '按疾病、地区和主题查找文献，结合监测数据了解研究背景。',
+  countryList: '数据较丰富的国家与地区',
   common: '常用疾病入口',
   viewAll: '查看全部',
-  analysis: '已发布分析',
+  analysis: '监测报告',
   latest: '最新监测报告',
   research: '浏览研究证据',
   openReport: '打开报告',
@@ -144,13 +145,13 @@ const explorePaths = [
   { href: href('/countries/'), index: '01', title: t.countryPath, text: t.countryPathText, stat: 'countries', metric: t.jurisdictions },
   { href: href('/diseases/'), index: '02', title: t.diseasePath, text: t.diseasePathText, stat: 'diseases', metric: t.diseases },
   { href: href('/downloads/'), index: '03', title: t.downloadPath, text: t.downloadPathText, stat: 'sources', metric: t.sources },
-  { href: href('/research/'), index: '04', title: t.researchPath, text: t.researchPathText, stat: `${reportsRaw.length}`, metric: t.analysis },
+  { href: href('/research/'), index: '04', title: t.researchPath, text: t.researchPathText, stat: new Intl.NumberFormat(locale).format((researchRoutes.articles ?? []).filter((article: any) => article.indexable !== false).length), metric: zh ? '篇证据摘要' : fr ? 'résumés des preuves' : 'evidence summaries' },
 ];
 ---
 
 <div class:list={['public-home-redesign', zh && 'is-zh']}>
   <section class="home-hero">
-    <HomeInfluenza client:load language={locale} />
+    <HomeInfluenza client:idle language={locale} />
     <div class="page-wrap hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">{t.eyebrow}</p>
@@ -187,10 +188,10 @@ const explorePaths = [
           </div>
           <span class="release-pill"><i></i>{t.updated}</span>
         </header>
-        <SurveillanceHomeSummary client:load dataUrl="/site-data/meta.json" mode="home-indicators" language={locale} reportCount={reportsRaw.length} />
+        <SurveillanceHomeSummary client:load dataUrl="/site-data/home-summary.json" mode="home-indicators" language={locale} reportCount={reportsRaw.length} />
         <div class="source-board">
           <h3>{t.recentBoard}</h3>
-          <SurveillanceHomeSummary client:load dataUrl="/site-data/meta.json" mode="recent-countries" language={locale} />
+          <SurveillanceHomeSummary client:load dataUrl="/site-data/home-summary.json" mode="recent-countries" language={locale} />
         </div>
         <p class="source-note">{t.sourceNote}</p>
         <a class="text-link console-link" href={href('/about/')}>{t.methods} <span aria-hidden="true">-&gt;</span></a>
@@ -201,11 +202,11 @@ const explorePaths = [
     <section class="situation-strip">
       <div class="page-wrap situation-grid">
         <div>
-          <p class="eyebrow">{t.review} · <SituationMetrics client:load mode="date" locale={locale} /></p>
+          <p class="eyebrow">{t.review} · <SituationMetrics client:visible mode="date" locale={locale} /></p>
           <h2>{t.attention}</h2>
           <p>{t.reviewText}</p>
         </div>
-        <SituationMetrics client:load locale={locale} />
+        <SituationMetrics client:visible locale={locale} />
         <a href={href('/situation/')}>{t.fullReview} <span aria-hidden="true">-&gt;</span></a>
       </div>
     </section>
@@ -228,7 +229,7 @@ const explorePaths = [
           <a class="path-card" href={path.href}>
             <span class="path-index">{path.index}</span>
             <span class="path-copy"><strong>{path.title}</strong><small>{path.text}</small></span>
-            <span class="path-stat"><b>{path.index === '04' ? path.stat : <SurveillanceHomeSummary client:visible dataUrl="/site-data/meta.json" mode="home-count" metric={path.stat as 'countries' | 'diseases' | 'sources'} language={locale} />}</b><small>{path.metric}</small></span>
+            <span class="path-stat"><b>{path.index === '04' ? path.stat : <SurveillanceHomeSummary client:visible dataUrl="/site-data/home-summary.json" mode="home-count" metric={path.stat as 'countries' | 'diseases' | 'sources'} language={locale} />}</b><small>{path.metric}</small></span>
           </a>
         ))}
       </div>
@@ -242,7 +243,7 @@ const explorePaths = [
           <h2>{t.countryList}</h2>
           <a href={href('/countries/')}>{t.viewAll}</a>
         </div>
-        <SurveillanceHomeSummary client:visible dataUrl="/site-data/meta.json" mode="country-links" language={locale} />
+        <SurveillanceHomeSummary client:visible dataUrl="/site-data/home-summary.json" mode="country-links" language={locale} />
       </div>
       <div>
         <div class="subheading">
@@ -274,7 +275,7 @@ const explorePaths = [
         <div class="report-list">
           {latestReports.map((report: any) => {
             const code = String(report.country_code ?? '').toLowerCase();
-            const name = zh ? report.country_name_zh ?? report.country_name_en ?? report.country_name ?? report.country_code : fr ? (report.country_name_fr ?? localizedRegionName('fr', report.country_code, { en: report.country_name_en ?? report.country_name })) : report.country_name_en ?? report.country_name ?? report.country_code;
+            const name = zh ? localizedRegionName('zh', report.country_code, { zh: report.country_name_zh, en: report.country_name_en ?? report.country_name }) : fr ? (report.country_name_fr ?? localizedRegionName('fr', report.country_code, { en: report.country_name_en ?? report.country_name })) : report.country_name_en ?? report.country_name ?? report.country_code;
             return (
               <a href={siteHref(href(`/countries/${code}/reports/${report.id}/`))}>
                 <CountryFlag code={report.country_code} name={name} sizeClass="w-9 h-7" />
@@ -352,6 +353,13 @@ const explorePaths = [
   .text-link, .subheading a, .situation-grid > a { display: inline-flex; gap: .25rem; align-items: center; color: rgb(var(--color-teal)); font-size: .78rem; font-weight: 750; text-decoration: none; }
   .console-link { margin: .65rem 1.1rem 1rem; }
   .text-link:hover, .subheading a:hover, .situation-grid > a:hover { color: rgb(var(--color-accent)); }
+  :global(html[data-theme='dark']) .eyebrow,
+  :global(html[data-theme='dark']) .slogan-window,
+  :global(html[data-theme='dark']) .text-link,
+  :global(html[data-theme='dark']) .subheading a,
+  :global(html[data-theme='dark']) .compare-feature-copy small,
+  :global(html[data-theme='dark']) .report-list b { color: #6ee7d2; }
+  :global(html[data-theme='dark']) .path-index { color: #f0a086; }
   .situation-strip { color: #e5edf3; background: rgb(var(--color-brand)); }
   .situation-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(19rem, .85fr) auto; gap: 2rem; align-items: center; padding-block: 2rem; }
   .situation-grid .eyebrow { color: #8ad2ca; }

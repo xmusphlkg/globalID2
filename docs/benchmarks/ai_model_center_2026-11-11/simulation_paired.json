@@ -1,0 +1,200 @@
+{
+  "before": {
+    "at": "2026-11-10T16:21:57.007415+00:00",
+    "mode": "simulated",
+    "seed": 7,
+    "input_identity_sha256": "0dc6325f868747bc3fb61f7b0623f594d099e18bf49721a4b24b668d8df4f6d6",
+    "source_revision": "0030_ai_activity_leases",
+    "source_rows_copied": 1024,
+    "buffer_size": 512,
+    "capacity": 157,
+    "routes": [
+      {
+        "model_key": "simulation:model-0",
+        "capacity": 40,
+        "source_leased": 0
+      },
+      {
+        "model_key": "simulation:model-1",
+        "capacity": 39,
+        "source_leased": 0
+      },
+      {
+        "model_key": "simulation:model-2",
+        "capacity": 39,
+        "source_leased": 0
+      },
+      {
+        "model_key": "simulation:model-3",
+        "capacity": 39,
+        "source_leased": 0
+      }
+    ],
+    "simulated_latency_seconds": 5.0,
+    "elapsed_seconds": 77.238,
+    "timed_out": false,
+    "call_budget_reached": false,
+    "activity_attempts": 2048,
+    "activity_attempt_outcomes": {
+      "succeeded": 2048
+    },
+    "peak_active_executions": 157,
+    "background_errors": [],
+    "supply_ceiling": 157,
+    "distinct_model_count": 4,
+    "seconds_to_full_capacity": 2.953,
+    "whole_run_execution_occupancy": 0.8461,
+    "interior_sampled_occupancy": 0.939,
+    "terminal_workflows": 1024,
+    "terminal_workflows_per_minute": 795.46,
+    "reviewed_workflows": 1024,
+    "workflow_outcomes": {
+      "held": 1011,
+      "published": 13
+    },
+    "activity_statuses": {
+      "succeeded": 2048
+    },
+    "execution_latency_p50_seconds": 5.007,
+    "execution_latency_p95_seconds": 5.021,
+    "ready_queue_wait_p50_seconds": 4.669,
+    "ready_queue_wait_p95_seconds": 5.581,
+    "tick_p95_seconds": 0.446,
+    "sql_statements": {
+      "SELECT": 20115,
+      "INSERT": 462,
+      "UPDATE": 3250
+    },
+    "totals": {
+      "published": 13,
+      "archived": 0,
+      "rejected": 0,
+      "held": 1011,
+      "deferred": 0,
+      "stale": 0,
+      "waiting": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "generation": 0,
+      "claimed": 1024,
+      "scanned": 1024,
+      "cursor": 12487,
+      "exhausted": true,
+      "pending": 0,
+      "buffer_budget": 512,
+      "buffer_target": 314
+    },
+    "http_requests": 0,
+    "http_outcomes": {},
+    "http_latency_p50_seconds": null,
+    "http_latency_p95_seconds": null,
+    "limits": [
+      "Decisions and health updates remain in a disposable database.",
+      "Occupancy includes warmup and finite-batch drain; this is not sustained provider throughput.",
+      "Simulated replies do not measure model quality; live calls use a per-route cap and total call budget."
+    ]
+  },
+  "after": {
+    "at": "2026-11-10T16:23:16.801635+00:00",
+    "mode": "simulated",
+    "seed": 7,
+    "input_identity_sha256": "0dc6325f868747bc3fb61f7b0623f594d099e18bf49721a4b24b668d8df4f6d6",
+    "source_revision": "0030_ai_activity_leases",
+    "source_rows_copied": 1024,
+    "buffer_size": 512,
+    "capacity": 157,
+    "routes": [
+      {
+        "model_key": "simulation:model-0",
+        "capacity": 40,
+        "source_leased": 0
+      },
+      {
+        "model_key": "simulation:model-1",
+        "capacity": 39,
+        "source_leased": 0
+      },
+      {
+        "model_key": "simulation:model-2",
+        "capacity": 39,
+        "source_leased": 0
+      },
+      {
+        "model_key": "simulation:model-3",
+        "capacity": 39,
+        "source_leased": 0
+      }
+    ],
+    "simulated_latency_seconds": 5.0,
+    "elapsed_seconds": 77.744,
+    "timed_out": false,
+    "call_budget_reached": false,
+    "activity_attempts": 2048,
+    "activity_attempt_outcomes": {
+      "succeeded": 2048
+    },
+    "peak_active_executions": 157,
+    "background_errors": [],
+    "supply_ceiling": 157,
+    "distinct_model_count": 4,
+    "seconds_to_full_capacity": 3.698,
+    "whole_run_execution_occupancy": 0.8419,
+    "interior_sampled_occupancy": 0.9421,
+    "terminal_workflows": 1024,
+    "terminal_workflows_per_minute": 790.29,
+    "reviewed_workflows": 1024,
+    "workflow_outcomes": {
+      "held": 1011,
+      "published": 13
+    },
+    "activity_statuses": {
+      "succeeded": 2048
+    },
+    "execution_latency_p50_seconds": 5.007,
+    "execution_latency_p95_seconds": 5.038,
+    "ready_queue_wait_p50_seconds": 4.765,
+    "ready_queue_wait_p95_seconds": 5.758,
+    "tick_p95_seconds": 0.445,
+    "sql_statements": {
+      "SELECT": 19625,
+      "INSERT": 396,
+      "UPDATE": 3214
+    },
+    "totals": {
+      "published": 13,
+      "archived": 0,
+      "rejected": 0,
+      "held": 1011,
+      "deferred": 0,
+      "stale": 0,
+      "waiting": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "generation": 0,
+      "claimed": 1024,
+      "scanned": 1024,
+      "cursor": 12487,
+      "exhausted": true,
+      "pending": 0,
+      "buffer_budget": 512,
+      "buffer_target": 314
+    },
+    "http_requests": 0,
+    "http_outcomes": {},
+    "http_latency_p50_seconds": null,
+    "http_latency_p95_seconds": null,
+    "limits": [
+      "Decisions and health updates remain in a disposable database.",
+      "Occupancy includes warmup and finite-batch drain; this is not sustained provider throughput.",
+      "Simulated replies do not measure model quality; live calls use a per-route cap and total call budget."
+    ]
+  },
+  "method": {
+    "same_in_memory_article_snapshot": true,
+    "database": "isolated PostgreSQL 15, tmpfs data directory",
+    "capacity": 157,
+    "latency_seconds": 5,
+    "provider_requests": 0,
+    "comparison_scope": "Literature projection and coordinator fairness; simulated completion bypasses provider telemetry writes. Not production throughput or quality evidence."
+  }
+}

@@ -175,7 +175,7 @@ def test_public_probe_uses_httpx_and_retries_transient_failures(monkeypatch):
         requests.append(request)
         if len(requests) == 1:
             raise httpx.ConnectError("connection reset")
-        assert request.headers["user-agent"].startswith("python-httpx/")
+        assert request.headers["user-agent"] == "GIDS-Release-Verifier/1.0"
         return httpx.Response(200)
 
     monkeypatch.setattr(papers_r2.httpx, "Client", lambda **kwargs: original_client(

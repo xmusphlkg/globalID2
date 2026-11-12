@@ -3,57 +3,27 @@ GlobalID V2 AI Base Agent
 
 AI Agent Base Class - Provides unified LLM interaction functionality with multi-platform AI provider support
 """
-import asyncio
-import re
+
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from openai import AsyncOpenAI
-from anthropic import AsyncAnthropic
-
-from src.core import get_cache, get_config, get_logger, RateLimiter
-from src.ai.attachments import (
-    NATIVE_INPUT,
-    TEXT_INPUT,
-    as_native_content,
-    as_text,
-    looks_like_file_rejection,
-    note_native_rejection,
-    route_accepts_native_files,
-)
+from src.ai.catalogue.errors import FailureKind, classify_failure
 from src.ai.model_center import (
-    ANTHROPIC_PROTOCOL_MAX_TOKENS,
-    ANTHROPIC_RUNTIME_TIMEOUT_SECONDS,
-    acquire_runtime_route_admission,
-    anthropic_sdk_base_url,
     clear_route_rate_limit,
-    drop_rejected_optional_parameter,
-    extract_retry_after_seconds,
-    is_model_channel_failure,
-    get_active_model_routes,
-    get_runtime_routes,
-    is_model_unavailable_error,
-    is_provider_authentication_error,
-    is_rate_limit_error,
     mark_provider_authentication_failed,
-    record_route_runtime_failure,
-    record_route_runtime_success,
-    record_model_call_log,
     mark_route_rate_limited,
     mark_route_unavailable,
-    runtime_route_admission_score,
-    runtime_route_request_timeout_seconds,
-    visible_assistant_text,
+    record_model_call_log,
+    record_route_runtime_failure,
+    record_route_runtime_success,
 )
+from src.ai.providers import ProviderTransport, sanitize_completion_params
+from src.core import get_cache, get_config, get_logger
 
 logger = get_logger(__name__)
-
-#: Kept for older imports. Completion requests are not capped; Anthropic still
-#: requires the field, so that call sends the protocol ceiling.
-ANTHROPIC_UNCAPPED_MAX_TOKENS = ANTHROPIC_PROTOCOL_MAX_TOKENS
 
 
 class NoModelAvailable(Exception):
@@ -63,461 +33,41 @@ class NoModelAvailable(Exception):
 class BaseAgent(ABC):
     """
     AI Agent Base Class
-    
-    Provides common LLM invocation, caching, retry, and rate-limiting functionality.
+
+    Provides durable invocation, route-specific caching, and provider transport.
     Supports multiple AI providers: OpenAI, Anthropic, QianWen, Azure, and more.
     """
-    
-    # 模型中心返回的运行时路由（含 provider/api_key/base_url），若存在则优先使用。
-    AVAILABLE_MODEL_ROUTES: Optional[List[Dict[str, Any]]] = None
-    AVAILABLE_MODEL_ROUTES_LOADED_AT: Optional[float] = None
-    # Model-center internal metadata keys that must never be forwarded to completion APIs.
-    INTERNAL_COMPLETION_PARAM_KEYS = {
-        "routing_state",
-        "rate_limit_cooldown_seconds",
-        "cooldown_until",
-        "last_rate_limit_at",
-        "last_recovered_at",
-        "rate_limit_count",
-        "runtime_cooldown_until",
-        "runtime_failure_streak",
-        "runtime_failure_count",
-        "runtime_timeout_count",
-        "runtime_success_count",
-        "runtime_latency_ewma_ms",
-        "runtime_last_latency_ms",
-        "last_runtime_failure_kind",
-        "last_runtime_failure_at",
-        "last_runtime_success_at",
-        "last_runtime_error",
-    }
-    
+
     def __init__(
         self,
         name: str,
-        model: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 2000,
-        provider: Optional[str] = None,
     ):
         """
         Initialize the agent.
 
         Args:
             name: Agent name
-            model: Model to use (defaults to configured model)
             temperature: Sampling temperature
-            max_tokens: Maximum number of tokens to generate
-            provider: AI provider (optional, defaults to configured provider)
+            max_tokens: Output-budget hint retained in prompts and provenance
         """
         self.name = name
         self.config = get_config()
         self.cache = get_cache()
-        self.rate_limiter = RateLimiter(
-            max_requests=self.config.ai.rate_limit,
-            window_seconds=60,
-        )
-        
-        # 提供商和模型配置：若配置了 model_chain，优先用链中首个模型，避免使用 default_model（如 glm-4-7）当用户未配置时
-        chain = getattr(self.config.ai, "model_chain", None) or []
-        effective_model = model
-        if effective_model is None and chain:
-            effective_model = chain[0]
-        self.model = effective_model or self.config.ai.default_model
-        self.provider = provider or self.config.ai.default_provider
-        # 根据模型名推断 provider，避免 qianwen 链却显示 glm 模型
-        inferred = self._infer_provider_from_model(self.model)
-        if inferred:
-            self.provider = inferred
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.max_retries = self.config.ai.max_retries
-        
+        self.transport: ProviderTransport | None = None
+
         # 对话历史记录
         self.conversation_history = []
-        
+
         # Provider clients are constructed only for the dispatcher-selected route.
-        
-        logger.info(
-            "Agent '{}' initialized with bootstrap provider '{}' and model '{}'; "
-            "live completions are routed by Model Center.",
-            name,
-            self.provider,
-            self.model,
-        )
 
-    @classmethod
-    def _estimate_wait_seconds_for_empty_candidates(
-        cls,
-        runtime_routes: Optional[List[Dict[str, Any]]],
-        chain: Optional[List[str]],
-        wait_cap_seconds: int,
-    ) -> int:
-        """Estimate a bounded wait before retrying when all candidates are cooling down.
-
-        ``chain`` is unused; Model Center route snapshots are the only cooldown source.
-        """
-        waits: List[int] = []
-        for route in runtime_routes or []:
-            try:
-                db_wait = int(route.get("rate_limit_remaining_seconds") or 0)
-            except (TypeError, ValueError):
-                db_wait = 0
-            if db_wait > 0:
-                waits.append(db_wait)
-
-            try:
-                runtime_wait = int(route.get("runtime_failure_remaining_seconds") or 0)
-            except (TypeError, ValueError):
-                runtime_wait = 0
-            if runtime_wait > 0:
-                waits.append(runtime_wait)
-
-        if not waits:
-            return 1
-
-        return max(1, min(min(waits), max(1, int(wait_cap_seconds))))
-
-    def _build_candidates(
-        self,
-        runtime_routes: Optional[List[Dict[str, Any]]],
-        ignore_local_cooldowns: bool = False,
-    ) -> Tuple[List[Dict[str, Any]], List[str]]:
-        """Build completion candidates from Model Center route snapshots.
-
-        ``ignore_local_cooldowns`` still names the final recovery probe: it may
-        try non-durable non-routable routes (for example probe_unavailable) but
-        must never bypass a durable rate-limit or runtime circuit.
-        """
-        candidates: List[Dict[str, Any]] = []
-        chain_used: List[str] = []
-        runtime_model_names: list[str] = []
-
-        if runtime_routes is not None:
-            for route in runtime_routes:
-                route_key = str(route.get("model_key") or route.get("model_name") or "")
-                model_name = str(route.get("model_name") or "")
-                if not route_key or not model_name:
-                    continue
-                route_status = str(route.get("last_check_status") or "").strip().lower()
-                if route_status == "unavailable":
-                    continue
-                # A final recovery probe may try non-durable non-routable routes.
-                # It must never bypass a durable Model Center rate-limit or
-                # runtime circuit.
-                durably_blocked = bool(route.get("runtime_failure_active")) or bool(
-                    route.get("rate_limit_active")
-                )
-                try:
-                    durably_blocked = durably_blocked or int(
-                        route.get("rate_limit_remaining_seconds") or 0
-                    ) > 0
-                except (TypeError, ValueError):
-                    pass
-                try:
-                    durably_blocked = durably_blocked or int(
-                        route.get("runtime_failure_remaining_seconds") or 0
-                    ) > 0
-                except (TypeError, ValueError):
-                    pass
-                if not bool(route.get("available_for_routing", True)) and (
-                    not ignore_local_cooldowns or durably_blocked
-                ):
-                    continue
-                candidates.append(
-                    {
-                        "route_key": route_key,
-                        "model_name": model_name,
-                        "route": route,
-                    }
-                )
-                if model_name not in runtime_model_names:
-                    runtime_model_names.append(model_name)
-
-            return candidates, list(runtime_model_names)
-
-        return candidates, chain_used
-
-    @staticmethod
-    def _runtime_provider_identity(route: Dict[str, Any]) -> str:
-        """Return a stable provider identity for one completion pass."""
-        provider_id = route.get("provider_id")
-        if provider_id is not None and str(provider_id).strip():
-            return f"provider-id:{provider_id}"
-        provider_key = str(route.get("provider_key") or route.get("provider_name") or "").strip()
-        return f"provider-key:{provider_key}" if provider_key else "provider:unknown"
-
-    @staticmethod
-    def _prioritize_candidates(
-        candidates: List[Dict[str, Any]],
-        preferred_models: Optional[List[str]],
-    ) -> List[Dict[str, Any]]:
-        if not candidates:
-            return candidates
-
-        def order_runtime_by_admission(group: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-            runtime = [candidate for candidate in group if candidate.get("route") is not None]
-            direct = [candidate for candidate in group if candidate.get("route") is None]
-            runtime.sort(
-                key=lambda candidate: runtime_route_admission_score(candidate["route"]),
-            )
-            return runtime + direct
-
-        if not preferred_models:
-            return order_runtime_by_admission(candidates)
-
-        preferred_order = {
-            value.strip(): index
-            for index, value in enumerate(preferred_models)
-            if isinstance(value, str) and value.strip()
-        }
-        if not preferred_order:
-            return candidates
-
-        def order_group(group: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-            prioritized: list[Dict[str, Any]] = []
-            deferred: list[Dict[str, Any]] = []
-            for candidate in group:
-                model_name = str(candidate.get("model_name") or "").strip()
-                route_key = str(candidate.get("route_key") or "").strip()
-                if model_name in preferred_order or route_key in preferred_order:
-                    prioritized.append(candidate)
-                else:
-                    deferred.append(candidate)
-            prioritized.sort(
-                key=lambda candidate: preferred_order.get(
-                    str(candidate.get("route_key") or "").strip(),
-                    preferred_order.get(
-                        str(candidate.get("model_name") or "").strip(),
-                        10**6,
-                    ),
-                )
-            )
-            return prioritized + deferred
-
-        # A preferred shard may also exist only in the direct environment
-        # fallback. It must not jump ahead of model-center routes that have a
-        # current healthy status; preference reorders within each route class.
-        runtime = [candidate for candidate in candidates if candidate.get("route") is not None]
-        direct = [candidate for candidate in candidates if candidate.get("route") is None]
-        preferred_runtime = [
-            candidate
-            for candidate in runtime
-            if str(candidate.get("model_name") or "").strip() in preferred_order
-            or str(candidate.get("route_key") or "").strip() in preferred_order
-        ]
-        deferred_runtime = [candidate for candidate in runtime if candidate not in preferred_runtime]
-        # Preference selects a requested shard first; live admission pressure
-        # balances routes only within that preference band.
-        return (
-            order_runtime_by_admission(order_group(preferred_runtime))
-            + order_runtime_by_admission(order_group(deferred_runtime))
-            + order_group(direct)
-        )
-    
-    def _infer_provider_from_model(self, model: str) -> Optional[str]:
-        """根据模型名推断 provider，不依赖 self.provider。"""
-        if not model:
-            return None
-        model_lower = model.lower()
-        if any(k in model_lower for k in ['glm', 'chatglm', 'zhipu']):
-            return 'glm'
-        if any(k in model_lower for k in ['qwen', 'qianwen']):
-            return 'qianwen'
-        if any(k in model_lower for k in ['claude', 'anthropic']):
-            return 'anthropic'
-        if any(k in model_lower for k in ['gpt-4', 'gpt-3.5', 'text-davinci']):
-            return 'openai'
-        if 'azure' in model_lower:
-            return 'azure'
-        return None
-
-    def get_provider_for_model(self, model: str) -> str:
-        """Infer provider from model name."""
-        inferred = self._infer_provider_from_model(model)
-        return inferred if inferred else self.provider
-
-    @classmethod
-    def _sanitize_completion_params(cls, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Remove internal routing/rate-limit metadata before provider calls."""
-        sanitized: Dict[str, Any] = {}
-        for key, value in (params or {}).items():
-            if isinstance(key, str) and key in cls.INTERNAL_COMPLETION_PARAM_KEYS:
-                continue
-            if isinstance(key, str) and (
-                key.startswith("routing_")
-                or key.startswith("rate_limit_")
-                or key.startswith("runtime_")
-                or key.startswith("health_check_")
-                or key.startswith("availability_")
-            ):
-                continue
-            sanitized[key] = value
-        return sanitized
-
-    @staticmethod
-    def _extract_unexpected_kwarg(error: Exception) -> Optional[str]:
-        """Parse unexpected keyword argument name from Python TypeError."""
-        match = re.search(r"unexpected keyword argument '([^']+)'", str(error))
-        return match.group(1) if match else None
-
-    @staticmethod
-    def _completion_content_to_text(content: Any) -> str:
-        return visible_assistant_text(content)
-
-    @staticmethod
-    def _empty_completion_error(response: Any) -> RuntimeError:
-        """Describe an empty upstream response without logging its prompt/body."""
-        choices = response.get("choices") if isinstance(response, dict) else getattr(response, "choices", None)
-        first = choices[0] if isinstance(choices, (list, tuple)) and choices else None
-        message = (
-            first.get("message")
-            if isinstance(first, dict)
-            else getattr(first, "message", None)
-        )
-        if message is None and isinstance(first, dict):
-            message = first
-        if isinstance(message, dict):
-            message_fields = sorted(str(key) for key in message.keys())[:12]
-            refusal = bool(message.get("refusal"))
-            tool_calls = message.get("tool_calls")
-            reasoning_content = message.get("reasoning_content")
-        else:
-            message_fields = sorted(
-                key for key in ("content", "refusal", "tool_calls", "reasoning_content")
-                if getattr(message, key, None) is not None
-            )
-            refusal = bool(getattr(message, "refusal", None))
-            tool_calls = getattr(message, "tool_calls", None)
-            reasoning_content = getattr(message, "reasoning_content", None)
-
-        usage = response.get("usage") if isinstance(response, dict) else getattr(response, "usage", None)
-        completion_tokens = (
-            usage.get("completion_tokens")
-            if isinstance(usage, dict)
-            else getattr(usage, "completion_tokens", None)
-        )
-        finish_reason = (
-            first.get("finish_reason")
-            if isinstance(first, dict)
-            else getattr(first, "finish_reason", None)
-        )
-        tool_call_count = len(tool_calls) if isinstance(tool_calls, (list, tuple)) else int(bool(tool_calls))
-        top_level_fields = (
-            sorted(str(key) for key in response.keys())[:12]
-            if isinstance(response, dict)
-            else []
-        )
-        explanation = (
-            "Model exhausted its completion token budget before producing an answer"
-            if finish_reason == "length" and reasoning_content
-            else "Model returned an empty completion response"
-        )
-        return RuntimeError(
-            f"{explanation} "
-            f"(finish_reason={finish_reason!r}, completion_tokens={completion_tokens!r}, "
-            f"reasoning_chars={len(str(reasoning_content or ''))}, "
-            f"message_fields={message_fields!r}, refusal_present={refusal}, "
-            f"tool_call_count={tool_call_count}, response_type={type(response).__name__}, "
-            f"response_fields={top_level_fields!r})"
-        )
-
-    @classmethod
-    def _normalize_response_content(cls, content: Any, response: Any) -> str:
-        text = cls._completion_content_to_text(content)
-        if not text.strip():
-            raise cls._empty_completion_error(response)
-        return text
-
-    @classmethod
-    def _extract_openai_compatible_response(cls, response: Any) -> Tuple[str, Dict[str, int]]:
-        """Normalize OpenAI-compatible responses, including string-returning proxies."""
-        token_usage: Dict[str, int] = {}
-        usage = response.get("usage") if isinstance(response, dict) else getattr(response, "usage", None)
-        if usage:
-            prompt_tokens = usage.get("prompt_tokens") if isinstance(usage, dict) else getattr(usage, "prompt_tokens", None)
-            completion_tokens = usage.get("completion_tokens") if isinstance(usage, dict) else getattr(usage, "completion_tokens", None)
-            total_tokens = usage.get("total_tokens") if isinstance(usage, dict) else getattr(usage, "total_tokens", None)
-            token_usage = {
-                "prompt": int(prompt_tokens or 0),
-                "completion": int(completion_tokens or 0),
-                "total": int(total_tokens or ((prompt_tokens or 0) + (completion_tokens or 0))),
-            }
-
-        if isinstance(response, str):
-            if not response.strip():
-                raise cls._empty_completion_error(response)
-            return response, token_usage
-
-        if isinstance(response, dict):
-            choices = response.get("choices")
-            if isinstance(choices, list) and choices:
-                first = choices[0]
-                if isinstance(first, dict):
-                    message = first.get("message")
-                    if isinstance(message, dict):
-                        return cls._normalize_response_content(message.get("content"), response), token_usage
-                    return cls._normalize_response_content(first.get("text") or first.get("content"), response), token_usage
-            output_text = response.get("output_text")
-            if output_text is not None:
-                return cls._normalize_response_content(output_text, response), token_usage
-            return cls._normalize_response_content(response.get("content"), response), token_usage
-
-        choices = getattr(response, "choices", None)
-        if choices:
-            first = choices[0]
-            message = getattr(first, "message", None)
-            if message is not None:
-                return cls._normalize_response_content(getattr(message, "content", None), response), token_usage
-            return cls._normalize_response_content(getattr(first, "text", None), response), token_usage
-
-        output_text = getattr(response, "output_text", None)
-        if output_text is not None:
-            return cls._normalize_response_content(output_text, response), token_usage
-        return cls._normalize_response_content(getattr(response, "content", response), response), token_usage
-
-    async def _safe_openai_completion_create(
-        self,
-        client: AsyncOpenAI,
-        request_payload: Dict[str, Any],
-        max_retries: int = 3,
-    ) -> Any:
-        """Call OpenAI-compatible completion API and auto-drop unsupported kwargs."""
-        from src.ai.work_queue import require_dispatcher
-        require_dispatcher()
-        payload = dict(request_payload or {})
-        dropped_parameters: set[str] = set()
-        for _ in range(max(1, max_retries)):
-            try:
-                return await client.chat.completions.create(**payload)
-            except TypeError as exc:
-                unexpected_kwarg = self._extract_unexpected_kwarg(exc)
-                if not unexpected_kwarg or unexpected_kwarg not in payload:
-                    raise
-
-                logger.warning(
-                    "Dropping unsupported completion argument '{}' for model '{}'",
-                    unexpected_kwarg,
-                    payload.get("model"),
-                )
-                payload.pop(unexpected_kwarg, None)
-                dropped_parameters.add(unexpected_kwarg)
-            except Exception as exc:
-                if not drop_rejected_optional_parameter(exc, payload, dropped_parameters):
-                    raise
-                logger.warning(
-                    "Dropping unsupported completion argument for model '{}': {}",
-                    payload.get("model"),
-                    ", ".join(sorted(dropped_parameters)),
-                )
-
-        # Should be unreachable because loop returns or raises.
-        return await client.chat.completions.create(**payload)
+        logger.debug("Agent '{}' submits completions to the model dispatcher", name)
 
     @staticmethod
     def _decode_cached_completion(cached: Any) -> Tuple[Optional[str], Dict[str, Any]]:
-        if isinstance(cached, str):
-            return cached, {}
         if isinstance(cached, dict):
             response = cached.get("response")
             if isinstance(response, str):
@@ -542,7 +92,7 @@ class BaseAgent(ABC):
             "prompt": prompt,
             "system_prompt": system,
             "response": response_text,
-            "model": model or self.model,
+            "model": model,
             "provider": provider,
             "tokens": token_usage or {},
             "duration": round(duration, 2),
@@ -552,266 +102,82 @@ class BaseAgent(ABC):
         if metadata:
             conversation_entry["metadata"] = metadata
         self.conversation_history.append(conversation_entry)
-    
-    async def complete(self, prompt: str, system: Optional[str] = None, use_cache: bool = True, **kwargs) -> str:
+
+    async def complete(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        use_cache: bool = True,
+        **kwargs,
+    ) -> str:
         """Submit durable business work; provider execution belongs to the worker."""
-        from src.ai.work_queue import in_dispatcher, submit_completion
+        from src.ai.runtime import in_dispatcher, submit_completion
+
         if not in_dispatcher():
             return await submit_completion(self, prompt, system, use_cache, kwargs)
         if kwargs.get("_scheduled_route") is None:
             raise RuntimeError("Model dispatcher must pin an admitted route")
-        return await self._complete_transport(prompt, system=system, use_cache=use_cache, **kwargs)
+        return await self._complete_transport(
+            prompt, system=system, use_cache=use_cache, **kwargs
+        )
 
     async def _complete_transport(
         self,
         prompt: str,
         system: Optional[str] = None,
         use_cache: bool = True,
-        **kwargs
+        **kwargs,
     ) -> str:
-        """
-        Generate a completion from the configured model/provider.
+        """Execute exactly one dispatcher-selected route; the queue owns retries.
 
-        Args:
-            prompt: User prompt
-            system: System prompt
-            use_cache: Whether to use cache
-            **kwargs: Additional provider-specific args
-
-        Returns:
-            Generated text
+        Provider exceptions retain their types and causes. Cache and telemetry
+        failures never turn an already successful generation into another call.
         """
-        from src.ai.work_queue import require_dispatcher
+        from src.ai.runtime import require_dispatcher
+
         require_dispatcher()
-        scheduled_route = kwargs.pop("_scheduled_route", None)
-        # Callers still pass this; the dispatcher owns retry after a quota failure.
-        kwargs.pop("max_quota_recovery_rounds", None)
-        wait_for_model_recovery = bool(kwargs.pop("wait_for_model_recovery", True))
-        model_request_timeout_seconds = kwargs.pop("model_request_timeout_seconds", None)
-        max_attempts_per_model = kwargs.pop("max_attempts_per_model", None)
-        timeout_cooldown_seconds = max(
-            0,
-            int(kwargs.pop("timeout_cooldown_seconds", 0) or 0),
+        route = kwargs.pop("_scheduled_route", None)
+        if not route:
+            raise NoModelAvailable(
+                "Model dispatcher must select a route before transport"
+            )
+        if not route.get("available_for_routing", True):
+            raise NoModelAvailable("Dispatcher-selected route is no longer routable")
+        timeout = kwargs.pop("model_request_timeout_seconds", None)
+        cooldown = kwargs.pop("timeout_cooldown_seconds", None)
+        model = str(route["model_name"])
+        provider = str(
+            route.get("provider_key") or route.get("provider_name") or "runtime"
         )
-        attempt_limit = (
-            self.max_retries
-            if max_attempts_per_model is None
-            else max(1, min(self.max_retries, int(max_attempts_per_model)))
+        self._last_input_mode = None
+        use_cache = (
+            use_cache and self.config.ai.enable_cache and not kwargs.get("attachments")
         )
-        preferred_models_raw = kwargs.pop("preferred_models", None)
-        preferred_models = (
-            [item for item in preferred_models_raw if isinstance(item, str)]
-            if isinstance(preferred_models_raw, list)
+        cache_key = (
+            self._make_cache_key(prompt, system, route=route, params=kwargs)
+            if use_cache
             else None
         )
-        if kwargs.get("attachments"):
-            # The cache key covers prompt and system only, so a different
-            # document under the same prompt would hit a stale answer.
-            use_cache = False
-
-        # 检查缓存
-        if use_cache and self.config.ai.enable_cache:
-            cache_key = self._make_cache_key(prompt, system)
-            cached = await self.cache.get(cache_key)
-            if cached:
-                cached_response, cached_meta = self._decode_cached_completion(cached)
-                if cached_response is not None:
-                    cached_model = cached_meta.get("model")
-                    model_name = cached_model.strip() if isinstance(cached_model, str) and cached_model.strip() else self.model
-
-                    cached_provider = cached_meta.get("provider")
-                    provider = cached_provider if isinstance(cached_provider, str) and cached_provider.strip() else self.provider
-                    cached_tokens = cached_meta.get("token_usage")
-
-                    self._append_conversation_entry(
-                        prompt=prompt,
-                        system=system,
-                        response_text=cached_response,
-                        provider=provider,
-                        model=model_name,
-                        token_usage=cached_tokens if isinstance(cached_tokens, dict) else {},
-                        duration=0.0,
-                        metadata={"cache_hit": True},
-                    )
-                logger.debug(f"Cache hit for agent '{self.name}'")
-                return cached_response if cached_response is not None else cached
-        
-        # 调用 LLM：运行时路由由模型中心统一管理；env 链路只用于初始化模型中心。
-        route_cache_ttl = max(1, int(getattr(self.config.ai, "route_cache_ttl_seconds", 15)))
-        runtime_routes = [scheduled_route] if scheduled_route is not None else BaseAgent.AVAILABLE_MODEL_ROUTES
-        route_cache_expired = (
-            BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT is None
-            or (time.time() - BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT) >= route_cache_ttl
-        )
-        if scheduled_route is None and (runtime_routes is None or route_cache_expired):
+        if cache_key:
             try:
-                runtime_routes = await get_active_model_routes()
-                if not runtime_routes:
-                    # Keep model-center source of truth even when all routes are cooling/rate-limited.
-                    all_runtime_routes = await get_runtime_routes()
-                    if all_runtime_routes:
-                        runtime_routes = all_runtime_routes
-                BaseAgent.AVAILABLE_MODEL_ROUTES = runtime_routes
-                BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = time.time()
-            except Exception as e:
-                logger.warning(f"Failed to load model-center routes; no direct env fallback will be used: {e}")
-                runtime_routes = []
-                BaseAgent.AVAILABLE_MODEL_ROUTES = None
-                BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-
-        candidates, chain_used = self._build_candidates(runtime_routes, ignore_local_cooldowns=False)
-        candidates = self._prioritize_candidates(candidates, preferred_models)
-
-        if not candidates and wait_for_model_recovery:
-            wait_cap_seconds = max(
-                3,
-                int(
-                    getattr(
-                        self.config.ai,
-                        "rate_limit_wait_cap_seconds",
-                        getattr(self.config.ai, "rate_limit_cooldown_seconds", 300),
-                    )
-                ),
-            )
-            wait_seconds = BaseAgent._estimate_wait_seconds_for_empty_candidates(
-                runtime_routes=runtime_routes,
-                chain=chain_used,
-                wait_cap_seconds=wait_cap_seconds,
-            )
-            logger.warning(
-                f"No candidate model available for agent '{self.name}'. "
-                f"Will wait {wait_seconds}s, refresh routes, and retry candidate selection once."
-            )
-            await asyncio.sleep(wait_seconds)
-
-            BaseAgent.AVAILABLE_MODEL_ROUTES = None
-            BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-            try:
-                runtime_routes = await get_active_model_routes()
-                if not runtime_routes:
-                    all_runtime_routes = await get_runtime_routes()
-                    if all_runtime_routes:
-                        runtime_routes = all_runtime_routes
-                BaseAgent.AVAILABLE_MODEL_ROUTES = runtime_routes
-                BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = time.time()
-            except Exception as refresh_exc:
-                logger.warning(f"Failed to refresh model-center routes after cooldown wait: {refresh_exc}")
-                runtime_routes = []
-
-            candidates, chain_used = self._build_candidates(runtime_routes, ignore_local_cooldowns=False)
-            candidates = self._prioritize_candidates(candidates, preferred_models)
-
-            # Final recovery probe: try non-durable non-routable routes without
-            # bypassing durable Model Center rate-limit or runtime circuits.
-            if not candidates:
-                probe_candidates, _ = self._build_candidates(runtime_routes, ignore_local_cooldowns=True)
-                probe_candidates = self._prioritize_candidates(probe_candidates, preferred_models)
-                if probe_candidates:
-                    candidates = probe_candidates
-                    logger.warning(
-                        f"Candidate list still empty after wait/refresh. "
-                        f"Will probe {len(candidates)} model(s) that are not under a durable cooldown."
-                    )
-        elif not candidates:
-            logger.warning(
-                f"No candidate model available for agent '{self.name}'; "
-                "model recovery waiting is disabled for this request."
-            )
-
-        last_error = None
-        attempted_models: List[str] = []
-        authentication_failed_providers: set[str] = set()
-        original_model = self.model
-        request_id = uuid4()
-
-        for candidate in candidates:
-            model_name = candidate["model_name"]
-            route = candidate["route"]
-            route_key = candidate["route_key"]
-            provider_identity = (
-                self._runtime_provider_identity(route)
-                if route
-                else f"legacy:{self.get_provider_for_model(model_name)}"
-            )
-            if provider_identity in authentication_failed_providers:
-                logger.warning(
-                    "Skipping model '{}' because provider '{}' already rejected its credentials in this completion.",
-                    model_name,
-                    provider_identity,
-                )
-                continue
-            self.model = model_name
-            retry_count = 0
-            start_time = time.time()
-
-            while retry_count < attempt_limit:
-                # Retries and fallback routes also consume request capacity.
-                # Admission waits are not provider latency or provider errors.
-                await self.rate_limiter.acquire()
-                attempt_started_at = time.perf_counter()
-                provider = str(
-                    route.get("provider_key") or route.get("provider_name") or "runtime"
-                ) if route else self.get_provider_for_model(model_name)
-                try:
-                    if model_name not in attempted_models:
-                        attempted_models.append(model_name)
-                    if route:
-                        provider = str(route.get("provider_key") or route.get("provider_name") or "runtime")
-                        request = self._complete_with_runtime_route(
-                            route,
-                            prompt,
-                            system,
-                            request_timeout_seconds=model_request_timeout_seconds,
-                            **kwargs,
-                        )
-                    else:
-                        raise NoModelAvailable("Dispatcher route is required")
-                    response_text, token_usage = await request
-                    if not isinstance(response_text, str) or not response_text.strip():
-                        raise RuntimeError("Model returned an empty completion response")
-                    attempt_duration_seconds = time.perf_counter() - attempt_started_at
-                    await record_model_call_log(
-                        request_id=request_id,
-                        route=route,
-                        model_name=model_name,
-                        provider_key=provider,
-                        agent_name=self.name,
-                        status="success",
-                        latency_ms=attempt_duration_seconds * 1000,
-                    )
-                    if route:
-                        try:
-                            await record_route_runtime_success(
-                                route,
-                                duration_seconds=getattr(
-                                    self,
-                                    "_runtime_route_request_duration_seconds",
-                                    None,
-                                )
-                                or attempt_duration_seconds,
-                            )
-                        except Exception as health_exc:
-                            logger.warning(
-                                "Failed to persist runtime success for route '{}': {}",
-                                route_key,
-                                health_exc,
-                            )
-                    if route and (
-                        route.get("rate_limit_count")
-                        or route.get("last_check_status") == "rate_limited"
-                    ):
-                        try:
-                            await clear_route_rate_limit(route, "Connection recovered after cooldown")
-                            BaseAgent.AVAILABLE_MODEL_ROUTES = None
-                            BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-                        except Exception as clear_exc:
-                            logger.warning(f"Failed to clear route cooldown for '{route_key}': {clear_exc}")
-
-                    # 记录对话历史
-                    duration = time.time() - start_time
-                    interaction_metadata = {"cache_hit": False}
-                    if route:
-                        interaction_metadata["runtime_route"] = {
+                cached = await self.cache.get(cache_key)
+            except Exception as exc:
+                logger.warning("Completion cache read failed: {}", type(exc).__name__)
+                cached = None
+            response, meta = self._decode_cached_completion(cached)
+            if response and response.strip() and meta.get("model") == model:
+                self._append_conversation_entry(
+                    prompt=prompt,
+                    system=system,
+                    response_text=response,
+                    provider=provider,
+                    model=model,
+                    token_usage=meta.get("token_usage") or {},
+                    duration=0.0,
+                    metadata={
+                        "cache_hit": True,
+                        "cache_key": cache_key,
+                        "runtime_route": {
                             key: route.get(key)
                             for key in (
                                 "model_id",
@@ -820,412 +186,196 @@ class BaseAgent(ABC):
                                 "model_name",
                                 "provider_key",
                             )
-                        }
-                    self._append_conversation_entry(
-                        prompt=prompt,
-                        system=system,
-                        response_text=response_text,
-                        provider=provider,
-                        token_usage=token_usage,
-                        duration=duration,
-                        metadata=interaction_metadata,
-                    )
-
-                    # 缓存结果
-                    if use_cache and self.config.ai.enable_cache:
-                        await self.cache.set(
-                            cache_key,
-                            {
-                                "response": response_text,
-                                "token_usage": token_usage,
-                                "model": self.model,
-                                "provider": provider,
-                                "temperature": self.temperature,
-                                "max_tokens": self.max_tokens,
-                            },
-                            ttl=self.config.ai.cache_ttl * 3600,  # 转换为秒
-                        )
-
-                    # 成功立即返回
-                    self.model = original_model
-                    return response_text
-
-                except Exception as e:
-                    last_error = e
-                    retry_count += 1
-                    await record_model_call_log(
-                        request_id=request_id,
-                        route=route,
-                        model_name=model_name,
-                        provider_key=provider,
-                        agent_name=self.name,
-                        status="failed",
-                        latency_ms=(time.perf_counter() - attempt_started_at) * 1000,
-                        error=e,
-                    )
-                    authentication_related = is_provider_authentication_error(e)
-
-                    if route and not authentication_related:
-                        try:
-                            runtime_failure = await record_route_runtime_failure(
-                                route,
-                                e,
-                                duration_seconds=getattr(
-                                    self,
-                                    "_runtime_route_request_duration_seconds",
-                                    None,
-                                )
-                                or (time.perf_counter() - attempt_started_at),
-                                cooldown_seconds=max(
-                                    5,
-                                    int(
-                                        timeout_cooldown_seconds
-                                        or getattr(
-                                            self.config.ai,
-                                            "rate_limit_cooldown_seconds",
-                                            60,
-                                        )
-                                    ),
-                                ),
-                            )
-                            if runtime_failure.get("recorded"):
-                                # A following task must read the durable model-center
-                                # circuit, not reuse this process's stale route cache.
-                                BaseAgent.AVAILABLE_MODEL_ROUTES = None
-                                BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-                        except Exception as health_exc:
-                            logger.warning(
-                                "Failed to persist runtime failure for route '{}': {}",
-                                route_key,
-                                health_exc,
-                            )
-
-                    quota_related = is_rate_limit_error(e)
-                    unavailable_related = is_model_unavailable_error(e)
-                    channel_failed_related = is_model_channel_failure(e)
-                    retry_after_seconds = extract_retry_after_seconds(e)
-                    cooldown_seconds = retry_after_seconds or int(
-                        getattr(self.config.ai, "rate_limit_cooldown_seconds", 300)
-                    )
-
-                    logger.warning(
-                        f"Agent '{self.name}' error with model '{self.model}' "
-                        f"(attempt {retry_count}/{attempt_limit}): {e}"
-                    )
-
-                    if isinstance(e, TimeoutError):
-                        # record_route_runtime_failure above already opened the
-                        # durable Model Center circuit for this route.
-                        logger.warning(
-                            f"Model '{self.model}' exceeded its per-route request timeout; "
-                            "switching to the next candidate."
-                        )
-                        break
-
-                    if authentication_related:
-                        authentication_failed_providers.add(provider_identity)
-                        logger.warning(
-                            "Provider '{}' rejected credentials for model '{}'. "
-                            "Blocking sibling routes and continuing only with another provider.",
-                            provider_identity,
-                            self.model,
-                        )
-                        if route:
-                            try:
-                                await mark_provider_authentication_failed(route, e)
-                            except Exception as auth_exc:
-                                logger.warning(
-                                    "Failed to persist provider authentication failure for route '{}': {}",
-                                    route_key,
-                                    auth_exc,
-                                )
-                        BaseAgent.AVAILABLE_MODEL_ROUTES = None
-                        BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-                        # Credentials cannot recover through retry/backoff; a
-                        # fresh, explicitly tested credential is required.
-                        break
-
-                    if quota_related:
-                        if route:
-                            # Model Center escalates the durable cooldown per
-                            # consecutive limit; claim and candidate selection
-                            # read that value from the next route snapshot.
-                            try:
-                                persisted = await mark_route_rate_limited(
-                                    route,
-                                    str(e),
-                                    retry_after_seconds=retry_after_seconds,
-                                )
-                                cooldown_seconds = int(persisted.get("cooldown_seconds") or cooldown_seconds)
-                            except Exception as persist_exc:
-                                logger.warning(
-                                    f"Failed to persist route cooldown for '{route_key}': {persist_exc}"
-                                )
-                        logger.warning(
-                            f"Detected quota/rate-limit issue for model '{self.model}', "
-                            f"will cool down this route for {cooldown_seconds}s and switch to the next model if available."
-                        )
-                        BaseAgent.AVAILABLE_MODEL_ROUTES = None
-                        BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-                        break
-
-                    if channel_failed_related:
-                        # record_route_runtime_failure above already opened the
-                        # durable Model Center circuit for this route.
-                        channel_cooldown_seconds = max(60, int(cooldown_seconds))
-                        logger.warning(
-                            "Detected model channel failure for '{}'; "
-                            f"cooling down model/route for {channel_cooldown_seconds}s before probing alternatives.",
-                            self.model,
-                        )
-                        BaseAgent.AVAILABLE_MODEL_ROUTES = None
-                        BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-                        break
-
-                    if unavailable_related:
-                        logger.warning(
-                            f"Detected unavailable model/permission issue for '{self.model}'. "
-                            f"Will skip this model for now and continue with the next candidate."
-                        )
-                        if route:
-                            try:
-                                await mark_route_unavailable(route, str(e))
-                            except Exception as unavailable_exc:
-                                logger.warning(
-                                    f"Failed to persist unavailable status for route '{route_key}': {unavailable_exc}"
-                                )
-                        BaseAgent.AVAILABLE_MODEL_ROUTES = None
-                        BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-                        break
-
-                    if retry_count < attempt_limit:
-                        await asyncio.sleep(2 ** retry_count)  # exponential backoff
-
-            # 当前模型用尽重试仍失败，尝试下一个模型
-            logger.error(
-                f"Model '{self.model}' failed after {retry_count} attempt(s) for agent '{self.name}'."
-            )
-
-        # 所有模型都失败
-        self.model = original_model
-
-        # TimeoutError and other exceptions may have an empty string
-        # representation; preserve the class in task logs and retry records.
-        failure_detail = str(last_error).strip() if last_error is not None else ""
-        if not failure_detail and last_error is not None:
-            failure_detail = type(last_error).__name__
-        logger.error(f"All models failed for agent '{self.name}': {failure_detail}")
-        if not attempted_models:
-            raise NoModelAvailable(
-                f"Agent completion failed: no model route could take the request for agent '{self.name}' (all cooling down, rate limited or removed)"
-            )
-        raise Exception(
-            f"Agent completion failed after trying models {attempted_models}: {failure_detail}"
-        ) from last_error
-
-    async def _complete_with_runtime_route(
-        self,
-        route: Dict[str, Any],
-        prompt: str,
-        system: Optional[str] = None,
-        request_timeout_seconds: Optional[float] = None,
-        **kwargs,
-    ) -> Tuple[str, Dict[str, int]]:
-        """Generate through a permit; timeout and telemetry cover only the API call."""
-        from src.ai.work_queue import require_dispatcher
-        require_dispatcher()
-        self._runtime_route_request_duration_seconds = None
-        admission = await acquire_runtime_route_admission(route)
-        request_started_at = time.perf_counter()
+                        },
+                    },
+                )
+                return response
+        if self.transport is None:
+            raise RuntimeError("Dispatcher must provide its provider transport")
+        request_id = uuid4()
+        started = time.perf_counter()
         try:
-            request = self._complete_with_admitted_runtime_route(
+            response, tokens, self._last_input_mode = await self.transport.complete(
                 route,
                 prompt,
                 system,
-                **kwargs,
+                temperature=self.temperature,
+                attachments=kwargs.pop("attachments", None),
+                params=kwargs,
+                request_timeout_seconds=timeout,
             )
-            route_timeout_seconds = runtime_route_request_timeout_seconds(
-                route, request_timeout_seconds
-            )
-            if route_timeout_seconds is not None:
-                response = await asyncio.wait_for(
-                    request,
-                    timeout=max(0.01, float(route_timeout_seconds)),
-                )
-            else:
-                response = await request
-            response_text = (
-                response[0] if isinstance(response, tuple) and response else None
-            )
-            if not isinstance(response_text, str) or not response_text.strip():
-                # Admission controls provider pressure. An empty provider reply
-                # is not a successful call and must not earn more concurrency.
+            if not isinstance(response, str) or not response.strip():
                 raise RuntimeError("Model returned an empty completion response")
-        except BaseException as exc:
-            self._runtime_route_request_duration_seconds = (
-                time.perf_counter() - request_started_at
+        except Exception as exc:
+            elapsed = time.perf_counter() - started
+            await self._record_attempt(
+                request_id, route, model, provider, elapsed, error=exc
             )
-            await admission.release(success=False, error=exc)
+            failure = classify_failure(exc)
+            try:
+                if failure.kind is FailureKind.AUTHENTICATION:
+                    await mark_provider_authentication_failed(route, exc)
+                elif failure.kind is FailureKind.RATE_LIMIT:
+                    await mark_route_rate_limited(
+                        route, str(exc), retry_after_seconds=failure.retry_after_seconds
+                    )
+                elif failure.kind is FailureKind.MODEL_UNAVAILABLE:
+                    await mark_route_unavailable(route, str(exc))
+                elif failure.scope == "model":
+                    await record_route_runtime_failure(
+                        route,
+                        exc,
+                        duration_seconds=elapsed,
+                        cooldown_seconds=max(
+                            5,
+                            int(cooldown or self.config.ai.rate_limit_cooldown_seconds),
+                            failure.retry_after_seconds or 0,
+                        ),
+                        retry_after_seconds=failure.retry_after_seconds,
+                    )
+            except Exception as health_error:
+                logger.warning(
+                    "Could not persist route failure: {}", type(health_error).__name__
+                )
             raise
-        self._runtime_route_request_duration_seconds = (
-            time.perf_counter() - request_started_at
+        elapsed = time.perf_counter() - started
+        await self._record_attempt(request_id, route, model, provider, elapsed)
+        try:
+            await record_route_runtime_success(route, duration_seconds=elapsed)
+            if (
+                route.get("rate_limit_active")
+                or route.get("last_check_status") == "rate_limited"
+            ):
+                await clear_route_rate_limit(
+                    route, "Connection recovered after cooldown"
+                )
+        except Exception as exc:
+            logger.warning("Could not persist route success: {}", type(exc).__name__)
+        self._append_conversation_entry(
+            prompt=prompt,
+            system=system,
+            response_text=response,
+            provider=provider,
+            model=model,
+            token_usage=tokens,
+            duration=elapsed,
+            metadata={
+                "cache_hit": False,
+                "cache_key": cache_key,
+                "runtime_route": {
+                    key: route.get(key)
+                    for key in (
+                        "model_id",
+                        "provider_id",
+                        "model_key",
+                        "model_name",
+                        "provider_key",
+                    )
+                },
+            },
         )
-        await admission.release(success=True)
+        if cache_key:
+            try:
+                await self.cache.set(
+                    cache_key,
+                    {
+                        "response": response,
+                        "token_usage": tokens,
+                        "model": model,
+                        "provider": provider,
+                        "temperature": self.temperature,
+                        "max_tokens": self.max_tokens,
+                    },
+                    ttl=self.config.ai.cache_ttl * 3600,
+                )
+            except Exception as exc:
+                logger.warning("Completion cache write failed: {}", type(exc).__name__)
         return response
 
-    async def _complete_with_admitted_runtime_route(
-        self,
-        route: Dict[str, Any],
-        prompt: str,
-        system: Optional[str] = None,
-        **kwargs,
-    ) -> Tuple[str, Dict[str, int]]:
-        """Choose native file or extracted text for attachments, then send.
-
-        A native request the provider rejects as a file problem is repeated once
-        as text, and the route stays on text for a while.
-        """
-        attachments = list(kwargs.pop("attachments", None) or [])
-        from src.ai.work_queue import require_dispatcher
-        require_dispatcher()
-        style = str(route.get("api_style") or "openai_compatible").lower()
-        self._last_input_mode = None
-        if attachments:
-            native = any(item.native_capable for item in attachments) and route_accepts_native_files(route)
-            if native:
-                try:
-                    result = await self._send_runtime_route_request(
-                        route, as_native_content(style, prompt, attachments), system, **kwargs
-                    )
-                    self._last_input_mode = NATIVE_INPUT
-                    return result
-                except Exception as exc:
-                    if not looks_like_file_rejection(exc):
-                        raise
-                    note_native_rejection(route)
-                    logger.warning(
-                        "Route '{}' rejected a native file; retrying as extracted text: {}",
-                        route.get("model_key"),
-                        str(exc)[:200],
-                    )
-            prompt = as_text(prompt, attachments)
-            self._last_input_mode = TEXT_INPUT
-        return await self._send_runtime_route_request(route, prompt, system, **kwargs)
-
-    async def _send_runtime_route_request(
-        self,
-        route: Dict[str, Any],
-        content: Any,
-        system: Optional[str] = None,
-        **kwargs,
-    ) -> Tuple[str, Dict[str, int]]:
-        """Issue the provider request; ``content`` is a string or provider content blocks."""
-        from src.ai.work_queue import require_dispatcher
-        require_dispatcher()
-        style = str(route.get("api_style") or "openai_compatible").lower()
-        model_name = str(route.get("model_name") or self.model)
-        route_temperature = route.get("temperature")
-        temperature = self.temperature if route_temperature is None else float(route_temperature)
-        sanitized_kwargs = self._sanitize_completion_params(dict(kwargs))
-        sanitized_kwargs.pop("max_tokens", None)
-        sanitized_kwargs.pop("max_completion_tokens", None)
-
-        if style == "anthropic":
-            # An explicit timeout is required: with the SDK default, a non-streaming
-            # request at the protocol max_tokens raises "Streaming is required" before
-            # anything is sent. The caller's asyncio deadline still bounds the call,
-            # and retries belong to the dispatcher, not the SDK.
-            route_timeout = runtime_route_request_timeout_seconds(route, None)
-            client = AsyncAnthropic(
-                api_key=route.get("api_key"),
-                base_url=anthropic_sdk_base_url(route.get("base_url")),
-                default_headers=(route.get("extra_headers") or None),
-                timeout=float(route_timeout) if route_timeout else ANTHROPIC_RUNTIME_TIMEOUT_SECONDS,
-                max_retries=0,
+    async def _record_attempt(
+        self, request_id, route, model, provider, duration, *, error=None
+    ):
+        try:
+            await record_model_call_log(
+                request_id=request_id,
+                route=route,
+                model_name=model,
+                provider_key=provider,
+                agent_name=self.name,
+                status="failed" if error is not None else "success",
+                latency_ms=duration * 1000,
+                error=error,
             )
-            request: Dict[str, Any] = {
-                "model": model_name,
-                "messages": [{"role": "user", "content": content}],
-                "temperature": temperature,
-                # The Anthropic API cannot omit this field. It is the protocol ceiling.
-                "max_tokens": ANTHROPIC_PROTOCOL_MAX_TOKENS,
-                **sanitized_kwargs,
-            }
-            if system:
-                request["system"] = system
-            response = await client.messages.create(**request)
+        except Exception as exc:
+            logger.warning("Could not record model attempt: {}", type(exc).__name__)
 
-            token_usage = {}
-            if hasattr(response, "usage") and response.usage:
-                token_usage = {
-                    "prompt": response.usage.input_tokens,
-                    "completion": response.usage.output_tokens,
-                    "total": response.usage.input_tokens + response.usage.output_tokens,
-                }
-            return visible_assistant_text(response.content), token_usage
-
-        client = AsyncOpenAI(
-            api_key=route.get("api_key"),
-            base_url=route.get("base_url") or None,
-            default_headers=(route.get("extra_headers") or None),
-        )
-
-        messages = []
-        if system:
-            messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": content})
-
-        extra_params = dict(route.get("extra_params") or {})
-        for reserved in ("model", "messages", "temperature", "max_tokens", "max_completion_tokens"):
-            extra_params.pop(reserved, None)
-        extra_params.update(sanitized_kwargs)
-        extra_params = self._sanitize_completion_params(extra_params)
-        extra_params.pop("max_tokens", None)
-        extra_params.pop("max_completion_tokens", None)
-
-        request_payload = {
-            "model": model_name,
-            "messages": messages,
-            "temperature": temperature,
-            **extra_params,
-        }
-        response = await self._safe_openai_completion_create(client, request_payload)
-
-        return self._extract_openai_compatible_response(response)
-
-    def _make_cache_key(self, prompt: str, system: Optional[str] = None) -> str:
-        """Generate a cache key for a prompt/system pair."""
+    def _make_cache_key(
+        self, prompt: str, system: Optional[str] = None, *, route=None, params=None
+    ) -> str:
+        """Route and generation options are part of the result's identity."""
         import hashlib
-        content = f"{self.name}:{self.model}:{system or ''}:{prompt}"
-        return f"agent:{hashlib.md5(content.encode()).hexdigest()}"
+        import json
+
+        route = route or {}
+        temperature = route.get("temperature")
+        content = {
+            "agent": self.name,
+            "route": {
+                key: route.get(key)
+                for key in (
+                    "model_key",
+                    "model_name",
+                    "model_id",
+                    "provider_id",
+                    "api_style",
+                    "base_url",
+                )
+            },
+            "temperature": self.temperature if temperature is None else temperature,
+            "max_tokens": self.max_tokens,
+            "system": system,
+            "prompt": prompt,
+            "params": sanitize_completion_params(params or {}),
+            "route_params": sanitize_completion_params(route.get("extra_params") or {}),
+        }
+        encoded = json.dumps(
+            content, sort_keys=True, ensure_ascii=False, default=str
+        ).encode()
+        return f"agent:v2:{hashlib.sha256(encoded).hexdigest()}"
 
     async def invalidate_completion_cache(
-        self,
-        *,
-        prompt: str,
-        system: Optional[str] = None,
+        self, *, prompt: str, system: Optional[str] = None
     ) -> bool:
-        """Discard a completion that failed a caller's post-generation checks."""
+        """Invalidate the actual dispatched result, including a replayed conversation."""
         if not self.config.ai.enable_cache:
             return False
+        keys = {
+            entry.get("metadata", {}).get("cache_key")
+            for entry in self.conversation_history
+            if entry.get("prompt") == prompt and entry.get("system_prompt") == system
+        }
+        keys.discard(None)
         try:
-            return bool(await self.cache.delete(self._make_cache_key(prompt, system)))
+            results = [await self.cache.delete(key) for key in keys]
+            return any(results)
         except Exception as exc:
-            logger.warning("Failed to invalidate AI completion cache: {}", exc)
+            logger.warning(
+                "Failed to invalidate AI completion cache: {}", type(exc).__name__
+            )
             return False
-    
+
     def get_conversation_history(self) -> List[Dict[str, Any]]:
         """获取对话历史记录"""
         return self.conversation_history.copy()
-    
+
     def clear_conversation_history(self):
         """清除对话历史记录"""
         self.conversation_history = []
-    
+
     def get_latest_conversation(self) -> Optional[Dict[str, Any]]:
         """获取最新的对话记录"""
         return self.conversation_history[-1] if self.conversation_history else None
-    
+
     @abstractmethod
     async def process(self, **kwargs) -> Dict[str, Any]:
         """

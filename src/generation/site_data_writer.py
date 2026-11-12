@@ -11,7 +11,7 @@ import json
 import os
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 def clean_generated_dir(dir_path: Path) -> None:
@@ -110,13 +110,13 @@ def _write_if_changed(path: Path, content: bytes) -> bool:
     return True
 
 
-def write_pretty_json(path: Path, payload: Any) -> bool:
+def write_pretty_json(path: Path, payload: Any, *, on_serialized: Callable[[bytes], None] | None = None) -> bool:
     """Write build-time JSON using the historical human-readable encoding."""
 
-    return _write_if_changed(
-        path,
-        json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
-    )
+    content = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+    if on_serialized is not None:
+        on_serialized(content)
+    return _write_if_changed(path, content)
 
 
 def write_compact_json(path: Path, payload: Any) -> bool:

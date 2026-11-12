@@ -871,7 +871,7 @@ async def test_repository_persists_openalex_id_and_does_not_downgrade_existing_o
     }
 
 
-async def test_repository_refreshes_stale_autopilot_exclusion_when_new_classification_reopens_review():
+async def test_repository_keeps_autopilot_exclusion_when_classification_changes():
     article = SimpleNamespace(
         article_id="lit_existing",
         slug="existing",
@@ -904,17 +904,9 @@ async def test_repository_refreshes_stale_autopilot_exclusion_when_new_classific
         Classification(publication_status="review"),
     )
 
-    audit = article.metadata_["autopilot"]
-    assert article.publication_status == "review"
-    assert audit["decision"] == "hold"
-    assert audit["actor"] == "literature-classifier"
-    assert audit["reopened_from"] == "exclude"
-    assert "reopened" in audit["reasons"][0]
-    assert audit["decided_at"] != "2026-08-16T00:00:00+00:00"
-    event = next(value for value in db.added if isinstance(value, LiteratureStatusEvent))
-    assert event.previous_status == "excluded"
-    assert event.current_status == "review"
-    assert event.source == "literature-classifier"
+    assert article.publication_status == "excluded"
+    assert article.metadata_["autopilot"]["decision"] == "exclude"
+    assert not any(isinstance(value, LiteratureStatusEvent) for value in db.added)
 
 
 async def test_repository_unchanged_fingerprint_keeps_excluded_status_without_event():
@@ -949,9 +941,8 @@ async def test_repository_unchanged_fingerprint_keeps_excluded_status_without_ev
     assert status_events == []
 
 
-async def test_repository_ai_governance_exclusion_neutralised_when_classification_changes():
-    """AI-governance excluded + changed classification fingerprint: article reopened to review
-    and the stale ai_content_governance record is neutralised so it no longer looks terminal."""
+async def test_repository_keeps_governance_exclusion_when_classification_changes():
+    """Changed classification does not reopen an AI exclusion."""
     article = SimpleNamespace(
         article_id="lit_existing",
         slug="existing",
@@ -985,16 +976,9 @@ async def test_repository_ai_governance_exclusion_neutralised_when_classificatio
         Classification(publication_status="review"),
     )
 
-    assert article.publication_status == "review"
-    gov = article.metadata_["ai_content_governance"]
-    assert gov["decision"] == "hold"
-    assert gov["actor"] == "literature-classifier"
-    assert gov["reopened_from"] == "excluded"
-    assert "reopened" in gov["reasons"][0]
-    event = next(v for v in db.added if isinstance(v, LiteratureStatusEvent))
-    assert event.previous_status == "excluded"
-    assert event.current_status == "review"
-    assert event.source == "literature-classifier"
+    assert article.publication_status == "excluded"
+    assert article.metadata_["ai_content_governance"]["decision"] == "excluded"
+    assert not any(isinstance(value, LiteratureStatusEvent) for value in db.added)
 
 
 async def test_repository_published_article_not_downgraded_to_review_on_reclassification():

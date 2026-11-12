@@ -202,6 +202,9 @@ def _payload(week: str, items: list[dict[str, Any]], list_code: str) -> dict[str
         label = f"{item['country']} · {item['period_start']} – {item['period_end']}"
         lines_en.append(f"- [{label}]({item['url']})")
         lines_zh.append(f"- [{label}]({item['url']})")
+    def item_content(item: Mapping[str, Any]) -> str:
+        label = f"{item['country']} · {item['period_start']} – {item['period_end']}"
+        return f"- [{label}]({item['url']})"
     return {
         "idempotency_key": f"reports-weekly:{week}:{list_code}:r1", "list_codes": [list_code],
         "frequency": "weekly", "default_locale": "en", "source_locale": "en", "target_locales": ["en", "zh"],
@@ -209,20 +212,28 @@ def _payload(week: str, items: list[dict[str, Any]], list_code: str) -> dict[str
             "en": {"subject": f"GIDS {label_en} — {week}", "markdown": "\n".join(lines_en)},
             "zh": {"subject": f"GIDS {label_zh} — {week}", "markdown": "\n".join(lines_zh)},
         },
-        "content_items": [{"id": item["id"], "countries": [item["country"]], "diseases": item["diseases"]} for item in items],
+        "personalized_templates": {
+            "en": "\n".join(lines_en[:3] + ["", "{{GIDS_PERSONALIZED_ITEMS}}"]),
+            "zh": "\n".join(lines_zh[:3] + ["", "{{GIDS_PERSONALIZED_ITEMS}}"]),
+        },
+        "content_items": [{"id": item["id"], "countries": [item["country"]], "diseases": item["diseases"],
+                           "localized_markdown": {"en": item_content(item), "zh": item_content(item)}} for item in items],
         "created_by": "report-release-dispatcher", "max_recipients": 10000,
     }
 
 
 def dispatch_after_release(*, root: Path, reports_dir: Path, worker_base_url: str, reports_base_url: str,
                            token: str, start_week: str, now: datetime | None = None,
-                           opener: Callable[..., Any] = urlopen, mode: str = "full", guard_activation: bool = False) -> dict[str, Any]:
+                           opener: Callable[..., Any] = urlopen, mode: str = "full", guard_activation: bool = False,
+                           integrated_week_start: str = "") -> dict[str, Any]:
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         raise ReportSubscriptionError("timezone_required")
     now = now.astimezone(timezone.utc)
     if not _valid_week(start_week):
         raise ReportSubscriptionError("report_dispatch_start_week_required")
+    if integrated_week_start and not _valid_week(integrated_week_start):
+        raise ReportSubscriptionError("integrated_week_start_invalid")
     if not token or not worker_base_url:
         raise ReportSubscriptionError("report_dispatch_configuration_missing")
     origin = transport._https_origin(reports_base_url, "reports_base_url")
@@ -280,17 +291,35 @@ def dispatch_after_release(*, root: Path, reports_dir: Path, worker_base_url: st
                     continue
             else:
                 record = None
+            integrated_owns_week = bool(integrated_week_start and eligible_week >= integrated_week_start)
+            # A pre-existing outbox may already have reached the Worker, even
+            # when its local completed_lists does not record an acknowledgement.
+            # Require reconciliation before changing its recipients or payload.
+            if integrated_owns_week and record and "weekly_digest" in record.get("payloads", {}):
+                raise ReportSubscriptionError("weekly_digest_cutover_pending_requires_reconciliation")
             if any(report_id not in catalogue or observations[report_id].get("fingerprint") != _fingerprint(catalogue[report_id]) for report_id in ids):
                 raise ReportSubscriptionError("report_changed_or_removed_requires_review")
             items = [catalogue[report_id] for report_id in ids]
             _verify_pages(items, reports_dir, manifest, opener)
-            payloads = {code: _payload(eligible_week, items, code) for code in ("reports", "weekly_digest")}
+            codes = ("reports",) if integrated_owns_week else ("reports", "weekly_digest")
+            payloads = {code: _payload(eligible_week, items, code) for code in codes}
             if mode == "pilot":
                 for payload in payloads.values():
                     payload["idempotency_key"] = "pilot:" + payload["idempotency_key"]
             fingerprint = _fingerprint(payloads)
-            if record and (record.get("payload_sha256") != fingerprint or _fingerprint(record.get("payloads") or {}) != fingerprint):
-                raise ReportSubscriptionError("report_dispatch_content_changed_requires_review")
+            if record:
+                previous = record.get("payloads")
+                if isinstance(previous, dict) and all(isinstance(value, dict) and "personalized_templates" not in value for value in previous.values()):
+                    legacy = {}
+                    for code, payload in payloads.items():
+                        old = dict(payload)
+                        old.pop("personalized_templates", None)
+                        old["content_items"] = [{key: value for key, value in item.items() if key != "localized_markdown"}
+                                                for item in payload["content_items"]]
+                        legacy[code] = old
+                    fingerprint = _fingerprint(legacy)
+                if record.get("payload_sha256") != fingerprint or _fingerprint(previous or {}) != fingerprint:
+                    raise ReportSubscriptionError("report_dispatch_content_changed_requires_review")
             if not record:
                 record = {"week": eligible_week, "payloads": payloads, "payload_sha256": fingerprint, "status": "pending", "completed_lists": []}
                 _save(path, record)
@@ -334,6 +363,7 @@ async def dispatch_if_enabled(service: Any, runtime: Any, *, reports_origin: str
             reports_base_url=reports_origin,
             token=env_value("SUBSCRIPTIONS__ADMIN_API_TOKEN"),
             start_week=env_value("SUBSCRIPTIONS__REPORT_DIGEST_START_WEEK"),
+            integrated_week_start=env_value("SUBSCRIPTIONS__INTEGRATED_WEEKLY_START_WEEK"),
             mode=delivery_mode(env_value),
             guard_activation=True,
         )

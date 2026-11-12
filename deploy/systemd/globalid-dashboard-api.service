@@ -16,6 +16,8 @@ User=__RUN_AS_USER__
 Group=__RUN_AS_GROUP__
 WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=-__PROJECT_DIR__/.env
+Environment=DATABASE__POOL_SIZE=8
+Environment=DATABASE__MAX_OVERFLOW=4
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_api_service.sh
 Restart=on-failure
 RestartSec=10

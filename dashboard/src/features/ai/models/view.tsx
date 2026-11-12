@@ -1214,7 +1214,7 @@ export default function AIModelsPage() {
               {` · ${isZh ? "累计" : "total"} ${route.runtime_failure_count}`}
             </p>
             <p className="mt-1">
-              {isZh ? "模型调用" : "model calls"}: {route.runtime_model_inflight}/{route.runtime_model_capacity}
+              {isZh ? "模型占用名额" : "occupied model slots"}: {route.runtime_model_inflight}/{route.runtime_model_capacity}
               {" · "}{isZh ? "服务商合计" : "provider total"}: {route.runtime_provider_inflight}/{route.runtime_provider_capacity}
             </p>
             {route.runtime_last_error ? <p className="mt-1 max-w-[220px] truncate" title={route.runtime_last_error}>{route.runtime_last_error}</p> : null}
@@ -1486,7 +1486,7 @@ export default function AIModelsPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 border-t border-tremor-border pt-3 text-xs text-tremor-content-subtle dark:border-dark-tremor-border dark:text-dark-tremor-content-subtle">
                         <span>{route.runtime_latency_ewma_ms == null ? "-" : `${Math.round(route.runtime_latency_ewma_ms)} ms`}</span>
-                        <span className="text-right">{route.runtime_model_inflight}/{route.runtime_model_capacity} {isZh ? "模型调用" : "model calls"}</span>
+                        <span className="text-right">{route.runtime_model_inflight}/{route.runtime_model_capacity} {isZh ? "模型占用名额" : "occupied model slots"}</span>
                       </div>
                     </article>
                   )) : <EmptyState icon={<GitBranch className="h-10 w-10" />} title={copy.noRoutes} />}

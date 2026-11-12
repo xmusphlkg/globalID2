@@ -1,3 +1,4 @@
+import GIDSLoader from '../GIDSLoader';
 import { useEffect, useMemo, useState } from 'react';
 import { useSurveillanceSummary } from './useSurveillanceSummary';
 import { COUNTRY_COVERAGE } from '../../lib/country-coverage.ts';
@@ -43,7 +44,7 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
     for (const [key, value] of Object.entries({ q: query, who, wb, income, status })) value ? url.searchParams.set(key, value) : url.searchParams.delete(key);
     window.history.replaceState({}, '', url);
   }, [filtered, query, who, wb, income, status, parentCode, publication.data]);
-  if (!publication.data) return <p role="status" className="figure-caption">{publication.error ? pick('Current coverage is unavailable.', '当前覆盖数据暂不可用。', 'La couverture actuelle est indisponible.') : pick('Loading current coverage…', '正在加载当前覆盖数据…', 'Chargement de la couverture…')}</p>;
+  if (!publication.data) return <p role="status" className="figure-caption">{publication.error ? pick('Current coverage is unavailable.', '当前覆盖数据暂不可用。', 'La couverture actuelle est indisponible.') : <GIDSLoader language={language} />}</p>;
   const regional = subdivisionRows(publication.data);
   const parents = [...new Set(regional.map((row: Row) => String(row.parent_code)))].map(code => ({
     ...((publication.data?.countries ?? []).find((row: Row) => row.code === code) || { code }),
@@ -70,7 +71,7 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
       <button type="button" className="site-action-secondary border px-3 py-2 text-sm" onClick={reset}>{pick('Reset filters', '重置筛选', 'Réinitialiser les filtres')}</button>
     </div>}
     <p className="figure-caption" aria-live="polite">{filtered.length.toLocaleString()} {pick('countries and regions', '个国家和地区', 'pays et régions')}</p>
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {filtered.map(row => { const active = hasData(row);
         const name = countryLabel(row, language);
         const content = <><div className="flex items-center gap-3"><img src={getFlagAssetPath(row.code) ?? undefined} alt="" width="32" height="24" loading="lazy" /><div><strong>{name}</strong><span className="block text-xs text-[rgb(var(--text-muted))]">{row.code}</span></div></div>

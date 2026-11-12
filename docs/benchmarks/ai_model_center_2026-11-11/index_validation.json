@@ -1,0 +1,26 @@
+{
+  "time": "2026-11-10T16:31:42.783065+00:00",
+  "progress": [],
+  "index": [
+    {
+      "relname": "idx_ai_model_call_logs_success_model",
+      "indisvalid": true,
+      "indisready": true,
+      "bytes": 3817472
+    }
+  ],
+  "old_or_blocking_sessions": [],
+  "count_explain": {
+    "planning_ms": 0.397,
+    "execution_ms": 18.955,
+    "shared_hits": 506,
+    "shared_reads": 0,
+    "scans": [
+      {
+        "type": "Index Only Scan",
+        "index": "idx_ai_model_call_logs_success_model",
+        "heap_fetches": 677
+      }
+    ]
+  }
+}

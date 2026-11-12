@@ -14,13 +14,19 @@ const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 0);
 if (!Number.isInteger(renderWorkers) || renderWorkers < 0 || renderWorkers > 32) {
   throw new Error('GIDS_ASTRO_RENDER_WORKERS must be an integer from 0 to 32');
 }
+if (process.env.GIDS_RESEARCH_BUILD_DIR && process.env.GIDS_REPORTS_BUILD_DIR) {
+  throw new Error('Research and reports builds require separate workspaces');
+}
+const isolatedBuildDir = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_REPORTS_BUILD_DIR;
 export default defineConfig({
+  ...(process.env.GIDS_RESEARCH_BUILD_DIR ? { root: resolve(process.env.GIDS_RESEARCH_BUILD_DIR) } : {}),
   experimental: { parallelPrerender: renderWorkers ? { workers: renderWorkers } : false },
   ...(process.env.GIDS_BUILD_PUBLIC_DIR ? { publicDir: resolve(process.env.GIDS_BUILD_PUBLIC_DIR) } : {}),
-  ...(process.env.GIDS_REPORTS_BUILD_DIR ? {
-    srcDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'src'),
-    publicDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'public'),
-    outDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'dist'),
+  ...(isolatedBuildDir ? {
+    srcDir: resolve(isolatedBuildDir, 'src'),
+    publicDir: resolve(isolatedBuildDir, 'public'),
+    outDir: resolve(isolatedBuildDir, 'dist'),
+    ...(process.env.GIDS_RESEARCH_BUILD_DIR ? { cacheDir: resolve(isolatedBuildDir, '.astro') } : {}),
   } : {}),
   site: siteUrl,
   output: 'static',
@@ -35,6 +41,7 @@ export default defineConfig({
     inlineStylesheets: 'auto',
   },
   vite: {
+    ...(process.env.GIDS_RESEARCH_BUILD_DIR ? { ssr: { noExternal: ['@astrojs/react'] } } : {}),
     plugins: [{
       name: 'local-subscription-options',
       apply: 'serve',
@@ -107,6 +114,10 @@ export default defineConfig({
             // as a stable cacheable vendor chunk prevents the shared graph
             // from collapsing back into a >500 kB monolith.
             if (id.includes('/node_modules/zrender/')) return 'zrender';
+            // Isolated research builds have fewer entry points. Without this
+            // boundary the shared ECharts engine merges into chartPreferences
+            // and exceeds the same chunk budget used by the main-site build.
+            if (id.includes('/node_modules/echarts/lib/core/')) return 'echarts-engine';
           },
         },
       },

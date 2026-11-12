@@ -10,6 +10,30 @@ from src.core.source_scopes import scope_display_label
 from src.generation.site_data_views import resolve_country_display_names
 
 SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
+    ("IE", "hpsc_ndh"): {
+        "label": "Ireland HPSC Notifiable Disease Weekly Hub",
+        "url": "https://notifiabledisease.hpsc.ie/",
+        "type": "official_arcgis", "cadence": "weekly",
+        "description": "HPSC weekly notification data. Published by operator decision; written reuse permission has not been confirmed. HPSC terms require prior permission.",
+        "description_zh": "爱尔兰 HPSC 每周法定传染病数据。根据网站运营者决定公开；尚未确认取得书面再利用许可，HPSC 条款要求事先取得许可。",
+        "description_fr": "Données hebdomadaires du HPSC publiées sur décision de l’exploitant ; l’autorisation écrite de réutilisation n’a pas été confirmée et les conditions du HPSC exigent une autorisation préalable.",
+    },
+    ("IE", "hpsc_annual"): {
+        "label": "Ireland HPSC Annual Infectious Disease Statistics",
+        "url": "https://www.hpsc.ie/p/notifiablediseases/annualidstatistics-2",
+        "type": "official_pdf", "cadence": "annual",
+        "description": "HPSC historical annual statistics, published by operator decision; written reuse permission has not been confirmed.",
+        "description_zh": "爱尔兰 HPSC 历年年度统计，根据网站运营者决定公开；尚未确认取得书面再利用许可。",
+        "description_fr": "Statistiques annuelles historiques du HPSC publiées sur décision de l’exploitant ; l’autorisation écrite de réutilisation n’a pas été confirmée.",
+    },
+    ("IE", "hpsc_weekly_archive"): {
+        "label": "Ireland HPSC Weekly Report Archive",
+        "url": "https://www.lenus.ie/",
+        "type": "historical_pdf", "cadence": "weekly",
+        "description": "Sparse historical weekly reports; missing reports are not zero. Published by operator decision; archive reuse rights have not been verified.",
+        "description_zh": "不连续的历史周报；缺失报告不代表零。根据网站运营者决定公开，档案再利用权利尚未核实。",
+        "description_fr": "Rapports hebdomadaires historiques incomplets ; une absence ne signifie pas zéro. Publiés sur décision de l’exploitant ; les droits de réutilisation des archives n’ont pas été vérifiés.",
+    },
     ("*", "cn_province_datacenter"): {
         "label": "Public Health Science Data Center",
         "url": "https://www.phsciencedata.cn/Share/ky_sjml.jsp",
@@ -440,6 +464,12 @@ def build_country_source_info(
             cfg[field] = metadata[field]
     crawler_cfg = cfg.get("crawler_config", {})
     source_scopes = list(crawler_cfg.get("sources") or ["all"])
+    public_scopes = cfg.get("public_source_scopes")
+    if public_scopes is not None:
+        # A database country record may still list private ingestion feeds or
+        # predate the public adapter; the explicit public allow-list wins.
+        source_scopes = list(dict.fromkeys(str(scope).strip() for scope in public_scopes if str(scope).strip()))
+        cfg["notes"] = cfg.get("public_source_notes") or ""
     fallback_cadence = (
         crawler_cfg.get("cadence")
         or (frequency_meta or {}).get("source_frequency")
@@ -473,6 +503,7 @@ def build_country_source_info(
                 or crawler_cfg.get("cadence")
                 or fallback_cadence,
                 "description": details.get("description") or cfg.get("notes"),
+                **{key: details[key] for key in ("description_zh", "description_fr") if details.get(key)},
             }
         )
 
@@ -483,7 +514,11 @@ def build_country_source_info(
         "primary_label": primary.get("label") if primary else None,
         "primary_url": primary.get("url") if primary else None,
         "primary_type": primary.get("type") if primary else None,
-        "parser_primary": cfg.get("parser_config", {}).get("primary"),
+        "parser_primary": (
+            "ecdc_atlas_annual_reported_cases"
+            if public_scopes == ["ecdc_atlas_annual"]
+            else cfg.get("parser_config", {}).get("primary")
+        ),
         "notes": cfg.get("notes"),
         "sources": sources,
     }

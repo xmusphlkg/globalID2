@@ -17,6 +17,8 @@ from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
 
+from .release_binding import papers_binding_matches
+
 Capture = Callable[..., Awaitable[dict[str, Any]]]
 JsonFetch = Callable[[str], Awaitable[dict[str, Any]]]
 LatestDeployment = Callable[..., Awaitable[dict[str, Any] | None]]
@@ -587,6 +589,7 @@ async def verify_cloudflare_production_release(
                 and bool(release_identity.get("build_digest"))
                 and last_manifest.get("build_digest")
                 == release_identity["build_digest"]
+                and papers_binding_matches(last_manifest, release_identity)
             )
             if deployment_matches and manifest_matches:
                 return {

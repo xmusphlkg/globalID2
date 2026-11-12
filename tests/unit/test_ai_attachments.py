@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from src.ai import attachments as att
-from src.ai.agents.base import BaseAgent
+from src.ai.providers import ProviderTransport
 from src.ai.attachments import (
     NATIVE_INPUT,
     TEXT_INPUT,
@@ -129,14 +129,9 @@ def test_non_native_document_falls_back_to_a_text_block_inside_native_content():
 # --- BaseAgent fallback ---
 
 
-class _Agent(BaseAgent):
-    async def process(self, **kwargs):  # pragma: no cover
-        return {}
-
-
 @pytest.fixture
-def agent(monkeypatch):
-    instance = _Agent(name="attach-test", model="m", provider="p")
+def agent():
+    instance = ProviderTransport()
     instance.sent = []
     return instance
 
@@ -157,24 +152,24 @@ def _script(agent, monkeypatch, *outcomes):
             raise outcome
         return outcome, {}
 
-    monkeypatch.setattr(agent, "_send_runtime_route_request", send)
+    monkeypatch.setattr(agent, "send", send)
 
 
 async def test_native_route_receives_the_file_and_reports_native_mode(agent, monkeypatch):
     _script(agent, monkeypatch, "ok")
     route = _route(api_style="anthropic")
-    result = await agent._complete_with_admitted_runtime_route(route, "ask", "sys", attachments=[_doc()])
+    result = await agent.complete(route, "ask", "sys", attachments=[_doc()])
     assert result[0] == "ok"
-    assert agent._last_input_mode == NATIVE_INPUT
+    assert result[2] == NATIVE_INPUT
     assert isinstance(agent.sent[0], list) and agent.sent[0][0]["type"] == "document"
 
 
 async def test_rejected_file_is_retried_as_text_and_the_route_is_blocked(agent, monkeypatch):
     _script(agent, monkeypatch, _HTTPError(400, "unsupported file input"), "ok")
     route = _route(api_style="anthropic")
-    result = await agent._complete_with_admitted_runtime_route(route, "ask", "sys", attachments=[_doc()])
+    result = await agent.complete(route, "ask", "sys", attachments=[_doc()])
     assert result[0] == "ok"
-    assert agent._last_input_mode == TEXT_INPUT
+    assert result[2] == TEXT_INPUT
     assert isinstance(agent.sent[1], str) and "extracted text" in agent.sent[1] and agent.sent[1].endswith("ask")
     assert route_accepts_native_files(route) is False
 
@@ -183,29 +178,29 @@ async def test_non_file_errors_are_not_swallowed_and_do_not_block_the_route(agen
     _script(agent, monkeypatch, _HTTPError(429, "rate limit reached"))
     route = _route(api_style="anthropic")
     with pytest.raises(_HTTPError):
-        await agent._complete_with_admitted_runtime_route(route, "ask", None, attachments=[_doc()])
+        await agent.complete(route, "ask", None, attachments=[_doc()])
     assert len(agent.sent) == 1
     assert route_accepts_native_files(route) is True
 
 
 async def test_text_only_route_never_sees_the_original_file(agent, monkeypatch):
     _script(agent, monkeypatch, "ok")
-    await agent._complete_with_admitted_runtime_route(_route(), "ask", None, attachments=[_doc()])
+    result = await agent.complete(_route(), "ask", None, attachments=[_doc()])
     assert isinstance(agent.sent[0], str)
-    assert agent._last_input_mode == TEXT_INPUT
+    assert result[2] == TEXT_INPUT
 
 
 async def test_calls_without_attachments_are_untouched(agent, monkeypatch):
     _script(agent, monkeypatch, "ok")
-    await agent._complete_with_admitted_runtime_route(_route(api_style="anthropic"), "ask", None)
+    result = await agent.complete(_route(api_style="anthropic"), "ask", None)
     assert agent.sent == ["ask"]
-    assert agent._last_input_mode is None
+    assert result[2] is None
 
 
 @pytest.fixture(autouse=True)
 def dispatcher_transport_context():
     """These tests exercise provider internals, never a business caller."""
-    from src.ai.work_queue import _DISPATCHING
+    from src.ai.runtime.context import _DISPATCHING
     token = _DISPATCHING.set(True)
     try:
         yield

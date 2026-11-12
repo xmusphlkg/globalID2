@@ -4,6 +4,21 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.18.3] - 2026-11-12
+
+### Research and public data
+
+- Serve current research indexes as static Pages content and article/library assets directly from Papers R2. Partition catalogue and evidence payloads, load only relevant facets, and retain versioned compatibility routes for cached clients.
+- Compress static Papers uploads, reuse checksummed artifacts, retain older referenced assets and shards, and enforce a conservative bucket-size budget before publication.
+- Publish downloadable surveillance files from the same frozen snapshot as live JSON, with release-bound manifests, resumable publication and acknowledgement only after both channels succeed.
+- Add compact, independently refreshed homepage summaries and a bootstrap manifest to reduce initial data loading; improve notice layouts, map loading feedback, footer navigation and text contrast.
+
+### Background operations
+
+- Add bounded literature abstract repair and a resumable systemd backfill coordinator. Repaired records can return to review while historical exclusions require an explicit reopening decision.
+- Serialize AI failure-progress writes before acquiring database connections to avoid exhausting dispatcher pools under contention.
+- Close SMTP connections after TLS/authentication setup failures and propagate authentication cooldown errors when the caller requests failure reporting.
+
 ### Fixed
 
 - Completed tasks now persist and display 100% progress, including older successful JSON publications; failed and cancelled tasks retain their actual progress. Late progress callbacks cannot overwrite terminal task progress.
@@ -15,6 +30,16 @@ This file records release-level changes to the GIDS application and its data ope
 
 - The control panel has a realtime publication workspace for Surveillance and Situation, with separate queue/backlog views, version and integrity receipts, task history, manual JSON publication and fresh retries. The site release center and shared task list identify JSON channels separately from template and report publication.
 - Automatic JSON publication can be paused per channel with durable cross-process state. Scheduler reconciliation, retries and continuation respect the pause; existing tasks and explicit manual runs remain available. Monitoring shows intentional pauses without treating their pending/retry age as an outage, while retaining integrity and execution alarms.
+
+## [0.18.2] - 2026-11-11
+
+- Accelerated disease-title association during literature export by skipping regex checks for absent literal aliases, preserving existing boundary, negation and specificity rules.
+- Cached unchanged title associations with policy-safe invalidation, tracked complete per-disease literature dependencies, and grouped card shards by publication month so ordinary additions reuse unrelated pages and older shards.
+- Added dedicated disease literature pages on the Papers R2 host, with real pagination, on-demand card shards, filters, publication trends and transparent PubMed/Europe PMC search strategies.
+- Added a lightweight GIDS signal-orbit loading animation with accessible status text and reduced-motion support across public data views.
+- Improved common disease aliases and compound searches, comparison selections, language-switch continuity and shared theme preferences across the public hosts.
+- Scoped chart source captions and observation dates to the selected series, aligned homepage and Situation counts to the same 30-day window, and clarified current-file versus full-history download totals.
+- Reduced focused Ask queries to relevant research collections, added recoverable search errors, and improved Chinese interface labels, evidence relationships and text contrast.
 
 ## [0.18.1] - 2026-11-07
 

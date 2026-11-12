@@ -1,8 +1,8 @@
 [Unit]
 Description=GlobalID control-plane scheduler
-After=globalid-docker.service globalid-dashboard-api.service globalid-dashboard-worker.service
+After=globalid-docker.service globalid-dashboard-api.service globalid-dashboard-worker.service globalid-ai-worker.service
 Wants=globalid-docker.service globalid-dashboard-api.service
-Requires=globalid-dashboard-worker.service
+Requires=globalid-dashboard-worker.service globalid-ai-worker.service
 PartOf=globalid-stack.target
 StartLimitIntervalSec=300
 StartLimitBurst=5
@@ -14,6 +14,8 @@ User=__RUN_AS_USER__
 Group=__RUN_AS_GROUP__
 WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=-__PROJECT_DIR__/.env
+Environment=DATABASE__POOL_SIZE=2
+Environment=DATABASE__MAX_OVERFLOW=1
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_scheduler_service.sh
 Restart=on-failure
 RestartSec=10

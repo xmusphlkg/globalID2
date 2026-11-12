@@ -10,7 +10,7 @@ from sqlalchemy import Text, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.task_progress import displayed_progress
-from src.control_plane.runtime import runtime_registry
+from src.control_plane.runtime import REQUIRED_RUNTIME_SERVICES, runtime_registry
 from src.control_plane.system_resources import proxy_location, system_resources
 from src.domain import AutomationJob, DataReleaseJob, Task, TaskStatus, TaskType
 
@@ -164,7 +164,7 @@ class ControlPlaneOverviewService:
 
         services, redis_ok = await runtime_registry.list_services()
         live_kinds = {str(item.get("service")) for item in services}
-        for kind in ("worker", "scheduler"):
+        for kind in REQUIRED_RUNTIME_SERVICES:
             if kind not in live_kinds:
                 items.insert(
                     0,

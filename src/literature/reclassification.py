@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
@@ -70,6 +71,10 @@ async def reclassify_existing_literature(
     *,
     dry_run: bool = False,
     limit: int | None = None,
+    dois: list[str] | None = None,
+    after_id: int | None = None,
+    journals: list[str] | None = None,
+    excluded_only: bool = False,
 ) -> dict[str, Any]:
     """Re-run current rules over stored source metadata and replace only links.
 
@@ -83,6 +88,18 @@ async def reclassify_existing_literature(
     taxonomy = _load_json(ROOT / config.taxonomy_path)
     async with get_db() as db:
         query = select(LiteratureArticle).order_by(LiteratureArticle.id)
+        if after_id is not None:
+            if after_id < 0:
+                raise ValueError("after_id must be non-negative")
+            query = query.where(LiteratureArticle.id > after_id)
+        if journals:
+            query = query.where(LiteratureArticle.journal.in_(journals))
+        if excluded_only:
+            query = query.where(LiteratureArticle.publication_status == "excluded")
+        if dois is not None:
+            if not dois:
+                raise ValueError("DOI scope must not be empty")
+            query = query.where(LiteratureArticle.doi.in_([doi.strip().lower() for doi in dois]))
         if limit is not None:
             query = query.limit(limit)
         articles = (await db.execute(query)).scalars().all()
@@ -109,7 +126,8 @@ async def reclassify_existing_literature(
                 (metadata.get("discovery_score_evidence") or {}).get("surveillance_relation_score")
                 or 0.0
             )
-            classification = classify_candidate(
+            classification = await asyncio.to_thread(
+                classify_candidate,
                 candidate_from_stored_article(article),
                 diseases=diseases,
                 countries=countries,
@@ -144,10 +162,14 @@ async def reclassify_existing_literature(
                 metrics={"examined": len(articles), "changed": changed},
             )
 
-    signal_links = await reconcile_automatic_signal_links(dry_run=dry_run)
+    # A scoped run must not modify links for the rest of the corpus. Those
+    # links are reconciled by the regular scoped automation lifecycle.
+    signal_links = ({"skipped": "scoped_reclassification"} if dois is not None or after_id is not None or journals or excluded_only
+                    else await reconcile_automatic_signal_links(dry_run=dry_run))
     return {
         "dry_run": dry_run,
         "examined": len(articles),
+        "next_after_id": int(articles[-1].id) if articles else after_id,
         "changed": changed,
         "diseases_added": diseases_added,
         "countries_added": countries_added,

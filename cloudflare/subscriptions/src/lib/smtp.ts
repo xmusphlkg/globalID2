@@ -17,10 +17,11 @@ type SmtpSocket = ReturnType<typeof connect>;
 export async function sendSmtpEmail(
   config: SmtpConfig,
   email: EmailContent & { to: string; messageId?: string },
+  purpose: "content" | "transactional" = "content",
 ): Promise<{ providerMessageId: string | null }> {
   const recipient = normalizeEmail(email.to);
   if (!recipient) throw new Error("invalid_smtp_recipient");
-  if (!recipientAllowed({ DELIVERY_MODE: config.deliveryMode, PILOT_RECIPIENTS: config.pilotRecipients }, recipient)) throw new Error("pilot_recipient_blocked");
+  if (purpose !== "transactional" && !recipientAllowed({ DELIVERY_MODE: config.deliveryMode, PILOT_RECIPIENTS: config.pilotRecipients }, recipient)) throw new Error("pilot_recipient_blocked");
 
   const implicitTls = !config.useTls || config.port === 465 || config.port === 2465;
   const socketOptions = implicitTls

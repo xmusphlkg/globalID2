@@ -1,6 +1,6 @@
 import pytest
 
-from src.ai.model_center import (
+from src.ai.catalogue.options import (
     get_thinking_mode,
     route_completion_extra_body,
     with_thinking_mode,
@@ -27,7 +27,10 @@ def test_explicit_extra_body_is_returned_as_a_copy() -> None:
     assert result is not body
 
 
-@pytest.mark.parametrize("extra_params", [None, "bad", {}, {"extra_body": None}, {"extra_body": {}}, {"extra_body": "x"}])
+@pytest.mark.parametrize(
+    "extra_params",
+    [None, "bad", {}, {"extra_body": None}, {"extra_body": {}}, {"extra_body": "x"}],
+)
 def test_missing_or_malformed_extra_body_yields_none(extra_params) -> None:
     assert route_completion_extra_body({"extra_params": extra_params}) is None
 
@@ -61,7 +64,10 @@ def test_with_thinking_mode_sets_and_clears_without_touching_siblings() -> None:
 
 
 def test_with_thinking_mode_default_removes_empty_extra_body() -> None:
-    params = {"extra_body": {"thinking": {"type": "enabled"}}, "runtime_max_concurrency": 2}
+    params = {
+        "extra_body": {"thinking": {"type": "enabled"}},
+        "runtime_max_concurrency": 2,
+    }
     assert with_thinking_mode(params, "default") == {"runtime_max_concurrency": 2}
 
 
@@ -71,7 +77,9 @@ def test_reapplying_current_mode_preserves_provider_specific_values() -> None:
 
 
 def test_with_thinking_mode_handles_non_dict_input() -> None:
-    assert with_thinking_mode(None, "enabled") == {"extra_body": {"thinking": {"type": "enabled"}}}
+    assert with_thinking_mode(None, "enabled") == {
+        "extra_body": {"thinking": {"type": "enabled"}}
+    }
     assert with_thinking_mode(None, "default") == {}
 
 
@@ -80,27 +88,10 @@ def test_with_thinking_mode_rejects_unknown_mode() -> None:
         with_thinking_mode({}, "auto")
 
 
-@pytest.mark.parametrize(
-    "route",
-    [
-        {"extra_params": {"runtime_completion_max_tokens": 8000}},
-        {"extra_params": {"runtime_completion_max_tokens": 99999}},
-        {"extra_params": {"extra_body": {"thinking": {"type": "disabled"}}}},
-        {"extra_params": {}},
-        {"extra_params": {"extra_body": {"thinking": {"type": "enabled"}}}},
-        {"extra_params": {}, "max_tokens": 1000},
-    ],
-)
-def test_completion_requests_are_not_capped(route) -> None:
-    from src.ai.model_center import runtime_route_completion_max_tokens
-
-    assert runtime_route_completion_max_tokens(route, 2400) is None
-
-
 def test_completion_sanitizer_strips_probe_only_settings_but_keeps_extra_body() -> None:
-    from src.ai.agents.base import BaseAgent
+    from src.ai.providers import sanitize_completion_params
 
-    sanitized = BaseAgent._sanitize_completion_params(
+    sanitized = sanitize_completion_params(
         {
             "health_check_timeout_seconds": 90,
             "health_check_max_tokens": 4096,

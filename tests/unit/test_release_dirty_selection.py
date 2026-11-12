@@ -96,6 +96,21 @@ async def enqueue(maker, service, *, full=False):
         ).scalar_one()
 
 
+async def test_maintenance_release_freezes_explicit_subscription_suppression(release_db):
+    maker, service, _ = release_db
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site Release"),
+        manual=True, trigger="site_polish", trigger_task_uuid=None,
+        suppress_subscription_dispatch=True,
+    )
+    assert result["status"] == "queued"
+    async with maker() as session:
+        task = (await session.execute(select(Task).where(Task.task_uuid == result["task_uuid"]))).scalar_one()
+        assert task.input_data["suppress_subscription_dispatch"] is True
+        assert task.input_data["code_only"] is False
+        assert task.input_data["release_job_id"] == "site-release"
+
+
 @pytest.mark.parametrize("has_global", [False, True])
 async def test_situation_json_leaves_non_global_markers_for_operator_review(release_db, has_global):
     maker, service, _ = release_db
@@ -163,7 +178,7 @@ async def test_json_release_selects_surveillance_and_runs_beside_static_lane(rel
         assert task.metadata_["data_only"] is True
         assert task.input_data["incremental_country_codes"] == ["US"]
         assert not task.input_data["include_cloudflare_deploy"]
-        assert not task.input_data["include_git_push"]
+        assert task.input_data["include_git_push"]
         assert not task.input_data["raw_archive_enabled"]
     second = await service._enqueue_release_task(job, manual=True, trigger="test", trigger_task_uuid=None, data_only=True)
     assert second["status"] == "skipped"
@@ -991,6 +1006,12 @@ async def test_disabled_scope_stays_pending_without_blocking_publishable_scopes(
     release_db, monkeypatch, disabled_code, include_us
 ):
     maker, service, _ = release_db
+    if disabled_code == "IE":
+        country_config = module.get_country_bootstrap_config
+        monkeypatch.setattr(module, "get_country_bootstrap_config", lambda code: (
+            {**country_config(code), "public_release_enabled": False}
+            if code == "IE" else country_config(code)
+        ))
     async with maker() as session:
         if disabled_code == "IE":
             session.add(

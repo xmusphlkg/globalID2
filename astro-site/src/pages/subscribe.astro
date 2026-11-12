@@ -2,13 +2,17 @@
 // src/pages/subscribe.astro — Subscribe page
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { buildAlternatePaths } from '../lib/seo';
-import { translateUi } from '../utils/i18n';
+import { translateUi, localizedRegionName } from '../utils/i18n';
+import metaRaw from '../data/meta.json';
+import GIDSLoading from '../components/GIDSLoading.astro';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
+
+const subscriptionCountryNames = Object.fromEntries(((metaRaw as any).countries ?? []).map((country: any) => [String(country.code).toUpperCase(), localizedRegionName(locale, country.code, { en: country.name_en ?? country.name, zh: country.name_zh, fr: country.name_fr })]));
 
 const subscriptionsApiBase = (
   import.meta.env.PUBLIC_SUBSCRIPTIONS_API_BASE ||
@@ -31,7 +35,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
     <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
       <div class="grid gap-10 lg:grid-cols-[minmax(0,0.82fr)_minmax(520px,1fr)] lg:items-start">
         <div class="subscribe-intro">
-          <div class="mb-6 inline-flex items-center gap-2 border border-teal-500/25 bg-teal-500/10 px-3 py-1.5 text-xs font-semibold text-teal-400">
+          <div class="subscribe-intro-badge mb-6 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold">
             <span class="h-1.5 w-1.5 rounded-full bg-teal-400"></span>
             <span>{pick('GIDS subscription center', 'GIDS 订阅中心')}</span>
           </div>
@@ -50,11 +54,11 @@ const subscriptionOptionsUrl = import.meta.env.DEV
               <dd>{pick('Reports, Research Radar digests, and priority alerts', '报告、Research Radar 摘要和重点提醒')}</dd>
             </div>
             <div>
-              <dt>{pick('Filters', '过滤条件')}</dt>
+              <dt>{pick('Filters', '筛选范围')}</dt>
               <dd>{pick('Country, disease, topic, and study preferences', '国家、疾病、主题和研究类型偏好')}</dd>
             </div>
             <div>
-              <dt>{pick('Control', '控制权')}</dt>
+              <dt>{pick('Control', '随时管理')}</dt>
               <dd>{pick('One-click unsubscribe link', '一键退订链接')}</dd>
             </div>
           </dl>
@@ -63,6 +67,8 @@ const subscriptionOptionsUrl = import.meta.env.DEV
         <form
           id="subscription-form"
           class="subscribe-form"
+          tabindex="0"
+          aria-labelledby="subscription-form-title"
           data-api-base={subscriptionsApiBase}
           data-options-url={subscriptionOptionsUrl}
           data-page-locale={locale}
@@ -71,13 +77,13 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           <div class="subscribe-form-header">
             <div>
               <p class="subscribe-kicker">{pick('Preferences', '订阅偏好')}</p>
-              <h2>{pick('Create a subscription', '创建订阅')}</h2>
+              <h2 id="subscription-form-title">{pick('Create a subscription', '创建订阅')}</h2>
             </div>
             <span class="subscribe-service-badge">{pick('Official GIDS service', 'GIDS 官方服务')}</span>
           </div>
 
           <p id="subscription-pilot-notice" class="subscribe-status" role="status" hidden>
-            {pick('The subscription service is being tested with the administrator mailbox. Public delivery is not open yet.', '订阅服务目前仅向管理员邮箱试运行，尚未开放公众投递。', 'Le service est en cours de test avec la boîte administrateur. Les envois publics ne sont pas encore ouverts.')}
+            {pick('You can subscribe now and confirm your email. Public updates will begin when the subscription service launches.', '你可以先确认订阅偏好，邮件更新将在服务正式开放后开始发送。', 'Vous pouvez vous inscrire et confirmer votre adresse. Les envois publics commenceront au lancement du service.')}
           </p>
 
           <div class="subscribe-field">
@@ -118,7 +124,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           <fieldset class="subscribe-field">
             <div class="subscribe-field-title">
               <legend>{pick('Diseases', '疾病')}</legend>
-              <span>{pick('Leave empty for all', '留空表示全部')}</span>
+              <span>{pick('Leave empty for all', '不选则包含全部')}</span>
             </div>
             <input
               id="disease-search"
@@ -140,7 +146,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           <fieldset class="subscribe-field">
             <div class="subscribe-field-title">
               <legend>{pick('Study types', '研究类型')}</legend>
-              <span>{pick('Leave empty for all', '留空表示全部')}</span>
+              <span>{pick('Leave empty for all', '不选则包含全部')}</span>
             </div>
             <div class="subscribe-chip-grid" id="study-type-options"></div>
           </fieldset>
@@ -148,7 +154,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           <fieldset class="subscribe-field">
             <div class="subscribe-field-title">
               <legend>{pick('Publication status', '出版状态')}</legend>
-              <span>{pick('Leave empty for all approved research', '留空表示全部已审核研究')}</span>
+              <span>{pick('Leave empty for all approved research', '不选则包含全部已审核研究')}</span>
             </div>
             <div class="subscribe-chip-grid" id="peer-review-status-options"></div>
           </fieldset>
@@ -162,13 +168,14 @@ const subscriptionOptionsUrl = import.meta.env.DEV
             </span>
           </label>
 
+          <div id="subscription-loading" hidden><GIDSLoading language={locale} compact /></div>
           <div id="subscription-status" class="subscribe-status" role="status" aria-live="polite" hidden></div>
 
           <div class="subscribe-actions">
             <button id="subscription-submit" type="submit" class="subscribe-submit">
               <span>{pick('Subscribe', '提交订阅')}</span>
             </button>
-            <p>{pick('We only send the updates you choose. You can unsubscribe in any email.', '我们只发送你选择的更新；你可以在任意邮件中退订。')}</p>
+            <p>{pick('We only send the updates you choose. You can unsubscribe in any email.', '我们只发送你选择的更新，你可以通过邮件中的链接随时退订。')}</p>
             <p><a href={`${subscriptionsApiBase}/api/subscriptions/manage`}>{pick('Manage an existing subscription', '管理已有订阅', 'Gérer un abonnement existant')}</a></p>
           </div>
         </form>
@@ -183,13 +190,13 @@ const subscriptionOptionsUrl = import.meta.env.DEV
         <span aria-hidden="true">×</span>
       </button>
       <p class="subscribe-kicker">{pick('Subscription received', '订阅已收到')}</p>
-      <h2 id="subscription-modal-title">{pick('Check your inbox', '请检查你的邮箱')}</h2>
+      <h2 id="subscription-modal-title">{pick('Check your inbox', '请查收确认邮件')}</h2>
       <p id="subscription-modal-message" class="subscribe-modal-message"></p>
       <div class="subscribe-trust-note">
         <strong>{pick('Trusted sender', '可信发件人')}</strong>
         <span>GIDS Alerts &lt;noreply@globalinfectiousdisease.com&gt;</span>
       </div>
-      <p class="subscribe-modal-help">{pick('Add this sender to your contacts or allowlist so future GIDS updates are not filtered as spam.', '请将该发件人加入联系人或信任列表，帮助后续 GIDS 更新顺利送达。')}</p>
+      <p class="subscribe-modal-help">{pick('Add this sender to your contacts or allowlist so future GIDS updates are not filtered as spam.', '可将发件人加入联系人或白名单，避免后续更新被误判为垃圾邮件。')}</p>
       <div class="subscribe-modal-actions">
         <button id="subscription-resend" class="subscribe-modal-secondary" type="button">
           <span>{pick('Resend confirmation', '再次发送确认邮件')}</span>
@@ -202,7 +209,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
     </div>
   </div>
 
-  <script is:inline>
+  <script is:inline define:vars={{ subscriptionCountryNames }}>
     (() => {
       const form = document.getElementById('subscription-form');
       if (!form) return;
@@ -212,6 +219,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
       const emailInput = document.getElementById('subscriber-email');
       const submitButton = document.getElementById('subscription-submit');
       const statusEl = document.getElementById('subscription-status');
+      const loadingEl = document.getElementById('subscription-loading');
       const pilotNotice = document.getElementById('subscription-pilot-notice');
       const modal = document.getElementById('subscription-modal');
       const modalMessage = document.getElementById('subscription-modal-message');
@@ -269,21 +277,21 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           missingEmail: '请输入有效的邮箱地址。',
           missingList: '请至少选择一个订阅列表。',
           missingConsent: '请先接受服务协议。',
-          submitting: '正在提交订阅...',
-          received: '订阅请求已收到。如确认邮件可以投递，请查收邮箱；如果未收到，请稍后重试。',
-          emailSent: '订阅已收到。我们已通过 GIDS Alerts 发送确认邮件。请将该发件人加入信任列表，帮助后续更新顺利送达。',
-          emailQueued: '订阅已收到，确认邮件正在排队等待发送，请稍后查收。',
+          submitting: '正在提交订阅…',
+          received: '订阅请求已收到。请查收确认邮件；若暂未收到，可稍后重新请求发送。',
+          emailSent: '订阅请求已收到，请查收 GIDS Alerts 发来的确认邮件，并点击邮件中的链接完成订阅。',
+          emailQueued: '订阅请求已收到，确认邮件正在排队发送，请稍后查收。',
           pilotOnly: '订阅服务目前仅向管理员邮箱试运行。',
           failed: '订阅提交失败，请稍后再试。',
           network: '连接订阅服务时发生网络错误。',
-          optionsLoading: '正在加载订阅选项...',
+          optionsLoading: '正在读取订阅选项…',
           optionsFailed: '订阅选项暂时无法加载，请稍后刷新页面。',
           regionFallback: '该地区暂无独立订阅选项，已改为选择其所属国家。',
           rateLimited: '订阅请求过于频繁，请稍后再试。',
           emailRateLimited: '订阅已保存。确认邮件刚刚发送过，请稍后再请求重新发送。',
-          resendSending: '正在请求再次发送确认邮件...',
+          resendSending: '正在请求重发确认邮件…',
           resendDone: '确认邮件请求已再次发送。',
-          resendUnavailable: '确认邮件投递尚未接入。你的订阅请求仍已保存。',
+          resendUnavailable: '确认邮件暂时无法发送，你的订阅请求已保存。',
           confirmationFailed: '确认邮件未能发送。你的选择仍保留在页面上，请稍后重试。',
           weekly: '每周', instant: '发布提醒时',
           unavailable: '暂未开放',
@@ -320,7 +328,12 @@ const subscriptionOptionsUrl = import.meta.env.DEV
 
       function setStatus(type, message) {
         if (!statusEl) return;
-        statusEl.hidden = false;
+        statusEl.hidden = type === 'pending';
+        if (loadingEl) {
+          loadingEl.hidden = type !== 'pending';
+          const text = loadingEl.querySelector('.gids-loading__copy > span:last-child');
+          if (text) text.textContent = message;
+        }
         statusEl.dataset.type = type;
         statusEl.textContent = message;
       }
@@ -360,6 +373,15 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           : lang === 'fr'
             ? (item.label_fr || item.name_fr || item.label_en || item.name_en || item.label_zh || item.name_zh || item.value || item.code)
             : (item.label_en || item.name_en || item.label_zh || item.name_zh || item.value || item.code);
+      }
+
+      function countryLabelFor(item) {
+        const code = String(item.value || item.code || '').toUpperCase();
+        if (subscriptionCountryNames[code]) return subscriptionCountryNames[code];
+        if (/^[A-Z]{2}$/.test(code)) {
+          try { return new Intl.DisplayNames([currentLang() === 'zh' ? 'zh-CN' : currentLang()], { type: 'region' }).of(code) || labelFor(item); } catch {}
+        }
+        return labelFor(item);
       }
 
       function descriptionFor(item, lang = currentLang()) {
@@ -435,7 +457,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           input.value = item.value;
           input.disabled = disabled;
           input.checked = selected.has(item.value);
-          span.textContent = labelFor(item);
+          span.textContent = name === 'countries' ? countryLabelFor(item) : labelFor(item);
           label.append(input, span);
           container.append(label);
         });
@@ -511,6 +533,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
           renderAllOptions();
           applyRequestedTopic();
           if (statusEl && statusEl.dataset.type === 'pending') statusEl.hidden = true;
+          if (loadingEl) loadingEl.hidden = true;
           setSubmitting(false);
         } catch (error) {
           setStatus('error', messages.optionsFailed);
@@ -708,6 +731,10 @@ const subscriptionOptionsUrl = import.meta.env.DEV
 }
 
 .subscribe-form {
+  max-height: 80vh;
+  max-height: 80dvh;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   border: 1px solid rgb(var(--border) / 0.82);
   background: rgb(var(--surface));
   box-shadow: none;
@@ -730,12 +757,18 @@ const subscriptionOptionsUrl = import.meta.env.DEV
   color: rgb(var(--text-strong));
 }
 
+.subscribe-intro-badge { color: #0b6f68; border: 1px solid rgb(var(--color-teal) / .3); background: rgb(var(--color-teal) / .08); }
+html[data-theme='dark'] .subscribe-intro-badge,
+html[data-theme='dark'] .subscribe-kicker,
+html[data-theme='dark'] .subscribe-consent a,
+html[data-theme='dark'] .subscribe-trust-note strong { color: #6ee7d2; }
+
 .subscribe-kicker {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
-  color: rgb(20 184 166);
+  color: rgb(var(--color-teal));
 }
 
 .subscribe-service-badge {
@@ -833,7 +866,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
 .subscribe-check input,
 .subscribe-inline-check input,
 .subscribe-consent input {
-  accent-color: rgb(20 184 166);
+  accent-color: rgb(var(--color-teal));
 }
 
 .subscribe-segmented label:has(input:checked) {
@@ -935,7 +968,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
 }
 
 .subscribe-consent a {
-  color: rgb(20 184 166);
+  color: rgb(var(--color-teal));
   font-weight: 750;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -1072,7 +1105,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
 
 .subscribe-trust-note strong {
   font-size: 0.78rem;
-  color: rgb(20 184 166);
+  color: rgb(var(--color-teal));
 }
 
 .subscribe-trust-note span {

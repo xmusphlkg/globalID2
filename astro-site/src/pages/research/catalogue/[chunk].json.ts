@@ -1,9 +1,11 @@
 import type { APIRoute } from 'astro';
 import { researchCatalogue } from '../../../lib/research-catalogue-shards';
+import { independentResearchPages } from '../../../lib/page-build-plan';
 
 export const prerender = true;
 
 export function getStaticPaths() {
+  if (independentResearchPages()) return [];
   const { researchCatalogueChunks, researchCatalogueChunkNames } = researchCatalogue();
   return researchCatalogueChunks.map((_, index) => ({ params: { chunk: researchCatalogueChunkNames[index] }, props: { index } }));
 }

@@ -3,7 +3,8 @@
 Private full projections are kept in ``state_dir`` for future scoped merges.
 Only compact JSON, small summaries and immutable objects enter ``public_dir``.
 The current pointer is written last and pins every browser request to one
-complete generation. CSV/XLSX, literature, reports and Astro are not involved.
+complete generation. Coupled releases also freeze CSV/JSON/XLSX from the same
+context; literature, reports and Astro are not involved.
 """
 
 from __future__ import annotations
@@ -32,7 +33,8 @@ COMPLETED_GENERATION = "completed-generation.json"
 
 
 def _generation_version() -> str:
-    return hashlib.sha256(dependency_version().encode() + Path(__file__).read_bytes()).hexdigest()
+    return hashlib.sha256(dependency_version().encode() + Path(__file__).read_bytes()
+                          + Path(__file__).with_name('home_summary.py').read_bytes()).hexdigest()
 
 
 def completed_generation(state_dir: Path, public_dir: Path) -> dict | None:
@@ -262,8 +264,10 @@ def write_surveillance_artifacts(context: dict, state_dir: Path, public_dir: Pat
     }
     write_pretty_json(state_dir / "meta.json", meta)
     write_compact_json(public_dir / "meta.json", meta)
+    from .home_summary import surveillance_home_summary
+    write_compact_json(public_dir / "home-summary.json", surveillance_home_summary(meta))
     write_compact_json(public_dir / "site-status.json", {"generated_at": context["generated_at"]})
-    logical.extend(("meta.json", "site-status.json"))
+    logical.extend(("meta.json", "site-status.json", "home-summary.json"))
     for group in ("countries", "diseases"):
         expected = {Path(name).name for name in logical if name.startswith(group + "/")}
         remove_stale_json_files(public_dir / group, expected)
@@ -310,6 +314,8 @@ async def _export_surveillance_data_unlocked(
     public_url_base: str = "", downloads_manifest: Path | None = None,
     publication_changes: list[dict] | None = None,
     country_workers: int = 1,
+    download_candidate: Path | None = None, download_output: Path | None = None,
+    download_url_base: str = "",
 ) -> dict:
     """Export independent dynamic JSON within the caller's frozen DB snapshot.
 
@@ -337,6 +343,10 @@ async def _export_surveillance_data_unlocked(
     )
     print(f"  Surveillance projection: {time.perf_counter() - started:.1f}s", flush=True)
     downloads = _read(downloads_manifest) if downloads_manifest and downloads_manifest.is_file() else None
+    if download_candidate is not None:
+        from .surveillance_downloads import generate_download_candidate
+        downloads = generate_download_candidate(context, download_output, download_candidate,
+            release_id=release_id, download_url_base=download_url_base)
     logical = write_surveillance_artifacts(context, state_dir, public_dir, downloads=downloads)
     selected = context["incremental_country_codes"] if context.get("incremental") else [item["code"] for item in context["country_exports"]]
     high_water = {}
@@ -366,13 +376,17 @@ async def export_surveillance_data(
     public_url_base: str = "", downloads_manifest: Path | None = None,
     publication_changes: list[dict] | None = None,
     country_workers: int = 1,
+    download_candidate: Path | None = None, download_output: Path | None = None,
+    download_url_base: str = "",
 ) -> dict:
     """Serialize local output writers; parent-managed exports may hold the lock."""
     from .surveillance_lock import LOCKED_ENV, surveillance_output_lock
     options = dict(release_id=release_id, incremental_country_codes=incremental_country_codes,
                    incremental=incremental, country_scopes_exact=country_scopes_exact,
                    public_url_base=public_url_base, downloads_manifest=downloads_manifest,
-                   publication_changes=publication_changes, country_workers=country_workers)
+                   publication_changes=publication_changes, country_workers=country_workers,
+                   download_candidate=download_candidate, download_output=download_output,
+                   download_url_base=download_url_base)
     if os.environ.get(LOCKED_ENV) == "1":
         return await _export_surveillance_data_unlocked(state_dir, public_dir, **options)
     async with surveillance_output_lock(state_dir, public_dir):

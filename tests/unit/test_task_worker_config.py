@@ -1,19 +1,21 @@
+import asyncio
 import os
 import sys
-import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from src.core.config import TaskWorkerSettings
-from src.domain import TaskStatus, TaskType
 import src.core.task_manager as task_manager_module
-from src.core.task_manager import task_manager
 from dashboard.api.routers.tasks import _worker_concurrency
+from src.core.config import TaskWorkerSettings
+from src.core.task_manager import task_manager
+from src.domain import TaskStatus, TaskType
 from src.services import task_worker
 
 
@@ -22,6 +24,7 @@ def test_task_worker_idle_logging_defaults_to_low_noise():
 
     assert settings.poll_interval_seconds == 2.0
     assert settings.idle_log_every == 300
+    assert settings.role == "general"
 
 
 def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
@@ -29,14 +32,13 @@ def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
     env_file.write_text(
         "\n".join(
             [
+                "TASK_WORKER_ROLE=ai",
                 "TASK_WORKER_CONCURRENCY=6",
                 "TASK_WORKER_GENERAL_CONCURRENCY=5",
                 "TASK_WORKER_RELEASE_CONCURRENCY=1",
                 "TASK_WORKER_AI_CONCURRENCY=4",
                 "TASK_WORKER_AI_DYNAMIC_CONCURRENCY_ENABLED=true",
                 "TASK_WORKER_AI_CONCURRENCY_MIN=1",
-                "TASK_WORKER_AI_CONCURRENCY_PER_ROUTE=2",
-                "TASK_WORKER_AI_CONCURRENCY_SCALE_UP_SUCCESSES=2",
                 "TASK_WORKER_AI_CONCURRENCY_ADJUST_SECONDS=10",
                 "TASK_WORKER_KNOWLEDGE_SOURCE_CONCURRENCY=3",
                 "TASK_WORKER_POLL_INTERVAL=1.5",
@@ -56,13 +58,12 @@ def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
     settings = TaskWorkerSettings(_env_file=env_file)
 
     assert settings.concurrency == 6
+    assert settings.role == "ai"
     assert settings.general_concurrency == 5
     assert settings.release_concurrency == 1
     assert settings.ai_concurrency == 4
     assert settings.ai_dynamic_concurrency_enabled is True
     assert settings.ai_concurrency_min == 1
-    assert settings.ai_concurrency_per_route == 2
-    assert settings.ai_concurrency_scale_up_successes == 2
     assert settings.ai_concurrency_adjust_seconds == 10
     assert settings.knowledge_source_concurrency == 3
     assert settings.poll_interval_seconds == 1.5
@@ -76,6 +77,14 @@ def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
     assert settings.scheduler_worker_grace_seconds == 60
 
 
+def test_worker_role_rejects_combined_or_unknown_execution_mode():
+    from pydantic import ValidationError
+
+    for role in ("all", "mixed", "unknown"):
+        with pytest.raises(ValidationError):
+            TaskWorkerSettings(TASK_WORKER_ROLE=role, _env_file=None)
+
+
 def test_worker_concurrency_uses_unified_config(monkeypatch):
     fake_config = SimpleNamespace(task_worker=SimpleNamespace(concurrency=7))
     monkeypatch.setattr("dashboard.api.routers.tasks.get_config", lambda: fake_config)
@@ -83,76 +92,93 @@ def test_worker_concurrency_uses_unified_config(monkeypatch):
     assert _worker_concurrency() == 7
 
 
-def test_adaptive_ai_concurrency_sums_routable_model_slots():
-    async def routes():
-        return [
-            {"available_for_routing": True, "provider_id": 1},
-            {"available_for_routing": True, "provider_id": 2},
-            {"available_for_routing": True, "provider_id": 2},
-        ]
-
-    controller = task_worker.AdaptiveAIConcurrencyController(
-        minimum=1,
-        maximum=6,
-        enabled=True,
-        slots_per_route=2,
-        scale_up_successes=2,
+def organizer_controller(routes, *, configured=4, minimum=1, maximum=6, enabled=True):
+    return task_worker.AIOrganizerAdmission(
+        configured=configured,
+        minimum=minimum,
+        maximum=maximum,
+        enabled=enabled,
         adjust_seconds=1,
         route_loader=routes,
     )
 
-    assert asyncio.run(controller.refresh(force=True)) == 6
-    assert controller.record_result(success=True) == 6
-    assert controller.record_result(
-        success=False,
-        error=RuntimeError("Agent completion failed after route timeout"),
-    ) == 6
 
-
-def test_adaptive_ai_concurrency_tracks_model_center_model_capacity():
+def test_organizer_budget_is_independent_of_model_capacity():
     async def routes():
         return [
-            {"available_for_routing": True, "provider_id": 1, "runtime_model_capacity": 1},
-            {"available_for_routing": True, "provider_id": 1, "runtime_model_capacity": 1},
-            {"available_for_routing": True, "provider_id": 2, "runtime_model_capacity": 2},
+            {"available_for_routing": True, "runtime_model_capacity": 70},
+            {"available_for_routing": True, "runtime_model_capacity": 70},
         ]
 
-    controller = task_worker.AdaptiveAIConcurrencyController(
-        minimum=1,
-        maximum=6,
-        enabled=True,
-        slots_per_route=2,
-        scale_up_successes=2,
-        adjust_seconds=1,
-        route_loader=routes,
-    )
-
+    controller = organizer_controller(routes)
     assert asyncio.run(controller.refresh(force=True)) == 4
-    assert controller.record_result(success=True) == 4
 
-    async def reduced_routes():
-        return [{"available_for_routing": True, "provider_id": 1, "runtime_model_capacity": 1}]
+    async def small_routes():
+        return [{"available_for_routing": True, "runtime_model_capacity": 1}]
 
-    controller.route_loader = reduced_routes
-    assert asyncio.run(controller.refresh(force=True)) == 1
+    controller.route_loader = small_routes
+    assert asyncio.run(controller.refresh(force=True)) == 4
 
 
-def test_adaptive_ai_concurrency_pauses_when_model_center_has_no_routes():
+def test_organizer_budget_obeys_configured_bounds():
+    async def routes():
+        return [{"available_for_routing": True, "runtime_model_capacity": 100}]
+
+    assert asyncio.run(organizer_controller(routes, configured=99).refresh(force=True)) == 6
+    assert asyncio.run(organizer_controller(routes, configured=1, minimum=2).refresh(force=True)) == 2
+
+
+def test_dynamic_organizer_admission_pauses_and_recovers_without_routes():
+    async def routes():
+        return [{"available_for_routing": False, "runtime_model_capacity": 100}]
+
+    controller = organizer_controller(routes)
+    assert asyncio.run(controller.refresh(force=True)) == 0
+
+    async def recovered():
+        return [{"available_for_routing": True, "runtime_model_capacity": 2}]
+
+    controller.route_loader = recovered
+    assert asyncio.run(controller.refresh(force=True)) == 4
+
+
+def test_static_organizer_budget_does_not_change_with_route_health():
     async def routes():
         return []
 
-    controller = task_worker.AdaptiveAIConcurrencyController(
-        minimum=1,
-        maximum=6,
-        enabled=True,
-        slots_per_route=2,
-        scale_up_successes=2,
-        adjust_seconds=1,
-        route_loader=routes,
-    )
+    controller = organizer_controller(routes, enabled=False)
+    assert controller.capacity == 4
+    assert asyncio.run(controller.refresh(force=True)) == 4
+    # Recovery detection still observes actual route health, independently
+    # from the configured static admission budget.
+    assert controller.has_routable_models is False
 
-    assert asyncio.run(controller.refresh(force=True)) == 0
-    assert controller.record_result(success=False, error=RuntimeError("connection error")) == 0
+
+def test_organizer_admission_keeps_last_budget_when_catalogue_read_fails():
+    async def routes():
+        return [{"available_for_routing": True, "runtime_model_capacity": 1}]
+
+    controller = organizer_controller(routes)
+    assert asyncio.run(controller.refresh(force=True)) == 4
+
+    async def unavailable():
+        raise RuntimeError("temporary catalogue failure")
+
+    controller.route_loader = unavailable
+    assert asyncio.run(controller.refresh(force=True)) == 4
+
+
+def test_background_organizers_leave_room_for_reports():
+    blocked = task_worker._lane_blocked_task_types(
+        [TaskType.AGENT_WORKFLOW, TaskType.ENRICH_LITERATURE],
+        ai_capacity=3,
+        general_capacity=2,
+        release_capacity=1,
+    )
+    assert TaskType.AGENT_WORKFLOW in blocked
+    assert TaskType.ENRICH_LITERATURE in blocked
+    assert TaskType.GENERATE_REPORT not in blocked
+    assert TaskType.CRAWL_DATA not in blocked
 
 
 def test_task_worker_lane_defaults_when_unset(tmp_path: Path, monkeypatch):

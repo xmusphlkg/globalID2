@@ -792,3 +792,31 @@ def test_scoped_same_date_revision_invalidates_download_fingerprint(tmp_path):
     old_date = next(row for row in rows if row["date"] == "2010-01-01")
     assert old_date["cases"] == "99"
     assert old_date["incidence_rate_per_100k"] == "2.5"
+
+
+def test_surveillance_download_candidate_is_incremental_and_retry_snapshot_is_immutable(tmp_path):
+    from src.generation.surveillance_downloads import generate_download_candidate, downloads_initialized
+    output = tmp_path / "downloads"
+    first_run, second_run = tmp_path / "first", tmp_path / "second"
+    base = "https://raw.githubusercontent.com/example/data/main"
+    first = generate_download_candidate(_context(), output, first_run,
+        release_id="data-first", download_url_base=base)
+    assert downloads_initialized(output)
+    snapshots = {path.relative_to(first_run): (path.read_bytes(), path.stat().st_ino)
+        for group in ("countries", "diseases") for path in (first_run / group).rglob("*") if path.is_file()}
+    context = _context()
+    context.update(incremental=True, incremental_country_codes=["CN"], changed_disease_ids=["D007"])
+    context["country_exports"][0]["country_data"]["disease_series"]["D007"]["cases"][-1] = 99
+    second = generate_download_candidate(context, output, second_run,
+        release_id="data-second", download_url_base=base)
+    for group in ("countries", "diseases"):
+        before = {part["id"]: part for part in first[group][0]["parts"]}
+        for part in second[group][0]["parts"]:
+            for fmt, asset in part["files"].items():
+                relative = Path(asset["relative_path"])
+                if part["id"] != "2026-2029":
+                    assert asset["sha256"] == before[part["id"]]["files"][fmt]["sha256"]
+                    assert (second_run / relative).stat().st_ino == snapshots[relative][1]
+                else:
+                    assert asset["sha256"] != before[part["id"]]["files"][fmt]["sha256"]
+    assert all((first_run / path).read_bytes() == value[0] for path, value in snapshots.items())

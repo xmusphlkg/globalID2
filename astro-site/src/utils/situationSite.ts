@@ -1,8 +1,7 @@
 /** Build the situation page's join to country surveillance, disease pages, and research. */
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { diseaseIndex, siteMeta } from '../lib/seo-page-data.ts';
+import { readResearchIndexFields } from '../lib/generated-site-data.ts';
 import { buildSituationSite, type CountryInput, type DiseaseInput } from '../components/situation/site.ts';
 import type { SiteIndex } from './situationTypes.ts';
 
@@ -25,7 +24,7 @@ function readResearchFacets(): { diseases: Map<string, FacetLink>; countries: Ma
   const diseases = new Map<string, FacetLink>();
   const countries = new Map<string, FacetLink>();
   try {
-    const raw = JSON.parse(readFileSync(resolve('./src/data/research/index.json'), 'utf8')) as {
+    const raw = readResearchIndexFields(['facets']) as {
       facets?: {
         diseases?: Array<{ disease_id?: string; count?: number; url?: string }>;
         countries?: Array<{ code?: string; count?: number; url?: string }>;
