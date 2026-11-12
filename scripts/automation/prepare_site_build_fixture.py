@@ -371,6 +371,7 @@ def fixture_payloads() -> dict[str, Any]:
                 "disease_count": 1,
                 "country_count": 1,
                 "brief_status": "automatically_compiled_not_editorially_reviewed",
+                "cited_findings": [],
                 "byline": {
                     "name_en": "GIDS Research Radar automated compiler",
                     "name_zh": "GIDS Research Radar 自动编译器",
@@ -507,6 +508,10 @@ def fixture_payloads() -> dict[str, Any]:
             },
         },
     }
+    payloads.update({
+        f"src/data/research/weekly/{brief['week']}.json": brief
+        for brief in research["weekly_briefs"]
+    })
     payloads.update(situation_fixture_payloads())
     for disease_id, slug, name, name_fr in fixture_diseases:
         payloads[f"src/data/diseases/{disease_id.lower()}.json"] = {

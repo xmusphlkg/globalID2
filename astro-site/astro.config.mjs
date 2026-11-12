@@ -117,7 +117,7 @@ export default defineConfig({
             // Isolated research builds have fewer entry points. Without this
             // boundary the shared ECharts engine merges into chartPreferences
             // and exceeds the same chunk budget used by the main-site build.
-            if (id.includes('/node_modules/echarts/lib/core/')) return 'echarts-engine';
+            if (process.env.GIDS_RESEARCH_BUILD_DIR && id.includes('/node_modules/echarts/lib/core/')) return 'echarts-engine';
           },
         },
       },
