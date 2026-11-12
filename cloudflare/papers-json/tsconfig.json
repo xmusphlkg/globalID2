@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "allowImportingTsExtensions": true, "lib": ["ES2022"], "module": "ESNext", "moduleResolution": "Bundler", "noEmit": true, "skipLibCheck": true, "strict": true, "target": "ES2022", "types": ["@cloudflare/workers-types", "node"], "typeRoots": ["../surveillance-data/node_modules/@types", "../surveillance-data/node_modules"] },
+  "include": ["src/**/*.ts", "worker-configuration.d.ts", "../surveillance-data/src/papers-template.ts"]
+}

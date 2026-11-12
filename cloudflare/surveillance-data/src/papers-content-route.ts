@@ -1,4 +1,5 @@
 /** Resolve an immutable research generation through its small sharded catalogue. */
+import { templateArticleResponse } from './paper-template-content.ts';
 const generationPath = /^\/research-publication\/([a-f0-9]{64})\/((?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]*\/?$)/;
 
 export function papersContentPath(pathname: string): { generation: string; key: string } | null {
@@ -117,11 +118,16 @@ export async function servePapersContent(request: Request, env: Env, route: { ge
     const shardKey = catalogue.shards[group]?.key;
     if (!shardKey) return error(404);
     if (!/^releases\/sha256\/catalogue-shards\/[a-f0-9]{64}\.json$/.test(shardKey)) throw new Error('Invalid research catalogue shard');
-    const data = await catalogueJson<{ schema_version: number; items: Array<{ logical_key: string; key: string; content_type: string }> }>(request, env, shardKey, ctx);
+    const data = await catalogueJson<{ schema_version: number; items: Array<{ logical_key: string; key: string; content_type: string; paper_template?: unknown; [key: string]: unknown }> }>(request, env, shardKey, ctx);
     if (!data) throw new Error('Research catalogue shard unavailable');
     if (data.schema_version !== 1 || !Array.isArray(data.items)) throw new Error('Invalid research catalogue shard');
     const entry = data.items.find(item => item.logical_key === route.key);
     if (!entry) return error(404);
+    if ('paper_template' in entry) {
+      const response = await templateArticleResponse(request, env, entry, route.key, route.generation, ctx);
+      const publicBase = new URL(request.url).hostname === 'papers.globalinfectiousdisease.com' ? 'https://globalinfectiousdisease.com' : '';
+      return response.body ? rewriteHtml(response, route.generation, publicBase) : response;
+    }
     if (!/^releases\/sha256\/objects\/[a-f0-9]{64}\/[a-f0-9]{16}$/.test(entry.key) || typeof entry.content_type !== 'string') throw new Error('Invalid research object');
     let object: R2Object | null;
     let body: ReadableStream | null = null;

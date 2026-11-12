@@ -7,6 +7,19 @@ from pathlib import Path
 from typing import Any
 
 
+def papers_environment(service: Any, base: dict[str, str]) -> dict[str, str]:
+    config = service._config()
+    return {**base,
+        'CLOUDFLARE_ACCOUNT_ID': service._cloudflare_account_id(),
+        'CLOUDFLARE_API_TOKEN': service._cloudflare_api_token(),
+        'R2_PAPERS_BUCKET': str(config.r2_papers_bucket or 'globalid-papers'),
+        'R2_PAPERS_PUBLIC_BASE_URL': str(config.r2_papers_public_base_url or 'https://papers.globalinfectiousdisease.com'),
+        'R2_ACCESS_KEY_ID': str(config.r2_access_key_id or ''),
+        'R2_SECRET_ACCESS_KEY': str(config.r2_secret_access_key or ''),
+        'R2_ENDPOINT_URL': str(config.r2_endpoint_url or ''),
+        'R2_ACCOUNT_ID': str(config.r2_account_id or service._cloudflare_account_id() or '')}
+
+
 async def prepare_repository_publications(
     *, service: Any, task: Any, runtime: Any, job: Any, python_path: Path,
     git_env: dict[str, str], branch: str, download_repo_url: str,
@@ -61,34 +74,7 @@ async def prepare_repository_publications(
         )
 
     if r2_papers_enabled:
-        r2_env = {
-            **git_env,
-            "CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
-            # Fallback when no R2 key pair is configured: the publisher derives
-            # S3 credentials from this token.
-            "CLOUDFLARE_API_TOKEN": service._cloudflare_api_token(),
-            "R2_PAPERS_BUCKET": str(
-                service._config().r2_papers_bucket or "globalid-papers"
-            ),
-            "R2_PAPERS_PUBLIC_BASE_URL": str(
-                service._config().r2_papers_public_base_url
-                or "https://papers.globalinfectiousdisease.com"
-            ),
-            "R2_ACCESS_KEY_ID": str(
-                service._config().r2_access_key_id or ""
-            ),
-            "R2_SECRET_ACCESS_KEY": str(
-                service._config().r2_secret_access_key or ""
-            ),
-            "R2_ENDPOINT_URL": str(
-                service._config().r2_endpoint_url or ""
-            ),
-            "R2_ACCOUNT_ID": str(
-                service._config().r2_account_id
-                or service._cloudflare_account_id()
-                or ""
-            ),
-        }
+        r2_env = papers_environment(service, git_env)
         repository_publications.append(
             (
                 "r2_papers",

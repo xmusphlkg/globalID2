@@ -250,7 +250,11 @@ class R2S3Client:
             "x-amz-date": amz_date,
         }
         if conditional_headers:
-            if set(conditional_headers) - {"if-match", "if-none-match"}:
+            if set(conditional_headers) - {
+                "if-match", "if-none-match", "x-amz-copy-source",
+                "x-amz-copy-source-if-match", "x-amz-metadata-directive",
+                "cf-copy-destination-if-none-match",
+            }:
                 raise ValueError("Unsupported R2 conditional header")
             headers.update(conditional_headers)
         if content_type:
@@ -580,6 +584,10 @@ def _verify_public_sample(url: str, opener=None) -> None:
     raise R2S3Error(f"Public papers verification failed for sample URL: {url}: {detail}")
 
 
+def _is_static_article(key: str) -> bool:
+    return bool(re.fullmatch(r'(?:(?:zh|fr)/)?research/articles/[a-z0-9][a-z0-9-]*/', key))
+
+
 def publish_papers_site(
     papers_dir: Path,
     config: R2PapersConfig,
@@ -590,6 +598,8 @@ def publish_papers_site(
     workers: int = 32,
     lock_dir: Path | None = None,
     max_total_bytes: int | None = None,
+    preserve_static_articles: bool = False,
+    template_candidate: Path | None = None,
 ) -> PapersPublishResult:
     """Publish with one writer per target and bounded parallel object transfers."""
     if not 1 <= workers <= 96:
@@ -604,11 +614,29 @@ def publish_papers_site(
         active = client or R2S3Client(config)
         artifacts = ArtifactIndex(papers_dir)
         try:
-            return _publish_papers_site(
+            if template_candidate is not None:
+                from .papers_templates_publish import PREFIX, publish_candidate
+                pointer_key = f'{PREFIX}/current.json'
+                previous_pointer = active.get_object(pointer_key)
+                if previous_pointer is None:
+                    raise R2S3Error('Template mode requires an active generation')
+                publish_candidate(template_candidate, active, workers=workers,
+                                  max_total_bytes=max_total_bytes or 8_000_000_000)
+            result = _publish_papers_site(
                 papers_dir, config, client=active, verify_public=verify_public,
                 public_opener=public_opener, workers=workers, artifacts=artifacts,
                 max_total_bytes=max_total_bytes,
+                preserve_static_articles=preserve_static_articles or template_candidate is not None,
             )
+            if template_candidate is not None:
+                pointer = (template_candidate / 'current.json').read_bytes()
+                try:
+                    active.put_object_conditional(pointer_key, pointer, previous=previous_pointer,
+                                                  cache_control='no-store')
+                except R2S3Error as error:
+                    if error.status != 412 or active.get_object(pointer_key) != pointer:
+                        raise
+            return result
         finally:
             try:
                 artifacts.save()
@@ -627,6 +655,7 @@ def _publish_papers_site(
     workers: int,
     artifacts: ArtifactIndex,
     max_total_bytes: int | None = None,
+    preserve_static_articles: bool = False,
 ) -> PapersPublishResult:
     started = time.monotonic()
 
@@ -669,6 +698,15 @@ def _publish_papers_site(
             "file_count": len(published_files),
             "article_social_cards_enabled": False,
         }
+    if preserve_static_articles:
+        if config.manifest_key != MANIFEST_KEY:
+            raise R2S3Error('Static article retention requires the canonical Papers manifest')
+        if active.get_object('paper-template-v2/current.json') is None:
+            raise R2S3Error('Template generation is not active; refusing to skip static article uploads')
+        # Article routes are served from JSON in template mode. Keep the last
+        # published static pages as a rollback fallback, not as new uploads.
+        local_files = [item for item in local_files if not _is_static_article(str(item.get('key', '')))]
+        local_manifest = {**local_manifest, 'files': sorted(local_files, key=lambda item: str(item.get('key', ''))), 'file_count': len(local_files)}
     local_by_key = {str(item["key"]): item for item in local_files if "key" in item}
 
     if not local_by_key:
@@ -694,6 +732,25 @@ def _publish_papers_site(
     # successful PUTs from *any* earlier attempt, even if it never wrote its
     # final manifest, and detects objects overwritten by an incomplete release.
     inventory = active.list_objects() if hasattr(active, "list_objects") else None
+
+    if preserve_static_articles:
+        if inventory is None:
+            raise R2S3Error('Static article retention requires a full R2 inventory')
+        previous_files = {str(item.get('key')): item for item in remote_manifest.get('files', []) if isinstance(item, dict) and item.get('key') is not None}
+        legacy_pages = {key for key in previous_files if _is_static_article(key)}
+        if not legacy_pages:
+            raise R2S3Error('No published static article baseline available for fallback')
+        legacy_assets = remote_manifest.get('template_legacy_asset_keys')
+        if legacy_assets is None:
+            legacy_assets = sorted(key for key in previous_files if key.startswith('_astro/'))
+        if not isinstance(legacy_assets, list) or any(not isinstance(key, str) or not key.startswith('_astro/') for key in legacy_assets):
+            raise R2S3Error('Invalid static fallback asset list')
+        required = legacy_pages | set(legacy_assets)
+        if any(key not in previous_files or key not in inventory for key in required):
+            raise R2S3Error('A static article or fallback asset is missing from R2')
+        kept = [previous_files[key] for key in sorted(required - set(local_by_key))]
+        all_files = sorted([*local_files, *kept], key=lambda item: str(item['key']))
+        local_manifest = {**local_manifest, 'files': all_files, 'file_count': len(all_files), 'template_legacy_asset_keys': sorted(legacy_assets)}
 
     retained_keys: set[str] = set()
     if inventory is not None and config.manifest_key == MANIFEST_KEY:
@@ -735,6 +792,18 @@ def _publish_papers_site(
         compress = digests["bytes"] >= 1024 and content_type.startswith((
             "text/", "application/json", "application/xml", "image/svg+xml",
         ))
+        # A previously published uncompressed representation is already a
+        # valid object.  Do not rewrite unchanged content merely to migrate
+        # it to gzip: that turns a format change into a bulk publication.
+        # Check the live inventory as well as the previous manifest so an
+        # interrupted upload cannot make an obsolete manifest look current.
+        if compress and inventory is not None:
+            previous = remote_by_key.get(key) or {}
+            stored = inventory.get(key) or {}
+            if (previous.get("sha256") == digests["sha256"]
+                    and stored.get("bytes") == digests["bytes"]
+                    and stored.get("etag") == digests["md5"]):
+                return False, 0
         # A warm compressed publish needs only local stat + actual remote ETag.
         # Recompress only when a receipt is missing/stale or the remote differs.
         if compress and inventory is not None:

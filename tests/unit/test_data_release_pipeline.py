@@ -119,10 +119,13 @@ async def test_repository_pool_timeout_is_retryable_but_mixed_failures_are_not()
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("resume", [False, True])
-async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monkeypatch, resume):
+@pytest.mark.parametrize('research_mode', [None, 'full', 'content', 'code', 'detached'])
+async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monkeypatch, resume, research_mode):
     commands = []
     timeouts = []
     command_envs = {}
+    command_args = {}
+    boundary_events = []
     progress = []
     stored_task = SimpleNamespace(output_data=None)
 
@@ -149,7 +152,10 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
 
     class Service:
         def _config(self):
-            return SimpleNamespace(timezone="UTC")
+            return SimpleNamespace(timezone="UTC", r2_papers_bucket='papers',
+                r2_papers_public_base_url='https://papers.example', r2_access_key_id='key',
+                r2_secret_access_key='secret', r2_endpoint_url='', r2_account_id='account',
+                literature_json_enabled=research_mode == 'detached')
 
         async def load_jobs(self):
             return [
@@ -165,7 +171,7 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
                 )
             ]
 
-        async def integration_checks(self, _job_id):
+        async def integration_checks(self, _job_id, **_kwargs):
             return {
                 "overall_ready": True,
                 "blockers": [],
@@ -218,13 +224,14 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
             return ["validate-situation-release"]
 
         def _r2_papers_enabled(self, _job=None):
-            return False
+            return research_mode is not None
 
         def _split_papers_bundle_command(self, **_kwargs):
             return ["split-papers"]
 
         def _publish_papers_r2_command(self, **_kwargs):
-            return ["publish-papers-r2"]
+            from src.services.data_release.commands import build_publish_papers_r2_command
+            return build_publish_papers_r2_command(python_path=_kwargs['python_path'], source_dir=tmp_path / 'exports/papers-site')
 
         def _cloudflare_account_id(self):
             return "account"
@@ -237,8 +244,10 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
 
         async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
             commands.append(title)
+            boundary_events.append(title)
             timeouts.append(_kwargs.get("timeout_seconds"))
             command_envs[title] = _kwargs.get("env")
+            command_args[title] = _kwargs.get('cmd')
 
         def _write_site_release_manifest(self, identity):
             return identity
@@ -262,11 +271,33 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
         task_uuid="task-success",
         input_data={"release_job_id": "site-release"},
     )
+    if research_mode is not None:
+        # Exercise the production guard rather than the lightweight fixture
+        # path that skips baseline capture when the publisher script is absent.
+        publisher = tmp_path / 'scripts/publish_papers_r2.py'
+        publisher.parent.mkdir()
+        publisher.write_text('# publication entrypoint present\n')
+        if research_mode in {'code', 'content'}:
+            task.input_data[f'{research_mode}_only'] = True
+        if research_mode == 'detached':
+            task.input_data['code_only'] = True
+        if research_mode in {'code', 'detached'}:
+            from src.services.data_release.stage_receipts import StageReceipts
+            monkeypatch.setattr(StageReceipts, 'assert_published_data',
+                lambda *_args: boundary_events.append('assert published inputs'))
+            for name in ('meta.json', 'downloads.json', 'research/routes.json'):
+                path = runtime.astro_dir / 'src/data' / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('{}')
 
+    expected_release = 'release-1'
     if resume:
         from src.services.data_release.artifact_checkpoint import ArtifactCheckpoint
 
         identity = await Service()._site_release_identity("main")
+        if research_mode is not None:
+            identity = {**identity, 'release_id': 'restored-release'}
+            expected_release = identity['release_id']
         monkeypatch.setattr(ArtifactCheckpoint, "restore", lambda *_args: identity)
 
     output = await pipeline.execute_release_task(Service(), task, runtime=runtime)
@@ -277,11 +308,45 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
         "Build Astro Site",
         "Validate Situation Release Gate",
     ]
-    assert commands == ([] if resume else expected_commands)
+    if research_mode is not None:
+        if research_mode in {'code', 'detached'}:
+            expected_commands = expected_commands[2:]
+        if research_mode in {'code', 'content', 'detached'}:
+            expected_commands.insert(expected_commands.index('Build Astro Site'), 'Reuse Published Research Snapshot')
+        expected_commands.append('Split Papers Bundle')
+        expected_commands = ['Capture Research Publication Baseline', *([] if resume else expected_commands),
+                             'Publish Papers Bundle to R2']
+        assert commands == expected_commands
+        expected_run = str(tmp_path / 'exports/site-research-runs/task-success' / expected_release)
+        for title in ('Capture Research Publication Baseline', 'Publish Papers Bundle to R2'):
+            env = command_envs[title]
+            assert env['GIDS_RESEARCH_PUBLICATION_RUN'] == expected_run
+            assert env['GIDS_RESEARCH_RELEASE_ID'] == expected_release
+            assert env['GIDS_PRESERVE_RESEARCH_DATA'] == ('1' if research_mode in {'code', 'content', 'detached'} else '0')
+        baseline_args = command_args['Capture Research Publication Baseline']
+        assert command_args['Publish Papers Bundle to R2'][1] == 'scripts/publish_papers_r2.py'
+        assert '--capture-baseline-only' in baseline_args
+        assert baseline_args[baseline_args.index('--release-id') + 1] == expected_release
+        if not resume and research_mode in {'code', 'content', 'detached'}:
+            reuse = command_args['Reuse Published Research Snapshot']
+            assert reuse[1] == 'scripts/reuse_published_research.py'
+            assert reuse[reuse.index('--run') + 1] == expected_run
+            assert commands.index('Capture Research Publication Baseline') < commands.index('Reuse Published Research Snapshot') < commands.index('Build Astro Site')
+            if research_mode == 'content':
+                assert commands.index('Generate Site Data') < commands.index('Reuse Published Research Snapshot')
+            else:
+                assert boundary_events.count('assert published inputs') == 1
+                assert boundary_events.index('assert published inputs') < boundary_events.index('Reuse Published Research Snapshot')
+        if resume:
+            assert 'Reuse Published Research Snapshot' not in commands
+    else:
+        assert commands == ([] if resume else expected_commands)
     if not resume:
-        assert timeouts[0] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
+        if research_mode not in {'code', 'detached'}:
+            assert dict(zip(commands, timeouts))['Export Situation'] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
         assert command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=12288"
-    assert progress == ([5, 15, 60, 88, 100] if resume else [5, 15, 22, 35, 45, 60, 88, 100])
+    assert progress == ([5, 15, 60, 88, 100] if resume else
+                        [5, 15, 45, 60, 88, 100] if research_mode in {'code', 'detached'} else [5, 15, 22, 35, 45, 60, 88, 100])
     assert output["release_timing"]["within_target"]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False
