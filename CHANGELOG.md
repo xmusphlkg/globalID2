@@ -4,6 +4,12 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Research publication
+
+- Store article content as one reusable multilingual JSON record per paper and shared locale templates. The Worker reconstructs complete HTML with verified metadata and generation-bound assets; style changes no longer require uploading every article body.
+- Connect full-site and independent literature updates to one conditional research publication pointer. Freeze candidates before publication, reuse committed object receipts, and keep retries from overwriting newer data.
+- Add an audited migration cleanup that verifies all replacement article digests, checks three languages across the public hosts, preserves local originals, and removes only replaced static pages and inactive prototype objects. Historical immutable releases and shared assets remain available for existing links.
+
 ## [0.18.3] - 2026-11-12
 
 ### Research and public data

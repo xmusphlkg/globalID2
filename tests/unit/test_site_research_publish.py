@@ -1,0 +1,210 @@
+"""Full-site research uses the literature publisher's single frozen transaction."""
+from dataclasses import replace
+import hashlib
+import json
+
+import pytest
+
+from src.services.data_release.literature_publish import PREFIX
+from src.services.data_release.papers_r2 import R2S3Error
+from src.services.data_release.site_research_publish import freeze_site_research, publish_site_research
+from src.services.data_release.surveillance_publish import capture_surveillance_baseline
+from tests.unit.test_prepare_papers_templates import page
+from tests.unit.test_surveillance_publish import CONFIG, Store
+
+
+def sources(tmp_path):
+    papers, dist, research = (tmp_path / name for name in ('papers', 'dist', 'research-json'))
+    for prefix in ('', 'zh', 'fr'):
+        article = papers / prefix / 'research/articles/paper-a/index.html'
+        article.parent.mkdir(parents=True)
+        article.write_text(page('paper-a', 'style-one'))
+        landing = dist / prefix / 'research/index.html'
+        landing.parent.mkdir(parents=True)
+        landing.write_text(f'<html>landing {prefix or "en"}</html>')
+    (papers / '_astro').mkdir()
+    (papers / '_astro/old.css').write_text('body{color:red}')
+    (dist / '_astro').mkdir()
+    (dist / '_astro/new.css').write_text('body{color:blue}')
+    (dist / 'scripts').mkdir()
+    (dist / 'scripts/research.js').write_text('window.research=true;')
+    (dist / 'research/catalogue').mkdir()
+    (dist / 'research/catalogue/manifest.json').write_text('{"catalogue":"runtime"}')
+    (research / 'shards').mkdir(parents=True)
+    (research / 'index.json').write_text('{"file":"shards/list.json","version":1}')
+    (research / 'catalogue.json').write_text('{"articles":1}')
+    (research / 'shards/list.json').write_text('{"articles":["paper-a"]}')
+    config = replace(CONFIG, public_base_url='https://papers.example')
+    args = dict(papers_dir=papers, site_dist=dist, research_source=research,
+                run=tmp_path / 'run', release_id='site-one', config=config, receipt=tmp_path / 'receipt.json')
+    return args
+
+
+def entries(store, pointer):
+    catalogue = json.loads(store.get_object(pointer['papers']['papers_manifest_url'].removeprefix('https://papers.example/')))
+    return {entry['logical_key']: entry for shard in catalogue['shards'].values()
+            for entry in json.loads(store.get_object(shard['key']))['items']}
+
+
+def test_site_requires_prebuild_baseline_without_mutating_remote(tmp_path):
+    args, store = sources(tmp_path), Store()
+    with pytest.raises(ValueError, match='baseline before building'):
+        publish_site_research(**args, client=store)
+    assert not store.writes
+    assert not args['run'].exists()
+
+
+def test_site_merges_all_locales_assets_index_and_template_articles_before_one_switch(tmp_path):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    result = publish_site_research(**args, client=store, workers=2)
+    pointer = json.loads(store.get_object(f'{PREFIX}/current.json'))
+    published = entries(store, pointer)
+    assert result['release_id'] == pointer['release_id'] == 'site-one'
+    assert store.writes[-1][0] == f'{PREFIX}/current.json'
+    for key in ('research/', 'zh/research/', 'fr/research/', '_astro/old.css', '_astro/new.css',
+                'scripts/research.js', 'research/catalogue/manifest.json'):
+        assert key in published
+    assert not any(key.startswith('site-data/research/') for key in published)
+    article_entries = [entry for entry in published.values() if 'paper_template' in entry]
+    assert len(article_entries) == 3
+    assert {entry['paper_template']['locale'] for entry in article_entries} == {'en', 'zh', 'fr'}
+    assert len({entry['key'] for entry in article_entries}) == 1
+    for entry in article_entries:
+        original = (args['papers_dir'] / entry['path']).read_bytes()
+        assert entry['sha256'] == hashlib.sha256(original).hexdigest()
+        assert entry['bytes'] == len(original)
+        assert entry['key'].startswith('paper-template-v2/records/')
+        legacy = f"releases/sha256/objects/{entry['sha256']}/"
+        assert not any(key.startswith(legacy) for key in store.objects)
+    assert not any(key.endswith('/research/articles/paper-a/') for key in store.objects)
+    assert 'paper-template-v2/current.json' not in store.objects
+    assert set(pointer['files']) == {'index.json', 'catalogue.json', 'shards/list.json'}
+    writes = list(store.writes)
+    resumed = publish_site_research(**args, client=store)
+    assert resumed['json']['pointer_changed'] is False
+    assert store.writes == writes
+
+
+def test_failed_switch_retries_frozen_site_instead_of_new_mutable_source(tmp_path):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    store.failure = '/current.json'
+    with pytest.raises(R2S3Error):
+        publish_site_research(**args, client=store, workers=2)
+    assert f'{PREFIX}/current.json' not in store.objects
+    assert not args['receipt'].exists()
+    article = args['papers_dir'] / 'research/articles/paper-a/index.html'
+    article.write_text(page('paper-a', 'newer-source'))
+    (args['research_source'] / 'index.json').write_text('{"version":2}')
+    store.failure = None
+    publish_site_research(**args, client=store, workers=2)
+    pointer = json.loads(store.get_object(f'{PREFIX}/current.json'))
+    descriptor = entries(store, pointer)['research/articles/paper-a/']
+    assert descriptor['sha256'] == hashlib.sha256(page('paper-a', 'style-one').encode()).hexdigest()
+    index = pointer['files']['index.json']
+    assert json.loads(store.get_object(f"{PREFIX}/{index['url']}"))['version'] == 1
+    assert store.writes[-1][0] == f'{PREFIX}/current.json'
+
+
+def test_changed_article_updates_shared_record_and_json_in_same_generation(tmp_path):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store, workers=2)
+    first = json.loads(store.get_object(f'{PREFIX}/current.json'))
+    first_entries = entries(store, first)
+    old_keys = set(store.objects)
+    store.writes.clear()
+    article = args['papers_dir'] / 'research/articles/paper-a/index.html'
+    article.write_text(article.read_text().replace('>paper-a</main>', '>new findings</main>'))
+    (args['research_source'] / 'index.json').write_text('{"file":"shards/list.json","version":2}')
+    second_args = {**args, 'run': tmp_path / 'second-run', 'release_id': 'site-two'}
+    capture_surveillance_baseline(second_args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**second_args, client=store, workers=2)
+    second = json.loads(store.get_object(f'{PREFIX}/current.json'))
+    second_entries = entries(store, second)
+    assert first['papers']['papers_generation_sha256'] != second['papers']['papers_generation_sha256']
+    assert first_entries['research/articles/paper-a/']['key'] != second_entries['research/articles/paper-a/']['key']
+    assert sum(key.startswith('paper-template-v2/records/') for key, _ in store.writes) == 1
+    assert not any(key.startswith('paper-template-v2/templates/') for key, _ in store.writes)
+    assert old_keys <= set(store.objects)
+    assert json.loads(store.get_object(f"{PREFIX}/{second['files']['index.json']['url']}"))['version'] == 2
+    assert store.writes[-1][0] == f'{PREFIX}/current.json'
+
+
+def test_intervening_literature_publication_cannot_be_overwritten_by_site(tmp_path):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    newer = b'{"schema_version":1,"release_id":"newer-literature","files":{}}'
+    store.objects[f'{PREFIX}/current.json'] = newer
+    with pytest.raises(R2S3Error, match='baseline changed'):
+        publish_site_research(**args, client=store, workers=2)
+    assert store.objects[f'{PREFIX}/current.json'] == newer
+    assert not store.writes
+
+
+def test_json_pointer_projection_comes_from_frozen_copy_not_later_mutable_source(tmp_path, monkeypatch):
+    from src.services.data_release import site_research_publish as module
+    args = sources(tmp_path)
+    original_index = (args['research_source'] / 'index.json').read_bytes()
+    original = module.freeze_literature_json
+    def change_source_then_freeze(source, destination, **kwargs):
+        (args['research_source'] / 'index.json').write_text('{"version":999}')
+        return original(source, destination, **kwargs)
+    monkeypatch.setattr(module, 'freeze_literature_json', change_source_then_freeze)
+    freeze_site_research(papers_dir=args['papers_dir'], site_dist=args['site_dist'], research_source=args['research_source'],
+                        run=args['run'], release_id=args['release_id'], papers_origin=args['config'].public_base_url)
+    pointer = json.loads((args['run'] / 'current.json').read_bytes())
+    public_index = (args['run'] / 'json' / pointer['files']['index.json']['url']).read_bytes()
+    assert original_index == public_index
+    assert not (args['run'] / 'bundle/site-data/research/index.json').exists()
+
+
+def test_unsafe_source_and_other_release_ready_receipt_cannot_be_adopted(tmp_path):
+    args = sources(tmp_path)
+    link = args['site_dist'] / 'scripts/unsafe.js'
+    link.symlink_to(tmp_path / 'outside.js')
+    with pytest.raises(ValueError, match='Symlink'):
+        freeze_site_research(papers_dir=args['papers_dir'], site_dist=args['site_dist'], research_source=args['research_source'],
+                            run=args['run'], release_id=args['release_id'], papers_origin=args['config'].public_base_url)
+    assert not (args['run'] / 'site-ready.json').exists()
+    link.unlink()
+    freeze_site_research(papers_dir=args['papers_dir'], site_dist=args['site_dist'], research_source=args['research_source'],
+                        run=args['run'], release_id=args['release_id'], papers_origin=args['config'].public_base_url)
+    with pytest.raises(ValueError, match='another release'):
+        freeze_site_research(papers_dir=args['papers_dir'], site_dist=args['site_dist'], research_source=args['research_source'],
+                            run=args['run'], release_id='other-release', papers_origin=args['config'].public_base_url)
+
+
+def test_style_release_refuses_stale_research_projection_without_remote_writes(tmp_path):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store, workers=2)
+    previous = store.get_object(f'{PREFIX}/current.json')
+    store.writes.clear()
+    (args['research_source'] / 'index.json').write_text('{"version":"stale local export"}')
+    next_args = {**args, 'run': tmp_path / 'style-run', 'release_id': 'style-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    with pytest.raises(ValueError, match='differs from the captured published snapshot'):
+        publish_site_research(**next_args, client=store, preserve_research_data=True, workers=2)
+    assert store.get_object(f'{PREFIX}/current.json') == previous
+    assert not store.writes
+
+
+def test_style_release_preserves_published_json_and_reuses_all_article_records(tmp_path):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store, workers=2)
+    first = json.loads(store.get_object(f'{PREFIX}/current.json'))
+    store.writes.clear()
+    for prefix in ('', 'zh', 'fr'):
+        (args['papers_dir'] / prefix / 'research/articles/paper-a/index.html').write_text(page('paper-a', 'style-two'))
+    next_args = {**args, 'run': tmp_path / 'style-run', 'release_id': 'style-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**next_args, client=store, preserve_research_data=True, workers=2)
+    second = json.loads(store.get_object(f'{PREFIX}/current.json'))
+    assert first['files'] == second['files']
+    assert first['papers']['papers_generation_sha256'] != second['papers']['papers_generation_sha256']
+    assert any(key.startswith('paper-template-v2/templates/') for key, _ in store.writes)
+    assert not any(key.startswith('paper-template-v2/records/') for key, _ in store.writes)
+    assert store.writes[-1][0] == f'{PREFIX}/current.json'

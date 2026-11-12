@@ -17,7 +17,8 @@ PREFIX = "site-data/research-publication"
 
 def publish_literature_candidate(*, run: Path, objects_dir: Path, papers: PapersContentCandidate,
                                  config: R2PapersConfig, receipt: Path, client: Any = None,
-                                 workers: int = 16, build: dict[str, Any] | None = None) -> dict[str, Any]:
+                                 workers: int = 16, build: dict[str, Any] | None = None,
+                                 known_staged_objects: set[str] | None = None) -> dict[str, Any]:
     """Upload pages first and atomically switch the single research pointer.
 
     The caller captures a baseline before exporting data, freezes a private
@@ -42,11 +43,14 @@ def publish_literature_candidate(*, run: Path, objects_dir: Path, papers: Papers
             # redundant conditional uploads when only acknowledgement remains.
             write_committed_papers_receipt(receipt, candidate=papers, pointer=bound, target=destination, build=build)
             return {"release_id": bound["release_id"], "papers": {"generation_sha256": papers.generation,
-                    "uploaded_objects": 0, "reused_objects": len({item["key"] for item in papers.entries})},
+                    "uploaded_objects": 0, "reused_objects": len(papers.object_keys)},
                     "json": {"release_id": bound["release_id"], "uploaded": 0, "pointer_changed": False}}
         previous_manifest = validate_manifest(previous)[0] if previous is not None else None
         known = (read_committed_papers_receipt(receipt, pointer=previous_manifest, target=destination)
                  if previous_manifest and previous_manifest.get("papers") else set())
+        # Migration callers may supply only objects proven by
+        # verified_existing_objects(candidate, inventory), never name-only keys.
+        known.update(known_staged_objects or ())
         papers_result = publish_papers_content(papers, client=active, previous_objects=known, workers=workers)
         _atomic_write(run / "current.json", body)
         json_result = publish_surveillance_data(run, config, prefix=PREFIX, client=active,

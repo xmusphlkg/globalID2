@@ -66,7 +66,7 @@ def write_committed_papers_receipt(path: Path, *, candidate: PapersContentCandid
     try:
         with os.fdopen(descriptor, "w") as stream:
             receipt = {"schema": 1, "identity": identity,
-                       "keys": sorted({item["key"] for item in candidate.entries})}
+                       "keys": sorted(candidate.object_keys)}
             if build is not None:
                 receipt["build"] = build
                 receipt["files"] = [{"path": item["path"], "sha256": item["sha256"], "bytes": item["bytes"]}

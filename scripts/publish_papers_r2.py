@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import sys
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,7 +17,6 @@ from src.services.data_release.papers_bundle import DEFAULT_PAPERS_ORIGIN
 from src.services.data_release.papers_r2 import (
     R2PapersConfig,
     derive_r2_credentials_from_api_token,
-    publish_papers_site,
 )
 
 
@@ -68,30 +68,39 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Skip the public HEAD/GET sample check after upload",
     )
+    parser.add_argument('--site-dist', type=Path, default=ROOT / 'astro-site/dist')
+    parser.add_argument('--research-source', type=Path, default=ROOT / 'astro-site/public/site-data/research')
+    parser.add_argument('--run', type=Path, default=os.environ.get('GIDS_RESEARCH_PUBLICATION_RUN'))
+    parser.add_argument('--release-id', default=os.environ.get('GIDS_RESEARCH_RELEASE_ID'))
+    parser.add_argument('--template-dir', type=Path)
+    parser.add_argument('--inventory', type=Path, help='Verified remote inventory for one-time migration reuse')
+    parser.add_argument('--capture-baseline-only', action='store_true')
+    parser.add_argument('--prepare-only', action='store_true')
+    parser.add_argument('--preserve-research-data', action='store_true',
+        default=os.environ.get('GIDS_PRESERVE_RESEARCH_DATA') == '1')
     args = parser.parse_args(argv)
     config = _config_from_env()
-    result = publish_papers_site(
-        args.source_dir,
-        config,
-        verify_public=not args.skip_public_verify,
-        workers=args.workers,
-        max_total_bytes=args.max_total_bytes,
-    )
-    print(
-        json.dumps(
-            {
-                "uploaded": result.uploaded,
-                "removed": result.removed,
-                "unchanged": result.unchanged,
-                "bytes_uploaded": result.bytes_uploaded,
-                "manifest_url": result.manifest_url,
-                "sample_url": result.sample_url,
-                "sample_ok": result.sample_ok,
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
+    if not args.release_id or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,160}', args.release_id):
+        parser.error('--release-id (or GIDS_RESEARCH_RELEASE_ID) is required')
+    run = args.run or ROOT / 'exports/site-research-runs' / args.release_id
+    if args.capture_baseline_only:
+        from src.services.data_release.surveillance_publish import capture_surveillance_baseline
+        result = capture_surveillance_baseline(run, config, prefix='site-data/research-publication')
+    else:
+        from src.services.data_release.site_research_publish import publish_site_research
+        inventory = json.loads(args.inventory.read_bytes()) if args.inventory else None
+        if inventory is not None and 'objects' in inventory:
+            if inventory.get('bucket') != config.bucket:
+                raise ValueError('Inventory belongs to another bucket')
+            inventory = inventory['objects']
+        if inventory is not None and sum(int(item['bytes']) for item in inventory.values()) > args.max_total_bytes:
+            raise ValueError('R2 bucket already exceeds publication storage budget')
+        result = publish_site_research(papers_dir=args.source_dir, site_dist=args.site_dist,
+            research_source=args.research_source, run=run, release_id=args.release_id, config=config,
+            receipt=ROOT / 'data/cache/isolated-research-publication.json',
+            template_dir=args.template_dir, inventory=inventory, workers=args.workers,
+            prepare_only=args.prepare_only, preserve_research_data=args.preserve_research_data)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 

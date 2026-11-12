@@ -1,0 +1,118 @@
+{
+  "$schema": "../surveillance-data/node_modules/wrangler/config-schema.json",
+  "name": "globalid-papers-template",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-12",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "r2_buckets": [
+    {
+      "binding": "DATA",
+      "bucket_name": "globalid-papers"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "routes": [
+    {
+      "pattern": "globalinfectiousdisease.com/research",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "globalinfectiousdisease.com/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "globalinfectiousdisease.com/zh/research",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "globalinfectiousdisease.com/zh/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "globalinfectiousdisease.com/fr/research",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "globalinfectiousdisease.com/fr/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "globalinfectiousdisease.com/site-data/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "globalinfectiousdisease.com/research-publication/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "www.globalinfectiousdisease.com/research",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "www.globalinfectiousdisease.com/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "www.globalinfectiousdisease.com/zh/research",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "www.globalinfectiousdisease.com/zh/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "www.globalinfectiousdisease.com/fr/research",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "www.globalinfectiousdisease.com/fr/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "www.globalinfectiousdisease.com/site-data/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "www.globalinfectiousdisease.com/research-publication/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "papers.globalinfectiousdisease.com/research",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "papers.globalinfectiousdisease.com/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "papers.globalinfectiousdisease.com/zh/research",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "papers.globalinfectiousdisease.com/zh/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "papers.globalinfectiousdisease.com/fr/research",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "papers.globalinfectiousdisease.com/fr/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "papers.globalinfectiousdisease.com/site-data/research/*",
+      "zone_name": "globalinfectiousdisease.com"
+    },
+    {
+      "pattern": "papers.globalinfectiousdisease.com/research-publication/*",
+      "zone_name": "globalinfectiousdisease.com"
+    }
+  ]
+}
