@@ -147,6 +147,7 @@ def test_production_canaries_cover_three_languages_on_every_host(tmp_path):
     current = {'release_id': 'new-release', 'papers': {'papers_origin': cleanup.PRODUCTION_ORIGINS[2]}}
     urls = []
     def opener(request, **kwargs):
+        assert request.get_header('User-agent').startswith('GlobalIDReleaseVerifier/')
         urls.append(request.full_url)
         return Response()
     cleanup.verify_public_samples(plan, coverage, current, opener=opener)
