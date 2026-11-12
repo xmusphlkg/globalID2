@@ -4,6 +4,8 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+- Remove one-time paper migration transfer tools and the obsolete standalone template activation command. Document the dashboard’s unified research publication flow.
+
 ## [0.18.3] - 2026-11-12
 
 ### Research publication infrastructure
