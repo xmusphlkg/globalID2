@@ -76,12 +76,12 @@ def test_ie_control_plane_exposes_current_and_annual_source_policies() -> None:
     assert options["hpsc_annual"].history_end_year == 2020
     assert options["hpsc_annual"].source_policy.temporal_granularity == "annual"
     assert options["hpsc_annual"].source_policy.dynamic_revision_enabled is False
-    assert options["hpsc_annual"].source_policy.public_release_enabled is False
+    assert options["hpsc_annual"].source_policy.public_release_enabled is True
     assert options["hpsc_weekly_archive"].source_kind == "history"
     assert options["hpsc_weekly_archive"].default_start_year == 2015
     assert options["hpsc_weekly_archive"].history_end_year == 2021
     assert options["hpsc_weekly_archive"].source_policy.temporal_granularity == "weekly"
-    assert options["hpsc_weekly_archive"].source_policy.public_release_enabled is False
+    assert options["hpsc_weekly_archive"].source_policy.public_release_enabled is True
     assert options["ecdc_atlas_annual"].source_kind == "regional_baseline"
     assert options["ecdc_atlas_annual"].source_policy.public_release_enabled is True
 
