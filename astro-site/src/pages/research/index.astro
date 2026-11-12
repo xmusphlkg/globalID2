@@ -54,7 +54,8 @@ const initialResultCount = catalogueCount > initialVisibleArticles
   : pick(`${catalogueCount} ${catalogueCount === 1 ? 'publication' : 'publications'}`, `${catalogueCount} 篇文献`, `${catalogueCount} publication${catalogueCount === 1 ? '' : 's'}`);
 const diseases = [...new Map(catalogueFacets.flatMap((article: any) => article.diseases ?? []).map((item: any) => [item.disease_id, item])).values()] as any[];
 const countries = [...new Map(catalogueFacets.flatMap((article: any) => article.countries ?? []).map((item: any) => [item.code, item])).values()] as any[];
-const countryMetadata = new Map((metaData.countries ?? []).map(country => [country.code.toUpperCase(), country]));
+const metadataCountries: Array<{ code: string; name_zh?: string }> = metaData.countries ?? [];
+const countryMetadata = new Map(metadataCountries.map(country => [country.code.toUpperCase(), country]));
 const countryName = (country: any) => localizedRegionName(locale, country.code, {
   en: country.name_en,
   zh: country.name_zh || countryMetadata.get(String(country.code).toUpperCase())?.name_zh,
