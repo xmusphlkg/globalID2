@@ -83,7 +83,18 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
     const logical = 'research/articles/example/';
     const paperKey = `releases/sha256/objects/${first}/0123456789abcdef`;
     const cssKey = `releases/sha256/objects/${second}/0123456789abcdef`;
-    const document = '<html><head><link rel="canonical" href="https://papers.globalinfectiousdisease.com/research/articles/example/"><link rel="stylesheet" href="/_astro/style.css"></head><body><a href="/research/">paper</a><astro-island component-url="/_astro/island.js" renderer-url="/_astro/renderer.js"></astro-island></body></html>';
+    const document = `<html><head>
+      <link rel="canonical" href="https://globalinfectiousdisease.com/research/articles/example/">
+      <link rel="alternate" hreflang="zh-CN" href="https://globalinfectiousdisease.com/zh/research/articles/example/">
+      <meta property="og:url" content="https://globalinfectiousdisease.com/research/articles/example/">
+      <link rel="stylesheet" href="/_astro/style.css"></head><body>
+      <a href="/research/">research</a>
+      <a href="/research/articles/example/?source=list#summary">paper</a>
+      <a href="/fr/research/diseases/dengue/">disease</a>
+      <a href="https://doi.org/10.1234/example">DOI</a>
+      <a href="#summary">summary</a>
+      <div data-graph-src="/site-data/research-graph.json"></div>
+      <astro-island component-url="/_astro/island.js" renderer-url="/_astro/renderer.js"></astro-island></body></html>`;
     await bucket.put(paperKey, gzipSync(document), { httpMetadata: { contentType: 'text/html', contentEncoding: 'gzip' } });
     await bucket.put(cssKey, gzipSync('body{src:url(/_astro/font.woff2)}'), { httpMetadata: { contentType: 'text/css', contentEncoding: 'gzip' } });
     const jsonKey = `releases/sha256/objects/${'c'.repeat(64)}/0123456789abcdef`;
@@ -102,7 +113,12 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
       await bucket.put(shardKey, JSON.stringify({ schema_version: 1, items }));
     }
     await bucket.put(`releases/sha256/catalogues/${first}.json`, JSON.stringify({ schema_version: 2, generation_sha256: first, shards }));
-    const paper = await runtime.dispatchFetch(`${origin}/research-publication/${first}/${logical}`);
+    await bucket.put('site-data/research-publication/current.json', JSON.stringify({ schema_version: 1, release_id: 'research-one',
+      papers: { papers_generation_sha256: first }, files: {} }));
+    const removed = await runtime.dispatchFetch(`${origin}/research-publication/${first}/${logical}`);
+    assert.equal(removed.status, 410);
+    assert.equal(removed.headers.get('location'), null);
+    const paper = await runtime.dispatchFetch(`${origin}/${logical}`);
     const html = await paper.text();
     assert.match(html, /<html>/);
     assert.match(html, new RegExp(`component-url="/research-publication/${first}/_astro/island.js"`));
@@ -111,14 +127,22 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
     assert.deepEqual(await catalogue.json(), { articles: [] });
     assert.equal(catalogue.headers.get('content-length'), null);
     assert.match(html, new RegExp(`/research-publication/${first}/_astro/style.css`));
-    assert.match(html, new RegExp(`/research-publication/${first}/research/`));
+    assert.match(html, /href="https:\/\/globalinfectiousdisease.com\/research\/"/);
+    assert.doesNotMatch(html, new RegExp(`/research-publication/${first}/research/articles/`));
     assert.match(html, /rel="canonical" href="https:\/\/papers.globalinfectiousdisease.com\/research\/articles\/example\/"/);
-    assert.match(paper.headers.get('cache-control'), /immutable/);
+    assert.match(html, /hreflang="zh-CN" href="https:\/\/papers.globalinfectiousdisease.com\/zh\/research\/articles\/example\/"/);
+    assert.match(html, /property="og:url" content="https:\/\/papers.globalinfectiousdisease.com\/research\/articles\/example\/"/);
+    assert.ok(html.includes('href="https://papers.globalinfectiousdisease.com/research/articles/example/?source=list#summary"'));
+    assert.ok(html.includes('href="https://papers.globalinfectiousdisease.com/fr/research/diseases/dengue/"'));
+    assert.ok(html.includes('href="https://doi.org/10.1234/example"'));
+    assert.ok(html.includes('href="#summary"'));
+    assert.ok(html.includes(`data-graph-src="/research-publication/${first}/site-data/research-graph.json"`));
+    assert.equal(paper.headers.get('cache-control'), 'no-store');
     const css = await runtime.dispatchFetch(`${origin}/research-publication/${first}/_astro/style.css`);
     assert.match(await css.text(), new RegExp(`/research-publication/${first}/_astro/font.woff2`));
     await bucket.put('site-data/research-publication/current.json', JSON.stringify({ schema_version: 1, release_id: 'research-one',
       papers: { papers_generation_sha256: first }, files: {} }));
-    const stable = await runtime.dispatchFetch(`${origin}/${logical}`, { headers: { 'If-None-Match': paper.headers.get('etag') } });
+    const stable = await runtime.dispatchFetch(`${origin}/${logical}`, { headers: { 'If-None-Match': '"old-page"' } });
     assert.equal(stable.status, 200);
     assert.equal(stable.headers.get('cache-control'), 'no-store');
     assert.equal(stable.headers.get('etag'), null);
@@ -166,6 +190,9 @@ test('packaged Pages Worker routes live JSON while preserving ordinary static as
     assert.equal(monthHead.status, 200);
     assert.equal(await monthHead.text(), '');
     assert.equal(monthHead.headers.get('cache-control'), 'no-store');
+    const removed = await runtime.dispatchFetch(`https://site.test/research-publication/${'a'.repeat(64)}/research/articles/old/`);
+    assert.equal(removed.status, 410);
+    assert.equal(removed.headers.get('location'), null);
     assert.equal(await (await runtime.dispatchFetch('https://site.test/countries/jp/')).text(), 'static:/countries/jp/');
     assert.equal(await (await runtime.dispatchFetch('https://site.test/site-data/search-index.json')).text(), 'static:/site-data/search-index.json');
   } finally { await runtime.dispose(); rmSync(directory, { recursive: true, force: true }); }

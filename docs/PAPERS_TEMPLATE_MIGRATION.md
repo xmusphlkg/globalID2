@@ -2,6 +2,16 @@
 
 ## Deployment status
 
+The stable public URL policy was deployed on 2026-11-12 with site release
+`20261112T144553Z-13ed03c39c6e` (task `d4e8f489-2e9f-4e10-adb1-0658583e3036`)
+and Papers Worker version `145915b0-c375-45ec-ae87-8e638ada000e`.
+Main Pages, Papers and Reports were republished. Live checks confirmed three
+article locales return 200 at short canonical URLs, removed snapshot article
+URLs return 410, research navigation contains no snapshot page links, and
+versioned scripts/styles still return 200. The research sitemap uses the Papers
+canonical URLs. API, workers, scheduler, dashboard web and local site processes
+were restarted; interrupted tasks were recovered by their stopped owner IDs.
+
 The shared-paper structure was activated on 2026-11-12 as `template-cutover-20261112`, using the same research publication pointer for full-site and independent literature updates. The research-only Worker serves 24 routes across the main, `www` and Papers hosts. Checks passed for all nine canonical host/locale article combinations, three versioned article locales, three versioned research homepages and nine referenced assets. The research homepage also passed a browser check without console errors. The fenced cleanup completed after those checks: 24,579 replaced static article objects and 2,146 inactive v1 prototype objects were deleted (26,725 total, 238,943,659 stored bytes). Shared assets, research data and historical immutable releases were retained.
 
 - Catalogue generation: `89b185ac744d79d60c1c303bf712405120ad46b669fcdd7483e8ec978ff41d74`.
@@ -25,7 +35,13 @@ site-data/research-publication/current.json
 
 The catalogue remains schema 2. Article entries retain their original `logical_key`, `path`, HTML `sha256` and HTML `bytes`. Their `key` references the shared record, and `paper_template` contains `template_sha256`, `record_sha256`, `locale` and `slug`. Other assets keep their existing content-addressed object entries.
 
-The research-only `globalid-papers-template` Worker reuses the catalogue reader from `globalid-surveillance-data` for stable research URLs and `/research-publication/<generation>/...` URLs. It validates bounded, decoded JSON against its content hash, assembles the HTML, verifies the original HTML digest and size, then applies generation-specific asset/link rewriting. Canonical and social metadata remain stable. Responses identify template rendering with `X-GIDS-Paper-Mode: template` and expose the verified original digest in `X-GIDS-Paper-SHA256`.
+The research-only `globalid-papers-template` Worker reuses the catalogue reader from `globalid-surveillance-data` for stable research URLs. It validates bounded, decoded JSON against its content hash, assembles the HTML, verifies the original HTML digest and size, then pins supporting data and assets to the page's generation. Responses identify template rendering with `X-GIDS-Paper-Mode: template` and expose the verified original digest in `X-GIDS-Paper-SHA256`.
+
+Public article and disease-literature links, canonical metadata, language alternates, feeds and sitemaps use the stable `https://papers.globalinfectiousdisease.com/[locale/]research/...` addresses. Research landing and other collection pages use the main host. The publication-mode flag controls hosting and build routing; it does not change article canonical URLs. Client-side cards and graph links follow the same short-URL policy.
+
+Snapshot **page** URLs under `/research-publication/<generation>/...` are removed with `410 Gone`, without a redirect or static fallback. Only supporting JSON, scripts, styles, images and fonts retain versioned URLs. They are needed by pages already open during a publication switch. Storage generations remain available for internal resolution and rollback; removing public snapshot pages does not delete their backing objects.
+
+Release rebuilt research pages/client assets before the Worker change: old client bundles still generate snapshot page links. Validate GET and HEAD on removed page URLs, stable navigation in all three locales, sitemap/canonical agreement, and versioned resource loading.
 
 The earlier standalone prototype reader was replaced. `paper-template-v2/current.json` is not the production publication path: do not activate a second pointer. The staged record/template keys are reused by the unified catalogue.
 
@@ -46,11 +62,11 @@ The initial 2026-11-12 audit reconstructed 24,579 pages exactly. Gzip level 6 co
 ## Cutover, cleanup and recovery
 
 1. Fence publication workers during the final cutover/cleanup window. Preserve the old pointer, canonical manifest, object inventory and a separate SHA-verified copy of every static article.
-2. Prepare and validate the unified candidate, reuse verified staged objects, and publish every referenced payload. Verify the immutable-generation URLs, deploy compatible canonical Worker routes, then switch the research pointer conditionally.
+2. Prepare and validate the unified candidate, reuse verified staged objects, and publish every referenced payload. Verify immutable data/assets and the staged article assembly, deploy compatible canonical Worker routes, then switch the research pointer conditionally.
 3. Verify template mode, original article digest and release identity in all three languages on the main, `www` and Papers hosts. Validate the complete article coverage before deleting any old page.
 4. Use `scripts/cleanup_legacy_papers.py` with its reviewed exact-key plan. It requires every replacement article's digest and size to equal the preserved original, checks public canaries, conditionally prunes the canonical static manifest, and checks the publication pointer before each deletion batch. Durable checkpoints make interrupted cleanup resumable.
 
-Cleanup removes only the covered legacy static article keys and audited inactive v1 prototype objects. Shared assets, research data and historical immutable generations remain because cached or versioned links may still use them. A pointer change stops further deletion. All static publishers must remain fenced during cleanup; a manifest check alone cannot exclude unfinished uploads.
+Cleanup removes only the covered legacy static article keys and audited inactive v1 prototype objects. Shared assets, research data and historical immutable generations remain for open pages and rollback. A pointer change stops further deletion. All static publishers must remain fenced during cleanup; a manifest check alone cannot exclude unfinished uploads.
 
 After static deletion, rollback to a retained immutable research generation must keep compatible Worker routes. Removing those routes requires restoring the preserved static originals first. Do not delete retained generation assets as part of this migration.
 

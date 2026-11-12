@@ -63,7 +63,7 @@ function fixture() {
   return { objects, reads, env, put, generation, recordKey };
 }
 
-test('one publication pointer switches all locale templates while old versioned pages remain readable', async () => {
+test('one publication pointer switches all locale templates while old snapshot page URLs are removed', async () => {
   const f = fixture();
   const first = f.generation('first'); first.activate();
   for (const [logical, html] of Object.entries(first.expected)) {
@@ -81,12 +81,10 @@ test('one publication pointer switches all locale templates while old versioned 
   assert.equal(await current.text(), next.expected[logical]);
   const oldUrl = `https://site.test/research-publication/${first.hash}/${logical}`;
   const old = await worker.fetch(new Request(oldUrl), f.env);
-  assert.equal(await old.text(), first.expected[logical]);
-  assert.match(old.headers.get('Cache-Control')!, /immutable/);
-  const conditional = await worker.fetch(new Request(oldUrl, { headers: { 'If-None-Match': old.headers.get('ETag')! } }), f.env);
-  assert.equal(conditional.status, 304);
+  assert.equal(old.status, 410);
+  assert.equal(old.headers.get('Location'), null);
   const head = await worker.fetch(new Request(oldUrl, { method: 'HEAD' }), f.env);
-  assert.equal(head.status, 200); assert.equal(await head.text(), '');
+  assert.equal(head.status, 410); assert.equal(await head.text(), '');
   assert.equal(f.reads.some(key => key === 'paper-template-v2/current.json'), false);
 });
 

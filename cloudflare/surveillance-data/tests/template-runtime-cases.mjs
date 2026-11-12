@@ -6,7 +6,7 @@ import { gzipSync } from 'node:zlib';
 import { readFileSync, readdirSync } from 'node:fs';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 
-test('template catalogue switches atomically, rewrites assets, and keeps the previous generation readable', async () => {
+test('template catalogue switches atomically, rewrites assets, and removes snapshot page URLs', async () => {
   const runtime = new Miniflare(convertV4MiniflareOptions({
     modules: true, scriptPath: resolve('.wrangler/test-bundle/index.js'),
     compatibilityDate: '2026-11-07', compatibilityFlags: ['nodejs_compat'], r2Buckets: ['DATA'],
@@ -54,7 +54,8 @@ test('template catalogue switches atomically, rewrites assets, and keeps the pre
     assert.equal(changed.headers.get('x-gids-research-release'), 'next');
     assert.match(await changed.text(), /<footer>next<\/footer>/);
     const retained = await runtime.dispatchFetch(`${origin}/research-publication/${first.generation}/${logical}`);
-    assert.match(await retained.text(), /<footer>first<\/footer>/);
+    assert.equal(retained.status, 410);
+    assert.equal(retained.headers.get('location'), null);
     const papersHost = await runtime.dispatchFetch(`https://papers.globalinfectiousdisease.com/${logical}`);
     assert.match(await papersHost.text(), new RegExp(`https://globalinfectiousdisease.com/research-publication/${next.generation}/_astro/next.css`));
     assert.equal(await bucket.get('paper-template-v2/current.json'), null);

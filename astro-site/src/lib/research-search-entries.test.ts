@@ -9,5 +9,5 @@ test('research search includes current indexable articles and excludes hidden re
   ], preprints: [{ article_id: 'p', slug: 'p', title: 'Preprint' }] });
   assert.deepEqual(entries.map(entry => entry.id), ['research:a', 'research:p']);
   assert.ok(entries[0].aliases.includes('Dengue'));
-  assert.ok(entries[0].href.en.endsWith('/research/articles/a/'));
+  assert.equal(entries[0].href.en, 'https://papers.globalinfectiousdisease.com/research/articles/a/');
 });

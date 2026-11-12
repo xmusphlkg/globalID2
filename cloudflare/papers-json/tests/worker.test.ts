@@ -25,7 +25,7 @@ function fixture() {
   return { env: { DATA: { get, head: get } } as unknown as Env, keys, generation, body };
 }
 
-test('research wrapper serves no-slash landing pages and frozen generation paths', async () => {
+test('research wrapper serves short pages and removes snapshot page URLs', async () => {
   const f = fixture();
   for (const path of ['/research', '/research/', '/zh/research', '/fr/research/', '/research/articles/paper-a/']) {
     const result = await worker.fetch(new Request(`https://papers.example${path}`), f.env);
@@ -34,8 +34,8 @@ test('research wrapper serves no-slash landing pages and frozen generation paths
     assert.equal(await result.text(), f.body);
   }
   const versioned = await worker.fetch(new Request(`https://papers.example/research-publication/${f.generation}/research/`), f.env);
-  assert.equal(versioned.status, 200); assert.match(versioned.headers.get('cache-control')!, /immutable/);
-  assert.equal(await versioned.text(), f.body);
+  assert.equal(versioned.status, 410);
+  assert.equal(versioned.headers.get('location'), null);
   assert.equal(f.keys.includes('paper-template-v2/current.json'), false);
 });
 
@@ -46,4 +46,21 @@ test('research wrapper never activates surveillance or arbitrary R2 paths', asyn
   }
   assert.equal((await worker.fetch(new Request('https://site.test/research/', { method: 'POST' }), f.env)).status, 405);
   assert.equal(f.keys.length, 0);
+});
+
+test('removed snapshot pages return Gone without reading R2 or redirecting', async () => {
+  const f = fixture();
+  for (const host of ['globalinfectiousdisease.com', 'papers.globalinfectiousdisease.com', 'www.globalinfectiousdisease.com']) {
+    for (const path of ['research', 'research/', 'research/articles/paper-a/', 'zh/research/articles/paper-a',
+      'fr/research/articles/paper-a/index.html', 'research/graph/', 'research/diseases/dengue/?q=1']) {
+      for (const method of ['GET', 'HEAD']) {
+        const response = await worker.fetch(new Request(`https://${host}/research-publication/${f.generation}/${path}`, { method }), f.env);
+        assert.equal(response.status, 410, path);
+        assert.equal(response.headers.get('location'), null);
+        assert.equal(response.headers.get('x-robots-tag'), 'noindex');
+        if (method === 'HEAD') assert.equal(await response.text(), '');
+      }
+    }
+  }
+  assert.deepEqual(f.keys, []);
 });

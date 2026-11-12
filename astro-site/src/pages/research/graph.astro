@@ -137,9 +137,6 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
       const routePrefix = root.dataset.graphPrefix || '';
       // Article pages are served from the papers host; local preview renders them itself.
       const papersHref = (path) => {
-        const generation = document.querySelector('meta[name="gids-research-generation"]')?.content || '';
-        if (/^[a-f0-9]{64}$/.test(generation) && /^\/(?:(?:zh|fr)\/)?research\/articles\//.test(path))
-          return `/research-publication/${generation}${path}`;
         return /^\/(?:(?:zh|fr)\/)?research\/articles\//.test(path) && !['localhost', '127.0.0.1'].includes(location.hostname)
           ? `https://papers.globalinfectiousdisease.com${path}` : path;
       };

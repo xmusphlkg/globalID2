@@ -4,6 +4,10 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.18.4] - 2026-11-12
+
+- Restore stable, short public research URLs across navigation, search, canonical metadata and sitemaps. Retire generation-specific page URLs with HTTP 410 while keeping data and assets bound to their publication generation.
+- Invalidate incremental site builds and publication checkpoints when shared research URL rules or the Papers Worker change, preventing retries from restoring obsolete links.
 - Remove one-time paper migration transfer tools and the obsolete standalone template activation command. Document the dashboard’s unified research publication flow.
 
 ## [0.18.3] - 2026-11-12

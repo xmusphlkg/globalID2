@@ -83,6 +83,9 @@ export function sharedFingerprint() {
     resolve(siteRoot, 'scripts', 'source-dependencies.mjs'),
     resolve(siteRoot, 'scripts', 'public-build-inputs.mjs'),
     resolve(projectRoot, 'shared', 'research-publishing.json'),
+    // Public URL policy affects links across the main site as well as the
+    // research templates; invalidate every cached page when it changes.
+    resolve(projectRoot, 'shared', 'research-urls.ts'),
   ].filter(existsSync).sort();
   const digest = createHash('sha256');
   const identities = gitSourceIdentities(projectRoot);

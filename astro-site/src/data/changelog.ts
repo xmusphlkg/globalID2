@@ -26,6 +26,18 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.18.4', date: '2026-11-12',
+    titleEn: 'Stable research links', titleZh: '稳定的文献链接', titleFr: 'Liens stables vers les publications',
+    summaryEn: 'Research pages use shorter, stable links across the website and search.',
+    summaryZh: '文献页面统一使用简短、稳定的网址，方便浏览、分享和检索。',
+    summaryFr: 'Les publications utilisent des liens courts et stables dans le site et la recherche.',
+    sections: [{ kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'Navigation, search and sitemaps now point to the same stable research URLs. Old version-specific page links have been removed.',
+      zh: '导航、搜索和网站地图统一指向稳定的文献网址；旧的带版本号页面链接已移除。',
+      fr: 'La navigation, la recherche et les plans de site utilisent les mêmes adresses stables. Les anciens liens de page par version ont été supprimés.',
+    }] }],
+  },
+  {
     version: '0.18.3',
     date: '2026-11-12',
     titleEn: 'Faster research access and synchronized downloads',

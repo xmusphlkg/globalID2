@@ -82,9 +82,11 @@ legacy literature switch enabled would keep writing content-addressed versions
 that the static research pages no longer read, and a later main-site build could
 restore the old Worker routes. Reload the scheduler, API and general worker after
 changing the setting; allow active collection tasks to drain.
-Version-pinned `/research-publication/*` URLs remain on the Worker for cached
-clients. That compatibility handler decodes gzip R2 bodies before HTML/CSS
-rewriting; current `/research/*` URLs are static.
+Version-pinned data and assets under `/research-publication/*` remain on the
+Worker for open pages. Snapshot page URLs return `410 Gone` without redirects.
+The resource handler decodes gzip R2 bodies before CSS rewriting; in this direct
+static hosting mode, current `/research/*` URLs are static. The current template
+publication mode is described in [Papers JSON publication](PAPERS_TEMPLATE_MIGRATION.md).
 
 `R2_PAPERS_MAX_TOTAL_BYTES` defaults to 8,000,000,000 bytes in the publisher CLI.
 Before any upload it checks a conservative final bucket size: raw candidate
