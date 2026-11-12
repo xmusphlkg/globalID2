@@ -48,7 +48,13 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
                    if previous_manifest and previous_manifest.get('papers') else None)
             manifest = build_research_papers_manifest(stage, origin=config.public_base_url, build=build, previous=old)
             _atomic_write(manifest_path, json.dumps(manifest, ensure_ascii=False, separators=(',', ':')).encode())
-        papers = prepare_papers_content_from_manifest(stage, manifest, papers_origin=config.public_base_url, release_id=release_id)
+        template_dir = run / 'paper-templates'
+        # A run frozen by the previous publisher must retain its exact binding
+        # when recovering an interrupted acknowledgement. All new runs use JSON.
+        if current.get('papers') and not template_dir.exists():
+            template_dir = None
+        papers = prepare_papers_content_from_manifest(stage, manifest, papers_origin=config.public_base_url,
+            release_id=release_id, template_dir=template_dir)
         result = publish_literature_candidate(run=run, objects_dir=shared / 'objects', papers=papers,
             config=config, receipt=receipt, client=client, workers=workers, build=build)
         _atomic_write(run / 'published.json', json.dumps(result, ensure_ascii=False, separators=(',', ':')).encode())

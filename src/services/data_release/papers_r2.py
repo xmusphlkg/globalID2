@@ -250,7 +250,11 @@ class R2S3Client:
             "x-amz-date": amz_date,
         }
         if conditional_headers:
-            if set(conditional_headers) - {"if-match", "if-none-match"}:
+            if set(conditional_headers) - {
+                "if-match", "if-none-match", "x-amz-copy-source",
+                "x-amz-copy-source-if-match", "x-amz-metadata-directive",
+                "cf-copy-destination-if-none-match",
+            }:
                 raise ValueError("Unsupported R2 conditional header")
             headers.update(conditional_headers)
         if content_type:

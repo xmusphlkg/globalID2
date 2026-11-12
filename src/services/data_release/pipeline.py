@@ -347,6 +347,26 @@ async def _execute_release_task(
         # Never acknowledge fresh DB facts against a reused older site snapshot.
         resumed_identity = None
         generated_record = None
+    research_reused = False
+    if r2_papers_enabled and (runtime.root_dir / 'scripts/publish_papers_r2.py').is_file():
+        # Capture before export/render, not at upload time: an independent
+        # literature publication during the build must invalidate this attempt.
+        from .repository_publishers import papers_environment
+        research_identity = resumed_identity or release_identity
+        research_run = runtime.root_dir / 'exports/site-research-runs' / str(task.task_uuid) / research_identity['release_id']
+        git_env = {**git_env, 'GIDS_RESEARCH_PUBLICATION_RUN': str(research_run),
+                   'GIDS_RESEARCH_RELEASE_ID': research_identity['release_id'],
+                   'GIDS_PRESERVE_RESEARCH_DATA': '1' if code_only or content_only or literature_detached else '0'}
+        await service._run_logged_command(task.task_uuid, title='Capture Research Publication Baseline',
+            cmd=[str(python_path), 'scripts/publish_papers_r2.py', '--capture-baseline-only',
+                 '--run', str(research_run), '--release-id', research_identity['release_id']],
+            cwd=runtime.root_dir, env=papers_environment(service, git_env),
+            metadata={'event': 'site_research_publication_baseline'}, timeout_seconds=120)
+        if git_env['GIDS_PRESERVE_RESEARCH_DATA'] == '1' and resumed_identity is None:
+            if code_only:
+                await asyncio.to_thread(stage_receipts.assert_published_data,
+                    [runtime.astro_dir / 'src/data', runtime.astro_dir / 'public/site-data'])
+            research_reused = True
     if resumed_identity is not None:
         release_identity = resumed_identity
         await runtime.task_manager.add_workbook_entry(
@@ -356,10 +376,11 @@ async def _execute_release_task(
         )
     else:
         if code_only:
-            await asyncio.to_thread(
-                stage_receipts.assert_published_data,
-                [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"],
-            )
+            if not research_reused:
+                await asyncio.to_thread(
+                    stage_receipts.assert_published_data,
+                    [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"],
+                )
             for required in ("meta.json", "downloads.json", "research/routes.json"):
                 if not (runtime.astro_dir / "src/data" / required).is_file():
                     raise RuntimeError("Code-only release requires an existing data snapshot: " + required)
@@ -391,6 +412,13 @@ async def _execute_release_task(
         if needs_projection and generated_record:
             from src.generation.release_projection_snapshot import validate_read_snapshot_projection
             await asyncio.to_thread(validate_read_snapshot_projection, projection_manifest.parent)
+        if git_env.get('GIDS_PRESERVE_RESEARCH_DATA') == '1':
+            # The content generator can also install published research. Bind
+            # the final inputs after that step and before any rendering.
+            await service._run_logged_command(task.task_uuid, title='Reuse Published Research Snapshot',
+                cmd=[str(python_path), 'scripts/reuse_published_research.py', '--run', str(research_run)],
+                cwd=runtime.root_dir, env=papers_environment(service, git_env),
+                metadata={'event': 'site_research_snapshot_reused'}, timeout_seconds=300)
         from .build_stage import build_release_site
 
         release_identity = await build_release_site(

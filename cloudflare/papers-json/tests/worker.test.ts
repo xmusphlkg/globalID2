@@ -1,70 +1,49 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { gzipSync } from 'node:zlib';
-import { servePaper } from '../src/index.ts';
-const hash = (data: string) => createHash('sha256').update(data).digest('hex');
+import worker from '../src/index.ts';
 
+const sha = (value: string) => createHash('sha256').update(value).digest('hex');
 function fixture() {
+  const keys: string[] = [], generation = 'a'.repeat(64), body = '<html>research landing</html>';
   const objects = new Map<string, string>();
-  const put = (group: string, value: unknown) => {
-    const raw = JSON.stringify(value), sha = hash(raw);
-    objects.set(`paper-template-v2/${group}/${sha}.json`, raw);
-    return sha;
+  const objectKey = `releases/sha256/objects/${sha(body)}/0123456789abcdef`;
+  const shards: Record<string, {key: string}> = {};
+  for (const logical of ['research/', 'zh/research/', 'fr/research/', 'research/articles/paper-a/']) {
+    const shard = JSON.stringify({ schema_version: 1, items: [{ logical_key: logical, key: objectKey, content_type: 'text/html' }] });
+    const shardKey = `releases/sha256/catalogue-shards/${sha(shard)}.json`;
+    objects.set(shardKey, shard); shards[sha(logical).slice(0, 2)] = { key: shardKey };
+  }
+  objects.set(objectKey, body);
+  objects.set(`releases/sha256/catalogues/${generation}.json`, JSON.stringify({ schema_version: 2, generation_sha256: generation, shards }));
+  objects.set('site-data/research-publication/current.json', JSON.stringify({ schema_version: 1, release_id: 'unified', papers: { papers_generation_sha256: generation } }));
+  const get = async (key: string) => {
+    keys.push(key); const value = objects.get(key);
+    return value === undefined ? null : { size: Buffer.byteLength(value), body: new Response(value).body!, httpEtag: '"object"',
+      json: async () => JSON.parse(value), text: async () => value, httpMetadata: {} };
   };
-  const slug = 'paper-1';
-  const record = put('records', { schema: 2, slug, locales: { en: { head: ['<title>Paper</title>'], main: '<main id="main-content">Evidence</main>' } } });
-  const template = put('templates', { schema: 1, chunks: ['<html><head>', { field: 'head', index: 0 }, '</head><body>', { field: 'main' }, '</body></html>'] });
-  const index = put('indexes', { schema: 1, items: { [slug]: record } });
-  const generation = put('generations', { schema: 1, locales: { en: { template } }, indexes: { [hash(slug).slice(0,2)]: index } });
-  objects.set('paper-template-v2/current.json', JSON.stringify({ schema: 1, generation }));
-  objects.set('research/articles/paper-1/', '<html>legacy</html>');
-  const keys: string[] = [];
-  const env = { DATA: { async get(key: string) {
-    keys.push(key); const raw = objects.get(key); if (raw === undefined) return null;
-    const bytes = new TextEncoder().encode(raw);
-    return { size: bytes.byteLength, httpMetadata: {}, body: new Blob([bytes]).stream(),
-      async arrayBuffer() { return bytes.buffer; }, writeHttpMetadata(headers: Headers) { headers.set('Content-Type','text/html'); } };
-  } } } as unknown as Env;
-  return { env, objects, keys, generation, record, template };
+  return { env: { DATA: { get, head: get } } as unknown as Env, keys, generation, body };
 }
 
-test('serves complete SSR HTML, correct metadata and conditional requests', async () => {
-  const { env } = fixture();
-  const url='https://papers.example/research/articles/paper-1/';
-  const res=await servePaper(new Request(url),env);
-  assert.equal(res.status,200); assert.equal(res.headers.get('x-gids-paper-mode'),'template');
-  assert.equal(await res.text(),'<html><head><title>Paper</title></head><body><main id="main-content">Evidence</main></body></html>');
-  const etag=res.headers.get('etag')!;
-  assert.equal((await servePaper(new Request(url,{headers:{'If-None-Match':etag}}),env)).status,304);
-  const head=await servePaper(new Request(url,{method:'HEAD'}),env);
-  assert.equal(head.status,200); assert.equal(await head.text(),'');
+test('research wrapper serves no-slash landing pages and frozen generation paths', async () => {
+  const f = fixture();
+  for (const path of ['/research', '/research/', '/zh/research', '/fr/research/', '/research/articles/paper-a/']) {
+    const result = await worker.fetch(new Request(`https://papers.example${path}`), f.env);
+    assert.equal(result.status, 200);
+    assert.equal(result.headers.get('X-GIDS-Research-Release'), 'unified');
+    assert.equal(await result.text(), f.body);
+  }
+  const versioned = await worker.fetch(new Request(`https://papers.example/research-publication/${f.generation}/research/`), f.env);
+  assert.equal(versioned.status, 200); assert.match(versioned.headers.get('cache-control')!, /immutable/);
+  assert.equal(await versioned.text(), f.body);
+  assert.equal(f.keys.includes('paper-template-v2/current.json'), false);
 });
 
-test('corrupted content falls back to the retained static page', async () => {
-  const f=fixture(); f.objects.set(`paper-template-v2/records/${f.record}.json`, '{}');
-  const res=await servePaper(new Request('https://papers.example/research/articles/paper-1/'),f.env);
-  assert.equal(res.status,200); assert.equal(res.headers.get('x-gids-paper-mode'),'legacy');
-  assert.equal(await res.text(),'<html>legacy</html>');
-});
-
-test('reads gzip JSON and validates the decoded content hash', async () => {
-  const f=fixture(), original=f.env.DATA.get.bind(f.env.DATA);
-  f.env.DATA.get = async (key: string) => {
-    const item=await original(key);
-    if (!item || !key.includes('/records/')) return item;
-    const raw=new Uint8Array(await item.arrayBuffer());
-    const compressed=gzipSync(raw);
-    return { ...item, size: compressed.byteLength, httpMetadata: { contentEncoding: 'gzip' }, body: new Blob([compressed]).stream() } as R2ObjectBody;
-  };
-  const res=await servePaper(new Request('https://papers.example/research/articles/paper-1/'),f.env);
-  assert.equal(res.status,200); assert.equal(res.headers.get('x-gids-paper-mode'),'template');
-  assert.match(await res.text(), /<title>Paper<\/title>/);
-});
-
-test('does not expose arbitrary keys or accept writes', async () => {
-  const f=fixture();
-  assert.equal((await servePaper(new Request('https://papers.example/research/articles/../../secret'),f.env)).status,404);
-  assert.equal((await servePaper(new Request('https://papers.example/research/articles/paper-1/',{method:'POST'}),f.env)).status,405);
-  assert.equal(f.keys.length,0);
+test('research wrapper never activates surveillance or arbitrary R2 paths', async () => {
+  const f = fixture();
+  for (const path of ['/site-data/current.json', '/site-data/situation/current.json', '/site-data/updates/latest.json', '/private.json']) {
+    assert.equal((await worker.fetch(new Request(`https://site.test${path}`), f.env)).status, 404);
+  }
+  assert.equal((await worker.fetch(new Request('https://site.test/research/', { method: 'POST' }), f.env)).status, 405);
+  assert.equal(f.keys.length, 0);
 });

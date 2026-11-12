@@ -4,10 +4,12 @@ import { resolve } from 'node:path';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildPages } from '../scripts/build-pages.mjs';
+
+import './template-runtime-cases.mjs';
 
 test('real local Worker streams R2 generations and exposes a fresh same-origin pointer', async () => {
   const runtime = new Miniflare(convertV4MiniflareOptions({
