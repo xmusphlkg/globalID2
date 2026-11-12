@@ -473,7 +473,7 @@ async def _execute_release_task(
         publish_commit_message=publish_commit_message,
         download_git_timeout_seconds=DOWNLOAD_GIT_PUBLISH_TIMEOUT_SECONDS,
         literature_only=literature_only or content_only, code_only=code_only,
-        r2_papers_enabled=r2_papers_enabled and not literature_detached, r2_reports_enabled=r2_reports_enabled,
+        r2_papers_enabled=r2_papers_enabled, r2_reports_enabled=r2_reports_enabled,
     )
     completed_publications = await _run_repository_publications(repository_publications)
     raw_archive_published = "raw_archive" in completed_publications
