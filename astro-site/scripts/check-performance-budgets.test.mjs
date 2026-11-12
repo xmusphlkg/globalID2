@@ -30,7 +30,7 @@ test('persisted asset facts do not retain the complete HTML catalogue', t => {
     if(result.pages!==96 || cache.stats.misses!==96) throw new Error('Missing catalogue entries');
     cache.save();`;
   const result = spawnSync(process.execPath, ['--max-old-space-size=64', '--input-type=module', '-e', script, directory],
-    { encoding: 'utf8', timeout: 30000 });
+    { encoding: 'utf8', timeout: 30000, env: { ...process.env, GIDS_BUILD_FINGERPRINT_CACHE: join(directory, 'fingerprints.json') } });
   assert.equal(result.status, 0, result.stderr || String(result.error));
 });
 
