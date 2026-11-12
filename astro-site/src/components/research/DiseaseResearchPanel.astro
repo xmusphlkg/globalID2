@@ -13,7 +13,7 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const file = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/diseases/${diseaseId.toLowerCase()}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
 const articles = payload?.articles ?? [];
-const previewArticles = articles.slice(0, 5);
+const previewArticles = articles.slice(0, 6);
 const { byDisease, diseaseFacets } = diseaseLiteratureCatalogue();
 const allArticles = byDisease.get(diseaseId.toLowerCase()) ?? [];
 const diseaseFacet = diseaseFacets.get(diseaseId.toLowerCase());
@@ -29,12 +29,6 @@ const diseaseFacet = diseaseFacets.get(diseaseId.toLowerCase());
       <a href={siteHref(`${prefix}/research/diseases/${diseaseFacet.slug}/`)}>{zh ? `查看全部 ${allArticles.length.toLocaleString('zh-CN')} 篇文献 →` : fr ? `Voir les ${allArticles.length.toLocaleString('fr-FR')} publications →` : `View all ${allArticles.length.toLocaleString('en-US')} publications →`}</a>
     </div>
     <div class="research-panel-list mt-5">{previewArticles.map((article: any) => <ResearchArticleCard article={article} compact locale={locale} focusDiseaseId={diseaseId} />)}</div>
-    {allArticles.length > previewArticles.length && (
-      <p class="research-panel-count">
-        {zh ? `此处展示 ${previewArticles.length} 篇近期证据摘要，疾病文献专题共收录 ${allArticles.length.toLocaleString('zh-CN')} 篇相关文献，可继续筛选和查看发文趋势。` : fr ? `${previewArticles.length} synthèses récentes présentées ici. Le dossier contient ${allArticles.length.toLocaleString('fr-FR')} publications associées avec filtres et tendances.` : `Previewing ${previewArticles.length} recent evidence summaries. The disease literature page contains ${allArticles.length.toLocaleString('en-US')} related publications with filters and trends.`}
-      </p>
-    )}
-    <p class="research-panel-note">{zh ? '文献链接仅用于发现研究，不会改变或验证上方的监测序列。' : fr ? 'Les liens bibliographiques servent à découvrir des travaux et ne modifient ni ne valident la série de surveillance ci-dessus.' : 'Literature links are provided for discovery and do not alter or validate the surveillance series above.'}</p>
   </section>
 )}
 
@@ -42,7 +36,5 @@ const diseaseFacet = diseaseFacets.get(diseaseId.toLowerCase());
   .research-panel-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
   .research-panel-heading > a { flex: none; color: rgb(var(--color-brand)); font-size: .78rem; font-weight: 650; }
   .research-panel-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: .6rem; }
-  .research-panel-count { margin-top: .75rem; color: rgb(var(--text-faint)); font: 500 .68rem/1.4 ui-monospace, monospace; }
-  .research-panel-note { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .72rem; line-height: 1.5; }
   @media (max-width: 640px) { .research-panel-heading { align-items: start; flex-direction: column; } }
 </style>
