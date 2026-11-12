@@ -43,3 +43,19 @@ def test_refuses_inconsistent_template_and_cleans_partial_candidate(tmp_path):
     with pytest.raises(ValueError, match='template shapes'): prepare(src,out)
     assert not out.exists()
     assert not list(tmp_path.glob('.papers-template-*'))
+
+
+def test_changed_article_replaces_only_one_record_and_index(tmp_path):
+    src = tmp_path / 'source'
+    populate(src, 'same')
+    first = tmp_path / 'first'
+    prepare(src, first)
+    article = src / 'research/articles/paper-a/index.html'
+    article.write_text(article.read_text().replace('>paper-a</main>', '>updated paper-a</main>'))
+    second = tmp_path / 'second'
+    prepare(src, second)
+    def names(root, group):
+        return {path.name for path in (root / group).iterdir()}
+    assert names(first, 'templates') == names(second, 'templates')
+    assert len(names(second, 'records') - names(first, 'records')) == 1
+    assert len(names(second, 'indexes') - names(first, 'indexes')) == 1
