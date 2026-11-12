@@ -2,8 +2,14 @@ import { readFileSync } from 'node:fs';
 
 let plan: { selected: Set<string>; known: Set<string> } | undefined;
 
+/** Independent research pages are rendered by their own publication task. */
+export function independentResearchPages(): boolean {
+  return process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' && !process.env.GIDS_RESEARCH_BUILD_DIR;
+}
+
 /** An untracked route renders normally; only verified reusable bundles skip rendering. */
 export function shouldBuildPage(key: string): boolean {
+  if (independentResearchPages() && key.startsWith('research:')) return false;
   const path = process.env.GIDS_PAGE_BUILD_PLAN;
   if (!path) return true;
   if (!plan) {

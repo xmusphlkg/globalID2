@@ -5,11 +5,12 @@ import sharp from 'sharp';
 import researchRoutes from '../../../data/research/routes.json';
 import { renderResearchSocialCardSvg } from '../../../lib/research-social-card';
 import { researchSocialCardsEnabled } from '../../../lib/research-publishing';
+import { independentResearchPages } from '../../../lib/page-build-plan';
 
 export const prerender = true;
 
 export function getStaticPaths() {
-  if (!researchSocialCardsEnabled) return [];
+  if (!researchSocialCardsEnabled || independentResearchPages()) return [];
   const plan = process.env.GIDS_RESEARCH_BUILD_PLAN
     ? new Set(JSON.parse(readFileSync(process.env.GIDS_RESEARCH_BUILD_PLAN, 'utf8')).selected as string[])
     : null;

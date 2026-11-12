@@ -6,6 +6,7 @@ import { listMonths, listWeeks, readSituationMap } from '../utils/international'
 import { readResearchIndex } from './generated-site-data';
 import { memoizeForBuild } from './build-memo';
 import { diseaseLiteratureCatalogue } from './research-literature-server';
+import { independentResearchPages } from './page-build-plan';
 
 // Every sitemap partition and the papers host share one derived catalogue.
 // Previously each endpoint recomputed every group, including full surveillance
@@ -13,7 +14,7 @@ import { diseaseLiteratureCatalogue } from './research-literature-server';
 export const siteSitemapGroups = memoizeForBuild(() => {
   const map = readSituationMap();
   const researchFile = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', 'research/index.json');
-  const research = existsSync(researchFile) ? readResearchIndex() : undefined;
+  const research = !independentResearchPages() && existsSync(researchFile) ? readResearchIndex() : undefined;
   const library = research ? diseaseLiteratureCatalogue() : undefined;
   return buildSitemapGroups({
     meta: siteMeta, diseases: diseaseIndex, reports: reportIndex,

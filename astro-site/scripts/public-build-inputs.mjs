@@ -10,7 +10,7 @@ export function isSurveillancePublicPath(path) {
     || /^site-data\/(?:current|meta|site-status)\.json$/.test(value);
 }
 
-export function preparePublicBuildInputs({ publicRoot, stageRoot, external = false }) {
+export function preparePublicBuildInputs({ publicRoot, stageRoot, external = false, independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' }) {
   publicRoot = resolve(publicRoot);
   if (!external) return { publicDir: publicRoot, staged: false, cleanup() {} };
   stageRoot = resolve(stageRoot);
@@ -20,6 +20,7 @@ export function preparePublicBuildInputs({ publicRoot, stageRoot, external = fal
   const link = (source, target) => {
     const key = relative(publicRoot, source);
     if (isSurveillancePublicPath(key)) return;
+    if (independentResearch && /^site-data\/research(?:\/|$)/.test(key.split(sep).join('/'))) return;
     if (key === 'site-data') {
       mkdirSync(target, { recursive: true });
       for (const name of readdirSync(source)) link(resolve(source, name), resolve(target, name));

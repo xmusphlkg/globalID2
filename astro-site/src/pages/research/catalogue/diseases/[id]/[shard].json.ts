@@ -1,7 +1,9 @@
 import type { APIRoute } from 'astro';
 import { diseaseLiteratureCatalogue, diseaseLiteratureBundle } from '../../../../../lib/research-literature-server';
+import { independentResearchPages } from '../../../../../lib/page-build-plan';
 
 export function getStaticPaths() {
+  if (independentResearchPages()) return [];
   return [...diseaseLiteratureCatalogue().byDisease.keys()].flatMap(id => diseaseLiteratureBundle(id).shards.map(shard => ({ params: { id, shard: shard.id } })));
 }
 export const GET: APIRoute = ({ params }) => {

@@ -43,6 +43,8 @@ async def generate_release_inputs(*, service, task, runtime, job, python_path,
         )
         if input_data.get("content_only"):
             generation_command.append("--content-only")
+            if input_data.get("literature_detached"):
+                generation_command.append("--reuse-published-research")
         await service._run_logged_command(
             task.task_uuid, title="Generate Site Data",
             cmd=generation_command,

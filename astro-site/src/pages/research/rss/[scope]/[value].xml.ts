@@ -7,10 +7,12 @@ import {
 } from '../../../../lib/research-feed';
 
 import { researchFeedCatalogue } from '../../../../lib/research-feed-catalogue';
+import { independentResearchPages } from '../../../../lib/page-build-plan';
 
 const fallbackSite = 'https://globalinfectiousdisease.com';
 
 export function getStaticPaths() {
+  if (independentResearchPages()) return [];
   return researchFeedCatalogue().definitions.map(definition => ({
     params: { scope: definition.scope, value: definition.value },
     props: { definition },

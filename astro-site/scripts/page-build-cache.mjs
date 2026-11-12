@@ -72,7 +72,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   const literature = diseaseLiteratureFromIndex(researchIndex);
   const literatureFingerprints = new Map([...literature.byDisease].map(([id, rows]) => [id, sha(JSON.stringify([literature.diseaseFacets.get(id), rows]))]));
   const facets = routes.facets ?? researchIndex.facets ?? {};
-  for (const [group, facetGroup] of Object.entries({ countries: 'countries', topics: 'topics', weekly: 'weeks' })) {
+  for (const [group, facetGroup] of Object.entries(env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' ? {} : { countries: 'countries', topics: 'topics', weekly: 'weeks' })) {
     for (const facet of facets[facetGroup] ?? []) {
       const slug = safeSegment(group === 'weekly' ? facet.week : facet.slug);
       const file = group === 'diseases' ? safeSegment(String(facet.disease_id).toLowerCase()) : slug;
@@ -81,7 +81,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   }
 
   // Library facets include bibliographic-only diseases; curated collections do not.
-  for (const [id, facet] of literature.diseaseFacets) {
+  for (const [id, facet] of env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' ? [] : literature.diseaseFacets) {
     const slug = safeSegment(facet.slug);
     add(`research:diseases:${slug}`, `research/diseases/${slug}`, [literatureFingerprints.get(id)]);
   }

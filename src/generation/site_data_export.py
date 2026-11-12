@@ -828,6 +828,7 @@ async def collect_site_export_context(
     country_scopes_exact: bool = False,
     surveillance_only: bool = False,
     static_content_only: bool = False,
+    reuse_published_research: bool = False,
     publication_changes: list[dict] | None = None,
     country_workers: int = 1,
 ) -> dict:
@@ -836,6 +837,8 @@ async def collect_site_export_context(
     # export must never hide an unapplied control-plane migration.
     if static_content_only and (surveillance_only or incremental_country_codes or recorded_at_as_of is not None):
         raise ValueError("Content-only export cannot refresh or re-date surveillance facts")
+    if reuse_published_research and not static_content_only:
+        raise ValueError("Published research reuse requires a content-only export")
     if not isinstance(country_workers, int) or not 1 <= country_workers <= 8:
         raise ValueError("Surveillance country workers must be between 1 and 8")
     frozen_meta = _read_json_file(output_dir / "meta.json", None) if static_content_only else None
@@ -1572,7 +1575,7 @@ async def collect_site_export_context(
         fresh_results_by_code.clear()
         refreshed_country_data.clear()
 
-        literature_export = {} if surveillance_only else await collect_literature_export(
+        literature_export = {} if surveillance_only or reuse_published_research else await collect_literature_export(
             session,
             diseases_by_id=diseases_by_id,
             surveillance_coverage={
@@ -1589,10 +1592,10 @@ async def collect_site_export_context(
 
     # The notice-based Situation module exports its own static shards; the
     # site-data export only needs its snapshot to link literature to events.
-    situation_latest = {} if surveillance_only else await latest_situation_snapshot()
+    situation_latest = {} if surveillance_only or reuse_published_research else await latest_situation_snapshot()
     situation_weekly: list = []
     situation_monthly: list = []
-    literature_export = literature_export if surveillance_only else attach_surveillance_evidence(
+    literature_export = literature_export if surveillance_only or reuse_published_research else attach_surveillance_evidence(
         literature_export,
         situation_latest,
         diseases_by_id=diseases_by_id,
@@ -1616,6 +1619,7 @@ async def collect_site_export_context(
         "report_details": report_details,
         "reports": reports,
         "literature_export": literature_export,
+        "reuse_published_research": reuse_published_research,
         "situation_latest": situation_latest,
         "situation_monthly": situation_monthly,
         "situation_weekly": situation_weekly,
@@ -1799,12 +1803,13 @@ def write_site_export_artifacts(
     remove_stale_json_files(public_site_data_dir / "reports", expected_report_files)
     report_phase("report JSON")
 
-    write_literature_artifacts(
-        literature_export,
-        output_dir,
-        public_site_data_dir=public_site_data_dir,
-    )
-    print(f"  ✓ research/index.json ({len(literature_export.get('articles') or [])} published articles)")
+    if not context.get("reuse_published_research"):
+        write_literature_artifacts(
+            literature_export,
+            output_dir,
+            public_site_data_dir=public_site_data_dir,
+        )
+        print(f"  ✓ research/index.json ({len(literature_export.get('articles') or [])} published articles)")
     report_phase("literature JSON")
 
     # ── Meta ──
@@ -2031,11 +2036,12 @@ def write_incremental_site_export_artifacts(
     remove_stale_json_files(output_dir / "reports", expected_report_files)
     remove_stale_json_files(public_site_data_dir / "reports", expected_report_files)
 
-    write_literature_artifacts(
-        context["literature_export"],
-        output_dir,
-        public_site_data_dir=public_site_data_dir,
-    )
+    if not context.get("reuse_published_research"):
+        write_literature_artifacts(
+            context["literature_export"],
+            output_dir,
+            public_site_data_dir=public_site_data_dir,
+        )
     # Reconcile explicit withdrawals only after replacement artifacts succeed.
     # Ordinary unchanged scopes remain untouched.
     for code in context.get("retired_country_codes") or ():
@@ -2069,6 +2075,7 @@ async def export(
     incremental_site: bool = False,
     country_scopes_exact: bool = False,
     content_only: bool = False,
+    reuse_published_research: bool = False,
 ) -> None:
     """Package and write one complete or scoped incremental export."""
     collect_started = time.perf_counter()
@@ -2081,6 +2088,7 @@ async def export(
         incremental_site=incremental_site,
         country_scopes_exact=country_scopes_exact,
         static_content_only=content_only,
+        reuse_published_research=reuse_published_research,
     )
     print(
         "  Phase timing: database reads and projections "

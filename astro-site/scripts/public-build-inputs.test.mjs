@@ -19,6 +19,10 @@ test('external public staging excludes surveillance while preserving source file
     for (const name of kept) assert.equal(readFileSync(join(staged.publicDir, name), 'utf8'), name);
     assert.equal(lstatSync(join(staged.publicDir, 'site-data/research')).isSymbolicLink(), true);
     staged.cleanup(); assert.equal(existsSync(stageRoot), false);
+    const independent = preparePublicBuildInputs({ publicRoot, stageRoot, external: true, independentResearch: true });
+    assert.equal(existsSync(join(independent.publicDir, 'site-data/research')), false);
+    assert.equal(readFileSync(join(independent.publicDir, 'site-data/reports/index.json'), 'utf8'), 'site-data/reports/index.json');
+    independent.cleanup();
     for (const name of [...excluded, ...kept]) assert.equal(existsSync(join(publicRoot, name)), true);
     assert.throws(() => preparePublicBuildInputs({ publicRoot, stageRoot: join(publicRoot, 'nested'), external: true }), /separate/);
     assert.equal(isSurveillancePublicPath('site-data/research/countries/jp.json'), false);

@@ -33,15 +33,16 @@ new Worker routes can serve the current generation or a specific immutable
 generation; page assets and interactive requests stay pinned to that generation.
 The Pages routing change is packaged only when the independent channel is
 enabled, so deploying ordinary site changes before initialization does not
-capture research paths prematurely. No new route has been deployed yet.
+capture research paths prematurely. The Pages route is now deployed and serves
+the current independent research generation.
 
 The current Cloudflare credential returned HTTP 403 for Workers Routes access.
 The new canonical Research Radar links and its sharded sitemap therefore use
 the main Pages hostname, which can serve the new path without additional zone
 permissions. Previously published direct `papers.globalinfectiousdisease.com`
 links still resolve to their old R2 objects; making those old URLs follow the
-new publication would require Workers Routes access. The existing static
-site publication continues to run until the new generation is initialized.
+new publication would require Workers Routes access. Static site publication
+continues independently after the first research generation is initialized.
 
 The isolated Astro builder uses a private research snapshot and a separate
 working directory. A real article was rendered in English, Chinese and French
@@ -61,3 +62,25 @@ An offline test used that real three-language article build (292 output files)
 with an in-memory object store and a synthetic JSON index. It exercised the
 catalogue, object uploads and pointer switch without network or model calls;
 it does not measure Cloudflare upload speed or the complete research backlog.
+
+## Main-site build reuse
+
+When independent literature publication and the content-only site release are
+enabled, the site export reuses the snapshot named by
+`exports/research-current-receipt.json`. It installs the build and browser data
+from the same completed publication under the research artifact lock, without
+querying or rewriting individual literature records. If the receipt or snapshot
+is missing, the release fails instead of silently publishing inconsistent data.
+The independent literature publisher continues to generate its own snapshots.
+
+The main-site build omits research article, collection, catalogue, feed, and
+sitemap shard pages that the independent publication serves. It still renders
+the main site, including its homepage and disease panels, against the reused
+published snapshot. Public staging omits the research JSON tree when the worker
+serves those paths. Ordinary site checks continue to cover the main site.
+
+On 2026-11-12 a read-only test against the local published snapshot reused
+approximately 2.3 GB of research data in 22 seconds; a content-only database
+projection without the literature rebuild took 1.5 seconds. An isolated full
+main-site pipeline produced 4,124 pages and passed its main-site checks. These
+are local measurements, not an end-to-end production deployment time.

@@ -11,8 +11,10 @@ import { localizedRegionName, translateUi } from '../../../utils/i18n';
 import { researchSocialImage } from '../../../lib/research-publishing';
 import { researchArticleVersion } from '../../../lib/research-article-version';
 import { researchRelationships, researchTermLabel } from '../../../lib/research-relationships';
+import { independentResearchPages } from '../../../lib/page-build-plan';
 
 export function getStaticPaths() {
+  if (independentResearchPages()) return [];
   const plan = process.env.GIDS_RESEARCH_BUILD_PLAN
     ? new Set(JSON.parse(readFileSync(process.env.GIDS_RESEARCH_BUILD_PLAN, 'utf8')).selected as string[])
     : null;
