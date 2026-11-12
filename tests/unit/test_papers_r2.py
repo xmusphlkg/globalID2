@@ -102,6 +102,26 @@ def test_template_release_does_not_switch_when_assets_fail(tmp_path, monkeypatch
         publish_papers_site(tmp_path, config, client=Client(), template_candidate=candidate, lock_dir=tmp_path / 'locks')
 
 
+def test_template_release_rejects_concurrent_pointer_change(tmp_path, monkeypatch):
+    from src.services.data_release import papers_templates_publish
+    candidate = tmp_path / 'candidate'
+    candidate.mkdir()
+    (candidate / 'current.json').write_bytes(b'new')
+    class Client:
+        pointer = b'old'
+        def get_object(self, key): return self.pointer
+        def put_object_conditional(self, key, body, *, previous, **kwargs):
+            self.pointer = b'concurrent'
+            raise R2S3Error('precondition', status=412)
+    client = Client()
+    monkeypatch.setattr(papers_templates_publish, 'publish_candidate', lambda *a, **kw: None)
+    monkeypatch.setattr(papers_r2, '_publish_papers_site', lambda *a, **kw: None)
+    config = R2PapersConfig(account_id='a', bucket='b', access_key_id='c', secret_access_key='d')
+    with pytest.raises(R2S3Error, match='precondition'):
+        publish_papers_site(tmp_path, config, client=client, template_candidate=candidate, lock_dir=tmp_path / 'locks')
+    assert client.pointer == b'concurrent'
+
+
 def test_derive_r2_credentials_rejects_inactive_or_blank_tokens(monkeypatch) -> None:
     monkeypatch.setattr(papers_r2, "_derived_credentials", {})
 
