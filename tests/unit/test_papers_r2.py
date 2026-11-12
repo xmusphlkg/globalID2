@@ -58,6 +58,50 @@ def test_derive_r2_credentials_uses_token_id_and_sha256(monkeypatch) -> None:
     assert len(calls) == 1
 
 
+def test_template_release_stages_before_assets_then_switches_pointer(tmp_path, monkeypatch):
+    from src.services.data_release import papers_templates_publish
+    candidate = tmp_path / 'candidate'
+    candidate.mkdir()
+    (candidate / 'current.json').write_bytes(b'new')
+    events = []
+    class Client:
+        pointer = b'old'
+        def get_object(self, key): return self.pointer
+        def put_object_conditional(self, key, body, *, previous, **kwargs):
+            events.append('switch')
+            assert previous == self.pointer
+            self.pointer = body
+    client = Client()
+    monkeypatch.setattr(papers_templates_publish, 'publish_candidate',
+                        lambda *a, **kw: events.append('stage'))
+    def publish(*args, **kwargs):
+        assert kwargs['preserve_static_articles']
+        assert client.pointer == b'old'
+        events.append('assets')
+        return 'published'
+    monkeypatch.setattr(papers_r2, '_publish_papers_site', publish)
+    config = R2PapersConfig(account_id='a', bucket='b', access_key_id='c', secret_access_key='d')
+    assert publish_papers_site(tmp_path, config, client=client, template_candidate=candidate, lock_dir=tmp_path / 'locks') == 'published'
+    assert events == ['stage', 'assets', 'switch']
+    assert client.pointer == b'new'
+
+
+def test_template_release_does_not_switch_when_assets_fail(tmp_path, monkeypatch):
+    from src.services.data_release import papers_templates_publish
+    candidate = tmp_path / 'candidate'
+    candidate.mkdir()
+    (candidate / 'current.json').write_bytes(b'new')
+    class Client:
+        def get_object(self, key): return b'old'
+        def put_object_conditional(self, *args, **kwargs): pytest.fail('pointer switched')
+    monkeypatch.setattr(papers_templates_publish, 'publish_candidate', lambda *a, **kw: None)
+    def fail(*args, **kwargs): raise R2S3Error('asset failure')
+    monkeypatch.setattr(papers_r2, '_publish_papers_site', fail)
+    config = R2PapersConfig(account_id='a', bucket='b', access_key_id='c', secret_access_key='d')
+    with pytest.raises(R2S3Error, match='asset failure'):
+        publish_papers_site(tmp_path, config, client=Client(), template_candidate=candidate, lock_dir=tmp_path / 'locks')
+
+
 def test_derive_r2_credentials_rejects_inactive_or_blank_tokens(monkeypatch) -> None:
     monkeypatch.setattr(papers_r2, "_derived_credentials", {})
 
@@ -595,3 +639,36 @@ def test_same_size_tampering_cannot_be_skipped_by_remote_match(tmp_path):
     with pytest.raises(R2S3Error, match="checksum"):
         publish_papers_site(papers, config, client=client, verify_public=False)
     assert client.objects["research/cards/slug.png"] == b"png-bytes"
+
+
+def test_template_mode_keeps_old_static_article_and_assets_without_reupload(tmp_path):
+    papers = _seed_papers(tmp_path)
+    assets = papers / '_astro'; assets.mkdir()
+    (assets / 'old.css').write_text('body{color:red}')
+    (papers / 'papers-manifest.json').unlink()
+    client = FakeR2(); config = R2PapersConfig('acct', 'bucket', 'key', 'secret')
+    publish_papers_site(papers, config, client=client, verify_public=False)
+    key = 'research/articles/slug/'
+    old = client.objects[key]
+    previous = json.loads(client.objects['papers-manifest.json'])
+    previous_article = next(x for x in previous['files'] if x['key'] == key)
+    client.objects['paper-template-v2/current.json'] = b'{"schema":1}'
+    (papers / 'research/articles/slug/index.html').write_text('<html>new shared styles</html>')
+    (assets / 'old.css').unlink()
+    (assets / 'new.css').write_text('body{color:blue}')
+    (papers / 'papers-manifest.json').unlink()
+    result = publish_papers_site(papers, config, client=client, verify_public=False, preserve_static_articles=True)
+    assert result.uploaded == 1
+    assert client.objects[key] == old
+    assert '_astro/old.css' in client.objects and '_astro/new.css' in client.objects
+    manifest = json.loads(client.objects['papers-manifest.json'])
+    assert next(x for x in manifest['files'] if x['key'] == key)['sha256'] == previous_article['sha256']
+    assert '_astro/old.css' in manifest['template_legacy_asset_keys']
+
+
+def test_template_mode_requires_active_pointer_before_mutation(tmp_path):
+    papers = _seed_papers(tmp_path); client = FakeR2()
+    config = R2PapersConfig('acct', 'bucket', 'key', 'secret')
+    with pytest.raises(R2S3Error, match='not active'):
+        publish_papers_site(papers, config, client=client, verify_public=False, preserve_static_articles=True)
+    assert not client.objects

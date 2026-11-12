@@ -9,15 +9,15 @@ function fixture() {
   const objects = new Map<string, string>();
   const put = (group: string, value: unknown) => {
     const raw = JSON.stringify(value), sha = hash(raw);
-    objects.set(`paper-template-v1/${group}/${sha}.json`, raw);
+    objects.set(`paper-template-v2/${group}/${sha}.json`, raw);
     return sha;
   };
   const slug = 'paper-1';
-  const record = put('records', { schema: 1, slug, head: ['<title>Paper</title>'], main: '<main id="main-content">Evidence</main>' });
+  const record = put('records', { schema: 2, slug, locales: { en: { head: ['<title>Paper</title>'], main: '<main id="main-content">Evidence</main>' } } });
   const template = put('templates', { schema: 1, chunks: ['<html><head>', { field: 'head', index: 0 }, '</head><body>', { field: 'main' }, '</body></html>'] });
-  const index = put('indexes', { schema: 1, locale: 'en', items: { [slug]: record } });
-  const generation = put('generations', { schema: 1, locales: { en: { template, indexes: { [hash(slug).slice(0,2)]: index } } } });
-  objects.set('paper-template-v1/current.json', JSON.stringify({ schema: 1, generation }));
+  const index = put('indexes', { schema: 1, items: { [slug]: record } });
+  const generation = put('generations', { schema: 1, locales: { en: { template } }, indexes: { [hash(slug).slice(0,2)]: index } });
+  objects.set('paper-template-v2/current.json', JSON.stringify({ schema: 1, generation }));
   objects.set('research/articles/paper-1/', '<html>legacy</html>');
   const keys: string[] = [];
   const env = { DATA: { async get(key: string) {
@@ -42,7 +42,7 @@ test('serves complete SSR HTML, correct metadata and conditional requests', asyn
 });
 
 test('corrupted content falls back to the retained static page', async () => {
-  const f=fixture(); f.objects.set(`paper-template-v1/records/${f.record}.json`, '{}');
+  const f=fixture(); f.objects.set(`paper-template-v2/records/${f.record}.json`, '{}');
   const res=await servePaper(new Request('https://papers.example/research/articles/paper-1/'),f.env);
   assert.equal(res.status,200); assert.equal(res.headers.get('x-gids-paper-mode'),'legacy');
   assert.equal(await res.text(),'<html>legacy</html>');

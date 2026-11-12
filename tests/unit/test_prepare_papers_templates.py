@@ -30,10 +30,10 @@ def test_style_only_reuses_all_records_and_indexes(tmp_path):
     pointer=json.loads((second/'current.json').read_bytes())
     gen=json.loads((second/'generations'/f"{pointer['generation']}.json").read_bytes())
     spec=gen['locales']['en']; bucket=hashlib.sha256(b'paper-a').hexdigest()[:2]
-    index=json.loads((second/'indexes'/f"{spec['indexes'][bucket]}.json").read_bytes())
+    index=json.loads((second/'indexes'/f"{gen['indexes'][bucket]}.json").read_bytes())
     record=json.loads((second/'records'/f"{index['items']['paper-a']}.json").read_bytes())
     template=json.loads((second/'templates'/f"{spec['template']}.json").read_bytes())
-    assert assemble_paper(template,record) == page('paper-a','new')
+    assert assemble_paper(template,{'schema':1,'slug':record['slug'],**record['locales']['en']}) == page('paper-a','new')
 
 
 def test_refuses_inconsistent_template_and_cleans_partial_candidate(tmp_path):

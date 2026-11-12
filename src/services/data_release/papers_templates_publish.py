@@ -4,7 +4,7 @@ The old static Papers objects are never touched. This is an explicit migration
 entry point, not yet part of the existing site-release task.
 """
 from __future__ import annotations
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import gzip
 import hashlib
 import json
@@ -13,7 +13,7 @@ import re
 import time
 from .papers_r2 import R2S3Error
 
-PREFIX='paper-template-v1'
+PREFIX='paper-template-v2'
 _HASH=re.compile(r'[a-f0-9]{64}\Z')
 
 
@@ -36,28 +36,36 @@ def validate_candidate(directory: Path) -> tuple[bytes,dict[str,Path],dict]:
     generation=current.get('generation')
     _,manifest=_load(root,'generations',generation)
     files={f'generations/{generation}.json':root/'generations'/f'{generation}.json'}
-    counts={}
     locales=manifest.get('locales')
     if not isinstance(locales,dict) or set(locales)!={'en','zh','fr'}: raise ValueError('Invalid locale manifest')
-    for locale,spec in locales.items():
-        if not isinstance(spec,dict) or not isinstance(spec.get('indexes'),dict): raise ValueError('Invalid locale')
+    for spec in locales.values():
+        if not isinstance(spec,dict): raise ValueError('Invalid locale')
         template=spec.get('template');_load(root,'templates',template)
         files[f'templates/{template}.json']=root/'templates'/f'{template}.json'
-        count=0
-        for shard,index_hash in spec['indexes'].items():
-            if not isinstance(shard,str) or not re.fullmatch(r'[a-f0-9]{2}',shard): raise ValueError('Invalid shard')
-            _,index=_load(root,'indexes',index_hash)
-            if index.get('locale')!=locale or not isinstance(index.get('items'),dict): raise ValueError('Invalid index')
-            files[f'indexes/{index_hash}.json']=root/'indexes'/f'{index_hash}.json'
-            for slug,record_hash in index['items'].items():
-                if not isinstance(slug,str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]*',slug) or hashlib.sha256(slug.encode()).hexdigest()[:2]!=shard:
-                    raise ValueError('Invalid paper identity')
-                _,record=_load(root,'records',record_hash)
-                if record.get('slug')!=slug or not isinstance(record.get('main'),str) or not isinstance(record.get('head'),list): raise ValueError('Invalid paper record')
-                files[f'records/{record_hash}.json']=root/'records'/f'{record_hash}.json'
-                count+=1
-        if not count: raise ValueError('Empty paper locale')
-        counts[locale]=count
+    indexes=manifest.get('indexes')
+    if not isinstance(indexes,dict): raise ValueError('Invalid indexes')
+    count=0
+    for shard,index_hash in indexes.items():
+        if not isinstance(shard,str) or not re.fullmatch(r'[a-f0-9]{2}',shard): raise ValueError('Invalid shard')
+        _,index=_load(root,'indexes',index_hash)
+        if not isinstance(index.get('items'),dict): raise ValueError('Invalid index')
+        files[f'indexes/{index_hash}.json']=root/'indexes'/f'{index_hash}.json'
+        for slug,record_hash in index['items'].items():
+            if not isinstance(slug,str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]*',slug) or hashlib.sha256(slug.encode()).hexdigest()[:2]!=shard:
+                raise ValueError('Invalid paper identity')
+            if not isinstance(record_hash,str) or not _HASH.fullmatch(record_hash): raise ValueError('Invalid record digest')
+            path=root/'records'/f'{record_hash}.json'
+            if path.is_symlink() or not path.is_file(): raise ValueError('Missing or unsafe paper record')
+            raw=path.read_bytes()
+            if hashlib.sha256(raw).hexdigest()!=record_hash: raise ValueError('Candidate checksum mismatch')
+            record=json.loads(raw)
+            if record.get('schema')!=2 or record.get('slug')!=slug or not isinstance(record.get('locales'),dict) or set(record['locales'])!={'en','zh','fr'}: raise ValueError('Invalid paper record')
+            for item in record['locales'].values():
+                if not isinstance(item,dict) or not isinstance(item.get('main'),str) or not isinstance(item.get('head'),list): raise ValueError('Invalid localized record')
+            files[f'records/{record_hash}.json']=root/'records'/f'{record_hash}.json'
+            count+=1
+    if not count: raise ValueError('Empty paper index')
+    counts={locale:count for locale in locales}
     return pointer,files,counts
 
 
@@ -90,14 +98,31 @@ def publish_candidate(directory: Path, client, *, workers: int=32, activate: boo
     uploaded = processed = 0
     started = last_report = time.monotonic()
     print(f'Template staging: {len(files)} immutable objects; storage upper bound {bound} bytes', flush=True)
+    # Bound queued work and report completions rather than submission order:
+    # one slow object must not hide progress by blocking Executor.map().
+    entries = iter(sorted(files.items()))
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        for changed in pool.map(upload,sorted(files.items())):
-            uploaded += int(changed)
-            processed += 1
-            now = time.monotonic()
-            if now - last_report >= 15:
-                print(f'Template staging: {processed}/{len(files)}; uploaded={uploaded}; reused={processed-uploaded}; seconds={now-started:.1f}', flush=True)
-                last_report = now
+        pending = set()
+        def fill():
+            while len(pending) < workers * 2:
+                item = next(entries, None)
+                if item is None: break
+                pending.add(pool.submit(upload, item))
+        fill()
+        try:
+            while pending:
+                done, pending = wait(pending, return_when=FIRST_COMPLETED)
+                for future in done:
+                    uploaded += int(future.result())
+                    processed += 1
+                fill()
+                now = time.monotonic()
+                if now - last_report >= 15:
+                    print(f'Template staging: {processed}/{len(files)}; uploaded={uploaded}; reused={processed-uploaded}; seconds={now-started:.1f}', flush=True)
+                    last_report = now
+        except BaseException:
+            for future in pending: future.cancel()
+            raise
     if activate:
         try: client.put_object_conditional(pointer_key,pointer,previous=previous,cache_control='no-store')
         except R2S3Error as error:

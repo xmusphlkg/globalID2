@@ -44,13 +44,13 @@ def prepare(source: Path, destination: Path) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix='.papers-template-', dir=destination.parent))
     try:
-        manifest = {'schema': 1, 'locales': {}}
+        manifest = {'schema': 1, 'locales': {}, 'indexes': {}}
+        localized = {}
         counts = {}
         for locale, prefix in [('en', ''), ('zh', 'zh'), ('fr', 'fr')]:
             pages = sorted((source / prefix / 'research/articles').glob('*/index.html'))
             if not pages: raise ValueError(f'No paper pages for {locale}')
             shell = None
-            shards = {}
             for page in pages:
                 if page.is_symlink(): raise ValueError('Symlink paper page')
                 html = page.read_text(encoding='utf-8')
@@ -63,15 +63,20 @@ def prepare(source: Path, destination: Path) -> dict:
                     if _put(work, 'templates', pair.template) != shell: raise ValueError('Template digest mismatch')
                 elif shell != identity:
                     raise ValueError(f'Multiple {locale} template shapes; inspect before migration: {page}')
-                digest = _put(work, 'records', pair.record)
-                bucket = hashlib.sha256(pair.record['slug'].encode()).hexdigest()[:2]
-                entries = shards.setdefault(bucket, {})
-                if pair.record['slug'] in entries: raise ValueError('Duplicate slug')
-                entries[pair.record['slug']] = digest
-            indexes = {bucket: _put(work, 'indexes', {'schema': 1, 'locale': locale, 'items': entries})
-                       for bucket, entries in sorted(shards.items())}
-            manifest['locales'][locale] = {'template': shell, 'indexes': indexes}
+                slug=pair.record['slug']
+                entries=localized.setdefault(slug, {})
+                if locale in entries: raise ValueError('Duplicate localized slug')
+                entries[locale] = {'head':pair.record['head'], 'main':pair.record['main']}
+            manifest['locales'][locale] = {'template': shell}
             counts[locale] = len(pages)
+        shards = {}
+        for slug, entries in sorted(localized.items()):
+            if set(entries) != {'en','zh','fr'}: raise ValueError(f'Missing localized paper: {slug}')
+            digest = _put(work, 'records', {'schema':2, 'slug':slug, 'locales':entries})
+            bucket = hashlib.sha256(slug.encode()).hexdigest()[:2]
+            shards.setdefault(bucket, {})[slug] = digest
+        manifest['indexes'] = {bucket: _put(work, 'indexes', {'schema':1, 'items':entries})
+                               for bucket,entries in sorted(shards.items())}
         generation = _put(work, 'generations', manifest)
         (work / 'current.json').write_bytes(_json({'schema': 1, 'generation': generation}))
         os.rename(work, destination)

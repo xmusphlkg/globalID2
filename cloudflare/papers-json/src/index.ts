@@ -2,7 +2,7 @@
 import { assemblePaper, type PaperRecord, type PaperTemplate } from '../../surveillance-data/src/papers-template.ts';
 
 type Binding = Pick<R2Bucket, 'get'>;
-const PREFIX = 'paper-template-v1';
+const PREFIX = 'paper-template-v2';
 const HASH = /^[a-f0-9]{64}$/;
 const encoder = new TextEncoder();
 const isObject = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -60,14 +60,14 @@ export async function servePaper(request: Request, env: Env): Promise<Response> 
     const current = await readJson(env.DATA, 'current.json', 2048);
     if (!isObject(current) || current.schema !== 1 || typeof current.generation !== 'string' || !HASH.test(current.generation)) throw new Error('Invalid generation');
     const generation = await readJson(env.DATA, `generations/${current.generation}.json`, 262144, current.generation);
-    if (!isObject(generation) || generation.schema !== 1 || !isObject(generation.locales)) throw new Error('Invalid generation manifest');
+    if (!isObject(generation) || generation.schema !== 1 || !isObject(generation.locales) || !isObject(generation.indexes)) throw new Error('Invalid generation manifest');
     const spec = generation.locales[locale];
-    if (!isObject(spec) || typeof spec.template !== 'string' || !HASH.test(spec.template) || !isObject(spec.indexes)) throw new Error('Invalid locale');
+    if (!isObject(spec) || typeof spec.template !== 'string' || !HASH.test(spec.template)) throw new Error('Invalid locale');
     const bucket = (await digest(encoder.encode(slug))).slice(0, 2);
-    const indexHash = spec.indexes[bucket];
+    const indexHash = generation.indexes[bucket];
     if (typeof indexHash !== 'string' || !HASH.test(indexHash)) return await legacy(request, env.DATA);
     const index = await readJson(env.DATA, `indexes/${indexHash}.json`, 2097152, indexHash);
-    if (!isObject(index) || index.schema !== 1 || index.locale !== locale || !isObject(index.items)) throw new Error('Invalid index');
+    if (!isObject(index) || index.schema !== 1 || !isObject(index.items)) throw new Error('Invalid index');
     const recordHash = Object.prototype.hasOwnProperty.call(index.items, slug) ? index.items[slug] : null;
     if (typeof recordHash !== 'string' || !HASH.test(recordHash)) return await legacy(request, env.DATA);
     const [rawTemplate, rawRecord] = await Promise.all([
@@ -75,8 +75,9 @@ export async function servePaper(request: Request, env: Env): Promise<Response> 
       readJson(env.DATA, `records/${recordHash}.json`, 2097152, recordHash),
     ]);
     if (!isObject(rawTemplate) || !isObject(rawRecord)) throw new Error('Invalid paper content');
-    const template = rawTemplate as PaperTemplate, record = rawRecord as PaperRecord;
-    if (record.slug !== slug) throw new Error('Paper identity mismatch');
+    if (rawRecord.schema !== 2 || rawRecord.slug !== slug || !isObject(rawRecord.locales) || !isObject(rawRecord.locales[locale])) throw new Error('Paper identity mismatch');
+    const template = rawTemplate as PaperTemplate, localized = rawRecord.locales[locale];
+    const record = { schema: 1, slug, head: localized.head, main: localized.main } as PaperRecord;
     const html = assemblePaper(template, record);
     const etag = `"${spec.template}-${recordHash}"`;
     const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=0, must-revalidate', 'X-Content-Type-Options': 'nosniff', ETag: etag, 'X-GIDS-Paper-Mode': 'template' });

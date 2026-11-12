@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,15 +69,32 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Skip the public HEAD/GET sample check after upload",
     )
+    parser.add_argument(
+        "--preserve-static-articles", action="store_true",
+        help="Retain the previously published static article fallback while serving active JSON templates.",
+    )
+    parser.add_argument(
+        "--template-mode", action="store_true",
+        default=os.environ.get("R2_PAPERS_TEMPLATE_MODE", "").lower() in {"1", "true", "yes"},
+        help="Prepare and atomically publish JSON templates after the initial cutover.",
+    )
     args = parser.parse_args(argv)
     config = _config_from_env()
-    result = publish_papers_site(
-        args.source_dir,
-        config,
-        verify_public=not args.skip_public_verify,
-        workers=args.workers,
-        max_total_bytes=args.max_total_bytes,
-    )
+    with tempfile.TemporaryDirectory(prefix="papers-release-") as temporary:
+        candidate = None
+        if args.template_mode:
+            from scripts.prepare_papers_templates import prepare
+            candidate = Path(temporary) / "candidate"
+            prepare(args.source_dir, candidate)
+        result = publish_papers_site(
+            args.source_dir,
+            config,
+            verify_public=not args.skip_public_verify,
+            workers=args.workers,
+            max_total_bytes=args.max_total_bytes,
+            preserve_static_articles=args.preserve_static_articles,
+            template_candidate=candidate,
+        )
     print(
         json.dumps(
             {

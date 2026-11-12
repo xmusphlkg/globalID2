@@ -17,10 +17,10 @@ class Fake:
 def test_stage_reuses_objects_and_switches_pointer_last(tmp_path):
  src=tmp_path/'src';populate(src,'old'); candidate=tmp_path/'candidate';prepare(src,candidate)
  client=Fake();r=publish_candidate(candidate,client,workers=2)
- assert r['uploaded']>0 and not r['activated'] and 'paper-template-v1/current.json' not in client.objects
+ assert r['uploaded']>0 and not r['activated'] and 'paper-template-v2/current.json' not in client.objects
  r=publish_candidate(candidate,client,workers=2,activate=True)
- assert r['uploaded']==0 and r['activated'] and client.writes[-1]=='paper-template-v1/current.json'
- assert client.objects['paper-template-v1/current.json']==(candidate/'current.json').read_bytes()
+ assert r['uploaded']==0 and r['activated'] and client.writes[-1]=='paper-template-v2/current.json'
+ assert client.objects['paper-template-v2/current.json']==(candidate/'current.json').read_bytes()
 
 def test_damaged_candidate_or_budget_fails_before_any_mutation(tmp_path):
  src=tmp_path/'src';populate(src,'old'); candidate=tmp_path/'candidate';prepare(src,candidate)
