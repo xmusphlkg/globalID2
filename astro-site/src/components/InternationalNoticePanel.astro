@@ -26,19 +26,16 @@ const { alerts = [], dataUrl, diseaseId, locale, limit = 8, contextCodes = [], m
 const COPY = {
   en: {
     heading: 'Official outbreak alerts',
-    lead: 'Disease-in-place alerts read from WHO, ECDC, Africa CDC and PAHO reports, newest first.',
     map: 'Open on the situation map',
     place: 'Show this place on the map',
   },
   zh: {
     heading: '官方疫情警报',
-    lead: '从世卫组织、欧洲疾控中心、非洲疾控中心和泛美卫生组织报告中读取的“某病在某地”警报，按时间倒序。',
     map: '在态势地图中打开',
     place: '在地图上显示此地',
   },
   fr: {
     heading: 'Alertes officielles de flambée',
-    lead: 'Alertes « maladie en un lieu » lues dans les rapports de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS, du plus récent au plus ancien.',
     map: 'Ouvrir sur la carte de situation',
     place: 'Afficher ce lieu sur la carte',
   },
@@ -74,26 +71,12 @@ const PANEL_CSS = `  .intl-panel {
     margin-bottom: 1rem;
   }
   .intl-panel-heading { margin-top: 0; }
-  .intl-panel-jump {
-    display: inline-flex;
-    align-items: center;
-    min-height: 2.5rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-decoration: none;
-  }
   .intl-panel-list {
     display: grid;
-    gap: 0;
+    gap: 0.6rem;
     margin: 0;
     padding: 0;
     list-style: none;
-  }
-  .intl-panel-item {
-    padding: 1rem 0;
-    border-top: 1px solid rgb(var(--border));
-    min-width: 0;
   }
   .intl-panel-title {
     font-size: 0.95rem;
@@ -143,9 +126,6 @@ const PANEL_CSS = `  .intl-panel {
     color: rgb(var(--color-teal));
     background: rgb(var(--surface-raised));
   }
-  .intl-panel-map { color: rgb(var(--color-teal)); font-weight: 650; text-decoration: none; }
-  .intl-panel-map { font-size: 0.72rem; }
-  .intl-panel-map:hover { text-decoration: underline; }
   .intl-panel-counts { margin: 0.35rem 0 0; font-size: 0.8rem; font-weight: 600; color: rgb(var(--text)); }
   .intl-panel-quote { margin: 0.4rem 0 0; padding-left: 0.6rem; border-left: 2px solid rgb(var(--border-soft)); font-size: 0.8rem; font-style: italic; color: rgb(var(--text-muted)); }
 `;
@@ -162,13 +142,12 @@ const PANEL_CSS = `  .intl-panel {
         <div class="intl-panel-header">
           <div>
             <h2 id="intl-panel-heading" class="figure-title intl-panel-heading">{copy.heading}</h2>
-            <p class="figure-caption">{copy.lead}</p>
           </div>
-          {mapHref && <a class="site-action-secondary intl-panel-jump" href={mapHref}>{copy.map}</a>}
+          {mapHref && <a class="research-card-action" href={mapHref}>{copy.map}</a>}
         </div>
         <ul class="intl-panel-list">
           {rows.map((alert) => (
-            <li class="intl-panel-item">
+            <li class="research-card research-card-compact intl-panel-item">
               <a class="intl-panel-title" href={alert.url} target="_blank" rel="noopener noreferrer">
                 {diseaseName(alert, locale)} · {alert.admin_area ? `${alert.admin_area}, ` : ''}{countryName(alert, locale)}
               </a>
@@ -176,7 +155,6 @@ const PANEL_CSS = `  .intl-panel {
                 <span class="intl-panel-date">{formatDay(alert.published_date, locale)}</span>
                 <span class="intl-panel-source">{sourceLabel(alert, locale)}</span>
                 <span>{STATUS_LABELS[alert.status][locale]}</span>
-                <a class="intl-panel-map" href={`${prefix}/situation/?place=${encodeURIComponent(alert.alert_id)}`}>{copy.place}</a>
               </p>
               {countsLine(alert, locale) && <p class="intl-panel-counts">{countsLine(alert, locale)}</p>}
               {alertSummary(alert, locale) && <p class="intl-panel-summary">{alertSummary(alert, locale)}</p>}
@@ -188,6 +166,9 @@ const PANEL_CSS = `  .intl-panel {
                   ))}
                 </p>
               )}
+              <div class="research-card-actions">
+                <a class="research-card-action" href={`${prefix}/situation/?place=${encodeURIComponent(alert.alert_id)}`}>{copy.place}</a>
+              </div>
             </li>
           ))}
         </ul>
