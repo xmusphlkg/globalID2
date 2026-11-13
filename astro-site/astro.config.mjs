@@ -14,19 +14,20 @@ const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 0);
 if (!Number.isInteger(renderWorkers) || renderWorkers < 0 || renderWorkers > 32) {
   throw new Error('GIDS_ASTRO_RENDER_WORKERS must be an integer from 0 to 32');
 }
-if (process.env.GIDS_RESEARCH_BUILD_DIR && process.env.GIDS_REPORTS_BUILD_DIR) {
-  throw new Error('Research and reports builds require separate workspaces');
+if ([process.env.GIDS_RESEARCH_BUILD_DIR, process.env.GIDS_REPORTS_BUILD_DIR, process.env.GIDS_COUNTRY_BUILD_DIR].filter(Boolean).length > 1) {
+  throw new Error('Research, reports and country builds require separate workspaces');
 }
-const isolatedBuildDir = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_REPORTS_BUILD_DIR;
+const isolatedBuildDir = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_REPORTS_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR;
+const privateRoot = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR;
 export default defineConfig({
-  ...(process.env.GIDS_RESEARCH_BUILD_DIR ? { root: resolve(process.env.GIDS_RESEARCH_BUILD_DIR) } : {}),
+  ...(privateRoot ? { root: resolve(privateRoot) } : {}),
   experimental: { parallelPrerender: renderWorkers ? { workers: renderWorkers } : false },
   ...(process.env.GIDS_BUILD_PUBLIC_DIR ? { publicDir: resolve(process.env.GIDS_BUILD_PUBLIC_DIR) } : {}),
   ...(isolatedBuildDir ? {
     srcDir: resolve(isolatedBuildDir, 'src'),
     publicDir: resolve(isolatedBuildDir, 'public'),
     outDir: resolve(isolatedBuildDir, 'dist'),
-    ...(process.env.GIDS_RESEARCH_BUILD_DIR ? { cacheDir: resolve(isolatedBuildDir, '.astro') } : {}),
+    ...(privateRoot ? { cacheDir: resolve(isolatedBuildDir, '.astro') } : {}),
   } : {}),
   site: siteUrl,
   output: 'static',
@@ -41,7 +42,7 @@ export default defineConfig({
     inlineStylesheets: 'auto',
   },
   vite: {
-    ...(process.env.GIDS_RESEARCH_BUILD_DIR ? { ssr: { noExternal: ['@astrojs/react'] } } : {}),
+    ...(privateRoot ? { ssr: { noExternal: ['@astrojs/react'] } } : {}),
     plugins: [{
       name: 'local-subscription-options',
       apply: 'serve',

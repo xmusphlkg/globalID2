@@ -67,6 +67,8 @@ async def execute_situation_data_release(service, task, *, runtime) -> dict:
     state, public = root / "exports/situation-state", root / "exports/situation-data"
     run = root / "exports/situation-runs" / task.task_uuid
     receipt = await asyncio.to_thread(_ready_candidate, run, task_uuid=task.task_uuid, dirty_ids=dirty_ids)
+    from .publication_recovery import require_candidate, save_recovery
+    require_candidate(service, receipt is not None)
     python = service._python_executable()
     config = service._config()
     env = {"CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
@@ -76,6 +78,9 @@ async def execute_situation_data_release(service, task, *, runtime) -> dict:
         "R2_SECRET_ACCESS_KEY": str(getattr(config, "r2_secret_access_key", "")),
         "R2_ENDPOINT_URL": str(getattr(config, "r2_endpoint_url", "")),
         "R2_ACCOUNT_ID": str(getattr(config, "r2_account_id", "") or service._cloudflare_account_id())}
+    expected_generations = data.get("publication_expected_generations") or {}
+    if "situation" in expected_generations:
+        env["GIDS_PUBLICATION_EXPECTED_BASELINE_JSON"] = json.dumps(expected_generations["situation"])
     export_seconds = 0.0
     if receipt is None:
         export_started = time.monotonic()
@@ -94,6 +99,7 @@ async def execute_situation_data_release(service, task, *, runtime) -> dict:
                     metadata={"event": "situation_json_export"}, timeout_seconds=runtime.generate_timeout_seconds)
             receipt = await asyncio.to_thread(_freeze_candidate, run, public, task_uuid=task.task_uuid, dirty_ids=dirty_ids)
         export_seconds = time.monotonic() - export_started
+    await asyncio.to_thread(save_recovery, root, task, run / "ready.json")
     async with runtime.get_database() as db:
         await validate_situation_selection(db, dirty_ids, task_uuid=task.task_uuid)
     await runtime.task_manager.update_task_progress(task.task_uuid, 65)

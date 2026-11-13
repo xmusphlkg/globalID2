@@ -155,6 +155,7 @@ def test_publish_pending_groups_only_scopes(monkeypatch):
         "knowledge": ["D001"],
         "surveillance_json_enabled": True,
         "situation_json_enabled": False,
+        "literature_json_enabled": False,
     }
 
 

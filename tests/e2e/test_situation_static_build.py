@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -50,6 +51,14 @@ def _run_astro_build() -> subprocess.CompletedProcess[str]:
             check=False,
             capture_output=True,
             text=True,
+            # The production control plane enables the independent Papers
+            # publication channel before invoking Astro.  This test exercises
+            # the Situation export and should use the same main-site scope;
+            # rendering the retired long-tail research pages would read the
+            # multi-gigabyte local catalogue and exceed the fixed test budget.
+            env={**os.environ,
+                 "GIDS_RESEARCH_PUBLICATION_ENABLED": "1",
+                 "GIDS_PERFORMANCE_BUDGET_PROFILE": "large-local-fixture"},
             # The French locale doubles the static route surface; keep this
             # deterministic build budget above production-sized render time.
             timeout=300,

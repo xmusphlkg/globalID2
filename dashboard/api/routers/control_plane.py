@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import time
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
@@ -25,6 +26,9 @@ from src.control_plane.runtime import runtime_registry
 
 router = APIRouter()
 EVENT_STREAM_MAX_LIFETIME_SECONDS = 8.0
+OVERVIEW_CACHE_TTL_SECONDS = 5.0
+_overview_cache: tuple[float, dict] | None = None
+_overview_cache_lock = asyncio.Lock()
 
 
 def _request_id(request: Request) -> str | None:
@@ -33,7 +37,15 @@ def _request_id(request: Request) -> str | None:
 
 @router.get("/overview", response_model=DataResponse[ControlPlaneOverviewOut])
 async def overview(request: Request, db: AsyncSession = Depends(get_db)):
-    payload = await ControlPlaneOverviewService(db).overview()
+    global _overview_cache
+    now = time.monotonic()
+    async with _overview_cache_lock:
+        cached = _overview_cache
+        if cached is not None and now - cached[0] < OVERVIEW_CACHE_TTL_SECONDS:
+            payload = cached[1]
+        else:
+            payload = await ControlPlaneOverviewService(db).overview()
+            _overview_cache = (time.monotonic(), payload)
     return DataResponse(data=ControlPlaneOverviewOut.model_validate(payload), meta=ResponseMeta(request_id=_request_id(request)))
 
 

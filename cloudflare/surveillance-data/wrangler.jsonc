@@ -17,12 +17,11 @@
     { "pattern": "globalinfectiousdisease.com/site-data/site-status.json*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/site-data/situation/*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/site-data/research-publication/*", "zone_name": "globalinfectiousdisease.com" },
-    { "pattern": "globalinfectiousdisease.com/research-publication/*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/site-data/updates/*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/situation/map-data.json*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/situation/outbreaks/*", "zone_name": "globalinfectiousdisease.com" }
   ],
   "r2_buckets": [{ "binding": "DATA", "bucket_name": "globalid-papers" }],
-  "vars": { "DATA_PREFIX": "site-data/surveillance", "SITUATION_PREFIX": "site-data/situation" },
+  "vars": { "PAPERS_PROJECTION_V3": "1", "DATA_PREFIX": "site-data/surveillance", "SITUATION_PREFIX": "site-data/situation" },
   "observability": { "enabled": true, "head_sampling_rate": 1 }
 }

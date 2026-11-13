@@ -13,7 +13,7 @@ import {
   reportArchiveCountries,
   type ReportIndexEntry,
 } from './report-routes.ts';
-import { REPORTS_ORIGIN } from './papers.ts';
+import { absoluteSiteUrl, isPapersPath, REPORTS_ORIGIN } from './papers.ts';
 import type { CountryDirectory, DiseaseDirectory } from './site-data-loaders.ts';
 
 export interface SitemapEntry {
@@ -430,15 +430,16 @@ function escapeXml(value: string): string {
 
 export function renderSitemapXml(entries: SitemapEntry[], site: URL | string): string {
   const siteUrl = site instanceof URL ? site : new URL(site);
+  const entryUrl = (path: string) => isPapersPath(path) ? absoluteSiteUrl(path, siteUrl) : new URL(path, siteUrl);
   const hasAlternates = entries.some(entry => entry.alternates?.length);
   const namespace = hasAlternates
     ? ' xmlns:xhtml="http://www.w3.org/1999/xhtml"'
     : '';
   const body = entries.map(({ path, lastmod, alternates }) => {
-    const loc = new URL(path, siteUrl).toString();
+    const loc = entryUrl(path).toString();
     const lastmodTag = lastmod ? `\n    <lastmod>${escapeXml(lastmod)}</lastmod>` : '';
     const alternateTags = (alternates ?? []).map(alternate => (
-      `\n    <xhtml:link rel="alternate" hreflang="${alternate.locale}" href="${escapeXml(new URL(alternate.path, siteUrl).toString())}" />`
+      `\n    <xhtml:link rel="alternate" hreflang="${alternate.locale}" href="${escapeXml(entryUrl(alternate.path).toString())}" />`
     )).join('');
     return `  <url>\n    <loc>${escapeXml(loc)}</loc>${lastmodTag}${alternateTags}\n  </url>`;
   }).join('\n');

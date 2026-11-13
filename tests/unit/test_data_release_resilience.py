@@ -24,12 +24,13 @@ def _command_error(
     *,
     stage: str,
     timed_out: bool = False,
+    returncode: int = 1,
 ) -> ReleaseCommandError:
     return ReleaseCommandError(
         message,
         release_stage=stage,
         title="release command",
-        returncode=1,
+        returncode=returncode,
         timed_out=timed_out,
     )
 
@@ -82,6 +83,20 @@ def test_classifier_retries_only_allowlisted_transient_external_failures():
     assert not classify_release_failure(
         _command_error("Research publication baseline changed", stage="literature_publication_publish")
     ).retryable
+
+
+@pytest.mark.parametrize("returncode", [-15, -2])
+def test_classifier_retries_controlled_worker_interruptions(returncode):
+    result = classify_release_failure(
+        _command_error(
+            "Export Literature Snapshot failed with exit code %s" % returncode,
+            stage="literature_publication_export",
+            returncode=returncode,
+        )
+    )
+    assert result.retryable is True
+    assert result.category == "worker_interrupted"
+    assert result.stage == "literature_publication_export"
 
 
 def test_classifier_keeps_preflight_syntax_and_credentials_terminal():

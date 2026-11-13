@@ -48,10 +48,19 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
         'R2_ACCESS_KEY_ID': str(getattr(config, 'r2_access_key_id', '')),
         'R2_SECRET_ACCESS_KEY': str(getattr(config, 'r2_secret_access_key', '')),
         'R2_ENDPOINT_URL': str(getattr(config, 'r2_endpoint_url', '')),
-        'R2_ACCOUNT_ID': str(getattr(config, 'r2_account_id', '') or service._cloudflare_account_id())}
+        'R2_ACCOUNT_ID': str(getattr(config, 'r2_account_id', '') or service._cloudflare_account_id()),
+        'GIDS_PAPERS_PROJECTION_V3': '1'}
+    expected = data.get('publication_expected_generations', {})
+    if 'literature' in expected:
+        env['GIDS_PUBLICATION_EXPECTED_BASELINE_JSON'] = json.dumps(expected['literature'])
     run.mkdir(parents=True, exist_ok=True)
     build_started = time.monotonic()
-    if not await asyncio.to_thread(_ready, run, task_uuid=task.task_uuid, dirty_ids=dirty_ids):
+    from .publication_recovery import require_candidate, save_recovery
+    ready = await asyncio.to_thread(_ready, run, task_uuid=task.task_uuid, dirty_ids=dirty_ids)
+    require_candidate(service, ready)
+    if getattr(service, "_publication_recovery", None):
+        env['GIDS_PUBLICATION_RECOVERY_ONLY'] = '1'
+    if not ready:
         await service._run_logged_command(task.task_uuid, title='Capture Literature Publication Baseline',
             cmd=[str(python), 'scripts/publish_surveillance_data.py', '--source-dir', str(run), '--prefix',
                  'site-data/research-publication', '--capture-baseline-only'], cwd=root, env=env,
@@ -83,6 +92,15 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
                 metadata={'event': 'literature_publication_build'}, timeout_seconds=max(runtime.astro_build_timeout_seconds, runtime.generate_timeout_seconds))
         await asyncio.to_thread(_atomic_write, run / 'ready.json', json.dumps(
             {'schema': 1, 'task_uuid': task.task_uuid, 'dirty_ids': dirty_ids}, separators=(',', ':')).encode())
+    if data.get('publication_plan'):
+        if not getattr(service, "_publication_recovery", None):
+            await service._run_logged_command(task.task_uuid, title='Prepare Literature Publication',
+                cmd=[str(python), 'scripts/publish_research_candidate.py', '--run', str(run), '--snapshot', str(snapshot),
+                     '--stage', str(stage), '--release-id', release_id, '--prepare-only'], cwd=root, env=env,
+                metadata={'event': 'literature_publication_prepare'}, timeout_seconds=runtime.generate_timeout_seconds)
+        prepared = run / 'papers-prepared.json'
+        await asyncio.to_thread(save_recovery, root, task, run / 'ready.json', additional_files={
+            str(prepared.relative_to(root)): hashlib.sha256(prepared.read_bytes()).hexdigest()})
     async with runtime.get_database() as db:
         await validate_global_selection(db, dirty_ids, line='literature', task_uuid=task.task_uuid)
     await runtime.task_manager.update_task_progress(task.task_uuid, 65)

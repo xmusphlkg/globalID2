@@ -1,8 +1,11 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.18.3",
+  "version": "0.18.4",
   "scripts": {
+    "build:theme": "node scripts/build-theme.mjs",
+    "test:theme": "node --experimental-strip-types --test scripts/build-theme.test.mjs src/lib/site-theme.test.ts",
+    "verify:theme": "node scripts/verify-theme-preview.mjs",
     "postinstall": "npm run sync:flags",
     "sync:flags": "node scripts/sync-flags.mjs",
     "dev": "npm run sync:flags && astro dev",
@@ -14,7 +17,7 @@
     "check:surveillance-data": "python3 scripts/check-surveillance-data.py",
     "benchmark:curve": "node --experimental-strip-types scripts/benchmark-surveillance.mjs",
     "test:monthly": "node --experimental-strip-types --test src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
-    "test:charts": "npm run sync:flags && node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/chart-source-scope.test.ts src/lib/country-coverage.test.ts src/lib/country-classifications.test.ts src/lib/subdivision-map-points.test.ts src/components/charts/surveillance/__tests__/*.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts src/components/charts/reportFigureOptions.test.ts",
+    "test:charts": "npm run sync:flags && node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/safeCanvasPainter.test.ts src/lib/chart-source-scope.test.ts src/lib/country-coverage.test.ts src/lib/country-classifications.test.ts src/lib/subdivision-map-points.test.ts src/components/charts/surveillance/__tests__/*.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts src/components/charts/reportFigureOptions.test.ts",
     "test:knowledge": "node --experimental-strip-types --test src/utils/knowledge.test.ts",
     "test:research": "node --experimental-strip-types --test src/lib/research-ask.test.ts src/lib/research-ui.test.ts src/lib/research-signal-groups.test.ts src/lib/research-evidence-manifest.test.ts src/lib/research-literature.test.ts src/lib/research-relationships.test.ts scripts/research-catalogue-client.test.mjs src/lib/research-catalogue-partition.test.ts src/lib/research-literature-client.test.ts src/lib/research-versioned-href.test.ts src/lib/research-sitemap.test.ts src/lib/research-search-entries.test.ts src/lib/research-public-source.test.ts",
     "test:i18n": "node --experimental-strip-types --test src/utils/i18n.test.ts",
@@ -45,7 +48,8 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "sharp": "^0.35.3",
-    "tslib": "^2.8.1"
+    "tslib": "^2.8.1",
+    "zrender": "6.1.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",

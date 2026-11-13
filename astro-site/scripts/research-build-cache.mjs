@@ -83,6 +83,9 @@ export function sharedFingerprint() {
     resolve(siteRoot, 'scripts', 'source-dependencies.mjs'),
     resolve(siteRoot, 'scripts', 'public-build-inputs.mjs'),
     resolve(projectRoot, 'shared', 'research-publishing.json'),
+    // Public URL policy affects links across the main site as well as the
+    // research templates; invalidate every cached page when it changes.
+    resolve(projectRoot, 'shared', 'research-urls.ts'),
   ].filter(existsSync).sort();
   const digest = createHash('sha256');
   const identities = gitSourceIdentities(projectRoot);
@@ -94,7 +97,7 @@ export function sharedFingerprint() {
   digest.update(graph(['astro.config.mjs', 'src/middleware.ts', 'src/middleware.js']));
   digest.update(String(existsSync(resolve(siteRoot, 'src/data/situation/international/latest.json'))));
   digest.update(String(existsSync(resolve(siteRoot, 'src/data/situation/international/map.json'))));
-  for (const key of ['GLOBALID_SITE_URL', 'SITE_URL', 'PUBLIC_GIDS_MAINTENANCE_MESSAGE', 'SITUATION_SHADOW_PREVIEW', 'PUBLIC_GIDS_DATA_MANIFEST_URL', 'PUBLIC_GIDS_SITUATION_MANIFEST_URL', 'GIDS_PAGES_DATA_WORKER', 'GIDS_EXTERNAL_SURVEILLANCE_DATA']) {
+  for (const key of ['GLOBALID_SITE_URL', 'SITE_URL', 'PUBLIC_GIDS_MAINTENANCE_MESSAGE', 'SITUATION_SHADOW_PREVIEW', 'PUBLIC_GIDS_DATA_MANIFEST_URL', 'PUBLIC_GIDS_SITUATION_MANIFEST_URL', 'PUBLIC_GIDS_THEME_V1_URL', 'GIDS_PAGES_DATA_WORKER', 'GIDS_EXTERNAL_SURVEILLANCE_DATA']) {
     digest.update(`${key}=${process.env[key] ?? ''}\n`);
   }
   digest.update(`PUBLIC_GA4_MEASUREMENT_ID=${effectiveMeasurementId()}\n`);

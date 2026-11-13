@@ -7,6 +7,7 @@
     "nodejs_compat"
   ],
   "workers_dev": false,
+  "vars": { "PAPERS_PROJECTION_V3": "1" },
   "r2_buckets": [
     {
       "binding": "DATA",

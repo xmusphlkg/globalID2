@@ -34,6 +34,7 @@ def test_pending_preserves_scopes_and_exposes_actual_channel_routing(monkeypatch
     assert response.json()["data"] == {
         "surveillance": ["IE"], "literature": True, "situation": True, "knowledge": ["D038"],
         "surveillance_json_enabled": surveillance, "situation_json_enabled": situation,
+        "literature_json_enabled": False,
     }
 
 
@@ -62,6 +63,7 @@ def test_static_endpoint_preserves_explicit_static_modes(monkeypatch, mode):
     (TaskType.EXPORT_DATA, {"data_only": True}, "surveillance_json"),
     (TaskType.EXPORT_DATA, {"data_only": True, "data_line": "surveillance"}, "surveillance_json"),
     (TaskType.EXPORT_DATA, {"data_only": True, "data_line": "situation"}, "situation_json"),
+    (TaskType.EXPORT_DATA, {"data_only": True, "data_line": "literature"}, "literature_json"),
     (TaskType.EXPORT_DATA, {"data_only": True, "data_line": "unrecognized"}, "unknown_json"),
     (TaskType.EXPORT_DATA, {"data_only": True, "data_line": ["invalid"]}, "unknown_json"),
     (TaskType.EXPORT_DATA, {"reports_only": True}, "reports"),

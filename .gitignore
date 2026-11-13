@@ -111,6 +111,8 @@ pnpm-debug.log*
 /data/backups/
 /backups/
 /data/system-settings.json
+/data/cloudflare-publication-usage.json
+/data/publication-plans/
 /data/realtime-publishing-control.json
 /data/literature-publishing-control.json
 /data/*.lock

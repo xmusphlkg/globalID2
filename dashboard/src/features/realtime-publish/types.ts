@@ -1,6 +1,5 @@
 import type { components } from "@/generated/api";
 
-export const realtimeChannels = ["surveillance", "situation"] as const;
 export type RealtimeChannel = components["schemas"]["RealtimeChannelOverviewOut"]["channel"];
 export type PendingEligibility = "all" | "publishable" | "blocked";
 

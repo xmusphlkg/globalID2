@@ -63,31 +63,27 @@ function fixture() {
   return { objects, reads, env, put, generation, recordKey };
 }
 
-test('one publication pointer switches all locale templates while old versioned pages remain readable', async () => {
+test('template v2 catalogue entries fail closed and old snapshot page URLs stay removed', async () => {
   const f = fixture();
   const first = f.generation('first'); first.activate();
-  for (const [logical, html] of Object.entries(first.expected)) {
+  for (const logical of Object.keys(first.expected)) {
     const response = await worker.fetch(new Request(`https://papers.globalinfectiousdisease.com/${logical}`), f.env);
-    assert.equal(response.status, 200);
-    assert.equal(response.headers.get('X-GIDS-Paper-Mode'), 'template');
-    assert.equal(response.headers.get('X-GIDS-Paper-SHA256'), sha(html));
-    assert.equal(response.headers.get('X-GIDS-Research-Release'), 'first');
-    assert.equal(response.headers.get('Cache-Control'), 'no-store');
-    assert.equal(await response.text(), html);
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('X-GIDS-Paper-Mode'), null);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
   }
   const next = f.generation('second'); next.activate();
   const logical = 'research/articles/paper-a/';
   const current = await worker.fetch(new Request(`https://site.test/${logical}`), f.env);
-  assert.equal(await current.text(), next.expected[logical]);
+  assert.equal(current.status, 503);
+  assert.equal(current.headers.get('X-GIDS-Research-Release'), 'second');
   const oldUrl = `https://site.test/research-publication/${first.hash}/${logical}`;
   const old = await worker.fetch(new Request(oldUrl), f.env);
-  assert.equal(await old.text(), first.expected[logical]);
-  assert.match(old.headers.get('Cache-Control')!, /immutable/);
-  const conditional = await worker.fetch(new Request(oldUrl, { headers: { 'If-None-Match': old.headers.get('ETag')! } }), f.env);
-  assert.equal(conditional.status, 304);
+  assert.equal(old.status, 410);
+  assert.equal(old.headers.get('Location'), null);
   const head = await worker.fetch(new Request(oldUrl, { method: 'HEAD' }), f.env);
-  assert.equal(head.status, 200); assert.equal(await head.text(), '');
-  assert.equal(f.reads.some(key => key === 'paper-template-v2/current.json'), false);
+  assert.equal(head.status, 410); assert.equal(await head.text(), '');
+  assert.equal(f.reads.some(key => key.startsWith('paper-template-v2/')), false);
 });
 
 test('template and record are cached immutably, but every canonical request reads current', async t => {
@@ -100,10 +96,10 @@ test('template and record are cached immutably, but every canonical request read
   t.after(() => { if (original) Object.defineProperty(globalThis, 'caches', original); else delete (globalThis as any).caches; });
   const f = fixture(), first = f.generation('cache'); first.activate();
   const url = 'https://site.test/research/articles/paper-a/';
-  assert.equal((await worker.fetch(new Request(url), f.env)).status, 200);
-  assert.equal((await worker.fetch(new Request(url), f.env)).status, 200);
-  assert.equal(f.reads.filter(key => key === f.recordKey).length, 1);
-  assert.equal(f.reads.filter(key => key === first.templateKey).length, 1);
+  assert.equal((await worker.fetch(new Request(url), f.env)).status, 503);
+  assert.equal((await worker.fetch(new Request(url), f.env)).status, 503);
+  assert.equal(f.reads.filter(key => key === f.recordKey).length, 0);
+  assert.equal(f.reads.filter(key => key === first.templateKey).length, 0);
   assert.equal(f.reads.filter(key => key === 'site-data/research-publication/current.json').length, 2);
 });
 

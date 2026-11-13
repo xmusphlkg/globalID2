@@ -163,6 +163,32 @@ async def test_close_attempts_every_client_even_when_one_cleanup_fails(
     clients[1].close.assert_awaited_once()
 
 
+async def test_prune_closes_disabled_and_rotated_provider_pools(dispatcher, clients):
+    transport = ProviderTransport()
+    await transport.send(ROUTE, "old credentials")
+    rotated = {**ROUTE, "api_key": "rotated"}
+    await transport.send(rotated, "new credentials")
+    await transport.prune([rotated])
+    clients[0].close.assert_awaited_once()
+    clients[1].close.assert_not_awaited()
+    await transport.prune([])
+    clients[1].close.assert_awaited_once()
+    await transport.close()
+    for client in clients:
+        client.close.assert_awaited_once()
+
+
+async def test_prune_retains_shared_pool_for_enabled_cooling_model(dispatcher, clients):
+    transport = ProviderTransport()
+    await transport.send(ROUTE, "one")
+    sibling = {**ROUTE, "model_key": "p:other", "available_for_routing": False}
+    await transport.prune([sibling])
+    clients[0].close.assert_not_awaited()
+    await transport.send(sibling, "two")
+    assert len(clients) == 1
+    await transport.close()
+
+
 async def test_optional_negotiation_is_bounded_and_does_not_mutate_configuration(
     dispatcher,
 ):

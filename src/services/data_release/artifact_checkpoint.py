@@ -35,8 +35,8 @@ def _fingerprint(value) -> str:
 def source_fingerprint(root: Path) -> str:
     digest = hashlib.sha256()
     paths = []
-    for name in ("src", "scripts", "configs", "astro-site/src", "astro-site/scripts", "astro-site/public",
-                 "cloudflare/surveillance-data/src", "cloudflare/surveillance-data/scripts"):
+    for name in ("src", "scripts", "configs", "shared", "astro-site/src", "astro-site/scripts", "astro-site/public",
+                 "cloudflare/surveillance-data/src", "cloudflare/surveillance-data/scripts", "cloudflare/papers-json/src"):
         directory = root / name
         paths.extend(
             path for path in directory.rglob("*") if path.is_file()

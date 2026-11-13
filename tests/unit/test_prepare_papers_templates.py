@@ -59,3 +59,21 @@ def test_changed_article_replaces_only_one_record_and_index(tmp_path):
     assert names(first, 'templates') == names(second, 'templates')
     assert len(names(second, 'records') - names(first, 'records')) == 1
     assert len(names(second, 'indexes') - names(first, 'indexes')) == 1
+
+
+def test_meta_attribute_gt_does_not_change_template_shape(tmp_path):
+    src = tmp_path / 'source'
+    populate(src, 'same')
+    description = 'HIV suppression threshold >200 copies/mL'
+    for prefix in ('', 'zh', 'fr'):
+        page_path = src / prefix / 'research/articles/paper-a/index.html'
+        html = page_path.read_text()
+        html = html.replace('content="paper-a"', f'content="{description}"')
+        page_path.write_text(html)
+
+    output = tmp_path / 'candidate'
+    prepare(src, output)
+
+    pointer = json.loads((output / 'current.json').read_bytes())
+    generation = json.loads((output / 'generations' / f"{pointer['generation']}.json").read_bytes())
+    assert generation['locales']['fr']['template'] == generation['locales']['en']['template']

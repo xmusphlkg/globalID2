@@ -12,7 +12,8 @@ from src.services.data_release import data_pipeline
 from tests.unit.test_release_dirty_selection import release_db
 
 
-async def test_literature_release_retries_frozen_candidate_and_acks_only_selected_ids(release_db, tmp_path, monkeypatch):
+@pytest.mark.parametrize('planned', [False, True])
+async def test_literature_release_retries_frozen_candidate_and_acks_only_selected_ids(release_db, tmp_path, monkeypatch, planned):
     maker, service, _ = release_db
     async with maker() as db:
         rows = [PublishDirty(line=line, scope_key='*', source_task_uuid='source', marked_at=datetime.now(timezone.utc))
@@ -35,6 +36,8 @@ async def test_literature_release_retries_frozen_candidate_and_acks_only_selecte
         task_manager=SimpleNamespace(update_task_progress=AsyncMock(), add_workbook_entry=AsyncMock()))
     task = SimpleNamespace(task_uuid='research-test', input_data={'data_only': True, 'data_line': 'literature',
                                                                   'publish_dirty_ids': [ids[0]]})
+    if planned:
+        task.input_data['publication_plan'] = {'plan_id': 'plan', 'plan_digest': 'digest'}
     commands = []
     fail = True
     async def command(_uuid, **kwargs):
@@ -58,6 +61,9 @@ async def test_literature_release_retries_frozen_candidate_and_acks_only_selecte
             if fail:
                 fail = False
                 raise RuntimeError('upload failed')
+            if '--prepare-only' in cmd:
+                (tmp_path / 'exports/research-runs/research-test/papers-prepared.json').write_text('{}')
+                return
             (tmp_path / 'exports/research-runs/research-test/current.json').write_text('{}')
             (tmp_path / 'exports/research-runs/research-test/published.json').write_text(json.dumps({
                 'release_id': 'literature-research-test', 'papers': {'generation_sha256': 'a' * 64}, 'json': {}}))
@@ -69,6 +75,9 @@ async def test_literature_release_retries_frozen_candidate_and_acks_only_selecte
     monkeypatch.setattr(service, '_cloudflare_api_token', lambda: 'token')
     with pytest.raises(RuntimeError, match='upload failed'):
         await data_pipeline.execute_data_release(service, task, runtime=runtime)
+    # A process launch failure before complete Papers preparation must remain
+    # retryable, rather than becoming an impossible recovery-only publication.
+    assert not (tmp_path / 'exports/publication-recovery/research-test.json').exists()
     async with maker() as db:
         assert (await db.get(PublishDirty, ids[0])).published_at is None
     result = await data_pipeline.execute_data_release(service, task, runtime=runtime)

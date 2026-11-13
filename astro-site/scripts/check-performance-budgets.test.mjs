@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { auditPerformance } from './check-performance-budgets.mjs';
+import { auditPerformance, profileBudgetOverrides } from './check-performance-budgets.mjs';
 import { openPageAuditCache } from './page-audit-cache.mjs';
 
 function fixture() {
@@ -15,6 +15,15 @@ function fixture() {
   writeFileSync(join(directory, 'data', 'world.json'), '{"type":"FeatureCollection","features":[]}');
   return directory;
 }
+
+test('large local fixture profile is explicit and leaves production budgets unchanged', () => {
+  assert.deepEqual(profileBudgetOverrides({}), {});
+  const profile = profileBudgetOverrides({ GIDS_PERFORMANCE_BUDGET_PROFILE: 'large-local-fixture' });
+  assert.equal(profile.maxAverageHtmlBytes, 220_000);
+  assert.equal(profile.maxAverageHtmlGzipBytes, 30_000);
+  assert.equal(profile.maxTotalHtmlGzipBytes, 100_000_000);
+  assert.throws(() => profileBudgetOverrides({ GIDS_PERFORMANCE_BUDGET_PROFILE: 'unknown' }), /Unknown/);
+});
 
 test('persisted asset facts do not retain the complete HTML catalogue', t => {
   const directory = fixture();

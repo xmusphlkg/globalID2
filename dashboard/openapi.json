@@ -4555,6 +4555,51 @@
         "title": "DataResponse[PendingOut]",
         "type": "object"
       },
+      "DataResponse_PublicationCapabilitiesOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublicationCapabilitiesOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[PublicationCapabilitiesOut]",
+        "type": "object"
+      },
+      "DataResponse_PublicationPlanOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublicationPlanOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[PublicationPlanOut]",
+        "type": "object"
+      },
+      "DataResponse_PublicationUsageOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublicationUsageOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[PublicationUsageOut]",
+        "type": "object"
+      },
       "DataResponse_RealtimeActionOut_": {
         "properties": {
           "data": {
@@ -9109,6 +9154,11 @@
             "title": "Literature",
             "type": "boolean"
           },
+          "literature_json_enabled": {
+            "default": false,
+            "title": "Literature Json Enabled",
+            "type": "boolean"
+          },
           "situation": {
             "title": "Situation",
             "type": "boolean"
@@ -9737,6 +9787,631 @@
         "title": "ProxyLocationOut",
         "type": "object"
       },
+      "PublicationCapabilitiesOut": {
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/PublicationChannelOut"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "legacy_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Legacy Modes",
+            "type": "array"
+          },
+          "modes": {
+            "items": {
+              "$ref": "#/components/schemas/PublicationModeOut"
+            },
+            "title": "Modes",
+            "type": "array"
+          },
+          "plan_execution": {
+            "default": false,
+            "title": "Plan Execution",
+            "type": "boolean"
+          },
+          "plan_preview": {
+            "default": true,
+            "title": "Plan Preview",
+            "type": "boolean"
+          },
+          "rollback": {
+            "default": false,
+            "title": "Rollback",
+            "type": "boolean"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channels",
+          "modes"
+        ],
+        "title": "PublicationCapabilitiesOut",
+        "type": "object"
+      },
+      "PublicationChangedFileOut": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "kind",
+          "reason"
+        ],
+        "title": "PublicationChangedFileOut",
+        "type": "object"
+      },
+      "PublicationChannelOut": {
+        "properties": {
+          "automatic": {
+            "title": "Automatic",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "realtime_controls": {
+            "default": false,
+            "title": "Realtime Controls",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "rollback": {
+            "default": false,
+            "title": "Rollback",
+            "type": "boolean"
+          },
+          "supported_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Supported Modes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "enabled",
+          "automatic",
+          "supported_modes"
+        ],
+        "title": "PublicationChannelOut",
+        "type": "object"
+      },
+      "PublicationModeOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "supported": {
+            "title": "Supported",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "supported"
+        ],
+        "title": "PublicationModeOut",
+        "type": "object"
+      },
+      "PublicationPlanCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "surveillance",
+                  "situation",
+                  "literature"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "job_id": {
+            "default": "site-release",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Job Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "auto",
+            "enum": [
+              "auto",
+              "theme",
+              "content",
+              "full",
+              "template"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "PublicationPlanCreate",
+        "type": "object"
+      },
+      "PublicationPlanOut": {
+        "properties": {
+          "affected_templates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Templates",
+            "type": "array"
+          },
+          "asset_compile_scope": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Asset Compile Scope",
+            "type": "array"
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "changed_files": {
+            "items": {
+              "$ref": "#/components/schemas/PublicationChangedFileOut"
+            },
+            "title": "Changed Files",
+            "type": "array"
+          },
+          "channels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "content_record_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Record Count"
+          },
+          "cost_estimate_confidence": {
+            "enum": [
+              "unknown",
+              "low",
+              "high"
+            ],
+            "title": "Cost Estimate Confidence",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dirty_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Dirty Ids",
+            "type": "array"
+          },
+          "executable": {
+            "default": false,
+            "title": "Executable",
+            "type": "boolean"
+          },
+          "execution_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Mode"
+          },
+          "expected_generations": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Expected Generations",
+            "type": "object"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "html_page_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html Page Count"
+          },
+          "input_digest": {
+            "title": "Input Digest",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "content",
+              "theme",
+              "template",
+              "routing",
+              "full"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "pages_deploy_required": {
+            "title": "Pages Deploy Required",
+            "type": "boolean"
+          },
+          "pending_scopes": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Pending Scopes",
+            "type": "object"
+          },
+          "plan_digest": {
+            "title": "Plan Digest",
+            "type": "string"
+          },
+          "plan_id": {
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "preview_only": {
+            "default": true,
+            "title": "Preview Only",
+            "type": "boolean"
+          },
+          "rollback_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rollback Of"
+          },
+          "source_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Revision"
+          },
+          "validation_scope": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Validation Scope",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "worker_deploy_required": {
+            "title": "Worker Deploy Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plan_id",
+          "plan_digest",
+          "job_id",
+          "created_at",
+          "expires_at",
+          "kind",
+          "channels",
+          "source_revision",
+          "input_digest",
+          "expected_generations",
+          "affected_templates",
+          "content_record_count",
+          "html_page_count",
+          "asset_compile_scope",
+          "pages_deploy_required",
+          "worker_deploy_required",
+          "validation_scope",
+          "cost_estimate_confidence",
+          "changed_files",
+          "dirty_ids",
+          "pending_scopes",
+          "warnings"
+        ],
+        "title": "PublicationPlanOut",
+        "type": "object"
+      },
+      "PublicationRollbackPlanCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "default": "site-release",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "theme",
+            "default": "theme",
+            "title": "Kind",
+            "type": "string"
+          },
+          "target_plan_id": {
+            "title": "Target Plan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_plan_id"
+        ],
+        "title": "PublicationRollbackPlanCreate",
+        "type": "object"
+      },
+      "PublicationServiceUsageOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "requests": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requests"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "PublicationServiceUsageOut",
+        "type": "object"
+      },
+      "PublicationUsageOut": {
+        "properties": {
+          "account_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Total"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "plan": {
+            "default": "unknown",
+            "enum": [
+              "unknown",
+              "free",
+              "paid"
+            ],
+            "title": "Plan",
+            "type": "string"
+          },
+          "projected_usage": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected Usage"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/PublicationServiceUsageOut"
+            },
+            "title": "Services",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "default": "unknown",
+            "enum": [
+              "unknown",
+              "known",
+              "stale"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "PublicationUsageOut",
+        "type": "object"
+      },
       "PublishRunCreate": {
         "additionalProperties": false,
         "properties": {
@@ -9750,10 +10425,45 @@
             "title": "Full",
             "type": "boolean"
           },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
           "job_id": {
             "default": "site-release",
             "title": "Job Id",
             "type": "string"
+          },
+          "plan_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Digest"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
           },
           "reports_only": {
             "default": false,
@@ -9848,7 +10558,8 @@
           "channel": {
             "enum": [
               "surveillance",
-              "situation"
+              "situation",
+              "literature"
             ],
             "title": "Channel",
             "type": "string"
@@ -9986,7 +10697,8 @@
           "channel": {
             "enum": [
               "surveillance",
-              "situation"
+              "situation",
+              "literature"
             ],
             "title": "Channel",
             "type": "string"
@@ -10127,7 +10839,8 @@
           "channel": {
             "enum": [
               "surveillance",
-              "situation"
+              "situation",
+              "literature"
             ],
             "title": "Channel",
             "type": "string"
@@ -10377,7 +11090,8 @@
             "propertyNames": {
               "enum": [
                 "surveillance",
-                "situation"
+                "situation",
+                "literature"
               ]
             },
             "title": "Channels",
@@ -10436,7 +11150,8 @@
           "channel": {
             "enum": [
               "surveillance",
-              "situation"
+              "situation",
+              "literature"
             ],
             "title": "Channel",
             "type": "string"
@@ -13502,10 +14217,12 @@
                   "static",
                   "surveillance_json",
                   "situation_json",
+                  "literature_json",
                   "unknown_json",
                   "reports",
                   "code",
-                  "raw_archive"
+                  "raw_archive",
+                  "theme"
                 ],
                 "type": "string"
               },
@@ -13763,10 +14480,12 @@
                   "static",
                   "surveillance_json",
                   "situation_json",
+                  "literature_json",
                   "unknown_json",
                   "reports",
                   "code",
-                  "raw_archive"
+                  "raw_archive",
+                  "theme"
                 ],
                 "type": "string"
               },
@@ -23138,6 +23857,87 @@
         ]
       }
     },
+    "/api/v1/publish/capabilities": {
+      "get": {
+        "operationId": "capabilities_api_v1_publish_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_PublicationCapabilitiesOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Capabilities",
+        "tags": [
+          "Publish"
+        ]
+      }
+    },
     "/api/v1/publish/pending": {
       "get": {
         "operationId": "pending_api_v1_publish_pending_get",
@@ -23214,6 +24014,401 @@
           }
         },
         "summary": "Pending",
+        "tags": [
+          "Publish"
+        ]
+      }
+    },
+    "/api/v1/publish/plans": {
+      "post": {
+        "operationId": "plan_api_v1_publish_plans_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicationPlanCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_PublicationPlanOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Plan",
+        "tags": [
+          "Publish"
+        ]
+      }
+    },
+    "/api/v1/publish/plans/{plan_id}/preview/{locale}/{family}": {
+      "get": {
+        "operationId": "preview_api_v1_publish_plans__plan_id__preview__locale___family__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "title": "Plan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "title": "Locale",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "family",
+            "required": true,
+            "schema": {
+              "title": "Family",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Preview",
+        "tags": [
+          "Publish"
+        ]
+      }
+    },
+    "/api/v1/publish/plans/{plan_id}/previews": {
+      "get": {
+        "operationId": "previews_api_v1_publish_plans__plan_id__previews_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "title": "Plan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Previews",
+        "tags": [
+          "Publish"
+        ]
+      }
+    },
+    "/api/v1/publish/plans/{plan_id}/receipt": {
+      "get": {
+        "operationId": "receipt_api_v1_publish_plans__plan_id__receipt_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "title": "Plan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Receipt",
         "tags": [
           "Publish"
         ]
@@ -23311,7 +24506,8 @@
             "schema": {
               "enum": [
                 "surveillance",
-                "situation"
+                "situation",
+                "literature"
               ],
               "title": "Channel",
               "type": "string"
@@ -23417,7 +24613,8 @@
             "schema": {
               "enum": [
                 "surveillance",
-                "situation"
+                "situation",
+                "literature"
               ],
               "title": "Channel",
               "type": "string"
@@ -23551,7 +24748,8 @@
             "schema": {
               "enum": [
                 "surveillance",
-                "situation"
+                "situation",
+                "literature"
               ],
               "title": "Channel",
               "type": "string"
@@ -23657,7 +24855,8 @@
             "schema": {
               "enum": [
                 "surveillance",
-                "situation"
+                "situation",
+                "literature"
               ],
               "title": "Channel",
               "type": "string"
@@ -23790,7 +24989,8 @@
             "schema": {
               "enum": [
                 "surveillance",
-                "situation"
+                "situation",
+                "literature"
               ],
               "title": "Channel",
               "type": "string"
@@ -23885,6 +25085,97 @@
         ]
       }
     },
+    "/api/v1/publish/rollback-plans": {
+      "post": {
+        "operationId": "rollback_plan_api_v1_publish_rollback_plans_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicationRollbackPlanCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_PublicationPlanOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Rollback Plan",
+        "tags": [
+          "Publish"
+        ]
+      }
+    },
     "/api/v1/publish/runs": {
       "post": {
         "operationId": "start_api_v1_publish_runs_post",
@@ -23971,6 +25262,168 @@
           }
         },
         "summary": "Start",
+        "tags": [
+          "Publish"
+        ]
+      }
+    },
+    "/api/v1/publish/theme-history": {
+      "get": {
+        "operationId": "theme_history_api_v1_publish_theme_history_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Theme History",
+        "tags": [
+          "Publish"
+        ]
+      }
+    },
+    "/api/v1/publish/usage": {
+      "get": {
+        "operationId": "usage_api_v1_publish_usage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_PublicationUsageOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Usage",
         "tags": [
           "Publish"
         ]

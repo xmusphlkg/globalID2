@@ -124,15 +124,15 @@ test('research publication is isolated and exposes only its pointer and immutabl
   assert.deepEqual(f.keys, ['site-data/research-publication/current.json', `site-data/research-publication/objects/${hash}.json`]);
 });
 
-test('versioned research pages resolve through the pinned catalogue and stream immutable content', async () => {
+test('versioned research data resolves through the pinned catalogue and streams immutable content', async () => {
   const generation = 'b'.repeat(64), shard = 'c'.repeat(64), content = 'd'.repeat(64);
-  const logical = 'research/articles/example/', group = createHash('sha256').update(logical).digest('hex').slice(0, 2);
+  const logical = 'research/catalogue/manifest.json', group = createHash('sha256').update(logical).digest('hex').slice(0, 2);
   const shardKey = `releases/sha256/catalogue-shards/${shard}.json`;
   const objectKey = `releases/sha256/objects/${content}/0123456789abcdef`;
   const stored = new Map([
     [`releases/sha256/catalogues/${generation}.json`, JSON.stringify({ schema_version: 2, generation_sha256: generation, shards: { [group]: { key: shardKey } } })],
-    [shardKey, JSON.stringify({ schema_version: 1, items: [{ logical_key: logical, key: objectKey, content_type: 'text/html; charset=utf-8' }] })],
-    [objectKey, '<html>paper</html>'],
+    [shardKey, JSON.stringify({ schema_version: 1, items: [{ logical_key: logical, key: objectKey, content_type: 'application/json; charset=utf-8' }] })],
+    [objectKey, '{"articles":[]}'],
   ]);
   const keys: string[] = [];
   const get = async (key: string) => {
@@ -143,14 +143,14 @@ test('versioned research pages resolve through the pinned catalogue and stream i
   const env = { DATA: { get, head: get } } as unknown as Env;
   const url = `https://site.test/research-publication/${generation}/${logical}`;
   const response = await worker.fetch(new Request(url), env);
-  assert.equal(await response.text(), '<html>paper</html>');
-  assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
+  assert.equal(await response.text(), '{"articles":[]}');
+  assert.equal(response.headers.get('content-type'), 'application/json; charset=utf-8');
   assert.match(response.headers.get('cache-control')!, /immutable/);
   assert.deepEqual(keys, [`releases/sha256/catalogues/${generation}.json`, shardKey, objectKey]);
   const cached = await worker.fetch(new Request(url, { headers: { 'If-None-Match': '"paper"' } }), env);
   assert.equal(cached.status, 304);
   assert.equal((await worker.fetch(new Request(url, { method: 'POST' }), env)).status, 405);
-  assert.equal((await worker.fetch(new Request(`https://site.test/research-publication/${generation}/missing`), env)).status, 404);
+  assert.equal((await worker.fetch(new Request(`https://site.test/research-publication/${generation}/research/catalogue/missing.json`), env)).status, 404);
 });
 
 test('Pages Advanced Mode preserves static routes and serves JSON through the same handler', async () => {

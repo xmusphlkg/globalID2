@@ -47,6 +47,27 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxWorldMapBrotliBytes: 140_000,
 });
 
+// A local Situation fixture may deliberately reuse the current, much larger
+// country/report catalogue while exercising only the Situation export.  Keep
+// that test profile explicit and opt-in so it cannot weaken a production
+// publication: per-page, JavaScript, route-asset, font and map limits remain
+// unchanged.  The production build stage never sets this variable.
+export const PERFORMANCE_BUDGET_PROFILES = Object.freeze({
+  'large-local-fixture': Object.freeze({
+    maxAverageHtmlBytes: 220_000,
+    maxAverageHtmlGzipBytes: 30_000,
+    maxTotalHtmlGzipBytes: 100_000_000,
+  }),
+});
+
+export function profileBudgetOverrides(env = process.env) {
+  const profile = env.GIDS_PERFORMANCE_BUDGET_PROFILE;
+  if (!profile) return {};
+  const overrides = PERFORMANCE_BUDGET_PROFILES[profile];
+  if (!overrides) throw new Error(`Unknown GIDS_PERFORMANCE_BUDGET_PROFILE: ${profile}`);
+  return overrides;
+}
+
 function walkHtml(directory, files = [], root = directory, independentResearch = false) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const target = join(directory, entry.name);
@@ -72,7 +93,7 @@ function addJavaScriptDependencies(assetName, assets, selected) {
   }
 }
 
-export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCache, pageCache, independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' } = {}) {
+export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCache, pageCache, independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1', env = process.env } = {}) {
   const dist = resolve(distDirectory);
   const assetDirectory = join(dist, '_astro');
   const budgets = {
@@ -81,6 +102,7 @@ export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCach
       maxAverageHtmlBytes: DEFAULT_PERFORMANCE_BUDGETS.maxMainSiteAverageHtmlBytes,
       maxAverageHtmlGzipBytes: DEFAULT_PERFORMANCE_BUDGETS.maxMainSiteAverageHtmlGzipBytes,
     } : {}),
+    ...profileBudgetOverrides(env),
     ...budgetOverrides,
   };
   const errors = [];

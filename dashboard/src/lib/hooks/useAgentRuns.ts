@@ -194,7 +194,7 @@ export function useAgentRuns(
       };
     },
     staleTime: 10 * 1000,
-    refetchInterval: 5 * 1000,
+    refetchInterval: 10 * 1000,
   });
 }
 
@@ -204,7 +204,7 @@ export function useAgentRunDetail(taskUuid: string | null) {
     queryFn: () => apiFetch(`/ai/runs/${taskUuid}`),
     enabled: !!taskUuid,
     staleTime: 5 * 1000,
-    refetchInterval: taskUuid ? 5 * 1000 : false,
+    refetchInterval: taskUuid ? 10 * 1000 : false,
   });
 }
 

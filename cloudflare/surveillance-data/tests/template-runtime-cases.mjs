@@ -6,7 +6,7 @@ import { gzipSync } from 'node:zlib';
 import { readFileSync, readdirSync } from 'node:fs';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 
-test('template catalogue switches atomically, rewrites assets, and keeps the previous generation readable', async () => {
+test('template v2 catalogue entries fail closed and snapshot page URLs stay removed', async () => {
   const runtime = new Miniflare(convertV4MiniflareOptions({
     modules: true, scriptPath: resolve('.wrangler/test-bundle/index.js'),
     compatibilityDate: '2026-11-07', compatibilityFlags: ['nodejs_compat'], r2Buckets: ['DATA'],
@@ -42,26 +42,22 @@ test('template catalogue switches atomically, rewrites assets, and keeps the pre
     }
     const first = await version('first'); await first.activate();
     const response = await runtime.dispatchFetch(`${origin}/${logical}`);
-    assert.equal(response.status, 200);
-    assert.equal(response.headers.get('x-gids-paper-mode'), 'template');
-    assert.equal(response.headers.get('x-gids-paper-sha256'), first.originalHash);
-    const html = await response.text();
-    assert.match(html, new RegExp(`/research-publication/${first.generation}/_astro/first.css`));
-    assert.match(html, /rel="canonical" href="https:\/\/papers.globalinfectiousdisease.com\/research\/articles\/example\/"/);
-    assert.match(html, /<main>Paper content<\/main>/);
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('x-gids-paper-mode'), null);
     const next = await version('next'); await next.activate();
     const changed = await runtime.dispatchFetch(`${origin}/${logical}`);
+    assert.equal(changed.status, 503);
     assert.equal(changed.headers.get('x-gids-research-release'), 'next');
-    assert.match(await changed.text(), /<footer>next<\/footer>/);
     const retained = await runtime.dispatchFetch(`${origin}/research-publication/${first.generation}/${logical}`);
-    assert.match(await retained.text(), /<footer>first<\/footer>/);
+    assert.equal(retained.status, 410);
+    assert.equal(retained.headers.get('location'), null);
     const papersHost = await runtime.dispatchFetch(`https://papers.globalinfectiousdisease.com/${logical}`);
-    assert.match(await papersHost.text(), new RegExp(`https://globalinfectiousdisease.com/research-publication/${next.generation}/_astro/next.css`));
+    assert.equal(papersHost.status, 503);
     assert.equal(await bucket.get('paper-template-v2/current.json'), null);
   } finally { await runtime.dispose(); }
 });
 
-test('real migrated article records assemble through the unified catalogue in every locale', {
+test('real template v2 records fail closed instead of assembling HTML', {
   skip: !process.env.GIDS_PAPERS_CANDIDATE || !process.env.GIDS_PAPERS_SOURCE,
 }, async () => {
   const runtime = new Miniflare(convertV4MiniflareOptions({
@@ -101,12 +97,9 @@ test('real migrated article records assemble through the unified catalogue in ev
       papers: { papers_generation_sha256: catalogueHash }, files: {} }));
     for (const [logical, digest] of Object.entries(expected)) {
       const response = await runtime.dispatchFetch(`https://papers.globalinfectiousdisease.com/${logical}`);
-      assert.equal(response.status, 200);
-      assert.equal(response.headers.get('x-gids-paper-mode'), 'template');
-      assert.equal(response.headers.get('x-gids-paper-sha256'), digest);
-      const html = await response.text();
-      assert.match(html, /<title>/); assert.match(html, /rel="canonical"/);
-      assert.match(html, new RegExp(`gids-research-generation" content="${catalogueHash}`));
+      assert.equal(response.status, 503);
+      assert.equal(response.headers.get('x-gids-paper-mode'), null);
+      assert.notEqual(response.headers.get('x-gids-paper-sha256'), digest);
     }
   } finally { await runtime.dispose(); }
 });

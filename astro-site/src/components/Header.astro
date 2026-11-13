@@ -19,8 +19,12 @@ const localize = (path: string) => pathFor(currentLanguage, path);
 const copy = createTranslator(currentLanguage);
 const languageOptions = LOCALES;
 const languageMenuLabel = copy('Language', '语言', 'Langue');
-// The Situation module is built on the international authority export.
-const situationVisible = existsSync(resolve('./src/data/situation/international/map.json'));
+// Pin this decision for the whole build. A concurrent data refresh can replace
+// the source tree while Astro prerenders thousands of pages; reading the file
+// separately for every route otherwise produces multiple header shells.
+const configuredSituationNav = process.env.GIDS_SITUATION_NAV_VISIBLE;
+const situationVisible = configuredSituationNav === '1'
+  || (configuredSituationNav !== '0' && existsSync(resolve('./src/data/situation/international/map.json')));
 
 const primaryLinks = [
   ...(situationVisible ? [{ href: '/situation/', en: 'Situation', zh: '全球态势', fr: 'Situation' }] : []),

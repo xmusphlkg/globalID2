@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "compatibility": "v1",
+  "root": {
+    "--page-reading-width": "74rem",
+    "--page-tool-width": "78rem",
+    "--page-directory-width": "88rem",
+    "--page-gutter": "2rem",
+    "--page-block-space": "clamp(1.5rem, 3vw, 2.5rem)",
+    "--page-title-size": "clamp(2rem, 4.5vw, 3.5rem)",
+    "--color-brand": "16 42 67",
+    "--color-teal": "15 118 110",
+    "--color-accent": "181 71 46",
+    "--color-evidence": "138 99 0",
+    "--bg": "12 25 38",
+    "--bg-soft": "19 37 53",
+    "--surface": "20 40 57",
+    "--surface-raised": "28 50 68",
+    "--text": "205 216 225",
+    "--text-strong": "247 244 237",
+    "--text-muted": "171 188 201",
+    "--text-faint": "134 155 172",
+    "--border": "63 87 105",
+    "--border-soft": "106 130 147",
+    "--ring-offset": "12 25 38",
+    "--header-bg": "11 31 47",
+    "--footer-bg": "8 24 38"
+  },
+  "light": {
+    "--bg": "247 244 237",
+    "--bg-soft": "239 235 225",
+    "--surface": "255 255 255",
+    "--surface-raised": "250 248 242",
+    "--text": "57 76 91",
+    "--text-strong": "16 42 67",
+    "--text-muted": "78 98 113",
+    "--text-faint": "78 98 113",
+    "--border": "200 211 220",
+    "--border-soft": "144 164 179",
+    "--ring-offset": "247 244 237",
+    "--header-bg": "247 244 237",
+    "--footer-bg": "16 42 67"
+  },
+  "mobile": {
+    "--page-gutter": "1rem"
+  }
+}

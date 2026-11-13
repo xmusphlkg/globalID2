@@ -615,27 +615,13 @@ def publish_papers_site(
         artifacts = ArtifactIndex(papers_dir)
         try:
             if template_candidate is not None:
-                from .papers_templates_publish import PREFIX, publish_candidate
-                pointer_key = f'{PREFIX}/current.json'
-                previous_pointer = active.get_object(pointer_key)
-                if previous_pointer is None:
-                    raise R2S3Error('Template mode requires an active generation')
-                publish_candidate(template_candidate, active, workers=workers,
-                                  max_total_bytes=max_total_bytes or 8_000_000_000)
+                raise R2S3Error('Paper template v2 publication has been removed')
             result = _publish_papers_site(
                 papers_dir, config, client=active, verify_public=verify_public,
                 public_opener=public_opener, workers=workers, artifacts=artifacts,
                 max_total_bytes=max_total_bytes,
-                preserve_static_articles=preserve_static_articles or template_candidate is not None,
+                preserve_static_articles=preserve_static_articles,
             )
-            if template_candidate is not None:
-                pointer = (template_candidate / 'current.json').read_bytes()
-                try:
-                    active.put_object_conditional(pointer_key, pointer, previous=previous_pointer,
-                                                  cache_control='no-store')
-                except R2S3Error as error:
-                    if error.status != 412 or active.get_object(pointer_key) != pointer:
-                        raise
             return result
         finally:
             try:

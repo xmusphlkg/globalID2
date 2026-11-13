@@ -252,7 +252,7 @@ export function useAutomationConfig() {
     queryKey: ["sources-automation"],
     queryFn: () => apiFetch("/schedules/ingestion/config"),
     staleTime: 5 * 1000,
-    refetchInterval: 5 * 1000,
+    refetchInterval: 15 * 1000,
   });
 }
 
@@ -261,7 +261,7 @@ export function useAutomationJobs() {
     queryKey: ["sources-automation-jobs"],
     queryFn: () => apiFetch("/schedules/ingestion/jobs"),
     staleTime: 5 * 1000,
-    refetchInterval: 5 * 1000,
+    refetchInterval: 15 * 1000,
   });
 }
 

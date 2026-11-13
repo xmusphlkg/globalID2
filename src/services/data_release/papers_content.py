@@ -63,6 +63,7 @@ class PapersContentCandidate:
     manifest: bytes
     template_root: Path | None = None
     template_objects: tuple[dict[str, Any], ...] = ()
+    verification_keys: tuple[str, ...] = ()
 
     @property
     def object_keys(self) -> set[str]:
@@ -142,7 +143,6 @@ def _prepare(root: Path, origin: str, files: tuple[ImmutablePapersFile, ...], *,
              template_dir: Path | None = None) -> PapersContentCandidate:
     if not files:
         raise ValueError("Papers publication cannot be empty")
-    groups: dict[str, list[dict[str, Any]]] = {}
     entries: list[dict[str, Any]] = []
     templates, template_objects, template_root = {}, (), None
     if template_dir is not None:
@@ -162,7 +162,21 @@ def _prepare(root: Path, origin: str, files: tuple[ImmutablePapersFile, ...], *,
             entry['key'] = f"paper-template-v2/records/{descriptor['record_sha256']}.json"
             entry['paper_template'] = descriptor
         entries.append(entry)
-        groups.setdefault(_hash(item.logical_key.encode())[:2], []).append(entry)
+    return catalogue_from_entries(root=root, origin=origin, release_id=release_id, entries=entries,
+                                  template_root=template_root, template_objects=template_objects)
+
+
+def catalogue_from_entries(*, root: Path, origin: str, release_id: str, entries: list[dict],
+                           template_root: Path | None = None, template_objects: tuple[dict, ...] = ()) -> PapersContentCandidate:
+    """Use the existing sharded catalogue and publisher for either paper protocol."""
+    groups: dict[str, list[dict]] = {}
+    seen = set()
+    for entry in sorted(entries, key=lambda value: value['logical_key']):
+        logical = entry['logical_key']
+        if logical in seen:
+            raise ValueError('Duplicate logical key in paper catalogue')
+        seen.add(logical)
+        groups.setdefault(_hash(logical.encode())[:2], []).append(entry)
     shards: list[tuple[str, bytes]] = []
     descriptors = {}
     for group, items in sorted(groups.items()):

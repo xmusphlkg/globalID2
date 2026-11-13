@@ -7,6 +7,17 @@ from src.services.data_release.artifact_checkpoint import ArtifactCheckpoint
 from src.services.data_release.pipeline import _built_site_digest
 
 
+@pytest.mark.parametrize('relative', ['shared/research-urls.ts', 'cloudflare/papers-json/src/index.ts'])
+def test_url_policy_or_reader_changes_invalidate_frozen_release(tmp_path, relative):
+    from src.services.data_release.artifact_checkpoint import source_fingerprint
+    source = tmp_path / relative
+    source.parent.mkdir(parents=True)
+    source.write_text('old policy')
+    before = source_fingerprint(tmp_path)
+    source.write_text('new policy')
+    assert source_fingerprint(tmp_path) != before
+
+
 def test_partition_backup_falls_back_across_filesystems(tmp_path, monkeypatch):
     import errno
     from src.services.data_release import artifact_checkpoint

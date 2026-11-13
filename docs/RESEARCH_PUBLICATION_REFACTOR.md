@@ -1,7 +1,10 @@
-# Research publication isolation: work in progress
+# Research publication isolation: JSON channel and Papers v3 active
 
-The existing six-hour static publication remains the production path. The
-candidate code in this branch is not an enabled publication channel.
+The existing six-hour static publication remains the production HTML path.
+The Literature JSON catalogue/data channel is now enabled and runs alongside
+it. The Papers v3 HTML projection is now the active production projection,
+served from the single research publication pointer with the v2 reader kept for
+older entries.
 
 The intended boundary is an exact set of committed literature dirty IDs and a
 single exported PostgreSQL read snapshot. The exporter receives explicit
@@ -13,16 +16,18 @@ Only small structural checks and the conditional R2 pointer fence remain;
 there is no full per-paper content review or per-object remote read-back at
 publication time. Browser readers pin a single manifest.
 
-This is **not yet sufficient to switch production**. The separate task,
-six-hour scheduler, exact-ID acknowledgements, retries and publication fences
-are implemented behind `DATA_RELEASE__LITERATURE_JSON_ENABLED=false`. They
-still need a complete production-scale build and controlled initialization
-before the old site-release publication is retired.
+The JSON channel has passed its controlled initialization and the public
+pointer is readable. The separate task, six-hour scheduler, exact-ID
+acknowledgements, retries and publication fences run with
+`DATA_RELEASE__LITERATURE_JSON_ENABLED=true`. The v3 HTML projection was
+published after complete 8,352-article/three-locale coverage and public canary
+verification; retained static/v2 objects remain available for recovery.
 
-The experimental content-addressed Papers code is currently disconnected from
-production. Its caller must obtain reuse information from a committed earlier
-release, preserve immutable object storage, and record failures. Publication
-logs cannot detect damaged or missing objects that are assumed unchanged.
+The earlier experimental prototype is disconnected from production. The active
+publisher obtains reuse information from the committed v3 release, preserves
+immutable object storage, and records failures. Publication logs still cannot
+detect damaged or missing objects that are assumed unchanged, so reuse remains
+bound to exact receipt and remote identity checks.
 
 The candidate publisher now uploads Papers content and catalogue shards with
 bounded concurrency, binds the Papers generation to the JSON manifest, and

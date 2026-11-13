@@ -789,13 +789,21 @@ class DataReleaseService:
         data_line: str = "surveillance",
         pending_ids: list[int] | None = None,
         suppress_subscription_dispatch: bool = False,
+        theme_only: bool = False,
+        publication_plan: dict | None = None,
     ) -> dict[str, Any]:
-        if sum(bool(value) for value in (full, reports_only, code_only, data_only)) > 1:
+        if sum(bool(value) for value in (full, reports_only, code_only, data_only, theme_only)) > 1:
             raise ValueError("Full, reports-only, code-only and data-only release modes are mutually exclusive")
         async with self._lock:
             job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
             if job is None:
                 raise ValueError(f"Data release job not found: {job_id}")
+
+            if theme_only:
+                if not publication_plan:
+                    raise ValueError("Theme publication requires a frozen plan")
+                return await self._enqueue_release_task(job, manual=manual, trigger=trigger,
+                    trigger_task_uuid=trigger_task_uuid, theme_only=True, publication_plan=publication_plan)
 
             if data_only:
                 # The JSON channel has its own queue/retry state. A poll must
@@ -808,6 +816,7 @@ class DataReleaseService:
                     trigger_task_uuid=trigger_task_uuid, data_only=True, data_line=data_line,
                     pending_ids=pending_ids,
                     **({"suppress_subscription_dispatch": True} if suppress_subscription_dispatch else {}),
+                    **({"publication_plan": publication_plan} if publication_plan else {}),
                 )
 
             tz_name = job.timezone or self._config().timezone
@@ -828,6 +837,7 @@ class DataReleaseService:
                     code_only=code_only,
                     pending_ids=pending_ids,
                     **({"suppress_subscription_dispatch": True} if suppress_subscription_dispatch else {}),
+                    **({"publication_plan": publication_plan} if publication_plan else {}),
                 )
                 state.last_finished_at = datetime.now(ZoneInfo(tz_name))
                 state.last_task_uuid = result["task_uuid"]
@@ -952,7 +962,7 @@ class DataReleaseService:
             or is_automatic_json_paused(_data_line(data))
         ):
             return
-        if any(data.get(flag) for flag in ("raw_archive_only", "reports_only", "code_only")):
+        if any(data.get(flag) for flag in ("raw_archive_only", "reports_only", "code_only", "theme_only")):
             return
         if (metadata.get("release_continuation") or {}).get("status") in {"queued", "exhausted"}:
             return
@@ -1047,7 +1057,7 @@ class DataReleaseService:
             )).scalars().all())
         report_time = _as_aware_utc(latest_report.completed_at)
         for release in releases:
-            if any((release.input_data or {}).get(flag) for flag in ("code_only", "raw_archive_only", "data_only")):
+            if any((release.input_data or {}).get(flag) for flag in ("code_only", "raw_archive_only", "data_only", "theme_only")):
                 continue
             if release.status == TaskStatus.COMPLETED and (release.output_data or {}).get("r2_reports_published"):
                 snapshot_time = _as_aware_utc(release.started_at)
@@ -1171,7 +1181,7 @@ class DataReleaseService:
             ).scalars().all()
         for task in tasks:
             metadata = dict(task.metadata_ or {})
-            if metadata.get("release_job_id") != job_id or any((task.input_data or {}).get(flag) for flag in ("reports_only", "raw_archive_only", "code_only", "data_only")):
+            if metadata.get("release_job_id") != job_id or any((task.input_data or {}).get(flag) for flag in ("reports_only", "raw_archive_only", "code_only", "data_only", "theme_only")):
                 continue
             task_time = _as_aware_utc(task.completed_at or task.created_at)
             crawl_time = _as_aware_utc(crawl_completed_at)
@@ -1222,7 +1232,7 @@ class DataReleaseService:
             tasks = list(result.scalars().all())
         for task in tasks:
             metadata = dict(task.metadata_ or {})
-            if metadata.get("release_job_id") == job_id and not any((task.input_data or {}).get(flag) for flag in ("reports_only", "raw_archive_only", "code_only")):
+            if metadata.get("release_job_id") == job_id and not any((task.input_data or {}).get(flag) for flag in ("reports_only", "raw_archive_only", "code_only", "theme_only")):
                 if data_only and _data_line(task.input_data or {}) != data_line:
                     continue
                 return task
@@ -1242,8 +1252,10 @@ class DataReleaseService:
         data_line: str = "surveillance",
         pending_ids: list[int] | None = None,
         suppress_subscription_dispatch: bool = False,
+        theme_only: bool = False,
+        publication_plan: dict | None = None,
     ) -> dict[str, Any]:
-        if sum(bool(value) for value in (full, reports_only, code_only, data_only)) > 1:
+        if sum(bool(value) for value in (full, reports_only, code_only, data_only, theme_only)) > 1:
             raise ValueError("Release modes are mutually exclusive")
         _data_line({"data_line": data_line})
         situation_detached = bool(getattr(self._config(), "situation_json_enabled", False) and not any((data_only, code_only, reports_only)))
@@ -1280,15 +1292,15 @@ class DataReleaseService:
                     selection_query = selection_query.where(PublishDirty.line != "literature")
             if pending_ids is not None:
                 selection_query = selection_query.where(PublishDirty.id.in_(pending_ids))
-            dirty = [] if reports_only or code_only else list((await db.execute(selection_query.order_by(PublishDirty.id))).scalars().all())
-            if pending_ids is not None and not dirty:
+            dirty = [] if reports_only or code_only or theme_only else list((await db.execute(selection_query.order_by(PublishDirty.id))).scalars().all())
+            if pending_ids is not None and not dirty and not full:
                 return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid, "reason": "no_pending_changes"}
             if full:
                 # Freeze exact visible log IDs, including for full releases.
                 # A transaction can commit later with an earlier marked_at;
                 # a timestamp-only acknowledgement would lose that change.
                 dirty_ids = [row.id for row in dirty]
-            if not full and not reports_only and not code_only:
+            if not full and not reports_only and not code_only and not theme_only:
                 scopes = sorted({row.scope_key for row in dirty if row.line == "surveillance"})
                 known = list((await db.execute(select(Country.code, Country.is_active))).all()) if scopes else []
                 known_codes = {str(code).strip().upper() for code, _active in known}
@@ -1384,6 +1396,18 @@ class DataReleaseService:
             "raw_archive_repo_url": raw_archive.repo_url,
             "raw_archive_branch": raw_archive.branch,
         }
+        if publication_plan:
+            input_data["publication_plan"] = dict(publication_plan)
+            input_data["publication_expected_generations"] = dict(publication_plan.get("expected_generations", {}))
+            if publication_plan.get("execution_mode") == "country_template":
+                input_data["country_template_only"] = True
+                input_data["country_template_codes"] = list(publication_plan.get("country_codes", []))
+        if theme_only:
+            input_data.update(theme_only=True, include_git_push=False, include_cloudflare_deploy=False,
+                              raw_archive_enabled=False, publish_dirty_ids=[], continuation_dirty_ids=[],
+                              publish_change_count=0, content_only=False, situation_detached=False,
+                              literature_detached=False)
+            description_parts = ["Publish and verify the frozen compatible theme candidate; no content, HTML or Pages build."]
         async with get_database() as db:
             # Reserve a channel atomically across scheduler/API processes.
             # JSON and static have separate runtime outputs, but their brief
@@ -1394,6 +1418,35 @@ class DataReleaseService:
                 .order_by(DataReleaseJob.id.asc())
                 .with_for_update()
             )
+            if publication_plan:
+                from .data_release.publication_execution import PublicationPlanError, configuration_digest, digest
+                prior = (await db.execute(select(Task).where(
+                    Task.task_uuid == publication_plan["task_uuid"]))).scalar_one_or_none()
+                if prior is not None:
+                    if (prior.input_data or {}).get("publication_plan", {}).get("plan_digest") != publication_plan["plan_digest"]:
+                        raise PublicationPlanError("publication_idempotency_conflict")
+                    return {"job_id": job.job_id, "status": "skipped", "task_uuid": prior.task_uuid,
+                            "reason": "idempotent_replay"}
+                if publication_plan.get("expires_at") and datetime.fromisoformat(publication_plan["expires_at"]) <= datetime.now(ZoneInfo("UTC")):
+                    raise PublicationPlanError("publication_plan_expired", 410)
+                if publication_plan.get("job_configuration_digest"):
+                    locked_job = (await db.execute(select(DataReleaseJob).where(
+                        DataReleaseJob.job_id == job.job_id).with_for_update())).scalar_one_or_none()
+                    if locked_job is None or digest({column.name: getattr(locked_job, column.name)
+                        for column in DataReleaseJob.__table__.columns}) != publication_plan["job_configuration_digest"]:
+                        raise PublicationPlanError("publication_job_configuration_changed")
+                if publication_plan.get("configuration_digest") and configuration_digest(self, ROOT_DIR) != publication_plan["configuration_digest"]:
+                    raise PublicationPlanError("publication_configuration_changed")
+                if (data_only or full) and pending_ids is not None:
+                    frozen_ids = set(pending_ids)
+                    selected_ids = set(dirty_ids) | set(release_plan.get("continuation_dirty_ids", []))
+                    if frozen_ids != selected_ids:
+                        raise PublicationPlanError("publication_selection_changed")
+                    pending_now = set((await db.execute(select(PublishDirty.id).where(
+                        PublishDirty.id.in_(sorted(frozen_ids)), (PublishDirty.line == data_line) if data_only else True,
+                        PublishDirty.published_at.is_(None)).with_for_update())).scalars())
+                    if pending_now != frozen_ids:
+                        raise PublicationPlanError("publication_selection_changed")
             if pending_ids is not None and trigger_task_uuid:
                 child = (await db.execute(select(Task).where(
                     Task.task_type == TaskType.EXPORT_DATA,
@@ -1449,8 +1502,9 @@ class DataReleaseService:
                             "reason": "no_pending_changes" if not pending else "selection_changed"}
 
             task = Task(
+                **({"task_uuid": publication_plan["task_uuid"]} if publication_plan else {}),
                 task_type=TaskType.EXPORT_DATA,
-                task_name=f"{('Literature Publication' if data_line == 'literature' else data_line.title() + ' JSON') if data_only else 'Data Release'}: {job.name}",
+                task_name=f"{'Theme Publication' if theme_only else ('Literature Publication' if data_line == 'literature' else data_line.title() + ' JSON') if data_only else 'Data Release'}: {job.name}",
                 # A release always outranks collection and AI work in the queue,
                 # whatever priority the job row stores.
                 priority=TaskPriority.URGENT,
@@ -2177,6 +2231,7 @@ class DataReleaseService:
         return build_publish_papers_r2_command(
             python_path=python_path,
             source_dir=self._papers_site_dir(),
+            articles_dir=ASTRO_DIR / "src" / "data" / "research" / "articles",
         )
 
     def _split_reports_bundle_command(self, *, python_path: Path) -> list[str]:
@@ -2463,7 +2518,7 @@ class DataReleaseService:
         title: str,
         cmd: list[str],
         cwd: Path,
-        env: Optional[dict[str, str]] = None,
+        env: Optional[dict[str, str | None]] = None,
         metadata: Optional[dict[str, Any]] = None,
         timeout_seconds: float = DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS,
     ) -> None:

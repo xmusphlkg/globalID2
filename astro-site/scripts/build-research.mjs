@@ -67,7 +67,9 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
   // A full isolated candidate must not inherit another release's partial plan.
   const env = { ...process.env, GIDS_RESEARCH_BUILD_DIR: prepared.buildRoot,
     GIDS_SITE_DATA_ROOT: prepared.data, GIDS_RESEARCH_PUBLIC_ROOT: resolve(snapshot, 'public/research'),
-    GIDS_STATIC_RENDER: '1', PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN: process.env.GIDS_RESEARCH_STATIC_HOST === '1' ? '0' : '1' };
+    GIDS_STATIC_RENDER: '1',
+    GIDS_SITUATION_NAV_VISIBLE: existsSync(resolve(site, 'src/data/situation/international/map.json')) ? '1' : '0',
+    PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN: process.env.GIDS_RESEARCH_STATIC_HOST === '1' ? '0' : '1' };
   delete env.GIDS_RESEARCH_BUILD_PLAN;
   delete env.GIDS_PAGE_BUILD_PLAN;
   delete env.GIDS_REPORTS_BUILD_DIR;
@@ -130,7 +132,11 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
   const cache = resolve(project, 'data/cache');
   mkdirSync(cache, { recursive: true });
   if (process.env.GIDS_ISOLATED_RESEARCH_LOCKED !== '1') {
-    const result = spawnSync('flock', ['-x', resolve(cache, 'research-isolated-build.lock'), process.execPath, fileURLToPath(import.meta.url)], {
+    // The main site build also invokes Astro and shares the source
+    // node_modules/Vite optimizer cache. Use its artifact lock so an
+    // isolated Literature build cannot race a regular site build and leave a
+    // prerender manifest pointing at a chunk that has not been emitted yet.
+    const result = spawnSync('flock', ['-x', resolve(cache, 'research-public-artifacts.lock'), process.execPath, fileURLToPath(import.meta.url)], {
       cwd: site, env: { ...process.env, GIDS_ISOLATED_RESEARCH_LOCKED: '1' }, stdio: 'inherit',
     });
     if (result.error) throw result.error;

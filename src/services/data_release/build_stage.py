@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import json
+import hashlib
+import shutil
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -38,6 +41,68 @@ async def build_release_site(
             and not getattr(config, "surveillance_json_enabled", False)):
         raise RuntimeError("Runtime data templates require an initialized JSON channel and Worker; enable DATA_RELEASE__SURVEILLANCE_JSON_ENABLED after initialization before publishing templates")
     task_data = dict(getattr(task, "input_data", None) or {})
+    if task_data.get("country_template_only"):
+        if not task_data.get("code_only") or not task_data.get("publication_plan"):
+            raise ValueError("Country template compilation requires a frozen code plan")
+        baseline = runtime.root_dir / "exports/verified-pages-snapshot"
+        frozen_plan = task_data["publication_plan"]
+        candidate = runtime.root_dir / "exports/country-template-runs" / task.task_uuid
+        from .surveillance_publish import _atomic_receipt
+        ready_path = candidate.with_suffix(".ready.json")
+        signature = {"plan_digest": frozen_plan.get("plan_digest"),
+                     "baseline_digest": frozen_plan["country_baseline_digest"],
+                     "baseline_release_sha256": frozen_plan["country_baseline_release_sha256"],
+                     "countries": task_data["country_template_codes"]}
+        if ready_path.is_file():
+            ready = json.loads(ready_path.read_bytes())
+            if (ready.get("signature") != signature or await asyncio.to_thread(built_site_digest, candidate) != ready.get("candidate_digest")
+                    or hashlib.sha256((candidate / "release.json").read_bytes()).hexdigest() != signature["baseline_release_sha256"]):
+                raise ValueError("Frozen country candidate integrity check failed")
+            receipt = ready["receipt"]
+        else:
+            if candidate.exists():
+                await asyncio.to_thread(shutil.rmtree, candidate)
+            await service._run_logged_command(task.task_uuid, title="Compile Country Template",
+                cmd=["node", "--experimental-strip-types", "scripts/build-country-template.mjs",
+                     "--baseline", str(baseline), "--output", str(candidate), "--countries",
+                     ",".join(task_data.get("country_template_codes") or []),
+                     "--baseline-digest", str(frozen_plan["country_baseline_digest"]),
+                     "--baseline-release-sha256", str(frozen_plan["country_baseline_release_sha256"])],
+                cwd=runtime.astro_dir,
+                env={"GIDS_RUNTIME_DATA_READY": "1", "GIDS_EXTERNAL_SURVEILLANCE_DATA": "1",
+                     "GIDS_RUNTIME_SITUATION_READY": "1" if getattr(config, "situation_json_enabled", False) else "0",
+                     "GIDS_RESEARCH_PUBLICATION_ENABLED": "1" if getattr(config, "literature_json_enabled", False) else "0",
+                     "PUBLIC_GIDS_THEME_V1_URL": str(getattr(config, "theme_stylesheet_url", "") or ""),
+                     "NODE_OPTIONS": "--max-old-space-size=12288",
+                     "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
+                     "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
+                     "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],
+                     "PUBLIC_GIDS_DEPLOY_BRANCH": release_identity["deployment_branch"],
+                     "PUBLIC_GIDS_BUILT_AT": release_identity["built_at"]},
+                metadata={"event": "country_template_compile", "release_job_id": job.job_id},
+                timeout_seconds=runtime.astro_build_timeout_seconds)
+            receipt = json.loads((candidate / "country-template-receipt.json").read_bytes())
+            expected = {f"{locale}countries/{code}/index.html" for code in task_data["country_template_codes"] for locale in ("", "zh/", "fr/")}
+            if (receipt.get("family") != "country" or set(receipt.get("pages", [])) != expected
+                    or receipt.get("content_render_count") != 0 or receipt.get("papers_render_count") != 0
+                    or receipt.get("reports_render_count") != 0):
+                raise ValueError("Country compiler output does not match the frozen plan")
+            (candidate / "country-template-receipt.json").unlink()
+            await asyncio.to_thread(_atomic_receipt, ready_path, {
+                "signature": signature, "candidate_digest": await asyncio.to_thread(built_site_digest, candidate),
+                "receipt": receipt})
+        dist = runtime.astro_dir / "dist"
+        if dist.exists():
+            await asyncio.to_thread(shutil.rmtree, dist)
+        await asyncio.to_thread(shutil.copytree, candidate, dist)
+        from .release_binding import PAPERS_FIELDS
+        prior = json.loads((candidate / "release.json").read_bytes())
+        release_identity = {**release_identity, **{key: prior[key] for key in PAPERS_FIELDS if key in prior},
+                            "build_digest": await asyncio.to_thread(built_site_digest, dist)}
+        await service._record_release_checkpoint(task.task_uuid, "country_template", receipt)
+        await runtime.task_manager.add_workbook_entry(task.task_uuid, entry_type="info", title="Country Template Compiled",
+            content=json.dumps(receipt), content_type="json", metadata={"event": "country_template_compiled", **receipt})
+        return release_identity
     external_surveillance = bool(getattr(config, "surveillance_json_enabled", False)
         and (task_data.get("content_only") or task_data.get("code_only")))
     reuse = None
@@ -97,6 +162,7 @@ async def build_release_site(
             "GIDS_PAGES_DATA_WORKER": "1" if getattr(config, "pages_data_worker_enabled", False) else "0",
             "GIDS_RESEARCH_PUBLICATION_ENABLED": "1" if getattr(config, "literature_json_enabled", False) else "0",
             "PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN": "1" if getattr(config, "literature_json_enabled", False) else "0",
+            "PUBLIC_GIDS_THEME_V1_URL": str(getattr(config, "theme_stylesheet_url", "") or ""),
             "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
             "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
             "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],

@@ -1,5 +1,6 @@
 /** Resolve an immutable research generation through its small sharded catalogue. */
 import { templateArticleResponse } from './paper-template-content.ts';
+import { isResearchPagePath, isResearchResourcePath, researchPageUrl } from '../../../shared/research-urls.ts';
 const generationPath = /^\/research-publication\/([a-f0-9]{64})\/((?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]*\/?$)/;
 
 export function papersContentPath(pathname: string): { generation: string; key: string } | null {
@@ -53,26 +54,35 @@ async function catalogueJson<T>(request: Request, env: Env, key: string,
   return value;
 }
 
-/** Preserve canonical metadata while keeping page links and assets on one generation. */
-function versionedPath(value: string, generation: string, publicBase: string): string | null {
+/** Public navigation and SEO agree; only supporting resources use a generation. */
+function rewrittenPath(value: string, generation: string, publicBase: string): string | null {
   let url: URL;
   try { url = new URL(value, 'https://globalinfectiousdisease.com'); } catch { return null; }
-  if (!['globalinfectiousdisease.com', 'www.globalinfectiousdisease.com', 'papers.globalinfectiousdisease.com'].includes(url.hostname)
-      || !/^\/(?:_astro\/|scripts\/|site-data\/research(?:\/|-graph\.json)|(?:zh\/|fr\/)?research(?:\/|$))/.test(url.pathname)) return null;
-  return `${publicBase}/research-publication/${generation}${url.pathname}${url.search}${url.hash}`;
+  if (!['https:', 'http:'].includes(url.protocol)
+      || !['globalinfectiousdisease.com', 'www.globalinfectiousdisease.com', 'papers.globalinfectiousdisease.com'].includes(url.hostname)) return null;
+  if (isResearchPagePath(url.pathname)) return researchPageUrl(`${url.pathname}${url.search}${url.hash}`);
+  if (isResearchResourcePath(url.pathname)) {
+    return `${publicBase}/research-publication/${generation}${url.pathname}${url.search}${url.hash}`;
+  }
+  // The v3 shells are assembled in an isolated build and may retain root
+  // relative links for the shared logo, navigation and static assets.  On
+  // the Papers host those files belong to the main site; keep their origin
+  // explicit so they do not become 404s under papers.globalinfectiousdisease.com.
+  if (publicBase && value.startsWith('/') && !value.startsWith('//')) {
+    return `${publicBase}${url.pathname}${url.search}${url.hash}`;
+  }
+  return null;
 }
 
 function rewriteHtml(response: Response, generation: string, publicBase: string): Response {
   if (typeof HTMLRewriter === 'undefined') return response;
   return new HTMLRewriter().on('head', {
     element(element) { element.prepend(`<meta name="gids-research-generation" content="${generation}">`, { html: true }); },
-  }).on('[href], [src], [data-graph-src], [component-url], [renderer-url]', {
+  }).on('[href], [src], [data-graph-src], [component-url], [renderer-url], meta[property="og:url"]', {
     element(element) {
-      // Search engines and social cards should retain their stable public URLs.
-      if (element.tagName === 'link' && /(?:^|\s)(?:canonical|alternate)(?:\s|$)/i.test(element.getAttribute('rel') || '')) return;
-      for (const attribute of ['href', 'src', 'data-graph-src', 'component-url', 'renderer-url']) {
+      for (const attribute of ['href', 'src', 'data-graph-src', 'component-url', 'renderer-url', ...(element.tagName === 'meta' ? ['content'] : [])]) {
         const value = element.getAttribute(attribute);
-        const next = value && versionedPath(value, generation, publicBase);
+        const next = value && rewrittenPath(value, generation, publicBase);
         if (next) element.setAttribute(attribute, next);
       }
     },
@@ -106,6 +116,12 @@ export async function serveCurrentResearch(request: Request, env: Env, key: stri
 }
 
 export async function servePapersContent(request: Request, env: Env, route: { generation: string; key: string }, ctx?: ExecutionContext): Promise<Response> {
+  // Removed snapshot page URLs must never fall through to static Pages or R2.
+  // The stable route calls this resolver internally with its original short URL.
+  if (papersContentPath(new URL(request.url).pathname) && !isResearchResourcePath(`/${route.key}`)) {
+    return new Response(request.method === 'HEAD' ? null : 'Gone', { status: 410,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
+  }
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { Allow: 'GET, HEAD, OPTIONS' } });
   if (request.method !== 'GET' && request.method !== 'HEAD') return new Response(null, { status: 405, headers: { Allow: 'GET, HEAD, OPTIONS' } });
   try {

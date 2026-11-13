@@ -60,7 +60,7 @@ function mockApi(state = overview(), options: MockOptions = {}) {
   vi.mocked(apiFetch).mockImplementation((path, init) => {
     if (init?.method) {
       if (options.mutation) return Promise.resolve(options.mutation(path, init));
-      const key = path.includes("/situation/") ? "situation" : "surveillance";
+      const key = path.includes("/literature/") ? "literature" : path.includes("/situation/") ? "situation" : "surveillance";
       if (init.method === "PATCH") {
         const paused = JSON.parse(String(init.body)).paused as boolean;
         state.channels[key].paused = paused;
@@ -72,7 +72,7 @@ function mockApi(state = overview(), options: MockOptions = {}) {
     }
     if (path === "/publish/realtime/overview") return Promise.resolve(structuredClone(state));
     const url = new URL(path, "https://api.example");
-    const key = url.pathname.includes("/situation/") ? "situation" : "surveillance";
+    const key = url.pathname.includes("/literature/") ? "literature" : url.pathname.includes("/situation/") ? "situation" : "surveillance";
     if (url.pathname.endsWith("/pending")) return Promise.resolve(options.pending?.(url, key) ?? page([pending(key)]));
     if (url.pathname.endsWith("/runs")) return Promise.resolve(options.runs?.(url, key) ?? page([run()]));
     return Promise.reject(new Error(`Unexpected test API route: ${path}`));
@@ -90,6 +90,35 @@ beforeEach(() => { vi.resetAllMocks(); useAppStore.setState({ lang: "en" }); });
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); });
 
 describe("realtime publication control panel", () => {
+  it("describes literature correctly and routes its publication and pause actions to its own channel", async () => {
+    const state = overview();
+    state.channels = { literature: channel("literature") };
+    mockApi(state);
+    show();
+    const card = await screen.findByRole("region", { name: "Literature" });
+    expect(within(card).getByText("Published research records, article projections and their shared catalogue.")).toBeInTheDocument();
+    expect(within(card).queryByText("Situation maps, official alerts, and weekly archives.")).toBeNull();
+    expect(screen.getByLabelText("Publication channel")).toHaveValue("literature");
+    fireEvent.click(screen.getByRole("button", { name: "Publish selected JSON" }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/publish/realtime/literature/runs", { method: "POST", body: JSON.stringify({}) }));
+    fireEvent.click(await within(card).findByRole("button", { name: "Pause automatic publication · Literature" }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/publish/realtime/literature/control", { method: "PATCH", body: JSON.stringify({ paused: true }) }));
+  });
+
+  it("offers only channels returned by the service and selects an available channel", async () => {
+    const state = overview();
+    state.channels = { situation: channel("situation") };
+    mockApi(state);
+    show();
+    await screen.findByRole("region", { name: "Situation" });
+    expect(screen.queryByRole("region", { name: "Surveillance" })).toBeNull();
+    expect(screen.getByLabelText("Publication channel")).toHaveValue("situation");
+    expect(screen.getAllByRole("option", { name: "Situation" })).toHaveLength(1);
+    expect(screen.queryByRole("option", { name: "Surveillance" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Publish selected JSON" }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/publish/realtime/situation/runs", { method: "POST", body: JSON.stringify({}) }));
+  });
+
   it("shows historical completed tasks as 100% without masking failed progress", async () => {
     mockApi(overview(), { runs: () => page([
       run({ task_uuid: "completed-old", status: "completed", progress: 65 }),
@@ -260,6 +289,16 @@ describe("realtime publication control panel", () => {
     expect(screen.getByRole("button", { name: "恢复自动发布 · 国家与疾病监测" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "发布所选通道 JSON" })).toBeEnabled();
     expect(Object.keys(realtimePublishMessages.zh).sort()).toEqual(Object.keys(realtimePublishMessages.en).sort());
+  });
+
+  it("keeps the Chinese blocked reason column readable on narrow screens", async () => {
+    useAppStore.setState({ lang: "zh" });
+    mockApi(overview(), { pending: (_url, key) => page([pending(key, 2)]) });
+    show();
+    const changes = await screen.findByRole("region", { name: "待发布变更 · 国家与疾病监测" });
+    const table = await within(changes).findByRole("table");
+    expect(table).toHaveClass("min-w-[42rem]");
+    expect(within(table).getByText("此国家或地区尚未注册。").closest("td")).toHaveClass("min-w-48");
   });
 
   it("repairs an invalid control only through an explicit resume and keeps the other channel paused", async () => {

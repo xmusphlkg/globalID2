@@ -115,6 +115,8 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     downloads = bool(data.get("include_git_push"))
     receipt = await asyncio.to_thread(_ready_candidate, run, task_uuid=task.task_uuid,
         codes=codes, dirty_ids=dirty_ids, available_codes=selected_plan["available_country_codes"], downloads=downloads)
+    from .publication_recovery import require_candidate, save_recovery
+    require_candidate(service, receipt is not None)
     python = service._python_executable()
     config = service._config()
     env = {"CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
@@ -124,6 +126,9 @@ async def execute_data_release(service, task, *, runtime) -> dict:
         "R2_SECRET_ACCESS_KEY": str(getattr(config, "r2_secret_access_key", "")),
         "R2_ENDPOINT_URL": str(getattr(config, "r2_endpoint_url", "")),
         "R2_ACCOUNT_ID": str(getattr(config, "r2_account_id", "") or service._cloudflare_account_id())}
+    expected_generations = data.get("publication_expected_generations") or {}
+    if "surveillance" in expected_generations:
+        env["GIDS_PUBLICATION_EXPECTED_BASELINE_JSON"] = json.dumps(expected_generations["surveillance"])
     export_seconds = 0.0
     if receipt is None:
         from src.generation.surveillance_data_export import completed_generation
@@ -170,6 +175,7 @@ async def execute_data_release(service, task, *, runtime) -> dict:
                 task_uuid=task.task_uuid, codes=codes, dirty_ids=dirty_ids, full=full,
                 available_codes=selected_plan["available_country_codes"], downloads=downloads)
         export_seconds = time.monotonic() - export_started
+    await asyncio.to_thread(save_recovery, root, task, run / "ready.json")
     async with runtime.get_database() as db:
         before_publish = await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid)
     await asyncio.to_thread(_validate_projection_scopes, run / "_release-projection", codes,

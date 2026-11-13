@@ -8,6 +8,138 @@ GlobalID V2 is an infectious disease surveillance platform built around three co
 
 The current repository is centered on China disease surveillance data, but the data model, country bootstrap configuration, and mapping system are structured for multi-country expansion.
 
+## Current GIDS refactor status (2026-11-13)
+
+The core data-line and control-plane refactor is running in production. The
+repository is not yet at a clean, fully signed-off release boundary because a
+small set of dashboard polling and database-pool changes is still uncommitted
+and the failure-fence acceptance record is still pending. The two requested
+public cutovers are complete and have independent immutable receipts; a green
+unit test alone does not prove that a production pointer was switched and
+verified.
+
+| Area | Current result | Boundary that remains |
+| --- | --- | --- |
+| Collection pipeline | Four data lines use queued `collect → organize → store` stages. Database head is `0031_ai_success_log_index`; the old fused country runner has been removed. | Continue per-line acceptance on real incremental runs; cancelled work must remain cancelled and must not create dirty markers. |
+| Publication | Surveillance, Situation, and Literature JSON channels are enabled. Publication consumes `publish_dirty` scopes, writes immutable objects, and advances one channel pointer after verification. Papers v3 has a verified production generation and an idempotent no-upload rerun; the targeted failure-fence suite passes (`5 passed`). | Save the remaining production failed-publication pointer-fence acceptance record before declaring the whole refactor signed off. |
+| Model center | AI organizers run in the dedicated AI worker. Durable work items, route leases, cooldowns, retry limits, and twelve auxiliary dispatchers are active. | Production throughput and backlog estimates remain observations, not guarantees; do not infer them from isolated benchmarks. |
+| Control plane | `/api/v1` exposes overview, collection, models, publication, and runtime contracts. The checked-in OpenAPI JSON and TypeScript client pass `npm run openapi:check`; authenticated local smoke checks for all five surfaces return HTTP 200 with the expected `data/meta` envelope. | The working tree must be clean and the dashboard must be rebuilt before calling the current polling/pool tuning a release. |
+| Public site | Pages plus same-origin JSON data workers remain active. The independent theme v1 and Papers projection v3 cutovers are now live behind immutable R2 objects and verified pointers. | Keep the canary receipts and pointer checks in the release record; the independent JSON CDN/R2 design remains revoked. |
+| Runtime | API, general worker, AI worker, scheduler, web, and the twelve model dispatchers are active. After the owner-scoped recovery, the latest readiness check reports `status=ok` (`queued=17`, `running=14` at the 2026-11-13 check); queue counts are live and continue to change. | Keep using the managed restart script for backend changes; it freezes the scheduler, drains workers, recovers only confirmed-dead leases, and verifies all heartbeats before reopening scheduling. |
+
+### The new runtime flow
+
+```mermaid
+flowchart LR
+  S[Official sources] --> Q[Scheduler enqueues a task]
+  Q --> W[General worker]
+  W --> C[collect]
+  C --> O[organize]
+  O --> T[store]
+  T --> DB[(PostgreSQL facts)]
+  T --> D[publish_dirty]
+  D --> R[Release task]
+  R --> J[Surveillance / Situation / Literature JSON]
+  R --> H[Astro HTML and download channels]
+  J --> P[Pages same-origin data worker]
+  O -. model work .-> A[AI worker + durable model leases]
+  A --> DB
+```
+
+Collection never publishes public projections in the same transaction. A
+successful `store` records the affected scope as dirty; a later release reads
+those scopes, creates a candidate, verifies immutable objects, conditionally
+updates the channel pointer, and records the public and database confirmations.
+The dashboard reads these states and does not become a second publisher.
+
+During the 2026-11-13 cutover, the graceful drain encountered one
+non-resumable crawler and exceeded its observation deadline. systemd then
+restarted the dead worker PIDs, the owner-scoped recovery cancelled the three
+stale tasks left by those PIDs, and the scheduler/API/workers returned to
+`status=ok`. No publication pointer or source release was rolled back.
+
+### Requirement assessment
+
+The architectural requirements are met: collection and publication are
+separate, publication is incremental and dirty-scope driven, model calls are
+handled by a durable queue, worker roles are isolated, and the old dashboard
+paths remain available during the transition. The production database is
+already on the complete migration chain, and the active services have passed
+the runtime readiness check.
+
+The remaining release boundary is the saved production failure-fence acceptance
+record and a clean working tree. The targeted literature publication tests
+cover the same fence (`5 passed`); the idempotent Papers v3 rerun already records
+`uploaded_objects=0` and `pointer_changed=false`; the two previously held
+cutovers have now been completed and have independent receipts:
+
+- **Theme v1:** `exports/theme-production-cutover-20261113/theme-receipt.json`
+  records `authoritative_committed=true` and `public_verified=true`. The
+  dedicated bucket `globalid-theme` serves
+  `https://theme.globalinfectiousdisease.com/theme/compat/v1/theme.css` with
+  HTTP 200 and the browser fixture covers all home/country templates in three
+  locales at mobile and desktop widths. The readiness probe now returns
+  `ready=true`. The Pages production deployment is
+  `288d10d2-0e1e-4c9e-b630-365a04fac09d` (`75e8ec3`); the public
+  custom-domain checks for `/`, `/zh/`, `/fr/`, and all three locale variants
+  of `/countries/cn/` returned HTTP 200 and include the immutable theme URL
+  plus `data-gids-theme-compat="v1"`.
+- **Papers v3:** the complete 8,352-article, three-locale candidate is
+  published under generation
+  `318580a640b1885153b721990f21eee324cd015af92783da50603d76a29a07c0`.
+  `exports/research-runs/papers-v3-cutover-20261113/published.json`
+  records the idempotent verification (`uploaded_objects=0`,
+  `reused_objects=46748`) after the initial publish uploaded 8,356 new
+  immutable objects and reused 38,392 existing objects. The public pointer
+  remains the single atomic `site-data/research-publication/current.json`;
+  stable English, Chinese, and French article URLs return
+  `X-GIDS-Paper-Mode: projection-v3` plus content, template, and assets
+  hashes.
+
+The Literature **JSON publication** switch is enabled alongside the HTML
+projection. Its pointer and immutable shards are still verified independently;
+the v3 HTML canaries above verify the renderer and its template/record/assets
+hashes, while the JSON readiness probe verifies the catalogue/data channel.
+Scheduled literature publication and full-site research publication emit only
+projection v3. A `paper_template` entry that is not schema 3 fails closed.
+Template v2 is not a rollback path, and historical `paper-template-v2/`
+objects are retained rather than deleted.
+
+The CDN design in `docs/MAIN_SITE_JSON_PUBLICATION_DESIGN.md` is historical
+input. It is not the current deployment plan: the independent public bucket,
+custom domain, cache rules, and frontend CDN reader were removed by decision.
+The current public path is the existing Pages deployment and its same-origin
+JSON worker. See the implementation and deployment records for the retained
+scope and evidence:
+
+- [`docs/DATA_LINE_AND_CONTROL_PLANE_REFACTOR.md`](docs/DATA_LINE_AND_CONTROL_PLANE_REFACTOR.md)
+- [`docs/MAIN_SITE_JSON_PUBLICATION_IMPLEMENTATION.md`](docs/MAIN_SITE_JSON_PUBLICATION_IMPLEMENTATION.md)
+- [`docs/MAIN_SITE_PRODUCTION_DEPLOYMENT_20261113.md`](docs/MAIN_SITE_PRODUCTION_DEPLOYMENT_20261113.md)
+- [`docs/acceptance/DATA_LINE_RUNTIME_20261030.md`](docs/acceptance/DATA_LINE_RUNTIME_20261030.md)
+
+### Safe completion sequence
+
+Use the following order when closing the remaining acceptance boundary:
+
+1. Check `venv/bin/python scripts/check_task_runtime.py` and wait for active
+   `EXPORT_DATA`/collection tasks to finish. Do not mark a running task
+   complete by hand.
+2. Run the read-only data-line acceptance for the exact task UUIDs and save
+   the artifact, stage, dirty-marker, and pointer evidence.
+3. Exercise the publication failure fence and the second no-dirty run in an
+   isolated candidate, then repeat against the selected production channel.
+4. Re-run `venv/bin/python scripts/check_theme_publication_readiness.py --pretty`
+   and the three-locale Papers v3 canary; both must retain their recorded
+   immutable generation and pointer checks.
+5. Run `cd dashboard && npm run openapi:check`, the targeted Python and
+   dashboard tests, and `venv/bin/python scripts/release_readiness.py`.
+   Readiness is intentionally blocked while the worktree is dirty.
+6. After the release task is no longer running, use
+   `venv/bin/python scripts/restart_task_runtime.py --include-api` only if a
+   new backend is needed, then restart the dashboard web service after its
+   production build. The script drains workers and preserves active task
+   recovery semantics.
+
 ## Branches and data repositories
 
 This source-code repository has two persistent branches:
@@ -222,7 +354,7 @@ The general-worker systemd drop-in starts the independent AI worker. The AI
 worker starts 12 auxiliary model dispatchers and publishes model readiness. The example configuration allows 12 AI organizers with
 `TASK_WORKER_CONCURRENCY=16`; organizer slots and dispatcher processes do not
 multiply the model center's global route limits. Service templates budget up to
-81 database pool connections across these dispatchers, the general worker, AI
+85 database pool connections across these dispatchers, the general worker, AI
 worker, API, scheduler, and historical rescreen service. Keep additional clients within the
 database's connection limit when changing these settings. The installer also
 installs the managed service drop-ins so the dispatcher count survives reinstalls.
@@ -508,8 +640,8 @@ This installs:
 The AI worker owns AI business organizers, the main model dispatcher, and the
 model-runtime readiness signal. Twelve auxiliary dispatchers follow its lifecycle.
 General ingestion/export work has its own worker process and Redis lease; restarting
-it does not stop the AI worker. The checked-in database pool ceilings total 81
-connections (including AI worker 8 + 4), below PostgreSQL's 100-connection limit.
+it does not stop the AI worker. The checked-in database pool ceilings total 85
+connections (including API 10 + 6 and AI worker 8 + 4), below PostgreSQL's 100-connection limit.
 
 Useful commands:
 

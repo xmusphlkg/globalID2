@@ -73,6 +73,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--run', type=Path, default=os.environ.get('GIDS_RESEARCH_PUBLICATION_RUN'))
     parser.add_argument('--release-id', default=os.environ.get('GIDS_RESEARCH_RELEASE_ID'))
     parser.add_argument('--template-dir', type=Path)
+    parser.add_argument('--articles-dir', type=Path,
+        default=ROOT / 'astro-site/src/data/research/articles',
+        help='Public article JSON used to build Papers v3 records')
     parser.add_argument('--inventory', type=Path, help='Verified remote inventory for one-time migration reuse')
     parser.add_argument('--capture-baseline-only', action='store_true')
     parser.add_argument('--prepare-only', action='store_true')
@@ -98,8 +101,9 @@ def main(argv: list[str] | None = None) -> int:
         result = publish_site_research(papers_dir=args.source_dir, site_dist=args.site_dist,
             research_source=args.research_source, run=run, release_id=args.release_id, config=config,
             receipt=ROOT / 'data/cache/isolated-research-publication.json',
-            template_dir=args.template_dir, inventory=inventory, workers=args.workers,
-            prepare_only=args.prepare_only, preserve_research_data=args.preserve_research_data)
+            articles_dir=args.articles_dir, template_dir=args.template_dir, inventory=inventory,
+            workers=args.workers, prepare_only=args.prepare_only,
+            preserve_research_data=args.preserve_research_data)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

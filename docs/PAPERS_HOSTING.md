@@ -82,9 +82,11 @@ legacy literature switch enabled would keep writing content-addressed versions
 that the static research pages no longer read, and a later main-site build could
 restore the old Worker routes. Reload the scheduler, API and general worker after
 changing the setting; allow active collection tasks to drain.
-Version-pinned `/research-publication/*` URLs remain on the Worker for cached
-clients. That compatibility handler decodes gzip R2 bodies before HTML/CSS
-rewriting; current `/research/*` URLs are static.
+Version-pinned data and assets under `/research-publication/*` remain on the
+Worker for open pages. Snapshot page URLs return `410 Gone` without redirects.
+The resource handler decodes gzip R2 bodies before CSS rewriting; in this direct
+static hosting mode, current `/research/*` URLs are static. The current template
+publication mode is described in [Papers JSON publication](PAPERS_TEMPLATE_MIGRATION.md).
 
 `R2_PAPERS_MAX_TOTAL_BYTES` defaults to 8,000,000,000 bytes in the publisher CLI.
 Before any upload it checks a conservative final bucket size: raw candidate
@@ -148,6 +150,11 @@ Main-site navigation and surveillance fetches continue to use the main origin.
 3. Digest and deploy use the **slim** `dist` only.
 4. The dashboard freezes a research candidate and `scripts/publish_papers_r2.py` publishes content-addressed multilingual paper records, shared templates, and assets. A receipt bound to the committed generation lets subsequent releases reuse unchanged objects. Full-site and independent literature releases both use the same conditional `site-data/research-publication/current.json` pointer. See [Papers JSON publication](PAPERS_TEMPLATE_MIGRATION.md).
 5. Cloudflare Pages deploy + production verification, then dirty-marker commit.
+
+The production `globalid-papers-template` Worker owns the main-host
+`/research-publication/*` route. The surveillance-data Worker serves the
+`/site-data/research-publication/*` JSON namespace; its Wrangler routes do not
+claim the versioned HTML route, so the two Worker deployments cannot overlap.
 
 The report directory and report pages use a separate R2 bucket and direct
 custom domain, like this Papers channel. See [`REPORTS_HOSTING.md`](REPORTS_HOSTING.md)

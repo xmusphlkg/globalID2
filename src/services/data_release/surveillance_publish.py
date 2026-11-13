@@ -28,6 +28,7 @@ DEFAULT_PREFIX = "site-data/surveillance"
 OBJECT = re.compile(r"objects/([a-f0-9]{64})\.json\Z")
 LOGICAL = re.compile(r"(?:[a-z0-9_-]+/)*[a-z0-9_.-]+\.json\Z", re.IGNORECASE)
 STARTING_BASELINE = "starting-baseline.json"
+_EXPECTED_BASELINE_UNSET = object()
 
 
 def validate_manifest(body: bytes) -> tuple[dict, dict[str, dict]]:
@@ -110,7 +111,8 @@ def _atomic_receipt(path: Path, value: dict) -> None:
 
 
 def capture_surveillance_baseline(directory: Path, config: R2PapersConfig, *,
-                                  prefix: str = DEFAULT_PREFIX, client=None) -> dict:
+                                  prefix: str = DEFAULT_PREFIX, client=None,
+                                  expected_baseline_sha256=_EXPECTED_BASELINE_UNSET) -> dict:
     """Capture the public pointer before reading data; never refresh a receipt.
 
     No local current.json or generated objects are required. GET errors remain
@@ -130,11 +132,17 @@ def capture_surveillance_baseline(directory: Path, config: R2PapersConfig, *,
                 if len(previous) > 2 * 1024 * 1024:
                     raise ValueError("Public data manifest exceeds supported size")
                 validate_manifest(previous)
+            observed_sha = hashlib.sha256(previous).hexdigest() if previous is not None else None
+            if expected_baseline_sha256 is not _EXPECTED_BASELINE_UNSET and observed_sha != expected_baseline_sha256:
+                raise R2S3Error("Publication pointer differs from the reviewed plan baseline", status=412)
             _atomic_receipt(directory / ".publication" / STARTING_BASELINE, {
                 "schema": 1, "prefix": prefix, "target_sha256": _target(config, prefix),
                 "baseline_sha256": hashlib.sha256(previous).hexdigest() if previous is not None else None,
                 "previous_b64": base64.b64encode(previous).decode("ascii") if previous is not None else None,
             })
+        observed_sha = hashlib.sha256(previous).hexdigest() if previous is not None else None
+        if expected_baseline_sha256 is not _EXPECTED_BASELINE_UNSET and observed_sha != expected_baseline_sha256:
+            raise R2S3Error("Captured publication baseline differs from the reviewed plan", status=412)
         return {"baseline_captured": True, "reused": exists, "prefix": prefix,
             "pointer_present": previous is not None,
             "baseline_sha256": hashlib.sha256(previous).hexdigest() if previous is not None else None}

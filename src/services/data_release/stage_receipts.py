@@ -228,7 +228,7 @@ class StageReceipts:
                 "successful publication; complete a normal data release first."
             ) from error
 
-    def matches(self, stage: str, signature: str) -> dict | None:
+    def matches(self, stage: str, signature: str, *, prepared: bool = False) -> dict | None:
         record = self.records.get(stage)
         if not isinstance(record, dict) or record.get("signature") != signature:
             return None
@@ -237,6 +237,12 @@ class StageReceipts:
             # rather than silently deploying bytes absent from the receipt.
             current = _inventory([Path(p) for p in record["roots"]])
             expected = record["files"]
+            if prepared:
+                # These two hand-authored modules are build inputs, never DB
+                # projection evidence. A prepared dist already contains their
+                # old rendered bytes and does not read the new source again.
+                current = _generated_data_files(self.root, current)
+                expected = _generated_data_files(self.root, expected)
             if current.keys() != expected.keys():
                 return None
             for name, entry in expected.items():

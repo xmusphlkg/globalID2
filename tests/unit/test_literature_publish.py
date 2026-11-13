@@ -26,6 +26,7 @@ def test_failed_pointer_switch_is_retryable_and_only_then_records_reuse(tmp_path
                                      config=config, receipt=receipt, client=store)
     assert f"{PREFIX}/current.json" not in store.objects
     assert not receipt.exists()
+    assert not (run / 'authority-committed.json').exists()
     store.failure = None
     result = publish_literature_candidate(run=run, objects_dir=run / "objects", papers=papers,
                                           config=config, receipt=receipt, client=store)
@@ -33,12 +34,15 @@ def test_failed_pointer_switch_is_retryable_and_only_then_records_reuse(tmp_path
     assert pointer["papers"]["papers_generation_sha256"] == papers.generation
     assert result["release_id"] == pointer["release_id"] == "candidate"
     assert receipt.exists()
+    authority = (run / 'authority-committed.json').read_bytes()
+    assert json.loads(authority)['authoritative_committed'] is True
     assert store.writes[-1][0] == f"{PREFIX}/current.json"
     writes = list(store.writes)
     resumed = publish_literature_candidate(run=run, objects_dir=run / "objects", papers=papers,
                                             config=config, receipt=receipt, client=store)
     assert resumed["json"]["pointer_changed"] is False
     assert store.writes == writes
+    assert (run / 'authority-committed.json').read_bytes() == authority
 
 
 def test_newer_pointer_prevents_any_paper_upload(tmp_path):
@@ -79,8 +83,9 @@ def test_verified_pre_staged_templates_are_not_reuploaded_before_pointer(tmp_pat
     assert store.writes[-1][0] == f'{PREFIX}/current.json'
 
 
-def test_managed_candidate_freezes_and_resumes_without_a_second_upload(tmp_path):
+def test_managed_candidate_freezes_and_resumes_without_a_second_upload(tmp_path, monkeypatch):
     from scripts.publish_research_candidate import publish
+    monkeypatch.setenv('GIDS_PAPERS_PROJECTION_V3', '1')
     config = replace(CONFIG, public_base_url='https://papers.example')
     run, snapshot, stage = tmp_path / 'run', tmp_path / 'snapshot', tmp_path / 'stage'
     run.mkdir()
@@ -88,6 +93,14 @@ def test_managed_candidate_freezes_and_resumes_without_a_second_upload(tmp_path)
     public.mkdir(parents=True)
     (public / 'index.json').write_text('{"articles":[]}')
     (public / 'catalogue.json').write_text('{}')
+    articles = snapshot / 'build/research/articles'
+    articles.mkdir(parents=True)
+    (articles / 'paper-a.json').write_text(json.dumps({
+        'slug': 'paper-a', 'article_id': 'lit-paper-a', 'title': 'Paper paper-a',
+        'editorial_status': 'published',
+        'summary': {'en': {'main_findings': 'Public finding'}, 'zh': {'main_findings': '中文发现'},
+                    'fr': {'main_findings': 'Résultats'}},
+    }))
     from tests.unit.test_prepare_papers_templates import page as paper_html
     for prefix in ('', 'zh', 'fr'):
         page = stage / prefix / 'research/articles/paper-a/index.html'
@@ -98,7 +111,8 @@ def test_managed_candidate_freezes_and_resumes_without_a_second_upload(tmp_path)
     store = Store()
     capture_surveillance_baseline(run, config, prefix=PREFIX, client=store)
     args = dict(run=run, snapshot=snapshot, stage=stage, shared=tmp_path / 'shared', receipt=tmp_path / 'receipt',
-                release_id='research-test', config=config, client=store)
+                release_id='research-test', config=config, client=store,
+                projection_verifier=lambda _candidate: {'status': 'verified'})
     first = publish(**args)
     assert first['release_id'] == 'research-test'
     writes = list(store.writes)
@@ -110,44 +124,18 @@ def test_managed_candidate_freezes_and_resumes_without_a_second_upload(tmp_path)
     catalogue = json.loads(store.objects[pointer['papers']['papers_manifest_url'].removeprefix('https://papers.example/')])
     entries = [entry for shard in catalogue['shards'].values()
                for entry in json.loads(store.objects[shard['key']])['items']]
-    assert all('paper_template' in entry for entry in entries)
-    assert not any('/objects/' in key and 'releases/sha256/' in key for key in store.objects)
+    assert entries and all(entry['paper_template']['schema'] == 3 and entry['integrity'] == 'independent-v3' for entry in entries)
+    assert not any(key.startswith('paper-template-v2/') for key in store.objects)
 
 
-def test_frozen_legacy_run_resumes_but_cannot_overwrite_a_new_pointer(tmp_path):
+def test_legacy_v2_marker_cannot_be_published(tmp_path, monkeypatch):
     from scripts.publish_research_candidate import publish
-    from src.services.data_release.papers_bundle import build_papers_manifest
-    from src.services.data_release.papers_content import prepare_papers_content_from_manifest
+    monkeypatch.setenv('GIDS_PAPERS_PROJECTION_V3', '1')
     config = replace(CONFIG, public_base_url='https://papers.example')
     run, snapshot, stage = tmp_path / 'run', tmp_path / 'snapshot', tmp_path / 'stage'
     run.mkdir()
-    page = stage / 'research/articles/legacy/index.html'
-    page.parent.mkdir(parents=True)
-    page.write_text('<html>legacy</html>')
-    build = {'schema': 1, 'inputs': {'schema': 1, 'shared': 's',
-        'articles': {'legacy': {'digest': 'd', 'indexable': True}}}, 'reused': [], 'cache_version': 'cache-1'}
-    Path(f'{stage}.inputs.json').write_text(json.dumps(build))
-    store = Store()
-    capture_surveillance_baseline(run, config, prefix=PREFIX, client=store)
-    generation(run, release='legacy-run')
-    manifest = build_papers_manifest(stage, papers_origin=config.public_base_url)
-    (run / 'papers-build-manifest.json').write_text(json.dumps(manifest))
-    papers = prepare_papers_content_from_manifest(stage, manifest, papers_origin=config.public_base_url,
-                                                  release_id='legacy-run')
-    shared = tmp_path / 'shared'
-    shared.mkdir()
-    import shutil
-    shutil.copytree(run / 'objects', shared / 'objects')
-    receipt = tmp_path / 'receipt'
-    publish_literature_candidate(run=run, objects_dir=shared / 'objects', papers=papers,
-        config=config, receipt=receipt, client=store, build=build)
-    args = dict(run=run, snapshot=snapshot, stage=stage, shared=shared, receipt=receipt,
-                release_id='legacy-run', config=config, client=store)
-    writes = list(store.writes)
-    assert publish(**args)['json']['pointer_changed'] is False
-    assert store.writes == writes
-    assert not (run / 'paper-templates').exists()
-    store.objects[f'{PREFIX}/current.json'] = b'{"newer": true}'
-    with pytest.raises(R2S3Error, match='baseline changed'):
-        publish(**args)
-    assert store.writes == writes
+    (run / 'papers-prepared.json').write_text(json.dumps({'schema': 1, 'release_id': 'legacy-run'}))
+    capture_surveillance_baseline(run, config, prefix=PREFIX, client=Store())
+    with pytest.raises(ValueError, match='Legacy v2'):
+        publish(run=run, snapshot=snapshot, stage=stage, shared=tmp_path / 'shared', receipt=tmp_path / 'receipt',
+                release_id='legacy-run', config=config, client=Store())

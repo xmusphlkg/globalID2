@@ -42,6 +42,17 @@ def test_literature_pause_uses_an_independent_state_file(tmp_path):
     assert ChannelControlStore(path).snapshot() == state
 
 
+def test_unified_controls_keep_literature_and_observation_pause_files_separate(tmp_path, monkeypatch):
+    from src.services.data_release import channel_control
+    monkeypatch.setattr(channel_control, "get_config", lambda: SimpleNamespace(data_dir=tmp_path))
+    state = channel_control.get_publication_controls()
+    assert set(state) == {"surveillance", "situation", "literature"}
+    ChannelControlStore(tmp_path / "literature-publishing-control.json", channels=("literature",)).set_paused("literature", True)
+    state = channel_control.get_publication_controls()
+    assert state["literature"]["paused"]
+    assert not state["surveillance"]["paused"] and not state["situation"]["paused"]
+
+
 def test_pause_is_durable_isolated_and_private(tmp_path):
     path = tmp_path / "controls.json"
     first = ChannelControlStore(path)

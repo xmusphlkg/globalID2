@@ -135,6 +135,32 @@ async def execute_release_task(
     service: Any, task: Any, *, runtime: ReleasePipelineRuntime
 ) -> dict[str, Any]:
     """Publish in place; upload errors retain artifacts without rolling them back."""
+    frozen = (getattr(task, "input_data", None) or {}).get("publication_plan")
+    if frozen:
+        from .publication_execution import load_plan, validate_execution
+        from .publication_recovery import load_recovery, replay_environment
+        plan = await asyncio.to_thread(load_plan, runtime.get_config().data_dir,
+                                       frozen["plan_id"], frozen["plan_digest"])
+        recovery = await asyncio.to_thread(load_recovery, runtime.root_dir, task)
+        job_configuration = None
+        if plan["execution_mode"] != "theme" and not recovery:
+            from sqlalchemy import select
+            from src.domain import DataReleaseJob
+            async with runtime.get_database() as db:
+                job_row = (await db.execute(select(DataReleaseJob).where(DataReleaseJob.job_id == plan["job_id"]))).scalar_one_or_none()
+                if job_row is None:
+                    raise ValueError("publication_job_not_found")
+                job_configuration = {column.name: getattr(job_row, column.name) for column in DataReleaseJob.__table__.columns}
+        await asyncio.to_thread(validate_execution, plan, root=runtime.root_dir, service=service, queued=True,
+                                task_uuid=task.task_uuid, job_configuration=job_configuration, recovery=recovery)
+        if plan["_execution"].get("environment"):
+            service = replay_environment(service, plan["_execution"]["environment"])
+            service._publication_recovery = recovery
+    if (getattr(task, "input_data", None) or {}).get("theme_only"):
+        if not frozen:
+            raise ValueError("Theme publication requires a frozen plan")
+        from .theme_publication import execute
+        return await execute(task, runtime=runtime, service=service)
     if (getattr(task, "input_data", None) or {}).get("data_only"):
         from .data_pipeline import execute_data_release
         return await execute_data_release(service, task, runtime=runtime)
@@ -210,7 +236,8 @@ async def _execute_release_task(
         raise RuntimeError("Static release predates the independent Situation JSON contract; enqueue a new static release")
     if literature_detached and not code_only and not input_data.get("literature_detached"):
         raise RuntimeError("Static release predates the independent literature contract; enqueue a new static release")
-    if ((runtime.astro_dir / "src/lib/surveillance-data.ts").is_file()
+    if (not getattr(service, "_publication_recovery", None)
+            and (runtime.astro_dir / "src/lib/surveillance-data.ts").is_file()
             and not getattr(service._config(), "surveillance_json_enabled", False)):
         # Check before any retained generation/render receipt can skip npm.
         raise RuntimeError("Runtime data templates require an initialized JSON channel and Worker before static publication")
@@ -223,7 +250,26 @@ async def _execute_release_task(
     if job is None:
         raise RuntimeError(f"Release job not found: {job_id}")
 
-    checks = await service.integration_checks(job.job_id, **({"code_only": True} if code_only else {}))
+    recovery = getattr(service, "_publication_recovery", None)
+    if recovery:
+        checks = recovery["checks"]
+        # Fresh credentials must still reach the frozen account/project. The
+        # production branch is a destination, not a mutable retry preference.
+        access = await service._cloudflare_check(job.cloudflare_project_name)
+        if (access.get("blockers") or not access.get("payload", {}).get("project_access_ok")
+                or access["payload"].get("production_branch") != recovery["deployment_branch"]):
+            raise ValueError("publication_frozen_destination_unavailable")
+        subdomain = str(checks.get("cloudflare", {}).get("subdomain") or "")
+        if not subdomain:
+            raise ValueError("publication_frozen_destination_unavailable")
+        current = await service._public_json(f"https://{subdomain}/release.json")
+        identity = recovery["release_identity"]
+        if (current.get("release_id") not in {recovery.get("site_baseline"), identity["release_id"]}
+                or (current.get("release_id") == identity["release_id"]
+                    and current.get("build_digest") != identity["build_digest"])):
+            raise ValueError("publication_baseline_changed")
+    else:
+        checks = await service.integration_checks(job.job_id, **({"code_only": True} if code_only else {}))
     await runtime.task_manager.add_workbook_entry(
         task.task_uuid,
         entry_type="info",
@@ -266,6 +312,8 @@ async def _execute_release_task(
             task,
             deployment_branch,
         )
+    if recovery:
+        release_identity = recovery["release_identity"]
 
     await runtime.task_manager.update_task_progress(task.task_uuid, 5)
     raw_archive_cfg = getattr(
@@ -310,9 +358,13 @@ async def _execute_release_task(
     )
     r2_reports_enabled_fn = getattr(service, "_r2_reports_enabled", None)
     r2_reports_enabled = bool(r2_reports_enabled_fn(job)) if callable(r2_reports_enabled_fn) else False
+    if input_data.get("country_template_only"):
+        # The isolated compiler preserves every non-country HTML byte and old
+        # asset. No research/report bundle or publication pointer changes.
+        r2_papers_enabled = r2_reports_enabled = False
     artifact_signature = None
     resumed_identity = None
-    if artifact_checkpoint is not None:
+    if artifact_checkpoint is not None and not recovery:
         config = service._config()
         artifact_signature = await asyncio.to_thread(
             artifact_checkpoint.signature,
@@ -333,9 +385,11 @@ async def _execute_release_task(
         "job": job.model_dump() if hasattr(job, "model_dump") else vars(job),
         "download_url_base": download_url_base, "deployment_branch": deployment_branch,
     })
-    ready_signature = await asyncio.to_thread(stage_receipts.signature, "ready", release_identity)
-    generated_signature = await asyncio.to_thread(stage_receipts.signature, "generated", release_identity)
-    ready_record = await asyncio.to_thread(stage_receipts.matches, "ready", ready_signature)
+    ready_signature = recovery["ready_signature"] if recovery else await asyncio.to_thread(stage_receipts.signature, "ready", release_identity)
+    generated_signature = None if recovery else await asyncio.to_thread(stage_receipts.signature, "generated", release_identity)
+    ready_record = await asyncio.to_thread(stage_receipts.matches, "ready", ready_signature, prepared=bool(recovery))
+    if recovery and not ready_record:
+        raise ValueError("publication_prepared_candidate_unavailable")
     if resumed_identity is None and ready_record:
         resumed_identity = ready_record["identity"]
     generated_record = None if resumed_identity else await asyncio.to_thread(
@@ -347,6 +401,8 @@ async def _execute_release_task(
         # Never acknowledge fresh DB facts against a reused older site snapshot.
         resumed_identity = None
         generated_record = None
+        if recovery:
+            raise ValueError("publication_prepared_candidate_unavailable")
     research_reused = False
     if r2_papers_enabled and (runtime.root_dir / 'scripts/publish_papers_r2.py').is_file():
         # Capture before export/render, not at upload time: an independent
@@ -357,11 +413,18 @@ async def _execute_release_task(
         git_env = {**git_env, 'GIDS_RESEARCH_PUBLICATION_RUN': str(research_run),
                    'GIDS_RESEARCH_RELEASE_ID': research_identity['release_id'],
                    'GIDS_PRESERVE_RESEARCH_DATA': '1' if code_only or content_only or literature_detached else '0'}
-        await service._run_logged_command(task.task_uuid, title='Capture Research Publication Baseline',
-            cmd=[str(python_path), 'scripts/publish_papers_r2.py', '--capture-baseline-only',
-                 '--run', str(research_run), '--release-id', research_identity['release_id']],
-            cwd=runtime.root_dir, env=papers_environment(service, git_env),
-            metadata={'event': 'site_research_publication_baseline'}, timeout_seconds=120)
+        if recovery:
+            from .surveillance_publish import _starting_baseline
+            captured, _ = await asyncio.to_thread(_starting_baseline, research_run,
+                service._r2_papers_config(), 'site-data/research-publication')
+            if not captured:
+                raise ValueError("publication_prepared_candidate_unavailable")
+        else:
+            await service._run_logged_command(task.task_uuid, title='Capture Research Publication Baseline',
+                cmd=[str(python_path), 'scripts/publish_papers_r2.py', '--capture-baseline-only',
+                     '--run', str(research_run), '--release-id', research_identity['release_id']],
+                cwd=runtime.root_dir, env=papers_environment(service, git_env),
+                metadata={'event': 'site_research_publication_baseline'}, timeout_seconds=120)
         if git_env['GIDS_PRESERVE_RESEARCH_DATA'] == '1' and resumed_identity is None:
             if code_only:
                 await asyncio.to_thread(stage_receipts.assert_published_data,
@@ -445,6 +508,18 @@ async def _execute_release_task(
         await asyncio.to_thread(stage_receipts.save, "ready", ready_signature, stage_paths, identity=release_identity)
     if artifact_checkpoint is not None and resumed_identity is None:
         await asyncio.to_thread(artifact_checkpoint.save_ready, artifact_signature, release_identity)
+    if input_data.get("publication_plan"):
+        from .publication_recovery import save_recovery, reports_fence
+        if not stage_receipts.matches("ready", ready_signature, prepared=bool(recovery)):
+            raise ValueError("publication_prepared_candidate_unavailable")
+        report_fence = None
+        if r2_reports_enabled:
+            report_fence = await asyncio.to_thread(reports_fence, service, runtime.root_dir,
+                recovery.get("reports_fence") if recovery else None)
+        await asyncio.to_thread(save_recovery, runtime.root_dir, task, stage_receipts.path,
+            checks=checks, ready_signature=ready_signature, deployment_branch=deployment_branch,
+            release_identity=release_identity, reports_fence=report_fence,
+            site_baseline=input_data["publication_plan"].get("site_baseline"))
     await runtime.task_manager.add_workbook_entry(
         task.task_uuid,
         entry_type="info",
@@ -483,13 +558,15 @@ async def _execute_release_task(
 
     report_subscription_dispatch = None
 
+    planned_public_verification = bool(input_data.get("publication_plan"))
     await runtime.task_manager.add_workbook_entry(
         task.task_uuid,
         entry_type="info",
-        title="Website Verification Skipped",
-        content="Publication completes on successful upload/deploy commands. Papers, Reports and main-site public HTTP checks are disabled; artifacts are not rolled back.",
+        title="Website Verification Pending" if planned_public_verification else "Website Verification Skipped",
+        content=("This planned release requires the deployed release manifest and production deployment to match before completion."
+                 if planned_public_verification else "Publication completes on successful upload/deploy commands. Papers, Reports and main-site public HTTP checks are disabled; artifacts are not rolled back."),
         content_type="text",
-        metadata={"event": "website_verification_skipped", "release_job_id": job.job_id},
+        metadata={"event": "website_verification_pending" if planned_public_verification else "website_verification_skipped", "release_job_id": job.job_id},
     )
 
     # The site only goes live after its direct public file links exist. This
@@ -510,6 +587,24 @@ async def _execute_release_task(
             deployment_branch=deployment_branch, publish_commit_message=publish_commit_message,
         )
         pages_deployed = True
+        if planned_public_verification:
+            from datetime import datetime, timezone
+            await service._record_release_checkpoint(task.task_uuid, "public_verification", {
+                "authoritative_committed": True, "public_verified": False})
+            verified = await service._verify_cloudflare_production_release(
+                project_name=project_name, subdomain=str(cloudflare_check.get("subdomain") or ""),
+                release_identity=release_identity)
+            if not verified.get("verified"):
+                raise ReleaseVerificationError("Planned release public verification did not succeed")
+            cloudflare_deployment.update(verification="verified", public_verified=True,
+                production_url=verified.get("production_url"))
+            await service._record_release_checkpoint(task.task_uuid, "public_verification", {
+                "authoritative_committed": True, "public_verified": True,
+                "public_verified_at": datetime.now(timezone.utc).isoformat()})
+            from .surveillance_publish import _atomic_receipt
+            await asyncio.to_thread(_atomic_receipt, runtime.root_dir / "exports/publicly-verified-site-release.json", {
+                "schema": 1, "release_id": release_identity["release_id"], "build_digest": release_identity["build_digest"],
+                "task_uuid": task.task_uuid, "public_verified_at": datetime.now(timezone.utc).isoformat()})
         # Research delivery is explicitly activated with a start week and
         # only runs after the exact built release is visible on the public site.
         # The outbox stores public content before any Worker request, so a
@@ -630,7 +725,7 @@ async def _execute_release_task(
         "download_repo_branch": branch,
         "download_url_base": download_url_base,
         "direct_downloads_published": downloads_published,
-        "website_verification": "skipped",
+        "website_verification": "verified" if planned_public_verification and pages_deployed else "skipped",
         "artifact_rollback": False,
         "r2_papers_published": r2_papers_published,
         "r2_reports_published": r2_reports_published,

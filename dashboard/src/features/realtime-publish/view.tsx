@@ -15,7 +15,6 @@ import type {
   PendingEligibility, RealtimeActionResult, RealtimeChannel, RealtimeChannelOverview,
   RealtimeControlResult, RealtimePage, RealtimePending, RealtimeRun,
 } from "./types";
-import { realtimeChannels } from "./types";
 
 type Feedback = { action: RealtimeAction; result: RealtimeActionResult | RealtimeControlResult };
 
@@ -57,7 +56,7 @@ function ChannelCard({ data, lang, text, busy, unavailable, control }: {
   const monitorTone = critical ? "danger" : stale || monitor.status === "warning" ? "warning" : monitor.status === "ok" ? "success" : "neutral";
   return <section className="cc-panel" aria-labelledby={`rt-${channel}-title`}>
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><h2 id={`rt-${channel}-title`} className="text-base font-semibold">{text(channel)}</h2><p className="cc-muted mt-1 text-sm">{text(channel === "surveillance" ? "surveillance_description" : "situation_description")}</p></div>
+      <div><h2 id={`rt-${channel}-title`} className="text-base font-semibold">{text(channel)}</h2><p className="cc-muted mt-1 text-sm">{text(channel === "surveillance" ? "surveillance_description" : channel === "literature" ? "literature_description" : "situation_description")}</p></div>
       <StatusBadge tone={!data.enabled ? "neutral" : data.paused || data.control_error_code ? "warning" : "success"}>{text(automatic)}</StatusBadge>
     </div>
     <dl className="grid grid-cols-3 gap-3 rounded-md bg-[var(--cc-workspace)] p-3">
@@ -99,9 +98,9 @@ function ChannelCard({ data, lang, text, busy, unavailable, control }: {
 
 function ChangesTable({ items, text }: { items: RealtimePending[]; text: RealtimeText }) {
   if (!items.length) return <p className="cc-muted py-4 text-sm">{text("changes_empty")}</p>;
-  return <div className="overflow-x-auto"><table className="cc-table"><thead><tr>{(["scope", "eligibility", "age", "coverage", "source_task"] as const).map(key => <th key={key} scope="col">{text(key)}</th>)}</tr></thead><tbody>{items.map(item => <tr key={item.id}>
+  return <div className="overflow-x-auto"><table className="cc-table min-w-[42rem]"><thead><tr>{(["scope", "eligibility", "age", "coverage", "source_task"] as const).map(key => <th key={key} scope="col">{text(key)}</th>)}</tr></thead><tbody>{items.map(item => <tr key={item.id}>
     <td className="font-medium"><span className="break-all">{item.scope_key}</span><p className="cc-muted mt-1 text-xs">#{item.id}</p></td>
-    <td><StatusBadge tone={item.publishable ? "success" : "warning"}>{text(item.publishable ? "publishable" : "blocked")}</StatusBadge>{!item.publishable && <p className="cc-muted mt-2 max-w-xs text-xs">{realtimeBlockedReason(item.blocked_reason, text)}</p>}</td>
+    <td className="min-w-48"><StatusBadge tone={item.publishable ? "success" : "warning"}>{text(item.publishable ? "publishable" : "blocked")}</StatusBadge>{!item.publishable && <p className="cc-muted mt-2 max-w-xs break-words text-xs">{realtimeBlockedReason(item.blocked_reason, text)}</p>}</td>
     <td className="whitespace-nowrap">{realtimeAge(item.age_seconds, text)}</td>
     <td><p>{text(item.precise ? "precise" : "whole_scope")}</p>{item.precise && item.disease_ids && item.disease_ids.length > 0 && <p className="cc-muted mt-1 max-w-xs break-words text-xs">{item.disease_ids.slice(0, 3).join(", ")}{item.disease_ids.length > 3 ? ` +${item.disease_ids.length - 3}` : ""}</p>}<p className="cc-muted mt-1 text-xs">{text("countries")}: {item.affected_country_count}</p></td>
     <td>{item.source_task_uuid ? <Link className="text-[var(--cc-link)] underline underline-offset-2" href={`/collection/runs/${encodeURIComponent(item.source_task_uuid)}`}>{text("open_task")}</Link> : "—"}</td>
@@ -123,13 +122,15 @@ function RunsTable({ items, lang, text }: { items: RealtimeRun[]; lang: Realtime
 export function RealtimePublishView() {
   const lang = useAppStore(state => state.lang);
   const text = realtimeText(lang);
-  const [channel, setChannel] = useState<RealtimeChannel>("surveillance");
+  const [requestedChannel, setChannel] = useState<RealtimeChannel>("surveillance");
   const [pendingPage, setPendingPage] = useState(1);
   const [eligibility, setEligibility] = useState<PendingEligibility>("all");
   const [runPage, setRunPage] = useState(1);
   const [runStatus, setRunStatus] = useState("");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const overview = useRealtimeOverview();
+  const realtimeChannels = Object.values(overview.data?.channels ?? {}).map(item => item.channel);
+  const channel = realtimeChannels.includes(requestedChannel) ? requestedChannel : realtimeChannels[0] ?? requestedChannel;
   const changes = useRealtimePending(channel, pendingPage, eligibility);
   const runs = useRealtimeRuns(channel, runPage, runStatus);
   const action = useRealtimeAction();
@@ -172,7 +173,7 @@ export function RealtimePublishView() {
     <section className="cc-panel" aria-labelledby="rt-manual-title">
       <div><h2 id="rt-manual-title" className="text-base font-semibold">{text("manual")}</h2><p className="cc-muted mt-1 text-sm">{text("manual_hint")}</p></div>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="grid gap-1.5 text-sm"><span className="font-medium">{text("select_channel")}</span><select className="cc-input min-w-52" value={channel} disabled={action.isPending} onChange={event => { setChannel(event.target.value as RealtimeChannel); setPendingPage(1); setRunPage(1); setFeedback(null); action.reset(); }}>{realtimeChannels.map(key => <option value={key} key={key}>{text(key)}</option>)}</select></label>
+        <label className="grid gap-1.5 text-sm"><span className="font-medium">{text("select_channel")}</span><select className="cc-input min-w-52" value={channel} disabled={action.isPending || !realtimeChannels.length} onChange={event => { setChannel(event.target.value as RealtimeChannel); setPendingPage(1); setRunPage(1); setFeedback(null); action.reset(); }}>{realtimeChannels.map(key => <option value={key} key={key}>{text(key)}</option>)}</select></label>
         <button className="cc-button cc-button-primary" disabled={!canPublish} onClick={() => void submit({ kind: "publish", channel })}>{text(action.isPending && action.variables?.kind === "publish" ? "submitting" : "publish")}</button>
         <button className="cc-button" disabled={!canPublish || !selected?.latest_failure} onClick={() => void submit({ kind: "retry", channel })}>{text(action.isPending && action.variables?.kind === "retry" ? "submitting" : "retry")}</button>
       </div>

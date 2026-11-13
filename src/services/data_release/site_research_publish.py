@@ -12,6 +12,7 @@ from src.generation.literature_publication import _atomic_write, freeze_literatu
 from .literature_publish import PREFIX, publish_literature_candidate
 from .papers_bundle import build_papers_manifest, is_obsolete_research_build_path
 from .papers_content import prepare_papers_content_from_manifest, verified_existing_objects
+from .papers_projection import assert_v3_candidate, load_projection_candidate, prepare_projection_candidate
 from .papers_r2 import R2S3Client
 from .surveillance_publish import _starting_baseline
 
@@ -30,6 +31,8 @@ def freeze_site_research(*, papers_dir: Path, site_dist: Path, research_source: 
         if result.get('release_id') != release_id:
             raise ValueError('Site research candidate belongs to another release')
         return result
+    if os.environ.get('GIDS_PUBLICATION_RECOVERY_ONLY') == '1':
+        raise ValueError('Frozen site research candidate unavailable; regeneration is forbidden')
     if (run / 'published.json').exists():
         raise ValueError('Published site research candidate has no ready receipt')
     if not papers_dir.is_dir() or not site_dist.is_dir():
@@ -92,8 +95,37 @@ def freeze_site_research(*, papers_dir: Path, site_dist: Path, research_source: 
         shutil.rmtree(work, ignore_errors=True)
 
 
+def _article_documents(articles_dir: Path, slugs: list[str]) -> list[dict]:
+    documents = []
+    for slug in slugs:
+        path = Path(articles_dir) / f'{slug}.json'
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f'Missing public article projection: {slug}')
+        documents.append(json.loads(path.read_bytes()))
+    return documents
+
+
+def _load_site_v3(run: Path, *, release_id: str, origin: str):
+    path = run / 'papers-prepared.json'
+    if not path.exists():
+        return None
+    if path.is_symlink():
+        raise ValueError('Invalid prepared Papers candidate')
+    marker = json.loads(path.read_bytes())
+    if marker.get('schema') != 3:
+        raise ValueError('Legacy v2 Papers candidates cannot be published')
+    if marker.get('release_id') != release_id or marker.get('candidate') != 'projection-v3/candidate.json':
+        raise ValueError('Prepared Papers candidate belongs to a different release')
+    candidate = load_projection_candidate(run / marker['candidate'])
+    if candidate.release_id != release_id or candidate.origin != origin or candidate.generation != marker.get('generation'):
+        raise ValueError('Prepared Papers candidate does not match its marker')
+    assert_v3_candidate(candidate)
+    return candidate
+
+
 def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source: Path,
                           run: Path, release_id: str, config, receipt: Path,
+                          articles_dir: Path | None = None,
                           template_dir: Path | None = None, inventory: dict | None = None,
                           workers: int = 32, client=None, prepare_only: bool = False,
                           preserve_research_data: bool = False) -> dict:
@@ -107,10 +139,29 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
         frozen = json.loads((run / 'current.json').read_bytes())
         if ('index.json' not in prior.get('files', {}) or frozen['files'] != prior['files']):
             raise ValueError('Style release research data differs from the captured published snapshot')
-    manifest = json.loads((run / 'papers-build-manifest.json').read_bytes())
-    candidate = prepare_papers_content_from_manifest(run / 'bundle', manifest,
-        papers_origin=config.public_base_url, release_id=release_id,
-        template_dir=template_dir or run / 'paper-templates')
+    candidate = _load_site_v3(run, release_id=release_id, origin=config.public_base_url)
+    if candidate is None:
+        if os.environ.get('GIDS_PUBLICATION_RECOVERY_ONLY') == '1':
+            raise ValueError('Frozen site research candidate unavailable; regeneration is forbidden')
+        if articles_dir is None:
+            raise ValueError('Site research publication requires public article projections')
+        manifest = json.loads((run / 'papers-build-manifest.json').read_bytes())
+        base = prepare_papers_content_from_manifest(run / 'bundle', manifest,
+            papers_origin=config.public_base_url, release_id=release_id,
+            template_dir=template_dir or run / 'paper-templates')
+        slugs = sorted({entry['paper_template']['slug'] for entry in base.entries if 'paper_template' in entry})
+        directory = run / 'projection-v3'
+        if directory.is_symlink():
+            raise ValueError('Invalid projection directory')
+        if directory.exists():
+            shutil.rmtree(directory)
+        candidate, _receipt = prepare_projection_candidate(base, articles=_article_documents(articles_dir, slugs),
+            directory=directory, release_id=release_id, migration=True)
+        assert_v3_candidate(candidate)
+        _atomic_write(run / 'papers-prepared.json', json.dumps({
+            'schema': 3, 'release_id': release_id, 'generation': candidate.generation,
+            'candidate': 'projection-v3/candidate.json',
+        }, sort_keys=True, separators=(',', ':')).encode())
     if prepare_only:
         return {'release_id': release_id, 'generation': candidate.generation,
                 'article_pages': sum('paper_template' in item for item in candidate.entries),
@@ -119,7 +170,7 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
     active = client or R2S3Client(config)
     try:
         result = publish_literature_candidate(run=run, objects_dir=run / 'json/objects', papers=candidate,
-            config=config, receipt=receipt, client=active, workers=workers, known_staged_objects=known)
+            config=config, receipt=receipt, client=active, workers=workers, known_staged_objects=known, build=None)
         _atomic_write(run / 'published.json', json.dumps(result, separators=(',', ':')).encode())
         return result
     finally:
