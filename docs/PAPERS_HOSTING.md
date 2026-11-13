@@ -151,6 +151,11 @@ Main-site navigation and surveillance fetches continue to use the main origin.
 4. The dashboard freezes a research candidate and `scripts/publish_papers_r2.py` publishes content-addressed multilingual paper records, shared templates, and assets. A receipt bound to the committed generation lets subsequent releases reuse unchanged objects. Full-site and independent literature releases both use the same conditional `site-data/research-publication/current.json` pointer. See [Papers JSON publication](PAPERS_TEMPLATE_MIGRATION.md).
 5. Cloudflare Pages deploy + production verification, then dirty-marker commit.
 
+The production `globalid-papers-template` Worker owns the main-host
+`/research-publication/*` route. The surveillance-data Worker serves the
+`/site-data/research-publication/*` JSON namespace; its Wrangler routes do not
+claim the versioned HTML route, so the two Worker deployments cannot overlap.
+
 The report directory and report pages use a separate R2 bucket and direct
 custom domain, like this Papers channel. See [`REPORTS_HOSTING.md`](REPORTS_HOSTING.md)
 for the object-key layout, publication, and cadence-based generation.

@@ -17,7 +17,6 @@
     { "pattern": "globalinfectiousdisease.com/site-data/site-status.json*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/site-data/situation/*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/site-data/research-publication/*", "zone_name": "globalinfectiousdisease.com" },
-    { "pattern": "globalinfectiousdisease.com/research-publication/*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/site-data/updates/*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/situation/map-data.json*", "zone_name": "globalinfectiousdisease.com" },
     { "pattern": "globalinfectiousdisease.com/situation/outbreaks/*", "zone_name": "globalinfectiousdisease.com" }
