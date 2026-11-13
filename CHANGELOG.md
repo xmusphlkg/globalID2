@@ -38,6 +38,8 @@ compatible for existing users.
 - Papers and the public site now share stable research URLs, generation-bound
   assets and compatibility headers. Existing stable links continue to resolve
   while the active renderer reports `projection-v3`.
+- The public updates page filters an inclusive UTC date range and charts
+  retained publication records for each day in that range.
 - Runtime recovery is owner-scoped: managed drains recover confirmed-dead
   leases, preserve resumable work and verify API, scheduler, worker and AI
   heartbeats before reopening the queue.

@@ -13,7 +13,7 @@ test('footer links to the localized updates page and header stays clear', async 
       await page.locator('html').evaluate((element, value) => element.setAttribute('data-theme', value), theme);
       await expect(page.locator('.updates-intro')).toHaveClass(/academic-hero/);
       await expect(page.locator('.updates-panel')).toHaveClass(/card/);
-      await expect(page.locator('.updates-controls select').first()).toHaveClass(/site-control-input/);
+      await expect(page.locator('.updates-controls .site-control-input').first()).toHaveClass(/site-control-input/);
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     }
   }
@@ -37,14 +37,20 @@ test('shows real published events, filters channels, and loads monthly archives'
   await expect(page.getByText('91', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: '查看版本与版式更新' }).first()).toBeVisible();
   await expect(page.getByText('数据已发布')).toHaveCount(4);
+  await expect(page.getByRole('img', { name: /每日发布记录/ })).toBeVisible();
+  await page.getByText('查看每日数量').click();
+  await expect(page.getByRole('row', { name: /2026-11-07/ }).getByRole('cell')).toHaveText('6');
   await page.getByLabel('更新类型').selectOption('knowledge');
   await expect(page.getByText('数据已发布')).toHaveCount(1);
   await expect(page.getByText('发布范围：D038')).toBeVisible();
+  await expect(page.getByRole('row', { name: /2026-11-07/ }).getByRole('cell')).toHaveText('1');
   await page.getByLabel('更新类型').selectOption('all');
-  await page.getByLabel('月份').selectOption('2026-10');
+  await page.getByLabel('截止日期（UTC）').fill('2026-10-31');
+  await page.getByLabel('起始日期（UTC）').fill('2026-10-01');
   await expect(page.getByText('数据已发布')).toHaveCount(1);
   await expect(page.locator('ol').getByText('论文数据')).toBeVisible();
-  await page.getByLabel('月份').selectOption('2026-11');
+  await page.getByLabel('起始日期（UTC）').fill('2026-11-01');
+  await page.getByLabel('截止日期（UTC）').fill('2026-11-30');
   await page.getByLabel('更新类型').selectOption('website');
   await expect(page.getByText('数据已发布')).toHaveCount(0);
   await expect(page.getByRole('link', { name: '查看版本与版式更新' }).first()).toHaveAttribute('href', /\/zh\/changelog\/#v/);
@@ -70,9 +76,10 @@ test('changing month hides old events until the selected archive arrives', async
   await page.goto('/zh/data-updates/');
   await expect(page.getByText('发布范围：JP')).toBeVisible();
   try {
-    await page.getByLabel('月份').selectOption('2026-10');
+    await page.getByLabel('截止日期（UTC）').fill('2026-10-31');
+    await page.getByLabel('起始日期（UTC）').fill('2026-10-01');
     await expect(page.getByText('数据已发布')).toHaveCount(0);
-    await expect(page.getByRole('status')).toContainText('正在加载');
+    await expect(page.getByRole('status').last()).toContainText('正在读取');
   } finally { releaseArchive(); }
   await expect(page.getByText('数据已发布')).toHaveCount(1);
   await expect(page.locator('ol').getByText('论文数据')).toBeVisible();
@@ -93,13 +100,15 @@ test('index errors survive a successful archive read and recover on the next pol
   indexAvailable = false;
   await page.clock.fastForward(61_000);
   await expect(page.getByRole('status')).toContainText('数据更新记录暂不可用');
-  await page.getByLabel('月份').selectOption('2026-10');
+  await page.getByLabel('截止日期（UTC）').fill('2026-10-31');
+  await page.getByLabel('起始日期（UTC）').fill('2026-10-01');
   await expect(page.locator('time[datetime="2026-10-07T12:00:00Z"]')).toBeVisible();
   await expect(page.getByRole('status')).toContainText('数据更新记录暂不可用');
   indexAvailable = true;
   await page.clock.fastForward(61_000);
   await expect(page.locator('.updates-status')).toBeEmpty();
-  await expect(page.getByLabel('月份')).toHaveValue('2026-10');
+  await expect(page.getByLabel('起始日期（UTC）')).toHaveValue('2026-10-01');
+  await expect(page.getByLabel('截止日期（UTC）')).toHaveValue('2026-10-31');
 });
 
 test('monthly failures retain known events and malformed records cannot crash the page', async ({ page }) => {

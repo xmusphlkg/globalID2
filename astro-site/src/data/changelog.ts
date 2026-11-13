@@ -26,6 +26,34 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.19.0', date: '2026-11-13',
+    titleEn: 'Current research pages and a clearer update history',
+    titleZh: '当前文献页面与更清晰的更新记录',
+    titleFr: 'Pages de recherche actuelles et historique plus clair',
+    summaryEn: 'Research pages use the current shared projection, the public theme uses the verified compatibility stylesheet, and the updates page can filter a date range with a daily record chart.',
+    summaryZh: '文献页面改用当前的共享投影，公开主题使用已验证的兼容样式；更新页可以按日期筛选，并用柱状图查看每日发布记录。',
+    summaryFr: 'Les pages de recherche utilisent la projection partagée actuelle, le thème public utilise la feuille de style vérifiée, et l’historique se filtre par dates avec un graphique quotidien.',
+    sections: [{
+      kind: 'new', labelEn: 'New', labelZh: '新增', labelFr: 'Nouveautés',
+      items: [{
+        en: 'The updates page filters an inclusive UTC date range and charts how many publication records were retained on each day.',
+        zh: '更新页支持按 UTC 日期范围筛选，并用柱状图显示所选范围内每一天保留的发布记录数。',
+        fr: 'La page des mises à jour filtre une période UTC inclusive et affiche le nombre de publications conservées chaque jour.',
+      }],
+    }, {
+      kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations',
+      items: [{
+        en: 'Research articles render from one shared projection across English, Chinese and French. Stable research links stay the same.',
+        zh: '中文、英文和法文文献页面由同一套共享投影生成，稳定的文献链接保持不变。',
+        fr: 'Les articles en anglais, chinois et français sont produits par une même projection partagée. Les liens stables restent inchangés.',
+      }, {
+        en: 'The public site uses the verified theme compatibility stylesheet.',
+        zh: '公开网站使用已验证的主题兼容样式。',
+        fr: 'Le site public utilise la feuille de style de compatibilité déjà vérifiée.',
+      }],
+    }],
+  },
+  {
     version: '0.18.4', date: '2026-11-12',
     titleEn: 'Stable research links', titleZh: '稳定的文献链接', titleFr: 'Liens stables vers les publications',
     summaryEn: 'Research pages use shorter, stable links across the website and search.',
