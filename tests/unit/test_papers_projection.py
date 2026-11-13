@@ -36,6 +36,18 @@ def test_direct_projection_contains_no_private_fields_or_template_versions():
         project_article({**article('paper-a'), 'editorial_status': 'draft'})
 
 
+def test_project_article_accepts_public_historical_seed_without_legacy_status():
+    value = {**article('paper-a'), 'article_id': 'lit_hist_paper-a',
+             'editorial_status': None, 'historical_baseline': True, 'indexable': True}
+    assert project_article(value)['article_id'] == 'lit_hist_paper-a'
+
+
+def test_project_article_rejects_missing_status_without_historical_provenance():
+    value = {**article('paper-a'), 'editorial_status': None, 'indexable': True}
+    with pytest.raises(ValueError, match='already-public'):
+        project_article(value)
+
+
 def test_migration_and_single_body_update_touch_one_record_without_reading_or_rendering_html(tmp_path, monkeypatch):
     first = initial(tmp_path)
     # Delete all old article HTML to prove the new path does not extract or render it.

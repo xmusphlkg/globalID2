@@ -69,7 +69,14 @@ def destination(config: R2PapersConfig) -> str:
 
 
 def public_read(url: str) -> bytes:
-    with urlopen(Request(url, headers={"Cache-Control": "no-cache"}), timeout=15) as response:
+    # Cloudflare can challenge urllib's default ``Python-urllib`` user agent
+    # even for a public R2 custom domain. Use the same bounded, identifiable
+    # probe identity as the readiness check so publication verification tests
+    # the actual public object rather than a bot challenge page.
+    with urlopen(Request(url, headers={
+        "Cache-Control": "no-cache",
+        "User-Agent": "GlobalID-Theme-Publication/1",
+    }), timeout=15) as response:
         if response.geturl() != url:
             raise ValueError("theme_public_redirect_not_allowed")
         if str(response.headers.get("Content-Type", "")).split(";", 1)[0].strip().lower() != "text/css":

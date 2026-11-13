@@ -88,6 +88,8 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
       <link rel="canonical" href="https://globalinfectiousdisease.com/research/articles/example/">
       <link rel="alternate" hreflang="zh-CN" href="https://globalinfectiousdisease.com/zh/research/articles/example/">
       <meta property="og:url" content="https://globalinfectiousdisease.com/research/articles/example/">
+      <link rel="icon" href="/logo.png">
+      <link rel="alternate" href="/situation/">
       <link rel="stylesheet" href="/_astro/style.css"></head><body>
       <a href="/research/">research</a>
       <a href="/research/articles/example/?source=list#summary">paper</a>
@@ -129,6 +131,8 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
     assert.equal(catalogue.headers.get('content-length'), null);
     assert.match(html, new RegExp(`/research-publication/${first}/_astro/style.css`));
     assert.match(html, /href="https:\/\/globalinfectiousdisease.com\/research\/"/);
+    assert.match(html, /href="\/logo\.png"/);
+    assert.match(html, /href="\/situation\/"/);
     assert.doesNotMatch(html, new RegExp(`/research-publication/${first}/research/articles/`));
     assert.match(html, /rel="canonical" href="https:\/\/papers.globalinfectiousdisease.com\/research\/articles\/example\/"/);
     assert.match(html, /hreflang="zh-CN" href="https:\/\/papers.globalinfectiousdisease.com\/zh\/research\/articles\/example\/"/);
@@ -150,7 +154,10 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
     assert.equal(stable.headers.get('x-gids-research-release'), 'research-one');
     assert.match(await stable.text(), new RegExp(`<meta name="gids-research-generation" content="${first}">`));
     const papersHost = await runtime.dispatchFetch(`https://papers.globalinfectiousdisease.com/${logical}`);
-    assert.match(await papersHost.text(), new RegExp(`https://globalinfectiousdisease.com/research-publication/${first}/_astro/style.css`));
+    const papersHtml = await papersHost.text();
+    assert.match(papersHtml, new RegExp(`https://globalinfectiousdisease.com/research-publication/${first}/_astro/style.css`));
+    assert.match(papersHtml, /href="https:\/\/globalinfectiousdisease.com\/logo\.png"/);
+    assert.match(papersHtml, /href="https:\/\/globalinfectiousdisease.com\/situation\/"/);
   } finally { await runtime.dispose(); }
 });
 

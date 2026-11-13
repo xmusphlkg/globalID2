@@ -1,7 +1,7 @@
 # 主站主题 v1 发布与试点
 
-2026-11-13：已实现独立候选构建、冻结计划执行、预览、公开验证与回滚；尚未发布公共主题入口。
-控制面板按实际配置决定执行能力。默认关闭，缺少公开目标或模板兼容确认时显示具体原因。
+2026-11-13：独立候选构建、冻结计划执行、预览、公开验证与回滚已完成，公共主题入口已发布。
+控制面板按实际配置决定执行能力；当前 `globalid-theme` 公共桶、兼容入口和模板覆盖均 ready。
 
 ## 范围
 
@@ -78,9 +78,9 @@ PUBLIC_GIDS_THEME_V1_URL=
 venv/bin/python scripts/check_theme_publication_readiness.py --pretty
 ```
 
-当前生产配置的检查结果为 `ready=false`：独立公开桶、HTTPS 自定义域名、
-兼容入口和模板兼容确认均未配置，发布开关也保持关闭。检查必须返回
-`ready=true` 后才允许启用主题发布；任何一个原因存在都应保持 fail-closed。
+当前生产配置的检查结果为 `ready=true`：独立公开桶、HTTPS 自定义域名、
+兼容入口和模板兼容确认均已配置，发布开关已打开。后续发布仍必须保持
+`ready=true`；任何一个原因出现都应 fail-closed。
 
 公开 base 必须是无路径、无查询串的 HTTPS 自定义域名，不接受 r2.dev；
 `PUBLIC_GIDS_THEME_V1_URL` 必须等于 `<base>/theme/compat/v1/theme.css`。

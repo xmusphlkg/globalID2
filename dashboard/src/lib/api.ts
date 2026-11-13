@@ -1,5 +1,9 @@
 const API_BASE = "/api/v1";
-const API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || 10000);
+// Dashboard reads can legitimately wait behind a short database lock or a
+// busy worker burst. Keep the client from cancelling before the API's own
+// bounded pool wait has a chance to complete, while allowing per-operation
+// overrides for long-running mutations.
+const API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || 20000);
 type ApiFetchInit = RequestInit & {
   timeoutMs?: number;
 };

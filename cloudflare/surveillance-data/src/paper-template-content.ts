@@ -1,9 +1,9 @@
 /** Assemble an immutable catalogue's public article without a second pointer. */
-import { assemblePaper, type PaperRecord, type PaperTemplate } from './papers-template.ts';
+import { assemblePaper } from './papers-template.ts';
 import { PROJECTION_RENDERER_REVISION, projectionFragments, type ProjectedPaper, type ProjectionTemplate } from './paper-projection.ts';
 
 const HASH = /^[a-f0-9]{64}$/;
-const PREFIX = 'paper-template-v2';
+const PREFIX = 'paper-template-v3';
 const encoder = new TextEncoder();
 const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -74,45 +74,16 @@ export async function templateArticleResponse(request: Request, env: Env, entry:
                                               ctx?: ExecutionContext): Promise<Response> {
   if (isObject(entry.paper_template) && entry.paper_template.schema === 3)
     return projectedArticleResponse(request, env, entry, logicalKey, generation, ctx);
-  const path = /^(?:(zh|fr)\/)?research\/articles\/([a-z0-9][a-z0-9-]*)\/$/.exec(logicalKey);
-  const descriptor = entry.paper_template;
-  if (!path || !isObject(descriptor) || descriptor.locale !== (path[1] || 'en') || descriptor.slug !== path[2]
-      || typeof descriptor.template_sha256 !== 'string' || !HASH.test(descriptor.template_sha256)
-      || typeof descriptor.record_sha256 !== 'string' || !HASH.test(descriptor.record_sha256)
-      || entry.key !== `${PREFIX}/records/${descriptor.record_sha256}.json`
-      || typeof entry.content_type !== 'string' || !/^text\/html(?:;|$)/i.test(entry.content_type)
-      || typeof entry.sha256 !== 'string' || !HASH.test(entry.sha256)
-      || typeof entry.bytes !== 'number' || !Number.isSafeInteger(entry.bytes) || entry.bytes < 0
-      || entry.bytes > 3 * 1024 * 1024) throw new Error('Invalid paper template catalogue entry');
-  const [rawTemplate, rawRecord] = await Promise.all([
-    immutableJson(request, env, 'templates', descriptor.template_sha256, 1024 * 1024, ctx),
-    immutableJson(request, env, 'records', descriptor.record_sha256, 2 * 1024 * 1024, ctx),
-  ]);
-  if (!isObject(rawTemplate) || !isObject(rawRecord) || rawRecord.schema !== 2
-      || rawRecord.slug !== descriptor.slug || !isObject(rawRecord.locales)) throw new Error('Invalid paper template identity');
-  const localized = rawRecord.locales[descriptor.locale];
-  if (!isObject(localized)) throw new Error('Missing localized paper template content');
-  const record = { schema: 1, slug: descriptor.slug, head: localized.head, main: localized.main } as PaperRecord;
-  const html = assemblePaper(rawTemplate as PaperTemplate, record);
-  const encoded = new Uint8Array(encoder.encode(html));
-  if (encoded.byteLength !== entry.bytes || await digest(encoded) !== entry.sha256)
-    throw new Error('Assembled paper differs from published catalogue');
-  const etag = `"${generation}-${entry.sha256}"`;
-  const headers = new Headers({ 'Content-Type': entry.content_type, 'Cache-Control': 'public, max-age=31536000, immutable',
-    'ETag': etag, 'X-Content-Type-Options': 'nosniff', 'Access-Control-Allow-Origin': '*',
-    'X-GIDS-Paper-Mode': 'template', 'X-GIDS-Paper-SHA256': entry.sha256 });
-  if (request.headers.get('If-None-Match')?.split(',').map(value => value.trim()).includes(etag))
-    return new Response(null, { status: 304, headers });
-  return new Response(request.method === 'HEAD' ? null : html, { headers });
+  throw new Error('Paper template v2 has been removed');
 }
 
 
-/** V3 explicitly validates independent hashes. Legacy v2 above retains HTML identity checks. */
+/** V3 validates independent record, template, and asset hashes. */
 async function projectedArticleResponse(request: Request, env: Env, entry: Record<string, unknown>,
                                         logicalKey: string, generation: string, ctx?: ExecutionContext): Promise<Response> {
   if (String(env.PAPERS_PROJECTION_V3) !== '1') throw new Error('Paper projection v3 is not enabled');
   const descriptor = entry.paper_template;
-  const path = /^(?:(zh|fr)\/)?research\/articles\/([a-z0-9][a-z0-9-]{0,199})\/$/.exec(logicalKey);
+  const path = /^(?:(zh|fr)\/)?research\/articles\/([a-z0-9][a-z0-9-]{0,239})\/$/.exec(logicalKey);
   if (!path || !isObject(descriptor) || descriptor.locale !== (path[1] || 'en') || descriptor.slug !== path[2]
       || !['record_sha256', 'template_sha256', 'assets_sha256'].every(field => typeof descriptor[field] === 'string' && HASH.test(descriptor[field] as string))
       || entry.key !== `paper-template-v3/records/${descriptor.record_sha256}.json`

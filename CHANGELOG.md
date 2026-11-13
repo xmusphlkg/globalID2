@@ -4,6 +4,77 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-13
+
+This release completes the GIDS data-line and control-plane migration while
+keeping public routes, data contracts and previously published research assets
+compatible for existing users.
+
+### Added
+
+- Split collection into durable `collect → organize → store` stages for
+  Surveillance, Situation, Literature and Knowledge. A successful store records
+  only its affected scope in `publish_dirty`; public JSON publication runs later
+  from a frozen candidate.
+- Added the independent Literature JSON channel with immutable shards, an
+  atomic current pointer, release receipts and sampled public-object checks.
+- Added authenticated control-plane views and API contracts for overview,
+  collection lines and summaries, model routes and queues, realtime publication
+  queues and runs, task workers, runtime heartbeats and action items.
+- Added the independent theme v1 compatibility stylesheet and its readiness,
+  receipt and public-host verification flow.
+- Added Papers projection v3: one multilingual record plus shared templates and
+  verified assets can render all three locales without copying every article
+  body into a new generation.
+
+### Changed
+
+- Replaced fused ingestion-and-publication work with queued workers and a
+  dedicated AI worker. Durable model work items now carry leases, retries,
+  cooldowns and route ownership across worker restarts.
+- Realtime data releases publish only JSON and advance a channel pointer after
+  immutable-object and manifest verification. Static Pages releases remain a
+  separate workflow, and retries acknowledge only the exact frozen dirty set.
+- Papers and the public site now share stable research URLs, generation-bound
+  assets and compatibility headers. Existing stable links continue to resolve
+  while the active renderer reports `projection-v3`.
+- Runtime recovery is owner-scoped: managed drains recover confirmed-dead
+  leases, preserve resumable work and verify API, scheduler, worker and AI
+  heartbeats before reopening the queue.
+
+### Fixed
+
+- Prevented stale release retries from overwriting newer JSON or research
+  pointers, and kept failed publication markers pending for a later retry.
+- Corrected quoted greater-than attributes in paper templates and preserved
+  required shared assets during projection rebuilds.
+- Made dashboard polling and task/source hooks follow the current API envelope,
+  while retaining the existing task and collection routes during migration.
+
+### Validation
+
+- Dashboard: 24 Vitest files, 134 tests, TypeScript checking and OpenAPI
+  consistency all pass.
+- Worker tests (23), Python target tests (45) and control-plane HTTP/runtime
+  tests pass; `git diff --check` is clean.
+- Production canaries return HTTP 200 for Surveillance, Situation and Literature
+  JSON, the three locale Papers v3 routes and the six main-site locale/country
+  routes. Theme v1 readiness and its public CSS probe return `ready=true`.
+- The current Papers generation contains 8,352 articles in three locales and
+  is published under generation
+  `318580a640b1885153b721990f21eee324cd015af92783da50603d76a29a07c0`.
+
+### Compatibility and operational notes
+
+- Existing public HTML, stable research URLs, download formats and previously
+  published immutable objects remain available. The public site still uses its
+  same-origin JSON worker; the abandoned independent CDN design is not part of
+  this release.
+- Release readiness remains a commit gate until the working tree is clean and
+  the production failure-fence acceptance record is saved. Runtime queue counts
+  and model throughput are live observations rather than fixed capacity
+  promises.
+
 ## [0.18.4] - 2026-11-12
 
 - Restore stable, short public research URLs across navigation, search, canonical metadata and sitemaps. Retire generation-specific page URLs with HTTP 410 while keeping data and assets bound to their publication generation.

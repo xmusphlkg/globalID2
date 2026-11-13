@@ -30,7 +30,7 @@ export function projectionFragments(template: ProjectionTemplate, record: Projec
   if (!object(template) || template.schema !== 3 || template.content_schema !== 3 || template.renderer !== 'gids-evidence-v1'
       || !['en', 'zh', 'fr'].includes(template.locale) || !Array.isArray(template.scope_attributes)
       || template.scope_attributes.some(value => !/^data-astro-cid-[a-z0-9]{4,32}$/.test(value))
-      || !object(record) || record.schema !== 3 || !/^[a-z0-9][a-z0-9-]{0,199}$/.test(record.slug)
+      || !object(record) || record.schema !== 3 || !/^[a-z0-9][a-z0-9-]{0,239}$/.test(record.slug)
       || !record.article_id || typeof record.article_id !== 'string' || !object(record.content)
       || !/^[a-f0-9]{64}$/.test(recordSha)) throw new Error('Invalid paper projection contract');
   const data = record.content, locale = template.locale, text = labels[locale];
@@ -82,7 +82,7 @@ export function projectionFragments(template: ProjectionTemplate, record: Projec
   const peerReview = data.peer_review_status === 'peer_reviewed' ? pick('Peer reviewed', '同行评议', 'Évalué par les pairs') : data.peer_review_status === 'preprint' ? pick('Preprint', '预印本', 'Prépublication') : pick('Peer review status unknown', '同行评议状态未知', 'Statut d’évaluation inconnu');
   const metadata = [['DOI', data.doi], ['PMID', data.pmid], ['PMCID', data.pmcid], ['OpenAlex', data.openalex_id], [text[14], integrityLabel[string(data.integrity_status)] || data.integrity_status], [text[1], data.study_type], [pick('Publisher', '出版商', 'Éditeur'), data.publisher], [pick('Article type', '文章类型', 'Type de publication'), data.article_type]];
   const integrity = rows(data.integrity_events).map(event => `<li><strong>${escape(event.event_type)}</strong> <time>${escape(event.effective_at || event.recorded_at)}</time> ${escape(event.source)}${safeUrl(event.source_url) ? ` <a href="${escape(safeUrl(event.source_url))}">${escape(text[8])}</a>` : ''}</li>`).join('');
-  const related = rows(data.related_articles).map(article => /^[a-z0-9][a-z0-9-]{0,199}$/.test(string(article.slug)) ? `<li><a href="https://papers.globalinfectiousdisease.com${prefix}/research/articles/${escape(article.slug)}/">${escape(article.title)}</a><p>${escape(article.journal)} · ${escape(article.study_type)}</p><p>${escape((Array.isArray(article[`reasons_${locale}`]) ? article[`reasons_${locale}`] as unknown[] : Array.isArray(article.reasons_en) ? article.reasons_en : []).filter(value => typeof value === 'string').join(' · '))}</p></li>` : '').join('');
+  const related = rows(data.related_articles).map(article => /^[a-z0-9][a-z0-9-]{0,239}$/.test(string(article.slug)) ? `<li><a href="https://papers.globalinfectiousdisease.com${prefix}/research/articles/${escape(article.slug)}/">${escape(article.title)}</a><p>${escape(article.journal)} · ${escape(article.study_type)}</p><p>${escape((Array.isArray(article[`reasons_${locale}`]) ? article[`reasons_${locale}`] as unknown[] : Array.isArray(article.reasons_en) ? article.reasons_en : []).filter(value => typeof value === 'string').join(' · '))}</p></li>` : '').join('');
   const topicSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   const panels = ([['topics', pick('Topics', '主题', 'Thèmes')], ['pathogens', pick('Pathogens', '病原体', 'Agents pathogènes')], ['populations', pick('Populations', '研究人群', 'Populations')], ['countries', pick('Geographic scope', '地理范围', 'Zone géographique')]] as const).map(([name, title]) => {
     const items = rows(data[name]);

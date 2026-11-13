@@ -58,68 +58,18 @@ def test_derive_r2_credentials_uses_token_id_and_sha256(monkeypatch) -> None:
     assert len(calls) == 1
 
 
-def test_template_release_stages_before_assets_then_switches_pointer(tmp_path, monkeypatch):
-    from src.services.data_release import papers_templates_publish
+def test_template_v2_release_is_rejected_before_upload(tmp_path, monkeypatch):
     candidate = tmp_path / 'candidate'
     candidate.mkdir()
     (candidate / 'current.json').write_bytes(b'new')
-    events = []
     class Client:
         pointer = b'old'
         def get_object(self, key): return self.pointer
-        def put_object_conditional(self, key, body, *, previous, **kwargs):
-            events.append('switch')
-            assert previous == self.pointer
-            self.pointer = body
-    client = Client()
-    monkeypatch.setattr(papers_templates_publish, 'publish_candidate',
-                        lambda *a, **kw: events.append('stage'))
-    def publish(*args, **kwargs):
-        assert kwargs['preserve_static_articles']
-        assert client.pointer == b'old'
-        events.append('assets')
-        return 'published'
-    monkeypatch.setattr(papers_r2, '_publish_papers_site', publish)
-    config = R2PapersConfig(account_id='a', bucket='b', access_key_id='c', secret_access_key='d')
-    assert publish_papers_site(tmp_path, config, client=client, template_candidate=candidate, lock_dir=tmp_path / 'locks') == 'published'
-    assert events == ['stage', 'assets', 'switch']
-    assert client.pointer == b'new'
-
-
-def test_template_release_does_not_switch_when_assets_fail(tmp_path, monkeypatch):
-    from src.services.data_release import papers_templates_publish
-    candidate = tmp_path / 'candidate'
-    candidate.mkdir()
-    (candidate / 'current.json').write_bytes(b'new')
-    class Client:
-        def get_object(self, key): return b'old'
         def put_object_conditional(self, *args, **kwargs): pytest.fail('pointer switched')
-    monkeypatch.setattr(papers_templates_publish, 'publish_candidate', lambda *a, **kw: None)
-    def fail(*args, **kwargs): raise R2S3Error('asset failure')
-    monkeypatch.setattr(papers_r2, '_publish_papers_site', fail)
+    monkeypatch.setattr(papers_r2, '_publish_papers_site', lambda *a, **kw: pytest.fail('assets published'))
     config = R2PapersConfig(account_id='a', bucket='b', access_key_id='c', secret_access_key='d')
-    with pytest.raises(R2S3Error, match='asset failure'):
+    with pytest.raises(R2S3Error, match='template v2 publication has been removed'):
         publish_papers_site(tmp_path, config, client=Client(), template_candidate=candidate, lock_dir=tmp_path / 'locks')
-
-
-def test_template_release_rejects_concurrent_pointer_change(tmp_path, monkeypatch):
-    from src.services.data_release import papers_templates_publish
-    candidate = tmp_path / 'candidate'
-    candidate.mkdir()
-    (candidate / 'current.json').write_bytes(b'new')
-    class Client:
-        pointer = b'old'
-        def get_object(self, key): return self.pointer
-        def put_object_conditional(self, key, body, *, previous, **kwargs):
-            self.pointer = b'concurrent'
-            raise R2S3Error('precondition', status=412)
-    client = Client()
-    monkeypatch.setattr(papers_templates_publish, 'publish_candidate', lambda *a, **kw: None)
-    monkeypatch.setattr(papers_r2, '_publish_papers_site', lambda *a, **kw: None)
-    config = R2PapersConfig(account_id='a', bucket='b', access_key_id='c', secret_access_key='d')
-    with pytest.raises(R2S3Error, match='precondition'):
-        publish_papers_site(tmp_path, config, client=client, template_candidate=candidate, lock_dir=tmp_path / 'locks')
-    assert client.pointer == b'concurrent'
 
 
 def test_derive_r2_credentials_rejects_inactive_or_blank_tokens(monkeypatch) -> None:

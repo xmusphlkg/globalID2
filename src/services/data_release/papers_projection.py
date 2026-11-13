@@ -18,7 +18,11 @@ from .papers_immutable import _source
 
 PREFIX = 'paper-template-v3'
 LOCALES = ('en', 'zh', 'fr')
-SLUG = re.compile(r'[a-z0-9][a-z0-9-]{0,199}\Z')
+# Preserve every already-public route in the frozen catalogue. One historical
+# article uses a 201-character slug; the projection must not silently drop it
+# during a complete migration merely because the old validator capped routes
+# at 200 characters.
+SLUG = re.compile(r'[a-z0-9][a-z0-9-]{0,239}\Z')
 HASH = re.compile(r'[a-f0-9]{64}\Z')
 FIELDS = ('title', 'doi', 'pmid', 'pmcid', 'openalex_id', 'journal', 'publisher', 'authors',
           'article_type', 'study_type', 'published_at', 'updated_at', 'publication_date_label_en',
@@ -31,9 +35,22 @@ SUMMARY_FIELDS = ('research_question', 'study_design', 'population_setting', 'ma
 
 
 def project_article(article: dict) -> dict:
+    # A small historical seed predates the editorial_status field. These rows
+    # are already public catalogue entries and carry the stronger historical
+    # baseline/indexable markers; treat that explicit public provenance as the
+    # publication decision instead of dropping otherwise public routes during
+    # the full v3 migration.
+    historical_public = (
+        article.get('editorial_status') is None
+        and article.get('historical_baseline') is True
+        and article.get('indexable') is True
+        and isinstance(article.get('article_id'), str)
+        and article['article_id'].startswith('lit_hist_')
+    ) if isinstance(article, dict) else False
     if (not isinstance(article, dict) or not isinstance(article.get('slug'), str)
             or not SLUG.fullmatch(article['slug']) or not isinstance(article.get('article_id'), str)
-            or not article['article_id'] or article.get('editorial_status') != 'published'
+            or not article['article_id']
+            or (article.get('editorial_status') != 'published' and not historical_public)
             or not isinstance(article.get('title'), str) or not article['title'].strip()):
         raise ValueError('Expected an already-public article projection')
     content = {key: article[key] for key in FIELDS if key in article}
@@ -141,6 +158,22 @@ def _template(base: PapersContentCandidate, locale: str, entry: dict) -> dict:
             'shell': {'schema': 1, 'chunks': chunks}, 'scope_attributes': scope}
 
 
+def assert_v3_candidate(candidate: PapersContentCandidate) -> None:
+    """Reject a catalogue that would publish or resume template v2 articles."""
+    articles = [entry for entry in candidate.entries if 'paper_template' in entry]
+    if not articles:
+        raise ValueError('Papers publication has no projected articles')
+    for entry in articles:
+        descriptor = entry.get('paper_template') or {}
+        if (descriptor.get('schema') != 3 or entry.get('integrity') != 'independent-v3'
+                or 'sha256' in entry or 'bytes' in entry
+                or not str(entry.get('key', '')).startswith(f'{PREFIX}/records/')):
+            raise ValueError('Papers publication must be projection v3')
+    if any(str(item.get('key', '')).startswith('paper-template-v2/')
+           for item in (*candidate.entries, *candidate.template_objects)):
+        raise ValueError('Papers publication still contains template v2 objects')
+
+
 def prepare_projection_candidate(base: PapersContentCandidate, *, articles: list[dict], directory: Path,
                                  release_id: str, migration: bool = False,
                                  templates: dict[str, dict] | None = None) -> tuple[PapersContentCandidate, dict]:
@@ -178,6 +211,10 @@ def prepare_projection_candidate(base: PapersContentCandidate, *, articles: list
     # Keep all old immutable objects available for unchanged entries and open
     # pages. Hardlinks reuse bytes without rendering or interpreting records.
     for descriptor in base.template_objects:
+        # v2 shells are read from the base while building the v3 template.
+        # They are not part of the published candidate.
+        if str(descriptor.get('key', '')).startswith('paper-template-v2/'):
+            continue
         source = _source(base.template_root, descriptor['path'])
         target = directory / descriptor['path']
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -283,7 +320,13 @@ def verify_projected_publication(candidate: PapersContentCandidate, *, opener=No
     for locale, entry in selected.items():
         descriptor = entry['paper_template']
         url = candidate.origin + '/' + entry['logical_key']
-        request = Request(url, headers={'Cache-Control': 'no-cache', 'Accept-Encoding': 'identity'})
+        # Cloudflare may reject urllib's implicit `Python-urllib` user agent
+        # with a challenge even though the public route is healthy.  Use the
+        # same explicit operator identity as the readiness probes so canary
+        # verification measures the Worker response rather than bot filtering.
+        request = Request(url, headers={'Cache-Control': 'no-cache',
+                                        'Accept-Encoding': 'identity',
+                                        'User-Agent': 'GlobalID-Papers-Canary/1'})
         with open_url(request, timeout=20) as response:
             if response.status != 200 or response.geturl() != url:
                 raise ValueError('Projected public canary was not served directly')

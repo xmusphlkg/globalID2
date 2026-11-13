@@ -16,8 +16,10 @@ User=__RUN_AS_USER__
 Group=__RUN_AS_GROUP__
 WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=-__PROJECT_DIR__/.env
-Environment=DATABASE__POOL_SIZE=8
-Environment=DATABASE__MAX_OVERFLOW=4
+# Keep enough API-local capacity for dashboard fan-out while leaving room for
+# workers, dispatchers, scheduler, and external database clients.
+Environment=DATABASE__POOL_SIZE=10
+Environment=DATABASE__MAX_OVERFLOW=6
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_api_service.sh
 Restart=on-failure
 RestartSec=10

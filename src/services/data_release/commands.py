@@ -156,16 +156,20 @@ def build_publish_papers_r2_command(
     *,
     python_path: Path,
     source_dir: Path,
+    articles_dir: Path | None = None,
 ) -> list[str]:
-    """Incrementally publish the papers bundle to Cloudflare R2."""
+    """Incrementally publish the papers bundle to Cloudflare R2 as projection v3."""
 
-    return [
+    command = [
         str(python_path),
         "scripts/publish_papers_r2.py",
         "--source-dir",
         str(source_dir),
         "--skip-public-verify",
     ]
+    if articles_dir is not None:
+        command.extend(["--articles-dir", str(articles_dir)])
+    return command
 
 
 def build_split_reports_bundle_command(

@@ -14,7 +14,7 @@ from tests.unit.test_surveillance_publish import CONFIG, Store
 
 
 def sources(tmp_path):
-    papers, dist, research = (tmp_path / name for name in ('papers', 'dist', 'research-json'))
+    papers, dist, research, articles = (tmp_path / name for name in ('papers', 'dist', 'research-json', 'articles'))
     for prefix in ('', 'zh', 'fr'):
         article = papers / prefix / 'research/articles/paper-a/index.html'
         article.parent.mkdir(parents=True)
@@ -34,8 +34,15 @@ def sources(tmp_path):
     (research / 'index.json').write_text('{"file":"shards/list.json","version":1}')
     (research / 'catalogue.json').write_text('{"articles":1}')
     (research / 'shards/list.json').write_text('{"articles":["paper-a"]}')
+    articles.mkdir()
+    (articles / 'paper-a.json').write_text(json.dumps({
+        'slug': 'paper-a', 'article_id': 'lit-paper-a', 'title': 'Paper paper-a',
+        'editorial_status': 'published',
+        'summary': {'en': {'main_findings': 'Public finding'}, 'zh': {'main_findings': '中文发现'},
+                    'fr': {'main_findings': 'Résultats'}},
+    }))
     config = replace(CONFIG, public_base_url='https://papers.example')
-    args = dict(papers_dir=papers, site_dist=dist, research_source=research,
+    args = dict(papers_dir=papers, site_dist=dist, research_source=research, articles_dir=articles,
                 run=tmp_path / 'run', release_id='site-one', config=config, receipt=tmp_path / 'receipt.json')
     return args
 
@@ -71,12 +78,10 @@ def test_site_merges_all_locales_assets_index_and_template_articles_before_one_s
     assert {entry['paper_template']['locale'] for entry in article_entries} == {'en', 'zh', 'fr'}
     assert len({entry['key'] for entry in article_entries}) == 1
     for entry in article_entries:
-        original = (args['papers_dir'] / entry['path']).read_bytes()
-        assert entry['sha256'] == hashlib.sha256(original).hexdigest()
-        assert entry['bytes'] == len(original)
-        assert entry['key'].startswith('paper-template-v2/records/')
-        legacy = f"releases/sha256/objects/{entry['sha256']}/"
-        assert not any(key.startswith(legacy) for key in store.objects)
+        assert entry['integrity'] == 'independent-v3'
+        assert entry['paper_template']['schema'] == 3
+        assert 'sha256' not in entry and 'bytes' not in entry
+        assert entry['key'].startswith('paper-template-v3/records/')
     assert not any(key.endswith('/research/articles/paper-a/') for key in store.objects)
     assert 'paper-template-v2/current.json' not in store.objects
     assert set(pointer['files']) == {'index.json', 'catalogue.json', 'shards/list.json'}
@@ -94,6 +99,8 @@ def test_failed_switch_retries_frozen_site_instead_of_new_mutable_source(tmp_pat
         publish_site_research(**args, client=store, workers=2)
     assert f'{PREFIX}/current.json' not in store.objects
     assert not args['receipt'].exists()
+    frozen = json.loads((args['run'] / 'projection-v3/candidate.json').read_bytes())
+    frozen_entry = next(entry for entry in frozen['entries'] if entry['logical_key'] == 'research/articles/paper-a/')
     article = args['papers_dir'] / 'research/articles/paper-a/index.html'
     article.write_text(page('paper-a', 'newer-source'))
     (args['research_source'] / 'index.json').write_text('{"version":2}')
@@ -101,7 +108,8 @@ def test_failed_switch_retries_frozen_site_instead_of_new_mutable_source(tmp_pat
     publish_site_research(**args, client=store, workers=2)
     pointer = json.loads(store.get_object(f'{PREFIX}/current.json'))
     descriptor = entries(store, pointer)['research/articles/paper-a/']
-    assert descriptor['sha256'] == hashlib.sha256(page('paper-a', 'style-one').encode()).hexdigest()
+    assert descriptor == frozen_entry
+    assert descriptor['integrity'] == 'independent-v3'
     index = pointer['files']['index.json']
     assert json.loads(store.get_object(f"{PREFIX}/{index['url']}"))['version'] == 1
     assert store.writes[-1][0] == f'{PREFIX}/current.json'
@@ -115,8 +123,9 @@ def test_changed_article_updates_shared_record_and_json_in_same_generation(tmp_p
     first_entries = entries(store, first)
     old_keys = set(store.objects)
     store.writes.clear()
-    article = args['papers_dir'] / 'research/articles/paper-a/index.html'
-    article.write_text(article.read_text().replace('>paper-a</main>', '>new findings</main>'))
+    article = json.loads((args['articles_dir'] / 'paper-a.json').read_text())
+    article['summary']['en']['main_findings'] = 'New public finding'
+    (args['articles_dir'] / 'paper-a.json').write_text(json.dumps(article))
     (args['research_source'] / 'index.json').write_text('{"file":"shards/list.json","version":2}')
     second_args = {**args, 'run': tmp_path / 'second-run', 'release_id': 'site-two'}
     capture_surveillance_baseline(second_args['run'], args['config'], prefix=PREFIX, client=store)
@@ -125,8 +134,8 @@ def test_changed_article_updates_shared_record_and_json_in_same_generation(tmp_p
     second_entries = entries(store, second)
     assert first['papers']['papers_generation_sha256'] != second['papers']['papers_generation_sha256']
     assert first_entries['research/articles/paper-a/']['key'] != second_entries['research/articles/paper-a/']['key']
-    assert sum(key.startswith('paper-template-v2/records/') for key, _ in store.writes) == 1
-    assert not any(key.startswith('paper-template-v2/templates/') for key, _ in store.writes)
+    assert sum(key.startswith('paper-template-v3/records/') for key, _ in store.writes) == 1
+    assert not any(key.startswith('paper-template-v2/') for key, _ in store.writes)
     assert old_keys <= set(store.objects)
     assert json.loads(store.get_object(f"{PREFIX}/{second['files']['index.json']['url']}"))['version'] == 2
     assert store.writes[-1][0] == f'{PREFIX}/current.json'
@@ -205,6 +214,7 @@ def test_style_release_preserves_published_json_and_reuses_all_article_records(t
     second = json.loads(store.get_object(f'{PREFIX}/current.json'))
     assert first['files'] == second['files']
     assert first['papers']['papers_generation_sha256'] != second['papers']['papers_generation_sha256']
-    assert any(key.startswith('paper-template-v2/templates/') for key, _ in store.writes)
-    assert not any(key.startswith('paper-template-v2/records/') for key, _ in store.writes)
+    assert any(key.startswith('paper-template-v3/templates/') for key, _ in store.writes)
+    assert not any(key.startswith('paper-template-v3/records/') for key, _ in store.writes)
+    assert not any(key.startswith('paper-template-v2/') for key, _ in store.writes)
     assert store.writes[-1][0] == f'{PREFIX}/current.json'

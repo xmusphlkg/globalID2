@@ -95,7 +95,7 @@ export function useTasks(
       return (await apiFetch<TaskItem[]>(`/tasks?${params}`)).map(normalizeTaskProgress);
     },
     staleTime: 10 * 1000,
-    refetchInterval: 5 * 1000,
+    refetchInterval: 10 * 1000,
   });
 }
 
@@ -133,7 +133,7 @@ export function usePaginatedTasks(
       };
     },
     staleTime: 10 * 1000,
-    refetchInterval: 5 * 1000,
+    refetchInterval: 10 * 1000,
   });
 }
 
@@ -142,7 +142,7 @@ export function useWorkerStatus() {
     queryKey: ["tasks", "worker-status"],
     queryFn: () => apiFetch("/tasks/worker-status"),
     staleTime: 5 * 1000,
-    refetchInterval: 5 * 1000,
+    refetchInterval: 10 * 1000,
   });
 }
 
@@ -152,7 +152,7 @@ export function useTaskDetail(uuid: string | null) {
     queryFn: async () => normalizeTaskProgress(await apiFetch<TaskDetail>(`/tasks/${uuid}`)),
     enabled: !!uuid,
     staleTime: 5 * 1000,
-    refetchInterval: uuid ? 5 * 1000 : false,
+    refetchInterval: uuid ? 10 * 1000 : false,
   });
 }
 

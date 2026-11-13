@@ -48,7 +48,8 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
         'R2_ACCESS_KEY_ID': str(getattr(config, 'r2_access_key_id', '')),
         'R2_SECRET_ACCESS_KEY': str(getattr(config, 'r2_secret_access_key', '')),
         'R2_ENDPOINT_URL': str(getattr(config, 'r2_endpoint_url', '')),
-        'R2_ACCOUNT_ID': str(getattr(config, 'r2_account_id', '') or service._cloudflare_account_id())}
+        'R2_ACCOUNT_ID': str(getattr(config, 'r2_account_id', '') or service._cloudflare_account_id()),
+        'GIDS_PAPERS_PROJECTION_V3': '1'}
     expected = data.get('publication_expected_generations', {})
     if 'literature' in expected:
         env['GIDS_PUBLICATION_EXPECTED_BASELINE_JSON'] = json.dumps(expected['literature'])

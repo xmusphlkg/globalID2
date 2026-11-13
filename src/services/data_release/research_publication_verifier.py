@@ -25,7 +25,10 @@ MAX_MANIFEST = 32 * 1024 * 1024
 MAX_PAGE = 5 * 1024 * 1024
 MAX_ARTICLE = 2 * 1024 * 1024
 HEX = re.compile(r"^[a-f0-9]{64}$")
-SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,199}$")
+# Keep the verifier aligned with the published route reader. A historical
+# public article has a 201-character slug and must remain addressable during
+# the v3 migration.
+SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,239}$")
 IDENTITY_KEYS = ("release_id", "build_digest", "source_commit", "deployment_branch",
                  "papers_origin", "papers_manifest_sha256", "papers_generation_sha256", "papers_manifest_url")
 

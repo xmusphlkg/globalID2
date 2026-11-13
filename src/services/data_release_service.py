@@ -2231,6 +2231,7 @@ class DataReleaseService:
         return build_publish_papers_r2_command(
             python_path=python_path,
             source_dir=self._papers_site_dir(),
+            articles_dir=ASTRO_DIR / "src" / "data" / "research" / "articles",
         )
 
     def _split_reports_bundle_command(self, *, python_path: Path) -> list[str]:

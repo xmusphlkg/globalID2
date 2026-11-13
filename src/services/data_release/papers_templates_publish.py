@@ -1,17 +1,12 @@
-"""Publish template candidate objects before an optional atomic pointer switch.
+"""Validate a private template-v2 candidate used only as v3 migration input.
 
-The old static Papers objects are never touched. This is an explicit migration
-entry point, not yet part of the existing site-release task.
+Uploading or activating paper-template-v2 is no longer a publication path.
 """
 from __future__ import annotations
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-import gzip
 import hashlib
 import json
 from pathlib import Path
 import re
-import time
-from .papers_r2 import R2S3Error
 
 PREFIX='paper-template-v2'
 _HASH=re.compile(r'[a-f0-9]{64}\Z')
@@ -70,61 +65,6 @@ def validate_candidate(directory: Path) -> tuple[bytes,dict[str,Path],dict]:
 
 
 def publish_candidate(directory: Path, client, *, workers: int=32, activate: bool=False, max_total_bytes: int=8_000_000_000) -> dict:
-    if type(workers) is not int or not 1<=workers<=96: raise ValueError('Workers must be 1–96')
-    if type(max_total_bytes) is not int or max_total_bytes<=0: raise ValueError('Invalid storage budget')
-    pointer,files,counts=validate_candidate(directory)
-    pointer_key=f'{PREFIX}/current.json'
-    previous=client.get_object(pointer_key) if activate else None
-    inventory=client.list_objects()
-    # Do not remove old objects or assume they can be reclaimed yet.
-    bound=sum(int(x['bytes']) for x in inventory.values())+sum(p.stat().st_size for k,p in files.items() if f'{PREFIX}/{k}' not in inventory)+len(pointer)
-    if bound>max_total_bytes: raise R2S3Error(f'Storage budget exceeded before upload: {bound} > {max_total_bytes}')
-    def upload(pair):
-        relative,path=pair;raw=path.read_bytes();expected=Path(relative).stem
-        if hashlib.sha256(raw).hexdigest()!=expected: raise ValueError('Candidate changed during upload')
-        encoded=gzip.compress(raw,compresslevel=6,mtime=0) if len(raw)>1024 else raw
-        compressed=len(encoded)<len(raw);wire=encoded if compressed else raw
-        key=f'{PREFIX}/{relative}';stored=inventory.get(key) or {}
-        if stored.get('bytes')==len(wire) and stored.get('etag')==hashlib.md5(wire,usedforsecurity=False).hexdigest(): return False
-        try:
-            client.put_object_conditional(key,wire,previous=None,content_type='application/json',cache_control='public, max-age=31536000, immutable',content_encoding='gzip' if compressed else None)
-        except R2S3Error as error:
-            if error.status!=412: raise
-            existing=client.get_object(key)
-            if existing and existing.startswith(b'\x1f\x8b'): existing=gzip.decompress(existing)
-            if existing!=raw: raise R2S3Error(f'Immutable object conflict: {relative}') from error
-            return False
-        return True
-    uploaded = processed = 0
-    started = last_report = time.monotonic()
-    print(f'Template staging: {len(files)} immutable objects; storage upper bound {bound} bytes', flush=True)
-    # Bound queued work and report completions rather than submission order:
-    # one slow object must not hide progress by blocking Executor.map().
-    entries = iter(sorted(files.items()))
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        pending = set()
-        def fill():
-            while len(pending) < workers * 2:
-                item = next(entries, None)
-                if item is None: break
-                pending.add(pool.submit(upload, item))
-        fill()
-        try:
-            while pending:
-                done, pending = wait(pending, return_when=FIRST_COMPLETED)
-                for future in done:
-                    uploaded += int(future.result())
-                    processed += 1
-                fill()
-                now = time.monotonic()
-                if now - last_report >= 15:
-                    print(f'Template staging: {processed}/{len(files)}; uploaded={uploaded}; reused={processed-uploaded}; seconds={now-started:.1f}', flush=True)
-                    last_report = now
-        except BaseException:
-            for future in pending: future.cancel()
-            raise
-    if activate:
-        try: client.put_object_conditional(pointer_key,pointer,previous=previous,cache_control='no-store')
-        except R2S3Error as error:
-            if error.status!=412 or client.get_object(pointer_key)!=pointer: raise
-    return {'generation':json.loads(pointer)['generation'],'pages':counts,'objects':len(files),'uploaded':uploaded,'reused':len(files)-uploaded,'activated':activate,'storage_upper_bound':bound}
+    """Reject the retired template-v2 uploader before it touches remote state."""
+    del directory, client, workers, activate, max_total_bytes
+    raise ValueError('Paper template v2 publication has been removed')

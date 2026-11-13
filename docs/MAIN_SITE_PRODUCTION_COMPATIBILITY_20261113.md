@@ -1,5 +1,11 @@
 # 2026-11-13 生产兼容性基线与客户端候选
 
+后续状态补充：本文记录的是切换前兼容基线。主题 v1 已于同日发布并在首页、
+`/zh/`、`/fr/` 及三语中国国家页验证引用
+`https://theme.globalinfectiousdisease.com/theme/compat/v1/theme.css`；Papers v3
+已由 `exports/site-research-runs/papers-v3-cutover-20261113/published.json` 记录并
+通过三语公开 canary。本文中 `template`/主题关闭描述仅适用于基线快照。
+
 本文记录生产基线、兼容候选和部署后浏览器验收；生产写操作由主任务执行。
 
 ## 改造前生产产物
@@ -34,7 +40,7 @@ python3 scripts/capture_papers_compatibility.py \
 
 ## 最终兼容候选：保留原数据链路
 
-用户明确决定保留 Bot Fight Mode、放弃独立 CDN。本轮新增的前端 CDN 读取/凭据/schema v2/回退逻辑及其测试已全部撤回：`surveillance-data.ts`、`situation-data.ts`、`surveillance-data.test.ts` 精确恢复 HEAD。原有数据入口配置能力保留，构建时使用其原默认值。测试工具中的独立 CDN 路径重写亦已删除。主题和国家模板功能保留；本次主题入口关闭。
+用户明确决定保留 Bot Fight Mode、放弃独立 CDN。本轮新增的前端 CDN 读取/凭据/schema v2/回退逻辑及其测试已全部撤回：`surveillance-data.ts`、`situation-data.ts`、`surveillance-data.test.ts` 精确恢复 HEAD。原有数据入口配置能力保留，构建时使用其原默认值。测试工具中的独立 CDN 路径重写亦已删除。主题和国家模板功能保留；本段主题入口关闭仅适用于本兼容基线，主题 v1 随后的生产切换见顶部补充。
 
 独立构建 `exports/compat-client-build-20261113/` 使用撤回后的源码，Node 22.23.4 / Astro 7.4.7，6 GiB 堆上限，耗时 1 分 16 秒。257 个临时输出全部弃用，仅接受 `_astro`。产出的 `surveillance-sources.Bzwt9QOP.js` 和 `situation-data.BsEBAbPj.js` 与原生产文件逐字节完全相同，因此原数据 URL、凭据和读取行为均保持不变。
 

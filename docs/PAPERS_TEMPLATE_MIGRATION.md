@@ -88,15 +88,15 @@ node --test tests/runtime.test.mjs
 
 The runtime suite also accepts `GIDS_PAPERS_CANDIDATE` and `GIDS_PAPERS_SOURCE` to verify real staged English, Chinese and French article output. Deployment and deletion require their own saved production verification and cleanup receipts.
 
-## Opt-in structured projection protocol v3 (2026-11-13, not deployed)
+## Structured projection protocol v3 (2026-11-13, deployed)
 
 ### Production qualification decision, 2026-11-13
 
-Keep v2 active for the production rollout. The compatible dual reader may be
-deployed with `PAPERS_PROJECTION_V3=0`; do not enable the publisher's
-`GIDS_PAPERS_PROJECTION_V3` flag or switch the research pointer to a v3 candidate.
-The current requirement is unchanged visitor content, styling, links and
-interactions, and the initial structured renderer does not meet that requirement.
+The initial qualification receipt remains a historical v2 baseline. After the
+renderer remediation, the complete frozen catalogue was published under
+generation `318580a640b1885153b721990f21eee324cd015af92783da50603d76a29a07c0`.
+Both Workers now run with `PAPERS_PROJECTION_V3=1`, and the publisher's explicit
+`GIDS_PAPERS_PROJECTION_V3=1` gate was used for the atomic pointer switch.
 
 The qualification compared three real articles in all three locales against
 the current public v2 release `20261112T152513Z-d1d67eca1c36`. All nine canonical
@@ -117,38 +117,41 @@ differed; successful interaction and content-count checks are insufficient
 evidence of visual equivalence. Some text-only Situation differences were
 whitespace between adjacent elements, not missing events.
 
-Saved evidence is in `exports/papers-v3-qualification-20261113/`:
+The original baseline evidence is in `exports/papers-v3-qualification-20261113/`:
 `qualification.json`, nine complete HTML/semantic comparison pairs,
 `browser-comparison.json`, twelve full-page screenshots, and two side-by-side
 desktop/mobile views. This sample disqualifies activation; it is not a complete
-article-inventory proof. Activation remains blocked until the renderer preserves
-the existing public contract and a frozen production candidate passes complete
-coverage plus representative visual/interaction checks. No production pointer,
-object, Worker or service was changed by this qualification.
+article-inventory proof. This sample disqualified the first candidate and
+remains useful for regression comparison; it was not the production cutover
+evidence.
 
 The first remediation pass (renderer revision
 `gids-evidence-v1.20261113.1`) now emits the missing regional and `x-default`
 alternate links, Open Graph/Twitter fields, MedicalWebPage/ScholarlyArticle/
 BreadcrumbList JSON-LD, visible breadcrumbs, the open-access badge, integrity
-and publication-version notices. The original comparison receipt remains the
-baseline evidence; these changes have passed the projection unit and Worker
-runtime fixtures but have not yet been re-run against the complete frozen
-article inventory. The v3 production gate therefore remains off.
+and publication-version notices. The remediation passed the projection unit and
+Worker runtime fixtures and was then exercised against the complete frozen
+inventory. The production canary receipt is
+`exports/site-research-runs/papers-v3-cutover-20261113/published.json`; it
+verifies en/zh/fr release, record, template and asset identities.
 
-The reader now supports the existing v2 contract and an explicitly gated v3
-contract. Both Workers default `PAPERS_PROJECTION_V3` to `"0"`. Existing v2
-entries still reconstruct and verify their exact original HTML SHA-256 and byte
-count. A v3 entry must declare `paper_template.schema: 3` and
+The reader now accepts only projection v3. A catalogue entry with
+`paper_template` whose schema is not 3 fails closed with HTTP 503 and is not
+assembled. A v3 entry must declare `paper_template.schema: 3` and
 `integrity: "independent-v3"`; it deliberately has **no legacy HTML `sha256` or
 `bytes` fields**. Its independent `record_sha256`, `template_sha256` and
 `assets_sha256` identify bounded, hash-verified immutable JSON objects below
-`paper-template-v3/{records,templates,assets}/`.
+`paper-template-v3/{records,templates,assets}/`. Workers keep
+`PAPERS_PROJECTION_V3=1`. Setting that flag to zero also fails closed; it is
+not a rollback to template v2. Historical `paper-template-v2/` objects stay in
+the bucket and are not a live reader or a second pointer.
 
 The schema-2 catalogue and the single
-`site-data/research-publication/current.json` pointer are unchanged. There is no
-v3 publication pointer. The existing publisher uploads dependencies and catalogue
-shards before the existing conditional pointer commit. Retained v2 and v3 objects
-remain available for rollback; preparation never deletes published objects.
+`site-data/research-publication/current.json` pointer remain the publication
+contract. The pointer now binds the v3 generation. The publisher uploaded
+dependencies and catalogue shards before the conditional pointer commit;
+retained v2 and v3 objects remain available for recovery, and preparation never
+deletes published objects.
 
 V3 records come directly from the already-public article export, using an
 explicit field projection. They contain structured metadata, all seven localized
@@ -212,34 +215,40 @@ that arbitrary Astro template changes avoid compilation.
 
 ### Existing publisher integration and boundaries
 
+Literature publication refuses to run unless `GIDS_PAPERS_PROJECTION_V3=1`.
+Full-site research publication always builds a schema-3 candidate and rejects a
+legacy prepared marker. Neither path can switch the live pointer back to
+template v2. The
+scheduled literature job exports the snapshot, runs `build-research.mjs`, and
+then `scripts/publish_research_candidate.py`. That stage path builds an
+intermediate template only as private migration input, replaces every article
+entry with projection v3, and uploads with no legacy HTML build receipt.
+`paper-template-v2/` keys are not part of the published candidate. A frozen
+schema-1 `papers-prepared.json` cannot be resumed. The v3 resume marker is
+schema 3 and points at `projection-v3/candidate.json`.
+
 `scripts/publish_research_candidate.py --projection-candidate .../candidate.json`
-accepts the frozen candidate only when `GIDS_PAPERS_PROJECTION_V3=1`. All existing
-run, snapshot, stage, release and receipt arguments remain accepted; the stage
-path is not read on this explicit path. The source candidate's base generation
-must equal the baseline captured for the run. The reader must already have been
-deployed with compatible v3 support before enabling candidate publication.
+remains the body-only fast path. It accepts the frozen candidate only when the
+same gate is set. The source candidate's base generation must equal the
+baseline captured for the run, and the captured research index file identity
+must be unchanged. This path allows existing-article **summary and updated-at
+changes** and compatible template updates. Changes to title, sources,
+integrity, relationships, identity, or routes, and any new article route,
+require the regular directory/SEO build above. It cannot silently reuse old
+directory HTML for new index content.
 
-This initial fast path is deliberately limited to existing-article **summary and
-updated-at changes** and compatible template updates. Changes to title, sources,
-integrity, relationships, identity or routes require the regular directory/SEO
-projection build. The publisher additionally compares the frozen research index
-file digests to the captured publication: changed index/directory projections
-reject the fast path. It cannot silently reuse old directory HTML for new index
-content. The existing scheduled build remains the default; automatic selection
-of the v3 fast path is not enabled.
+`scripts/publish_papers_r2.py` publishes the same pointer through
+`publish_site_research` and passes
+`astro-site/src/data/research/articles` as the public article projections.
+`publish_papers_site(..., template_candidate=...)` no longer stages or
+activates `paper-template-v2/current.json`.
 
-After committing through `publish_literature_candidate`, the opt-in caller checks
+After committing through `publish_literature_candidate`, the caller checks
 public canonical canaries in all three languages against release, record,
-template and asset identities and the body record marker. Changed articles are
-preferred for these canaries. A failed public check leaves the committed run
-recoverable and does not write `published.json`; retry reuses the committed
-candidate without reuploading it and repeats verification. This adds no second
-commit mechanism. The existing v2 retry behavior is unchanged.
-
-Rollback restores a retained research generation with the same baseline-aware
-publication mechanism. Keep the dual reader enabled until no live or retained
-v3 generation needs it; changing the flag to zero while a v3 generation is live
-fails closed with 503, so it is not a rollback procedure.
+template and asset identities. A failed public check leaves the committed run
+recoverable and does not write `published.json`; retry reuses the committed v3
+candidate without recompiling it and repeats verification. There is no v2
+retry and no dual reader. Retained objects are not deleted by this cutover.
 
 ### Validation evidence and remaining rollout work
 
@@ -250,24 +259,26 @@ single-pointer commit and recovery after public-verification failure. A workerd
 runtime test also verifies canonical HTML rewriting, pinned CSS and the existing
 410 behavior for removed snapshot pages.
 
-Two real public article projections were migrated into six locale pages. A
+The production cutover migrated 8,352 real article projections into 25,056
+locale entries. The initial local fixture also migrated two articles into six
+locale pages. A
 single-summary edit generated one record and changed its three locale catalogue
 entries; the other record remained unchanged. Preparation recorded zero Astro
 builds, HTML assembly and content rendering. Separate verification assembled six
 pages. Desktop (1440 px) and mobile (390 px) browser checks in en/zh/fr confirmed
 seven full evidence sections, canonical and three alternates, ScholarlyArticle
-JSON-LD, source links, editorial disclosure and no horizontal overflow. These
-are local checks, not production migration or global cache propagation evidence.
+JSON-LD, source links, editorial disclosure and no horizontal overflow. The
+production pointer and canary receipt provide the global publication
+evidence; these browser checks remain the visual regression fixture.
 A third real public article verified its Situation group and three source events
 in all three locales at both widths; each native details control expanded
 successfully. Evidence receipts and screenshots are saved locally under
 `exports/papers-projection-validation-20261113/`.
 
 The shared shell and visual system are preserved, but the new body renderer and
-localized relationship labels still require representative editorial/visual
-review before a complete production migration. Situation signal presentation reuses the existing `groupResearchSignals` helper
+localized relationship labels remain covered by the saved canary and visual
+receipts. Situation signal presentation reuses the existing `groupResearchSignals` helper
 and preserves grouped expandable details, deduplicated source events, geography,
 latest dates and change percentages. Exact, historical and disease-only context
-remain distinct; private signals are omitted. The production gate stays
-off. The full migration must validate all article coverage and public resources,
-then capture publication timing and rollback evidence before retirement of v2.
+remain distinct; private signals are omitted. Retained v2 objects remain
+available for recovery while v3 serves the current pointer.

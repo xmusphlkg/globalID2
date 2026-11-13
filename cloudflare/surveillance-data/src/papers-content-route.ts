@@ -61,8 +61,17 @@ function rewrittenPath(value: string, generation: string, publicBase: string): s
   if (!['https:', 'http:'].includes(url.protocol)
       || !['globalinfectiousdisease.com', 'www.globalinfectiousdisease.com', 'papers.globalinfectiousdisease.com'].includes(url.hostname)) return null;
   if (isResearchPagePath(url.pathname)) return researchPageUrl(`${url.pathname}${url.search}${url.hash}`);
-  if (!isResearchResourcePath(url.pathname)) return null;
-  return `${publicBase}/research-publication/${generation}${url.pathname}${url.search}${url.hash}`;
+  if (isResearchResourcePath(url.pathname)) {
+    return `${publicBase}/research-publication/${generation}${url.pathname}${url.search}${url.hash}`;
+  }
+  // The v3 shells are assembled in an isolated build and may retain root
+  // relative links for the shared logo, navigation and static assets.  On
+  // the Papers host those files belong to the main site; keep their origin
+  // explicit so they do not become 404s under papers.globalinfectiousdisease.com.
+  if (publicBase && value.startsWith('/') && !value.startsWith('//')) {
+    return `${publicBase}${url.pathname}${url.search}${url.hash}`;
+  }
+  return null;
 }
 
 function rewriteHtml(response: Response, generation: string, publicBase: string): Response {

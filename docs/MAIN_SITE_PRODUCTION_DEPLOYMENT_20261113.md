@@ -1,5 +1,13 @@
 # 2026-11-13 生产部署记录
 
+## 后续切换补充（2026-11-13）
+
+本文件前面的版本表记录维护窗口中的早期兼容部署。随后独立主题和 Papers v3
+已完成生产切换：主题收据为
+`exports/theme-production-cutover-20261113/theme-receipt.json`，Papers v3 收据为
+`exports/site-research-runs/papers-v3-cutover-20261113/published.json`。当前状态以
+这两份收据、线上指针和三语 canary 为准；旧版本表中的关闭状态仅属于历史快照。
+
 本次兼容版本已部署并完成线上验收。按用户最后要求，独立 JSON CDN 已撤销：新增镜像代码、配置、公开桶、自定义域名、缓存规则和复制记录均已删除。Bot Fight Mode 保持启用；网站继续使用原有同源 JSON、Pages 和研究 Worker。
 
 ## 实际生产版本
@@ -19,7 +27,7 @@
 
 主站仅发布兼容脚本修复，解决图表销毁后仍执行渐进绘图回调的问题。6,749 个 HTML 的正文、结构、CSS、SSR 参数和 SEO 保留；其中 1,767 页替换 4,086 个 JS 引用。另更新三语首页不可见的发布身份标记。保留全部原资源及原 Pages Worker、路由和响应头。数据读取模块与原生产字节完全一致。
 
-原 `built_at` 保留，页脚展示日期不变；新客户端发布时间另记为 `published_at`。独立主题发布、Papers v3 和文献自动 JSON 发布均保持原关闭状态，没有将未启用的迁移表述为已经上线。
+原 `built_at` 保留，页脚展示日期不变；新客户端发布时间另记为 `published_at`。本段描述维护窗口中的历史快照；后续主题、Papers v3 和 Literature JSON 切换见上方补充及对应收据。
 
 ## 验证
 

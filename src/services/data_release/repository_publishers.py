@@ -17,7 +17,8 @@ def papers_environment(service: Any, base: dict[str, str]) -> dict[str, str]:
         'R2_ACCESS_KEY_ID': str(config.r2_access_key_id or ''),
         'R2_SECRET_ACCESS_KEY': str(config.r2_secret_access_key or ''),
         'R2_ENDPOINT_URL': str(config.r2_endpoint_url or ''),
-        'R2_ACCOUNT_ID': str(config.r2_account_id or service._cloudflare_account_id() or '')}
+        'R2_ACCOUNT_ID': str(config.r2_account_id or service._cloudflare_account_id() or ''),
+        'GIDS_PAPERS_PROJECTION_V3': '1'}
 
 
 async def prepare_repository_publications(
