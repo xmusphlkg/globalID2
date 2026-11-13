@@ -398,6 +398,12 @@ class AutomationSettings(_BaseEnvSettings):
 class DataReleaseSettings(_BaseEnvSettings):
     """静态站点数据发布与部署配置"""
 
+    theme_publish_enabled: bool = Field(default=False, validation_alias="GIDS_THEME_PUBLISH_ENABLED")
+    theme_r2_bucket: str = Field(default="", validation_alias="GIDS_THEME_R2_BUCKET")
+    theme_public_base_url: str = Field(default="", validation_alias="GIDS_THEME_PUBLIC_BASE_URL")
+    theme_compat_v1_ready: bool = Field(default=False, validation_alias="GIDS_THEME_COMPAT_V1_READY")
+    theme_stylesheet_url: str = Field(default="", validation_alias="PUBLIC_GIDS_THEME_V1_URL")
+
     surveillance_json_enabled: bool = Field(
         default=False,
         validation_alias="DATA_RELEASE__SURVEILLANCE_JSON_ENABLED",

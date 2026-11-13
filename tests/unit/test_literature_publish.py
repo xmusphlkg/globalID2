@@ -26,6 +26,7 @@ def test_failed_pointer_switch_is_retryable_and_only_then_records_reuse(tmp_path
                                      config=config, receipt=receipt, client=store)
     assert f"{PREFIX}/current.json" not in store.objects
     assert not receipt.exists()
+    assert not (run / 'authority-committed.json').exists()
     store.failure = None
     result = publish_literature_candidate(run=run, objects_dir=run / "objects", papers=papers,
                                           config=config, receipt=receipt, client=store)
@@ -33,12 +34,15 @@ def test_failed_pointer_switch_is_retryable_and_only_then_records_reuse(tmp_path
     assert pointer["papers"]["papers_generation_sha256"] == papers.generation
     assert result["release_id"] == pointer["release_id"] == "candidate"
     assert receipt.exists()
+    authority = (run / 'authority-committed.json').read_bytes()
+    assert json.loads(authority)['authoritative_committed'] is True
     assert store.writes[-1][0] == f"{PREFIX}/current.json"
     writes = list(store.writes)
     resumed = publish_literature_candidate(run=run, objects_dir=run / "objects", papers=papers,
                                             config=config, receipt=receipt, client=store)
     assert resumed["json"]["pointer_changed"] is False
     assert store.writes == writes
+    assert (run / 'authority-committed.json').read_bytes() == authority
 
 
 def test_newer_pointer_prevents_any_paper_upload(tmp_path):

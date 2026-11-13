@@ -1,4 +1,4 @@
-"""Typed controls for the independent Surveillance and Situation JSON channels."""
+"""Typed controls for independent Surveillance, Situation and Literature channels."""
 from __future__ import annotations
 
 from typing import Literal
@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from .control_plane import ProblemDetail
 
-RealtimeChannel = Literal["surveillance", "situation"]
+RealtimeChannel = Literal["surveillance", "situation", "literature"]
 RealtimeTaskStatus = Literal["pending", "queued", "running", "retrying", "completed", "failed", "cancelled", "unknown"]
 
 

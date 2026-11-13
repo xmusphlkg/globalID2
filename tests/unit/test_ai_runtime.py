@@ -131,6 +131,43 @@ async def test_cooling_route_leaves_item_queued_for_other_route(db):
     )
 
 
+async def test_disabled_route_pool_is_retained_until_its_active_call_finishes(db):
+    from unittest.mock import AsyncMock
+
+    work_id = await add()
+    chosen = route()
+    live = [chosen]
+    started, finish = asyncio.Event(), asyncio.Event()
+
+    async def routes():
+        return live
+
+    async def complete(item, selected):
+        started.set()
+        await finish.wait()
+        return "done"
+
+    worker = dispatch.AIWorkDispatcher(routes, complete, owner=OWNER)
+    worker.transport.prune = AsyncMock()
+    try:
+        assert await worker.tick() == 1
+        await started.wait()
+        live.clear()
+        assert await worker.tick() == 0
+        worker.transport.prune.assert_awaited_with([chosen])
+        assert not worker.active[work_id].done()
+        finish.set()
+        await asyncio.gather(*worker.active.values())
+        await worker.tick()
+        worker.transport.prune.assert_awaited_with([])
+        assert not worker.active_routes
+        assert (await row(db, work_id)).status == "succeeded"
+    finally:
+        finish.set()
+        await asyncio.gather(*worker.active.values(), return_exceptions=True)
+        await worker.transport.close()
+
+
 async def test_retry_prefers_another_idle_route_after_transient_failure(db):
     work_id = await add()
     live = [route(), route("second")]

@@ -20,6 +20,7 @@ from src.services.situation_schedule_service import situation_schedule_service
 from src.services.report_schedule_service import report_schedule_service
 from src.services.knowledge_automation_service import knowledge_automation_service
 from src.services.idle_backlog_service import idle_backlog_service
+from src.services.data_release.publication_usage import run_usage_collector
 
 logger = get_logger(__name__)
 
@@ -114,6 +115,7 @@ async def run_scheduler() -> None:
     )
 
     logger.info("Control-plane scheduler starting")
+    usage_collector = asyncio.create_task(run_usage_collector(stop_event), name="publication-usage-collector")
     try:
         await automation_service.start()
         await data_release_service.start()
@@ -128,6 +130,7 @@ async def run_scheduler() -> None:
         )
         await stop_event.wait()
     finally:
+        stop_event.set()
         await situation_schedule_service.stop()
         await report_schedule_service.stop()
         await idle_backlog_service.stop()
@@ -136,6 +139,14 @@ async def run_scheduler() -> None:
         await disease_mapping_automation_service.stop()
         await data_release_service.stop()
         await automation_service.stop()
+        # Metrics must not delay stopping business schedulers after lease loss.
+        # A pending read-only HTTP thread may finish later; it cannot enqueue work.
+        try:
+            await asyncio.wait_for(usage_collector, timeout=1)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            pass
+        except Exception:
+            logger.warning("Publication usage collector stopped with an error")
         stop_event.set()
         await worker_monitor
         await lease_maintenance

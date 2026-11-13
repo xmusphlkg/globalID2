@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only Surveillance/Situation health checks; exit 0/1/2 for ok/warn/error."""
+"""Read-only publication health samples; exit 0/1/2 for ok/warn/error."""
 from __future__ import annotations
 
 import argparse
@@ -22,9 +22,10 @@ with redirect_stderr(io.StringIO()):
     from sqlalchemy import text
     from src.core.config import get_config
     from src.core.database import dispose_database, get_engine, get_session_maker
-    from src.services.data_release.channel_control import get_realtime_controls
+    from src.services.data_release.channel_control import get_publication_controls
+    from src.services.data_release.research_monitor import probe_public_research, reserve_sampling_cursor
     from src.services.data_release.realtime_monitor import (
-        CHANNELS, LEVEL, MonitorThresholds, assemble_report, collect_database_snapshot,
+        CHANNELS, DATABASE_CHANNELS, LEVEL, MonitorThresholds, assemble_report, collect_database_snapshot,
         probe_public_manifest, report_text, validate_public_url,
     )
 logger.remove()
@@ -32,10 +33,11 @@ logger.remove()
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("--channel", choices=CHANNELS, action="append", help="Repeat to select channels; default both")
+    result.add_argument("--channel", choices=DATABASE_CHANNELS, action="append", help="Repeat to select channels; default legacy pair plus Literature when enabled")
     result.add_argument("--origin", help="Public main-site origin; default configured main_site_origin")
     result.add_argument("--surveillance-manifest-url", default=os.environ.get("REALTIME_SURVEILLANCE_MANIFEST_URL"))
     result.add_argument("--situation-manifest-url", default=os.environ.get("REALTIME_SITUATION_MANIFEST_URL"))
+    result.add_argument("--literature-manifest-url", default=os.environ.get("REALTIME_LITERATURE_MANIFEST_URL"))
     result.add_argument("--format", choices=("json", "text"), default="json")
     result.add_argument("--pretty", action="store_true")
     result.add_argument("--interval-seconds", type=float, default=30)
@@ -43,6 +45,8 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--watch", action="store_true", help="Continue until interrupted or duration expires")
     result.add_argument("--duration-seconds", type=float, help="Bound observation duration (also enables watch)")
     result.add_argument("--archive-dir", type=Path, help="Append UTC-dated NDJSON and atomic latest.json locally")
+    result.add_argument("--research-sampling-state-file", type=Path,
+        help="Persist Literature round-robin position; default <archive-dir>/research-sampling.json")
     result.add_argument("--warning-exit-zero", action="store_true", help="Report warnings normally but return 0 (critical errors still fail)")
     result.add_argument("--timeout-seconds", type=float, default=10, help="Hard deadline for each HTTP channel probe and DB snapshot")
     result.add_argument("--object-limit-bytes", type=int, default=2 * 1024 * 1024)
@@ -65,10 +69,13 @@ async def database_snapshot(*, now, channels):
 
 async def check_once(args, thresholds, *, client, database_reader=database_snapshot):
     now = datetime.now(timezone.utc)
-    channels = tuple(dict.fromkeys(args.channel or CHANNELS))
-    origin = (args.origin or get_config().data_release.main_site_origin).rstrip("/")
+    config = get_config().data_release
+    defaults = (*CHANNELS, "literature") if getattr(config, "literature_json_enabled", False) else CHANNELS
+    channels = tuple(dict.fromkeys(args.channel or defaults))
+    origin = (args.origin or config.main_site_origin).rstrip("/")
     urls = {"surveillance": args.surveillance_manifest_url or origin + "/site-data/current.json",
-        "situation": args.situation_manifest_url or origin + "/site-data/situation/current.json"}
+        "situation": args.situation_manifest_url or origin + "/site-data/situation/current.json",
+        "literature": args.literature_manifest_url or origin + "/site-data/research-publication/current.json"}
     for channel in channels:
         validate_public_url(urls[channel])
     async def read_db():
@@ -78,11 +85,27 @@ async def check_once(args, thresholds, *, client, database_reader=database_snaps
             return None, "database_timeout"
         except Exception:
             return None, "database_unavailable"
-    results = await asyncio.gather(read_db(), *(probe_public_manifest(client, urls[channel],
-        timeout_seconds=args.timeout_seconds, object_limit_bytes=args.object_limit_bytes) for channel in channels))
+    async def read_public(channel):
+        options = {"timeout_seconds": args.timeout_seconds, "object_limit_bytes": args.object_limit_bytes}
+        if channel == "literature":
+            state_path = args.research_sampling_state_file or (
+                args.archive_dir / "research-sampling.json" if args.archive_dir else None)
+            if state_path:
+                try:
+                    cursor = await asyncio.to_thread(reserve_sampling_cursor, state_path,
+                        target=urls[channel] + "\n" + config.r2_papers_public_base_url.rstrip("/"))
+                except (OSError, ValueError, TypeError):
+                    return {"available": False, "error_code": "research_sampling_state_unavailable", "attempts": 0}
+            else:
+                cursor = getattr(args, "_research_sample_cursor", 0)
+                args._research_sample_cursor = cursor + 1
+            return await probe_public_research(client, urls[channel], papers_origin=config.r2_papers_public_base_url,
+                                              sample_cursor=cursor, **options)
+        return await probe_public_manifest(client, urls[channel], **options)
+    results = await asyncio.gather(read_db(), *(read_public(channel) for channel in channels))
     (database, error), *public = results
     return assemble_report(database, dict(zip(channels, public)), now=now,
-        thresholds=thresholds, database_error=error, controls=get_realtime_controls())
+        thresholds=thresholds, database_error=error, controls=get_publication_controls())
 
 
 def archive_report(directory: Path, report: dict) -> None:

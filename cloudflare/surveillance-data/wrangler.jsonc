@@ -23,6 +23,6 @@
     { "pattern": "globalinfectiousdisease.com/situation/outbreaks/*", "zone_name": "globalinfectiousdisease.com" }
   ],
   "r2_buckets": [{ "binding": "DATA", "bucket_name": "globalid-papers" }],
-  "vars": { "DATA_PREFIX": "site-data/surveillance", "SITUATION_PREFIX": "site-data/situation" },
+  "vars": { "PAPERS_PROJECTION_V3": "0", "DATA_PREFIX": "site-data/surveillance", "SITUATION_PREFIX": "site-data/situation" },
   "observability": { "enabled": true, "head_sampling_rate": 1 }
 }

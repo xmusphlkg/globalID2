@@ -9,6 +9,7 @@ around a broken safety gate.
 from __future__ import annotations
 
 import re
+import signal
 from dataclasses import dataclass
 from typing import Any
 
@@ -133,6 +134,20 @@ def classify_release_failure(exc: BaseException) -> ReleaseFailureClassification
                 reason="database connection pool exhausted; retry with bounded backoff",
             )
         cursor = cursor.__cause__
+
+    # A worker can be gracefully restarted while a long-running release
+    # subprocess is exporting or building a candidate.  The subprocess then
+    # reports SIGTERM/SIGINT as a negative return code; this is an interruption
+    # of execution, not a validation or publication failure.  Scheduled
+    # releases must be allowed to retry after the worker comes back.
+    returncode = getattr(exc, "returncode", None)
+    if returncode in {-int(signal.SIGTERM), -int(signal.SIGINT)}:
+        return ReleaseFailureClassification(
+            retryable=True,
+            category="worker_interrupted",
+            stage=stage,
+            reason="release worker was interrupted by a controlled shutdown",
+        )
 
     # A preflight exception is retryable only when its retained integration
     # diagnostics contain a positive transient signature.  Generic preflight

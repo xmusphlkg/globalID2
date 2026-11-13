@@ -146,7 +146,7 @@ async def test_overview_reads_local_monitor_and_db_only_with_gate_pause_and_stal
     import httpx
     monkeypatch.setattr(httpx, "AsyncClient", lambda *a, **k: pytest.fail("Overview must not contact Cloudflare"))
     result = RealtimeOverviewOut.model_validate(await control.overview(database, now=NOW))
-    collect.assert_awaited_once_with(database, now=NOW)
+    collect.assert_awaited_once_with(database, now=NOW, channels=module.CHANNELS)
     channel = result.channels["surveillance"]
     assert channel.enabled and channel.paused and not channel.effective_enabled and channel.manual_enabled
     assert channel.latest_success.task_uuid == "surv-old"
@@ -200,6 +200,23 @@ async def test_manual_action_while_paused_only_queues_own_json_channel(tmp_path,
     assert result["status"] == "queued" and result["href"] == "/publish/tasks?detail=new-json"
     release.trigger_job.assert_awaited_once_with("site-release", manual=True,
         trigger="dashboard-realtime-retry" if retry else "dashboard-realtime", data_only=True, data_line="situation")
+
+
+async def test_literature_uses_global_dirty_scope_and_existing_channel_queue(database, tmp_path):
+    database.add_all([PublishDirty(line="literature", scope_key="*", source_task_uuid="literature-source", marked_at=NOW),
+                      PublishDirty(line="literature", scope_key="bad:scope", source_task_uuid="literature-invalid", marked_at=NOW)])
+    await database.commit()
+    release = SimpleNamespace(trigger_job=AsyncMock(return_value={"status": "queued", "task_uuid": "literature-run"}))
+    control = service(tmp_path, release=release)
+    control.settings_reader = lambda: SimpleNamespace(literature_json_enabled=True)
+    pending = await control.pending(database, "literature", eligibility="publishable", now=NOW)
+    assert pending["total"] == 1 and pending["items"][0]["publishable"]
+    blocked = await control.pending(database, "literature", eligibility="blocked", now=NOW)
+    assert blocked["total"] == 1 and blocked["items"][0]["blocked_reason"] == "invalid_scope"
+    result = await control.enqueue("literature")
+    assert result["task_uuid"] == "literature-run"
+    release.trigger_job.assert_awaited_once_with("site-release", manual=True,
+        trigger="dashboard-realtime", data_only=True, data_line="literature")
 
 
 async def test_missing_job_id_uses_first_enabled_configured_job_and_explicit_id_is_preserved(tmp_path):

@@ -23,7 +23,7 @@ from src.core.config import get_config
 from src.core.country_library import get_country_bootstrap_config
 from src.domain import Country, Task, TaskStatus
 from src.domain.collection import PublishDirty
-from .realtime_monitor import ACTIVE, CHANNELS, age, collect_database_snapshot, iso, task_channel_clause, timestamp
+from .realtime_monitor import ACTIVE, DATABASE_CHANNELS as CHANNELS, age, collect_database_snapshot, iso, task_channel_clause, timestamp
 from .planning import plan_changes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -35,7 +35,7 @@ _SCOPE = re.compile(r"[A-Z0-9-]{1,64}\Z")
 _TASK_FIELDS = (Task.task_uuid, Task.status, Task.progress, Task.created_at, Task.started_at,
     Task.completed_at, Task.input_data, Task.output_data, Task.metadata_)
 _RETRY_STATUS = {"not_scheduled", "scheduled", "queued", "terminal", "succeeded"}
-_RETRY_CATEGORIES = {"permanent", "transient_external", "preflight", "non_external_stage", "unclassified_external"}
+_RETRY_CATEGORIES = {"permanent", "transient_external", "worker_interrupted", "preflight", "non_external_stage", "unclassified_external"}
 _ACTION_REASONS = {"already_running", "release_pipeline_busy", "no_pending_changes", "no_publishable_changes",
     "selection_changed", "continuation_already_queued", "channel_paused", "automatic_paused"}
 _MONITOR_ISSUES = {"database_unavailable", "pending_changes_delayed", "pending_scopes_blocked",
@@ -44,7 +44,7 @@ _MONITOR_ISSUES = {"database_unavailable", "pending_changes_delayed", "pending_s
     "public_clock_ahead", "completed_release_receipt_missing", "public_completed_version_mismatch",
     "http_timeout", "http_unreachable", "http_status", "transient_http_recovered", "response_too_large", "invalid_manifest",
     "invalid_manifest_metadata", "sample_object_exceeds_limit", "object_checksum_mismatch"}
-_MONITOR_ISSUES.update({"automatic_publication_paused", "control_state_invalid", "control_state_unavailable"})
+_MONITOR_ISSUES.update({"automatic_publication_paused", "control_state_invalid", "control_state_unavailable", "research_pointer_changed"})
 
 
 class RealtimeControlError(ValueError):
@@ -169,8 +169,8 @@ def project_monitor(payload: dict, error: str | None, channel: str, *, now: date
 
 
 def _get_controls():
-    from .channel_control import get_realtime_controls
-    return get_realtime_controls()
+    from .channel_control import get_publication_controls
+    return get_publication_controls()
 
 
 async def _set_control(channel, paused):
@@ -209,7 +209,7 @@ class RealtimeControlService:
 
     async def overview(self, db, *, now=None):
         now = now or datetime.now(timezone.utc)
-        snapshot = await collect_database_snapshot(db, now=now)
+        snapshot = await collect_database_snapshot(db, now=now, channels=CHANNELS)
         payload, monitor_error = await asyncio.to_thread(_monitor_receipt, self.monitor_path)
         controls = self._controls()
         channels = {}
@@ -286,8 +286,8 @@ class RealtimeControlService:
             scope_affected[scope] = len(plan_changes([marker], available, full=True)["country_codes"])
         items = []
         for row in rows:
-            valid = row.scope_key == "*" if channel == "situation" else row.scope_key in available
-            reason = (None if valid else "invalid_scope" if channel == "situation" or not _SCOPE.fullmatch(row.scope_key)
+            valid = row.scope_key == "*" if channel != "surveillance" else row.scope_key in available
+            reason = (None if valid else "invalid_scope" if channel != "surveillance" or not _SCOPE.fullmatch(row.scope_key)
                 else "unknown_country" if row.scope_key not in known else "inactive_country" if not known[row.scope_key] else "disabled_country")
             changes = _mapping(row.change_set)
             precise = changes.get("version") == 1 and changes.get("precise") is True

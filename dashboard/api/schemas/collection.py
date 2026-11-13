@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ..routers.ai import DiseaseKnowledgeStartRequest
 from ..routers.situation_notices import RefreshRequest
@@ -77,6 +77,16 @@ class PublishRunCreate(BaseModel):
     full: bool = False
     reports_only: bool = False
     code_only: bool = False
+    plan_id: str | None = None
+    plan_digest: str | None = None
+    idempotency_key: str | None = Field(default=None, min_length=8, max_length=200)
+
+    @model_validator(mode="after")
+    def validate_plan_request(self):
+        values = (self.plan_id, self.plan_digest, self.idempotency_key)
+        if any(values) and (not all(values) or self.full or self.reports_only or self.code_only):
+            raise ValueError("Plan execution requires plan_id, plan_digest and idempotency_key without legacy mode flags")
+        return self
 
 
 class PendingOut(BaseModel):
@@ -86,3 +96,4 @@ class PendingOut(BaseModel):
     knowledge: list[str]
     surveillance_json_enabled: bool = False
     situation_json_enabled: bool = False
+    literature_json_enabled: bool = False

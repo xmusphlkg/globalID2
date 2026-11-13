@@ -16,6 +16,30 @@ It checks Surveillance at `/site-data/current.json` and Situation at
 Manifest URLs must use HTTP(S), without embedded credentials, queries or
 fragments. No Cloudflare API token is needed for these public reads.
 
+When `data_release.literature_json_enabled` is enabled, the default check also
+includes Literature at `/site-data/research-publication/current.json`. Otherwise
+the default remains the legacy two channels and does not report Literature's
+deployment gate as a fault. Use `--channel literature` for an explicit diagnostic,
+with `--literature-manifest-url` / `REALTIME_LITERATURE_MANIFEST_URL` to override
+the pointer URL. The Papers origin is taken from configured
+`data_release.r2_papers_public_base_url`, never from an untrusted response.
+
+The Literature probe follows the existing research binding: it verifies the
+JSON envelope, the bound schema-2 sharded catalogue's byte digest and recomputed
+generation, one catalogue shard's digest/count/membership, and one immutable
+JSON sample's decoded length and digest. It rereads the current pointer to
+detect a generation switch during the check. The receipt explicitly records
+`verification_scope=research_pointer_catalogue_one_shard_one_json_sample` and
+`article_html_verified=false`; this is not an audit of every article, rendered
+HTML, template or asset. Its immutable catalogue/shard URLs must be publicly
+readable at the configured Papers origin; unavailable endpoints fail visibly.
+The bounded Literature probe makes one attempt per sampling cycle and shares
+the channel deadline across all requests. Its shard and immutable JSON samples
+use a persisted round-robin cursor when `--archive-dir` is enabled; the cursor
+advances before probing and survives failed requests. Without an archive
+directory the same rotation is kept in the monitor process. The receipt records
+the selected sample and still states that article HTML is not fully verified.
+
 The database snapshot runs in a repeatable, read-only transaction and always
 rolls back. It reports pending dirty markers and their oldest age, active
 queue counts, running/retrying task details, recent failure count, last
@@ -27,10 +51,12 @@ publication successes.
 Each public check downloads and validates the complete manifest, calculates
 its SHA-256, and verifies one immutable object against its declared decoded
 byte length and SHA-256. Gzip is decoded before validation. This samples
-object availability; it does not download every country history. The smallest
-object is chosen to keep a minute-by-minute check inexpensive. Manifest and
-sample reads have bounded response sizes and share a hard 10-second deadline
-per channel. The DB snapshot also has a 10-second deadline. Checks run
+object availability; it does not download every country history. Literature
+samples rotate through the bounded object list; Surveillance and Situation
+retain smallest-object selection to keep a minute-by-minute check inexpensive.
+Manifest and sample reads have bounded response sizes and share a hard
+10-second deadline per channel. The DB snapshot also has a 10-second deadline.
+Checks run
 concurrently; redirects fail visibly rather than silently probing another
 endpoint. A transient transport failure, HTTP 429 or 5xx may be retried once if
 the same deadline permits. A successful retry reports `transient_http_recovered` as a
@@ -136,7 +162,7 @@ messages. Those actions remain explicit release operations.
 ## Control panel
 
 Open **Publish → Realtime data** (`/publish/realtime`) for the independent
-Surveillance and Situation channels. Each channel shows its deployment gate,
+Surveillance, Situation and (when enabled) Literature channels. Each channel shows its deployment gate,
 automatic scheduling state, publishable and blocked backlog, active task,
 latest successful release, recent failures, automatic retry and continuation.
 Manifest version, SHA-256, HTTP status and sampled integrity come from the

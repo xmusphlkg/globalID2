@@ -27,10 +27,14 @@ def main(argv=None):
         help="Fail closed when a managed candidate lacks its pre-generation baseline")
     args = parser.parse_args(argv)
     config = _config_from_env()
-    result = (capture_surveillance_baseline(args.source_dir, config, prefix=args.prefix)
-        if args.capture_baseline_only else publish_surveillance_data(args.source_dir, config,
-            prefix=args.prefix, workers=args.workers, objects_dir=args.objects_dir,
-            require_starting_baseline=args.require_starting_baseline))
+    expected = {}
+    if "GIDS_PUBLICATION_EXPECTED_BASELINE_JSON" in os.environ:
+        expected["expected_baseline_sha256"] = json.loads(os.environ["GIDS_PUBLICATION_EXPECTED_BASELINE_JSON"])
+    if args.capture_baseline_only:
+        result = capture_surveillance_baseline(args.source_dir, config, prefix=args.prefix, **expected)
+    else:
+        result = publish_surveillance_data(args.source_dir, config, prefix=args.prefix, workers=args.workers,
+            objects_dir=args.objects_dir, require_starting_baseline=args.require_starting_baseline)
     print(json.dumps(result, ensure_ascii=False))
 
 

@@ -115,6 +115,11 @@ def get_realtime_controls() -> dict[str, dict[str, Any]]:
     return _store().snapshot()
 
 
+def get_publication_controls() -> dict[str, dict[str, Any]]:
+    """Expose all channels while retaining their existing durable pause stores."""
+    return {**_store().snapshot(), **_store("literature").snapshot()}
+
+
 async def set_realtime_control(channel: str, paused: bool) -> dict[str, Any]:
     return await asyncio.to_thread(_store(channel).set_paused, channel, paused)
 

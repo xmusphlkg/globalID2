@@ -22,6 +22,7 @@ from .planning import plan_changes
 from .surveillance_publish import validate_manifest
 
 CHANNELS = ("surveillance", "situation")
+DATABASE_CHANNELS = (*CHANNELS, "literature")
 ACTIVE = (TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.RETRYING)
 LEVEL = {"ok": 0, "warning": 1, "critical": 2}
 IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
@@ -123,7 +124,7 @@ async def collect_database_snapshot(db, *, now: datetime, channels=CHANNELS) -> 
     result = {}
     countries = (await db.execute(select(Country.code, Country.is_active))).all() if "surveillance" in channels else []
     for channel in channels:
-        if channel not in CHANNELS:
+        if channel not in DATABASE_CHANNELS:
             raise ValueError("unsupported_data_channel")
         # The planner uses Python `version == 1` (also true for JSON true).
         precise = and_(func.jsonb_typeof(PublishDirty.change_set) == "object", or_(
@@ -315,7 +316,7 @@ def evaluate_channel(database: dict | None, public: dict, *, now: datetime,
             elif (expected["manifest_sha256"] != public["manifest_sha256"]
                   or expected["release_id"] != public["release_id"]):
                 active_ids = {f"{prefix}-{task['task_uuid']}" for task in database["active"]
-                    for prefix in ("data", "situation")}
+                    for prefix in ("data", "situation", "literature")}
                 if public["release_id"] not in active_ids:
                     issue("critical" if expected["age_seconds"] > thresholds.publication_grace_seconds else "warning",
                         "public_completed_version_mismatch")

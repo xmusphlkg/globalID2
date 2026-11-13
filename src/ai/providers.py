@@ -114,9 +114,8 @@ class ProviderTransport:
         self._clients: dict[tuple, Any] = {}
         self._closed = False
 
-    def _client(self, route: dict[str, Any], style: str):
-        if self._closed:
-            raise RuntimeError("Provider transport is closed")
+    @staticmethod
+    def _client_key(route: dict[str, Any], style: str) -> tuple:
         base_url = route.get("base_url") or None
         if style == "anthropic":
             base_url = anthropic_sdk_base_url(base_url)
@@ -124,28 +123,52 @@ class ProviderTransport:
             route, ANTHROPIC_RUNTIME_TIMEOUT_SECONDS
         )
         headers = dict(route.get("extra_headers") or {})
-        key = (
+        return (
             style,
             base_url,
             route.get("api_key"),
             json.dumps(headers, sort_keys=True),
             timeout,
         )
+
+    def _client(self, route: dict[str, Any], style: str):
+        if self._closed:
+            raise RuntimeError("Provider transport is closed")
+        key = self._client_key(route, style)
         if key not in self._clients:
             constructor = AsyncAnthropic if style == "anthropic" else AsyncOpenAI
             self._clients[key] = constructor(
                 api_key=route.get("api_key"),
-                base_url=base_url,
-                default_headers=headers or None,
-                timeout=float(timeout),
+                base_url=key[1],
+                default_headers=route.get("extra_headers") or None,
+                timeout=float(key[4]),
                 max_retries=0,
             )
         return self._clients[key]
+
+    async def prune(self, routes) -> None:
+        """Release pools no longer configured or serving an active activity.
+
+        Callers include active route snapshots so a disabled/edited route can
+        finish its leased request before its connections are released.
+        """
+        keep = {
+            self._client_key(
+                route, str(route.get("api_style") or "openai_compatible").lower()
+            )
+            for route in routes
+        }
+        stale = [self._clients.pop(key) for key in list(self._clients) if key not in keep]
+        await self._close_clients(stale)
 
     async def close(self) -> None:
         """Close all pooled clients after the dispatcher's active calls finish."""
         self._closed = True
         clients, self._clients = list(self._clients.values()), {}
+        await self._close_clients(clients)
+
+    @staticmethod
+    async def _close_clients(clients) -> None:
         results = await asyncio.gather(
             *(client.close() for client in clients), return_exceptions=True
         )

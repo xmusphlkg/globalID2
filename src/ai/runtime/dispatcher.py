@@ -57,6 +57,7 @@ class AIWorkDispatcher:
         self.transport = ProviderTransport()
         self.active: dict[int, asyncio.Task] = {}
         self.leases: dict[int, AIWorkItem] = {}
+        self.active_routes: dict[int, dict[str, Any]] = {}
         self.outcomes: dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
         self.progress = SuccessProgressBuffer()
         # A locked parent must not let a burst of failure-history writes occupy
@@ -290,15 +291,18 @@ class AIWorkDispatcher:
                     logger.exception("Activity executor failed; its lease will expire")
                 del self.active[work_id]
                 self.leases.pop(work_id, None)
+                self.active_routes.pop(work_id, None)
         await recover_expired_leases()
         if self._queue_checked_at is None or now - self._queue_checked_at >= 20:
             await expire_queued_activities()
             self._queue_checked_at = now
         while (probe := await claim_probe(owner=self.owner)) is not None:
             self._start(probe, {"model_key": "health:probe"})
+        configured_routes = await self.route_loader()
+        await self.transport.prune([*configured_routes, *self.active_routes.values()])
         routes = [
             r
-            for r in await self.route_loader()
+            for r in configured_routes
             if r.get("available_for_routing") and r.get("runtime_model_capacity", 0) > 0
         ]
         counts = defaultdict(int, await active_route_lease_counts()) if routes else {}
@@ -340,6 +344,7 @@ class AIWorkDispatcher:
 
     def _start(self, item, route):
         self.leases[item.id] = item
+        self.active_routes[item.id] = route
         self.active[item.id] = asyncio.create_task(
             self._execute(item, route), name=f"ai-activity-{item.id}"
         )

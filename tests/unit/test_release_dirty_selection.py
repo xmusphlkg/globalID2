@@ -21,6 +21,10 @@ from tests.unit.publication_sqlite import create_publication_tables
 
 @pytest_asyncio.fixture
 async def release_db(tmp_path, monkeypatch):
+    from src.services.data_release import channel_control
+    # Local maintenance pauses must not affect isolated scheduler fixtures or
+    # cause tests to read/write the real production control files.
+    monkeypatch.setattr(channel_control, "get_config", lambda: SimpleNamespace(data_dir=tmp_path / "controls"))
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'release.sqlite'}")
     async with engine.begin() as connection:
         await connection.run_sync(

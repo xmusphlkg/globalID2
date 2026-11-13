@@ -140,17 +140,26 @@ async def terminate_process_tree(
             await asyncio.sleep(0.01)
 
 
+def subprocess_environment(overrides: dict[str, str | None] | None) -> dict[str, str]:
+    """None removes an inherited setting while preserving parser defaults."""
+    result = os.environ.copy()
+    for key, value in (overrides or {}).items():
+        if value is None:
+            result.pop(key, None)
+        else:
+            result[key] = value
+    return result
+
+
 async def run_capture(
     cmd: list[str],
     *,
     cwd: Path,
-    env: Optional[dict[str, str]] = None,
+    env: Optional[dict[str, str | None]] = None,
     timeout: int = 30,
     terminate: TerminateProcess = terminate_process_tree,
 ) -> dict[str, Any]:
-    merged_env = os.environ.copy()
-    if env:
-        merged_env.update(env)
+    merged_env = subprocess_environment(env)
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd,
@@ -188,7 +197,7 @@ async def run_logged_command(
     task_manager: WorkbookTaskManager,
     logger: Any,
     terminate: TerminateProcess,
-    env: Optional[dict[str, str]] = None,
+    env: Optional[dict[str, str | None]] = None,
     metadata: Optional[dict[str, Any]] = None,
     timeout_seconds: float,
     cancel_poll_seconds: float,
@@ -208,9 +217,7 @@ async def run_logged_command(
         metadata=metadata,
     )
 
-    merged_env = os.environ.copy()
-    if env:
-        merged_env.update(env)
+    merged_env = subprocess_environment(env)
     spawn_task = asyncio.create_task(asyncio.create_subprocess_exec(
         *cmd,
         cwd=str(cwd),

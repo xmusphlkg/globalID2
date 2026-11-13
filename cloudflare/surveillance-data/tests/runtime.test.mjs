@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { buildPages } from '../scripts/build-pages.mjs';
 
 import './template-runtime-cases.mjs';
+import './projection-runtime-cases.mjs';
 
 test('real local Worker streams R2 generations and exposes a fresh same-origin pointer', async () => {
   const runtime = new Miniflare(convertV4MiniflareOptions({

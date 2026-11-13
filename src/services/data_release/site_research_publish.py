@@ -30,6 +30,8 @@ def freeze_site_research(*, papers_dir: Path, site_dist: Path, research_source: 
         if result.get('release_id') != release_id:
             raise ValueError('Site research candidate belongs to another release')
         return result
+    if os.environ.get('GIDS_PUBLICATION_RECOVERY_ONLY') == '1':
+        raise ValueError('Frozen site research candidate unavailable; regeneration is forbidden')
     if (run / 'published.json').exists():
         raise ValueError('Published site research candidate has no ready receipt')
     if not papers_dir.is_dir() or not site_dist.is_dir():
@@ -107,10 +109,18 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
         frozen = json.loads((run / 'current.json').read_bytes())
         if ('index.json' not in prior.get('files', {}) or frozen['files'] != prior['files']):
             raise ValueError('Style release research data differs from the captured published snapshot')
-    manifest = json.loads((run / 'papers-build-manifest.json').read_bytes())
-    candidate = prepare_papers_content_from_manifest(run / 'bundle', manifest,
-        papers_origin=config.public_base_url, release_id=release_id,
-        template_dir=template_dir or run / 'paper-templates')
+    from .literature_recovery import freeze_papers, load_papers
+    if (run / 'papers-prepared.json').exists():
+        candidate, _ = load_papers(run, stage=run / 'bundle', origin=config.public_base_url,
+                                    release_id=release_id, template_dir=template_dir)
+    else:
+        if os.environ.get('GIDS_PUBLICATION_RECOVERY_ONLY') == '1':
+            raise ValueError('Frozen site research candidate unavailable; regeneration is forbidden')
+        manifest = json.loads((run / 'papers-build-manifest.json').read_bytes())
+        candidate = prepare_papers_content_from_manifest(run / 'bundle', manifest,
+            papers_origin=config.public_base_url, release_id=release_id,
+            template_dir=template_dir or run / 'paper-templates')
+        freeze_papers(run, candidate, None)
     if prepare_only:
         return {'release_id': release_id, 'generation': candidate.generation,
                 'article_pages': sum('paper_template' in item for item in candidate.entries),

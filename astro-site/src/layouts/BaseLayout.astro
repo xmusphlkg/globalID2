@@ -6,6 +6,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { buildAlternatePaths, clampSeoDescription, type JsonLdNode, type SeoDocument } from '../lib/seo';
 import { absoluteSiteUrl } from '../lib/papers';
+import { themeStylesheetHref } from '../lib/site-theme';
 
 interface Props {
   title: string;
@@ -42,6 +43,7 @@ const siteSourceCommit = '';
 const siteDeploymentBranch = '';
 const siteBase = siteOriginOverride ?? Astro.site?.toString() ?? Astro.url.origin;
 const canonicalURL = absoluteSiteUrl(seo?.canonicalPath ?? Astro.url.pathname, siteBase);
+const themeHref = themeStylesheetHref(canonicalURL.pathname, import.meta.env.PUBLIC_GIDS_THEME_V1_URL);
 const audiencePixel = `https://stats.globalinfectiousdisease.com/api/track?pixel=1&path=${encodeURIComponent(canonicalURL.pathname)}`;
 const siteOrigin = new URL(siteBase).origin;
 const documentLocale = seo?.locale ?? initialLanguage;
@@ -155,6 +157,7 @@ const structuredData = {
     {alternatePaths.en && <link rel="alternate" hreflang="x-default" href={absoluteSiteUrl(alternatePaths.en, siteBase)} />}
     <meta name="robots" content={robotsContent} />
     <meta name="theme-color" content="#102A43" />
+    {themeHref && <link rel="stylesheet" href={themeHref} data-gids-theme-compat="v1" />}
 
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
