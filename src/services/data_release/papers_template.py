@@ -14,7 +14,14 @@ import re
 
 _HEAD = re.compile(r'(?is)<head(?:\s[^>]*)?>.*?</head>')
 _MAIN = re.compile(r'''(?is)<main\b[^>]*\bid=["']main-content["'][^>]*>.*?</main>''')
-_TAG = re.compile(r'(?is)<title\b[^>]*>.*?</title>|<meta\b[^>]*>|<link\b[^>]*>|<script\b[^>]*>.*?</script>')
+# Attribute values may contain a literal ``>`` (for example, a description
+# mentioning ``>200 copies/mL``).  A plain ``[^>]*`` therefore terminates a
+# tag too early and can make article text part of the shared template.  Keep
+# quoted values together while scanning the tag boundary.
+_ATTRS = r'''(?:[^>"']|"[^"]*"|'[^']*')*'''
+_TAG = re.compile(
+    rf'''(?is)<title\b{_ATTRS}>.*?</title>|<meta\b{_ATTRS}>|<link\b{_ATTRS}>|<script\b{_ATTRS}>.*?</script>'''
+)
 _DYNAMIC_LINK = re.compile(r'''(?is)\brel=["'](?:canonical|alternate)["']''')
 _DYNAMIC_SCRIPT = re.compile(r'''(?is)\btype=["']application/ld\+json["']''')
 _SLUG = re.compile(r'[a-z0-9][a-z0-9-]*\Z')
