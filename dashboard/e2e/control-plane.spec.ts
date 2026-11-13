@@ -325,6 +325,10 @@ const test = base.extend<{ state: State }>({
         if (state.publishFails) return problem("Release temporarily unavailable", 503);
         return respond({ task_uuid: releaseUuid, status: "queued" }, 202);
       }
+      // This suite covers the legacy release controls. A 404 keeps planning on
+      // that path; publication-planning.spec.ts covers the newer endpoints.
+      if (path === "/publish/capabilities" || path === "/publish/usage")
+        return route.fulfill({ status: 404, json: { detail: "Legacy publication fixture" } });
       unexpected.push(`${method} ${path}`);
       return problem(`Unexpected fixture request: ${path}`, 500);
     });
