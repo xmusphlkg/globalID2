@@ -30,6 +30,8 @@ with redirect_stderr(io.StringIO()):
     )
 logger.remove()
 
+DEFAULT_OBJECT_LIMIT_BYTES = 8 * 1024 * 1024
+
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
@@ -49,7 +51,7 @@ def parser() -> argparse.ArgumentParser:
         help="Persist Literature round-robin position; default <archive-dir>/research-sampling.json")
     result.add_argument("--warning-exit-zero", action="store_true", help="Report warnings normally but return 0 (critical errors still fail)")
     result.add_argument("--timeout-seconds", type=float, default=10, help="Hard deadline for each HTTP channel probe and DB snapshot")
-    result.add_argument("--object-limit-bytes", type=int, default=2 * 1024 * 1024)
+    result.add_argument("--object-limit-bytes", type=int, default=DEFAULT_OBJECT_LIMIT_BYTES)
     for key, default in vars(MonitorThresholds()).items():
         result.add_argument("--" + key.replace("_", "-"), type=float, default=default)
     return result

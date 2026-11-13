@@ -7,6 +7,10 @@ venv/bin/python scripts/monitor_realtime_data.py --pretty
 venv/bin/python scripts/monitor_realtime_data.py --format text
 ```
 
+The bounded immutable-object probe defaults to 8 MiB. Literature objects can
+exceed the older 2 MiB sampling limit while remaining valid publication
+objects; use `--object-limit-bytes` to apply a stricter operator budget.
+
 The command uses the configured database and `data_release.main_site_origin`.
 It checks Surveillance at `/site-data/current.json` and Situation at
 `/site-data/situation/current.json`. Use `--channel surveillance` or
