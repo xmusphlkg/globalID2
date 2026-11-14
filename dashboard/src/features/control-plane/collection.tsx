@@ -43,6 +43,13 @@ function Feedback({ query, loading, reload }: { query: { isLoading: boolean; isF
   </>;
 }
 function Metadata({ title, children }: { title: string; children: React.ReactNode }) { return <div className="min-w-0"><dt className="cc-muted text-xs">{title}</dt><dd className="mt-1 break-words text-sm font-medium">{children}</dd></div>; }
+function schedulePhase(schedule: Schedule): string | null {
+  const config = schedule.configuration ?? {};
+  const phase = typeof config.phase_minute === "number" ? String(config.phase_minute).padStart(2, "0") : "";
+  const upstream = typeof config.upstream === "string" ? config.upstream : "";
+  const detail = [phase ? `:${phase}` : "", upstream].filter(Boolean).join(" · ");
+  return detail || null;
+}
 function JsonMetrics({ value }: { value: Record<string, unknown> }) {
   return <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-stone-50 p-3 font-mono text-xs text-stone-700">{JSON.stringify(value, null, 2)}</pre>;
 }
@@ -96,6 +103,7 @@ export function CollectionView({ initialCountry = "US" }: { initialCountry?: str
         <form className="mt-auto space-y-3 border-t border-stone-200 pt-4" onSubmit={(event) => { event.preventDefault(); void start(line.line); }}>
           {line.line === "surveillance" && <label className="block space-y-1.5 text-xs font-medium">{t(lang, "cc_collection_country")}<input aria-label={t(lang, "cc_collection_country")} className="cc-input block w-full" value={country} minLength={2} maxLength={16} required onChange={(event) => setCountry(event.target.value.toUpperCase())} autoCapitalize="characters" /></label>}
           {line.line === "knowledge" && <label className="block space-y-1.5 text-xs font-medium">{t(lang, "cc_collection_diseases")}<input aria-label={t(lang, "cc_collection_diseases")} className="cc-input block w-full" value={disease} required onChange={(event) => setDisease(event.target.value)} placeholder="D001, D002" /><span className="cc-muted block font-normal">{t(lang, "cc_collection_diseases_hint")}</span></label>}
+          {line.line === "situation" && <p className="cc-muted text-xs">{t(lang, "cc_collection_situation_hint")}</p>}
           <button type="submit" className="cc-button cc-button-primary" disabled={busy !== null || (line.line === "knowledge" && !diseaseIds.length) || (line.line === "surveillance" && country.trim().length < 2)}>{busy === line.line ? t(lang, "cc_collection_submitting") : t(lang, "cc_collection_start")}</button>
         </form>
       </section>)}
@@ -104,7 +112,7 @@ export function CollectionView({ initialCountry = "US" }: { initialCountry?: str
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 font-semibold"><CalendarClock className="h-4 w-4" aria-hidden="true" />{t(lang, "cc_collection_schedules")}</h2><label className="flex items-center gap-2 text-xs">{t(lang, "cc_collection_filter")}<select className="cc-input" value={kind} onChange={(event) => setKind(event.target.value)}><option value="">{t(lang, "cc_collection_filter_all")}</option>{["ingestion", "literature", "situation", "release"].map((value) => <option value={value} key={value}>{label(lang, value)}</option>)}</select></label></div>
       <p className="cc-muted text-xs">{t(lang, "cc_collection_schedule_hint")}</p>
       <Feedback query={schedules} loading="cc_collection_loading_schedules" reload="cc_collection_reload_schedules" />
-      {schedules.data?.length === 0 ? <p className="cc-muted">{t(lang, "cc_collection_empty_schedules")}</p> : schedules.data && visibleSchedules.length === 0 ? <p className="cc-muted">{t(lang, "cc_collection_filter_empty")}</p> : visibleSchedules.length > 0 && <div className="overflow-x-auto"><table className="cc-table w-full text-left text-sm"><thead><tr>{["cc_collection_name", "cc_collection_kind", "cc_collection_status", "cc_collection_next"].map((key) => <th scope="col" key={key}>{t(lang, key as LangKey)}</th>)}</tr></thead><tbody>{visibleSchedules.map((schedule) => <tr key={schedule.id}><td><span className="font-medium">{schedule.name}</span>{schedule.last_error && <p className="mt-1 max-w-sm break-words text-xs text-rose-700">{schedule.last_error}</p>}</td><td>{label(lang, schedule.kind)}</td><td><StatusBadge status={schedule.enabled === false ? "disabled" : schedule.last_status}>{schedule.enabled === false ? t(lang, "cc_collection_disabled") : label(lang, schedule.last_status)}</StatusBadge></td><td className="whitespace-nowrap">{date(lang, schedule.next_run_at)}</td></tr>)}</tbody></table></div>}
+      {schedules.data?.length === 0 ? <p className="cc-muted">{t(lang, "cc_collection_empty_schedules")}</p> : schedules.data && visibleSchedules.length === 0 ? <p className="cc-muted">{t(lang, "cc_collection_filter_empty")}</p> : visibleSchedules.length > 0 && <div className="overflow-x-auto"><table className="cc-table w-full text-left text-sm"><thead><tr>{["cc_collection_name", "cc_collection_kind", "cc_collection_status", "cc_collection_next"].map((key) => <th scope="col" key={key}>{t(lang, key as LangKey)}</th>)}</tr></thead><tbody>{visibleSchedules.map((schedule) => <tr key={schedule.id}><td><span className="font-medium">{schedule.name}</span>{schedulePhase(schedule) && <p className="mt-0.5 font-mono text-xs text-stone-500">{schedulePhase(schedule)}</p>}{schedule.last_error && <p className="mt-1 max-w-sm break-words text-xs text-rose-700">{schedule.last_error}</p>}</td><td>{label(lang, schedule.kind)}</td><td><StatusBadge status={schedule.enabled === false ? "disabled" : schedule.last_status}>{schedule.enabled === false ? t(lang, "cc_collection_disabled") : label(lang, schedule.last_status)}</StatusBadge></td><td className="whitespace-nowrap">{date(lang, schedule.next_run_at)}</td></tr>)}</tbody></table></div>}
     </section>
   </WorkspacePage>;
 }

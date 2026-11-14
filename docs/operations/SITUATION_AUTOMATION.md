@@ -37,6 +37,37 @@ There is no human gate. An extraction is public once the reviewer accepts it.
 Without a second model route the same model reviews itself and the output is
 labelled `single_model`. `--skip-ai` stores and exports without model calls.
 
+## Schedule
+
+Each source is sampled every 30 minutes (`SITUATION__INTERVAL_MINUTES`), the
+same cadence as surveillance ingestion. The scheduler only enqueues one
+`refresh_situation_sources` task per source. Feeds that share a host are placed
+on different minutes, and at most `SITUATION__SAMPLE_POOL_SIZE` samples
+(default 2) are queued or running. The general task worker runs a sample
+(`skip_ai`): it collects and stores that feed, including full text, and does
+not call a model or rebuild outbreaks.
+
+When stored reports are still waiting to be read, one `situation-read` task
+runs on the AI worker after `SITUATION__CATCH_UP_INTERVAL_MINUTES` (default
+20). It does not request the feeds again. A manual `situation-refresh` task
+still collects every feed and extracts in one run.
+
+The control panel lists each sample and the reading task as schedules
+(`situation:situation-sample-<source>` and `situation:situation-read`), with
+the phase minute and upstream host. Run now uses that same task. On the
+situation source page, collecting one feed queues a sample
+(`situation_role=sample`, `skip_ai`, `rebuild` false). Collecting every feed
+from that page is one sample task covering every feed. "Read stored reports"
+and "Full collect and read" keep the `read` and `refresh` roles.
+
+A sample writes `publish_dirty(line='situation', scope_key='*')` only when it
+stores a new or updated report, or when that feed's public source health
+changes. An unchanged sample does not publish. The reading task marks the same
+channel when an accepted alert changes or outbreak membership changes. Finishing
+the situation task asks the release scheduler to reconcile the situation JSON
+channel; the 30-second poll is the fallback. That publish is the situation JSON
+release, not a full site build.
+
 ## Internal-only full text
 
 Full report text and original PDFs are never published. They live in the

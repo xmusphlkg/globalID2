@@ -32,7 +32,9 @@ from src.services.global_sources.catalogue import SOURCE_REGISTRY
 from src.services.situation_notices.ai import EXTRACTION_PROMPT_VERSION, review_mode
 from src.services.situation_notices.source_control import (
     normalize_situation_sources,
+    panel_run_plan,
     reject_overlapping_run,
+    schedule_fields,
     source_monitors,
 )
 from src.services.situation_notices.source_log import log_situation_event
@@ -392,6 +394,9 @@ async def list_sources(history: int = Query(10, ge=1, le=100)) -> list[dict]:
             (await db.execute(select(SituationNotice.source_id, func.count()).group_by(SituationNotice.source_id))).all()
         )
         monitors = await source_monitors(db)
+    from src.services.situation_schedule_service import situation_schedule_service
+
+    jobs = (await situation_schedule_service.snapshot_async()).get("jobs") or []
     by_source: dict[str, list[SituationSourceRun]] = {}
     for run in runs:
         by_source.setdefault(run.source_id, []).append(run)
@@ -419,6 +424,7 @@ async def list_sources(history: int = Query(10, ge=1, le=100)) -> list[dict]:
                 "latest_task_uuid": monitor.get("latest_task_uuid"),
                 "latest_task_status": monitor.get("latest_task_status"),
                 "stages": monitor.get("stages") or [],
+                **schedule_fields(jobs, source_id),
                 "history": [
                     {
                         "run_id": r.run_id,
@@ -445,10 +451,11 @@ async def queue_refresh(body: RefreshRequest) -> dict:
         raise HTTPException(400, str(exc)) from exc
     async with get_db() as db:
         await reject_overlapping_run(db, selected)
+    plan = panel_run_plan(body.mode)
     base_name = {
-        "full": "Situation: collect, read reports, extract alerts, export",
-        "no_fetch": "Situation: read reports, extract alerts, export (no fetch)",
-        "metadata_only": "Situation: collect and export without AI",
+        "full": "Situation: collect and read reports",
+        "no_fetch": "Situation: read stored reports",
+        "metadata_only": "Situation: sample feeds",
     }[body.mode]
     if len(selected) == 1:
         label = (SOURCE_REGISTRY[selected[0]].get("label") or {}).get("en") or selected[0]
@@ -464,26 +471,26 @@ async def queue_refresh(body: RefreshRequest) -> dict:
         description="Alert-based Situation pipeline run",
         input_data={
             "mode": body.mode,
-            "fetch": body.mode != "no_fetch",
-            "skip_ai": body.mode == "metadata_only",
+            **plan,
             "ai_limit": max(1, min(int(body.ai_limit), 200)),
             "initiated_via": "control_panel",
             **({"sources": selected} if selected else {}),
         },
-        tags=["situation", body.mode, *selected],
+        tags=["situation", plan["situation_role"], body.mode, *selected],
     )
     task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
     scope = ", ".join(selected) if selected else "all registered feeds"
     await log_situation_event(
         task.task_uuid,
         title="Situation collection queued",
-        content=f"Queued {body.mode} collection for {scope}.",
-        metadata={"event": "situation_queued", "mode": body.mode, "sources": selected},
+        content=f"Queued {plan['situation_role']} ({body.mode}) for {scope}.",
+        metadata={"event": "situation_queued", "mode": body.mode, "situation_role": plan["situation_role"], "sources": selected},
     )
     return {
         "status": str(task.status.value if hasattr(task.status, "value") else task.status),
         "task_uuid": task.task_uuid,
         "mode": body.mode,
+        "situation_role": plan["situation_role"],
         "sources": selected,
         "href": f"/operations/tasks?task={task.task_uuid}",
     }

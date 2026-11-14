@@ -129,7 +129,7 @@ Worker 单元限制：`MemoryHigh=28G`，`MemoryMax=32G`，`RestartPreventExitSt
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `surveillance` | `automation_service` | `CRAWL_DATA` | 国家连接器 | 解析、现有 mapping、该国质量策略 | 该国 `CommitStrategy` | `disease_series_observations`，双写 `disease_records` | 国家码，如 `US` |
 | `literature` | `literature_service` | `SYNC_LITERATURE` | Crossref，失败时 PubMed，受控发现 | 去重、`classify_candidate` | `persist_batch`、`_finish_run` | `literature_*` | `*` |
-| `situation` | `situation_schedule_service` | `REFRESH_SITUATION_SOURCES` | `collect()`、`store_notices()`、`fetch_pending_documents()` | `extract_pending()`，后改为工作项 | `rebuild_outbreaks()` | `situation_*` | `*` |
+| `situation` | `situation_schedule_service`：每个来源每 30 分钟一个采样任务，按上游错峰，池大小 2 | `REFRESH_SITUATION_SOURCES` | 采样任务 `collect()`、`store_notices()`、`fetch_pending_documents()` | 待读报告由单独的 `situation-read` 任务 `extract_pending()` | 阅读任务 `rebuild_outbreaks()` | `situation_*` | `*` |
 | `knowledge` | `knowledge_automation_service` | `REFRESH_DISEASE_KNOWLEDGE_SOURCES` 与 `UPDATE_DISEASE_KNOWLEDGE` | 来源刷新任务 | 简报任务里的模型工作 | 来源行或简报行 | `disease_knowledge_*` | 疾病 id；来源刷新用 `sources` |
 
 `ENRICH_LITERATURE`、`DISCOVER_LITERATURE_GAPS`、`AGENT_WORKFLOW`、报告三类任务不是新的数据主线。它们继续作为任务存在。其中的模型调用在里程碑 D 变成工作项。

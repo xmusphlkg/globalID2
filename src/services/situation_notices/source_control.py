@@ -2,7 +2,8 @@
 
 A task with no ``sources`` list collects every registered feed, matching the
 historical full refresh. A task that names feeds overlaps another active task
-only when their sets intersect.
+only when their sets intersect. A task with ``situation_role`` ``read`` covers
+no feed and does not block sampling.
 """
 
 from __future__ import annotations
@@ -23,6 +24,69 @@ _ACTIVE = (
     TaskStatus.RETRYING,
 )
 _STAGE_ORDER = ("collect", "organize", "store")
+
+
+def panel_run_plan(mode: str) -> dict[str, Any]:
+    """Map a control-panel action onto the same roles as the scheduler.
+
+    A sample stores one or more feeds and does not rebuild outbreaks. A read
+    task extracts stored reports and rebuilds. A refresh still collects every
+    requested feed and extracts in that same task. None of these tasks export;
+    new or changed reports mark the situation JSON channel instead.
+    """
+
+    plans = {
+        "metadata_only": {
+            "situation_role": "sample",
+            "fetch": True,
+            "skip_ai": True,
+            "rebuild": False,
+            "export": False,
+        },
+        "no_fetch": {
+            "situation_role": "read",
+            "fetch": False,
+            "skip_ai": False,
+            "rebuild": True,
+            "export": False,
+        },
+        "full": {
+            "situation_role": "refresh",
+            "fetch": True,
+            "skip_ai": False,
+            "rebuild": True,
+            "export": False,
+        },
+    }
+    try:
+        return dict(plans[mode])
+    except KeyError as exc:
+        raise ValueError(f"Unknown situation run mode: {mode}") from exc
+
+
+def schedule_fields(jobs: Iterable[dict[str, Any]], source_id: str) -> dict[str, Any]:
+    """Attach one source's sample slot and the shared reading time."""
+
+    rows = list(jobs)
+    sample = next((job for job in rows if job.get("job_id") == f"situation-sample-{source_id}"), None)
+    reading = next((job for job in rows if job.get("job_id") == "situation-read"), None)
+
+    def iso(value: Any) -> str | None:
+        if value is None:
+            return None
+        formatter = getattr(value, "isoformat", None)
+        return formatter() if callable(formatter) else str(value)
+
+    return {
+        "next_sample_at": iso(sample.get("next_run_at")) if sample else None,
+        "phase_minute": sample.get("phase_minute") if sample else None,
+        "interval_minutes": sample.get("interval_minutes") if sample else None,
+        "upstream": sample.get("upstream") if sample else None,
+        "schedule_status": sample.get("last_status") if sample else None,
+        "sample_pool_size": sample.get("sample_pool_size") if sample else None,
+        "read_next_run_at": iso(reading.get("next_run_at")) if reading else None,
+        "read_interval_minutes": reading.get("interval_minutes") if reading else None,
+    }
 
 
 def normalize_situation_sources(requested: Iterable[str] | None) -> list[str]:
@@ -53,12 +117,21 @@ def task_sources(task: Any) -> list[str]:
     return [str(item) for item in raw if str(item).strip()]
 
 
+def _role(task: Any) -> str:
+    return str((getattr(task, "input_data", None) or {}).get("situation_role") or "")
+
+
 def covers(task: Any, source_id: str) -> bool:
+    # A reading task does not collect feeds, so it must not block a sample.
+    if _role(task) == "read":
+        return False
     selected = task_sources(task)
     return not selected or source_id in selected
 
 
 def overlaps(active: Any, requested: list[str]) -> bool:
+    if _role(active) == "read":
+        return False
     existing = task_sources(active)
     if not requested or not existing:
         return True
@@ -153,7 +226,9 @@ __all__ = [
     "covers",
     "normalize_situation_sources",
     "overlaps",
+    "panel_run_plan",
     "reject_overlapping_run",
+    "schedule_fields",
     "source_monitors",
     "task_sources",
 ]

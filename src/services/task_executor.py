@@ -647,6 +647,7 @@ async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
             don_limit=int(input_data.get("don_limit") or 200),
             require_cross_model=bool(input_data.get("require_cross_model", False)),
             fetch=fetch_events,
+            rebuild=bool(input_data.get("rebuild", True)),
             skip_ai=bool(input_data.get("skip_ai", False)),
             ai_limit=int(input_data.get("ai_limit") or 30),
             document_limit=int(input_data.get("document_limit") or 40),

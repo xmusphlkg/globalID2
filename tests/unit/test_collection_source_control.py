@@ -17,9 +17,12 @@ from src.literature.collection_sources import (
     run_label,
     source_plan,
 )
+from src.domain import TaskPriority, TaskStatus
 from src.services.situation_notices.source_control import (
     normalize_situation_sources,
     overlaps,
+    panel_run_plan,
+    schedule_fields,
 )
 
 
@@ -28,6 +31,104 @@ def test_situation_source_names_reject_unknown_ids() -> None:
     assert normalize_situation_sources(["who_don", "who_don", "ecdc_cdtr"]) == ["who_don", "ecdc_cdtr"]
     with pytest.raises(ValueError, match="Unknown situation sources: missing-feed"):
         normalize_situation_sources(["who_don", "missing-feed"])
+
+
+def test_panel_actions_use_the_scheduled_roles() -> None:
+    sample = panel_run_plan("metadata_only")
+    reading = panel_run_plan("no_fetch")
+    refresh = panel_run_plan("full")
+    assert sample == {
+        "situation_role": "sample",
+        "fetch": True,
+        "skip_ai": True,
+        "rebuild": False,
+        "export": False,
+    }
+    assert reading["situation_role"] == "read" and reading["fetch"] is False and reading["rebuild"] is True
+    assert refresh["situation_role"] == "refresh" and refresh["skip_ai"] is False and refresh["rebuild"] is True
+    with pytest.raises(ValueError, match="Unknown situation run mode"):
+        panel_run_plan("export")
+
+
+def test_source_schedule_fields_keep_the_sample_slot_and_shared_reading_time() -> None:
+    when = datetime(2026, 11, 15, 18, 12, tzinfo=timezone.utc)
+    read_at = datetime(2026, 11, 15, 18, 20, tzinfo=timezone.utc)
+    fields = schedule_fields(
+        [
+            {
+                "job_id": "situation-sample-who_don",
+                "next_run_at": when,
+                "phase_minute": 14,
+                "interval_minutes": 30,
+                "upstream": "who.int",
+                "last_status": "queued",
+                "sample_pool_size": 2,
+            },
+            {
+                "job_id": "situation-read",
+                "next_run_at": read_at,
+                "interval_minutes": 20,
+            },
+        ],
+        "who_don",
+    )
+    assert fields["next_sample_at"] == when.isoformat()
+    assert fields["phase_minute"] == 14
+    assert fields["upstream"] == "who.int"
+    assert fields["interval_minutes"] == 30
+    assert fields["sample_pool_size"] == 2
+    assert fields["read_next_run_at"] == read_at.isoformat()
+    assert fields["read_interval_minutes"] == 20
+    assert schedule_fields([], "who_don")["next_sample_at"] is None
+
+
+async def test_panel_sample_queues_one_feed_without_rebuild(monkeypatch) -> None:
+    created: dict = {}
+
+    class _Session:
+        async def __aenter__(self):
+            return object()
+
+        async def __aexit__(self, *_args):
+            return False
+
+    async def create_task(**kwargs):
+        created.update(kwargs)
+        return SimpleNamespace(task_uuid="panel-sample", status=SimpleNamespace(value="pending"))
+
+    async def update_status(task_uuid, status):
+        created["queued_status"] = status
+        return SimpleNamespace(task_uuid=task_uuid, status=SimpleNamespace(value="queued"))
+
+    async def quiet(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr("dashboard.api.routers.situation_notices.get_db", lambda: _Session())
+    monkeypatch.setattr("dashboard.api.routers.situation_notices.reject_overlapping_run", quiet)
+    monkeypatch.setattr("dashboard.api.routers.situation_notices.task_manager.create_task", create_task)
+    monkeypatch.setattr("dashboard.api.routers.situation_notices.task_manager.update_task_status", update_status)
+    monkeypatch.setattr("dashboard.api.routers.situation_notices.log_situation_event", quiet)
+
+    from dashboard.api.routers.situation_notices import RefreshRequest, queue_refresh
+
+    result = await queue_refresh(RefreshRequest(mode="metadata_only", sources=["who_don"]))
+    assert result["situation_role"] == "sample"
+    assert result["sources"] == ["who_don"]
+    assert created["priority"] == TaskPriority.HIGH
+    assert created["queued_status"] == TaskStatus.QUEUED
+    payload = created["input_data"]
+    assert payload["situation_role"] == "sample"
+    assert payload["skip_ai"] is True
+    assert payload["rebuild"] is False
+    assert payload["export"] is False
+    assert payload["fetch"] is True
+    assert payload["sources"] == ["who_don"]
+
+
+def test_situation_read_task_does_not_cover_feeds() -> None:
+    reading = SimpleNamespace(input_data={"situation_role": "read", "fetch": False, "skip_ai": False})
+    assert overlaps(reading, ["who_don"]) is False
+    assert overlaps(reading, []) is False
 
 
 def test_situation_overlap_treats_an_empty_selection_as_every_feed() -> None:

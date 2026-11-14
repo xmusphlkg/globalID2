@@ -121,6 +121,11 @@ type Source = {
   last_checked_at: string | null;
   last_success_at: string | null;
   last_error: string | null;
+  next_sample_at?: string | null;
+  phase_minute?: number | null;
+  interval_minutes?: number | null;
+  upstream?: string | null;
+  read_next_run_at?: string | null;
   history: { run_id: string; started_at: string; status: string; fetched_count: number; new_count: number; updated_count: number }[];
 };
 
@@ -196,14 +201,14 @@ export default function SituationControlView() {
 
   useEffect(() => { void loadTab(); }, [loadTab]);
 
-  const queueRun = async (mode: RefreshMode) => {
+  const queueRun = async (mode: RefreshMode, sourceId?: string) => {
     setBusy(true); setError(null); setMessage(null);
     try {
-      const result = await apiFetch<{ task_uuid: string; href: string }>("/situation/refresh", {
+      const result = await apiFetch<{ task_uuid: string; href: string; situation_role?: string }>("/situation/refresh", {
         method: "POST",
-        body: JSON.stringify({ mode, ai_limit: aiLimit }),
+        body: JSON.stringify({ mode, ai_limit: aiLimit, ...(sourceId ? { sources: [sourceId] } : {}) }),
       });
-      setMessage(`${t("Queued task", "已排队任务")} ${result.task_uuid}`);
+      setMessage(`${t("Queued task", "已排队任务")} ${result.situation_role ? `${result.situation_role} ` : ""}${result.task_uuid}`);
     } catch (cause) {
       setError(errorText(cause));
     } finally { setBusy(false); }
@@ -249,17 +254,17 @@ export default function SituationControlView() {
       eyebrow={t("Situation", "全球态势")}
       title={t("Official reports and alerts", "官方报告与警报")}
       description={t(
-        "Each report is read in full by two models and turned into alerts: one disease in one place, with the counts and a quoted sentence. Publication is automatic once the reviewer model accepts.",
-        "每份官方报告由两个模型通读全文，抽取为警报：某病在某地，附报告写明的数字和一句原话。评审模型接受后自动发布。",
+        "Each source is sampled every 30 minutes. A sample stores reports and marks the situation JSON channel when a report or source health changes. Reading and outbreak rebuild run on a separate task. Publication is automatic once the reviewer model accepts.",
+        "每个来源每 30 分钟采样一次。采样入库报告；报告或来源健康有变化时标记态势 JSON 通道。精读和疫情重建在单独任务里。评审模型接受后自动发布。",
       )}
       actions={<>
         <label className="flex items-center gap-1.5 text-sm">
           <span className={muted}>{t("AI reports per run", "每次 AI 报告数")}</span>
           <input type="number" min={1} max={200} value={aiLimit} onChange={event => setAiLimit(Math.max(1, Math.min(200, Number(event.target.value) || 1)))} className={`${field} w-16`} />
         </label>
-        <button type="button" className={button} disabled={busy} onClick={() => void queueRun("full")}><RefreshCw className="h-4 w-4" />{t("Collect + read + export", "抓取 + 精读 + 导出")}</button>
-        <button type="button" className={button} disabled={busy} onClick={() => void queueRun("no_fetch")}>{t("Read + export only", "仅精读 + 导出")}</button>
-        <button type="button" className={button} disabled={busy} onClick={() => void queueRun("metadata_only")}>{t("Collect without AI", "仅抓取（无 AI）")}</button>
+        <button type="button" className={button} disabled={busy} onClick={() => void queueRun("full")}><RefreshCw className="h-4 w-4" />{t("Full collect and read", "完整抓取并精读")}</button>
+        <button type="button" className={button} disabled={busy} onClick={() => void queueRun("no_fetch")}>{t("Read stored reports", "精读已入库报告")}</button>
+        <button type="button" className={button} disabled={busy} onClick={() => void queueRun("metadata_only")}>{t("Sample all feeds", "采样全部来源")}</button>
       </>}
     >
       {error ? <p className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{error}</p> : null}
@@ -371,7 +376,9 @@ export default function SituationControlView() {
         {sources.map(row => <article key={row.source_id} className={card}>
           <div className="flex items-start justify-between gap-2"><div><p className={`text-sm font-semibold ${strong}`}>{zh ? row.label_zh || row.label_en : row.label_en}</p><p className={`mt-0.5 ${muted}`}>{row.source_id} · {row.redistribution}</p></div><StatusBadge tone={row.status === "ok" ? "success" : row.status === "failed" ? "danger" : "neutral"}>{row.status}</StatusBadge></div>
           <p className={`mt-2 ${muted}`}>{t("Stored", "已入库")} {row.stored_notices} · {t("checked", "检查")} {fmt(row.last_checked_at)}</p>
+          <p className={muted}>{t("Next sample", "下次采样")} {fmt(row.next_sample_at)}{row.phase_minute != null ? ` · :${String(row.phase_minute).padStart(2, "0")}` : ""}{row.upstream ? ` · ${row.upstream}` : ""}{row.interval_minutes ? ` · ${row.interval_minutes} min` : ""}</p>
           <p className={muted}>{t("Last success", "最后成功")} {fmt(row.last_success_at)}</p>
+          <button type="button" className={`${button} mt-2`} disabled={busy} onClick={() => void queueRun("metadata_only", row.source_id)}>{t("Sample this source", "采样此来源")}</button>
           {row.last_error ? <p className="mt-2 line-clamp-2 text-xs text-rose-700 dark:text-rose-300" title={row.last_error}>{row.last_error}</p> : null}
           <ul className={`mt-2 space-y-0.5 font-mono ${muted}`}>{row.history.slice(0, 5).map(run => <li key={run.run_id}>{run.started_at.slice(0, 16)} {run.status} {run.fetched_count} +{run.new_count}</li>)}</ul>
           {row.homepage ? <a href={row.homepage} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-tremor-brand hover:underline">{t("Official page", "官方页面")}<ExternalLink className="h-3 w-3" aria-hidden="true" /></a> : null}
