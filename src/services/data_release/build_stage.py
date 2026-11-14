@@ -41,6 +41,10 @@ async def build_release_site(
             and not getattr(config, "surveillance_json_enabled", False)):
         raise RuntimeError("Runtime data templates require an initialized JSON channel and Worker; enable DATA_RELEASE__SURVEILLANCE_JSON_ENABLED after initialization before publishing templates")
     task_data = dict(getattr(task, "input_data", None) or {})
+    # A frozen full publication explicitly requests fresh HTML. Other tasks
+    # retain validated incremental rendering; upload-only recovery still uses
+    # its already frozen candidate before reaching this stage.
+    force_full_render = (task_data.get("publication_plan") or {}).get("execution_mode") == "full"
     isolated = runtime.astro_dir != runtime.root_dir / "astro-site"
     path_options = {"astro_dir": runtime.astro_dir} if isolated else {}
     if task_data.get("country_template_only"):
@@ -125,8 +129,11 @@ async def build_release_site(
                 "pages_data_worker": bool(getattr(config, "pages_data_worker_enabled", False)),
             })
             inputs = await asyncio.to_thread(reuse.inputs)
-            matched = await asyncio.to_thread(reuse.matches, inputs)
-            reason = reuse.reason
+            if force_full_render:
+                reason = "explicit-full-render"
+            else:
+                matched = await asyncio.to_thread(reuse.matches, inputs)
+                reason = reuse.reason
         except CACHE_ERRORS:
             logger.warning("Build reuse unavailable; running normal validation", exc_info=True)
             reuse = None
@@ -163,6 +170,7 @@ async def build_release_site(
             # The production worker has a 60 GiB memory budget.
             "NODE_OPTIONS": "--max-old-space-size=12288",
             "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
+            "GIDS_FORCE_FULL_RENDER": "1" if force_full_render else "0",
             "GIDS_EXTERNAL_SURVEILLANCE_DATA": "1" if external_surveillance else "0",
             "GIDS_RUNTIME_DATA_READY": "1" if getattr(config, "surveillance_json_enabled", False) else "0",
             "GIDS_RUNTIME_SITUATION_READY": "1" if getattr(config, "situation_json_enabled", False) else "0",

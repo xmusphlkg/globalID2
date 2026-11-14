@@ -4,9 +4,32 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, wri
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { articlePaths, finalizeResearchSnapshot, mergeAstroAssetTree, planResearchBuild, replaceAstroAssetCache, reusedAssetReferencesAvailable, summarizeBuildPlan } from './research-build-cache.mjs';
+import { articlePaths, finalizeResearchSnapshot, incrementalBuildEnabled, mergeAstroAssetTree, planResearchBuild, replaceAstroAssetCache, reusedAssetReferencesAvailable, summarizeBuildPlan } from './research-build-cache.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
+
+test('explicit full rendering overrides a release identity and warm site/report HTML caches', t => {
+  const root = mkdtempSync(join(tmpdir(), 'gids-force-render-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const articles = {};
+  for (const key of ['country:jp', 'disease:influenza', 'report-archive:jp', 'report:jp:50', 'report-disease:jp:50:influenza']) {
+    const path = key.replaceAll(':', '-') + '.html';
+    writeFileSync(join(root, path), key);
+    articles[key] = { fingerprint: key, paths: [path], files: { [path]: hash(key) } };
+  }
+  const snapshot = { schema: 1, shared: 'unchanged', articles };
+  const release = { PUBLIC_GIDS_RELEASE_ID: 'fresh-release', GIDS_RESEARCH_INCREMENTAL: '1' };
+  const warm = planResearchBuild({ snapshot, previous: snapshot, outputRoot: root, incremental: incrementalBuildEnabled(release) });
+  assert.deepEqual(warm.reused, Object.keys(articles));
+  const full = planResearchBuild({ snapshot, previous: snapshot, outputRoot: root,
+    incremental: incrementalBuildEnabled({ ...release, GIDS_FORCE_FULL_RENDER: '1' }) });
+  assert.equal(full.mode, 'full');
+  assert.deepEqual(full.selected, Object.keys(articles));
+  assert.deepEqual(full.reused, []);
+  assert.ok(Object.values(full.reasons).every(reason => reason === 'forced'));
+  for (const [key, item] of Object.entries(articles)) assert.equal(readFileSync(join(root, item.paths[0]), 'utf8'), key);
+  assert.equal(incrementalBuildEnabled({ ...release, GIDS_FORCE_FULL_RENDER: '0' }), true);
+});
 
 test('disabled article cards are absent from generated and restored bundles', () => {
   assert.equal(articlePaths('paper', true).some(path => path.startsWith('research/cards/')), false);

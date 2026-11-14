@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { directoryFactsPath, directoryFactsVersion } from './directory-build-cache.mjs';
 import { writeBuildRedirects } from './build-redirects.mjs';
-import { astroAssetCacheRoot, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, summarizeBuildPlan, writePending } from './research-build-cache.mjs';
+import { astroAssetCacheRoot, incrementalBuildEnabled, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, summarizeBuildPlan, writePending } from './research-build-cache.mjs';
 import { pageSourceSnapshot, planSitePages, pagePlanPath, sitePageCacheRoot, writePagePending } from './page-build-cache.mjs';
 import { preparePublicBuildInputs } from './public-build-inputs.mjs';
 
@@ -81,7 +81,7 @@ const snapshot = independentResearch ? { schema: 1, shared: 'independent', artic
 const directoryStats = {};
 const pageSnapshot = pageSourceSnapshot({ directoryStats });
 process.stdout.write(`[directory-cache] ${JSON.stringify(directoryStats)}\n`);
-const incremental = Boolean(process.env.PUBLIC_GIDS_RELEASE_ID || process.env.GIDS_RESEARCH_INCREMENTAL === '1');
+const incremental = incrementalBuildEnabled();
 let pagePlan = planSitePages(pageSnapshot, incremental);
 let plan = independentResearch ? { mode: 'incremental', selected: [], reused: [], removed: [], reasons: {}, snapshot } : planResearchBuild({
   incremental,

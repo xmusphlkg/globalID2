@@ -169,6 +169,11 @@ export function planResearchBuild({ incremental = false, snapshot = sourceSnapsh
   return { mode: full ? 'full' : 'incremental', snapshot, selected, reused, removed, reasons, assetReferences };
 }
 
+export function incrementalBuildEnabled(env = process.env) {
+  return env.GIDS_FORCE_FULL_RENDER !== '1'
+    && Boolean(env.PUBLIC_GIDS_RELEASE_ID || env.GIDS_RESEARCH_INCREMENTAL === '1');
+}
+
 export function summarizeBuildPlan(plan) {
   const groups = {};
   for (const [key, reason] of Object.entries(plan.reasons)) {
