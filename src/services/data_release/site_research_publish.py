@@ -18,6 +18,7 @@ from .papers_projection import (
 )
 from .papers_r2 import R2S3Client
 from .surveillance_publish import _starting_baseline
+from .site_research_collections import verify_collection_build
 
 
 def freeze_site_research(*, papers_dir: Path, site_dist: Path, research_source: Path,
@@ -78,8 +79,15 @@ def freeze_site_research(*, papers_dir: Path, site_dist: Path, research_source: 
                 raise ValueError('Research generation requires every locale landing page')
         manifest = build_papers_manifest(bundle, papers_origin=papers_origin)
         frozen_json = work / 'json'
-        freeze_literature_json(frozen_source, frozen_json, release_id=release_id,
+        frozen_manifest = freeze_literature_json(frozen_source, frozen_json, release_id=release_id,
                                generated_at=datetime.now(timezone.utc).isoformat(), logical_names=names)
+        collection_receipt = site_dist / 'research-collections-build.json'
+        if collection_receipt.exists():
+            split_manifest = papers_dir / 'papers-manifest.json'
+            rewritten = {item['path']: item for item in json.loads(split_manifest.read_bytes())['files']} if split_manifest.exists() else {}
+            verified = verify_collection_build(collection_receipt, bundle=bundle,
+                index_sha256=frozen_manifest['files']['index.json']['sha256'], rewritten=rewritten)
+            _atomic_write(run / 'research-collections-build.json', json.dumps(verified, separators=(',', ':')).encode())
         _atomic_write(work / 'papers-build-manifest.json', json.dumps(manifest, separators=(',', ':')).encode())
         # No public changes happen here; leftovers only belong to this run.
         for name in ('bundle', 'json'):
@@ -163,6 +171,8 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
                 directory=directory, release_id=release_id, migration=True)
         else:
             from .site_research_baseline import compose_site_candidate
+            verify_collection_build(run / 'research-collections-build.json', bundle=run / 'bundle',
+                index_sha256=json.loads((run / 'current.json').read_bytes())['files']['index.json']['sha256'])
             prior = json.loads(previous) if previous else {}
             if prior and json.loads((run / 'current.json').read_bytes())['files'] != prior.get('files'):
                 raise ValueError('Static research projections differ from the captured Papers v3 baseline')

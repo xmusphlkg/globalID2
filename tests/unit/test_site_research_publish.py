@@ -277,6 +277,15 @@ def independent_site_sources(args):
     (args['papers_dir'] / '_astro/old.css').unlink()
     (args['site_dist'] / '_astro/template-update.css').write_text('body{color:green}')
     (args['site_dist'] / 'research/index.html').write_text('<html>Updated research directory</html>')
+    collection_receipt(args)
+
+
+def collection_receipt(args, paths=()):
+    (args['site_dist'] / 'research-collections-build.json').write_text(json.dumps({
+        'schema': 1, 'scope': 'collections', 'article_pages_rendered': 0,
+        'research_index_sha256': hashlib.sha256((args['research_source'] / 'index.json').read_bytes()).hexdigest(),
+        'pages': {path: hashlib.sha256((args['site_dist'] / path).read_bytes()).hexdigest() for path in paths},
+    }))
 
 
 def test_independent_site_preserves_complete_v3_articles_and_freezes_before_upload(tmp_path):
@@ -347,6 +356,75 @@ def test_independent_site_removes_retired_non_article_pages_without_losing_paper
     assert all(before[key]['key'] in store.objects for key in retired_keys)
     frozen = next_args['run'] / 'bundle'
     assert not any(frozen.glob('**/collections/retired/index.html'))
+
+
+@pytest.mark.parametrize('local_baseline', [False, True])
+def test_independent_site_publishes_newly_rendered_collections_in_all_locales(tmp_path, local_baseline):
+    args, store = sources(tmp_path), Store()
+    if local_baseline:
+        args['run'] = tmp_path / 'exports/site-research-runs/first-task/site-one'
+    paths = [f'{locale}research/{group}/{slug}/index.html'
+        for locale in ('', 'zh/', 'fr/')
+        for group, slug in [('countries', 'jp'), ('diseases', 'influenza'), ('topics', 'surveillance'), ('weekly', '2026-W46')]]
+    for path in paths:
+        target = args['site_dist'] / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text('<h1>Old collection</h1>')
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    before = entries(store, json.loads(store.get_object(f'{PREFIX}/current.json')))
+    independent_site_sources(args)
+    for path in paths:
+        (args['site_dist'] / path).write_text(f'<h1>Current template {path}</h1><a href="/countries/jp/">Japan</a>')
+    collection_receipt(args, paths)
+    from src.services.data_release.papers_bundle import split_papers_bundle
+    split_papers_bundle(args['site_dist'], papers_dir=args['papers_dir'])
+    next_args = {**args, 'run': tmp_path / 'exports/site-research-runs/second-task/site-two', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**next_args, client=store)
+    after = entries(store, json.loads(store.get_object(f'{PREFIX}/current.json')))
+    for path in paths:
+        key = path.removesuffix('index.html')
+        assert after[key]['sha256'] != before[key]['sha256']
+        source = args['papers_dir'] / path
+        if not source.exists():
+            source = args['site_dist'] / path
+        assert store.get_object(after[key]['key']) == source.read_bytes()
+    assert len([entry for entry in after.values() if 'paper_template' in entry]) == 3
+    for key, entry in before.items():
+        if 'paper_template' in entry:
+            assert after[key] == entry
+
+
+@pytest.mark.parametrize('fault', ['missing_receipt', 'missing_route', 'changed_route', 'different_index'])
+def test_independent_site_cannot_publish_unrendered_or_mismatched_collection_candidate(tmp_path, fault):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    independent_site_sources(args)
+    relative = 'fr/research/diseases/influenza/index.html'
+    page = args['site_dist'] / relative
+    page.parent.mkdir(parents=True, exist_ok=True)
+    page.write_text('<h1>Newly rendered collection</h1>')
+    collection_receipt(args, [relative])
+    if fault == 'missing_receipt':
+        (args['site_dist'] / 'research-collections-build.json').unlink()
+    elif fault == 'missing_route':
+        page.unlink()
+    elif fault == 'changed_route':
+        page.write_text('changed after rendering')
+    else:
+        receipt = json.loads((args['site_dist'] / 'research-collections-build.json').read_text())
+        receipt['research_index_sha256'] = '0' * 64
+        (args['site_dist'] / 'research-collections-build.json').write_text(json.dumps(receipt))
+    next_args = {**args, 'run': tmp_path / 'bad-collections', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    writes, pointer = list(store.writes), store.get_object(f'{PREFIX}/current.json')
+    with pytest.raises((ValueError, FileNotFoundError)):
+        publish_site_research(**next_args, client=store, prepare_only=True)
+    assert store.writes == writes
+    assert store.get_object(f'{PREFIX}/current.json') == pointer
+    assert not (next_args['run'] / 'papers-prepared.json').exists()
 
 
 @pytest.mark.parametrize('fault', ['missing_baseline', 'v2_baseline', 'missing_record', 'changed_json'])
