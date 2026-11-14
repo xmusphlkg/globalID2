@@ -124,18 +124,26 @@ test('theme preference follows the reader across all three public hosts', async 
     const response = await request.get(`${baseURL}${target.pathname}${target.search}`);
     await route.fulfill({ response });
   });
-  await page.goto('https://globalinfectiousdisease.com/zh/');
-  await page.locator('#theme-toggle').click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  expect((await context.cookies()).find(cookie => cookie.name === 'gids_theme')?.domain).toBe('.globalinfectiousdisease.com');
-  await page.goto('https://papers.globalinfectiousdisease.com/zh/');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.goto('https://reports.globalinfectiousdisease.com/zh/');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.locator('#theme-toggle').click();
-  await page.goto('https://globalinfectiousdisease.com/zh/');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  // Theme-specific logos can still be loading after the final assertion. Drain
-  // their local proxy callbacks before Playwright disposes the request context.
-  await context.unrouteAll({ behavior: 'wait' });
+  // These fixture pages hydrate after `load`. Drain their intercepted asset
+  // requests before a cross-host navigation cancels them underneath the local
+  // proxy's asynchronous fetch/fulfill pair. No route errors are suppressed.
+  const visit = async (url: string) => {
+    await page.waitForLoadState('networkidle');
+    await page.goto(url, { waitUntil: 'networkidle' });
+  };
+  try {
+    await visit('https://globalinfectiousdisease.com/zh/');
+    await page.locator('#theme-toggle').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    expect((await context.cookies()).find(cookie => cookie.name === 'gids_theme')?.domain).toBe('.globalinfectiousdisease.com');
+    await visit('https://papers.globalinfectiousdisease.com/zh/');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await visit('https://reports.globalinfectiousdisease.com/zh/');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await page.locator('#theme-toggle').click();
+    await visit('https://globalinfectiousdisease.com/zh/');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  } finally {
+    await context.unrouteAll({ behavior: 'wait' });
+  }
 });
