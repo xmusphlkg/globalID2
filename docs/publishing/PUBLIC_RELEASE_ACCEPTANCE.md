@@ -18,7 +18,7 @@ schema、缺失翻译或非法日期均不得记录成功；错误提示检查�
 | Papers 渲染、路由、版本资源规则 | `globalid-papers-template` Worker | 三语文章 projection-v3、内容/模板 SHA、稳定 canonical |
 | 页面/组件/共享样式 | 原有 Pages 模板发布；研究页面同时走绑定研究发布 | release.json 身份匹配、真实浏览器资源和交互 |
 | 网站版本记录 | 公共 updates 发布器 | 主站 changelog.json 完整；R2 直读成功不能代替主站验证 |
-| 主题 v1 token | 独立主题发布器 | 首页/国家页引用兼容入口；入口立即重验、内容 CSS SHA 正确 |
+| 主题 v1 token | 独立主题发布器 | 首页/国家页/Compare 引用兼容入口；入口立即重验、内容 CSS SHA 正确 |
 
 新模板依赖新接口时先发布兼容的 Worker，并保留其部署版本和检查结果。部署 Pages
 不会自动更新独立 zone Worker。监测、态势、研究的日常 JSON 发布无需重建 Worker；
@@ -74,7 +74,9 @@ astro-site/node_modules/.bin/node astro-site/scripts/verify-data-updates.mjs
 Papers 为 canonical；`/research-publication/<generation>/research/.../` 的历史
 HTML 返回 410，版本化 JS/CSS/JSON 仍供已打开页面保持版本一致。
 
-独立主题合同当前只覆盖首页/国家页。兼容 CSS 入口应返回
+0.19.4 将三语 Compare 纳入独立主题路由，连同首页/国家页检查兼容入口实际加载。
+Compare 筛选面板样式仍由组件负责，不能用“主题已加载”代替标题、边框和移动布局检查。
+兼容 CSS 入口应返回
 `public, max-age=0, s-maxage=30, must-revalidate`，内容 CSS 使用一年 immutable。
 如果 zone Browser Cache TTL 把入口改为 14400 秒，可新增仅匹配
 `theme.globalinfectiousdisease.com` 与 `/theme/compat/v1/theme.css` 的 Cache Rule，
@@ -86,3 +88,18 @@ HTML 返回 410，版本化 JS/CSS/JSON 仍供已打开页面保持版本一致�
 `cleanup_legacy_papers.py` 属于静态站到 v2 的迁移工具，不能直接用于 v3。
 清理保留当前代次、最近至少 48 小时的代次及共享依赖；过期代次仅删除精确清单。
 路由返回 404/410 不代表存储对象已删除，物理清理必须另有 inventory 和执行收据。
+
+## 研究集合完整性
+
+文章 projection-v3 可访问并不能证明研究目录完整。0.19.3 的模板流程曾过滤所有旧
+非文章 HTML，却未重新生成独立通道负责的区域、疾病、主题和每周集合，因此误删
+4,782 个有效三语路由。修复必须从当前冻结 JSON 和当前模板重新生成集合，不能
+回指旧代次或把历史 HTML 整批补回。
+
+模板流程使用明确的 `collections` 构建范围，跳过文章 HTML，不读取或覆盖文章
+HTML 缓存。发布前校验当前全部集合路径、冻结索引摘要及生成文件摘要；疾病目录
+包含仅有书目信息的疾病，不能只读取经过筛选的顶层 facets。发布过程对 HTML 的
+合法链接重写须通过源摘要和重写后摘要建立对应关系，不能简单跳过摘要检查。
+
+线上补查应覆盖四类集合、中英法及主站/Papers 两个域名；监测数据正常推进导致
+验收前后代次变化时，保留首次结果并对新代次重新核对 current/bootstrap/对象摘要。

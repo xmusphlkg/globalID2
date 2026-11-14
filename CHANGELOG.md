@@ -4,6 +4,24 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.19.4] - 2026-11-14
+
+### Fixed
+
+- Rebuild Research collection pages from current frozen JSON and templates.
+  The previous template release removed collection routes even though its
+  build omitted those pages. Validate all current geographic, disease, topic
+  and weekly routes before publication, including bibliographic-only diseases.
+- Keep Compare selector headings inside their panels and enable the independent
+  shared theme on English, Chinese and French Compare routes.
+- Prune excluded directories before scanning publication source fingerprints,
+  preserving the exact fingerprint contract. A local three-run comparison reduced
+  median fingerprint time from 0.848s to 0.248s; this is not an end-to-end release
+  benchmark.
+
+Publication evidence and verification results are recorded in
+[the acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).
+
 ## [0.19.3] - 2026-11-14
 
 ### Fixed
@@ -32,6 +50,12 @@ This file records release-level changes to the GIDS application and its data ope
 - Add reusable live acceptance scripts for cross-host publication identity and
   multilingual daily update counts. Public release confirmation now also checks
   the main site's website-history JSON route.
+- Complete cleanup of 838 stale Pages deployments and 35,964 expired Papers
+  objects (2,763,282,763 bytes), preserving current and retained dependencies.
+- Deploy source `c1c99f6` through the planned template-only workflow, with public
+  verification and database confirmation. The final run took 12m 14s versus
+  22m 34s for the preceding run; the 10-minute target remains unmet. Workspace
+  preparation took 51.596s; Pages uploaded 35 files and reused 4,369.
 
 Operational deployment and real-network acceptance evidence are recorded in
 [the acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).

@@ -14,11 +14,11 @@
 | --- | --- | --- |
 | `astro-site/src/components/charts/DiseaseDetailView.tsx` | 已集成 | 图表/目录/报告组件提取，69 图表+6 主题测试及3语浏览器验证通过 |
 | `astro-site/src/components/charts/ReportV4Panel.tsx` | 已集成 | 图表/目录/报告组件提取，69 图表+6 主题测试及3语浏览器验证通过 |
-| `astro-site/src/components/public/PublicDownloads.astro` | 已集成 | 图表/下载/订阅职责拆分；三语浏览器与Astro检查通过，统一回归中 |
-| `astro-site/src/components/research/ResearchHotspotCharts.tsx` | 已集成 | 图表/下载/订阅职责拆分；三语浏览器与Astro检查通过，统一回归中 |
+| `astro-site/src/components/public/PublicDownloads.astro` | 已集成 | 图表/下载/订阅职责拆分；三语浏览器与 Astro 检查通过，主树 224 项 Astro 单测及 66 项浏览器验收通过 |
+| `astro-site/src/components/research/ResearchHotspotCharts.tsx` | 已集成 | 图表/下载/订阅职责拆分；三语浏览器与 Astro 检查通过，主树 224 项 Astro 单测及 66 项浏览器验收通过 |
 | `astro-site/src/components/situation/SituationExplorer.tsx` | 已集成 | 状态/时间线/检索合同提取，52+25 单测、6 浏览器测试通过 |
 | `astro-site/src/lib/research-ask.ts` | 已集成 | 状态/时间线/检索合同提取，52+25 单测、6 浏览器测试通过 |
-| `astro-site/src/pages/subscribe.astro` | 已集成 | 图表/下载/订阅职责拆分；三语浏览器与Astro检查通过，统一回归中 |
+| `astro-site/src/pages/subscribe.astro` | 已集成 | 图表/下载/订阅职责拆分；三语浏览器与 Astro 检查通过，主树 224 项 Astro 单测及 66 项浏览器验收通过 |
 | `cloudflare/subscriptions/src/handlers/campaigns.ts` | 已集成 | 活动/投递/令牌/队列职责分离；169项mock回归通过，SQL/claim/ledger/unknown与路由保持 |
 | `cloudflare/subscriptions/src/handlers/situation-alerts.ts` | 已集成 | 活动/投递/令牌/队列职责分离；169项mock回归通过，SQL/claim/ledger/unknown与路由保持 |
 | `cloudflare/subscriptions/src/index.ts` | 已集成 | 活动/投递/令牌/队列职责分离；169项mock回归通过，SQL/claim/ledger/unknown与路由保持 |
@@ -33,11 +33,11 @@
 | `dashboard/src/features/reports/list/view.tsx` | 已集成 | 按视图/表单/导出/引文职责拆分；主树类型检查与39文件167测试通过 |
 | `scripts/audit_iceland_integration.py` | 已集成 | 只读审计与源行解释独立；17 项相关回归通过 |
 | `scripts/benchmark_ai_literature.py` | 已集成 | 只读源快照与指标提取；CLI帮助检查通过，新增只读连接/异常释放测试通过 |
-| `scripts/full_rebuild_database.py` | 已实现 | 历史行转换归 database_rebuild_import；批写/提交仍由原编排管理，修复 NNDSS 常量遗漏，25 项测试通过 |
+| `scripts/full_rebuild_database.py` | 已集成 | 历史行转换归 database_rebuild_import；批写/提交仍由原编排管理，修复 NNDSS 常量遗漏，25 项测试通过 |
 | `scripts/publish_download_repo.py` | 已集成 | 领域资产/传输/收据模块；原脚本兼容包装，45 项测试通过 |
 | `scripts/publish_raw_git_archive.py` | 已集成 | 领域资产/传输/收据模块；原脚本兼容包装，45 项测试通过 |
 | `scripts/rebuild_source_series_components.py` | 已集成 | 只读审计与源行解释独立；17 项相关回归通过 |
-| `scripts/sync_disease_ontology.py` | 已实现 | 提取 sync_contracts / sync_planning；dry-run JSON 逐字节相同，相关测试通过 |
+| `scripts/sync_disease_ontology.py` | 已集成 | 提取 sync_contracts / sync_planning；dry-run JSON 逐字节相同，相关测试通过 |
 | `src/data/crawlers/au.py` | 已集成 | 纯查询与工作簿解析独立；50 项回归通过，补充静态检查遗漏 |
 | `src/data/crawlers/ca.py` | 已集成 | 源序列写入转换、Ontario解析提取；181 项回归通过 |
 | `src/data/crawlers/cn_provinces.py` | 已集成 | 省级明确归一化/PHSM历史审计提取；45项回归通过 |
@@ -48,14 +48,14 @@
 | `src/generation/site_data_literature.py` | 已集成 | 查询与文献导出按职责提取；181 passed / 15 skipped |
 | `src/generation/site_data_queries.py` | 已集成 | 查询与文献导出按职责提取；181 passed / 15 skipped |
 | `src/generation/site_data_views.py` | 已集成 | 视图、身份与质量规则提取；133 项回归通过 |
-| `src/knowledge/llm_brief_generator.py` | 已实现 | 纯提示/结果或网页解析独立；原方法分派与共享状态保留，166 项测试通过 |
-| `src/knowledge/sources.py` | 已实现 | 纯提示/结果或网页解析独立；原方法分派与共享状态保留，166 项测试通过 |
+| `src/knowledge/llm_brief_generator.py` | 已集成 | 纯提示/结果或网页解析独立；原方法分派与共享状态保留，166 项测试通过 |
+| `src/knowledge/sources.py` | 已集成 | 纯提示/结果或网页解析独立；原方法分派与共享状态保留，166 项测试通过 |
 | `src/literature/enrichment.py` | 已集成 | 纯合并/摘要/周报合同独立；157 项相关回归通过 |
 | `src/literature/pipeline.py` | 已集成 | 纯合并/摘要/周报合同独立；157 项相关回归通过 |
 | `src/literature/weekly_ai_review.py` | 已集成 | 纯合并/摘要/周报合同独立；157 项相关回归通过 |
-| `src/services/ai_content_governance_service.py` | 已实现 | 共享纯修复策略归 knowledge/repair_policy；模型/锁/提交不迁移，186 项前后回归通过 |
+| `src/services/ai_content_governance_service.py` | 已集成 | 共享纯修复策略归 knowledge/repair_policy；模型/锁/提交不迁移，186 项前后回归通过 |
 | `src/services/crawl_service.py` | 已集成 | 源序列写入转换、Ontario解析提取；181 项回归通过 |
-| `src/services/disease_knowledge_service.py` | 已实现 | 共享纯修复策略归 knowledge/repair_policy；模型/锁/提交不迁移，186 项前后回归通过 |
+| `src/services/disease_knowledge_service.py` | 已集成 | 共享纯修复策略归 knowledge/repair_policy；模型/锁/提交不迁移，186 项前后回归通过 |
 | `src/services/disease_mapping_ai_service.py` | 已集成 | 语义保护与报告复用规则独立；71 项相关回归通过 |
 | `src/services/disease_mapping_quality_service.py` | 已集成 | 纯输入/身份/自动化决策和查询独立；137 项相关回归通过 |
 | `src/services/disease_mapping_registry_service.py` | 已集成 | 纯输入/身份/自动化决策和查询独立；137 项相关回归通过 |
@@ -90,3 +90,10 @@
 计划 `1a95832b-d17c-4eed-b9dd-9e5ba93ac3fd` 于 2026-11-14 07:20 UTC 完成，公开校验和数据库确认均通过。
 后续 0.19.3 处理 BR 进程隔离、面板取消、恢复 checkpoint、旧路由继承和正式清理工具；
 真实线上三语更新页 6 项与跨站发布检查 81 项通过。详见[验收记录](../acceptance/DATA_UPDATES_20261114.md)。
+
+0.19.4 后续修复：独立 Research 模板流程从当前数据重新生成集合并验证全量路由，
+Node 10 项和 Python 57 项通过；Compare 的标题内置布局与三语独立主题接入已完成，
+三语 × 双宽度 × 亮暗 12 组视觉检查、8 项交互回归通过。
+源码指纹扫描在保留原指纹语义的前提下剪枝，56 项边界及恢复测试通过。
+按照用户“先改好代码，推送放后台”的要求，代码验证与生产发布结果分开记录，
+没有用后台排队或上传状态代替最终上线。

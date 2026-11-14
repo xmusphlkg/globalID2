@@ -3,6 +3,20 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.19.4', date: '2026-11-14',
+    titleEn: 'Research collections and clearer comparison filters',
+    titleZh: '恢复文献集合与清晰的对比筛选',
+    titleFr: 'Collections de recherche et filtres de comparaison plus clairs',
+    summaryEn: 'Rebuild research collections from current data and align comparison filters with the shared theme.',
+    summaryZh: '从当前数据重新生成文献集合，让对比筛选布局与共享主题保持一致。',
+    summaryFr: 'Régénérez les collections à partir des données actuelles et harmonisez les filtres avec le thème partagé.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Restore geographic, disease, topic and weekly research collection links across all three languages. Keep comparison headings inside their panels and load the shared theme on Compare pages.',
+      zh: '恢复三语区域、疾病、主题和每周文献集合链接；对比筛选标题放在面板内部，Compare 页面加载共享主题。',
+      fr: 'Rétablissez les liens vers les collections géographiques, par maladie, par thème et par semaine dans les trois langues. Placez les titres des filtres dans leurs panneaux et chargez le thème partagé sur les pages de comparaison.',
+    }] }],
+  },
+  {
     version: '0.19.3', date: '2026-11-14',
     titleEn: 'Reliable publication history and faster updates',
     titleZh: '可靠的发布历史与更顺畅的数据更新',

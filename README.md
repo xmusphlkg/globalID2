@@ -14,7 +14,21 @@ operations dashboard, and an Astro public site.
 - [Control center](docs/control-center/README.md): operators, API, deployment and troubleshooting.
 - [Changelog](CHANGELOG.md): version history.
 
-## Version 0.19.3
+## Version 0.19.4
+
+Template releases now regenerate Research collections from current frozen JSON
+and templates, then verify every expected route before publishing. Article v3
+projections remain independently managed. Compare headings sit inside the filter
+panels, and all three Compare locales load the independent shared theme.
+Code validation and background deployment status are recorded separately in the
+[acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).
+
+The preceding 0.19.3 production release, `20261114T082207Z-c1c99f6dc56f`, completed on
+14 November at 08:33 UTC through **plan → task → receipt**. Public verification
+and database confirmation both passed. This template-only run reused published
+data and completed in 12m 14s, compared with 22m 34s for the preceding run;
+the 10-minute target is not yet met. These are individual runs under different
+loads, not a controlled benchmark.
 
 CPU-heavy Brazil SINAN parsing runs in bounded child processes; ingestion
 transactions and publication ownership remain in the parent worker. Main-site
@@ -68,7 +82,11 @@ The [November 14 acceptance record](docs/acceptance/DATA_UPDATES_20261114.md)
 tracks the data-updates page, runtime restart, article preservation checks and
 actual deployment result. Its date range and daily chart include acknowledged
 data publications and selected website versions; they do not measure email
-delivery. Source-specific failures and Literature review backlog remain open.
+delivery. Canada and Belgium were traced from ingestion through dirty-marker
+acknowledgement to matching public update events after the latest restart.
+Email subscriptions remain in pilot mode; maintenance releases suppress delivery
+and this acceptance did not test actual email receipt. Source-specific failures
+and Literature review backlog remain open.
 
 ```mermaid
 flowchart LR

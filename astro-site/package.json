@@ -1,7 +1,7 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.19.3",
+  "version": "0.19.4",
   "scripts": {
     "build:theme": "node scripts/build-theme.mjs",
     "test:theme": "node --experimental-strip-types --test scripts/build-theme.test.mjs src/lib/site-theme.test.ts",
