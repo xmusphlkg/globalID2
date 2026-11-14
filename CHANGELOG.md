@@ -26,6 +26,9 @@ This file records release-level changes to the GIDS application and its data ope
 - Make an explicit planned `full` publication render all main-site and Report
   pages freshly, bypassing whole-build and HTML-page reuse while retaining
   validation gates and recovery of already prepared publication artifacts.
+- Allow a separately configured process count for Research collection rendering.
+  On the same frozen 4,782-page input, two workers completed in 173.762s versus
+  237.540s; article and main-site renderer settings remain independent.
 
 Publication evidence and verification results are recorded in
 [the acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).
