@@ -19,6 +19,14 @@ This file records release-level changes to the GIDS application and its data ope
   median fingerprint time from 0.848s to 0.248s; this is not an end-to-end release
   benchmark.
 
+- Reuse exact cached Research recommendation rankings when only other candidates
+  change. Merge affected candidates with unchanged top results, and fall back to
+  a full calculation when targets, winners or cache validity change. Randomized
+  regression tests verify the complete output against full recomputation.
+- Make an explicit planned `full` publication render all main-site and Report
+  pages freshly, bypassing whole-build and HTML-page reuse while retaining
+  validation gates and recovery of already prepared publication artifacts.
+
 Publication evidence and verification results are recorded in
 [the acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).
 
