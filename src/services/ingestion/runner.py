@@ -12,6 +12,32 @@ from src.services.ingestion.stages import StageRun
 from src.services.ingestion.strategies import UpdaterCommitStrategy
 from src.services.exceptions import TaskCancelledError
 
+ORGANIZE_CANCEL_POLL_SECONDS = 2.0
+
+
+async def _organize_with_cancellation(operation, cancelled):
+    """Observe Dashboard cancellation without holding a DB session while parsing."""
+    task = asyncio.create_task(operation)
+    try:
+        while not task.done():
+            done, _ = await asyncio.wait({task}, timeout=ORGANIZE_CANCEL_POLL_SECONDS)
+            if not done:
+                await cancelled()
+        return task.result()
+    finally:
+        if not task.done():
+            task.cancel()
+            cleanup = asyncio.gather(task, return_exceptions=True)
+            # Process organizers own their children and temporary files. Even
+            # repeated shutdown cancellation must drain that cleanup before the
+            # runner records failure or permits another stage to start.
+            while not cleanup.done():
+                try:
+                    await asyncio.shield(cleanup)
+                except asyncio.CancelledError:
+                    continue
+            cleanup.result()
+
 
 async def run_surveillance(service, *, task, updater, connector, source, force, process, strategy=None, strategy_options=None, connector_options=None):
     from src.services.crawl_service import CrawlResult
@@ -37,7 +63,10 @@ async def run_surveillance(service, *, task, updater, connector, source, force, 
         await cancelled()
         organize_async = getattr(connector, "organize_async", None)
         if organize_async is not None:
-            fetched = await organize_async(artifacts, updater=updater, source=source, **(connector_options or {}))
+            fetched = await _organize_with_cancellation(
+                organize_async(artifacts, updater=updater, source=source, **(connector_options or {})),
+                cancelled,
+            )
         else:
             fetched = await asyncio.to_thread(connector.organize, artifacts, updater=updater, source=source, **(connector_options or {}))
         organize_metrics = {"rows": len(fetched.rows), "series_rows": len(getattr(fetched, "series_rows", []))}

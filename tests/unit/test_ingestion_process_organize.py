@@ -15,9 +15,12 @@ from sqlalchemy import select
 
 from src.data.crawlers.br import SINANFile
 from src.data.processors.br import BRMonthlyUpdater
-from src.domain.collection import RunStage
+from src.core.task_manager import TaskManager
+from src.domain import Task, TaskStatus, TaskType
+from src.domain.collection import PublishDirty, RunStage
 from src.services.ingestion import process_organize as workers, runner
 from src.services.ingestion.countries import br
+from src.services.exceptions import TaskCancelledError
 from tests.unit.test_cn_us_jp_crawl_pipelines import db, inputs
 
 FIXTURE = Path(__file__).parents[1] / "fixtures/ingestion/BR/AIDABR25.dbc"
@@ -137,3 +140,52 @@ async def test_runner_awaits_async_parser_before_store(db):
     async with db() as session:
         stage = (await session.execute(select(RunStage).where(RunStage.stage == "organize"))).scalar_one()
         assert stage.status == "completed" and stage.metrics["rows"] == 1
+
+
+async def test_dashboard_cancel_interrupts_running_parser_before_store(db, tmp_path, monkeypatch):
+    params = inputs()
+    async with db.kw["bind"].begin() as connection:
+        await connection.run_sync(Task.__table__.create)
+    async with db() as session:
+        session.add(Task(task_uuid=params["task"].task_uuid, task_type=TaskType.CRAWL_DATA,
+                         task_name="CPU parser", status=TaskStatus.RUNNING))
+        await session.commit()
+    manager = runner.task_manager
+    monkeypatch.setattr(manager, "is_cancel_requested", TaskManager.is_cancel_requested.__get__(manager))
+    monkeypatch.setattr(manager, "_broadcast", AsyncMock())
+    monkeypatch.setattr(manager, "add_workbook_entry", AsyncMock())
+    monkeypatch.setattr(runner, "ORGANIZE_CANCEL_POLL_SECONDS", 0.01)
+    marker = tmp_path / "parser-started"
+    pools, roots = [], []
+    executor_type = workers.ProcessPoolExecutor
+
+    def create(**kwargs):
+        executor = executor_type(**kwargs)
+        pools.append(executor)
+        roots.append(Path(kwargs["initargs"][0]))
+        return executor
+
+    monkeypatch.setattr(workers, "ProcessPoolExecutor", create)
+
+    async def organize(*_args, **_kwargs):
+        return await workers.organize_in_process(_wait_with_temporary, marker)
+
+    params["connector"].organize_async = organize
+    task = asyncio.create_task(runner.run_surveillance(**params))
+    deadline = time.monotonic() + 10
+    while not marker.exists() and time.monotonic() < deadline:
+        await asyncio.sleep(0.01)
+    assert marker.exists()
+    processes = list(pools[0]._processes.values())
+    # Use the actual Dashboard service path, which persists a cooperative flag.
+    await manager.request_task_cancel(params["task"].task_uuid)
+    with pytest.raises(TaskCancelledError):
+        await asyncio.wait_for(task, timeout=3)
+    assert all(not process.is_alive() for process in processes)
+    assert all(not path.exists() for path in roots)
+    params["service"]._import_rows_with_series.assert_not_awaited()
+    async with db() as session:
+        stages = list((await session.execute(select(RunStage))).scalars())
+        assert next(row for row in stages if row.stage == "organize").status == "failed"
+        assert next(row for row in stages if row.stage == "store").status == "skipped"
+        assert not list((await session.execute(select(PublishDirty))).scalars())
