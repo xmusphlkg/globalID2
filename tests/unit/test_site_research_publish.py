@@ -313,6 +313,42 @@ def test_independent_site_preserves_complete_v3_articles_and_freezes_before_uplo
     assert entries(store, second) == projected
 
 
+@pytest.mark.parametrize('local_baseline', [False, True])
+def test_independent_site_removes_retired_non_article_pages_without_losing_papers(tmp_path, local_baseline):
+    args, store = sources(tmp_path), Store()
+    if local_baseline:
+        args['run'] = tmp_path / 'exports/site-research-runs/first-task/site-one'
+    retired_paths = []
+    for locale in ('', 'zh', 'fr'):
+        path = args['site_dist'] / locale / 'research/collections/retired/index.html'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('<html>Retired collection</html>')
+        retired_paths.append(path)
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    before = entries(store, json.loads(store.get_object(f'{PREFIX}/current.json')))
+    retired_keys = {f'{locale + "/" if locale else ""}research/collections/retired/' for locale in ('', 'zh', 'fr')}
+    assert retired_keys.issubset(before)
+    for path in retired_paths:
+        path.unlink()
+    independent_site_sources(args)
+    next_args = {**args, 'run': tmp_path / 'exports/site-research-runs/second-task/site-two', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**next_args, client=store)
+    after = entries(store, json.loads(store.get_object(f'{PREFIX}/current.json')))
+    assert not retired_keys.intersection(after)
+    for key, entry in before.items():
+        if 'paper_template' in entry:
+            assert after[key] == entry
+    assert after['_astro/old.css'] == before['_astro/old.css']
+    assert after['scripts/research.js'] == before['scripts/research.js']
+    assert after['research/'] != before['research/']
+    # Removing a route does not delete immutable history or supporting bytes.
+    assert all(before[key]['key'] in store.objects for key in retired_keys)
+    frozen = next_args['run'] / 'bundle'
+    assert not any(frozen.glob('**/collections/retired/index.html'))
+
+
 @pytest.mark.parametrize('fault', ['missing_baseline', 'v2_baseline', 'missing_record', 'changed_json'])
 def test_independent_site_rejects_unproven_or_incompatible_baseline_without_upload(tmp_path, fault):
     args, store = sources(tmp_path), Store()

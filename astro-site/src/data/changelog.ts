@@ -3,6 +3,20 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.19.3', date: '2026-11-14',
+    titleEn: 'Reliable publication history and faster updates',
+    titleZh: '可靠的发布历史与更顺畅的数据更新',
+    titleFr: 'Historique de publication fiable et mises à jour plus fluides',
+    summaryEn: 'Restore the daily activity chart and keep current pages and styles available as data updates run.',
+    summaryZh: '恢复每日更新趋势图，让数据更新期间的页面与样式保持最新。',
+    summaryFr: 'Rétablissez le graphique quotidien et gardez les pages et les styles à jour pendant les mises à jour des données.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Website version history loads with data release records. Removed pages stay removed, and the shared theme checks for updates promptly.',
+      zh: '网站版本历史与数据发布记录一起正常加载；已移除页面不再重新出现，共享主题及时检查更新。',
+      fr: 'L’historique des versions se charge avec les publications de données. Les pages supprimées restent supprimées et le thème partagé vérifie rapidement les mises à jour.',
+    }] }],
+  },
+  {
     version: '0.19.2', date: '2026-11-14',
     titleEn: 'Clearer geographic selection and reliable updates',
     titleZh: '更清晰的区域选择与可靠更新',

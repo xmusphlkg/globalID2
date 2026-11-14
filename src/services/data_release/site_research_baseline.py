@@ -126,7 +126,13 @@ def compose_site_candidate(*, run: Path, static, previous: dict | None, client,
             key = f"paper-template-v3/{group}/{digest}.json"
             if key not in dependencies or dependencies[key]['sha256'] != digest:
                 raise ValueError('Captured Papers v3 candidate has missing dependencies')
-    merged = {entry["logical_key"]: entry for entry in base.entries}
+    # The new static build is authoritative for non-article page routes.
+    # Preserve projected articles and their supporting resources, but do not
+    # resurrect removed directory/collection pages from the captured catalogue.
+    merged = {entry["logical_key"]: entry for entry in base.entries
+              if "paper_template" in entry or not (
+                  entry["logical_key"].endswith("/")
+                  or entry["path"].lower().endswith((".html", ".htm")))}
     for entry in static.entries:
         existing = merged.get(entry["logical_key"])
         if existing and "paper_template" in existing:
@@ -146,7 +152,7 @@ def compose_site_candidate(*, run: Path, static, previous: dict | None, client,
         raise ValueError("Captured Papers v3 baseline has incomplete article locales")
     directory.mkdir(parents=True, exist_ok=True)
     copies = [(entry, base.root, static.root) for entry in base.entries
-              if "paper_template" not in entry and merged[entry["logical_key"]] is entry]
+              if "paper_template" not in entry and merged.get(entry["logical_key"]) is entry]
     copies.extend((entry, base.template_root, directory) for entry in base.template_objects)
     def freeze(item):
         entry, source_root, target_root = item

@@ -4,6 +4,34 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.19.3] - 2026-11-14
+
+### Fixed
+
+- Isolate Brazil SINAN DBF parsing in bounded spawn processes so CPU work cannot
+  starve the publication worker. Cancellation terminates and joins parsers and
+  removes their temporary files; database writes remain in the parent.
+- Preserve completed deployment checkpoints when resuming a frozen publication
+  after a source update, avoiding duplicate builds and Pages uploads.
+- Stop inheriting retired static HTML routes when composing a new Papers
+  publication. Preserve current article and supporting asset references.
+- Deploy the main-site data route for the independently published changelog JSON;
+  its missing route prevented the default daily activity chart from appearing.
+- Respect the origin cache policy for the exact theme compatibility stylesheet
+  URL, removing the zone's four-hour browser-cache override on that entry point.
+
+### Operations
+
+- Add reviewed Papers generation cleanup with a minimum 48-hour retention window,
+  protection of shared dependencies and current articles, an enforced publication
+  maintenance window, resumable batch receipts and final object verification.
+- Add reusable live acceptance scripts for cross-host publication identity and
+  multilingual daily update counts. Public release confirmation now also checks
+  the main site's website-history JSON route.
+
+Operational deployment and real-network acceptance evidence are recorded in
+[the acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).
+
 ## [0.19.2] - 2026-11-14
 
 ### Fixed

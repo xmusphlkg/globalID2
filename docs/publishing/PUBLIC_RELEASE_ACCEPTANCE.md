@@ -52,7 +52,7 @@ astro-site/node_modules/.bin/node astro-site/scripts/verify-data-updates.mjs
 双域文章、旧链接和已退役路径、主题 CSS、手机/桌面布局与真实资源加载。可选：
 
 - `LIVE_BASELINE_REPORT`：上一次 `report.json`，输出各通道前后 release 比较。
-- `EXPECTED_MIN_SURVEILLANCE_DATE`：要求监测发布水位至少达到此 UTC 日期。
+- `EXPECTED_MIN_SURVEILLANCE_DATE`：要求监测观测内容水位至少达到此 UTC 日期（不是发布日期）。
 - `EXPECTED_APP_VERSION`：本次明确要求的网站记录首版本；自动门禁不作此要求。
 - `LIVE_AUDIT_OUTPUT`：证据目录；默认 `exports/live-acceptance/<UTC时间>/`。
 - `LIVE_API_ONLY=1`：仅接口排查；不能替代完整浏览器验收。
@@ -81,7 +81,8 @@ HTML 返回 410，版本化 JS/CSS/JSON 仍供已打开页面保持版本一致�
 设置 `browser_ttl.mode=respect_origin`。更新规则前读取并保留已有规则。CDN purge
 不能撤销访问者浏览器中已缓存且未过期的副本。
 
-旧 R2 静态文章物理清理使用 `scripts/cleanup_legacy_papers.py` 的精确对象计划、
-已校验备份和当前 v3 公开证明。不要删除整个网站、稳定公共链接或整个 immutable
-generation；旧已打开页面可能仍引用这些资源。路由返回 404/410不代表存储对象
-已被删除，存储清理必须另有 inventory 和执行收据。
+当前 Papers v3 物理清理使用 `scripts/cleanup_papers_generations.py`，见
+[代次保留与清理](../operations/papers-generation-retention.md)。旧
+`cleanup_legacy_papers.py` 属于静态站到 v2 的迁移工具，不能直接用于 v3。
+清理保留当前代次、最近至少 48 小时的代次及共享依赖；过期代次仅删除精确清单。
+路由返回 404/410 不代表存储对象已删除，物理清理必须另有 inventory 和执行收据。

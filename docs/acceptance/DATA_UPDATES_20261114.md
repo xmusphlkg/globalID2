@@ -62,7 +62,7 @@
 - 重启后真实浏览器登录控制面板：新计划/任务绑定一致，capabilities、任务详情与同源 receipt GET 均返回 200；任务详情显示正确 UUID、运行状态和发布日志，无浏览器错误。运行中的 receipt 保持未确认，未误报上线。
 - 文献缺口查询在真实库以只读事务、每条 30 秒超时验证：75,114 篇、85,053 疾病关联、49,209 国家关联，17 条 SELECT 共 13.24 秒，最慢 2.84 秒，最多 10,000 参数。
 
-**当前发布状态：两次 full 候选均在上传前失败；随后按用户要求转入隔离工作区完成 0.19.2 核心拆分与统一回归，尚未将本次页面改动记为线上成功。**
+**历史阶段：前两次 full 候选在上传前失败。0.19.2 后续发布已于 2026-11-14 07:20 UTC 完成；见下文发布证据。**
 
 - 前次任务 `6eda2677-85d3-5fe7-93a9-4d288776e823` 完成全站构建及 Papers 候选准备后，读取基线收据的路径错误导致上传前失败。已改为 capture helper 实际生成的 `.publication/starting-baseline.json`，相关 85 项回归通过。没有修改旧计划、成功收据或线上指针来绕过失败。
 - 新计划 `470828c7-410e-453d-97e0-948c4637cfd6`，任务 `bba4cfee-5780-5b81-8f5b-145e88047af0`，通过正式 plan → run API 执行。首次完整快照建立需要 full；后续 code-only 使用独立快照。code-only 不发布独立 Reports，报告模板改动使用 reports_only/full。
@@ -98,3 +98,18 @@ Compare支持真实下级区域、深链接和JSON刷新，地理标签覆盖中
 主树验证：Python完整首轮4,092通过、21条件跳过，7个失败修正后相关165项全部通过；Dashboard167项，Astro224项，Workers169项测试通过。OpenAPI159路径/208模型无变化，493个Astro文件0错误/0警告，Worker类型、生产配置和dry-run打包通过。66个独立浏览器用例通过，覆盖更新页、Compare、Situation、共享页壳和订阅；截图与脱敏日志在`exports/refactor-0.19.2/`。
 
 首次新full仍是后续小改动复用已发布独立快照的前置条件。此处测试通过不等于生产已切换；实际发布身份及收据在完成后追加。
+
+
+## 0.19.2 线上发布与收尾（07:20 UTC 后）
+
+- 源码 `29f63aafadbe969d3d2af8fe7bf65d97a738ec35` 已推送 development；生产 API、普通/AI worker、scheduler 和 dashboard 已加载更新。运行时 `weekly_ai_reviews.json` 保留。
+- 计划 `1a95832b-d17c-4eed-b9dd-9e5ba93ac3fd`，任务 `49b4ecb0-e229-5d9e-a20e-d4931345204d` 于 07:20:24 UTC 完成，100%；收据 `authoritative_committed`、`public_verified`、`database_confirmed` 均 true。
+- 主站 release `20261114T064220Z-29f63aafadbe`；Pages deployment `eeba6591-68e0-4764-b4db-c88994e6f296`。主域与部署域 release.json 一致；3,321 个上传、1,083 个复用。
+- Papers 当前 v3 generation `c59ac326861d75d9f0db8ae2e41bdd5ce9355ee530728277e3fe62e16de575f8`，8,770 篇文章、26,310 个三语路由。当前清单引用的 48,684 个对象全部存在。三语 canary、正文/模板哈希、主站与 Papers 同代通过。Reports 上传 1,569、复用 31、清除 40。
+- Subscription Worker 已发布 `14d2ab5f-5ad0-43cf-a837-877817f0dfcd`，17 个迁移均已应用，health 200。仍为 pilot 模式，使用 D1 outbox 与 cron；本次维护发布抑制订阅投递，没有为验收发送真实消息。
+- 主站 `/site-data/updates/changelog.json` 曾返回 404，而 R2 内容已是 0.19.2；旧 surveillance Worker 路由覆盖了正确的 Pages 产物。部署 `globalid-surveillance-data` 版本 `b1266a5f-c2ec-4107-9618-9032b89bd5ca`，部署前 23 项测试、类型检查及 dry-run 通过。
+- 主题兼容 CSS 受 zone 默认 browser TTL 14,400 秒覆盖。新增仅匹配主题 host 和 `/theme/compat/v1/theme.css` 的 respect-origin Cache Rule，普通与带查询 URL 均返回 `max-age=0,s-maxage=30,must-revalidate`，内容哈希不变。浏览器已保存的旧四小时缓存仍需自身到期。
+- 收尾延迟根因是 BR DBF 解析线程与发布任务竞争同一解释器 GIL；不是 IPv6 或上传网络。独立进程修复含实际 spawn、数据等价、取消回收和临时目录清理测试。
+- 发布完成后只读监控 literature、situation、surveillance 全部 ok；监测数据指针已继续推进。`generated_at` 取观测内容时间，因此重复抓取无新观测时不等于当天发布日期。新鲜度须结合 release 与任务完成时间判断。
+
+此次通过不等于所有上游始终正常：运行尝试仍有部分来源连接池超时与 AI 上游鉴权/空响应，后台重试状态需持续查看；未用 task 最终状态掩盖中间失败。

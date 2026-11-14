@@ -14,7 +14,17 @@ operations dashboard, and an Astro public site.
 - [Control center](docs/control-center/README.md): operators, API, deployment and troubleshooting.
 - [Changelog](CHANGELOG.md): version history.
 
-## Version 0.19.2
+## Version 0.19.3
+
+CPU-heavy Brazil SINAN parsing runs in bounded child processes; ingestion
+transactions and publication ownership remain in the parent worker. Main-site
+JSON routes, Pages, Papers and the theme are deployed and checked separately.
+The daily update chart needs both data archives and the independent website
+changelog JSON. See the [acceptance record](docs/acceptance/DATA_UPDATES_20261114.md)
+for verified deployments, remaining source limitations and cleanup evidence.
+Papers generation cleanup is a separate maintenance operation with a minimum
+48-hour retention window and exact dependency checks; see the
+[retention guide](docs/operations/papers-generation-retention.md).
 
 Compare, seasonality and Situation selectors use the available geographic
 hierarchy, including lower-level administrative units. Public labels are neutral
