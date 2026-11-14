@@ -187,8 +187,15 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
     <div className="compare-method-note"><span className="figure-kicker">{language === 'zh' ? '解读提示' : language === 'fr' ? 'Note méthodologique' : 'Interpretation note'}</span><p>{label.note}</p></div>
     {removedCountries.length > 0 && <p className="disease-trend-note" role="status">{language === 'zh' ? `当前疾病没有 ${removedCountries.join('、')} 的可用序列，已移除这些选择。请重新选择参与对比的地理区域。` : language === 'fr' ? `Sélections retirées, sans séries disponibles : ${removedCountries.join(', ')}. Choisissez d’autres zones géographiques.` : `Removed areas without available series: ${removedCountries.join(', ')}. Choose areas for the current diseases.`}</p>}
     <div className="compare-controls">
-      <fieldset className="compare-filter-panel"><legend>{label.diseases} <span>{selected.length}/2</span></legend><p className="compare-filter-hint">{label.diseaseHint}</p><input className="compare-search" type="search" aria-label={label.searchDiseases} placeholder={label.searchDiseases} value={diseaseQuery} onChange={event => setDiseaseQuery(event.target.value)} /><div className="compare-choice-list">{matchingDiseases.map(d => <label key={d.id} className={selected.includes(d.id) ? 'is-selected' : ''}><input type="checkbox" checked={selected.includes(d.id)} disabled={!selected.includes(d.id) && selected.length >= 2} onChange={() => toggleDisease(d.id)} /><span>{diseaseName(d.id)}</span><small>{d.countries ?? '—'} {d.countries === 1 ? label.availableOne : label.available}</small></label>)}{!matchingDiseases.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
-      <fieldset className="compare-filter-panel">
+      <div className="compare-filter-panel">
+        <fieldset className="compare-filter-group">
+          <legend>{label.diseases} <span>{selected.length}/2</span></legend>
+          <p className="compare-filter-hint">{label.diseaseHint}</p>
+          <input className="compare-search" type="search" aria-label={label.searchDiseases} placeholder={label.searchDiseases} value={diseaseQuery} onChange={event => setDiseaseQuery(event.target.value)} />
+          <div className="compare-choice-list">{matchingDiseases.map(d => <label key={d.id} className={selected.includes(d.id) ? 'is-selected' : ''}><input type="checkbox" checked={selected.includes(d.id)} disabled={!selected.includes(d.id) && selected.length >= 2} onChange={() => toggleDisease(d.id)} /><span>{diseaseName(d.id)}</span><small>{d.countries ?? '—'} {d.countries === 1 ? label.availableOne : label.available}</small></label>)}{!matchingDiseases.length && <p className="compare-no-matches">{label.noMatches}</p>}</div>
+        </fieldset>
+      </div>
+      <div className="compare-filter-panel"><fieldset className="compare-filter-group">
         <legend>{label.countries} <span>{countries.filter(code => areaByCode.has(code)).length}/4</span></legend>
         <p className="compare-filter-hint">{label.countryHint}</p>
         <input className="compare-search" type="search" aria-label={label.searchCountries} placeholder={label.searchCountries} value={countryQuery} onChange={event => { setCountryQuery(event.target.value); setExpandedAreas({}); }} />
@@ -211,7 +218,7 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
           })}
           {!matchingGroups.length && <p className="compare-no-matches">{label.noMatches}</p>}
         </div>
-      </fieldset>
+      </fieldset></div>
     </div>
     <div className="compare-results-heading"><div><p className="figure-kicker">{label.results}</p><h2 className="figure-title">{selected.map(diseaseName).join(' / ') || label.results}</h2></div><label className="chart-measure">{label.unit}<select aria-label={label.unit} value={unit} onChange={event => setUnit(event.target.value === 'rate' ? 'rate' : 'count')}><option value="count">{label.count}</option><option value="rate">{label.rate}</option></select></label></div>
     {unit === 'rate' && <p className="disease-trend-note">{label.missing}</p>}

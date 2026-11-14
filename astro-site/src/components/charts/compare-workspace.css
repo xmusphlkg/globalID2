@@ -1,9 +1,11 @@
+.compare-page { width: 100%; max-width: var(--page-tool-width); margin-inline: auto; padding: 2.5rem var(--page-gutter); }
 .compare-workspace { margin-top: 1.75rem; }
 .compare-method-note { display: grid; gap: .4rem; border-left: 3px solid rgb(var(--color-teal)); background: rgb(var(--bg-soft) / .5); padding: .9rem 1.1rem; }
 .compare-method-note p { max-width: 72rem; color: rgb(var(--text-muted)); font-size: .83rem; line-height: 1.65; }
 .compare-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.3rem 0 2rem; }
 .compare-filter-panel { min-width: 0; max-width: 100%; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); padding: 1rem; }
-.compare-filter-panel legend { max-width: 100%; overflow-wrap: anywhere; padding: 0 .45rem; color: rgb(var(--text-strong)); font-size: .95rem; font-weight: 650; }
+.compare-filter-group { min-width: 0; margin: 0; border: 0; padding: 0; }
+.compare-filter-group legend { width: 100%; max-width: 100%; overflow-wrap: anywhere; padding: 0 0 .45rem; color: rgb(var(--text-strong)); font-size: .95rem; line-height: 1.5; font-weight: 650; }
 .compare-filter-panel legend span { margin-left: .35rem; color: rgb(var(--color-teal)); font-size: .75rem; font-variant-numeric: tabular-nums; }
 .compare-filter-hint { margin-bottom: .65rem; color: rgb(var(--text-faint)); font-size: .73rem; }
 .compare-search { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; border: 1px solid rgb(var(--border)); background: rgb(var(--bg-soft)); color: rgb(var(--text-strong)); padding: .65rem .75rem; font-size: .83rem; outline-offset: 2px; }

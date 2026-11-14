@@ -99,6 +99,16 @@ for (const language of ['en', 'zh', 'fr'] as const) {
       return box.width > 0 && element.scrollWidth > element.clientWidth + 1;
     }).map(element => ({ className: element.className, width: element.clientWidth, scrollWidth: element.scrollWidth })));
     expect(widths).toEqual([]);
+    const headings = await page.locator('.compare-filter-panel').evaluateAll(panels => panels.map(panel => {
+      const frame = panel.getBoundingClientRect();
+      const title = panel.querySelector('legend')!.getBoundingClientRect();
+      return { top: title.top - frame.top, left: title.left - frame.left, right: frame.right - title.right };
+    }));
+    for (const heading of headings) {
+      expect(heading.top).toBeGreaterThanOrEqual(16);
+      expect(heading.left).toBeGreaterThanOrEqual(16);
+      expect(heading.right).toBeGreaterThanOrEqual(16);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.reload();
     await expect(panel.locator('input:checked')).toHaveCount(4);
