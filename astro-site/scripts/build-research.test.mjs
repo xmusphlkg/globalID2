@@ -56,7 +56,8 @@ test('collection rebuild skips articles without reading or replacing the complet
   const root = mkdtempSync(resolve(tmpdir(), 'gids-research-collections-'));
   const inherited = Object.fromEntries(['GIDS_RESEARCH_BUILD_PLAN', 'GIDS_PAGE_BUILD_PLAN',
     'GIDS_RESEARCH_PUBLICATION_ENABLED', 'GIDS_COUNTRY_BUILD_DIR', 'GIDS_CODE_BUILD_DIR',
-    'GIDS_REPORTS_BUILD_DIR'].map(key => [key, process.env[key]]));
+    'GIDS_REPORTS_BUILD_DIR', 'GIDS_ASTRO_RENDER_WORKERS', 'GIDS_RESEARCH_COLLECTION_RENDER_WORKERS']
+    .map(key => [key, process.env[key]]));
   try {
     const site = resolve(root, 'site'), snapshot = resolve(root, 'snapshot');
     const work = resolve(root, 'work'), destination = resolve(root, 'output'), cacheDir = resolve(root, 'article-cache');
@@ -81,6 +82,8 @@ test('collection rebuild skips articles without reading or replacing the complet
     process.env.GIDS_CODE_BUILD_DIR = resolve(root, 'outer-code-build');
     process.env.GIDS_COUNTRY_BUILD_DIR = resolve(root, 'outer-country-build');
     process.env.GIDS_REPORTS_BUILD_DIR = resolve(root, 'outer-report-build');
+    process.env.GIDS_ASTRO_RENDER_WORKERS = '0';
+    process.env.GIDS_RESEARCH_COLLECTION_RENDER_WORKERS = '2';
     let renderCount = 0;
     buildResearch({ site, project: root, snapshot, work, destination, cacheDir, scope: 'collections',
       run: (_cmd, _args, opts) => {
@@ -91,6 +94,7 @@ test('collection rebuild skips articles without reading or replacing the complet
         assert.equal(opts.env.GIDS_CODE_BUILD_DIR, undefined);
         assert.equal(opts.env.GIDS_COUNTRY_BUILD_DIR, undefined);
         assert.equal(opts.env.GIDS_REPORTS_BUILD_DIR, undefined);
+        assert.equal(opts.env.GIDS_ASTRO_RENDER_WORKERS, '2');
         assert.deepEqual(JSON.parse(readFileSync(opts.env.GIDS_RESEARCH_BUILD_PLAN, 'utf8')), { selected: [] });
         assert.equal(readFileSync(resolve(opts.cwd, 'src/pages/research/countries/[code].astro'), 'utf8'), 'current collection template');
         assert.equal(JSON.parse(readFileSync(resolve(opts.env.GIDS_SITE_DATA_ROOT, 'research/index.json'), 'utf8')).version, 'frozen');
@@ -102,12 +106,32 @@ test('collection rebuild skips articles without reading or replacing the complet
     assert.equal(readFileSync(resolve(destination, 'research/countries/fr/index.html'), 'utf8'), 'newly rendered collection');
     assert.equal(existsSync(resolve(destination, 'research/articles')), false);
     assert.equal(readFileSync(resolve(cacheDir, 'current.json'), 'utf8'), 'existing full cache pointer');
+    assert.equal(process.env.GIDS_ASTRO_RENDER_WORKERS, '0', 'collection override must stay inside the child environment');
     assert.deepEqual(JSON.parse(readFileSync(`${destination}.inputs.json`, 'utf8')), {
       schema: 1, scope: 'collections', article_pages_rendered: 0, snapshot,
     });
     assert.throws(() => buildResearch({ site, project: root, snapshot, work,
       destination: resolve(root, 'invalid'), scope: 'partial' }), /Unknown research build scope/);
     assert.equal(existsSync(resolve(root, 'invalid')), false);
+    process.env.GIDS_ASTRO_RENDER_WORKERS = '3';
+    for (const [scope, override, expected] of [
+      ['collections', undefined, '3'], ['collections', '', '3'], ['collections', '0', '0'],
+      ['full', '2', '3'], ['full', 'invalid-collection-only-setting', '3'],
+    ]) {
+      if (override === undefined) delete process.env.GIDS_RESEARCH_COLLECTION_RENDER_WORKERS;
+      else process.env.GIDS_RESEARCH_COLLECTION_RENDER_WORKERS = override;
+      buildResearch({ site, project: root, snapshot, work, scope,
+        destination: resolve(root, `workers-${scope}-${String(override)}`), run: (_cmd, _args, opts) => {
+          assert.equal(opts.env.GIDS_ASTRO_RENDER_WORKERS, expected);
+          mkdirSync(resolve(opts.cwd, 'dist'), { recursive: true });
+          return { status: 0 };
+        } });
+    }
+    for (const invalid of ['-1', '33', '2.5', 'invalid']) {
+      process.env.GIDS_RESEARCH_COLLECTION_RENDER_WORKERS = invalid;
+      assert.throws(() => buildResearch({ site, project: root, snapshot, work, scope: 'collections',
+        destination: resolve(root, 'invalid-workers') }), /GIDS_RESEARCH_COLLECTION_RENDER_WORKERS/);
+    }
   } finally {
     for (const [key, value] of Object.entries(inherited)) {
       if (value === undefined) delete process.env[key];

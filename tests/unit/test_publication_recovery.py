@@ -54,6 +54,37 @@ def test_environment_never_persists_credentials_and_replays_original_destination
         recovery.replay_environment(service, frozen)
 
 
+@pytest.mark.parametrize("collection_workers", [None, "2"])
+async def test_collection_render_workers_freeze_and_replay_without_changing_global_workers(monkeypatch, collection_workers):
+    from src.services.data_release_service import DataReleaseService
+    from src.services.data_release.process_runner import subprocess_environment
+
+    service = DataReleaseService()
+    config = SimpleNamespace(r2_account_id="account")
+    key = "GIDS_RESEARCH_COLLECTION_RENDER_WORKERS"
+    monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("GIDS_ASTRO_RENDER_WORKERS", "0")
+    monkeypatch.setattr(service, "_config", lambda: config)
+    monkeypatch.setattr(service, "_cloudflare_account_id", lambda: "account")
+    monkeypatch.setattr(service, "_env_file_values", lambda: {key: collection_workers} if collection_workers is not None else {})
+    captured = {}
+
+    async def command(*args, **kwargs):
+        captured.update(kwargs["env"])
+
+    monkeypatch.setattr(service, "_run_logged_command", command)
+    frozen = recovery.freeze_environment(service, {"job_id": "site-release", "name": "Site"})
+    assert frozen["environment"].get(key) == collection_workers
+    monkeypatch.setenv(key, "8")
+    monkeypatch.setenv("GIDS_ASTRO_RENDER_WORKERS", "4")
+    scoped = recovery.replay_environment(service, frozen)
+    await scoped._run_logged_command("task", env={})
+    child_env = subprocess_environment(captured)
+    assert child_env.get(key) == collection_workers
+    assert child_env["GIDS_ASTRO_RENDER_WORKERS"] == "0"
+    assert os.environ[key] == "8" and os.environ["GIDS_ASTRO_RENDER_WORKERS"] == "4"
+
+
 async def test_replayed_environment_parses_in_real_config_subprocess(monkeypatch):
     from src.core.config import DataReleaseSettings
     from src.services.data_release_service import DataReleaseService

@@ -62,6 +62,9 @@ export function prepareResearchWorkspace({ site, snapshot, work }) {
 
 export function buildResearch({ site, project, snapshot, destination, work, cacheDir, scope = 'full', run = spawnSync }) {
   if (!['full', 'collections'].includes(scope)) throw new Error(`Unknown research build scope: ${scope}`);
+  const collectionWorkers = scope === 'collections' ? process.env.GIDS_RESEARCH_COLLECTION_RENDER_WORKERS?.trim() : undefined;
+  if (collectionWorkers && (!Number.isInteger(Number(collectionWorkers)) || Number(collectionWorkers) < 0 || Number(collectionWorkers) > 32))
+    throw new Error('GIDS_RESEARCH_COLLECTION_RENDER_WORKERS must be an integer from 0 to 32');
   const started = performance.now();
   if (existsSync(destination)) throw new Error('Research build destination already exists');
   const prepared = prepareResearchWorkspace({ site, snapshot, work });
@@ -70,6 +73,7 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
   const env = { ...process.env, GIDS_RESEARCH_BUILD_DIR: prepared.buildRoot,
     GIDS_SITE_DATA_ROOT: prepared.data, GIDS_RESEARCH_PUBLIC_ROOT: resolve(snapshot, 'public/research'),
     GIDS_STATIC_RENDER: '1', GIDS_RESEARCH_BUILD_SCOPE: scope,
+    ...(collectionWorkers ? { GIDS_ASTRO_RENDER_WORKERS: collectionWorkers } : {}),
     PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN: process.env.GIDS_RESEARCH_STATIC_HOST === '1' ? '0' : '1' };
   delete env.GIDS_RESEARCH_BUILD_PLAN;
   delete env.GIDS_PAGE_BUILD_PLAN;
