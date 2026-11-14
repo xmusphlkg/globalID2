@@ -1851,7 +1851,17 @@ class DataReleaseService:
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Persist and reuse one release identity across retries of the same task."""
 
-        generated = await self._site_release_identity(deployment_branch)
+        recovery = getattr(self, "_publication_recovery", None)
+        if recovery:
+            # A verified prepared candidate still belongs to its original
+            # source commit. Initializing from the live checkout would erase
+            # successful upload checkpoints before the pipeline restores this
+            # frozen identity, causing an unnecessary second Pages deployment.
+            generated = dict(recovery["release_identity"])
+            if generated.get("deployment_branch") != deployment_branch:
+                raise ValueError("publication_recovery_identity_mismatch")
+        else:
+            generated = await self._site_release_identity(deployment_branch)
         async with get_database() as db:
             task_obj = (
                 await db.execute(
@@ -1861,6 +1871,8 @@ class DataReleaseService:
             if task_obj is None:
                 return generated, {}
             metadata = dict(task_obj.metadata_ or {})
+            if recovery:
+                return generated, dict(metadata.get("release_checkpoints") or {})
             existing = dict(metadata.get("release_identity") or {})
             if (
                 existing.get("source_commit") == generated.get("source_commit")
