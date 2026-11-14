@@ -6,6 +6,7 @@ import tempfile
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 from src.data.crawlers.br import BrazilSINANCrawler, SINANFile, _deduplicate_sinan_file_aliases
 from src.data.processors.br import BRMonthlyUpdater, BRUpdateFetchResult
@@ -64,13 +65,40 @@ async def collect(writer, *, source, months, history_csv, start_year=None, count
         crawler.session.close()
 
 
-def organize(artifacts, *, updater, source, months, history_csv, start_year=None, country_code="BR"):
+async def organize_async(artifacts, *, updater, **options):
+    """Isolate SINAN DBF parsing from publication and control-plane threads."""
+    from src.services.ingestion.process_organize import organize_in_process
+
+    fields = ("relative_path", "byte_size", "sha256", "kind", "source_url", "metadata_")
+    request = {
+        "artifacts": [{key: getattr(artifact, key) for key in fields} for artifact in artifacts],
+        "updater": {"country_code": updater.country_code, "source_name": updater.source_name,
+                    "output_csv": updater.output_csv},
+        "options": options,
+    }
+    return await organize_in_process(_organize_process, request)
+
+
+def _organize_process(request):
+    return organize(
+        [SimpleNamespace(**item) for item in request["artifacts"]],
+        updater=BRMonthlyUpdater(**request["updater"]),
+        parser_workers=1,
+        **request["options"],
+    )
+
+
+def organize(artifacts, *, updater, source, months, history_csv, start_year=None, country_code="BR", parser_workers=None):
     if updater.country_code != "BR":
         return _organize_subdivision(
             artifacts, updater=updater, months=months, history_csv=history_csv,
             country_code=updater.country_code,
         )
     crawler = BrazilSINANCrawler(save_raw=False)
+    if parser_workers is not None:
+        # One CPU parser per isolated process; multiple Python parsing threads
+        # contend for that process's GIL without increasing throughput.
+        crawler.max_workers = parser_workers
     files, paths, prior = [], {}, []
     logs = []
     try:

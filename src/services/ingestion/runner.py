@@ -35,7 +35,11 @@ async def run_surveillance(service, *, task, updater, connector, source, force, 
         await stages.finish(metrics={"artifact_count": len(artifacts), "artifact_bytes": sum(a.byte_size for a in artifacts)})
         await stages.transition("organize")
         await cancelled()
-        fetched = await asyncio.to_thread(connector.organize, artifacts, updater=updater, source=source, **(connector_options or {}))
+        organize_async = getattr(connector, "organize_async", None)
+        if organize_async is not None:
+            fetched = await organize_async(artifacts, updater=updater, source=source, **(connector_options or {}))
+        else:
+            fetched = await asyncio.to_thread(connector.organize, artifacts, updater=updater, source=source, **(connector_options or {}))
         organize_metrics = {"rows": len(fetched.rows), "series_rows": len(getattr(fetched, "series_rows", []))}
         source_audit = getattr(fetched, "source_audit", None)
         if source_audit:
