@@ -23,7 +23,9 @@ The daily update chart needs both data archives and the independent website
 changelog JSON. See the [acceptance record](docs/acceptance/DATA_UPDATES_20261114.md)
 for verified deployments, remaining source limitations and cleanup evidence.
 Papers generation cleanup is a separate maintenance operation with a minimum
-48-hour retention window and exact dependency checks; see the
+48-hour retention window and exact dependency checks. On 14 November, maintenance
+removed 838 old Pages deployments and 35,964 expired Papers objects (2.76 GB),
+while preserving the current publication and its dependencies. See the
 [retention guide](docs/operations/papers-generation-retention.md).
 
 Compare, seasonality and Situation selectors use the available geographic

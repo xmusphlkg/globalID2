@@ -11,6 +11,10 @@ This file records release-level changes to the GIDS application and its data ope
 - Isolate Brazil SINAN DBF parsing in bounded spawn processes so CPU work cannot
   starve the publication worker. Cancellation terminates and joins parsers and
   removes their temporary files; database writes remain in the parent.
+- Skip legacy article HTML caches when Research uses its independent publisher;
+  report workspace preparation and timing instead of leaving progress at zero.
+- Avoid decoding unused historical metadata in Japanese quality checks while
+  preserving quality decisions, stored provenance and revision snapshots.
 - Preserve completed deployment checkpoints when resuming a frozen publication
   after a source update, avoiding duplicate builds and Pages uploads.
 - Stop inheriting retired static HTML routes when composing a new Papers
