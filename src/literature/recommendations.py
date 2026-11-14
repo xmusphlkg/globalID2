@@ -130,7 +130,9 @@ def _read_cached_related(path: Path, identity: str, count: int) -> list | None:
         saved = json.loads(path.read_bytes())
         rows = saved["related"]
         checksum_input = {"records": saved["records"], "related": rows} if saved.get("schema") == 2 else rows
-        if (saved["identity"] == identity and isinstance(rows, list) and len(rows) == count
+        if (saved.get("schema") == 2
+                and saved.get("implementation") == hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+                and saved["identity"] == identity and isinstance(rows, list) and len(rows) == count
                 and all(isinstance(row, list) and all(isinstance(item, dict) for item in row) for row in rows)
                 and saved["sha256"] == hashlib.sha256(_json_bytes(checksum_input)).hexdigest()):
             return rows
@@ -164,7 +166,15 @@ def _incremental_related(path: Path, limit: int) -> dict[str, tuple[dict, list]]
                 or saved.get("sha256") != hashlib.sha256(_json_bytes({"records": records, "related": rows})).hexdigest()):
             return None
         result = {record["id"]: (record, row) for record, row in zip(records, rows)}
-        return result if len(result) == len(records) and all(isinstance(key, str) and key for key in result) else None
+        if len(result) != len(records) or any(not isinstance(key, str) or not key for key in result):
+            return None
+        for key, (_, row) in result.items():
+            if not isinstance(row, list) or len(row) > limit or any(not isinstance(item, dict) for item in row):
+                return None
+            winners = [str(item.get("article_id") or "") for item in row]
+            if len(set(winners)) != len(winners) or any(winner == key or winner not in result for winner in winners):
+                return None
+        return result
     except (OSError, ValueError, KeyError, TypeError):
         return None
 
@@ -199,35 +209,53 @@ def attach_related_research(
         "diseases": sorted(features[index].diseases), "topics": sorted(features[index].topics)}
         for index, article in enumerate(source)] if cacheable and cache_path is not None else None
     previous = _incremental_related(cache_path, limit) if records is not None and cache_path is not None else None
-    reusable: dict[str, list] = {}
+    changed: set[str] = set()
+    changed_by_disease: dict[str, set[int]] = defaultdict(set)
+    changed_by_topic: dict[str, set[int]] = defaultdict(set)
+    current_index = {key: index for index, key in enumerate(ids)}
     if previous is not None:
         current = {record["id"]: record for record in records}
         changed = {key for key in previous.keys() | current.keys()
                    if previous.get(key, ({}, []))[0].get("digest") != current.get(key, {}).get("digest")}
-        affected: set[int] = set()
-        for key in changed:
-            old = previous.get(key, ({}, []))[0]
-            new = current.get(key, {})
-            for disease in set(old.get("diseases") or []) | set(new.get("diseases") or []):
-                affected.update(by_disease.get(disease, ()))
-            for topic in set(old.get("topics") or []) | set(new.get("topics") or []):
-                affected.update(by_topic.get(topic, ()))
-        reusable = {record["id"]: previous[record["id"]][1] for index, record in enumerate(records)
-                    if index not in affected and record["id"] not in changed and record["id"] in previous}
-        print(f"  Related research cache: {len(reusable)} reused, {len(source) - len(reusable)} recomputed", flush=True)
+        for key in changed & current.keys():
+            index = current_index[key]
+            for disease in features[index].diseases:
+                changed_by_disease[disease].add(index)
+            for topic in features[index].topics:
+                changed_by_topic[topic].add(index)
     output: list[dict[str, Any]] = []
+    reused = merged = recomputed = 0
     for article_index, article in enumerate(source):
-        if ids[article_index] in reusable:
-            output.append({**article, "related_articles": reusable[ids[article_index]]})
-            continue
+        if article_index and article_index % 1000 == 0:
+            print(f"  Related research progress: {article_index}/{len(source)} ranked; "
+                  f"{reused} reused, {merged} merged, {recomputed} recomputed", flush=True)
         feature = features[article_index]
-        # The aboutness gate requires a shared disease or topic. All other
-        # articles have score zero, so their pairwise comparison is unnecessary.
         candidates: set[int] = set()
-        for disease in feature.diseases:
-            candidates.update(by_disease[disease])
-        for topic in feature.topics:
-            candidates.update(by_topic[topic])
+        prior = previous.get(ids[article_index]) if previous is not None and ids[article_index] not in changed else None
+        winners = [str(item.get("article_id") or "") for item in prior[1]] if prior is not None else []
+        if prior is not None and all(key in current_index and key not in changed for key in winners):
+            # For an unchanged target, unchanged old losers cannot outrank its
+            # intact top K. Only added/changed candidates can enter the list.
+            # A shorter old list already contains every positive-score winner.
+            for disease in feature.diseases:
+                candidates.update(changed_by_disease.get(disease, ()))
+            for topic in feature.topics:
+                candidates.update(changed_by_topic.get(topic, ()))
+            if not candidates:
+                output.append({**article, "related_articles": prior[1]})
+                reused += 1
+                continue
+            candidates.update(current_index[key] for key in winners)
+            merged += 1
+        else:
+            # A changed target or removed/changed winner may need an old loser
+            # to fill a vacancy, so retain the exhaustive indexed fallback.
+            # Disease/topic overlap remains the exact positive-score gate.
+            for disease in feature.diseases:
+                candidates.update(by_disease[disease])
+            for topic in feature.topics:
+                candidates.update(by_topic[topic])
+            recomputed += 1
         ranked: list[tuple[float, str, str, int]] = []
         for index in candidates:
             candidate = source[index]
@@ -263,6 +291,7 @@ def attach_related_research(
             })
         output.append({**article, "related_articles": related})
     if cache_path is not None:
+        print(f"  Related research cache: {reused} reused, {merged} merged, {recomputed} recomputed", flush=True)
         _write_cached_related(cache_path, identity, [article["related_articles"] for article in output], records=records, limit=limit)
     return output
 
