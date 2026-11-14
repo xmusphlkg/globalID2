@@ -23,7 +23,7 @@ from src.generation.site_data_views import (
 from src.generation.site_series_projection import apply_series_first_projection
 
 
-@pytest.mark.parametrize("module_name", ["rows", "windows", "disease_merge", "runtime", "formats"])
+@pytest.mark.parametrize("module_name", ["rows", "windows", "disease_merge", "runtime", "formats", "partitions"])
 def test_projection_fingerprint_tracks_extracted_module_changes(tmp_path, monkeypatch, module_name):
     module = getattr(direct_download_files, module_name)
     copied_source = tmp_path / f"{module_name}.py"
@@ -208,6 +208,29 @@ def test_build_writes_three_formats_for_every_partition(tmp_path) -> None:
     xlsx_path = tmp_path / current["files"]["xlsx"]["relative_path"]
     workbook = load_workbook(xlsx_path, read_only=True)
     assert workbook.sheetnames == ["records", "metadata"]
+
+
+def test_country_partition_worker_spawn_matches_serial_bytes(tmp_path) -> None:
+    from concurrent.futures import ProcessPoolExecutor
+    import multiprocessing
+
+    country = _context()["country_exports"][0]
+    base = "https://raw.githubusercontent.com/example/data/main"
+    serial_root, spawned_root = tmp_path / "serial", tmp_path / "spawned"
+    serial = direct_download_files._build_country_parts_task(
+        country, serial_root, base, 100_000, {},
+    )
+    with ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context("spawn")) as pool:
+        spawned = pool.submit(
+            direct_download_files._build_country_parts_task,
+            country, spawned_root, base, 100_000, {},
+        ).result(timeout=30)
+
+    assert serial["parts"] == spawned["parts"]
+    assert serial["row_count"] == spawned["row_count"]
+    serial_files = {path.relative_to(serial_root): path.read_bytes() for path in serial["paths"]}
+    spawned_files = {path.relative_to(spawned_root): path.read_bytes() for path in spawned["paths"]}
+    assert serial_files == spawned_files
 
 
 def test_full_refresh_skips_unchanged_datasets_and_rebuilds_only_changed_scope(

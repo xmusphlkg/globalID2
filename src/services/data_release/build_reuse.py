@@ -91,6 +91,8 @@ class BuildReuse:
             digest.update(b"present" if root.exists() else b"missing")
             paths = [path for path in self._files(root, outputs=outputs)
                      if path != self.root / "configs/literature/weekly_ai_reviews.json"
+                     and not (not outputs and path == self.astro / "src/data/changelog.ts")
+                     and not (not outputs and path.is_relative_to(self.astro / "public/site-data/updates"))
                      and not (outputs and path == self.astro / "dist/release.json")]
             # Warm receipts need metadata only. Hash independent cache misses on
             # multiple cores without making every warm lookup a thread-pool job.
@@ -120,7 +122,7 @@ class BuildReuse:
                 "cloudflare/surveillance-data/src", "cloudflare/surveillance-data/scripts",
                 "cloudflare/surveillance-data/package.json", "cloudflare/surveillance-data/package-lock.json",
                 "cloudflare/surveillance-data/wrangler.jsonc",
-                "astro-site/node_modules/.package-lock.json", "requirements.txt", "CHANGELOG.md", "data/system-settings.json")]
+                "astro-site/node_modules/.package-lock.json", "requirements.txt", "data/system-settings.json")]
                 + (sorted(path for path in self.astro.iterdir() if path.is_file()) if self.astro.is_dir() else [])),
             "configuration": _digest(self.configuration), "environment": _digest(environment),
             "node": self.node_version, "roots": [str(path) for path in self.outputs],

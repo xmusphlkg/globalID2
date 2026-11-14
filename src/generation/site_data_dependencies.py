@@ -30,6 +30,10 @@ def dependency_version() -> str:
     # unchanged disease could silently retain obsolete source/period selection.
     for name in (
         "generation/site_data_dependencies.py", "generation/site_data_export.py",
+        "generation/site_export/countries.py",
+        "generation/site_export/report_queries.py", "generation/site_export/knowledge_queries.py",
+        "generation/site_export/country_views.py", "generation/site_export/disease_views.py",
+        "generation/site_export/provenance_views.py",
         "generation/site_data_views.py", "generation/site_data_queries.py",
         "generation/site_series_projection.py", "generation/site_data_catalogue.py",
         "generation/site_data_about.py", "generation/country_projection_inputs.py",

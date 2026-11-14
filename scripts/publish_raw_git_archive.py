@@ -11,21 +11,26 @@ from __future__ import annotations
 
 import argparse
 import fcntl
-import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from pathlib import Path, PurePosixPath
-from typing import BinaryIO, Iterator
+from typing import Iterator
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from src.services.data_release.raw_archive import files as _files  # noqa: E402
+from src.services.data_release.raw_archive import transport as _transport  # noqa: E402
+from src.services.data_release.raw_archive.contracts import (  # noqa: E402
+    ArchiveResult, LargeFileRecord, PartRecord, RawArchiveError, _SyncItem,
+)
+from src.services.data_release.raw_archive.repository import GitRepository  # noqa: E402
+
 DEFAULT_SOURCE_DIR = ROOT / "data" / "raw"
 DEFAULT_REPOSITORY_DIR = ROOT / "exports" / "raw-git-archive"
 DEFAULT_REPO_URL = os.getenv("RAW_ARCHIVE__REPO_URL", "").strip()
@@ -70,93 +75,24 @@ TRANSIENT_PUSH_ERROR_MARKERS = (
 )
 
 
-class RawArchiveError(RuntimeError):
-    """Raised when the raw-data mirror cannot be updated safely."""
-
-
-@dataclass(frozen=True)
-class PartRecord:
-    path: str
-    size: int
-    sha256: str
-
-
-@dataclass(frozen=True)
-class LargeFileRecord:
-    path: str
-    size: int
-    sha256: str
-    parts: tuple[PartRecord, ...]
-
-
-@dataclass(frozen=True)
-class ArchiveResult:
-    mode: str
-    branch: str
-    source_file_count: int
-    source_bytes: int
-    added_file_count: int
-    updated_file_count: int
-    removed_storage_path_count: int
-    split_file_count: int
-    commit_count: int
-    changed: bool
-
-
-@dataclass(frozen=True)
-class _SyncItem:
-    source_path: str
-    storage_paths: tuple[str, ...]
-    stored_bytes: int
-
-
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(4 * 1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return _files._sha256_file(path)
 
 
 def _source_identity(path: Path) -> tuple[int, str]:
-    before = path.stat()
-    digest = _sha256_file(path)
-    after = path.stat()
-    if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
-        raise RawArchiveError(f"Source file changed while it was being read: {path}")
-    return after.st_size, digest
+    return _files._source_identity(path, sha256_file=_sha256_file)
 
 
 def _safe_relative_path(value: str) -> PurePosixPath:
-    path = PurePosixPath(value)
-    if path.is_absolute() or not path.parts or ".." in path.parts:
-        raise RawArchiveError(f"Unsafe archive path: {value!r}")
-    return path
+    return _files._safe_relative_path(value)
 
 
 def iter_source_files(source_dir: Path) -> Iterator[tuple[Path, Path]]:
-    """Yield source bytes, excluding authentication and private model requests."""
-
-    source = source_dir.resolve()
-    if not source.is_dir():
-        raise FileNotFoundError(f"Raw source directory does not exist: {source}")
-    files: list[tuple[Path, Path]] = []
-    for candidate in source.rglob("*"):
-        relative = candidate.relative_to(source)
-        if "_auth" in relative.parts or relative.parts[0] == "ai":
-            continue
-        if candidate.is_symlink():
-            raise RawArchiveError(f"Symlinks are forbidden in raw archives: {candidate}")
-        if candidate.is_file():
-            files.append((relative, candidate))
-    yield from sorted(files, key=lambda item: item[0].as_posix())
+    return _files.iter_source_files(source_dir)
 
 
 def _git_environment() -> dict[str, str]:
-    env = os.environ.copy()
-    env["GIT_TERMINAL_PROMPT"] = "0"
-    env["GIT_CONFIG_NOSYSTEM"] = "1"
-    return env
+    return _transport._git_environment()
 
 
 def _is_github_ssh_repo(repo_url: str) -> bool:
@@ -179,33 +115,10 @@ def configure_github_ssh_transport(repo_url: str) -> bool:
     return True
 
 
-def run_git(
-    args: list[str],
-    cwd: Path,
-    *,
-    timeout_seconds: float = DEFAULT_GIT_TIMEOUT_SECONDS,
-    check: bool = True,
-) -> subprocess.CompletedProcess[str]:
-    try:
-        result = subprocess.run(
-            ["git", *args],
-            cwd=cwd,
-            env=_git_environment(),
-            text=True,
-            capture_output=True,
-            timeout=timeout_seconds,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise RawArchiveError(
-            f"git {' '.join(args)} timed out after {timeout_seconds:g} seconds"
-        ) from exc
-    if check and result.returncode != 0:
-        detail = (result.stderr or result.stdout).strip()
-        raise RawArchiveError(
-            f"git {' '.join(args)} failed with exit code {result.returncode}: {detail}"
-        )
-    return result
+def run_git(args: list[str], cwd: Path, *, timeout_seconds: float = DEFAULT_GIT_TIMEOUT_SECONDS,
+            check: bool = True) -> subprocess.CompletedProcess[str]:
+    return _transport.run_git(args, cwd, timeout_seconds=timeout_seconds,
+        check=check, environment=_git_environment)
 
 
 def _is_transient_push_error(exc: RawArchiveError) -> bool:
@@ -213,434 +126,71 @@ def _is_transient_push_error(exc: RawArchiveError) -> bool:
     return any(marker in detail for marker in TRANSIENT_PUSH_ERROR_MARKERS)
 
 
-def _push_branch(
-    repository_dir: Path,
-    *,
-    timeout_seconds: float,
-    attempts: int = PUSH_ATTEMPTS,
-    retry_delay_seconds: float = PUSH_RETRY_DELAY_SECONDS,
-) -> None:
-    """Push the archive branch with bounded retries for transport failures.
+def _push_branch(repository_dir: Path, *, timeout_seconds: float,
+                 attempts: int = PUSH_ATTEMPTS, retry_delay_seconds: float = PUSH_RETRY_DELAY_SECONDS) -> None:
+    _transport._push_branch(repository_dir, timeout_seconds=timeout_seconds,
+        attempts=attempts, retry_delay_seconds=retry_delay_seconds, run_git=run_git,
+        branch=TARGET_BRANCH, is_transient_error=_is_transient_push_error, sleep=time.sleep)
 
-    Commits remain in the isolated archive checkout when all attempts fail.
-    The next publication run detects and pushes those pending commits before
-    scanning source files, so no generated archive work is lost.
-    """
 
-    if attempts < 1:
-        raise ValueError("Push attempts must be at least 1")
-    last_error: RawArchiveError | None = None
-    for attempt in range(1, attempts + 1):
-        try:
-            run_git(
-                ["push", "origin", f"HEAD:refs/heads/{TARGET_BRANCH}"],
-                repository_dir,
-                timeout_seconds=timeout_seconds,
-            )
-            return
-        except RawArchiveError as exc:
-            last_error = exc
-            if attempt == attempts or not _is_transient_push_error(exc):
-                raise
-            delay = retry_delay_seconds * (2 ** (attempt - 1))
-            print(
-                f"Raw archive push attempt {attempt}/{attempts} failed with a "
-                f"transient transport error; retrying in {delay:g} seconds.\n{exc}",
-                file=sys.stderr,
-                flush=True,
-            )
-            time.sleep(delay)
-    # The loop either returns or raises. Keep the guard explicit for type
-    # checkers and for safety if its control flow changes later.
-    raise RawArchiveError(f"Raw archive push failed: {last_error}")
+def _repository() -> GitRepository:
+    return GitRepository(run_git=run_git, push_branch=_push_branch, branch=TARGET_BRANCH, root=ROOT)
 
 
 def _configure_git(repository_dir: Path, timeout_seconds: float) -> None:
-    settings = (
-        ("user.name", "GlobalID Raw Archive"),
-        ("user.email", "raw-archive@globalid.invalid"),
-        ("core.compression", "1"),
-        ("pack.compression", "1"),
-        ("pack.window", "0"),
-        ("pack.depth", "0"),
-    )
-    for key, value in settings:
-        run_git(["config", key, value], repository_dir, timeout_seconds=timeout_seconds)
+    _repository().configure_git(repository_dir, timeout_seconds)
 
 
 def _working_tree_has_tracked_changes(repository_dir: Path, timeout_seconds: float) -> bool:
-    unstaged = run_git(
-        ["diff", "--quiet"], repository_dir, timeout_seconds=timeout_seconds, check=False
-    )
-    staged = run_git(
-        ["diff", "--cached", "--quiet"],
-        repository_dir,
-        timeout_seconds=timeout_seconds,
-        check=False,
-    )
-    if unstaged.returncode not in (0, 1) or staged.returncode not in (0, 1):
-        raise RawArchiveError("Unable to inspect the archive working tree")
-    return unstaged.returncode == 1 or staged.returncode == 1
+    return _repository().working_tree_has_tracked_changes(repository_dir, timeout_seconds)
 
 
 def _remote_branch_exists(repo_url: str, cwd: Path, timeout_seconds: float) -> bool:
-    result = run_git(
-        ["ls-remote", "--heads", "--", repo_url, f"refs/heads/{TARGET_BRANCH}"],
-        cwd,
-        timeout_seconds=timeout_seconds,
-    )
-    return bool(result.stdout.strip())
+    return _repository().remote_branch_exists(repo_url, cwd, timeout_seconds)
 
 
-def _switch_existing_clone_to_main(
-    repository_dir: Path,
-    *,
-    remote_has_main: bool,
-    timeout_seconds: float,
-) -> None:
-    branch = run_git(
-        ["symbolic-ref", "--short", "HEAD"],
-        repository_dir,
-        timeout_seconds=timeout_seconds,
-    ).stdout.strip()
-    if branch == TARGET_BRANCH:
-        return
-    if _working_tree_has_tracked_changes(repository_dir, timeout_seconds):
-        raise RawArchiveError(
-            f"Archive clone is on {branch!r} with tracked local changes; "
-            f"cannot switch safely to {TARGET_BRANCH!r}"
-        )
-
-    local_main = run_git(
-        ["show-ref", "--verify", "--quiet", f"refs/heads/{TARGET_BRANCH}"],
-        repository_dir,
-        timeout_seconds=timeout_seconds,
-        check=False,
-    )
-    if local_main.returncode == 0:
-        run_git(["checkout", TARGET_BRANCH], repository_dir, timeout_seconds=timeout_seconds)
-    elif remote_has_main:
-        run_git(
-            ["checkout", "-b", TARGET_BRANCH, f"origin/{TARGET_BRANCH}"],
-            repository_dir,
-            timeout_seconds=timeout_seconds,
-        )
-    else:
-        run_git(
-            ["checkout", "--orphan", TARGET_BRANCH],
-            repository_dir,
-            timeout_seconds=timeout_seconds,
-        )
+def _switch_existing_clone_to_main(repository_dir: Path, *, remote_has_main: bool,
+                                   timeout_seconds: float) -> None:
+    _repository().switch_existing_clone_to_main(repository_dir,
+        remote_has_main=remote_has_main, timeout_seconds=timeout_seconds)
 
 
 def _fast_forward_from_remote(repository_dir: Path, timeout_seconds: float) -> None:
-    remote_ref = f"origin/{TARGET_BRANCH}"
-    local_has_commit = run_git(
-        ["rev-parse", "--verify", "HEAD"],
-        repository_dir,
-        timeout_seconds=timeout_seconds,
-        check=False,
-    ).returncode == 0
-    if not local_has_commit:
-        run_git(["reset", "--mixed", remote_ref], repository_dir, timeout_seconds=timeout_seconds)
-        run_git(["checkout", "--", "."], repository_dir, timeout_seconds=timeout_seconds)
-        return
-
-    remote_is_ancestor = run_git(
-        ["merge-base", "--is-ancestor", remote_ref, "HEAD"],
-        repository_dir,
-        timeout_seconds=timeout_seconds,
-        check=False,
-    )
-    if remote_is_ancestor.returncode == 0:
-        return
-    local_is_ancestor = run_git(
-        ["merge-base", "--is-ancestor", "HEAD", remote_ref],
-        repository_dir,
-        timeout_seconds=timeout_seconds,
-        check=False,
-    )
-    if local_is_ancestor.returncode == 0:
-        run_git(["merge", "--ff-only", remote_ref], repository_dir, timeout_seconds=timeout_seconds)
-        return
-    raise RawArchiveError(
-        f"Local and remote {TARGET_BRANCH!r} histories diverged; refusing to overwrite either side"
-    )
+    _repository().fast_forward_from_remote(repository_dir, timeout_seconds)
 
 
 def _push_pending_commits(repository_dir: Path, timeout_seconds: float) -> None:
-    """Resume a commit whose previous network push was interrupted or rejected."""
-
-    pending = run_git(
-        ["rev-list", "--count", f"origin/{TARGET_BRANCH}..HEAD"],
-        repository_dir,
-        timeout_seconds=timeout_seconds,
-    )
-    if int(pending.stdout.strip() or "0") > 0:
-        _push_branch(
-            repository_dir,
-            timeout_seconds=timeout_seconds,
-        )
+    _repository().push_pending_commits(repository_dir, timeout_seconds)
 
 
-def _ensure_repository(
-    repository_dir: Path,
-    *,
-    repo_url: str,
-    push: bool,
-    timeout_seconds: float,
-) -> None:
-    repository_dir = repository_dir.resolve()
-    if push and not repo_url:
-        raise RawArchiveError("--push requires --repo-url or RAW_ARCHIVE__REPO_URL")
-
-    if (repository_dir / ".git").is_dir():
-        configured = run_git(
-            ["remote", "get-url", "origin"],
-            repository_dir,
-            timeout_seconds=timeout_seconds,
-            check=False,
-        )
-        if repo_url:
-            if configured.returncode != 0:
-                run_git(
-                    ["remote", "add", "origin", repo_url],
-                    repository_dir,
-                    timeout_seconds=timeout_seconds,
-                )
-            elif configured.stdout.strip() != repo_url:
-                # The URL may legitimately change between SSH and HTTPS. The
-                # explicit URL for this run is authoritative.
-                run_git(
-                    ["remote", "set-url", "origin", repo_url],
-                    repository_dir,
-                    timeout_seconds=timeout_seconds,
-                )
-
-        if push:
-            remote_has_main = _remote_branch_exists(repo_url, repository_dir, timeout_seconds)
-            if remote_has_main:
-                run_git(
-                    [
-                        "fetch",
-                        "origin",
-                        f"+refs/heads/{TARGET_BRANCH}:refs/remotes/origin/{TARGET_BRANCH}",
-                    ],
-                    repository_dir,
-                    timeout_seconds=timeout_seconds,
-                )
-            _switch_existing_clone_to_main(
-                repository_dir,
-                remote_has_main=remote_has_main,
-                timeout_seconds=timeout_seconds,
-            )
-            if remote_has_main:
-                _fast_forward_from_remote(repository_dir, timeout_seconds)
-                _push_pending_commits(repository_dir, timeout_seconds)
-        else:
-            branch = run_git(
-                ["symbolic-ref", "--short", "HEAD"],
-                repository_dir,
-                timeout_seconds=timeout_seconds,
-            ).stdout.strip()
-            if branch != TARGET_BRANCH:
-                raise RawArchiveError(
-                    f"Local-only archive clone is on {branch!r}; expected {TARGET_BRANCH!r}"
-                )
-        _configure_git(repository_dir, timeout_seconds)
-        return
-
-    if repository_dir.exists() and any(repository_dir.iterdir()):
-        raise RawArchiveError(f"Archive repository directory is not empty: {repository_dir}")
-    repository_dir.mkdir(parents=True, exist_ok=True)
-
-    remote_has_main = push and _remote_branch_exists(repo_url, ROOT, timeout_seconds)
-    if remote_has_main:
-        repository_dir.rmdir()
-        run_git(
-            [
-                "clone",
-                "--branch",
-                TARGET_BRANCH,
-                "--single-branch",
-                "--",
-                repo_url,
-                str(repository_dir),
-            ],
-            ROOT,
-            timeout_seconds=timeout_seconds,
-        )
-    else:
-        run_git(["init", "--quiet"], repository_dir, timeout_seconds=timeout_seconds)
-        run_git(
-            ["checkout", "--orphan", TARGET_BRANCH],
-            repository_dir,
-            timeout_seconds=timeout_seconds,
-        )
-        if push:
-            run_git(
-                ["remote", "add", "origin", repo_url],
-                repository_dir,
-                timeout_seconds=timeout_seconds,
-            )
-    _configure_git(repository_dir, timeout_seconds)
+def _ensure_repository(repository_dir: Path, *, repo_url: str, push: bool,
+                       timeout_seconds: float) -> None:
+    _repository().ensure_repository(repository_dir, repo_url=repo_url,
+        push=push, timeout_seconds=timeout_seconds)
 
 
 def _atomic_copy(source: Path, destination: Path, *, size: int, sha256: str) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            prefix=f".{destination.name}.sync-", dir=destination.parent, delete=False
-        ) as handle:
-            temporary = Path(handle.name)
-            with source.open("rb") as source_handle:
-                shutil.copyfileobj(source_handle, handle, length=4 * 1024 * 1024)
-            handle.flush()
-            os.fsync(handle.fileno())
-        if temporary.stat().st_size != size or _sha256_file(temporary) != sha256:
-            raise RawArchiveError(f"Source changed while it was copied: {source}")
-        shutil.copystat(source, temporary)
-        temporary.replace(destination)
-    except Exception:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
-        raise
+    _files._atomic_copy(source, destination, size=size, sha256=sha256, sha256_file=_sha256_file)
 
 
-@contextmanager
 def _bounded_copies(workers: int):
-    """Keep at most two copy jobs per worker; join before metadata or Git writes."""
-    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="raw-copy") as pool:
-        pending = set()
-
-        def drain():
-            nonlocal pending
-            done, pending = wait(pending, return_when=FIRST_COMPLETED)
-            for future in done:
-                future.result()
-
-        def copy(source, destination, *, size, sha256):
-            if len(pending) >= 2 * workers:
-                drain()
-            future = pool.submit(_atomic_copy, source, destination, size=size, sha256=sha256)
-            pending.add(future)
-            return future
-
-        try:
-            yield copy
-            while pending:
-                drain()
-        finally:
-            # Running atomic copies finish while the repository lock is held.
-            # A failed copy prevents every metadata write, commit and push.
-            for future in pending:
-                future.cancel()
+    return _files._bounded_copies(workers, copy_file=_atomic_copy)
 
 
-class _PartWriter:
+class _PartWriter(_files._PartWriter):
     def __init__(self, directory: Path, relative_prefix: PurePosixPath):
-        self.directory = directory
-        self.relative_prefix = relative_prefix
-        self.handle: BinaryIO | None = None
-        self.digest: hashlib._Hash | None = None
-        self.size = 0
-        self.index = 0
-        self.parts: list[PartRecord] = []
-
-    def _open(self) -> None:
-        self.index += 1
-        self.handle = (self.directory / f"part-{self.index:04d}").open("wb")
-        self.digest = hashlib.sha256()
-        self.size = 0
-
-    def _close(self) -> None:
-        if self.handle is None or self.digest is None:
-            return
-        self.handle.flush()
-        os.fsync(self.handle.fileno())
-        self.handle.close()
-        name = f"part-{self.index:04d}"
-        self.parts.append(
-            PartRecord(
-                path=(self.relative_prefix / name).as_posix(),
-                size=self.size,
-                sha256=self.digest.hexdigest(),
-            )
-        )
-        self.handle = None
-        self.digest = None
-        self.size = 0
-
-    def write(self, data: bytes) -> None:
-        view = memoryview(data)
-        while view:
-            if self.handle is None:
-                self._open()
-            available = PART_BYTES - self.size
-            piece = view[:available]
-            written = self.handle.write(piece)
-            if written is None:
-                written = len(piece)
-            assert self.digest is not None
-            self.digest.update(piece[:written])
-            self.size += written
-            view = view[written:]
-            if self.size == PART_BYTES:
-                self._close()
-
-    def close(self) -> tuple[PartRecord, ...]:
-        self._close()
-        return tuple(self.parts)
+        super().__init__(directory, relative_prefix, part_bytes=PART_BYTES)
 
 
 def _parts_are_current(repository_dir: Path, record: LargeFileRecord) -> bool:
-    if not record.parts:
-        return False
-    for part in record.parts:
-        relative = _safe_relative_path(part.path)
-        path = repository_dir.joinpath(*relative.parts)
-        if (
-            not path.is_file()
-            or path.stat().st_size != part.size
-            or _sha256_file(path) != part.sha256
-        ):
-            return False
-    return sum(part.size for part in record.parts) == record.size
+    return _files._parts_are_current(repository_dir, record,
+        sha256_file=_sha256_file, safe_relative_path=_safe_relative_path)
 
 
-def _split_file(
-    source: Path,
-    repository_dir: Path,
-    relative: PurePosixPath,
-    *,
-    size: int,
-    sha256: str,
-) -> LargeFileRecord:
-    split_relative = DATA_ROOT / PurePosixPath(f"{relative.as_posix()}.parts")
-    destination = repository_dir.joinpath(*split_relative.parts)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = Path(tempfile.mkdtemp(prefix=f".{destination.name}.sync-", dir=destination.parent))
-    writer = _PartWriter(temporary, split_relative)
-    combined_digest = hashlib.sha256()
-    combined_size = 0
-    try:
-        with source.open("rb") as handle:
-            for block in iter(lambda: handle.read(4 * 1024 * 1024), b""):
-                combined_digest.update(block)
-                combined_size += len(block)
-                writer.write(block)
-        parts = writer.close()
-        if combined_size != size or combined_digest.hexdigest() != sha256:
-            raise RawArchiveError(f"Source changed while it was split: {source}")
-        if destination.exists():
-            shutil.rmtree(destination)
-        temporary.rename(destination)
-        return LargeFileRecord(path=relative.as_posix(), size=size, sha256=sha256, parts=parts)
-    except Exception:
-        writer.close()
-        shutil.rmtree(temporary, ignore_errors=True)
-        raise
+def _split_file(source: Path, repository_dir: Path, relative: PurePosixPath,
+                *, size: int, sha256: str) -> LargeFileRecord:
+    return _files._split_file(source, repository_dir, relative, size=size, sha256=sha256,
+        data_root=DATA_ROOT, writer_factory=_PartWriter)
 
 
 def _load_large_file_index(repository_dir: Path) -> dict[str, LargeFileRecord]:

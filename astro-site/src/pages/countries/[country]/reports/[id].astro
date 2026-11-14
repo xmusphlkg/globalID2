@@ -204,7 +204,7 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
   seo={reportSeo}
   structuredData={reportStructuredData}
   breadcrumbs={[
-    { label: 'Countries', labelZh: '国家/地区', labelFr: 'Pays', href: localeHref('/countries/') },
+    { label: 'Geographic areas', labelZh: '区域', labelFr: 'Zones géographiques', href: localeHref('/countries/') },
     { label: countryNameEn, labelZh: countryNameZh, labelFr: countryNameFr, href: localeHref(`/countries/${country}/`) },
     { label: 'Reports', labelZh: '报告', labelFr: 'Rapports', href: localeHref(`/countries/${country}/reports/`) },
     { label: `#${id}` },
@@ -259,7 +259,7 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
               </div>
             )}
             <div class="academic-meta-item">
-              <div class="academic-meta-label">{zh ? '国家/地区' : fr ? 'Pays/région' : 'Country'}</div>
+              <div class="academic-meta-label">{zh ? '区域' : fr ? 'Zone' : 'Area'}</div>
               <div class="academic-meta-value text-sm font-medium">{zh ? countryNameZh : fr ? countryNameFr : countryNameEn}</div>
             </div>
             <div class="academic-meta-item">
@@ -312,8 +312,8 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
             title="Download Underlying Dataset"
             titleFr="Télécharger le jeu de données sous-jacent"
             initialLanguage={locale}
-            descriptionEn="Download the country dataset used to generate this report, including source metadata."
-            descriptionZh="下载生成本报告所依据的国家数据集，并附带数据源信息。"
+            descriptionEn="Download the area dataset used to generate this report, including source metadata."
+            descriptionZh="下载生成本报告所依据的区域数据集，并附带数据源信息。"
             descriptionFr="Téléchargez le jeu de données national utilisé pour générer ce rapport, avec ses métadonnées de source."
           />
         )}

@@ -79,7 +79,7 @@ type FeedGroup = {
 };
 const feedGroupSpecs: Array<Omit<FeedGroup, 'feeds'>> = [
   { scopes: ['diseases'], title: 'By disease', titleZh: '按疾病', titleFr: 'Par maladie' },
-  { scopes: ['countries'], title: 'By country or region', titleZh: '按国家或地区', titleFr: 'Par pays ou région' },
+  { scopes: ['countries'], title: 'By area', titleZh: '按区域或地区', titleFr: 'Par zone ou région' },
   { scopes: ['topics'], title: 'By public-health topic', titleZh: '按公共卫生主题', titleFr: 'Par thème de santé publique' },
   { scopes: ['study-types'], title: 'By study type', titleZh: '按研究类型', titleFr: 'Par type d’étude' },
   { scopes: ['collections', 'peer-review'], title: 'Reviews, guidelines & publication status', titleZh: '综述、指南与发表状态', titleFr: 'Revues, recommandations et statut de publication', open: true },
@@ -123,7 +123,7 @@ const lastUpdatedFr = data.last_updated
 const itemList = {
   '@type': 'CollectionPage',
   name: pick('GIDS Research Radar', 'GIDS 研究雷达', 'Radar de recherche GIDS'),
-  description: pick('New infectious disease research connected to disease and country surveillance context.', '与疾病和国家监测背景关联的传染病研究。', 'Nouvelles recherches sur les maladies infectieuses reliées au contexte de surveillance des maladies et des pays.'),
+  description: pick('New infectious disease research connected to disease and area surveillance context.', '与疾病和区域监测背景关联的传染病研究。', 'Nouvelles recherches sur les maladies infectieuses reliées au contexte de surveillance des maladies et des zones.'),
   mainEntity: {
     '@type': 'ItemList',
     numberOfItems: articles.length,
@@ -139,11 +139,11 @@ const itemList = {
 
 <ReportLayout
   title={pick('Research Radar', '研究雷达', 'Radar de recherche')}
-  description={pick('Track newly published infectious disease research across journals, diseases, countries, and public-health topics.', '按期刊、疾病、国家和公共卫生主题追踪最新发表的传染病研究。', 'Suivez les nouvelles recherches sur les maladies infectieuses par revue, maladie, pays et thème de santé publique.')}
+  description={pick('Track newly published infectious disease research across journals, diseases, areas, and public-health topics.', '按期刊、疾病、区域和公共卫生主题追踪最新发表的传染病研究。', 'Suivez les nouvelles recherches sur les maladies infectieuses par revue, maladie, zone et thème de santé publique.')}
   initialLanguage={locale}
   seo={{
     title: pick('Research Radar | GIDS', '研究雷达 | GIDS', 'Radar de recherche | GIDS'),
-    description: pick('Track newly published infectious disease research across journals, diseases, countries, and public-health topics.', '按期刊、疾病、国家和公共卫生主题追踪最新发表的传染病研究。', 'Suivez les nouvelles recherches sur les maladies infectieuses par revue, maladie, pays et thème de santé publique.'),
+    description: pick('Track newly published infectious disease research across journals, diseases, areas, and public-health topics.', '按期刊、疾病、区域和公共卫生主题追踪最新发表的传染病研究。', 'Suivez les nouvelles recherches sur les maladies infectieuses par revue, maladie, zone et thème de santé publique.'),
     locale,
     canonicalPath: `${prefix}/research/`,
     alternatePaths: buildAlternatePaths(`${prefix}/research/`, locale),
@@ -180,7 +180,7 @@ const itemList = {
             <div><dt>{pick('Historical baseline', '历史基线')}</dt><dd>{metrics.historical_baseline_articles ?? historicalBaselineAll.length}</dd></div>
             <div><dt>{pick('Papers · 7 days', '近 7 天论文')}</dt><dd>{metrics.papers_last_7_days ?? 0}</dd></div>
             <div><dt>{pick('Diseases · 7 days', '近 7 天疾病')}</dt><dd>{metrics.diseases_last_7_days ?? 0}</dd></div>
-            <div><dt>{pick('Countries · 7 days', '近 7 天国家')}</dt><dd>{metrics.countries_last_7_days ?? 0}</dd></div>
+            <div><dt>{pick('Areas · 7 days', '近 7 天区域')}</dt><dd>{metrics.countries_last_7_days ?? 0}</dd></div>
             <div><dt>{pick('Reviews & guidelines · 7 days', '近 7 天综述与指南')}</dt><dd>{metrics.reviews_and_guidelines_last_7_days ?? 0}</dd></div>
             <div><dt>{pick('Title-linked records · estimated', '标题关联文献 · 估算', 'Liens par titre · estimation')}</dt><dd>{metrics.title_estimated_related_records ?? 0}</dd></div>
           </dl>
@@ -352,7 +352,7 @@ const itemList = {
       <form class="research-filters" role="search" aria-label={pick('Filter research articles', '筛选研究文献')} data-research-filters data-research-locale={locale}>
         <label class="search-field"><span class="sr-only">{pick('Search', '搜索')}</span><input class="site-control-input" id="research-search" type="search" placeholder={pick('Search title, disease, journal, or topic', '搜索标题、疾病、期刊或主题')} /></label>
         <label><span>{pick('Disease', '疾病', 'Maladie')}</span><select class="site-control-input" id="research-disease"><option value="">{pick('All diseases', '全部疾病', 'Toutes les maladies')}</option>{diseases.map((item: any) => <option value={item.disease_id.toLowerCase()}>{localizedDiseaseName(item, locale)}</option>)}</select></label>
-        <label><span>{pick('Country', '国家')}</span><select class="site-control-input" id="research-country"><option value="">{pick('All countries', '全部国家')}</option>{countries.map((item: any) => <option value={item.code.toLowerCase()}>{countryName(item)}</option>)}</select></label>
+        <label><span>{pick('Area', '区域')}</span><select class="site-control-input" id="research-country"><option value="">{pick('All areas', '全部区域')}</option>{countries.map((item: any) => <option value={item.code.toLowerCase()}>{countryName(item)}</option>)}</select></label>
         <label><span>{pick('Study type', '研究类型')}</span><select class="site-control-input" id="research-study"><option value="">{pick('All study types', '全部研究类型')}</option>{studyTypes.map((item) => <option value={item.toLowerCase()}>{localizedStudyType(locale, item)}</option>)}</select></label>
         <label><span>{pick('Topic', '主题')}</span><select class="site-control-input" id="research-topic"><option value="">{pick('All topics', '全部主题')}</option>{topics.map((item) => <option value={String(item).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}>{localizedResearchTopic(locale, item)}</option>)}</select></label>
         <label><span>{pick('Pathogen type', '病原体类型')}</span><select class="site-control-input" id="research-pathogen-type"><option value="">{pick('All pathogen types', '全部病原体类型')}</option>{pathogenTypes.map((item: any) => <option value={item.id}>{localizedResearchFacet(locale, item.name)}</option>)}</select></label>

@@ -153,7 +153,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
   seo={countrySeo}
   initialLanguage={locale}
   breadcrumbs={[
-    { label: 'Countries and Regions', labelZh: '国家/地区', labelFr: 'Pays et régions', href: localeHref('/countries/') },
+    { label: 'Geographic Areas', labelZh: '区域', labelFr: 'Zones géographiques', href: localeHref('/countries/') },
     { label: countryName, labelZh: countryNameZh, labelFr: countryNameFr },
   ]}
 >
@@ -162,7 +162,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
       <div class="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
         <div class="space-y-4">
           <p class="academic-kicker">
-            {zh ? '国家/地区监测简报 | 传染病监测概览' : fr ? 'Brief de surveillance par pays/région | Profil des maladies infectieuses' : 'Country/Region Surveillance Brief | Infectious disease profile'}
+            {zh ? '区域监测简报 | 传染病监测概览' : fr ? 'Brief de surveillance par zone/région | Profil des maladies infectieuses' : 'Area Surveillance Brief | Infectious disease profile'}
           </p>
           <div class="flex items-center gap-3">
             <CountryFlag
@@ -184,7 +184,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
             href={localeHref(`/subscribe/?country=${encodeURIComponent(String(countryData?.country_code ?? fallbackCountryCode).toUpperCase())}`)}
             class="site-action-secondary inline-flex items-center px-4 py-2 rounded-none border text-sm font-semibold transition-all"
           >
-            {zh ? '关注此国家/地区' : fr ? 'Suivre ce pays ou cette région' : 'Follow this country or region'}
+            {zh ? '关注此区域' : fr ? 'Suivre cette zone' : 'Follow this area'}
           </a>
         </div>
 
@@ -206,7 +206,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     </section>
 
     <PageAnchorNav locale={locale} items={[
-      ...(childJurisdictions.length > 0 ? [{ href: '#subnational-data', label: 'Subnational data', labelZh: '分省数据', labelFr: 'Données infranationales' }] : []),
+      ...(childJurisdictions.length > 0 ? [{ href: '#subnational-data', label: 'Administrative subdivisions', labelZh: '下级行政单位', labelFr: 'Subdivisions administratives' }] : []),
       { href: '#indicators', label: 'Indicators', labelZh: '核心指标', labelFr: 'Indicateurs' },
       { href: '#trends', label: 'Trends', labelZh: '趋势', labelFr: 'Tendances' },
       { href: '#disease-directory', label: 'Diseases', labelZh: '疾病目录', labelFr: 'Maladies' },
@@ -215,8 +215,8 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     ]} />
 
     <section id="sources" class="figure-panel scroll-mt-24">
-      <p class="figure-kicker">{zh ? '国家/地区简介' : fr ? 'Brief du pays/de la région' : 'Country/Region Brief'}</p>
-      <h2 class="figure-title">{zh ? '如何解读本国家/地区监测画像。' : fr ? 'Comment interpréter ce profil de surveillance.' : 'How to interpret this surveillance profile.'}</h2>
+      <p class="figure-kicker">{zh ? '区域简介' : fr ? 'Brief de la zone' : 'Area Brief'}</p>
+      <h2 class="figure-title">{zh ? '如何解读本区域监测画像。' : fr ? 'Comment interpréter ce profil de surveillance.' : 'How to interpret this surveillance profile.'}</h2>
       <div class="mt-4"><SurveillanceCountryContext client:load dataUrl={countrySummaryUrl} language={locale} /></div>
     </section>
 
@@ -224,9 +224,9 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
       <section id="subnational-data" class="figure-panel scroll-mt-24">
         <p class="figure-kicker">{zh ? '分层浏览' : fr ? 'Accès hiérarchique' : 'Hierarchical access'}</p>
         <h2 class="figure-title">
-          {zh ? `${countryNameZh}分省数据` : fr ? `Jeux de données infranationaux de ${countryNameFr}` : `${countryName} subnational datasets`}
+          {zh ? `${countryNameZh}下级行政单位数据` : fr ? `Jeux de données des subdivisions de ${countryNameFr}` : `${countryName} subdivision datasets`}
         </h2>
-        <p class="figure-caption mt-2">{zh ? '分省序列独立展示，不与全国序列叠加，也不进入国家级排行和全球汇总。' : fr ? 'Les séries infranationales restent séparées des séries nationales, des classements et des totaux mondiaux.' : 'Subnational series remain separate from national series, rankings and global totals.'}</p>
+        <p class="figure-caption mt-2">{zh ? '下级行政单位序列独立展示，不与上级区域序列叠加，也不进入上级区域排行和全球汇总。' : fr ? 'Les séries des subdivisions restent séparées des séries des zones parentes, des classements et des totaux mondiaux.' : 'Subdivision series remain separate from parent-area series, rankings and global totals.'}</p>
         <div class="mt-5"><SurveillanceDirectory client:visible language={locale} parentCode={fallbackCountryCode} /></div>
       </section>
     )}

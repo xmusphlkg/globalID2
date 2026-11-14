@@ -80,10 +80,10 @@ def release(tmp_path, monkeypatch):
         async def _sync_subscription_options_if_needed(self, *args, **kwargs):
             return False
 
-        def _write_site_release_manifest(self, identity):
+        def _write_site_release_manifest(self, identity, *, astro_dir=None):
             from src.generation.site_data_writer import _write_if_changed
             import json
-            _write_if_changed(astro / "dist/release.json", json.dumps(identity).encode())
+            _write_if_changed((astro_dir or astro) / "dist/release.json", json.dumps(identity).encode())
             return identity
 
         async def _run_logged_command(self, task_uuid, *, title, **kwargs):
@@ -103,7 +103,7 @@ def release(tmp_path, monkeypatch):
                 for name in ("countries/test.json", "diseases/test.json", "manifest.json"):
                     put(tmp_path / "exports/site-downloads" / name)
             if title == "Build Astro Site":
-                put(astro / "dist/index.html", "<html>test</html>")
+                put(kwargs["cwd"] / "dist/index.html", "<html>test</html>")
 
     runtime = ReleasePipelineRuntime(manager, lambda: SimpleNamespace(raw_archive=SimpleNamespace(enabled=False, repo_url="")),
                                      db, object, tmp_path, astro, "main", "main", 60, 60, 60, 60,
@@ -124,6 +124,22 @@ async def test_static_content_release_never_acknowledges_or_reprojects_surveilla
     r.commit.assert_not_awaited()
     statement = r.database.execute.await_args.args[0]
     assert "publish_dirty.line !=" in str(statement)
+
+
+async def test_source_edit_during_export_is_rejected_before_expensive_build(release):
+    original = release.service._run_logged_command
+
+    async def command(*args, title, **kwargs):
+        await original(*args, title=title, **kwargs)
+        if title == 'Generate Site Data':
+            release.put(release.root / 'src/renderer.py', 'version = 2')
+
+    release.service._run_logged_command = command
+    with pytest.raises(ValueError, match='publication_source_changed'):
+        await execute_release_task(release.service, release.task, runtime=release.runtime)
+    assert 'Build Astro Site' not in release.service.commands
+    assert 'Deploy Cloudflare Pages' not in release.service.commands
+    release.commit.assert_not_awaited()
 
 
 async def test_migration_can_publish_without_dispatching_subscriptions(release, monkeypatch):
@@ -214,24 +230,124 @@ async def test_code_only_does_not_export_publish_downloads_or_ack_pending(releas
     r.task.task_uuid = "code-release"
     r.task.input_data = {"release_job_id": "site-release", "code_only": True}
     r.service.identity = {**r.service.identity, "release_id": "code-release"}
+    r.service._r2_reports_enabled = lambda _job: True
     await execute_release_task(r.service, r.task, runtime=r.runtime)
     assert "Build Astro Site" in r.service.commands
     assert "Generate Site Data" not in r.service.commands
     assert "Export Situation" not in r.service.commands
     assert "Publish Partitioned Data Downloads" not in r.service.commands
+    assert "Split Reports Bundle" in r.service.commands
+    assert "Publish Reports Bundle to R2" not in r.service.commands
     r.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_code_only_rejects_unpublished_local_snapshot(release):
+async def test_code_only_uses_retained_snapshot_without_overwriting_background_data(release):
     r = release
     await execute_release_task(r.service, r.task, runtime=r.runtime)
     r.put(r.astro / "src/data/meta.json", "unpublished changes")
     r.task.input_data = {"release_job_id": "site-release", "code_only": True}
     r.service.commands.clear()
-    with pytest.raises(RuntimeError, match="normal data release"):
+    await execute_release_task(r.service, r.task, runtime=r.runtime)
+    private = r.root / "exports/code-workspaces" / r.task.task_uuid / "astro-site"
+    assert (private / "src/data/meta.json").read_text() == "{}"
+    assert (r.astro / "src/data/meta.json").read_text() == "unpublished changes"
+    assert "Generate Site Data" not in r.service.commands
+
+
+async def test_changed_build_input_prevents_all_external_publication(release):
+    r = release
+    run = r.service._run_logged_command
+
+    async def mutate(task_uuid, *, title, **kwargs):
+        await run(task_uuid, title=title, **kwargs)
+        if title == "Build Astro Site":
+            r.put(r.astro / "src/data/meta.json", "background changed while rendering")
+
+    r.service._run_logged_command = mutate
+    with pytest.raises(RuntimeError, match="changed during rendering"):
         await execute_release_task(r.service, r.task, runtime=r.runtime)
-    assert not r.service.commands
+    assert "Deploy Cloudflare Pages" not in r.service.commands
+    assert "Publish Partitioned Data Downloads" not in r.service.commands
+    assert not (r.root / "exports/successful-site-release.json").exists()
+    r.commit.assert_not_awaited()
+
+
+async def test_code_only_retry_keeps_private_build_and_does_not_read_new_producer_data(release):
+    r = release
+    await execute_release_task(r.service, r.task, runtime=r.runtime)
+    r.task.task_uuid = "code-retry"
+    r.task.input_data = {"release_job_id": "site-release", "code_only": True}
+    r.service.identity = {**r.service.identity, "release_id": "code-retry"}
+    r.service.failure = "Deploy Cloudflare Pages"
+    with pytest.raises(RuntimeError, match="injected Deploy"):
+        await execute_release_task(r.service, r.task, runtime=r.runtime)
+    private = r.root / "exports/code-workspaces/code-retry/astro-site"
+    inode = (private / "src/data/meta.json").stat().st_ino
+    r.put(r.astro / "src/data/meta.json", "producer advances while publication retries")
+    r.put(r.root / "exports/site-downloads/countries/test.json", "independent newer downloads")
+    r.put(r.root / "exports/reports-site/new-report.html", "independent newer report")
+    r.service.failure = None
+    r.service.commands.clear()
+    await execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert (private / "src/data/meta.json").stat().st_ino == inode
+    assert "Build Astro Site" not in r.service.commands
+    assert "Generate Site Data" not in r.service.commands
+    assert (r.astro / "src/data/meta.json").read_text() == "producer advances while publication retries"
+    assert (r.root / "exports/reports-site/new-report.html").read_text() == "independent newer report"
+
+
+@pytest.mark.parametrize('tampered_file', ['papers-prepared.json', '.publication/starting-baseline.json'])
+async def test_papers_is_frozen_before_global_recovery_and_any_upload(release, monkeypatch, tampered_file):
+    import json
+    from src.services.data_release import pipeline, publication_recovery, shared_assets
+    from src.services.data_release.papers_r2 import R2PapersConfig
+    from src.services.data_release.surveillance_publish import capture_surveillance_baseline, _starting_baseline
+    r = release
+    r.put(r.root / 'scripts/publish_papers_r2.py', '# publisher entry point')
+    r.task.input_data['publication_plan'] = {'site_baseline': None}
+    r.service._config = lambda: SimpleNamespace(timezone='UTC', r2_papers_bucket='papers',
+        r2_papers_public_base_url='https://papers.test', r2_access_key_id='id',
+        r2_secret_access_key='secret', r2_endpoint_url='', r2_account_id='account')
+    r.service._r2_papers_enabled = lambda _job: True
+    r.service._publish_papers_r2_command = lambda **_kwargs: ['publish-papers']
+    monkeypatch.setattr(shared_assets, 'publish_shared_assets', AsyncMock())
+    logged = r.service._run_logged_command
+    candidate_run = r.root / 'exports/site-research-runs' / r.task.task_uuid / r.service.identity['release_id']
+    config = R2PapersConfig('account', 'papers', 'id', 'secret')
+    prefix = 'site-data/research-publication'
+
+    async def commands(task_uuid, *, title, **kwargs):
+        await logged(task_uuid, title=title, **kwargs)
+        if title == 'Capture Research Publication Baseline':
+            # Exercise the real on-disk contract, not a hand-created filename.
+            capture_surveillance_baseline(candidate_run, config, prefix=prefix,
+                client=SimpleNamespace(get_object=lambda _key: None))
+            assert _starting_baseline(candidate_run, config, prefix) == (True, None)
+            assert not (candidate_run / 'starting-baseline.json').exists()
+        if title == 'Prepare Papers Research Candidate':
+            assert '--prepare-only' in kwargs['cmd']
+            assert not publication_recovery.recovery_path(r.root, r.task).exists()
+            for name in ('site-ready.json', 'papers-prepared.json', 'projection-v3/candidate.json',
+                         'bundle/index.html', 'json/objects/index.json'):
+                r.put(candidate_run / name)
+        if title == 'Publish Papers Bundle to R2':
+            proof = publication_recovery.load_recovery(r.root, r.task)
+            assert proof['additional_files']
+            assert str((candidate_run / 'papers-prepared.json').relative_to(r.root)) in proof['additional_files']
+            assert str((candidate_run / '.publication/starting-baseline.json').relative_to(r.root)) in proof['additional_files']
+            raise RuntimeError('stop before remote upload')
+
+    r.service._run_logged_command = commands
+    with pytest.raises(RuntimeError, match='stop before remote upload'):
+        await pipeline._execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert r.service.commands.index('Prepare Papers Research Candidate') < r.service.commands.index('Publish Papers Bundle to R2')
+    ready = json.loads((r.root / 'exports/release-stages' / f'{r.task.task_uuid}.json').read_bytes())
+    assert str(candidate_run / 'projection-v3') in ready['stages']['ready']['roots']
+    assert str(candidate_run / '.publication/starting-baseline.json') in ready['stages']['ready']['roots']
+    r.put(candidate_run / tampered_file, '{"changed":true}')
+    with pytest.raises(ValueError, match='prepared_candidate_unavailable'):
+        publication_recovery.load_recovery(r.root, r.task)
 
 
 @pytest.mark.asyncio

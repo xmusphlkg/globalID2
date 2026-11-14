@@ -2,7 +2,6 @@
 
 .PHONY: help install up down restart logs ps test test-health clean format lint check \
 	check-python check-dashboard check-site check-subscriptions \
-	dev-data-commit site-data-dev-commit \
 	site-data site-data-external site-download-sync site-install site-dev site-build site-preview site-publish wpp-import \
 	autostart-install autostart-uninstall autostart-status
 
@@ -17,14 +16,12 @@ help:
 	@echo "  make ps           查看服务状态"
 	@echo ""
 	@echo "开发环境:"
-	@echo "  make install      安装 Python 依赖（需要 Poetry）"
+	@echo "  make install      创建 venv 并安装 Python 依赖"
 	@echo "  make test         运行所有测试"
 	@echo "  make test-health  运行健康检查"
 	@echo "  make format       格式化代码"
 	@echo "  make lint         代码检查"
 	@echo "  make check        全项目只读检查（Python+Dashboard+Astro+Worker）"
-	@echo "  make dev-data-commit       将已刷新的数据产物提交为独立 commit"
-	@echo "  make site-data-dev-commit  导出站点数据并自动提交数据产物"
 	@echo ""
 	@echo "静态站点 (Cloudflare Pages):"
 	@echo "  make site-install  安装 Astro/npm 依赖"
@@ -153,14 +150,12 @@ site-preview:
 	@echo "预览生产构建..."
 	cd astro-site && npm run preview
 
-# 完整的端到端发布流程: 构建时自动导出数据 → 构建 → 提示推送
+# 本地导出和构建；正式发布通过控制台的受管发布流程执行。
 site-publish: site-build
 	@echo ""
 	@echo "✓ 站点已构建完毕"
-	@echo "请执行以下命令推送到 Cloudflare Pages:"
-	@echo "  git add astro-site/src/data astro-site/dist"
-	@echo "  git commit -m 'chore: update site data and rebuild'"
-	@echo "  git push"
+	@echo "正式发布请通过控制台创建发布计划并执行，检查公开验证与数据库确认收据。"
+	@echo "流程见 docs/publishing/MAIN_SITE_JSON_PUBLICATION_IMPLEMENTATION.md"
 
 wpp-import:
 	@echo "导入 WPP 人口数据..."

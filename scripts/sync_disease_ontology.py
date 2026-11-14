@@ -14,7 +14,7 @@ import csv
 import json
 import sys
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +47,8 @@ from src.domain import (  # noqa: E402
     StandardDisease,
 )
 from src.ontology import load_disease_ontology  # noqa: E402
+from src.ontology import sync_planning as _sync_planning  # noqa: E402
+from src.ontology.sync_contracts import FactRemap, MappingTransition, SeriesGeographyRemap  # noqa: E402
 from src.ontology.sync_migrations.br_2026_08_ntra import (  # noqa: E402
     BR_NTRA_REPAIR_REASON,
     apply as apply_br_ntra,
@@ -75,44 +77,10 @@ TRANSITION_CSV = ROOT / "configs" / "disease_mapping_transitions.csv"
 LEGACY_INACTIVE_IDS = frozenset({"D012", "D067", "D160", "D176", "D179"})
 
 
-@dataclass(frozen=True)
-class FactRemap:
-    old_id: str
-    new_id: str
-    reason: str
-    country_code: str | None = None
-    source_id: str | None = None
-    mapping_local_name: str | None = None
-    evidence_field: str | None = None
-    evidence_value: str | None = None
-    action: str = "remap_legacy"
-    # Compatibility-only diagnostic field.  The migration query never uses
-    # this fuzzy pattern; source-scoped remaps use exact structured evidence.
-    raw_label_pattern: str | None = None
 
 
-@dataclass(frozen=True)
-class MappingTransition:
-    country_code: str
-    source_id: str
-    local_name: str
-    old_id: str
-    new_id: str
-    action: str
-    evidence_field: str | None
-    evidence_value: str | None
-    reason: str
 
 
-@dataclass(frozen=True)
-class SeriesGeographyRemap:
-    series_pattern: str
-    old_key: str
-    new_key: str
-    reason: str
-    source_system: str | None = None
-    evidence_fields: tuple[str, ...] = ()
-    evidence_values: tuple[str, ...] = ()
 
 
 def _read_mapping_transitions() -> tuple[MappingTransition, ...]:
@@ -365,34 +333,13 @@ def _managed_mapping_rows(managed_ids: set[str]) -> list[dict[str, Any]]:
 
 def build_plan() -> dict[str, Any]:
     ontology = load_disease_ontology()
-    document = ontology.to_dict()
     payload = build_disease_ontology_sync_payload(ontology)
-    # Country CSV files are the authoritative compatibility mapping layer,
-    # including concepts that have not yet received rich ontology facets.
-    managed_ids = _catalogue_ids()
-    mapping_rows = _managed_mapping_rows(managed_ids)
-    return {
-        "mode": "dry_run",
-        "registry_id": document["registry_id"],
-        "schema_version": document["schema_version"],
-        "release_version": document.get("release_version"),
-        "catalogue_rows": len(_read_standard_rows()),
-        "managed_mapping_rows": len(mapping_rows),
-        "managed_mapping_scopes": sorted({row["country_code"] for row in mapping_rows}),
-        "ontology_rows": payload.summary(),
-        "mapping_transitions": [asdict(item) for item in MAPPING_TRANSITIONS],
-        "fact_remaps": [asdict(item) for item in FACT_REMAPS],
-        "series_geography_remaps": [asdict(item) for item in SERIES_GEOGRAPHY_REMAPS],
-        "semantic_repairs": [
-            {
-                "country_code": "BR",
-                "old_disease_id": "D193",
-                "source_code": "NTRA",
-                "action": "remove_invalid_legacy_projection",
-                "reason": BR_NTRA_REPAIR_REASON,
-            }
-        ],
-    }
+    return _sync_planning.build_sync_plan(
+        document=ontology.to_dict(), payload_summary=payload.summary(),
+        standard_rows=_read_standard_rows(), mapping_rows=_managed_mapping_rows(_catalogue_ids()),
+        mapping_transitions=MAPPING_TRANSITIONS, fact_remaps=FACT_REMAPS,
+        series_geography_remaps=SERIES_GEOGRAPHY_REMAPS, br_repair_reason=BR_NTRA_REPAIR_REASON,
+    )
 
 
 def _declared_transition(
@@ -411,47 +358,9 @@ def _declared_transition(
 def _mapping_target_changes(
     existing_rows: list[dict[str, Any]], incoming_rows: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """Compare active DB semantics with the authoritative source-aware config."""
-
-    incoming_by_label: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for row in incoming_rows:
-        key = (
-            str(row["country_code"]).upper(),
-            normalize_mapping_key(row["local_name"]),
-        )
-        incoming_by_label.setdefault(key, []).append(row)
-
-    changes: dict[tuple[int, str, str], dict[str, Any]] = {}
-    for existing in existing_rows:
-        country_code = str(existing["country_code"]).upper()
-        old_id = str(existing["disease_id"]).upper()
-        old_source = str(existing.get("source_id") or "*").strip().upper() or "*"
-        key = (country_code, normalize_mapping_key(existing["local_name"]))
-        for incoming in incoming_by_label.get(key, []):
-            incoming_source = (
-                str(incoming.get("source_id") or "*").strip().upper() or "*"
-            )
-            if old_source != "*" and incoming_source not in {"*", old_source}:
-                continue
-            new_id = str(incoming["disease_id"]).upper()
-            if new_id == old_id:
-                continue
-            declaration = _declared_transition(
-                country_code=country_code, old_id=old_id, new_id=new_id
-            )
-            change_key = (int(existing["id"]), new_id, incoming_source)
-            changes[change_key] = {
-                "existing_mapping_id": int(existing["id"]),
-                "country_code": country_code,
-                "existing_source_id": old_source,
-                "source_id": incoming_source,
-                "local_name": str(incoming["local_name"]),
-                "old_disease_id": old_id,
-                "new_disease_id": new_id,
-                "declared": declaration is not None,
-                "migration_action": declaration.action if declaration else None,
-            }
-    return [changes[key] for key in sorted(changes)]
+    return _sync_planning.mapping_target_changes(
+        existing_rows, incoming_rows, declared_transition=_declared_transition,
+    )
 
 
 def _transition_configuration_errors() -> list[str]:
@@ -823,120 +732,9 @@ async def _sync_catalogue(db, ontology) -> int:
 def _mapping_deactivation_plan(
     existing_rows: list[dict[str, Any]], incoming_rows: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """Explain every active mapping that authoritative reconciliation will stop.
-
-    A registry-owned row disappears when it is removed from CSV.  A manual or
-    bootstrap row is retained unless its normalized label conflicts with the
-    current authoritative CSV target.
-    """
-
-    incoming: dict[tuple[str, str, str], str] = {}
-    for row in incoming_rows:
-        key = (
-            str(row["country_code"]).upper(),
-            str(row.get("source_id") or "*").strip().upper(),
-            normalize_mapping_key(row["local_name"]),
-        )
-        previous = incoming.setdefault(key, str(row["disease_id"]))
-        if previous != str(row["disease_id"]):
-            raise RuntimeError(
-                f"Authoritative mapping conflict for {key}: "
-                f"{previous} vs {row['disease_id']}"
-            )
-
-    incoming_by_label: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for row in incoming_rows:
-        label_key = (
-            str(row["country_code"]).upper(),
-            normalize_mapping_key(row["local_name"]),
-        )
-        incoming_by_label.setdefault(label_key, []).append(row)
-
-    plan: list[dict[str, Any]] = []
-    for row in existing_rows:
-        country_code = str(row["country_code"]).upper()
-        source_id = str(row.get("source_id") or "*").strip().upper()
-        normalized_label = normalize_mapping_key(row["local_name"])
-        key = (
-            country_code,
-            source_id,
-            normalized_label,
-        )
-        expected = incoming.get(key)
-        label_candidates = incoming_by_label.get((country_code, normalized_label), [])
-        metadata = _json_object(row.get("metadata"))
-        origin = str(metadata.get("origin") or "")
-        registry_owned = origin.startswith("configs/mapping/")
-        conflicts = expected is not None and expected != str(row["disease_id"])
-        removed_from_registry = registry_owned and expected is None
-        wildcard_shadow_conflict = (
-            source_id == "*"
-            and expected is None
-            and any(
-                str(candidate.get("source_id") or "*").strip().upper() != "*"
-                and str(candidate["disease_id"]) != str(row["disease_id"])
-                and _declared_transition(
-                    country_code=country_code,
-                    old_id=str(row["disease_id"]),
-                    new_id=str(candidate["disease_id"]),
-                )
-                is not None
-                for candidate in label_candidates
-            )
-        )
-        if not (conflicts or removed_from_registry or wildcard_shadow_conflict):
-            continue
-
-        replacements = sorted(
-            {
-                (
-                    str(candidate.get("source_id") or "*").strip().upper(),
-                    str(candidate["disease_id"]),
-                    str(candidate["local_name"]),
-                )
-                for candidate in label_candidates
-            }
-        )
-        if conflicts:
-            reason = "target_conflict"
-        elif wildcard_shadow_conflict:
-            reason = "wildcard_shadow_conflict"
-        elif not replacements:
-            reason = "removed_from_registry"
-        else:
-            source_changed = any(item[0] != source_id for item in replacements)
-            target_changed = any(
-                item[1] != str(row["disease_id"]) for item in replacements
-            )
-            if source_changed and target_changed:
-                reason = "target_and_source_rekey"
-            elif source_changed:
-                reason = "source_rekey"
-            elif target_changed:
-                reason = "target_rekey"
-            else:
-                reason = "registry_identity_rekey"
-        plan.append(
-            {
-                "mapping_id": int(row["id"]),
-                "country_code": country_code,
-                "source_id": source_id,
-                "local_name": str(row["local_name"]),
-                "normalized_local_name": normalized_label,
-                "old_disease_id": str(row["disease_id"]),
-                "origin": origin or None,
-                "reason": reason,
-                "replacement_candidates": [
-                    {
-                        "source_id": replacement_source,
-                        "disease_id": replacement_disease,
-                        "local_name": replacement_name,
-                    }
-                    for replacement_source, replacement_disease, replacement_name in replacements
-                ],
-            }
-        )
-    return sorted(plan, key=lambda item: item["mapping_id"])
+    return _sync_planning.mapping_deactivation_plan(
+        existing_rows, incoming_rows, declared_transition=_declared_transition,
+    )
 
 
 def _mapping_rows_to_deactivate(

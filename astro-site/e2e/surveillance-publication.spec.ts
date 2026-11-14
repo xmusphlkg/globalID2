@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 
 const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
+// Astro dev adds per-request timings; every other template byte must stay stable.
+const htmlHash = (value: Buffer) => hash(value.toString('utf8').replace(/ server-render-time="[^"]*"/g, ''));
 const publication = (version: number) => {
   const year = version === 1 ? 2025 : 2026;
   const cases = version === 1 ? [10, 20, 30, 40, 50, 60] : [15, 25, 35, 45, 55, 160];
@@ -27,7 +29,7 @@ const publication = (version: number) => {
     const body = JSON.stringify(value); const sha256 = hash(body);
     objects.set(sha256, body); files[name] = { url: `objects/${sha256}.json`, sha256, bytes: Buffer.byteLength(body) };
   }
-  return { manifest: { schema_version: 1, release_id: `browser-${version}`, files }, objects };
+  return { manifest: { schema_version: 1, generated_at: `${year}-07-01T00:00:00Z`, release_id: `browser-${version}`, files }, objects };
 };
 
 test('JSON publication updates summary and chart without changing static HTML, and pins lazy readers', async ({ page, request }) => {
@@ -39,10 +41,11 @@ test('JSON publication updates summary and chart without changing static HTML, a
     const key = new URL(route.request().url()).pathname.split('/').at(-1)!.replace('.json', '');
     return objects.has(key) ? route.fulfill({ body: objects.get(key), contentType: 'application/json' }) : route.fulfill({ status: 404 });
   });
-  const before = hash(await (await request.get('/diseases/influenza/')).body());
+  const before = htmlHash(await (await request.get('/diseases/influenza/')).body());
   await page.goto('/diseases/influenza/', { waitUntil: 'networkidle' });
   await expect(page.locator('[data-surveillance-version="browser-1"]').first()).toBeVisible();
   await expect(page.locator('#overview')).toContainText('2025-06-01');
+  await page.locator('[data-database-updated]').scrollIntoViewIfNeeded();
   await expect(page.locator('[data-database-updated]')).toContainText('2025');
   current = second;
   await page.locator('#main-trend').scrollIntoViewIfNeeded();
@@ -52,16 +55,18 @@ test('JSON publication updates summary and chart without changing static HTML, a
   await explorer.getByRole('tab', { name: 'Data', exact: true }).click();
   await expect(explorer.getByTestId('surveillance-data')).toContainText('2025-06-01');
   await expect(page.locator('[data-surveillance-version="browser-2"]')).toHaveCount(0);
+  await page.locator('[data-database-updated]').scrollIntoViewIfNeeded();
   await expect(page.locator('[data-database-updated]')).toContainText('2025');
   await page.goto('/diseases/influenza/', { waitUntil: 'networkidle' });
   await expect(page.locator('[data-surveillance-version="browser-2"]').first()).toBeVisible();
   await expect(page.locator('#overview')).toContainText('2026-06-01');
+  await page.locator('[data-database-updated]').scrollIntoViewIfNeeded();
   await expect(page.locator('[data-database-updated]')).toContainText('2026');
   await page.locator('#main-trend').scrollIntoViewIfNeeded();
   await explorer.getByRole('button', { name: 'All data', exact: true }).click();
   await explorer.getByRole('tab', { name: 'Data', exact: true }).click();
   await expect(explorer.getByTestId('surveillance-data')).toContainText('160');
-  expect(hash(await (await request.get('/diseases/influenza/')).body())).toBe(before);
+  expect(htmlHash(await (await request.get('/diseases/influenza/')).body())).toBe(before);
 });
 
 test('country indicators and lazy curves update together while the template stays unchanged', async ({ page, request }) => {
@@ -72,7 +77,7 @@ test('country indicators and lazy curves update together while the template stay
     const key = new URL(route.request().url()).pathname.split('/').at(-1)!.replace('.json', '');
     return route.fulfill({ body: objects.get(key), contentType: 'application/json' });
   });
-  const before = hash(await (await request.get('/countries/jp/')).body());
+  const before = htmlHash(await (await request.get('/countries/jp/')).body());
   await page.goto('/countries/jp/', { waitUntil: 'networkidle' });
   await expect(page.locator('#indicators')).toContainText('210');
   await expect(page.locator('#overview')).toContainText('2025-06-01');
@@ -86,10 +91,10 @@ test('country indicators and lazy curves update together while the template stay
   await explorer.getByRole('button', { name: 'All data', exact: true }).click();
   await explorer.getByRole('tab', { name: 'Data', exact: true }).click();
   await expect(explorer.getByTestId('surveillance-data')).toContainText('160');
-  expect(hash(await (await request.get('/countries/jp/')).body())).toBe(before);
+  expect(htmlHash(await (await request.get('/countries/jp/')).body())).toBe(before);
 });
 
-test('comparison disease choices and country counts follow current data without download-archive rebuilds', async ({ page }) => {
+test('comparison disease choices and area counts follow current data without download-archive rebuilds', async ({ page }) => {
   let current = publication(1);
   const objects = new Map([...current.objects, ...publication(2).objects]);
   await page.route('**/site-data/current.json', route => route.fulfill({ json: current.manifest }));
@@ -99,10 +104,10 @@ test('comparison disease choices and country counts follow current data without 
   });
   await page.goto('/compare/', { waitUntil: 'networkidle' });
   const panel = page.locator('.compare-filter-panel').first();
-  await expect(panel).toContainText('1 reporting countries');
+  await expect(panel).toContainText('1 top-level area');
   current = publication(2);
   await page.goto('/compare/', { waitUntil: 'networkidle' });
-  await expect(panel).toContainText('2 reporting countries');
+  await expect(panel).toContainText('2 top-level areas');
   await expect(page.locator('.compare-filter-panel').nth(1)).toContainText('United States');
 });
 

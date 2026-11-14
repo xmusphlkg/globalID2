@@ -63,7 +63,7 @@ Crossref、Europe PMC、PubMed 新分页接口各完成两页、每页一条的�
 | 11 月 4 日 06:29:35—08:06:06 | 10 |
 
 窗口尚未执行，是否实际缺失文章不能仅凭失败日志推断。先更新 worker，再按
-[补采操作步骤](../RESEARCH_RADAR.md#repair-historical-journal-failures) 逐窗口入队、检查
+[补采操作步骤](../research/RESEARCH_RADAR.md#repair-historical-journal-failures) 逐窗口入队、检查
 完成状态并继续下一页。补采仅能遍历上游当前索引中的该时间区间。
 
 旧主题发现断点无法证明历史覆盖，迁移后明确保留未知标记。按发表日期检索仍需

@@ -344,12 +344,12 @@ export default function CountriesMapView({ metaCountries: initialCountries = [],
     </div>
     <div ref={containerRef} className="coverage-map-canvas" style={{ position: 'relative', height: isFullscreen ? undefined : height, overflow: 'hidden', background: palette.mapBg }}>
       <ReactEChartsCore ref={chartRef} echarts={echarts} option={option} style={{ height: '100%', width: '100%' }} onEvents={handleEvents} notMerge />
-      <div className="coverage-map-controls" role="group" aria-label={initialLanguage === 'zh' ? '地图缩放' : 'Map zoom'}>
-        <button type="button" onClick={() => zoom(1.25)} aria-label={initialLanguage === 'zh' ? '放大地图' : 'Zoom in'}>+</button>
-        <button type="button" onClick={() => zoom(0.8)} aria-label={initialLanguage === 'zh' ? '缩小地图' : 'Zoom out'}>−</button>
-        <button type="button" onClick={resetZoom} aria-label={initialLanguage === 'zh' ? '重置地图缩放' : 'Reset map zoom'}>↺</button>
+      <div className="coverage-map-controls" role="group" aria-label={initialLanguage === 'zh' ? '地图缩放' : initialLanguage === 'fr' ? 'Zoom de la carte' : 'Map zoom'}>
+        <button type="button" onClick={() => zoom(1.25)} aria-label={initialLanguage === 'zh' ? '放大地图' : initialLanguage === 'fr' ? 'Agrandir la carte' : 'Zoom in'}>+</button>
+        <button type="button" onClick={() => zoom(0.8)} aria-label={initialLanguage === 'zh' ? '缩小地图' : initialLanguage === 'fr' ? 'Réduire la carte' : 'Zoom out'}>−</button>
+        <button type="button" onClick={resetZoom} aria-label={initialLanguage === 'zh' ? '重置地图缩放' : initialLanguage === 'fr' ? 'Réinitialiser le zoom' : 'Reset map zoom'}>↺</button>
       </div>
-      <span className="coverage-map-hint">{initialLanguage === 'zh' ? '滚轮缩放 · 拖拽平移' : 'Scroll to zoom · drag to pan'}</span>
+      <span className="coverage-map-hint">{initialLanguage === 'zh' ? '滚轮缩放 · 拖拽平移' : initialLanguage === 'fr' ? 'Molette pour zoomer · glisser pour déplacer' : 'Scroll to zoom · drag to pan'}</span>
       {dotPositions.map(marker => {
         const isSubdivision = marker.kind === 'subdivision';
         const isUnsupported = marker.status === 'Unsupported';
@@ -359,9 +359,9 @@ export default function CountriesMapView({ metaCountries: initialCountries = [],
       })}
       {hovered && <div className="coverage-map-tooltip" style={{ left: Math.min(Math.max(8, hovered.px + 12), Math.max(8, (containerRef.current?.clientWidth || 800) - 190)), top: Math.min(Math.max(8, hovered.py - 46), Math.max(8, (containerRef.current?.clientHeight || height) - (hovered.regionalCount ? 110 : 82))), background: palette.tooltipBg, borderColor: palette.tooltipBorder, color: palette.text }} role="status">
         <div className="coverage-map-tooltip-title"><img src={getFlagAssetPath(hovered.iso2)} alt="" aria-hidden="true" /> <strong>{hovered.name}</strong></div>
-        <div className="coverage-map-tooltip-meta">{hovered.kind === 'subdivision' ? (initialLanguage === 'zh' ? '省级/地区' : 'Province / region') : (initialLanguage === 'zh' ? '国家' : 'Country')} · {hovered.statusLabel}</div>
+        <div className="coverage-map-tooltip-meta">{hovered.kind === 'subdivision' ? (initialLanguage === 'zh' ? '下级行政单位' : initialLanguage === 'fr' ? 'Subdivision administrative' : 'Administrative subdivision') : (initialLanguage === 'zh' ? '上级区域' : initialLanguage === 'fr' ? 'Zone de niveau supérieur' : 'Top-level area')} · {hovered.statusLabel}</div>
         {hovered.kind === 'country' && Boolean(hovered.regionalCount) && <div className="coverage-map-tooltip-meta">{initialLanguage === 'zh' ? `${hovered.regionalCount} 个地区数据集` : initialLanguage === 'fr' ? `${hovered.regionalCount} jeux de données régionaux` : `${hovered.regionalCount} regional datasets`}</div>}
-        {hovered.href && <div className="coverage-map-tooltip-action">{initialLanguage === 'zh' ? '单击打开详情页 ↗' : 'Click to open details ↗'}</div>}
+        {hovered.href && <div className="coverage-map-tooltip-action">{initialLanguage === 'zh' ? '单击打开详情页 ↗' : initialLanguage === 'fr' ? 'Ouvrir les détails ↗' : 'Click to open details ↗'}</div>}
       </div>}
     </div>
     </div>

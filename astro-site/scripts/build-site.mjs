@@ -105,7 +105,6 @@ writeFileSync(resolve(projectRoot, 'data/cache/site-build-plan-report.json'), JS
 
 const runAstro = (selectedPath, selectedPagePath) => {
   const started = performance.now();
-  const situationNavVisible = existsSync(resolve(import.meta.dirname, 'src/data/situation/international/map.json')) ? '1' : '0';
   const publicInputs = preparePublicBuildInputs({
     publicRoot: resolve(import.meta.dirname, '..', 'public'),
     stageRoot: resolve(projectRoot, 'data/cache/public-build-inputs', String(process.pid)),
@@ -117,7 +116,6 @@ const runAstro = (selectedPath, selectedPagePath) => {
     env: {
       ...process.env,
       GIDS_STATIC_RENDER: '1',
-      GIDS_SITUATION_NAV_VISIBLE: situationNavVisible,
       GIDS_SITE_DIRECTORY_FACTS: directoryFactsPath(),
       GIDS_SITE_DIRECTORY_VERSION: directoryFactsVersion(),
       PUBLIC_GA4_MEASUREMENT_ID: measurementId,

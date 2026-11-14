@@ -8,7 +8,7 @@ from src.services.data_release.stage_receipts import StageReceipts
 from src.services.data_release_service import DataReleaseJobConfig, DataReleaseService
 
 
-@pytest.mark.parametrize("snapshot", ["valid", "missing", "changed"])
+@pytest.mark.parametrize("snapshot", ["valid", "missing", "changed", "retained"])
 async def test_code_only_requires_published_snapshot_and_skips_data_transports(tmp_path, monkeypatch, snapshot):
     service = DataReleaseService()
     astro = tmp_path / "astro"
@@ -18,10 +18,13 @@ async def test_code_only_requires_published_snapshot_and_skips_data_transports(t
     data_file = data_roots[0] / "countries.json"
     data_file.write_text('{"US":1}')
     if snapshot != "missing":
-        StageReceipts(tmp_path, "published", {}, {}).mark_published(
-            {"release_id": "successful", "build_digest": "abc"}, data_paths=data_roots,
-        )
-    if snapshot == "changed":
+        receipts = StageReceipts(tmp_path, "published", {}, {})
+        identity = {"release_id": "successful", "build_digest": "abc"}
+        if snapshot == "retained":
+            receipts.prepare_published_data(identity, data_roots)
+            receipts.assert_prepared_inputs(data_roots)
+        receipts.mark_published(identity, data_paths=data_roots)
+    if snapshot in {"changed", "retained"}:
         data_file.write_text('{"US":1234}')
     python = tmp_path / "python"
     python.touch()
@@ -52,12 +55,12 @@ async def test_code_only_requires_published_snapshot_and_skips_data_transports(t
 
     checks = await service.integration_checks("site", code_only=True)
 
-    assert checks["overall_ready"] is (snapshot == "valid")
+    assert checks["overall_ready"] is (snapshot in {"valid", "retained"})
     assert checks["raw_archive"]["independent"] is True
     assert checks["channels"]["github_downloads"]["enabled"] is False
     assert not any("requires direct-download" in message for message in checks["blockers"])
-    if snapshot != "valid":
-        assert any("unchanged data snapshot" in message for message in checks["blockers"])
+    if snapshot not in {"valid", "retained"}:
+        assert any("data snapshot" in message for message in checks["blockers"])
     service._download_repo_check.assert_not_called()
     service._raw_archive_check.assert_not_called()
     # Code-only needs Wrangler, but never invokes the Situation refresh helper.

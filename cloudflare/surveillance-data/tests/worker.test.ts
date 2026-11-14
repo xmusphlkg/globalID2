@@ -167,7 +167,7 @@ test('Pages Advanced Mode preserves static routes and serves JSON through the sa
 
 test('public update files use a restricted namespace and are never cached', async () => {
   const f = fixture();
-  for (const name of ['latest.json', '2026-11.json']) {
+  for (const name of ['latest.json', '2026-11.json', 'changelog.json']) {
     const response = await worker.fetch(new Request(`https://site.test/site-data/updates/${name}`), f.env);
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('cache-control'), 'no-store');
@@ -175,5 +175,5 @@ test('public update files use a restricted namespace and are never cached', asyn
   for (const name of ['private.json', '2026-13.json', '2026-00.json']) {
     assert.equal((await worker.fetch(new Request(`https://site.test/site-data/updates/${name}`), f.env)).status, 404);
   }
-  assert.deepEqual(f.keys, ['site-data/updates/latest.json', 'site-data/updates/2026-11.json']);
+  assert.deepEqual(f.keys, ['site-data/updates/latest.json', 'site-data/updates/2026-11.json', 'site-data/updates/changelog.json']);
 });

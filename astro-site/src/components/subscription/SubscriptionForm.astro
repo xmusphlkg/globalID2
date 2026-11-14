@@ -1,0 +1,124 @@
+---
+import GIDSLoading from '../GIDSLoading.astro';
+import { subscriptionText } from './messages';
+interface Props { locale: 'en' | 'zh' | 'fr'; subscriptionsApiBase: string; subscriptionOptionsUrl: string }
+const { locale, subscriptionsApiBase, subscriptionOptionsUrl } = Astro.props;
+const pick = subscriptionText(locale);
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
+---
+        <form
+          id="subscription-form"
+          class="subscribe-form"
+          tabindex="0"
+          aria-labelledby="subscription-form-title"
+          data-api-base={subscriptionsApiBase}
+          data-options-url={subscriptionOptionsUrl}
+          data-page-locale={locale}
+          novalidate
+        >
+          <div class="subscribe-form-header">
+            <div>
+              <p class="subscribe-kicker">{pick('Preferences', '订阅偏好')}</p>
+              <h2 id="subscription-form-title">{pick('Create a subscription', '创建订阅')}</h2>
+            </div>
+            <span class="subscribe-service-badge">{pick('Official GIDS service', 'GIDS 官方服务')}</span>
+          </div>
+
+          <p id="subscription-pilot-notice" class="subscribe-status" role="status" hidden>
+            {pick('You can subscribe now and confirm your email. Public updates will begin when the subscription service launches.', '你可以先确认订阅偏好，邮件更新将在服务正式开放后开始发送。', 'Vous pouvez vous inscrire et confirmer votre adresse. Les envois publics commenceront au lancement du service.')}
+          </p>
+
+          <div class="subscribe-field">
+            <label for="subscriber-email">{pick('Email address', '邮箱地址')}</label>
+            <input
+              id="subscriber-email"
+              class="site-control-input subscribe-input"
+              name="email"
+              type="email"
+              inputmode="email"
+              autocomplete="email"
+              required
+              placeholder="name@example.com"
+            />
+          </div>
+
+          <fieldset class="subscribe-field">
+            <legend>{pick('Language', '语言')}</legend>
+            <div class="subscribe-segmented" id="locale-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+              <legend>{pick('Updates to receive', '接收内容')}</legend>
+            <div class="subscribe-option-grid" id="list-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend>{pick('Geographic areas', '地理区域')}</legend>
+              <label class="subscribe-inline-check">
+                <input id="all-countries" type="checkbox" checked />
+                <span>{pick('All areas', '全部区域')}</span>
+              </label>
+            </div>
+            <div class="subscribe-chip-grid" id="country-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend>{pick('Diseases', '疾病')}</legend>
+              <span>{pick('Leave empty for all', '不选则包含全部')}</span>
+            </div>
+            <input
+              id="disease-search"
+              class="site-control-input subscribe-input mt-3"
+              type="text"
+              placeholder={pick('Search diseases', '搜索疾病')}
+            />
+            <div class="subscribe-chip-grid mt-3" id="disease-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend>{pick('Research topics', '研究主题')}</legend>
+              <span>{pick('For Research Radar; leave empty for all', '适用于 Research Radar；留空表示全部')}</span>
+            </div>
+            <div class="subscribe-chip-grid" id="research-topic-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend>{pick('Study types', '研究类型')}</legend>
+              <span>{pick('Leave empty for all', '不选则包含全部')}</span>
+            </div>
+            <div class="subscribe-chip-grid" id="study-type-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend>{pick('Publication status', '出版状态')}</legend>
+              <span>{pick('Leave empty for all approved research', '不选则包含全部已审核研究')}</span>
+            </div>
+            <div class="subscribe-chip-grid" id="peer-review-status-options"></div>
+          </fieldset>
+
+          <label class="subscribe-consent">
+            <input type="checkbox" name="consent" required />
+            <span>
+              <span>{pick('I agree to receive GIDS subscription emails and accept the', '我同意接收 GIDS 订阅邮件，并接受')}{zh ? '' : ' '}</span>
+              <a href={`${prefix}/terms/`} target="_blank" rel="noopener">{pick('Service Terms', '服务协议')}</a>
+              <span>{pick('.', '。')}</span>
+            </span>
+          </label>
+
+          <div id="subscription-loading" hidden><GIDSLoading language={locale} compact /></div>
+          <div id="subscription-status" class="subscribe-status" role="status" aria-live="polite" hidden></div>
+
+          <div class="subscribe-actions">
+            <button id="subscription-submit" type="submit" class="subscribe-submit">
+              <span>{pick('Subscribe', '提交订阅')}</span>
+            </button>
+            <p>{pick('We only send the updates you choose. You can unsubscribe in any email.', '我们只发送你选择的更新，你可以通过邮件中的链接随时退订。')}</p>
+            <p><a href={`${subscriptionsApiBase}/api/subscriptions/manage`}>{pick('Manage an existing subscription', '管理已有订阅', 'Gérer un abonnement existant')}</a></p>
+          </div>
+        </form>

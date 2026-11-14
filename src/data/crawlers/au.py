@@ -42,6 +42,12 @@ from urllib3.util.retry import Retry
 from src.core import get_logger
 from src.core.country_library import get_country_bootstrap_config
 from .base import BaseCrawler, CrawlerResult
+from .au_nindss import discovery as _au_discovery
+from .au_nindss import queries as _au_queries
+from .au_nindss.queries import (
+    _norm_text, _parse_int, _find_dm0, _parse_dm0_to_state_counts, _month_name, _quarter_for_month,
+)
+
 
 logger = get_logger(__name__)
 
@@ -148,181 +154,6 @@ def au_state_source_label(code: str) -> str:
 
 
 # ── Helpers (ported from GetDataFunctions.py) ─────────────────────────────────
-
-def _norm_text(value: object) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        return value.strip()
-    return str(value).strip()
-
-
-def _parse_int(value: object) -> Optional[int]:
-    if value is None:
-        return None
-    try:
-        text = str(value).strip().strip("'\"").replace(",", "")
-        if text.endswith(("L", "l")):
-            text = text[:-1]
-        if not text:
-            return None
-        if "." in text:
-            return int(float(text))
-        return int(text)
-    except (ValueError, TypeError):
-        return None
-
-
-def _find_dm0(obj: Any) -> Optional[List[Dict]]:
-    """Recursively find the first DM0 array in a DSR response structure."""
-    if isinstance(obj, dict):
-        for v in obj.values():
-            res = _find_dm0(v)
-            if res:
-                return res
-    elif isinstance(obj, list):
-        if obj and isinstance(obj[0], dict):
-            dm0_like_keys = {"G0", "G", "G1", "G2", "C", "M0", "M", "V", "X", "R"}
-            if any(any(k in dm0_like_keys for k in item.keys()) for item in obj):
-                return obj
-        for item in obj:
-            res = _find_dm0(item)
-            if res:
-                return res
-    return None
-
-
-def _parse_dm0_to_state_counts(dm0: List[Dict], raw: Dict, year: Any) -> Dict[str, int]:
-    """
-    Parse DM0 list into {state: count} mapping.
-    Ported from ID_AU/ScriptGetData/GetDataFunctions.py::parse_dm0_to_state_counts.
-    """
-    results: Dict[str, Any] = {}
-
-    # Strategy 1: use SH/DM1 metadata to map column indices to state names
-    try:
-        ds = raw["results"][0]["result"]["data"]["dsr"]["DS"][0]
-        sh = ds.get("SH", [])[0]
-        dm1 = sh.get("DM1") if sh else None
-        if dm1 and isinstance(dm1, list) and dm1[0].get("G1"):
-            states = [entry.get("G1") for entry in dm1]
-            for block in dm0:
-                year_key = block.get("G0") or block.get("G")
-                if str(year_key) == str(year):
-                    for i, xi in enumerate(block.get("X", [])):
-                        st = states[i] if i < len(states) else f"idx_{i}"
-                        val = None
-                        if isinstance(xi, dict):
-                            for kk in ("M0", "M", "V"):
-                                if kk in xi:
-                                    val = xi[kk]
-                                    break
-                            if val is None:
-                                for vv in xi.values():
-                                    if isinstance(vv, (int, float)):
-                                        val = vv
-                                        break
-                        else:
-                            val = xi
-                        results[st] = _parse_int(val) if val is not None else 0
-                        if results[st] is None:
-                            results[st] = 0
-                    return results
-    except Exception:
-        pass
-
-    # Strategy 2: generic fallback
-    for item in dm0:
-        if not isinstance(item, dict):
-            continue
-        state = None
-        value = None
-
-        for gkey in ("G0", "G", "G1", "G2"):
-            if gkey in item and item[gkey] is not None:
-                state = item[gkey]
-                break
-
-        if "C" in item and isinstance(item["C"], (list, tuple)) and item["C"]:
-            c = item["C"]
-            state = state or (c[0] if len(c) >= 1 else state)
-            if len(c) >= 2:
-                value = c[1]
-
-        if value is None:
-            for k, v in item.items():
-                if k == "C" and isinstance(v, (list, tuple)):
-                    continue
-                if k.startswith("M") or (k.startswith("C") and not isinstance(v, (list, tuple))):
-                    parsed = _parse_int(v)
-                    if parsed is not None:
-                        value = parsed
-                    else:
-                        try:
-                            value = float(str(v).strip().strip("'\"").replace(",", ""))
-                        except Exception:
-                            value = v
-                    break
-
-        if value is None and "V" in item:
-            value = item["V"]
-        if value is None and "R" in item:
-            value = 0
-
-        if state is None:
-            for v in item.values():
-                if isinstance(v, str):
-                    state = v
-                    break
-                if isinstance(v, (list, tuple)) and v and isinstance(v[0], str):
-                    state = v[0]
-                    break
-        if state is None:
-            state = str(item)
-
-        if isinstance(state, (list, tuple)) and state:
-            state = state[0]
-        if isinstance(state, dict):
-            for candidate in ("C", "Label", "G", "G1", "G0"):
-                if candidate in state:
-                    s = state[candidate]
-                    if isinstance(s, (list, tuple)) and s:
-                        state = s[0]
-                        break
-                    if isinstance(s, str):
-                        state = s
-                        break
-            else:
-                state = str(state)
-
-        if isinstance(value, (list, tuple)):
-            value = value[1] if len(value) >= 2 else (value[0] if value else None)
-        if isinstance(value, str):
-            parsed = _parse_int(value)
-            if parsed is not None:
-                value = parsed
-            else:
-                try:
-                    value = float(value.strip().strip("'\"").replace(",", ""))
-                except Exception:
-                    pass
-        if value is None:
-            value = 0
-
-        k_str = str(state)
-        v_norm = int(value) if isinstance(value, float) and float(value).is_integer() else value
-        results[k_str] = v_norm
-
-    return results
-
-
-def _month_name(m: int) -> str:
-    return datetime(2000, m, 1).strftime("%B")
-
-
-def _quarter_for_month(m: int) -> str:
-    # NOTE: The PowerBI dashboard requires TWO spaces after "Quarter".
-    return f"Quarter  {(m - 1) // 3 + 1}"
 
 
 # ── Return-value dataclass ────────────────────────────────────────────────────
@@ -540,86 +371,7 @@ class AustraliaNINDSSCrawler(BaseCrawler):
         return captured
 
     def _extract_runtime_hints_from_post_data(self, post_data: Optional[str]) -> Dict[str, Any]:
-        if not post_data:
-            return {}
-        try:
-            payload = json.loads(post_data)
-        except Exception:
-            return {}
-
-        queries = payload.get("queries", [])
-        for query_entry in queries:
-            commands = (
-                query_entry.get("Query", {})
-                .get("Commands", [])
-            )
-            for command in commands:
-                semantic = command.get("SemanticQueryDataShapeCommand", {})
-                query = semantic.get("Query", {})
-                from_items = query.get("From", [])
-                entities = {
-                    _norm_text(item.get("Name")): _norm_text(item.get("Entity"))
-                    for item in from_items
-                    if isinstance(item, dict)
-                }
-                location_alias = next(
-                    (name for name, entity in entities.items() if entity == "DELTALOAD_DATAMART LOCATION_DIM"),
-                    "",
-                )
-                fact_alias = next(
-                    (
-                        name
-                        for name, entity in entities.items()
-                        if entity == "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT"
-                    ),
-                    "",
-                )
-                disease_alias = next(
-                    (name for name, entity in entities.items() if entity == "DELTALOAD_DATAMART DISEASE_DIM"),
-                    "",
-                )
-                case_alias = next(
-                    (name for name, entity in entities.items() if entity == "DELTALOAD_DATAMART CASE_DIM"),
-                    "",
-                )
-                if not location_alias or not fact_alias:
-                    continue
-
-                state_seen = False
-                measure_property = ""
-                for select_item in query.get("Select", []):
-                    column = select_item.get("Column", {})
-                    column_expr = column.get("Expression", {}).get("SourceRef", {})
-                    if (
-                        _norm_text(column_expr.get("Source")) == location_alias
-                        and _norm_text(column.get("Property")) == "STATE"
-                    ):
-                        state_seen = True
-                    measure = select_item.get("Measure", {})
-                    measure_expr = measure.get("Expression", {}).get("SourceRef", {})
-                    if _norm_text(measure_expr.get("Source")) == fact_alias:
-                        measure_property = _norm_text(measure.get("Property"))
-
-                if state_seen and measure_property:
-                    score = 0
-                    if measure_property == "Count_Notification":
-                        score += 10
-                    if measure_property.lower() == "count_notification":
-                        score += 5
-                    if not any("HierarchyLevel" in item for item in query.get("Select", [])):
-                        score += 3
-                    return {
-                        "location": {
-                            "fact_alias": fact_alias,
-                            "location_alias": location_alias,
-                            "disease_alias": disease_alias or "d11",
-                            "case_alias": case_alias or "d3",
-                            "state_property": "STATE",
-                            "measure_property": measure_property,
-                            "_score": score,
-                        }
-                    }
-        return {}
+        return _au_discovery._extract_runtime_hints_from_post_data(post_data)
 
     @staticmethod
     def _should_replace_location_hint(
@@ -675,104 +427,16 @@ class AustraliaNINDSSCrawler(BaseCrawler):
         )
 
     def _extract_config_from_html(self, html_content: str) -> Optional[Dict[str, Any]]:
-        access_token = ""
-        api_url = ""
-        report_id = ""
-        dataset_id = ""
-        model_id: Optional[int] = None
-
-        match = re.search(r"var\s+pbiAppConfig\s*=\s*({.*?});", html_content, re.S)
-        if match:
-            try:
-                app_cfg = json.loads(match.group(1))
-                access_token = _norm_text(app_cfg.get("accessToken"))
-                report_id = _norm_text(app_cfg.get("reportId"))
-                api_url = self._derive_api_url_from_embed_url(_norm_text(app_cfg.get("embedUrl")))
-            except json.JSONDecodeError:
-                logger.debug("[AU-NINDSS] Failed to decode pbiAppConfig JSON from HTML")
-
-        if not access_token:
-            match = re.search(r'embedconfig="([^"]+)"', html_content, re.I)
-            if match:
-                try:
-                    cfg = self._decode_embed_config(match.group(1))
-                    embed_token = cfg.get("EmbedToken", {}) if isinstance(cfg, dict) else {}
-                    access_token = _norm_text(embed_token.get("token"))
-                    report_id = report_id or _norm_text(cfg.get("Id") or cfg.get("id"))
-                    api_url = api_url or self._derive_api_url_from_embed_url(
-                        _norm_text(cfg.get("EmbedUrl"))
-                    )
-                except Exception as exc:
-                    logger.debug(f"[AU-NINDSS] Failed to decode embedconfig | error={exc}")
-
-        if not access_token:
-            match = (
-                re.search(r'"accessToken"\s*:\s*"([^"]+)"', html_content)
-                or re.search(r"'accessToken'\s*:\s*'([^']+)'", html_content)
-            )
-            if match:
-                access_token = _norm_text(match.group(1))
-
-        if not access_token:
-            return None
-
-        # The static portal HTML currently exposes an embed token (often
-        # starting with `H4s...`) that is not accepted by the QES public/query
-        # endpoint. Only accept HTML extraction when it looks like the older
-        # JWT-style access token used by the direct API path.
-        if not access_token.startswith("ey"):
-            logger.warning(
-                f"[AU-NINDSS] Ignoring HTML-extracted token with unsupported format "
-                f"prefix={access_token[:5]!r}"
-            )
-            return None
-
-        return {
-            "accessToken": access_token,
-            "apiUrl": api_url,
-            "reportId": report_id,
-            "datasetId": dataset_id,
-            "modelId": model_id,
-        }
+        return _au_discovery._extract_config_from_html(html_content,
+            derive_api_url=self._derive_api_url_from_embed_url,
+            decode_embed_config=self._decode_embed_config, logger=logger)
 
     def _decode_embed_config(self, raw_embed_config: str) -> Dict[str, Any]:
-        encoded = html_lib.unescape(raw_embed_config).strip()
-        padding = (-len(encoded)) % 4
-        if padding:
-            encoded += "=" * padding
-        try:
-            decoded = base64.b64decode(encoded)
-        except Exception:
-            decoded = base64.urlsafe_b64decode(encoded)
-
-        if decoded.startswith(b"\x1f\x8b"):
-            with gzip.GzipFile(fileobj=io.BytesIO(decoded)) as gz:
-                decoded = gz.read()
-
-        return json.loads(decoded.decode("utf-8"))
+        return _au_discovery._decode_embed_config(raw_embed_config)
 
     def _derive_api_url_from_embed_url(self, embed_url: str) -> str:
-        if not embed_url:
-            return ""
-        try:
-            parsed = urlparse(embed_url)
-            config_param = parse_qs(parsed.query).get("config", [])
-            if not config_param:
-                return ""
-            cfg_raw = unquote(config_param[0])
-            cfg = json.loads(cfg_raw)
-            cluster_url = _norm_text(cfg.get("clusterUrl"))
-            if cluster_url:
-                parsed_cluster = urlparse(cluster_url)
-                if parsed_cluster.scheme and parsed_cluster.netloc:
-                    return (
-                        f"{parsed_cluster.scheme}://{parsed_cluster.netloc}"
-                        f"/webapi/capacities/{self.capacity_id}"
-                        "/workloads/QES/QueryExecutionService/automatic/public/query"
-                    )
-        except Exception as exc:
-            logger.debug(f"[AU-NINDSS] Failed to derive apiUrl from embed URL | error={exc}")
-        return ""
+        return _au_discovery._derive_api_url_from_embed_url(embed_url,
+            capacity_id=self.capacity_id, logger=logger)
 
     def _default_api_url(self) -> str:
         cap_slug = self.capacity_id.replace("-", "").lower()
@@ -961,103 +625,9 @@ class AustraliaNINDSSCrawler(BaseCrawler):
 
     # ── Per-disease location payload ──────────────────────────────────────────
 
-    def _build_location_payload(
-        self, year: str, quarter: str, month_name: str, disease: str
-    ) -> Dict[str, Any]:
-        location_hints = (
-            self._runtime_hints.get("location", {})
-            if isinstance(self._runtime_hints.get("location"), dict)
-            else {}
-        )
-        fact_alias = _norm_text(location_hints.get("fact_alias")) or "d1"
-        location_alias = _norm_text(location_hints.get("location_alias")) or "d"
-        disease_alias = _norm_text(location_hints.get("disease_alias")) or "d11"
-        case_alias = _norm_text(location_hints.get("case_alias")) or "d3"
-        state_property = _norm_text(location_hints.get("state_property")) or "STATE"
-        measure_property = _norm_text(location_hints.get("measure_property")) or "Count_Notification"
-        return {
-            "version": "1.0.0",
-            "queries": [{
-                "Query": {
-                    "Commands": [{
-                        "SemanticQueryDataShapeCommand": {
-                            "Query": {
-                                "Version": 2,
-                                "From": [
-                                    {"Name": fact_alias, "Entity": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT", "Type": 0},
-                                    {"Name": location_alias,  "Entity": "DELTALOAD_DATAMART LOCATION_DIM", "Type": 0},
-                                    {"Name": disease_alias, "Entity": "DELTALOAD_DATAMART DISEASE_DIM", "Type": 0},
-                                    {"Name": case_alias, "Entity": "DELTALOAD_DATAMART CASE_DIM", "Type": 0},
-                                ],
-                                "Select": [
-                                    {
-                                        "Column": {
-                                            "Expression": {"SourceRef": {"Source": location_alias}},
-                                            "Property": state_property,
-                                        },
-                                        "Name": "DELTALOAD_DATAMART LOCATION_DIM.STATE",
-                                    },
-                                    {
-                                        "Measure": {
-                                            "Expression": {"SourceRef": {"Source": fact_alias}},
-                                            "Property": measure_property,
-                                        },
-                                        "Name": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT.M_Notification",
-                                    },
-                                ],
-                                "Where": [
-                                    {"Condition": {"Not": {"Expression": {"In": {
-                                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": location_alias}}, "Property": state_property}}],
-                                        "Values": [
-                                            [{"Literal": {"Value": "'AUS'"}}],
-                                            [{"Literal": {"Value": "'Unknown'"}}],
-                                        ],
-                                    }}}}},
-                                    {"Condition": {"In": {
-                                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": disease_alias}}, "Property": "DISEASE NAME"}}],
-                                        "Values": [[{"Literal": {"Value": f"'{disease}'"}}]],
-                                    }}},
-                                    {"Condition": {"In": {
-                                        "Expressions": [
-                                            {"Column": {"Expression": {"SourceRef": {"Source": fact_alias}}, "Property": "DIAGNOSIS_YEAR_HIERARCHY"}},
-                                            {"Column": {"Expression": {"SourceRef": {"Source": fact_alias}}, "Property": "DIAGNOSIS_QUARTER"}},
-                                            {"Column": {"Expression": {"SourceRef": {"Source": fact_alias}}, "Property": "DIAGNOSIS_MONTHNAME"}},
-                                        ],
-                                        "Values": [[
-                                            {"Literal": {"Value": f"'{year}'"}},
-                                            {"Literal": {"Value": f"'{quarter}'"}},
-                                            {"Literal": {"Value": f"'{month_name}'"}},
-                                        ]],
-                                    }}},
-                                    {"Condition": {"Comparison": {
-                                        "ComparisonKind": 1,
-                                        "Left": {"Column": {"Expression": {"SourceRef": {"Source": fact_alias}}, "Property": "DAX_Year"}},
-                                        "Right": {"Literal": {"Value": "1990L"}},
-                                    }}},
-                                    {"Condition": {"In": {
-                                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": case_alias}}, "Property": "CONFIRMATION_STATUS"}}],
-                                        "Values": [
-                                            [{"Literal": {"Value": "'Confirmed'"}}],
-                                            [{"Literal": {"Value": "'Probable'"}}],
-                                        ],
-                                    }}},
-                                ],
-                            },
-                            "Binding": {
-                                "Primary": {"Groupings": [{"Projections": [0, 1]}]},
-                                "DataReduction": {"DataVolume": 4, "Primary": {"Window": {"Count": 200}}},
-                            },
-                        }
-                    }]
-                },
-                "ApplicationContext": {
-                    "DatasetId": self._config["datasetId"],
-                    "Sources": [{"ReportId": self._config["reportId"]}],
-                },
-            }],
-            "modelId": self._config["modelId"],
-            "cancelRequests": True,
-        }
+    def _build_location_payload(self, year: str, quarter: str, month_name: str, disease: str) -> Dict[str, Any]:
+        return _au_queries._build_location_payload(year, quarter, month_name, disease,
+            runtime_hints=self._runtime_hints, config=self._config)
 
     def _archive_month_fetch(
         self,

@@ -1,14 +1,14 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.18.4",
+  "version": "0.19.2",
   "scripts": {
     "build:theme": "node scripts/build-theme.mjs",
     "test:theme": "node --experimental-strip-types --test scripts/build-theme.test.mjs src/lib/site-theme.test.ts",
     "verify:theme": "node scripts/verify-theme-preview.mjs",
     "postinstall": "npm run sync:flags",
     "sync:flags": "node scripts/sync-flags.mjs",
-    "dev": "npm run sync:flags && astro dev",
+    "dev": "npm run sync:flags && node --experimental-strip-types scripts/export-changelog.mjs --dev-output && astro dev",
     "site:data": "sh -c 'PYTHON_BIN=../venv/bin/python3; if [ ! -x \"$PYTHON_BIN\" ]; then PYTHON_BIN=python3; fi; \"$PYTHON_BIN\" ../scripts/generate_site_data.py'",
     "build": "node scripts/build-pipeline.mjs",
     "build:astro": "node scripts/build-pipeline.mjs",

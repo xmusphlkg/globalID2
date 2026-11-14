@@ -62,13 +62,24 @@ def test_receipt_survives_new_task_identity_but_never_proves_remote_publication(
 
 
 @pytest.mark.parametrize("path", ["astro-site/src/pages/index.astro", "astro-site/src/data/meta.json",
-    "astro-site/postcss.config.mjs", "astro-site/public/new.json", "CHANGELOG.md", "scripts/validate-new.py", "shared/schema.json"])
+    "astro-site/postcss.config.mjs", "astro-site/public/new.json", "scripts/validate-new.py", "shared/schema.json"])
 def test_changed_rendering_or_validation_input_requires_build(tree, path):
     previous = validated(tree)
     put(tree / path, "changed input")
     cache = reuse(tree)
     assert cache.inputs() != previous
     assert not cache.matches(cache.inputs())
+
+
+def test_version_notes_do_not_invalidate_validated_templates(tree):
+    put(tree / "astro-site/public/logo.svg", "<svg/>")
+    previous = validated(tree)
+    put(tree / "astro-site/src/data/changelog.ts", "export const changelogReleases = ['new version'];")
+    put(tree / "astro-site/public/site-data/updates/changelog.json", '{"schema_version":1,"releases":[]}')
+    put(tree / "CHANGELOG.md", "## [99.0.0] - 2026-11-14")
+    cache = reuse(tree)
+    assert cache.inputs() == previous
+    assert cache.matches(previous)
 
 
 @pytest.mark.parametrize("mutation", ["changed", "deleted", "extra", "extra-directory", "bad-receipt"])

@@ -1715,7 +1715,7 @@ class DataReleaseService:
 
             try:
                 await asyncio.to_thread(
-                    StageReceipts(ROOT_DIR, "preflight", {}, {}).assert_published_data,
+                    StageReceipts(ROOT_DIR, "preflight", {}, {}).published_data_paths,
                     [ASTRO_DIR / "src/data", ASTRO_DIR / "public/site-data"],
                 )
             except RuntimeError as exc:
@@ -2039,8 +2039,8 @@ class DataReleaseService:
             "commit_dirty": bool(await self._git_status_paths()),
         }
 
-    def _write_site_release_manifest(self, identity: dict[str, Any]) -> dict[str, Any]:
-        dist_dir = ASTRO_DIR / "dist"
+    def _write_site_release_manifest(self, identity: dict[str, Any], *, astro_dir: Path | None = None) -> dict[str, Any]:
+        dist_dir = (astro_dir or ASTRO_DIR) / "dist"
         if not dist_dir.is_dir():
             raise RuntimeError(f"Astro build output is missing: {dist_dir}")
 
@@ -2055,7 +2055,7 @@ class DataReleaseService:
             "visual_modules": visual_modules,
         }
         from src.generation.site_data_writer import _write_if_changed
-        _write_if_changed(SITE_RELEASE_MANIFEST, (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+        _write_if_changed(dist_dir / "release.json", (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
         return payload
 
     def _cloudflare_deploy_command(
@@ -2212,11 +2212,11 @@ class DataReleaseService:
             return False
         return True
 
-    def _split_papers_bundle_command(self, *, python_path: Path) -> list[str]:
+    def _split_papers_bundle_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:
         cfg = self._config()
         return build_split_papers_bundle_command(
             python_path=python_path,
-            dist_dir=ASTRO_DIR / "dist",
+            dist_dir=(astro_dir or ASTRO_DIR) / "dist",
             papers_dir=self._papers_site_dir(),
             main_origin=str(cfg.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
             papers_origin=str(
@@ -2227,18 +2227,22 @@ class DataReleaseService:
             research_on_main=bool(getattr(cfg, "literature_json_enabled", False)),
         )
 
-    def _publish_papers_r2_command(self, *, python_path: Path) -> list[str]:
-        return build_publish_papers_r2_command(
+    def _publish_papers_r2_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:
+        command = build_publish_papers_r2_command(
             python_path=python_path,
             source_dir=self._papers_site_dir(),
-            articles_dir=ASTRO_DIR / "src" / "data" / "research" / "articles",
+            articles_dir=(astro_dir or ASTRO_DIR) / "src" / "data" / "research" / "articles",
         )
+        if astro_dir is not None:
+            command.extend(["--site-dist", str(astro_dir / "dist"),
+                            "--research-source", str(astro_dir / "public/site-data/research")])
+        return command
 
-    def _split_reports_bundle_command(self, *, python_path: Path) -> list[str]:
+    def _split_reports_bundle_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:
         cfg = self._config()
         return build_split_reports_bundle_command(
             python_path=python_path,
-            dist_dir=ASTRO_DIR / "dist",
+            dist_dir=(astro_dir or ASTRO_DIR) / "dist",
             reports_dir=self._reports_site_dir(),
             main_origin=str(cfg.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
             reports_origin=str(cfg.r2_reports_public_base_url or DEFAULT_REPORTS_ORIGIN),

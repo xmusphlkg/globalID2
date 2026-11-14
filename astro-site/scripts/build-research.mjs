@@ -68,7 +68,6 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
   const env = { ...process.env, GIDS_RESEARCH_BUILD_DIR: prepared.buildRoot,
     GIDS_SITE_DATA_ROOT: prepared.data, GIDS_RESEARCH_PUBLIC_ROOT: resolve(snapshot, 'public/research'),
     GIDS_STATIC_RENDER: '1',
-    GIDS_SITUATION_NAV_VISIBLE: existsSync(resolve(site, 'src/data/situation/international/map.json')) ? '1' : '0',
     PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN: process.env.GIDS_RESEARCH_STATIC_HOST === '1' ? '0' : '1' };
   delete env.GIDS_RESEARCH_BUILD_PLAN;
   delete env.GIDS_PAGE_BUILD_PLAN;

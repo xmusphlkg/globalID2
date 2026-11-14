@@ -52,7 +52,7 @@ function sourceFingerprint(site) {
   const roots = ['src/components', 'src/layouts', 'src/lib', 'src/utils', 'src/styles', 'src/assets'];
   const inputs = roots.flatMap(path => files(resolve(site, path)));
   for (const path of [...ROUTES.map(path => `src/pages/${path}`), 'src/data/meta.json', 'src/data/reports/index.json',
-    'src/data/diseases/index.json', 'src/data/changelog.ts', 'package.json', 'package-lock.json', 'astro.config.mjs',
+    'src/data/diseases/index.json', 'package.json', 'package-lock.json', 'astro.config.mjs',
     'postcss.config.mjs', 'tailwind.config.mjs', 'tsconfig.json', 'scripts/build-country-template.mjs',
     'scripts/directory-build-cache.mjs', 'scripts/file-fingerprints.mjs']) {
     if (existsSync(resolve(site, path))) inputs.push(resolve(site, path));

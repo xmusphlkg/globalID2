@@ -92,6 +92,51 @@ def test_json_dirty_scope_never_becomes_a_fake_content_record_count(repository):
     assert other["input_digest"] != result["input_digest"]
 
 
+def test_version_history_changes_do_not_request_template_publication(repository):
+    path = repository / "astro-site/src/data/changelog.ts"
+    path.parent.mkdir(parents=True)
+    path.write_text("export const changelogReleases = ['new version'];")
+    (repository / "CHANGELOG.md").write_text("## [99.0.0] - 2026-11-14")
+    result = plan(repository)
+    assert result["changed_files"] == []
+    assert result["html_page_count"] == 0
+    assert result["asset_compile_scope"] == []
+    assert not result["pages_deploy_required"]
+
+
+def test_maintenance_notification_choice_is_frozen_in_plan(repository):
+    ordinary = plan(repository)
+    maintenance = plan(repository, suppress_subscription_dispatch=True)
+    assert ordinary["suppress_subscription_dispatch"] is False
+    assert maintenance["suppress_subscription_dispatch"] is True
+    assert maintenance["input_digest"] != ordinary["input_digest"]
+    stored = repository / "data/publication-plans" / f"{maintenance['plan_id']}.json"
+    assert json.loads(stored.read_text())["suppress_subscription_dispatch"] is True
+
+
+@pytest.mark.asyncio
+async def test_plan_execution_passes_frozen_notification_choice(repository, monkeypatch):
+    from dashboard.api.schemas.collection import PublishRunCreate
+    from src.services.data_release import publication_execution as execution
+
+    frozen = plan(repository, suppress_subscription_dispatch=True)
+    frozen.update(execution_mode="full", _execution={
+        "configuration_digest": "config", "job_configuration_digest": "job",
+    })
+    monkeypatch.setattr(execution, "load_plan", lambda *args: frozen)
+    monkeypatch.setattr(execution, "validate_execution", lambda *args, **kwargs: None)
+    job = DataReleaseJob(job_id="site-release", name="Site")
+    db = SimpleNamespace(execute=AsyncMock(side_effect=[
+        SimpleNamespace(scalar_one_or_none=lambda: None),
+        SimpleNamespace(scalar_one_or_none=lambda: job),
+    ]))
+    service = SimpleNamespace(trigger_job=AsyncMock(return_value={"status": "queued"}))
+    await execution.enqueue_plan(PublishRunCreate(plan_id=frozen["plan_id"],
+        plan_digest=frozen["plan_digest"], idempotency_key="maintenance-site-only"),
+        db=db, root=repository, data_dir=repository / "data", service=service)
+    assert service.trigger_job.await_args.kwargs["suppress_subscription_dispatch"] is True
+
+
 def test_missing_publication_baseline_never_claims_no_changes(repository):
     (repository / "exports/successful-site-release.json").unlink()
     result = plan(repository)
@@ -194,7 +239,7 @@ def test_capabilities_report_literature_and_actual_automatic_pause(monkeypatch):
     assert literature["realtime_controls"]
     assert next(c for c in result["channels"] if c["id"] == "surveillance")["realtime_controls"]
     assert literature["reason"] == "automatic_publication_paused"
-    assert result["plan_execution"] and not result["rollback"]
+    assert result["plan_execution"] and not literature["rollback"]
 
 
 def test_plan_endpoint_only_reads_db_and_never_calls_enqueuer(repository, monkeypatch):

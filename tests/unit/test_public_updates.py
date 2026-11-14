@@ -4,7 +4,7 @@ import pytest
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from scripts.publish_public_updates import publish
+from scripts.publish_public_updates import publish, reconcile, website_history
 from src.domain import Base, Country, Task, TaskStatus, TaskType
 from src.domain.collection import PublishDirty
 from src.services.data_release.public_updates import project_updates, read_published_markers
@@ -87,3 +87,33 @@ def test_failed_month_upload_never_advances_index_and_can_be_retried():
     client.fail = False
     assert publish(files, client) == 2
     assert publish(files, client) == 0
+
+
+def test_website_history_export_uses_only_node_and_never_builds_templates(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import scripts.publish_public_updates as updates
+    calls = []
+    body = b'{"schema_version":1,"releases":[]}'
+    def run(command, **options):
+        calls.append(command)
+        return SimpleNamespace(stdout=body)
+    monkeypatch.setattr(updates.subprocess, 'run', run)
+    assert website_history(tmp_path) == {'changelog.json': body}
+    assert len(calls) == 1
+    assert calls[0][-1] == str(tmp_path / 'astro-site/scripts/export-changelog.mjs')
+    assert 'build' not in calls[0]
+
+
+@pytest.mark.parametrize('failed_feed', ['website', 'data'])
+def test_independent_record_feeds_do_not_block_each_other(failed_feed):
+    class Client:
+        def __init__(self): self.objects = {}
+        def get_object(self, key): return self.objects.get(key)
+        def put_object_conditional(self, key, body, **kwargs): self.objects[key] = body
+    def unavailable(): raise RuntimeError('input unavailable')
+    client = Client()
+    with pytest.raises(RuntimeError, match='input unavailable'):
+        reconcile(client,
+            history=unavailable if failed_feed == 'website' else lambda: {'changelog.json': b'versions'},
+            data=unavailable if failed_feed == 'data' else lambda: project_updates([]))
+    assert ('site-data/updates/latest.json' if failed_feed == 'website' else 'site-data/updates/changelog.json') in client.objects

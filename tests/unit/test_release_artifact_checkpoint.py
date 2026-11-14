@@ -106,7 +106,7 @@ def test_rendering_configuration_change_invalidates_candidate(tmp_path, monkeypa
     assert checkpoint.restore(changed, identity, _built_site_digest) is None
 
 
-def test_candidate_source_tracks_authored_typescript_in_data_directory(tmp_path):
+def test_candidate_source_excludes_runtime_changelog_but_tracks_other_authored_typescript(tmp_path):
     from src.services.data_release.artifact_checkpoint import source_fingerprint
     path = tmp_path / "astro-site/src/data/changelog.ts"
     path.parent.mkdir(parents=True)
@@ -115,4 +115,6 @@ def test_candidate_source_tracks_authored_typescript_in_data_directory(tmp_path)
     (path.parent / "generated.json").write_text('{"new":"snapshot"}')
     assert source_fingerprint(tmp_path) == before
     path.write_text("export const releases = ['new']")
+    assert source_fingerprint(tmp_path) == before
+    (path.parent / "acknowledgements.ts").write_text("export const acknowledgements = ['new']")
     assert source_fingerprint(tmp_path) != before

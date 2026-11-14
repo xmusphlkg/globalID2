@@ -16,14 +16,16 @@ function bundle(entries: Record<string, unknown>, version: string, root: string)
 }
 function surveillance(version = 1) {
   return bundle({
-    'meta.json': { generated_at: '2026-11-07', total_countries: 2, total_diseases: 1, countries: [country, { ...country, code: 'JP-13', parent_code: 'JP', location_type: 'subdivision' }] },
+    'meta.json': { generated_at: '2026-11-07', total_countries: 2, total_diseases: 1, countries: [country, { ...country, code: 'JP-13', name_en: 'Tokyo', name_zh: '东京都', name_fr: 'Tokyo', parent_code: 'JP', location_type: 'subdivision', source_info: { sources: [{ ...source, label: 'Regional monthly source' }] } }] },
     'site-status.json': { generated_at: '2026-11-07' },
     'home-influenza.json': { schema_version: 1, series: { JP: { cases: [1, 8 * version, 3] }, CN: { cases: [3, 1, 8] } } },
     'countries/jp-summary.json': { ...country, country_code: 'JP', country_name_en: 'Japan', total_deaths: 0, generated_at: '2026-11-07', diseases: [series], source_info: { sources: [source, source] }, country_brief_updated_at: '2026-10-10' },
     'countries/jp.json': { country_code: 'JP', disease_series: { D038: series } },
     'countries/jp-source-series.json': { v: 1, series: {} },
+    'countries/jp-13.json': { country_code: 'JP-13', disease_series: { D038: series } },
+    'countries/jp-13-summary.json': { ...country, country_code: 'JP-13', source_info: { sources: [{ ...source, label: 'Regional monthly source' }] } },
     'diseases/d038-summary.json': { ...series, generated_at: '2026-11-07', country_count: 1, source_info: [{ country_code: 'JP', sources: [source, source] }], reporting_countries: [{ ...country, dates_tail: series.dates, cases_tail: series.cases, period_granularity: 'weekly', comparability: 'comparable' }] },
-    'diseases/d038.json': { disease_id: 'D038', country_series: { JP: { ...series, name_en: 'Japan', name_zh: '日本', period_granularity: 'monthly', dates: ['2026-09-01', '2026-10-01'] } } },
+    'diseases/d038.json': { disease_id: 'D038', country_series: { JP: { ...series, name_en: 'Japan', name_zh: '日本', period_granularity: 'monthly', dates: ['2026-09-01', '2026-10-01'] }, 'JP-13': { ...series, name_en: 'Influenza', name_zh: '流感', period_granularity: 'monthly', dates: ['2026-09-01', '2026-10-01'], cases: [4, 8] } } },
   }, `restored-${version}`, '/site-data');
 }
 const schema_version = 'gids.situation_alerts.v1';
@@ -145,11 +147,16 @@ test('archives show named groups and adjacent periods while timelines stay lazy'
 });
 
 
-test('seasonality retains the selected country source and current data version', async ({ page }) => {
+test('seasonality retains upper and lower-level area sources and current data version', async ({ page }) => {
   await mock(page);
   await page.goto('/fr/diseases/influenza/');
   await page.locator('#seasonality').scrollIntoViewIfNeeded();
   await expect(page.locator('#seasonality select')).toContainText('Japon');
   await expect(page.locator('#seasonality [data-source-label]')).toHaveAttribute('data-source-label', 'Official weekly source');
+  await expect(page.locator('#seasonality [data-surveillance-version]')).toHaveAttribute('data-surveillance-version', 'restored-1');
+  await page.locator('#seasonality select').selectOption('JP-13');
+  await expect(page.locator('#seasonality select')).toHaveValue('JP-13');
+  await expect(page.locator('#seasonality option:checked')).toHaveText('Tokyo (JP-13)');
+  await expect(page.locator('#seasonality [data-source-label]')).toHaveAttribute('data-source-label', 'Regional monthly source');
   await expect(page.locator('#seasonality [data-surveillance-version]')).toHaveAttribute('data-surveillance-version', 'restored-1');
 });

@@ -1,288 +1,118 @@
-# 快速开始指南
+# 快速开始
 
-## 系统要求
+本文用于本地开发。生产服务的部署与升级见
+[部署和回滚](docs/control-center/deployment-and-rollback.md)，已有数据库的迁移见
+[迁移说明](migrations/README.md)。下列命令默认在仓库根目录执行。
 
-- Python 3.11+
-- PostgreSQL 14+
-- Redis (可选，用于缓存)
+## 1. 安装依赖
 
-## 快速部署（5分钟）
-
-### 1. 克隆并安装依赖
-
-```bash
-cd /home/likangguo/globalID/globalID2
-source venv/bin/activate  # 如果已有虚拟环境
-
-# 或创建新的虚拟环境
-python -m venv venv
-source venv/bin/activate
-
-# 安装依赖
-pip install -r requirements.txt
-```
-
-### 2. 配置数据库
-
-确保 `.env` 文件包含正确的数据库连接：
-
-```env
-DATABASE_URL=postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid
-```
-
-如果数据库是通过 Docker 启动的，当前配置会把数据保存在固定 Docker volume 中，重启电脑后数据仍会保留；数据库容器也会在 Docker 开机自启时自动拉起。
-
-不要执行下面这条命令，除非你就是要删除数据库数据：
+需要 Python 3.11+、Node.js 22.23.4+、Docker Compose。
+服务进程使用的系统 Node 也必须满足版本要求。
 
 ```bash
-docker compose down -v
+python3 -m venv venv
+venv/bin/pip install -r requirements.txt
+npm --prefix dashboard ci
+npm --prefix astro-site ci
 ```
 
-### 3. 初始化数据库（二选一）
+首次配置时从 `.env.example` 复制 `.env`，填写数据库和所需服务参数；已有 `.env`
+应按示例补齐配置。前后端的鉴权和代理设置见
+[配置指南](docs/operations/DEVELOPMENT.md#configuration)。
 
-#### 方式 A：完整重建（推荐）
-
-一次性完成所有初始化和数据导入（包含 8,785 条历史记录）：
-
-```bash
-python scripts/full_rebuild_database.py
-```
-
-预计耗时：1-2 分钟
-
-#### 方式 B：快速初始化
-
-仅创建表结构和基础配置：
-
-```bash
-python main.py init-database
-```
-
-### 4. 启动数据质量仪表盘
-
-```bash
-cd dashboard
-npm run dev
-```
-
-访问：http://localhost:3000
-
-### 5. 设置开机自动启动（数据库 + dashboard + 站点）
-
-仓库现在内置了一套 `systemd` 模板，会在开机后自动拉起：
-
-- Docker 基础设施（PostgreSQL / Redis / Qdrant）
-- dashboard API
-- dashboard worker
-- dashboard Web
-- Astro 站点
-
-先确保依赖已经安装过一次：
+## 2. 启动基础设施并初始化开发数据库
 
 ```bash
 docker compose up -d
-cd dashboard && npm install
-cd ../astro-site && npm install
-cd ..
+venv/bin/python main.py init-database
 ```
 
-然后执行：
+`init-database` 创建缺失的模型表并初始化 CN 元数据，不导入历史观测。
+它不能替代已有数据库的 Alembic 升级。采用迁移管理前，按
+[迁移说明](migrations/README.md)运行 preflight；已有 Alembic 版本的数据库按正常迁移链升级，
+不要重复 stamp 基线。
+
+数据库、Redis 和 Qdrant 使用固定 Docker volume。`docker compose down` 保留数据；
+`docker compose down -v` 会删除持久化数据。
+
+## 3. 启动 API、worker 和调度器
+
+分别在终端中运行：
 
 ```bash
-sudo ./scripts/install_systemd_services.sh --enable --start
+venv/bin/uvicorn dashboard.api.main:app --host 127.0.0.1 --port 8000
 ```
-
-查看状态：
 
 ```bash
-systemctl status globalid-stack.target
-journalctl -u globalid-dashboard-api.service -f
-journalctl -u globalid-dashboard-web.service -f
-journalctl -u globalid-site.service -f
+TASK_WORKER_ROLE=general venv/bin/python -m src.services.task_worker
 ```
-
-如需卸载：
 
 ```bash
-sudo ./scripts/install_systemd_services.sh --uninstall
+TASK_WORKER_ROLE=ai venv/bin/python -m src.services.task_worker
 ```
-
-可选开关写在根目录 `.env`：
-
-```env
-GLOBALID_API_PORT=8000
-GLOBALID_DASHBOARD_PORT=3000
-GLOBALID_SITE_PORT=4321
-GLOBALID_DASHBOARD_BUILD_ON_START=0
-GLOBALID_SITE_BUILD_ON_START=0
-GLOBALID_SITE_REGENERATE_ON_START=0
-```
-
-## 常用操作
-
-### 数据管理
 
 ```bash
-# 完整重建数据库（推荐，包含所有步骤）
-python scripts/full_rebuild_database.py
-
-# 导入日本周报历史数据（默认仅导入 Reporting Area=総数）
-python scripts/import_jp_weekly_history.py
-
-# 覆盖式重导（先清空 JP 历史数据再导入）
-python scripts/import_jp_weekly_history.py --replace-existing
-
-# JP 任务式更新（接入任务管理/workbook/crawl_runs）
-# 本地模式（source=local）：直接使用 data/raw/jp/weekly_cases_standardized.csv
-python main.py crawl --country JP --source local --process --no-save-raw
-
-# 爬虫模式（source=jp_weekly）：调用 globalID2 内置 JP crawler 更新后入库
-# 备注：是否保留抓取到的原始文件由 --save-raw 决定
-python main.py crawl --country JP --source jp_weekly --process --save-raw
-
-# 刷新疾病映射（修改 CSV 配置后）
-python scripts/refresh_disease_mappings.py --yes
-
-# 数据质量检查
-python scripts/data_quality_check_cn.py
+venv/bin/python -m src.control_plane.scheduler
 ```
 
-**注意**：`full_rebuild_database.py` 已整合历史数据导入功能，包含完整字段和详细metadata。
+普通任务和 AI 任务使用独立 worker。`crawl` 等 CLI 会入队并等待任务结果，需要对应
+worker 正常运行。调度器读取数据库中的任务配置；在生产数据库上启动它会执行已启用的计划。
 
-### 增量更新 / 补缺更新（非强制）
-`crawl` 默认是**非强制**（`--no-force`），会先拉取源列表，再与数据库对比，只处理需要更新的数据。
-
-另外支持按“月份缺口”做回填（`--fill-missing`，默认开启）：如果源列表里出现了某个月，但数据库里没有这个月的数据，会把该月也加入待处理列表。
+## 4. 启动控制台
 
 ```bash
-# 仅预览将要更新的数据（不落库、不保存raw）
-python main.py crawl --country CN --source all --no-process --no-save-raw --no-force --fill-missing
-
-# 真正执行更新（处理并写入数据库）
-python main.py crawl --country CN --source all --process --save-raw --no-force --fill-missing
+npm --prefix dashboard run dev
 ```
 
-### 开发/排障小脚本
-根目录下的临时脚本已移动到 `scripts/dev/`（例如插入国家、快速验证数据库是否有数据）。
+访问 <http://localhost:3000>。浏览器通过同源 `/api/v1` 访问 API；后端地址不同
+时配置服务端 `API_PROXY_TARGET`，并确保 Web 与 API 的 `DASHBOARD_API_KEY` 一致。
+健康检查入口为 <http://localhost:8000/health>。
 
-### 数据查看
+## 5. 采集、检查与本地导出
 
 ```bash
-# 启动仪表盘
-cd dashboard && npm run dev
+# 采集并处理 CN 官方来源；需要运行中的 general worker。
+venv/bin/python main.py crawl --country CN --source all --process --save-raw
 
-# 功能：
-# - 数据概览和 KPI 指标
-# - 疾病趋势分析
-# - 疾病对比
-# - 数据质量检查
-# - 自定义 SQL 查询
+# 查看任务运行状态。
+venv/bin/python scripts/check_task_runtime.py
+
+# 检查 CN 旧兼容投影的数据质量，不代表所有 v3 来源验收通过。
+venv/bin/python scripts/cn_data_quality_check.py
+
+# 导出最新数据到本地；不发布外部站点。
+venv/bin/python main.py export-data --country CN --period latest --output-format all
 ```
 
-### 数据导出
+国家来源与接入条件见[来源目录](docs/data-sources/README.md)。历史导入和修复见
+[脚本索引](scripts/README.md)。`full_rebuild_database.py` 的 full/history 模式会重建数据，
+需要已有原始文件；正常启动不需要执行它。仅同步旧兼容映射时可按
+[重建指南](docs/operations/DATABASE_REBUILD.md)使用交互式 `--mode mappings`。
+
+## 6. 预览公开站点
+
+在独立开发工作区生成数据后启动 Astro：
 
 ```bash
-# 导出最新数据（CSV + Excel）
-python main.py export-data --country CN --period latest
-
-# 导出全部数据
-python main.py export-data --country CN --period all --output-format all
-
-# 导出指定月份
-python main.py export-data --country CN --period 2025-06
-
-# 创建数据包（ZIP）
-python main.py export-data --country CN --package
+venv/bin/python scripts/generate_site_data.py
+npm --prefix astro-site run dev
 ```
 
-## 当前数据统计
+访问 <http://localhost:4321>。数据导出修改本地生成目录；不要在受管发布任务使用的
+工作区并行手工运行。正式公开更新由发布任务处理，流程见
+[发布架构](docs/architecture/STATIC_SITE_AND_DYNAMIC_DATA.md)。
 
-完成完整重建后，系统包含：
-
-- **总记录数**：8,785 条疾病记录
-- **时间范围**：2010-01-01 至 2025-12-01
-- **疾病数量**：49 种（排除汇总项）
-- **数据来源**：
-  - China CDC: Notifiable Infectious Diseases Reports (5,408 条)
-  - China CDC Weekly: Notifiable Infectious Diseases Reports (2,059 条)
-  - GOV Data (1,318 条)
-
-## 故障排除
-  - GOV Data (1,318 条)
-
-## 故障排除
-
-### 支持的格式
-
-- **CSV**: 通用格式，Excel/Python/R都能读取
-- **Excel** (.xlsx): 带格式化的Excel文件
-- **JSON**: API友好格式
-- **Parquet**: 高效压缩格式（大数据）
-
-### 自动导出
-
-生成报告时自动导出数据：
+## 检查与故障排查
 
 ```bash
-python main.py generate-report --country CN --report-type weekly
-# 会自动生成：
-# - reports/CN_data_20260210_*.csv
-# - reports/CN_latest.csv
-# - reports/CN_latest.xlsx
+./scripts/check_repository_boundaries.sh
+venv/bin/python scripts/check_legacy_disease_access.py
 ```
 
-### 数据包内容
+- 数据库连接失败：核对 `.env` 与 `docker compose ps`；不要通过重建数据库修复连接问题。
+- CLI 一直等待：检查 API、对应 worker 和任务状态。
+- 控制台访问 API 失败：核对代理目标、服务端 API key 与 API 健康状态。
+- 数据表已有但字段缺失：按迁移流程检查 Alembic 版本，不重复运行旧建表脚本。
+- 系统服务安装、日志和重启：见[开发与运维](docs/operations/DEVELOPMENT.md#boot-autostart)。
 
-使用 `--package` 创建的 ZIP 包含：
-
-- 所有历史数据（CSV + Excel + JSON）
-- 最新数据（CSV + Excel）
-- README.txt（数据字典说明）
-
-## 数据字段说明
-
-导出的数据包含以下字段：
-
-| 字段 | 说明 |
-|------|------|
-| Date | 记录日期 (YYYY-MM-DD) |
-| YearMonth | 年月 (YYYY Month) |
-| Disease | 疾病名称 |
-| DiseaseCategory | 疾病分类 |
-| Cases | 病例数 |
-| Deaths | 死亡数 |
-| Recoveries | 康复数 |
-| IncidenceRate | 发病率 |
-| MortalityRate | 死亡率 |
-| FatalityRate | 病死率 (%) |
-| Country | 国家 |
-| DataQuality | 数据质量 (high/medium/low) |
-| ConfidenceScore | 可信度评分 (0-1) |
-| Source | 数据来源 |
-| SourceURL | 来源URL |
-
-## 下一步
-
-依赖安装完成后：
-
-1. 运行数据迁移（约2-5分钟）
-2. 生成第一份报告
-3. 导出数据文件
-4. 设置定时任务
-
-## 问题排查
-
-### 如果数据库连接失败
-
-检查 .env 文件中的 DATABASE_URL 配置
-
-### 如果依赖安装很慢
-
-可以使用国内镜像：
-```bash
-pip install -i https://pypi.tuna.tsinghua.edu.cn/simple pgvector
-```
-
-### 如果内存不足
-
-编辑 `scripts/migrate_data.py`，将批量大小从 1000 改为 500
+更多入口：[文档索引](docs/README.md)、[控制台排障](docs/control-center/troubleshooting.md)。

@@ -575,7 +575,7 @@ Never resend a whole campaign merely because a subset failed.
 
 The existing `weekly_digest` currently contains surveillance reports; the
 proposed cross-source issue is described separately in
-[`docs/SUBSCRIPTION_WEEKLY_DIGEST_DESIGN.md`](../../docs/SUBSCRIPTION_WEEKLY_DIGEST_DESIGN.md).
+[`docs/publishing/SUBSCRIPTION_WEEKLY_DIGEST_DESIGN.md`](../../docs/publishing/SUBSCRIPTION_WEEKLY_DIGEST_DESIGN.md).
 
 ### Preview the email templates
 

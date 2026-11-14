@@ -68,7 +68,7 @@ test('subscription links preselect filters and keep diseases selected across sea
   await expect(page.getByRole('link', { name: 'Follow this disease' })).toHaveAttribute('href', '/subscribe/?disease=measles');
   await page.goto('/subscribe/?country=CN-BJ');
   await expect(page.locator('input[name="countries"][value="CN"]')).toBeChecked();
-  await expect(page.locator('#subscription-status')).toContainText('parent country');
+  await expect(page.locator('#subscription-status')).toContainText('parent area');
   await page.goto('/subscribe/?country=CA&disease=measles');
   await expect(page.locator('input[name="countries"][value="CA"]')).toBeChecked();
   await expect(page.locator('input[name="diseases"][value="measles"]')).toBeChecked();

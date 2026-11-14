@@ -15,7 +15,7 @@ const options = diseaseIndex.map(disease => ({
     zh: disease.name_zh,
     fr: localizedDiseaseName({ disease_id: disease.disease_id, slug: disease.slug, name_en: disease.name_en, name_zh: disease.name_zh, name_fr: disease.name_fr }, 'fr'),
 }));
-const title = locale === 'zh' ? '国家与疾病对比' : locale === 'fr' ? 'Comparer les pays et les maladies' : 'Compare countries and diseases';
+const title = locale === 'zh' ? '地理区域与疾病对比' : locale === 'fr' ? 'Comparer les zones géographiques et les maladies' : 'Compare geographic areas and diseases';
 ---
 
 <BaseLayout title={title} description={title} initialLanguage={locale}>
@@ -23,7 +23,7 @@ const title = locale === 'zh' ? '国家与疾病对比' : locale === 'fr' ? 'Com
     <p class="academic-kicker">GIDS / {locale === 'zh' ? '数据工具' : locale === 'fr' ? 'Outil de données' : 'Data tool'}</p>
     <h1 class="academic-title">{title}</h1>
     <p class="academic-lead mt-4">
-      {locale === 'zh' ? '选择最多两种疾病和四个国家，按来源报告期探索趋势并分享当前选择。' : locale === 'fr' ? 'Choisissez jusqu’à deux maladies et quatre pays pour explorer les tendances et partager votre sélection.' : 'Select up to two diseases and four countries to explore source-period trends and share your selection.'}
+      {locale === 'zh' ? '选择最多两种疾病和四个地理区域，按来源报告期探索趋势并分享当前选择。' : locale === 'fr' ? 'Choisissez jusqu’à deux maladies et quatre zones géographiques pour explorer les tendances et partager votre sélection.' : 'Select up to two diseases and four geographic areas to explore source-period trends and share your selection.'}
     </p>
     <CompareWorkspace client:load diseases={options} language={locale} />
   </div>

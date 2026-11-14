@@ -91,28 +91,28 @@ export default function MonthlyBar({
       {data.coverage && (
         <span className="chart-chip" role="note">
           {lang === 'zh'
-            ? `国家级已报告部分合计；覆盖分母为数据导出中的 ${data.coverage.jurisdiction_universe_size} 个国家/地区，具体报告数见悬浮提示。`
+            ? `上级区域已报告部分合计；覆盖分母为数据导出中的 ${data.coverage.jurisdiction_universe_size} 个区域，具体报告数见悬浮提示。`
             : lang === 'fr'
-              ? `Sous-totaux nationaux déclarés ; couverture mesurée sur ${data.coverage.jurisdiction_universe_size} juridictions nationales dans cet export. Voir les infobulles pour le détail mensuel.`
-              : `National reported subtotals; coverage is measured against ${data.coverage.jurisdiction_universe_size} national jurisdictions in this export. See tooltips for monthly coverage.`}
+              ? `Sous-totaux déclarés des zones de niveau supérieur ; couverture mesurée sur ${data.coverage.jurisdiction_universe_size} zones de niveau supérieur dans cet export. Voir les infobulles pour le détail mensuel.`
+              : `Reported subtotals for top-level areas; coverage is measured against ${data.coverage.jurisdiction_universe_size} top-level areas in this export. See tooltips for monthly coverage.`}
         </span>
       )}
       {!!data.coverage?.excluded_weekly_jurisdictions && (
         <span className="chart-chip" role="note">
           {lang === 'zh'
-            ? `${data.coverage.excluded_weekly_jurisdictions} 条国家级周序列未计入月度合计（周期间可能跨月）。`
+            ? `${data.coverage.excluded_weekly_jurisdictions} 条上级区域周序列未计入月度合计（周期间可能跨月）。`
             : lang === 'fr'
-              ? `${data.coverage.excluded_weekly_jurisdictions} séries hebdomadaires nationales exclues du sous-total mensuel (semaines pouvant chevaucher deux mois).`
-              : `${data.coverage.excluded_weekly_jurisdictions} national weekly series excluded from monthly subtotals because weeks may cross months.`}
+              ? `${data.coverage.excluded_weekly_jurisdictions} séries hebdomadaires des zones de niveau supérieur exclues du sous-total mensuel (semaines pouvant chevaucher deux mois).`
+              : `${data.coverage.excluded_weekly_jurisdictions} weekly series for top-level areas excluded from monthly subtotals because weeks may cross months.`}
         </span>
       )}
       {!!data.coverage?.excluded_unknown_jurisdictions && (
         <span className="chart-chip" role="note">
           {lang === 'zh'
-            ? `${data.coverage.excluded_unknown_jurisdictions} 条粒度不明的国家级序列未计入月度合计。`
+            ? `${data.coverage.excluded_unknown_jurisdictions} 条粒度不明的上级区域序列未计入月度合计。`
             : lang === 'fr'
-              ? `${data.coverage.excluded_unknown_jurisdictions} séries nationales de périodicité inconnue exclues du sous-total mensuel.`
-              : `${data.coverage.excluded_unknown_jurisdictions} national series of unknown cadence excluded from monthly subtotals.`}
+              ? `${data.coverage.excluded_unknown_jurisdictions} séries des zones de niveau supérieur de périodicité inconnue exclues du sous-total mensuel.`
+              : `${data.coverage.excluded_unknown_jurisdictions} series of unknown cadence for top-level areas excluded from monthly subtotals.`}
         </span>
       )}
       {!!data.coverage?.inferred_monthly_jurisdictions && (
@@ -128,10 +128,10 @@ export default function MonthlyBar({
         || data.coverage?.deaths_incompatible_months?.some(Boolean)) && (
         <span className="chart-chip" role="note">
           {lang === 'zh'
-            ? '来源定义不兼容的月份不计算多国合计；报告数仍见悬浮提示。'
+            ? '来源定义不兼容的月份不计算跨区域合计；报告数仍见悬浮提示。'
             : lang === 'fr'
-              ? 'Les mois aux définitions incompatibles n’ont pas de total multinational ; le nombre de déclarants reste indiqué.'
-              : 'Months with incompatible source definitions have no multi-country subtotal; reporting counts remain visible.'}
+              ? 'Les mois aux définitions incompatibles n’ont pas de total entre zones ; le nombre de déclarants reste indiqué.'
+              : 'Months with incompatible source definitions have no subtotal across areas; reporting counts remain visible.'}
         </span>
       )}
       <span className="chart-chip">

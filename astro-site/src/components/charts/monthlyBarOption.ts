@@ -76,8 +76,8 @@ export function buildMonthlyBarOption({
                 ? [lang === 'zh'
                   ? `报告地区：${coverage.reported}/${coverage.eligible}（${coverageStatus}）`
                   : lang === 'fr'
-                    ? `Juridictions déclarantes : ${coverage.reported}/${coverage.eligible} (${coverageStatus})`
-                    : `Reporting jurisdictions: ${coverage.reported}/${coverage.eligible} (${coverageStatus})`]
+                    ? `Zones déclarantes : ${coverage.reported}/${coverage.eligible} (${coverageStatus})`
+                    : `Reporting areas: ${coverage.reported}/${coverage.eligible} (${coverageStatus})`]
                 : []),
             ];
           }),

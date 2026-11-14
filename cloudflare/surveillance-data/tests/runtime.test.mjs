@@ -198,6 +198,13 @@ test('packaged Pages Worker routes live JSON while preserving ordinary static as
     assert.equal(monthHead.status, 200);
     assert.equal(await monthHead.text(), '');
     assert.equal(monthHead.headers.get('cache-control'), 'no-store');
+    const historyUrl = 'https://site.test/site-data/updates/changelog.json';
+    for (const version of ['90.0.0', '91.0.0']) {
+      await bucket.put('site-data/updates/changelog.json', JSON.stringify({ schema_version: 1, releases: [{ version }] }));
+      const history = await runtime.dispatchFetch(historyUrl);
+      assert.equal(history.headers.get('cache-control'), 'no-store');
+      assert.equal((await history.json()).releases[0].version, version);
+    }
     const removed = await runtime.dispatchFetch(`https://site.test/research-publication/${'a'.repeat(64)}/research/articles/old/`);
     assert.equal(removed.status, 410);
     assert.equal(removed.headers.get('location'), null);

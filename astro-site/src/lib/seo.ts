@@ -175,7 +175,7 @@ export function buildCountryMetaDescription(input: {
   start?: string | null;
   end?: string | null;
 }): string {
-  const name = normalizeSeoText(input.name) || 'Country';
+  const name = normalizeSeoText(input.name) || 'Area';
   const diseaseCount = Math.max(0, Number(input.diseaseCount) || 0);
   const tracked = diseaseCount > 0
     ? `${diseaseCount} tracked infectious diseases`
@@ -195,7 +195,7 @@ export function buildDiseaseMetaDescription(input: {
   const countryCount = Math.max(0, Number(input.countryCount) || 0);
   const categoryText = category ? ` (${category.toLowerCase()})` : '';
   const geography = countryCount > 0
-    ? ` across ${countryCount} ${countryCount === 1 ? 'country' : 'countries'}`
+    ? ` across ${countryCount} ${countryCount === 1 ? 'area' : 'areas'}`
     : '';
   return `${name}${categoryText} surveillance data${geography}${coverageText(input.start, input.end)}, with case trends, source metadata, and downloadable records.`;
 }

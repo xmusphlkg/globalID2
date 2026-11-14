@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -43,230 +42,40 @@ from src.services.disease_duplicate_audit_service import DiseaseDuplicateAuditSe
 from src.services.model_operations import run_worker_operation
 from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService, SOURCE_GROUPS, expand_sources
 
+from ..schemas.ai_tasks import (
+    AIStartRequest as AIStartRequest,
+    AIContentGovernanceRequest as AIContentGovernanceRequest,
+    AIContentGovernanceResponse as AIContentGovernanceResponse,
+    KnowledgeRepairRetryRequest as KnowledgeRepairRetryRequest,
+    DiseaseDuplicateAuditRequest as DiseaseDuplicateAuditRequest,
+    DiseaseDuplicateAuditStatusRequest as DiseaseDuplicateAuditStatusRequest,
+)
+from ..schemas.disease_knowledge import (
+    DiseaseKnowledgeCatalogueItem as DiseaseKnowledgeCatalogueItem,
+    DiseaseKnowledgeTaskSkipped as DiseaseKnowledgeTaskSkipped,
+    DiseaseKnowledgeStartRequest as DiseaseKnowledgeStartRequest,
+    DiseaseKnowledgeStartResponse as DiseaseKnowledgeStartResponse,
+    DiseaseKnowledgeRepairRequest as DiseaseKnowledgeRepairRequest,
+    DiseaseKnowledgeRepairResponse as DiseaseKnowledgeRepairResponse,
+    DiseaseKnowledgeSourceDetail as DiseaseKnowledgeSourceDetail,
+    DiseaseKnowledgeBriefDetail as DiseaseKnowledgeBriefDetail,
+    DiseaseKnowledgeDetail as DiseaseKnowledgeDetail,
+)
+from ..schemas.model_center import (
+    ProviderCreateRequest as ProviderCreateRequest,
+    ProviderBootstrapRequest as ProviderBootstrapRequest,
+    ProviderUpdateRequest as ProviderUpdateRequest,
+    ProviderOut as ProviderOut,
+    AvailabilityWindowIn as AvailabilityWindowIn,
+    ModelCreateRequest as ModelCreateRequest,
+    ModelUpdateRequest as ModelUpdateRequest,
+    ModelOut as ModelOut,
+    RuntimeRouteOut as RuntimeRouteOut,
+    AIModelCallLogOut as AIModelCallLogOut,
+    ThinkingMode as ThinkingMode,
+)
+
 router = APIRouter()
-
-
-class AIStartRequest(BaseModel):
-    """Body for POST /reports/runs."""
-
-    country_code: str = Field(..., min_length=2, max_length=10, description="Stable country code")
-    report_type: str = Field("monthly", description="Report type: daily / weekly / monthly / special")
-    period_start: Optional[str] = Field(None, description="ISO datetime, optional")
-    period_end: Optional[str] = Field(None, description="ISO datetime, optional")
-    language: str = Field("en", description="Report language: zh or en")
-    days: int = Field(365, ge=1, le=3650, description="Fallback period in days")
-    enable_review: bool = Field(True, description="Enable reviewer agent")
-    report_layout: str = Field(
-        "analytical_v3",
-        description="Report layout: analytical_v3 | structured | legacy",
-    )
-    analysis_depth: str = Field(
-        "deep",
-        description="Analytical v3 depth: deep | deterministic",
-    )
-    quality_threshold: float = Field(
-        0.85,
-        ge=0.0,
-        le=1.0,
-        description="Minimum quality gate score for automatic approval",
-    )
-    send_email: bool = Field(
-        False,
-        description="Send the completed report email to the centralized Settings recipients after generation",
-    )
-    reuse_from_failed: bool = Field(True, description="Reuse partial output from failed/generating tasks in same scope")
-    reuse_strategy: str = Field(
-        "auto",
-        description="Reuse strategy: auto | safe | resume | manual",
-    )
-    reuse_report_uuid: Optional[UUID] = Field(
-        None,
-        description="Optional explicit report UUID when reuse_strategy=manual",
-    )
-    priority: str = Field("normal", description="Task priority")
-    task_name: Optional[str] = Field(None, description="Optional custom task name")
-    description: Optional[str] = Field(None, description="Optional task description")
-
-
-class DiseaseKnowledgeCatalogueItem(BaseModel):
-    disease_id: str
-    name_en: Optional[str] = None
-    name_zh: Optional[str] = None
-    category: Optional[str] = None
-    icd_10: Optional[str] = None
-    icd_11: Optional[str] = None
-    description: Optional[str] = None
-    slug: Optional[str] = None
-    knowledge_status: str = "blocked"
-    knowledge_updated_at: Optional[str] = None
-    published_languages: List[str] = Field(default_factory=list)
-    blocked_languages: List[str] = Field(default_factory=list)
-    knowledge_display_mode: str = "blocked"
-    knowledge_completeness: float = 0.0
-    knowledge_profile_type: str = "infectious_disease"
-    knowledge_profile_schema: Dict[str, Any] = Field(default_factory=dict)
-    repair_sections: List[str] = Field(default_factory=list)
-    repair_sections_by_language: Dict[str, List[str]] = Field(default_factory=dict)
-    repair_reasons_by_language: Dict[str, List[str]] = Field(default_factory=dict)
-    required_gap_sections: List[str] = Field(default_factory=list)
-    repair_priority: str = "none"
-    language_quality: Dict[str, Any] = Field(default_factory=dict)
-    source_count: int = 0
-    brief_statuses: Dict[str, str] = Field(default_factory=dict)
-    brief_tiers: Dict[str, str] = Field(default_factory=dict)
-
-
-class DiseaseKnowledgeTaskSkipped(BaseModel):
-    disease_id: str
-    reason: str
-    existing_task_uuid: Optional[str] = None
-    existing_status: Optional[str] = None
-
-
-class DiseaseKnowledgeStartRequest(BaseModel):
-    disease_ids: List[str] = Field(..., min_length=1)
-    source: List[str] = Field(default_factory=list, description="Source groups: who / search / wikidata / wikipedia / pubmed / msd")
-    force: bool = False
-    generator: str = Field("auto", description="auto prefers reviewed profiles; ai always uses the model center")
-    priority: str = Field("normal")
-    task_name: Optional[str] = Field(None, description="Optional batch task name prefix")
-    description: Optional[str] = Field(None, description="Optional task description")
-
-
-class DiseaseKnowledgeStartResponse(BaseModel):
-    requested_disease_ids: List[str]
-    created_tasks: List[TaskOut]
-    skipped: List[DiseaseKnowledgeTaskSkipped] = Field(default_factory=list)
-
-
-class DiseaseKnowledgeRepairRequest(BaseModel):
-    source: List[str] = Field(default_factory=list, description="Source groups: who / search / wikidata / wikipedia / pubmed / msd")
-    force: bool = False
-    generator: str = Field("ai", description="ai uses the model center for targeted repair")
-    priority: Optional[str] = Field(None, description="Optional override: urgent / high / normal / low")
-    limit: Optional[int] = Field(None, ge=1, le=500)
-
-
-class DiseaseKnowledgeRepairResponse(BaseModel):
-    created_count: int
-    skipped_count: int
-    source_groups: List[str]
-    generator: str
-    force: bool
-    created_tasks: List[TaskOut]
-    skipped: List[DiseaseKnowledgeTaskSkipped] = Field(default_factory=list)
-
-
-class AIContentGovernanceRequest(BaseModel):
-    dry_run: bool = False
-    knowledge_retry_limit: int = Field(50, ge=0, le=500)
-    literature_limit: int = Field(20, ge=0, le=100)
-    literature_article_limit: Optional[int] = Field(None, ge=0, le=100)
-    source_limit: int = Field(30, ge=0, le=200)
-    learning_limit: int = Field(20, ge=0, le=100)
-
-
-class AIContentGovernanceResponse(BaseModel):
-    prompt_version: str
-    dry_run: bool
-    knowledge: Dict[str, Any]
-    literature_articles: Dict[str, Any]
-    literature: Dict[str, Any]
-    knowledge_sources: Dict[str, Any]
-    learning_suggestions: Dict[str, Any]
-
-
-class KnowledgeRepairRetryRequest(BaseModel):
-    limit: int = Field(50, ge=1, le=500)
-
-
-class DiseaseDuplicateAuditRequest(BaseModel):
-    include_ai: bool = Field(True, description="Ask the model center to classify findings")
-    include_new_disease_candidates: bool = Field(
-        True,
-        description="Scan current source data for unmapped disease terms that may need new standard diseases",
-    )
-    max_ai_candidates: int = Field(40, ge=1, le=100)
-
-
-class DiseaseDuplicateAuditStatusRequest(BaseModel):
-    include_new_disease_candidates: bool = True
-
-
-class DiseaseKnowledgeSourceDetail(BaseModel):
-    id: int
-    disease_id: str
-    source_type: str
-    source_name: str
-    url: str
-    resolved_url: Optional[str] = None
-    title: Optional[str] = None
-    license: Optional[str] = None
-    status: str
-    language: str
-    raw_excerpt: Optional[str] = None
-    content_text: Optional[str] = None
-    content_sections: List[Dict[str, Any]] = Field(default_factory=list)
-    raw_excerpt_hash: Optional[str] = None
-    fetched_at: Optional[str] = None
-    review_status: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-
-class DiseaseKnowledgeBriefDetail(BaseModel):
-    language: str
-    status: str
-    source_confidence: str
-    updated_at: Optional[str] = None
-    brief: str
-    definition: Optional[str] = None
-    clinical_features: Optional[str] = None
-    clinical_summary: Optional[str] = None
-    epidemiology: Optional[str] = None
-    transmission: Optional[str] = None
-    prevention: Optional[str] = None
-    surveillance_note: Optional[str] = None
-    risk_groups: Optional[str] = None
-    disclaimer: Optional[str] = None
-    model: Optional[str] = None
-    quality_score: Optional[float] = None
-    review_notes: Optional[str] = None
-    source_ids: List[int] = Field(default_factory=list)
-    source_attribution: List[Dict[str, Any]] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    quality: Dict[str, Any] = Field(default_factory=dict)
-
-
-class DiseaseKnowledgeDetail(BaseModel):
-    disease_id: str
-    name_en: Optional[str] = None
-    name_zh: Optional[str] = None
-    category: Optional[str] = None
-    icd_10: Optional[str] = None
-    icd_11: Optional[str] = None
-    description: Optional[str] = None
-    slug: Optional[str] = None
-    knowledge_status: str = "blocked"
-    knowledge_updated_at: Optional[str] = None
-    published_languages: List[str] = Field(default_factory=list)
-    blocked_languages: List[str] = Field(default_factory=list)
-    knowledge_display_mode: str = "blocked"
-    knowledge_completeness: float = 0.0
-    knowledge_profile_type: str = "infectious_disease"
-    knowledge_profile_schema: Dict[str, Any] = Field(default_factory=dict)
-    repair_sections: List[str] = Field(default_factory=list)
-    repair_sections_by_language: Dict[str, List[str]] = Field(default_factory=dict)
-    repair_reasons_by_language: Dict[str, List[str]] = Field(default_factory=dict)
-    required_gap_sections: List[str] = Field(default_factory=list)
-    repair_priority: str = "none"
-    language_quality: Dict[str, Any] = Field(default_factory=dict)
-    evidence_quality: Dict[str, Any] = Field(default_factory=dict)
-    source_count: int = 0
-    brief_statuses: Dict[str, str] = Field(default_factory=dict)
-    brief_tiers: Dict[str, str] = Field(default_factory=dict)
-    summary: Dict[str, Any] = Field(default_factory=dict)
-    briefs: List[DiseaseKnowledgeBriefDetail] = Field(default_factory=list)
-    sources: List[DiseaseKnowledgeSourceDetail] = Field(default_factory=list)
 
 
 @router.post("/ai/disease-audit/run", response_model=Dict[str, Any])
@@ -483,76 +292,6 @@ async def get_disease_knowledge_detail(
     return DiseaseKnowledgeDetail(**payload)
 
 
-class ProviderCreateRequest(BaseModel):
-    provider_key: str = Field(..., min_length=2, max_length=120)
-    provider_name: str = Field(..., min_length=2, max_length=80)
-    display_name: str = Field(..., min_length=2, max_length=200)
-    api_style: str = Field("openai_compatible")
-    base_url: Optional[str] = None
-    api_key: Optional[str] = None
-    organization: Optional[str] = None
-    extra_headers: Dict[str, Any] = Field(default_factory=dict)
-    extra_config: Dict[str, Any] = Field(default_factory=dict)
-    is_active: bool = True
-    priority: int = 100
-
-
-class ProviderBootstrapRequest(BaseModel):
-    force: bool = False
-
-
-class ProviderUpdateRequest(BaseModel):
-    display_name: Optional[str] = None
-    api_style: Optional[str] = None
-    base_url: Optional[str] = None
-    api_key: Optional[str] = None
-    clear_api_key: bool = False
-    organization: Optional[str] = None
-    extra_headers: Optional[Dict[str, Any]] = None
-    extra_config: Optional[Dict[str, Any]] = None
-    is_active: Optional[bool] = None
-    priority: Optional[int] = None
-
-
-class ProviderOut(BaseModel):
-    id: int
-    provider_key: str
-    provider_name: str
-    display_name: str
-    api_style: str
-    base_url: Optional[str] = None
-    organization: Optional[str] = None
-    is_active: bool
-    priority: int
-    has_api_key: bool
-    api_key_hint: Optional[str] = None
-    extra_headers: Dict[str, Any] = {}
-    extra_config: Dict[str, Any] = {}
-    last_check_status: str
-    last_check_message: Optional[str] = None
-    last_checked_at: Optional[str] = None
-    rate_limit_active: bool = False
-    rate_limit_cooldown_until: Optional[str] = None
-    rate_limit_remaining_seconds: int = 0
-    rate_limit_count: int = 0
-    last_rate_limit_at: Optional[str] = None
-    runtime_failure_active: bool = False
-    runtime_failure_cooldown_until: Optional[str] = None
-    runtime_failure_remaining_seconds: int = 0
-    runtime_failure_streak: int = 0
-    runtime_timeout_count: int = 0
-    runtime_latency_ewma_ms: Optional[float] = None
-    runtime_last_error: Optional[str] = None
-
-
-ThinkingMode = Literal["default", "enabled", "disabled"]
-
-
-class AvailabilityWindowIn(BaseModel):
-    start: str
-    end: str
-
-
 def _without_completion_caps(extra_params: Any) -> Dict[str, Any]:
     """Drop stored completion budgets so they cannot be forwarded upstream."""
     params = dict(extra_params) if isinstance(extra_params, dict) else {}
@@ -571,138 +310,6 @@ def _apply_availability(extra_params: Dict[str, Any], timezone_name: Optional[st
         return with_availability(extra_params, timezone_name, windows)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-
-
-class ModelCreateRequest(BaseModel):
-    provider_key: str = Field(..., min_length=2, max_length=120)
-    model_name: str = Field(..., min_length=1, max_length=120)
-    display_name: Optional[str] = None
-    model_key: Optional[str] = None
-    model_type: str = "chat"
-    api_style: Optional[str] = None
-    temperature: Optional[float] = None
-    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=512)
-    thinking_mode: Optional[ThinkingMode] = None
-    availability_timezone: Optional[str] = None
-    availability_windows: Optional[List[AvailabilityWindowIn]] = None
-    extra_params: Dict[str, Any] = Field(default_factory=dict)
-    is_enabled: bool = True
-    is_default: bool = False
-    priority: int = 100
-
-
-class ModelUpdateRequest(BaseModel):
-    display_name: Optional[str] = None
-    model_type: Optional[str] = None
-    api_style: Optional[str] = None
-    temperature: Optional[float] = None
-    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=512)
-    thinking_mode: Optional[ThinkingMode] = None
-    availability_timezone: Optional[str] = None
-    availability_windows: Optional[List[AvailabilityWindowIn]] = None
-    extra_params: Optional[Dict[str, Any]] = None
-    is_enabled: Optional[bool] = None
-    is_default: Optional[bool] = None
-    priority: Optional[int] = None
-
-
-class ModelOut(BaseModel):
-    id: int
-    provider_id: int
-    provider_key: str
-    provider_name: str
-    model_key: str
-    model_name: str
-    display_name: str
-    model_type: str
-    api_style: Optional[str] = None
-    temperature: Optional[float] = None
-    runtime_max_concurrency: Optional[int] = None
-    thinking_mode: ThinkingMode = "default"
-    availability_timezone: str = "Asia/Shanghai"
-    availability_windows: List[AvailabilityWindowIn] = Field(default_factory=list)
-    extra_params: Dict[str, Any] = {}
-    is_enabled: bool
-    is_default: bool
-    priority: int
-    last_check_status: str
-    last_check_message: Optional[str] = None
-    last_checked_at: Optional[str] = None
-    rate_limit_active: bool = False
-    rate_limit_scope: Optional[str] = None
-    rate_limit_cooldown_until: Optional[str] = None
-    rate_limit_remaining_seconds: int = 0
-    rate_limit_count: int = 0
-    last_rate_limit_at: Optional[str] = None
-    runtime_failure_active: bool = False
-    runtime_failure_scope: Optional[str] = None
-    runtime_failure_cooldown_until: Optional[str] = None
-    runtime_failure_remaining_seconds: int = 0
-    runtime_failure_streak: int = 0
-    runtime_timeout_count: int = 0
-    runtime_latency_ewma_ms: Optional[float] = None
-    runtime_last_error: Optional[str] = None
-
-
-class RuntimeRouteOut(BaseModel):
-    model_id: int
-    model_key: str
-    model_name: str
-    provider_id: int
-    provider_key: str
-    provider_name: str
-    api_style: str
-    base_url: Optional[str] = None
-    has_api_key: bool
-    api_key_hint: Optional[str] = None
-    priority: Optional[int] = None
-    available_for_routing: bool = False
-    routing_status: str = "probe_unavailable"
-    routing_status_reason: Optional[str] = None
-    last_check_status: Optional[str] = None
-    last_checked_at: Optional[str] = None
-    rate_limit_active: bool = False
-    rate_limit_scope: Optional[str] = None
-    rate_limit_cooldown_until: Optional[str] = None
-    rate_limit_remaining_seconds: int = 0
-    rate_limit_count: int = 0
-    last_rate_limit_at: Optional[str] = None
-    runtime_failure_active: bool = False
-    runtime_failure_scope: Optional[str] = None
-    runtime_failure_cooldown_until: Optional[str] = None
-    runtime_failure_remaining_seconds: int = 0
-    runtime_failure_kind: Optional[str] = None
-    runtime_failure_streak: int = 0
-    runtime_failure_streak_raw: int = 0
-    runtime_failure_count: int = 0
-    runtime_timeout_count: int = 0
-    runtime_success_count: int = 0
-    runtime_degraded: bool = False
-    runtime_degraded_scope: Optional[str] = None
-    runtime_degraded_reason: Optional[str] = None
-    runtime_latency_ewma_ms: Optional[float] = None
-    runtime_last_failure_at: Optional[str] = None
-    runtime_last_success_at: Optional[str] = None
-    runtime_last_error: Optional[str] = None
-    runtime_provider_capacity: int = 1
-    runtime_provider_inflight: int = 0
-    runtime_provider_max_capacity: int = 1
-    runtime_model_capacity: int = 1
-    runtime_model_inflight: int = 0
-
-
-class AIModelCallLogOut(BaseModel):
-    id: int
-    request_id: str
-    model_key: str
-    model_name: str
-    provider_key: str
-    agent_name: str
-    status: str
-    latency_ms: float
-    error_type: Optional[str] = None
-    error_message: Optional[str] = None
-    created_at: str
 
 
 @router.post("/reports/runs", response_model=TaskOut, status_code=202)

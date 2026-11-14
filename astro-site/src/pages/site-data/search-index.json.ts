@@ -87,7 +87,7 @@ export const GET: APIRoute = () => {
 
   entries.push(
     { id: 'situation:latest', kind: 'situation', href: localized('/situation/'), title: { en: 'Current global situation', zh: '当前全球态势', fr: 'Situation mondiale actuelle' }, summary: { en: 'Review priorities, official events, coverage, and methods.', zh: '复核优先级、官方事件、覆盖范围和方法。', fr: 'Priorités, événements officiels, couverture et méthodes.' }, aliases: ['situation', 'signals', 'events', 'situation mondiale', '态势', '信号', '事件'] },
-    { id: 'page:countries', kind: 'page', href: localized('/countries/'), title: { en: 'Country data directory', zh: '国家与地区数据目录', fr: 'Répertoire des pays et régions' }, aliases: ['countries', 'regions', 'pays', 'régions', '国家', '地区'] },
+    { id: 'page:countries', kind: 'page', href: localized('/countries/'), title: { en: 'Geographic data directory', zh: '地理区域数据目录', fr: 'Répertoire des zones géographiques' }, aliases: ['countries', 'regions', 'areas', 'pays', 'régions', 'zones', '国家', '区域', '地区', '地理区域'] },
     { id: 'page:diseases', kind: 'page', href: localized('/diseases/'), title: { en: 'Disease directory', zh: '疾病目录', fr: 'Répertoire des maladies' }, aliases: ['diseases', 'conditions', 'maladies', '疾病'] },
     { id: 'page:downloads', kind: 'page', href: localized('/downloads/'), title: { en: 'Data downloads', zh: '数据下载', fr: 'Téléchargements de données' }, aliases: ['csv', 'json', 'xlsx', 'download', 'téléchargement', '下载'] },
     { id: 'page:methods', kind: 'page', href: localized('/about/'), title: { en: 'Methods, sources, and about GIDS', zh: '方法、来源与关于 GIDS', fr: 'Méthodes, sources et présentation de GIDS' }, aliases: ['methods', 'sources', 'limitations', 'méthodes', 'sources', 'limites', '方法', '来源', '局限'] },

@@ -7,7 +7,7 @@ export function currentSurveillanceSite(base: SiteIndex, meta: Record<string, an
   const countries = Object.fromEntries(Object.entries(base.countries).map(([code, value]) => [code, { ...value, seriesCount: 0, latestDate: undefined }]));
   for (const row of meta?.countries ?? []) {
     const code = String(row.code ?? '').toUpperCase();
-    if (!/^[A-Z]{2}$/.test(code) || row.location_type === 'subdivision' || row.parent_code) continue;
+    if (!/^[A-Z]{2}(?:-[A-Z0-9]{1,8})?$/.test(code)) continue;
     countries[code] = { ...countries[code], name_en: row.name_en || row.name || countries[code]?.name_en || code,
       name_zh: row.name_zh || countries[code]?.name_zh, researchCount: countries[code]?.researchCount ?? 0,
       seriesCount: Number(row.disease_count ?? 0), latestDate: row.date_range?.end ?? undefined };
@@ -16,7 +16,7 @@ export function currentSurveillanceSite(base: SiteIndex, meta: Record<string, an
   for (const [diseaseId, summary] of Object.entries(summaries)) {
     for (const row of summary.reporting_countries ?? []) {
       const code = String(row.code ?? '').toUpperCase();
-      if (!/^[A-Z]{2}$/.test(code)) continue;
+      if (!/^[A-Z]{2}(?:-[A-Z0-9]{1,8})?$/.test(code)) continue;
       const glance = seriesGlance(row.cases_tail, row.dates_tail);
       if (!glance) continue;
       const key = seriesKey(code, diseaseId);

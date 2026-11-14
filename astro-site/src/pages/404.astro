@@ -10,7 +10,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ?
 
 <BaseLayout
   title={pick('Page not found', '页面不存在', 'Page introuvable')}
-  description={pick('The requested GIDS surveillance page is not available. Browse the disease directory or country coverage instead.', '请求的 GIDS 监测页面不存在，请浏览疾病目录或国家数据覆盖。', 'La page de surveillance GIDS demandée est introuvable. Consultez plutôt le répertoire des maladies ou la couverture par pays.')}
+  description={pick('The requested GIDS surveillance page is not available. Browse the disease directory or geographic coverage instead.', '请求的 GIDS 监测页面不存在，请浏览疾病目录或地理数据覆盖。', 'La page de surveillance GIDS demandée est introuvable. Consultez plutôt le répertoire des maladies ou la couverture par zone.')}
   initialLanguage={zh ? 'zh' : fr ? 'fr' : 'en'}
   noindex={true}
   hideLanguageToggle={true}
@@ -22,7 +22,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ?
     <p class="mt-3 text-xs text-[rgb(var(--text-faint))] break-all">{requestedPath}</p>
     <div class="mt-8 flex flex-wrap justify-center gap-3">
       <a href={`${prefix}/diseases/`} class="site-action-primary px-4 py-2 rounded-none">{pick('Disease directory', '疾病目录', 'Répertoire des maladies')}</a>
-      <a href={`${prefix}/countries/`} class="site-action-secondary px-4 py-2 rounded-none border">{pick('Countries and regions', '国家和地区', 'Pays et régions')}</a>
+      <a href={`${prefix}/countries/`} class="site-action-secondary px-4 py-2 rounded-none border">{pick('Geographic areas', '地理区域', 'Zones géographiques')}</a>
     </div>
   </section>
 </BaseLayout>

@@ -25,9 +25,9 @@ const sections = [
   ],
   [
     'What the map shows', '地图展示什么', 'Ce que montre la carte',
-    'A model turns each report into zero or more alerts. An alert is one disease in one place (a country, and a province or city when the report names one) with its status (new, ongoing, imported, ended, routine), the case and death counts and their date as the report states them, and one sentence quoted from the report. Counts the report does not state stay empty. A report on one outbreak in three countries gives three points that open onto the same timeline. A routine weekly roundup with nothing unusual gives no point and is listed under monitoring products.',
-    '模型把每份报告拆成零条或多条警报。一条警报是“某病在某地”（国家；报告写明省或城市时保留地名），带有状态（新发、持续、输入、结束、常规监测）、报告写明的病例数与死亡数及其对应日期，以及一句来自报告的原话。报告没写的数字保持为空。一份报告涉及同一疫情的三个国家，就得到三个点，点开是同一条时间线。没有异常的常规周报不产生地图点，归入“监测产品”。',
-    'Un modèle transforme chaque rapport en zéro, une ou plusieurs alertes. Une alerte est une maladie en un lieu (pays, plus province ou ville si le rapport la nomme), avec son statut (nouveau, en cours, importé, terminé, courant), les cas et décès et leur date tels que le rapport les donne, et une phrase citée du rapport. Les chiffres non donnés restent vides. Un rapport sur une flambée dans trois pays donne trois points qui ouvrent la même chronologie. Un point hebdomadaire courant sans événement inhabituel ne donne aucun point et figure parmi les produits de suivi.',
+    'A model turns each report into zero or more alerts. An alert is one disease in one place (a geographic area, with a province or city when the report names one) with its status (new, ongoing, imported, ended, routine), the case and death counts and their date as the report states them, and one sentence quoted from the report. Counts the report does not state stay empty. A report on one outbreak in three areas gives three points that open onto the same timeline. A routine weekly roundup with nothing unusual gives no point and is listed under monitoring products.',
+    '模型把每份报告拆成零条或多条警报。一条警报是“某病在某地”（地理区域；报告写明省或城市时保留地名），带有状态（新发、持续、输入、结束、常规监测）、报告写明的病例数与死亡数及其对应日期，以及一句来自报告的原话。报告没写的数字保持为空。一份报告涉及同一疫情的三个区域，就得到三个点，点开是同一条时间线。没有异常的常规周报不产生地图点，归入“监测产品”。',
+    'Un modèle transforme chaque rapport en zéro, une ou plusieurs alertes. Une alerte est une maladie en un lieu (zone géographique, plus province ou ville si le rapport la nomme), avec son statut (nouveau, en cours, importé, terminé, courant), les cas et décès et leur date tels que le rapport les donne, et une phrase citée du rapport. Les chiffres non donnés restent vides. Un rapport sur une flambée dans trois zones donne trois points qui ouvrent la même chronologie. Un point hebdomadaire courant sans événement inhabituel ne donne aucun point et figure parmi les produits de suivi.',
   ],
   [
     'Native file or extracted text', '原始文件或提取文本', 'Fichier d’origine ou texte extrait',
@@ -37,9 +37,9 @@ const sections = [
   ],
   [
     'Two-model peer review, published automatically', '两个模型互审，自动发布', 'Relecture par deux modèles, publication automatique',
-    'An author model drafts the alerts and an independent reviewer model audits them against the same report, then accepts, asks for a revision or rejects. Deterministic checks run first: disease ids and country codes must exist in the GIDS catalogue, the quoted sentence must appear word for word in the report, and every count must be a number that appears in it. Anything that fails a check is dropped. Only accepted output is published and there is no human gate. If only one model route exists, the same model reviews its own draft and the alert is labelled as single-model review.',
-    '作者模型起草警报，独立的审稿模型对照同一份报告审查，结论为通过、要求修改或拒绝。确定性检查先行：疾病 ID 和国家代码必须存在于 GIDS 目录，引用的句子必须逐字出现在报告里，每个数字都必须是报告中出现过的数字。未通过的内容会被丢弃。只有通过的结果才会发布，没有人工环节。只有一条模型路由时，由同一模型审查自己的草稿，并标注为“单模型评审”。',
-    'Un modèle auteur rédige les alertes et un modèle relecteur indépendant les vérifie sur le même rapport, puis accepte, demande une révision ou rejette. Des contrôles déterministes passent d’abord : identifiants de maladie et codes pays doivent exister dans le catalogue GIDS, la phrase citée doit figurer mot pour mot dans le rapport et chaque chiffre doit y apparaître. Ce qui échoue est écarté. Seul le contenu accepté est publié, sans intervention humaine. Avec une seule route, le même modèle relit son brouillon et l’alerte est signalée comme relecture mono-modèle.',
+    'An author model drafts the alerts and an independent reviewer model audits them against the same report, then accepts, asks for a revision or rejects. Deterministic checks run first: disease ids and geographic codes must exist in the GIDS catalogue, the quoted sentence must appear word for word in the report, and every count must be a number that appears in it. Anything that fails a check is dropped. Only accepted output is published and there is no human gate. If only one model route exists, the same model reviews its own draft and the alert is labelled as single-model review.',
+    '作者模型起草警报，独立的审稿模型对照同一份报告审查，结论为通过、要求修改或拒绝。确定性检查先行：疾病 ID 和地理代码必须存在于 GIDS 目录，引用的句子必须逐字出现在报告里，每个数字都必须是报告中出现过的数字。未通过的内容会被丢弃。只有通过的结果才会发布，没有人工环节。只有一条模型路由时，由同一模型审查自己的草稿，并标注为“单模型评审”。',
+    'Un modèle auteur rédige les alertes et un modèle relecteur indépendant les vérifie sur le même rapport, puis accepte, demande une révision ou rejette. Des contrôles déterministes passent d’abord : identifiants de maladie et codes géographiques doivent exister dans le catalogue GIDS, la phrase citée doit figurer mot pour mot dans le rapport et chaque chiffre doit y apparaître. Ce qui échoue est écarté. Seul le contenu accepté est publié, sans intervention humaine. Avec une seule route, le même modèle relit son brouillon et l’alerte est signalée comme relecture mono-modèle.',
   ],
   [
     'What is public, and quotations', '公开什么，以及引文', 'Ce qui est public, et les citations',
@@ -49,15 +49,15 @@ const sections = [
   ],
   [
     'Colour means recency, not severity', '颜色表示新旧，不表示严重程度', 'La couleur indique la fraîcheur, pas la gravité',
-    'Points updated in the last 7 days come first and are drawn in the strongest colour; older points fade. No model assigns a risk level. Outbreaks group alerts of one disease that one report names together, or that fall in the same country within 60 days; an outbreak with no alert for 30 days is shown as quiet.',
-    '最近 7 天有更新的点排在前面，颜色最醒目，越旧越淡。模型不打风险等级。疫情把同一疾病的警报归在一起：同一份报告一并提到的，或同一国家 60 天内的；30 天没有新警报的疫情显示为平静。',
-    'Les points mis à jour dans les 7 derniers jours passent en premier avec la couleur la plus forte ; les plus anciens s’estompent. Aucun modèle n’attribue de niveau de risque. Une flambée regroupe les alertes d’une maladie citées ensemble par un rapport ou situées dans le même pays à moins de 60 jours ; sans alerte depuis 30 jours elle est affichée comme calme.',
+    'Points updated in the last 7 days come first and are drawn in the strongest colour; older points fade. No model assigns a risk level. Outbreaks group alerts of one disease that one report names together, or that fall in the same geographic area within 60 days; an outbreak with no alert for 30 days is shown as quiet.',
+    '最近 7 天有更新的点排在前面，颜色最醒目，越旧越淡。模型不打风险等级。疫情把同一疾病的警报归在一起：同一份报告一并提到的，或同一区域 60 天内的；30 天没有新警报的疫情显示为平静。',
+    'Les points mis à jour dans les 7 derniers jours passent en premier avec la couleur la plus forte ; les plus anciens s’estompent. Aucun modèle n’attribue de niveau de risque. Une flambée regroupe les alertes d’une maladie citées ensemble par un rapport ou situées dans la même zone à moins de 60 jours ; sans alerte depuis 30 jours elle est affichée comme calme.',
   ],
   [
     'Limitations', '局限', 'Limites',
-    'Coverage follows what these authorities publish: countries that report little to international bodies appear rarely. A reading can still contain an error that both models missed, and a long report can have places the models skipped. The original report is always authoritative. This is not clinical guidance.',
-    '覆盖范围取决于这些机构发布了什么：很少向国际机构报告的国家出现得也少。模型的阅读仍可能出现两个模型都没发现的错误，长报告里也可能漏掉个别地点。一切以原始报告为准。本页不构成临床建议。',
-    'La couverture dépend de ce que publient ces autorités : les pays qui déclarent peu y apparaissent rarement. Une lecture peut contenir une erreur que les deux modèles ont manquée, et un long rapport peut avoir des lieux omis. Le rapport original fait foi. Ne constitue pas un avis clinique.',
+    'Coverage follows what these authorities publish: areas that report little to international bodies appear rarely. A reading can still contain an error that both models missed, and a long report can have places the models skipped. The original report is always authoritative. This is not clinical guidance.',
+    '覆盖范围取决于这些机构发布了什么：很少向国际机构报告的区域出现得也少。模型的阅读仍可能出现两个模型都没发现的错误，长报告里也可能漏掉个别地点。一切以原始报告为准。本页不构成临床建议。',
+    'La couverture dépend de ce que publient ces autorités : les zones qui déclarent peu y apparaissent rarement. Une lecture peut contenir une erreur que les deux modèles ont manquée, et un long rapport peut avoir des lieux omis. Le rapport original fait foi. Ne constitue pas un avis clinique.',
   ],
 ] as const;
 

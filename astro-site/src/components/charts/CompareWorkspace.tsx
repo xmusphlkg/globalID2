@@ -7,13 +7,14 @@ import { loadDiseaseDataset, type DiseaseDataset, type DiseaseDatasetSeriesEntry
 import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
 import { matchesDiseaseSearch } from '../../lib/disease-search';
 import GIDSLoader from '../GIDSLoader';
-import { comparisonPoints, reconcileComparisonCountries, liveCompareDiseaseOptions, type CompareDiseaseOption } from './compareDiseaseOptions';
+import './compare-workspace.css';
+import { comparisonAreaCodes, comparisonAreaGroups, type CompareAreaOption, comparisonPoints, reconcileComparisonCountries, liveCompareDiseaseOptions, type CompareDiseaseOption } from './compareDiseaseOptions';
 
 type Lang = 'en' | 'zh' | 'fr';
 const t = {
-  en: { diseases: 'Diseases', countries: 'Countries', diseaseHint: 'Select up to two', countryHint: 'Select two to four', searchDiseases: 'Search diseases', searchCountries: 'Search countries', noMatches: 'No matches', available: 'reporting countries', results: 'Comparison results', unit: 'Measure', count: 'Reported cases', rate: 'Per 100k, where published', series: 'Comparison series', empty: 'Select a disease and at least two countries with published series.', missing: 'Rates appear only where a source publishes a usable population denominator.', note: 'Lines retain each source’s reporting period and case definition. Compare aligned dates and methods before interpreting differences.' },
-  zh: { diseases: '疾病', countries: '国家与地区', diseaseHint: '最多选择 2 种', countryHint: '选择 2–4 个', searchDiseases: '搜索疾病', searchCountries: '搜索国家与地区', noMatches: '没有匹配项', available: '个报告国家/地区', results: '对比结果', unit: '指标', count: '报告病例数', rate: '每 10 万人（有可用分母时）', series: '对比序列', empty: '请选择疾病及至少两个有公开序列的国家。', missing: '仅在来源提供可用人口分母时显示每 10 万人口数值。', note: '曲线保留各来源的报告周期和病例定义；解释差异前请核对日期与统计方法。' },
-  fr: { diseases: 'Maladies', countries: 'Pays et régions', diseaseHint: 'Deux au maximum', countryHint: 'Choisissez 2 à 4 pays', searchDiseases: 'Rechercher une maladie', searchCountries: 'Rechercher un pays', noMatches: 'Aucun résultat', available: 'pays déclarants', results: 'Résultats de la comparaison', unit: 'Mesure', count: 'Cas déclarés', rate: 'Pour 100 000, si publié', series: 'Séries comparées', empty: 'Choisissez une maladie et au moins deux pays avec des séries publiées.', missing: 'Le taux apparaît seulement lorsqu’un dénominateur valide est disponible.', note: 'Les courbes conservent la période et la définition de chaque source. Vérifiez les méthodes avant toute comparaison.' },
+  en: { diseases: 'Diseases', countries: 'Geographic areas', diseaseHint: 'Select up to two', countryHint: 'Select two to four areas; expand an area to choose its published lower-level administrative units', subdivisions: 'Lower-level units', searchDiseases: 'Search diseases', searchCountries: 'Search geographic areas', noMatches: 'No matches', available: 'top-level areas', availableOne: 'top-level area', results: 'Comparison results', unit: 'Measure', count: 'Reported cases', rate: 'Per 100k, where published', series: 'Comparison series', empty: 'Select a disease and at least two geographic areas with published series.', missing: 'Rates appear only where a source publishes a usable population denominator.', note: 'Lines retain each source’s reporting period and case definition. Compare aligned dates and methods before interpreting differences.' },
+  zh: { diseases: '疾病', countries: '地理区域', diseaseHint: '最多选择 2 种', countryHint: '选择 2–4 个区域；展开区域可选择已有数据的下一级行政单位', subdivisions: '下一级行政单位', searchDiseases: '搜索疾病', searchCountries: '搜索地理区域', noMatches: '没有匹配项', available: '个上级区域', availableOne: '个上级区域', results: '对比结果', unit: '指标', count: '报告病例数', rate: '每 10 万人（有可用分母时）', series: '对比序列', empty: '请选择疾病及至少两个有公开序列的地理区域。', missing: '仅在来源提供可用人口分母时显示每 10 万人口数值。', note: '曲线保留各来源的报告周期和病例定义；解释差异前请核对日期与统计方法。' },
+  fr: { diseases: 'Maladies', countries: 'Zones géographiques', diseaseHint: 'Deux au maximum', countryHint: 'Choisissez 2 à 4 zones ; développez une zone pour sélectionner ses unités administratives de niveau inférieur publiées', subdivisions: 'Unités de niveau inférieur', searchDiseases: 'Rechercher une maladie', searchCountries: 'Rechercher une zone géographique', noMatches: 'Aucun résultat', available: 'zones de niveau supérieur', availableOne: 'zone de niveau supérieur', results: 'Résultats de la comparaison', unit: 'Mesure', count: 'Cas déclarés', rate: 'Pour 100 000, si publié', series: 'Séries comparées', empty: 'Choisissez une maladie et au moins deux zones géographiques avec des séries publiées.', missing: 'Le taux apparaît seulement lorsqu’un dénominateur valide est disponible.', note: 'Les courbes conservent la période et la définition de chaque source. Vérifiez les méthodes avant toute comparaison.' },
 };
 const palette = ['#0f766e', '#2563eb', '#c06127', '#9b4dcc'];
 
@@ -66,6 +67,7 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
   const [ready, setReady] = useState(false);
   const [diseaseQuery, setDiseaseQuery] = useState('');
   const [countryQuery, setCountryQuery] = useState('');
+  const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({});
   const refs = useRef<Record<string, any>>({});
   const seededCountries = useRef(false);
   const initialized = useRef(false);
@@ -82,7 +84,7 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
     if (!disease) return undefined;
     return { en: disease.en, zh: disease.zh, fr: disease.fr };
   };
-  const placeName = (entry: DiseaseDatasetSeriesEntry) => language === 'zh' ? entry.name_zh : language === 'fr' ? entry.name_fr || entry.name_en : entry.name_en;
+  const placeName = (area: CompareAreaOption) => area.names[language];
   const periodName = (value?: string | null) => {
     const period = String(value ?? '').toLowerCase();
     const names: Record<string, [string, string, string]> = {
@@ -117,7 +119,7 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
     const params = new URLSearchParams(location.search);
     const ids = params.get('d')?.split(',').filter(id => identities.some(d => d.id === id)).slice(0, 2) ?? [];
     urlCountriesProvided.current = params.has('c');
-    urlCountries.current = params.get('c')?.split(',').filter(code => /^[A-Z]{2}$/.test(code)).slice(0, 4) ?? [];
+    urlCountries.current = comparisonAreaCodes(params.get('c'));
     setSelected(params.has('d') ? ids : availableDiseases.filter(d => (d.countries ?? 0) > 0).slice(0, 1).map(d => d.id));
     setCountries(urlCountries.current);
     setUnit(params.get('u') === 'rate' ? 'rate' : 'count');
@@ -133,22 +135,24 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
     return () => { cancelled = true; };
   }, [selected, attempt]);
   const diseaseHref = (id: string) => diseases.find(item => item.id === id)?.href;
-  const available = useMemo(() => {
-    const map = new Map<string, DiseaseDatasetSeriesEntry>();
-    selected.forEach(id => Object.entries(datasets[id]?.country_series ?? {}).forEach(([code, entry]) => {
-      if (/^[A-Z]{2}$/.test(code) && entry.dates?.length && !map.has(code)) map.set(code, entry);
-    }));
-    return [...map].sort((a, b) => a[1].name_en.localeCompare(b[1].name_en));
-  }, [datasets, selected]);
+  const areaGroups = useMemo(() => comparisonAreaGroups(selected, datasets, publication.data?.countries), [selected, datasets, publication.data]);
+  const available = useMemo(() => areaGroups.flatMap(group => [group.area, ...group.children].filter(area => area.selectable)), [areaGroups]);
+  const areaByCode = useMemo(() => new Map(available.map(area => [area.code, area])), [available]);
   const matchingDiseases = diseases.filter(disease => matchesDiseaseSearch(disease, diseaseQuery));
-  const matchingCountries = available.filter(([code, entry]) => `${code} ${entry.name_en} ${entry.name_zh} ${entry.name_fr ?? ''}`.toLocaleLowerCase().includes(countryQuery.trim().toLocaleLowerCase()));
+  const query = countryQuery.trim().toLocaleLowerCase();
+  const areaMatches = (area: CompareAreaOption) => `${area.code} ${Object.values(area.names).join(' ')}`.toLocaleLowerCase().includes(query);
+  const matchingGroups = areaGroups.flatMap(group => {
+    const parentMatches = areaMatches(group.area);
+    const children = parentMatches ? group.children : group.children.filter(areaMatches);
+    return parentMatches || children.length ? [{ ...group, children }] : [];
+  });
   useEffect(() => {
     if (!ready || loading || loadError || !selected.length || selected.some(id => !datasets[id])) return;
     if (!seededCountries.current) {
       seededCountries.current = true;
-      if (!urlCountriesProvided.current) { setCountries(available.slice(0, 2).map(([code]) => code)); return; }
+      if (!urlCountriesProvided.current) { setCountries(available.filter(area => !area.parentCode).concat(available.filter(area => area.parentCode)).slice(0, 2).map(area => area.code)); return; }
     }
-    const next = reconcileComparisonCountries(countries, available.map(([code]) => code));
+    const next = reconcileComparisonCountries(countries, available.map(area => area.code));
     if (next.removed.length) { setCountries(next.countries); setRemovedCountries(next.removed); }
   }, [available, ready, loading, loadError, countries, selected, datasets]);
   useEffect(() => {
@@ -170,7 +174,7 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
   const chartOption = (id: string) => {
     const rows = rowsFor(id);
     const ink = dark ? '#8fa8ba' : '#526271';
-    return { animation: false, backgroundColor: 'transparent', color: rows.map(row => row.color), legend: { top: 0, type: 'scroll', textStyle: { color: ink } }, grid: { left: compact ? 46 : 64, right: compact ? 12 : 24, top: 45, bottom: 75 }, tooltip: { trigger: 'axis', valueFormatter: (value: number) => value == null ? '—' : value.toLocaleString(language) }, xAxis: { type: 'time', axisLabel: { color: ink, hideOverlap: true } }, yAxis: { type: 'value', min: 0, axisLabel: { color: ink, formatter: (value: number) => Intl.NumberFormat(language, { notation: 'compact' }).format(value) } }, dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 15, height: 20 }], series: rows.map(row => ({ name: `${placeName(row.entry)} · ${periodName(row.entry.period_granularity)}`, type: 'line', showSymbol: false, connectNulls: false, data: comparisonPoints(row.entry.dates, unit === 'rate' ? row.entry.incidence_rates ?? [] : row.entry.cases ?? []), lineStyle: { width: 2 }, emphasis: { focus: 'series' } })) };
+    return { animation: false, backgroundColor: 'transparent', color: rows.map(row => row.color), legend: { top: 0, type: 'scroll', textStyle: { color: ink } }, grid: { left: compact ? 46 : 64, right: compact ? 12 : 24, top: 45, bottom: 75 }, tooltip: { trigger: 'axis', valueFormatter: (value: number) => value == null ? '—' : value.toLocaleString(language) }, xAxis: { type: 'time', axisLabel: { color: ink, hideOverlap: true } }, yAxis: { type: 'value', min: 0, axisLabel: { color: ink, formatter: (value: number) => Intl.NumberFormat(language, { notation: 'compact' }).format(value) } }, dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 15, height: 20 }], series: rows.map(row => ({ name: `${areaByCode.get(row.code)?.names[language] ?? row.code} · ${periodName(row.entry.period_granularity)}`, type: 'line', showSymbol: false, connectNulls: false, data: comparisonPoints(row.entry.dates, unit === 'rate' ? row.entry.incidence_rates ?? [] : row.entry.cases ?? []), lineStyle: { width: 2 }, emphasis: { focus: 'series' } })) };
   };
   const share = () => {
     const url = new URL(location.href);
@@ -181,15 +185,38 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
   };
   return <div className="compare-workspace">
     <div className="compare-method-note"><span className="figure-kicker">{language === 'zh' ? '解读提示' : language === 'fr' ? 'Note méthodologique' : 'Interpretation note'}</span><p>{label.note}</p></div>
-    {removedCountries.length > 0 && <p className="disease-trend-note" role="status">{language === 'zh' ? `当前疾病没有 ${removedCountries.join('、')} 的可用序列，已移除这些选择。请重新选择参与对比的国家。` : language === 'fr' ? `Sélections retirées, sans séries disponibles : ${removedCountries.join(', ')}. Choisissez d’autres pays.` : `Removed countries without available series: ${removedCountries.join(', ')}. Choose countries for the current diseases.`}</p>}
+    {removedCountries.length > 0 && <p className="disease-trend-note" role="status">{language === 'zh' ? `当前疾病没有 ${removedCountries.join('、')} 的可用序列，已移除这些选择。请重新选择参与对比的地理区域。` : language === 'fr' ? `Sélections retirées, sans séries disponibles : ${removedCountries.join(', ')}. Choisissez d’autres zones géographiques.` : `Removed areas without available series: ${removedCountries.join(', ')}. Choose areas for the current diseases.`}</p>}
     <div className="compare-controls">
-      <fieldset className="compare-filter-panel"><legend>{label.diseases} <span>{selected.length}/2</span></legend><p className="compare-filter-hint">{label.diseaseHint}</p><input className="compare-search" type="search" aria-label={label.searchDiseases} placeholder={label.searchDiseases} value={diseaseQuery} onChange={event => setDiseaseQuery(event.target.value)} /><div className="compare-choice-list">{matchingDiseases.map(d => <label key={d.id} className={selected.includes(d.id) ? 'is-selected' : ''}><input type="checkbox" checked={selected.includes(d.id)} disabled={!selected.includes(d.id) && selected.length >= 2} onChange={() => toggleDisease(d.id)} /><span>{diseaseName(d.id)}</span><small>{d.countries ?? '—'} {label.available}</small></label>)}{!matchingDiseases.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
-      <fieldset className="compare-filter-panel"><legend>{label.countries} <span>{countries.filter(code => available.some(([availableCode]) => availableCode === code)).length}/4</span></legend><p className="compare-filter-hint">{label.countryHint}</p><input className="compare-search" type="search" aria-label={label.searchCountries} placeholder={label.searchCountries} value={countryQuery} onChange={event => setCountryQuery(event.target.value)} /><div className="compare-choice-list">{matchingCountries.map(([code, entry]) => <label key={code} className={countries.includes(code) ? 'is-selected' : ''}><input type="checkbox" checked={countries.includes(code)} disabled={!countries.includes(code) && countries.length >= 4} onChange={() => toggleCountry(code)} /><span>{placeName(entry)}</span><small>{code}</small></label>)}{!matchingCountries.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
+      <fieldset className="compare-filter-panel"><legend>{label.diseases} <span>{selected.length}/2</span></legend><p className="compare-filter-hint">{label.diseaseHint}</p><input className="compare-search" type="search" aria-label={label.searchDiseases} placeholder={label.searchDiseases} value={diseaseQuery} onChange={event => setDiseaseQuery(event.target.value)} /><div className="compare-choice-list">{matchingDiseases.map(d => <label key={d.id} className={selected.includes(d.id) ? 'is-selected' : ''}><input type="checkbox" checked={selected.includes(d.id)} disabled={!selected.includes(d.id) && selected.length >= 2} onChange={() => toggleDisease(d.id)} /><span>{diseaseName(d.id)}</span><small>{d.countries ?? '—'} {d.countries === 1 ? label.availableOne : label.available}</small></label>)}{!matchingDiseases.length && <p className="compare-no-matches">{label.noMatches}</p>}</div></fieldset>
+      <fieldset className="compare-filter-panel">
+        <legend>{label.countries} <span>{countries.filter(code => areaByCode.has(code)).length}/4</span></legend>
+        <p className="compare-filter-hint">{label.countryHint}</p>
+        <input className="compare-search" type="search" aria-label={label.searchCountries} placeholder={label.searchCountries} value={countryQuery} onChange={event => { setCountryQuery(event.target.value); setExpandedAreas({}); }} />
+        <div className="compare-choice-list compare-area-list">
+          {matchingGroups.map(({ area, children }) => {
+            const expanded = expandedAreas[area.code] ?? (Boolean(query) || children.some(child => countries.includes(child.code)));
+            const choice = (item: CompareAreaOption) => <label key={item.code} className={countries.includes(item.code) ? 'is-selected' : ''}>
+              <input type="checkbox" checked={countries.includes(item.code)} disabled={!countries.includes(item.code) && countries.length >= 4} onChange={() => toggleCountry(item.code)} />
+              <span>{placeName(item)}</span><small>{item.code}</small>
+            </label>;
+            return <div key={area.code} className="compare-area-group">
+              <div className="compare-area-heading">
+                {area.selectable ? choice(area) : <p className="compare-area-parent">{placeName(area)}<small>{area.code}</small></p>}
+                {children.length > 0 && <button type="button" className="compare-area-expand" aria-label={`${placeName(area)} · ${label.subdivisions} (${children.length})`} aria-expanded={expanded} aria-controls={`compare-children-${area.code}`} onClick={() => {
+                  setExpandedAreas(value => ({ ...value, [area.code]: !expanded }));
+                }}>{label.subdivisions} ({children.length}) <span aria-hidden="true">{expanded ? '−' : '+'}</span></button>}
+              </div>
+              {children.length > 0 && <div id={`compare-children-${area.code}`} className="compare-area-children" hidden={!expanded}>{children.map(choice)}</div>}
+            </div>;
+          })}
+          {!matchingGroups.length && <p className="compare-no-matches">{label.noMatches}</p>}
+        </div>
+      </fieldset>
     </div>
     <div className="compare-results-heading"><div><p className="figure-kicker">{label.results}</p><h2 className="figure-title">{selected.map(diseaseName).join(' / ') || label.results}</h2></div><label className="chart-measure">{label.unit}<select aria-label={label.unit} value={unit} onChange={event => setUnit(event.target.value === 'rate' ? 'rate' : 'count')}><option value="count">{label.count}</option><option value="rate">{label.rate}</option></select></label></div>
     {unit === 'rate' && <p className="disease-trend-note">{label.missing}</p>}
     {(!ready || loading) && <div className="chart-loading-panel" style={{ minHeight: 180 }}><GIDSLoader language={language} /></div>}
     {loadError && <p className="disease-trend-empty compare-chart" role="status">{language === 'zh' ? '暂时无法读取对比数据。' : language === 'fr' ? 'Les données de comparaison sont indisponibles.' : 'Comparison data could not load.'} <button type="button" className="underline" onClick={() => setAttempt(value => value + 1)}>{language === 'zh' ? '重试' : language === 'fr' ? 'Réessayer' : 'Retry'}</button></p>}
-    {ready && !loading && !loadError && (selected.length && countries.length >= 2 ? selected.map(id => rowsFor(id).length >= 2 ? <CompareResultChart key={id} id={id} title={diseaseName(id)} names={diseaseNames(id)} option={chartOption(id)} lang={language} share={share} dataHref={diseaseHref(id)} register={instance => { refs.current[id] = instance; }} /> : <p key={id} className="disease-trend-empty compare-chart" role="status">{diseaseName(id)} · {language === 'zh' ? `当前指标仅有 ${rowsFor(id).length} 个已选国家有有效数据，请选择至少两个。` : language === 'fr' ? `Données valides pour ${rowsFor(id).length} pays sélectionné(s) ; choisissez-en au moins deux.` : `Only ${rowsFor(id).length} selected countries have data for this measure. Select at least two.`}</p>) : <p className="disease-trend-empty compare-chart">{label.empty}</p>)}
+    {ready && !loading && !loadError && (selected.length && countries.length >= 2 ? selected.map(id => rowsFor(id).length >= 2 ? <CompareResultChart key={id} id={id} title={diseaseName(id)} names={diseaseNames(id)} option={chartOption(id)} lang={language} share={share} dataHref={diseaseHref(id)} register={instance => { refs.current[id] = instance; }} /> : <p key={id} className="disease-trend-empty compare-chart" role="status">{diseaseName(id)} · {language === 'zh' ? `当前指标仅有 ${rowsFor(id).length} 个已选区域有有效数据，请选择至少两个。` : language === 'fr' ? `Données valides pour ${rowsFor(id).length} zone(s) sélectionnée(s) ; choisissez-en au moins deux.` : `Only ${rowsFor(id).length} selected areas have data for this measure. Select at least two.`}</p>) : <p className="disease-trend-empty compare-chart">{label.empty}</p>)}
   </div>;
 }

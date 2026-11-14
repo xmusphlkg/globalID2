@@ -255,14 +255,19 @@ async def test_static_deploy_then_edits_reuses_candidate_and_never_overwrites_ne
     r.commit.assert_not_awaited()
     r.put(r.astro / "src/pages/index.astro", "<h1>new source</h1>")
     r.put(r.astro / "src/data/changelog.ts", "export const entries = ['new source'];")
+    if mode == 'code_only':
+        r.put(r.root / 'exports/site-downloads/countries/test.json', 'new independent downloads')
+        r.put(r.root / 'exports/reports-site/new-report.html', 'new independent report')
     cfg.timezone = "Asia/Shanghai"
     r.service.job.cloudflare_project_name = "new-default-project"
     r.service._cloudflare_project_name = lambda _value: "new-default-project"
-    public = json.loads((r.astro / "dist/release.json").read_text())
+    candidate_astro = (r.root / "exports/code-workspaces/prepared-static/astro-site"
+                       if mode == "code_only" else r.astro)
+    public = json.loads((candidate_astro / "dist/release.json").read_text())
     if after_commit == "newer_remote":
         public["release_id"] = "other-writer"
     if after_commit == "missing_artifact":
-        (r.astro / "dist/index.html").unlink()
+        (candidate_astro / "dist/index.html").unlink()
     r.service._public_json = AsyncMock(return_value=public)
     if after_commit == "recover":
         result = await execute_release_task(r.service, r.task, runtime=r.runtime)

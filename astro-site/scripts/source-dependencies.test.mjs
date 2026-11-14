@@ -80,9 +80,24 @@ test('actual research route closure excludes report and Situation templates with
     'src/pages/zh/research/articles/[slug].astro', 'src/pages/research/cards/[slug].png.ts']);
   assert.equal(plan.conservative, false, plan.reasons.join('\n'));
   assert.ok(plan.files.some(path => path.endsWith('/layouts/BaseLayout.astro')));
+  assert.ok(plan.files.some(path => path.endsWith('/components/Header.astro')));
+  assert.ok(plan.files.some(path => path.endsWith('/components/Footer.astro')));
+  // Publishing a changelog entry must not invalidate every research article.
+  assert.ok(!plan.files.some(path => path.endsWith('/data/changelog.ts')));
   assert.ok(plan.files.some(path => path.endsWith('/styles/global.css')));
   assert.ok(plan.files.some(path => path.endsWith('/public/scripts/analytics.js')));
   assert.ok(!plan.files.some(path => path.includes('/pages/countries/') || path.includes('/pages/situation/')));
+}));
+
+test('version and update pages compile without embedding the authored release catalogue', () => fixture(({ root }) => {
+  let plan;
+  createSourceDependencyFingerprinter({
+    siteRoot: join(import.meta.dirname, '..'), fingerprints: new FileFingerprints(join(root, 'cache')),
+    onPlan: value => { plan = value; },
+  })(['src/pages/changelog.astro', 'src/pages/data-updates.astro']);
+  assert.equal(plan.conservative, false, plan.reasons.join('\n'));
+  assert.ok(plan.files.some(path => path.endsWith('/public/useChangelog.ts')));
+  assert.ok(!plan.files.some(path => path.endsWith('/data/changelog.ts')));
 }));
 
 for (const [name, css, asset] of [

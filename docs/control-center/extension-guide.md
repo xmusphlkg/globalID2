@@ -82,3 +82,13 @@ Compose `WorkspacePage`, `PageHeader`, `Tabs`, `MetricStrip`, `ActionList`, `Dat
 - For asynchronous work, test concurrent claim, cancel, retry, failure recovery, heartbeat expiry, Redis interruption, and SSE resume.
 
 Finish with `npm run lint`, `npm test`, `npm run build`, OpenAPI drift checks, Python tests, migration upgrade/downgrade, and the relevant E2E workflow.
+
+## Refactoring existing modules
+
+Split modules by stable responsibility rather than a line-count target. Preserve
+public imports, transaction boundaries, worker ownership, publication order and
+exact dirty-ID acknowledgement. If projection code moves, update its input
+fingerprints so cached downloads and pages invalidate correctly. Test actual
+process-pool imports and patch targets when extracting worker functions.
+Generated clients and vendored code have their own maintenance workflows and
+should not be counted as application modules to split.

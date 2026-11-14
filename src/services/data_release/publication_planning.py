@@ -75,6 +75,8 @@ def _git(root: Path, *args: str) -> bytes:
 def _source_path(path: str) -> bool:
     parts = Path(path).parts
     return ((path.startswith(SOURCE_PREFIXES) or path in SOURCE_FILES)
+            # Published by the update-feed reconciler, never an HTML input.
+            and path != "astro-site/src/data/changelog.ts"
             and not any(part in {"node_modules", "__pycache__", "dist", ".astro", ".wrangler"} or part.startswith(".env") for part in parts)
             and not path.startswith(("astro-site/public/site-data/", "astro-site/src/data/_release-projection/"))
             and not re.search(r"wrangler\.(?:run\.|generated\.)", path))
@@ -142,7 +144,8 @@ def inspect_source(root: Path) -> dict:
 def create_plan(*, root: Path, data_dir: Path, job_id: str, config: Any,
                 dirty_rows: list[dict], job_configuration: dict | None = None,
                 now: datetime | None = None, execution_service=None,
-                requested_kind: str = "auto", channel: str | None = None, rollback_of: str | None = None) -> dict:
+                requested_kind: str = "auto", channel: str | None = None, rollback_of: str | None = None,
+                suppress_subscription_dispatch: bool = False) -> dict:
     now = now or datetime.now(timezone.utc)
     source = inspect_source(root)
     try:
@@ -203,7 +206,8 @@ def create_plan(*, root: Path, data_dir: Path, job_id: str, config: Any,
                             "configuration": config_values, "dirty_rows": dirty_rows,
                             "rendering_configuration": render_configuration,
                             "generations": source["generations"], "job_id": job_id,
-                            "job_configuration": job_configuration})
+                            "job_configuration": job_configuration,
+                            "suppress_subscription_dispatch": suppress_subscription_dispatch})
     plan = {
         "plan_id": str(uuid4()), "job_id": job_id,
         "created_at": now.isoformat(), "expires_at": (now + timedelta(minutes=15)).isoformat(),
@@ -220,6 +224,7 @@ def create_plan(*, root: Path, data_dir: Path, job_id: str, config: Any,
         "cost_estimate_confidence": "unknown" if pages else "low", "changed_files": changes,
         "dirty_ids": sorted(row["id"] for row in dirty_rows), "pending_scopes": scopes,
         "warnings": sorted(set(warnings)), "preview_only": True, "executable": False,
+        "suppress_subscription_dispatch": suppress_subscription_dispatch,
     }
     if execution_service is not None:
         from .publication_execution import prepare_execution

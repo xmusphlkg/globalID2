@@ -14,17 +14,18 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
 ---
 
 <ReportLayout
-  title={pick('Countries and Regions', '国家和地区')}
-  description={pick('Browse countries and regions with available infectious disease surveillance data.', '浏览提供传染病监测数据的国家和地区。')}
+  title={pick('Geographic Areas', '地理区域')}
+  description={pick('Browse geographic areas with available infectious disease surveillance data.', '浏览提供传染病监测数据的地理区域。')}
   initialLanguage={locale}
-  seo={{ title: pick('Countries and Regions | GIDS', '国家和地区 | GIDS'), description: pick('Browse countries and regions with available infectious disease surveillance data.', '浏览提供传染病监测数据的国家和地区。'), locale, canonicalPath: `${prefix}/countries/`, alternatePaths: buildAlternatePaths(`${prefix}/countries/`, locale), pageType: 'WebPage' }}
-  breadcrumbs={[{ label: pick('Countries', '国家') }]}
+  seo={{ title: pick('Geographic Areas | GIDS', '地理区域 | GIDS'), description: pick('Browse geographic areas with available infectious disease surveillance data.', '浏览提供传染病监测数据的地理区域。'), locale, canonicalPath: `${prefix}/countries/`, alternatePaths: buildAlternatePaths(`${prefix}/countries/`, locale), pageType: 'WebPage' }}
+  breadcrumbs={[{ label: pick('Geographic areas', '地理区域') }]}
 >
   <div class="coverage-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
     <section class="coverage-hero">
       <div>
         <p class="coverage-kicker">{pick('Current coverage', '当前覆盖')}</p>
-        <h1 class="coverage-title">{pick('Countries and Regions', '国家和地区')}</h1>
+        <h1 class="coverage-title">{pick('Geographic Areas', '地理区域')}</h1>
+        <p class="figure-caption mt-3">{pick('Coverage includes countries, territories and administrative subdivisions. Names and groupings identify source data without determining political status.', '覆盖范围包括国家、地区和下级行政单位。名称与分组用于标识来源数据，不作政治地位判断。', 'La couverture comprend des pays, des territoires et des subdivisions administratives. Les noms et regroupements identifient les données sources sans déterminer de statut politique.')}</p>
       </div>
       <SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="directory-indicators" language={locale} />
     </section>
@@ -34,7 +35,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
         <div class="coverage-map-title-block">
           <p class="coverage-map-eyebrow">{pick('Live geography layer', '实时地理覆盖层')}</p>
           <h2 class="coverage-section-title">{pick('Data coverage map', '数据覆盖地图')}</h2>
-          <p class="coverage-map-description">{pick('See where GIDS has country-level data, regional data, or a planned source.', '查看 GIDS 已接入国家级、地区级数据，及计划接入的数据来源。', 'Consultez les données nationales, régionales et les sources prévues.')}</p>
+          <p class="coverage-map-description">{pick('See where GIDS has top-level and subdivision data, or a planned source.', '查看 GIDS 已接入的上级区域与下级行政单位数据，及计划接入的数据来源。', 'Consultez les données des zones de niveau supérieur et de leurs subdivisions, ainsi que les sources prévues.')}</p>
         </div>
         <SurveillanceSummary client:load dataUrl="/site-data/meta.json" mode="coverage-caption" language={locale} />
       </div>
@@ -43,11 +44,11 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
         <div class="coverage-legend" role="list" aria-label={pick('Map legend', '地图图例')}>
           <span class="coverage-legend-item" role="listitem">
             <span class="coverage-legend-dot coverage-legend-supported"></span>
-            <span>{pick('Country supported', '国家已支持')}</span>
+            <span>{pick('Top-level area supported', '上级区域已支持')}</span>
           </span>
           <span class="coverage-legend-item" role="listitem">
             <span class="coverage-legend-dot coverage-legend-subdivision"></span>
-            <span>{pick('Province / region supported', '省级/地区已支持')}</span>
+            <span>{pick('Subdivision supported', '下级行政单位已支持')}</span>
           </span>
           <span class="coverage-legend-item" role="listitem">
             <span class="coverage-legend-dot coverage-legend-planned"></span>
@@ -70,8 +71,8 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
         />
         <p class="coverage-map-provenance">
           {pick(
-            'Marker positions use the bundled open GeoJSON boundary set and ISO country catalogue; province points are maintained as approximate administrative centroids.',
-            '标记位置使用站点内置的开放 GeoJSON 边界数据与 ISO 国家目录；省级点位以近似行政中心维护。',
+            'Marker positions use the bundled open GeoJSON boundary set and ISO geographic code catalogue; province points are maintained as approximate administrative centroids.',
+            '标记位置使用站点内置的开放 GeoJSON 边界数据与 ISO 地理代码目录；省级点位以近似行政中心维护。',
           )}
           {' '}
           <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noreferrer">flag-icons ↗</a>

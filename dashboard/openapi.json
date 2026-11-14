@@ -9985,6 +9985,11 @@
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "suppress_subscription_dispatch": {
+            "default": false,
+            "title": "Suppress Subscription Dispatch",
+            "type": "boolean"
           }
         },
         "title": "PublicationPlanCreate",
@@ -10176,6 +10181,11 @@
               }
             ],
             "title": "Source Revision"
+          },
+          "suppress_subscription_dispatch": {
+            "default": false,
+            "title": "Suppress Subscription Dispatch",
+            "type": "boolean"
           },
           "validation_scope": {
             "items": {

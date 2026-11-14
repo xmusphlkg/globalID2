@@ -1,8 +1,8 @@
 """Compare the engineering changelog with the public website changelog.
 
-``CHANGELOG.md`` is the release record. The public site renders
-``astro-site/src/data/changelog.ts``, which is a curated multilingual rewrite
-and is not generated during site export. A data release must refuse to publish
+``CHANGELOG.md`` is the release record. The public update feed exports
+``astro-site/src/data/changelog.ts``, a curated multilingual rewrite, without
+rebuilding the website. A data release must refuse to publish
 when the Markdown file contains a version the website file does not list.
 """
 

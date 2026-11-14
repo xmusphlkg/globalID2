@@ -15,7 +15,7 @@ export function dataRoute(pathname: string) {
   if (papers) return { channel: 'papers' as const, ...papers };
   const researchPage = researchCurrentPath(pathname);
   if (researchPage) return { channel: 'research-current' as const, key: researchPage };
-  const updates = /^\/site-data\/updates\/(latest\.json|\d{4}-(?:0[1-9]|1[0-2])\.json)$/.exec(pathname);
+  const updates = /^\/site-data\/updates\/(latest\.json|changelog\.json|\d{4}-(?:0[1-9]|1[0-2])\.json)$/.exec(pathname);
   if (updates) return { channel: 'updates' as const, relative: updates[1], publicRoot: '/site-data/updates/' };
   const research = /^\/site-data\/research-publication\/(current\.json|objects\/[a-f0-9]{64}\.json)$/.exec(pathname);
   if (research) return { channel: 'research' as const, relative: research[1], publicRoot: '/site-data/research-publication/' };

@@ -17,6 +17,18 @@ async def read_snapshot():
     yield {"GLOBALID_RELEASE_DB_SNAPSHOT": "00000003-0000001B-1"}
 
 
+def _mock_ready_outputs(root_dir: Path) -> None:
+    """Produce minimal artifacts so stage-order fakes honor the ready contract."""
+    for relative, content in (
+        ("src/data/meta.json", "{}"),
+        ("public/site-data/meta.json", "{}"),
+        ("dist/index.html", "<html>fixture</html>"),
+    ):
+        path = root_dir / "astro-site" / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+
+
 def _runtime(manager, root_dir: Path) -> pipeline.ReleasePipelineRuntime:
     return pipeline.ReleasePipelineRuntime(
         task_manager=manager,
@@ -244,6 +256,8 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
 
         async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
             commands.append(title)
+            if title == "Build Astro Site":
+                _mock_ready_outputs(tmp_path)
             boundary_events.append(title)
             timeouts.append(_kwargs.get("timeout_seconds"))
             command_envs[title] = _kwargs.get("env")
@@ -283,6 +297,10 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
             task.input_data['code_only'] = True
         if research_mode in {'code', 'detached'}:
             from src.services.data_release.stage_receipts import StageReceipts
+            # This fixture isolates stage order; private workspace/data-byte
+            # behavior is covered by the artifact-producing integration tests.
+            from src.services.data_release import code_workspace
+            monkeypatch.setattr(code_workspace, 'prepare', lambda *_args, **_kwargs: runtime.astro_dir)
             monkeypatch.setattr(StageReceipts, 'assert_published_data',
                 lambda *_args: boundary_events.append('assert published inputs'))
             for name in ('meta.json', 'downloads.json', 'research/routes.json'):
@@ -314,6 +332,7 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
         if research_mode in {'code', 'content', 'detached'}:
             expected_commands.insert(expected_commands.index('Build Astro Site'), 'Reuse Published Research Snapshot')
         expected_commands.append('Split Papers Bundle')
+        expected_commands.append('Prepare Papers Research Candidate')
         expected_commands = ['Capture Research Publication Baseline', *([] if resume else expected_commands),
                              'Publish Papers Bundle to R2']
         assert commands == expected_commands
@@ -461,6 +480,8 @@ async def test_pipeline_passes_local_gates_before_remote_publication(tmp_path, m
 
         async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
             commands.append(title)
+            if title == "Build Astro Site":
+                _mock_ready_outputs(tmp_path)
 
         def _write_site_release_manifest(self, identity):
             return identity

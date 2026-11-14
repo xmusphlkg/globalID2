@@ -22,7 +22,6 @@
   font-size: .78rem;
   line-height: 1.55;
 }
-.updates-metrics-note { margin: .75rem 0 var(--page-block-space); }
 .updates-panel { padding: clamp(1rem, 2.5vw, 1.75rem); }
 .updates-heading {
   display: flex;
@@ -46,10 +45,9 @@
 .updates-trend { padding: 1.2rem 0 0; }
 .updates-trend-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
 .updates-trend-heading h3 { margin: .3rem 0 0; color: rgb(var(--text-strong)); font-size: 1.15rem; font-weight: 700; }
-.updates-trend-heading span, .updates-trend-note { color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.55; }
-.updates-trend-note { max-width: 52rem; margin: .55rem 0 0; }
+.updates-trend-heading span { color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.55; }
 .updates-trend-chart { margin-top: 1rem; color: rgb(var(--color-teal)); }
-.updates-trend-chart svg { display: block; width: 100%; height: auto; min-height: 90px; }
+.updates-trend-chart svg { display: block; width: 100%; height: auto; }
 .updates-trend-chart text { fill: rgb(var(--text-muted)); font: 12px ui-monospace, monospace; }
 .updates-trend-table summary { cursor: pointer; color: rgb(var(--text-muted)); font-size: .8rem; padding: .7rem 0; }
 .updates-trend-table > div { max-height: 16rem; overflow-y: auto; }
@@ -82,3 +80,8 @@
   .updates-list li { grid-template-columns: .75rem minmax(0, 1fr); gap: .5rem .75rem; }
   .updates-list time { grid-column: 2; }
 }
+
+.updates-trend-counts { display: flex; flex-wrap: wrap; gap: 1rem; margin: .75rem 0 0; font-size: .8rem; }
+.updates-trend-counts > div { display: flex; align-items: baseline; gap: .4rem; }
+.updates-trend-counts dt { color: rgb(var(--text-muted)); }
+.updates-trend-counts dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }

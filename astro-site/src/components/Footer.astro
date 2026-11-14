@@ -1,7 +1,6 @@
 ---
 // src/components/Footer.astro
 import BrandLogo from './BrandLogo.astro';
-import { changelogReleases } from '../data/changelog';
 import { createTranslator, localizedPath, type Lang } from '../utils/i18n';
 
 interface Props {
@@ -10,14 +9,14 @@ interface Props {
 
 const { initialLanguage = 'en' } = Astro.props;
 const year = new Date().getFullYear();
-const siteVersion = changelogReleases[0]?.version;
-if (!siteVersion) throw new Error('Public changelog has no releases');
+// Independent publications share a stable footer. Release versions belong on
+// the changelog page, rather than being frozen into every historical page.
 const pendingDate = initialLanguage === 'zh' ? '读取中' : initialLanguage === 'fr' ? 'Chargement' : 'Loading';
 
 const copy = createTranslator(initialLanguage);
 const links = [
   { href: '/situation/', label: copy('Situation', '全球态势', 'Situation') },
-  { href: '/countries/', label: copy('Countries', '国家/地区', 'Pays') },
+  { href: '/countries/', label: copy('Geographic areas', '地理区域', 'Zones géographiques') },
   { href: '/diseases/', label: copy('Disease Directory', '疾病目录', 'Répertoire des maladies') },
   { href: '/compare/', label: copy('Compare', '对比工具', 'Comparer') },
   { href: '/downloads/', label: copy('Downloads', '数据下载', 'Téléchargements') },
@@ -138,7 +137,7 @@ const maintainer = copy({
         <a
           class="site-footer-link"
           href={localizedHref('/changelog/')}
-        >v{siteVersion} · {copy('Changelog', '更新记录', 'Historique des versions')}</a>
+        >{copy('Changelog', '更新记录', 'Historique des versions')}</a>
       </p>
       <p class="site-footer-legal-note text-xs">
         {copy('Data provided for informational purposes only. Always refer to official health authorities.', '数据仅供信息参考，请以官方卫生机构发布为准。', 'Ces données sont fournies à titre informatif. Consultez toujours les autorités sanitaires officielles.')}

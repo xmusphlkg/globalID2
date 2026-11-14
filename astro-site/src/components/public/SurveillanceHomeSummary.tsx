@@ -9,16 +9,16 @@ export default function SurveillanceHomeSummary({ dataUrl, mode, language, repor
   const { data, version, error, retry } = useSurveillanceSummary(dataUrl);
   const pick = (en: string, zh: string, fr: string) => translate(language, en, zh, fr);
   const prefix = language === 'en' ? '' : `/${language}`;
-  const metricLabels = [pick('National jurisdictions', '国家级辖区', 'Juridictions nationales'), pick('Subnational datasets', '省级／地区数据集', 'Jeux infranationaux'), pick('Diseases tracked', '追踪疾病数', 'Maladies suivies'), pick('Official sources', '官方来源', 'Sources officielles'), ...(reportCount !== undefined ? [pick('Published reports', '已发布报告', 'Rapports publiés')] : [])];
+  const metricLabels = [pick('Top-level areas', '上级区域', 'Zones de niveau supérieur'), pick('Subdivision datasets', '下级行政单位数据集', 'Jeux de données des subdivisions'), pick('Diseases tracked', '追踪疾病数', 'Maladies suivies'), pick('Official sources', '官方来源', 'Sources officielles'), ...(reportCount !== undefined ? [pick('Published reports', '已发布报告', 'Rapports publiés')] : [])];
   if (!data) {
     if (mode === 'home-count') return <span aria-label={pick('Not loaded', '尚未加载', 'Non chargé')}>—</span>;
     if (error) return <p role="status">{pick('Current data is unavailable.', '当前数据暂时无法读取。', 'Les données actuelles sont indisponibles.')} <button className="underline" onClick={retry}>{pick('Retry', '重试', 'Réessayer')}</button></p>;
     if (mode === 'home-indicators') return <div className="home-summary" aria-busy="true">
       <dl className="asset-grid">{metricLabels.map((label, index) => <div key={label}><dt className="academic-kicker mb-2">{label}</dt><dd className="font-semibold tabular-nums">{index === 4 ? number(reportCount, language) : '—'}</dd></div>)}</dl>
       <p className="home-summary-status"><GIDSLoader language={language} compact label={pick('Updating statistics…', '正在更新统计…', 'Actualisation des statistiques…')} /></p>
-      <p className="figure-caption mt-2">{pick('National and subnational coverage are counted separately.', '国家级与省级／地区覆盖分别统计，地区数据不叠加到全国总量。', 'Les couvertures nationale et infranationale sont comptées séparément, sans additionner leurs totaux.')}</p>
+      <p className="figure-caption mt-2">{pick('Top-level areas and subdivisions are counted separately; their totals are not added together.', '上级区域与下级行政单位分别统计，子级数据不叠加到上级总量。', 'Les zones de niveau supérieur et leurs subdivisions sont comptées séparément, sans additionner leurs totaux.')}</p>
     </div>;
-    return <div className={`home-list-placeholder home-list-placeholder--${mode}`} aria-busy="true"><GIDSLoader language={language} label={pick('Loading countries…', '正在读取国家概览…', 'Chargement des pays…')} /></div>;
+    return <div className={`home-list-placeholder home-list-placeholder--${mode}`} aria-busy="true"><GIDSLoader language={language} label={pick('Loading areas…', '正在读取区域概览…', 'Chargement des zones…')} /></div>;
   }
   const national: Summary[] = nationalRows(data), subdivisions = subdivisionRows(data), sourceCount = officialSourceCount(data);
   const nationalCount = data.national_count ?? national.length, subdivisionCount = data.subdivision_count ?? subdivisions.length, sources = data.official_source_count ?? sourceCount;
@@ -44,6 +44,6 @@ export default function SurveillanceHomeSummary({ dataUrl, mode, language, repor
       ...(reportCount !== undefined ? [[pick('Published reports', '已发布报告', 'Rapports publiés'), reportCount]] : []),
     ].map(([name, value]) => <div key={String(name)}><dt className="academic-kicker mb-2">{name}</dt><dd className="font-semibold tabular-nums">{number(value, language)}</dd></div>)}</dl>
     <p className="figure-caption home-summary-status">{pick('Data updated', '数据更新于', 'Données mises à jour')} {String(data.generated_at ?? '—').slice(0, 10)}</p>
-    <p className="figure-caption mt-2">{pick('National and subnational coverage are counted separately.', '国家级与省级／地区覆盖分别统计，地区数据不叠加到全国总量。', 'Les couvertures nationale et infranationale sont comptées séparément, sans additionner leurs totaux.')}</p>
+    <p className="figure-caption mt-2">{pick('Top-level areas and subdivisions are counted separately; their totals are not added together.', '上级区域与下级行政单位分别统计，子级数据不叠加到上级总量。', 'Les zones de niveau supérieur et leurs subdivisions sont comptées séparément, sans additionner leurs totaux.')}</p>
   </div>;
 }

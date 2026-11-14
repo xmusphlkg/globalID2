@@ -1,3 +1,6 @@
+import { applyDeepLinks, tally, type Selection, type Option } from './explorer-state.ts';
+import { AlertItem, Figures } from './SituationTimeline.tsx';
+import { FusionCard, CountryDossier } from './CountryDossier.tsx';
 import GIDSLoader from '../GIDSLoader';
 // Full-viewport situation stage. The map fills the page; filters, the place list
 // and the joined catalogue sit on top of it. Quotes load with the outbreak timeline.
@@ -5,9 +8,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties } from 'react';
 import './situation.css';
 import { situationData } from '../../lib/situation-data';
-import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SeriesGlance, SiteIndex, SituationAlertRecord, SituationMapDataFile } from '../../utils/situationTypes.ts';
-import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts, deduplicatePoints, filterPoints, placeLabel, recencyOf, sortPoints, visibleSituationPoints, type AlertGroup, type Filters, type GraphRow, type Lane, type WindowKey } from './model.ts';
-import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, countsLine, diseaseName, formatCount, formatDay, formatSignedPercent, sourceLabel } from './labels.ts';
+import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SiteIndex, SituationAlertRecord, SituationMapDataFile } from '../../utils/situationTypes.ts';
+import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts, deduplicatePoints, filterPoints, placeLabel, recencyOf, sortPoints, visibleSituationPoints, type Filters, type WindowKey } from './model.ts';
+import { COPY, STATUS_LABELS, countryName, diseaseName, formatCount, formatDay, sourceLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
 import type { CanvasProps, RegionTint } from './SituationMapCanvas.tsx';
 import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
@@ -29,76 +32,13 @@ interface Props {
   site: SiteIndex;
   links: ArchiveLinks;
 }
-
-type Selection = { kind: 'place'; id: string } | { kind: 'country'; code: string } | null;
 type ListMode = 'auto' | 'open' | 'closed';
 type Remote = OutbreakFile | 'loading' | 'error';
 type DataState = 'loading' | 'ready' | 'error';
 
-interface Option {
-  id: string;
-  label: string;
-  count: number;
-}
-
 const LIST_LIMIT = 300;
 const TIMELINE_PAGE = 30;
 const OUTBREAK_URL = (id: string) => `/situation/outbreaks/${encodeURIComponent(id)}.json`;
-
-function applyDeepLinks(
-  points: MapPoint[],
-  site: SiteIndex,
-  asOf: string,
-): { filters: Filters; selection: Selection } {
-  const params = new URLSearchParams(window.location.search);
-  const disease = diseaseIdFromQuery(params.get('disease') ?? '', site, points);
-  const countryRaw = (params.get('country') ?? '').toUpperCase();
-  const country = /^[A-Z]{2}$/.test(countryRaw) && (site.countries[countryRaw] || points.some(point => point.country_code.toUpperCase() === countryRaw))
-    ? countryRaw
-    : '';
-  const windowParam = params.get('window');
-  const nextWindow: WindowKey = windowParam === '7' || windowParam === '90' || windowParam === 'all' || windowParam === '30'
-    ? windowParam
-    : DEFAULT_FILTERS.window;
-  const place = params.get('place');
-  const outbreak = params.get('outbreak');
-  const match = place
-    ? points.find(point => point.alert_id === place) ?? null
-    : outbreak
-      ? sortPoints(points.filter(point => point.outbreak_id === outbreak), asOf)[0] ?? null
-      : null;
-  const filters: Filters = {
-    disease: disease || '',
-    country,
-    source: points.some(point => point.source_id === params.get('source')) ? params.get('source')! : '',
-    window: !windowParam && match && ageDays(match.published_date, asOf) > 30 ? 'all' : nextWindow,
-  };
-  const candidates = deduplicatePoints(sortPoints(filterPoints(points, filters, asOf), asOf));
-  const selected = match && (candidates.find(point => point.alert_id === match.alert_id)
-    ?? candidates.find(point => point.outbreak_id === match.outbreak_id
-      && point.country_code === match.country_code && point.admin_area === match.admin_area
-      && point.published_date === match.published_date));
-  return {
-    filters,
-    selection: selected
-      ? { kind: 'place', id: selected.alert_id }
-      : country
-        ? { kind: 'country', code: country }
-        : null,
-  };
-}
-
-function tally(points: MapPoint[], idOf: (point: MapPoint) => string | null, labelOf: (point: MapPoint) => string): Option[] {
-  const counts = new Map<string, Option>();
-  for (const point of points) {
-    const id = idOf(point);
-    if (!id) continue;
-    const entry = counts.get(id) ?? { id, label: labelOf(point), count: 0 };
-    entry.count += 1;
-    counts.set(id, entry);
-  }
-  return [...counts.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-}
 
 function Select({ label, value, options, anyLabel, onChange }: { label: string; value: string; options: Option[]; anyLabel: string; onChange: (value: string) => void }) {
   return (
@@ -113,133 +53,6 @@ function Select({ label, value, options, anyLabel, onChange }: { label: string; 
       </select>
     </label>
   );
-}
-
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) return null;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const width = 160;
-  const height = 36;
-  const path = values.map((value, index) => {
-    const x = (index / (values.length - 1)) * width;
-    const y = height - ((value - min) / span) * (height - 4) - 2;
-    return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
-  }).join(' ');
-  return (
-    <svg className="sit-spark" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-      <path d={path} />
-    </svg>
-  );
-}
-
-function shortCounts(alert: SituationAlertRecord, locale: Locale): string {
-  const copy = COPY[locale];
-  const parts: string[] = [];
-  if (alert.cases != null) parts.push(`${formatCount(alert.cases, locale)} ${copy.statCases.toLocaleLowerCase(locale)}`);
-  if (alert.deaths != null) parts.push(`${formatCount(alert.deaths, locale)} ${copy.statDeaths.toLocaleLowerCase(locale)}`);
-  return parts.join(' · ');
-}
-
-function Figures({ alert, locale }: { alert: SituationAlertRecord; locale: Locale }) {
-  const copy = COPY[locale];
-  const tiles: Array<{ key: string; label: string; value: string; note: string }> = [];
-  if (alert.cases != null) {
-    tiles.push({ key: 'cases', label: copy.statCases, value: formatCount(alert.cases, locale), note: alert.count_basis ? basisLabel(alert.count_basis, locale) : '' });
-  }
-  if (alert.deaths != null) tiles.push({ key: 'deaths', label: copy.statDeaths, value: formatCount(alert.deaths, locale), note: '' });
-  if (tiles.length && alert.as_of) tiles.push({ key: 'asof', label: copy.statAsOf, value: formatDay(alert.as_of, locale), note: '' });
-  if (!tiles.length) return alert.status !== 'routine' ? <p className="sit-muted">{copy.noCounts}</p> : null;
-  return (
-    <dl className="sit-stats">
-      {tiles.map(tile => (
-        <div key={tile.key} className={`sit-stat sit-stat-${tile.key}`}>
-          <dt>{tile.label}</dt>
-          <dd>
-            <strong>{tile.value}</strong>
-            {tile.note && <small>{tile.note}</small>}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-const GRAPH_COL = 9;
-const GRAPH_DOT_Y = 15;
-const GRAPH_BEND = 10;
-
-function GraphCell({ row, lanes, width }: { row: GraphRow<SituationAlertRecord>; lanes: Lane[]; width: number }) {
-  const x = (col: number) => col * GRAPH_COL + GRAPH_COL / 2;
-  const px = width * GRAPH_COL;
-  const color = (lane: number) => lanes[lane].color;
-  return (
-    <div className="sit-graph" style={{ width: px, '--bend': `${GRAPH_BEND}px` } as CSSProperties} aria-hidden="true">
-      <svg className="sit-graph-top" width={px}>
-        {row.lines.map(line => {
-          const y1 = line.part === 'down' ? GRAPH_DOT_Y : 0;
-          const y2 = line.part === 'up' ? GRAPH_DOT_Y : '100%';
-          return <line key={`t${line.lane}`} x1={x(line.from)} x2={x(line.from)} y1={y1} y2={y2} stroke={color(line.lane)} />;
-        })}
-        <circle className="sit-graph-node" cx={x(row.node)} cy={GRAPH_DOT_Y} r={3.5} fill={color(row.lane)} />
-      </svg>
-      <svg className="sit-graph-bend" width={px} height={GRAPH_BEND}>
-        {row.lines.filter(line => line.part !== 'up').map(line => (
-          <line key={`b${line.lane}`} x1={x(line.from)} x2={x(line.to)} y1={0} y2={GRAPH_BEND} stroke={color(line.lane)} />
-        ))}
-      </svg>
-    </div>
-  );
-}
-
-function AlertItem({ alert, row, lanes, width, selected, featured, showPlace, locale }: { alert: AlertGroup; row: GraphRow<SituationAlertRecord>; lanes: Lane[]; width: number; selected: boolean; featured: boolean; showPlace: boolean; locale: Locale }) {
-  const copy = COPY[locale];
-  const short = shortCounts(alert, locale);
-  const summary = alertSummary(alert, locale);
-  return (
-    <li className={`sit-alert${selected ? ' is-selected' : ''}`} data-alert-id={alert.alert_id} data-country={alert.country_code}>
-      <GraphCell row={row} lanes={lanes} width={width} />
-      <details open={featured}>
-        <summary>
-          <span className="sit-alert-head">
-            {showPlace && <span className="sit-alert-place">{placeLabel(alert, countryName(alert, locale))}</span>}
-            <span className={`sit-status sit-status-${alert.status}`}>{STATUS_LABELS[alert.status][locale]}</span>
-          </span>
-          <span className="sit-alert-sub">
-            <time dateTime={alert.published_date}>{formatDay(alert.published_date, locale)}</time>
-            {short && <> · <span className="sit-alert-counts">{short}</span></>}
-          </span>
-        </summary>
-        <div className="sit-alert-body">
-          {!featured && countsLine(alert, locale) && <p className="sit-counts">{countsLine(alert, locale)}</p>}
-          {!featured && !short && alert.status !== 'routine' && <p className="sit-muted">{copy.noCounts}</p>}
-          {summary && <p className="sit-summary">{summary}</p>}
-          {alert.quote ? (
-            <blockquote className="sit-quote" cite={alert.url}>
-              <p>{alert.quote}</p>
-            </blockquote>
-          ) : (
-            <p className="sit-muted">{copy.quoteWithheld}</p>
-          )}
-          {alert.reports.filter((report, index, reports) => reports.findIndex(item => item.source_id === report.source_id && item.url === report.url) === index).map(report => (
-            <p className="sit-links" key={report.alert_id}>
-              <a className="sit-source-link" href={report.url} target="_blank" rel="noopener noreferrer">{copy.originalReport} ↗</a>
-              <span>{sourceLabel(report, locale)}</span>
-            </p>
-          ))}
-        </div>
-      </details>
-    </li>
-  );
-}
-
-function diseaseIdFromQuery(value: string, site: SiteIndex, points: MapPoint[]): string {
-  const upper = value.trim().toUpperCase();
-  if (!upper) return '';
-  if (site.diseases[upper] || points.some(point => (point.disease_id ?? '').toUpperCase() === upper)) return upper;
-  const bySlug = Object.entries(site.diseases).find(([, disease]) => disease.slug === value.trim().toLowerCase());
-  return bySlug?.[0] ?? '';
 }
 
 export default function SituationExplorer({
@@ -297,6 +110,7 @@ export default function SituationExplorer({
   }, []);
 
   useEffect(() => {
+    if (!currentMeta.data && !currentMeta.error) return;
     let live = true;
     setDataState('loading');
     situationData.read<SituationMapDataFile>(dataUrl)
@@ -324,9 +138,10 @@ export default function SituationExplorer({
     return () => {
       live = false;
     };
-    // Markers load once per page; deep links are applied when the payload arrives.
+    // Resolve the current geography catalogue before validating shared links.
+    // Disease summary responses must not reapply the reader's initial filters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataUrl]);
+  }, [dataUrl, currentMeta.data, currentMeta.error]);
 
   useEffect(() => {
     if (skipWrite.current) {
@@ -408,7 +223,6 @@ export default function SituationExplorer({
     }
     return [...seen.values()];
   }, [timeline]);
-
 
   const graph = useMemo(() => buildGraph(timeline, selected?.country_code ?? ''), [timeline, selected?.country_code]);
   const laneNames = useMemo(() => graph.lanes.map(lane => {
@@ -741,125 +555,5 @@ export default function SituationExplorer({
         </div>
       </div>
     </div>
-  );
-}
-
-function SeriesRow({ glance, locale }: { glance: SeriesGlance; locale: Locale }) {
-  const copy = COPY[locale];
-  return (
-    <div className="sit-series">
-      <div className="sit-series-main">
-        <strong>{formatCount(glance.value, locale)}</strong>
-        <span>
-          {copy.nationalSeries}
-          {glance.date ? ` · ${formatDay(glance.date, locale)}` : ''}
-          {glance.changePct != null && ` · ${formatSignedPercent(glance.changePct, locale)} ${copy.vsPrevious}`}
-        </span>
-      </div>
-      {glance.spark && <Sparkline values={glance.spark} />}
-    </div>
-  );
-}
-
-function FusionCard({ locale, point, site }: { locale: Locale; point: MapPoint; site: SiteIndex }) {
-  const copy = COPY[locale];
-  const disease = point.disease_id ? site.diseases[point.disease_id.toUpperCase()] : undefined;
-  const country = site.countries[point.country_code.toUpperCase()];
-  const glance = point.disease_id ? site.series[seriesKey(point.country_code, point.disease_id)] : undefined;
-  const diseaseLabel = diseaseName(point, locale);
-  return (
-    <div className="sit-fusion">
-      <h3>{copy.surveillanceHeading}</h3>
-      {glance ? (
-        <SeriesRow glance={glance} locale={locale} />
-      ) : country && country.seriesCount > 0 && point.disease_id ? (
-        <p>{copy.diseaseNotInSeries(diseaseLabel, country.seriesCount)}</p>
-      ) : (
-        <p>{copy.noNationalSeries}</p>
-      )}
-      <div className="sit-chip-row">
-        {glance?.curveHref && <a className="sit-chip" href={glance.curveHref}>{copy.localCurve}</a>}
-        {country?.href && <a className="sit-chip" href={country.href}>{copy.openCountry}</a>}
-        {disease?.href && <a className="sit-chip" href={disease.href}>{copy.openDisease}</a>}
-        {disease?.researchHref && disease.researchCount > 0 && <a className="sit-chip" href={disease.researchHref}>{copy.openResearch(disease.researchCount)}</a>}
-        {country?.researchHref && country.researchCount > 0 && <a className="sit-chip" href={country.researchHref}>{copy.openResearch(country.researchCount)}</a>}
-      </div>
-    </div>
-  );
-}
-
-function CountryDossier({
-  locale,
-  country,
-  diseaseId,
-  series,
-  disease,
-  alerts,
-  asOf,
-  canWiden,
-  onWiden,
-  onSelect,
-}: {
-  locale: Locale;
-  country: SiteIndex['countries'][string];
-  diseaseId: string;
-  series?: SeriesGlance;
-  disease?: SiteIndex['diseases'][string];
-  alerts: MapPoint[];
-  asOf: string;
-  canWiden: boolean;
-  onWiden: () => void;
-  onSelect: (id: string) => void;
-}) {
-  const copy = COPY[locale];
-  return (
-    <>
-      {diseaseId && series && (
-        <div className="sit-fusion">
-          <h3>{disease?.name_zh && locale === 'zh' ? disease.name_zh : disease?.name_en ?? diseaseId}</h3>
-          <SeriesRow glance={series} locale={locale} />
-        </div>
-      )}
-      {diseaseId && !series && country.seriesCount > 0 && disease && (
-        <p className="sit-muted">{copy.diseaseNotInSeries(locale === 'zh' && disease.name_zh ? disease.name_zh : disease.name_en, country.seriesCount)}</p>
-      )}
-      <div className="sit-chip-row">
-        {series?.curveHref && <a className="sit-chip" href={series.curveHref}>{copy.localCurve}</a>}
-        {country.href && <a className="sit-chip" href={country.href}>{copy.openCountry}</a>}
-        {disease?.href && <a className="sit-chip" href={disease.href}>{copy.openDisease}</a>}
-        {disease?.researchHref && disease.researchCount > 0 && <a className="sit-chip" href={disease.researchHref}>{copy.openResearch(disease.researchCount)}</a>}
-        {country.researchHref && country.researchCount > 0 && <a className="sit-chip" href={country.researchHref}>{copy.openResearch(country.researchCount)}</a>}
-      </div>
-      <section>
-        <h3>{copy.alertsHere}</h3>
-        {alerts.length === 0 ? (
-          <>
-            <p className="sit-muted">{copy.noAlertsHere}</p>
-            {canWiden && <button type="button" className="sit-text-btn" onClick={onWiden}>{copy.widenWindow}</button>}
-          </>
-        ) : (
-          <ul className="sit-places-list">
-            {alerts.slice(0, 12).map(point => {
-              const recency = recencyOf(point.published_date, asOf);
-              return (
-                <li key={point.alert_id}>
-                  <button type="button" className="sit-item" onClick={() => onSelect(point.alert_id)}>
-                    <span className="sit-dot" style={{ background: RECENCY_COLORS[recency] }} aria-hidden="true" />
-                    <span className="sit-item-main">
-                      <strong>{diseaseName(point, locale)}</strong>
-                      <span>{placeLabel(point, countryName(point, locale))}</span>
-                    </span>
-                    <span className="sit-item-meta">
-                      <span className={`sit-status sit-status-${point.status}`}>{STATUS_LABELS[point.status][locale]}</span>
-                      <time dateTime={point.published_date}>{formatDay(point.published_date, locale)}</time>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </>
   );
 }

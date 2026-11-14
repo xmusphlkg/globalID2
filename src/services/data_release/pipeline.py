@@ -6,7 +6,7 @@ import asyncio
 import hashlib
 import json
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -173,6 +173,11 @@ async def execute_release_task(
     import time
 
     release_started = time.monotonic()
+    if (getattr(task, "input_data", None) or {}).get("code_only"):
+        from .code_workspace import prepare
+        private_astro = await asyncio.to_thread(prepare, runtime.root_dir, str(task.task_uuid),
+            recovery=bool(getattr(service, "_publication_recovery", None)))
+        runtime = replace(runtime, astro_dir=private_astro)
     paths = [
         runtime.astro_dir / "src" / "data",
         runtime.astro_dir / "public" / "site-data",
@@ -228,6 +233,7 @@ async def _execute_release_task(
     if input_data.get("publish_dirty_before"):
         raise RuntimeError("Legacy release uses a timestamp cutoff; enqueue a new release with exact dirty IDs")
     code_only = bool(input_data.get("code_only"))
+    isolated = runtime.astro_dir != runtime.root_dir / "astro-site"
     content_only = bool(input_data.get("content_only"))
     dispatch_subscriptions = not code_only and not bool(input_data.get("suppress_subscription_dispatch"))
     situation_detached = bool(getattr(getattr(service, "_config", lambda: None)(), "situation_json_enabled", False))
@@ -358,6 +364,12 @@ async def _execute_release_task(
     )
     r2_reports_enabled_fn = getattr(service, "_r2_reports_enabled", None)
     r2_reports_enabled = bool(r2_reports_enabled_fn(job)) if callable(r2_reports_enabled_fn) else False
+    if code_only:
+        # Reports can advance independently after this Pages data snapshot.
+        # A template build must not replace that newer publication with the
+        # reports retained by its older Pages baseline. Full/report tasks own
+        # Reports publication; local splitting still keeps archives off Pages.
+        r2_reports_enabled = False
     if input_data.get("country_template_only"):
         # The isolated compiler preserves every non-country HTML byte and old
         # asset. No research/report bundle or publication pointer changes.
@@ -426,7 +438,7 @@ async def _execute_release_task(
                 cwd=runtime.root_dir, env=papers_environment(service, git_env),
                 metadata={'event': 'site_research_publication_baseline'}, timeout_seconds=120)
         if git_env['GIDS_PRESERVE_RESEARCH_DATA'] == '1' and resumed_identity is None:
-            if code_only:
+            if code_only and not isolated:
                 await asyncio.to_thread(stage_receipts.assert_published_data,
                     [runtime.astro_dir / 'src/data', runtime.astro_dir / 'public/site-data'])
             research_reused = True
@@ -439,7 +451,7 @@ async def _execute_release_task(
         )
     else:
         if code_only:
-            if not research_reused:
+            if not research_reused and not isolated:
                 await asyncio.to_thread(
                     stage_receipts.assert_published_data,
                     [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"],
@@ -479,33 +491,74 @@ async def _execute_release_task(
             # The content generator can also install published research. Bind
             # the final inputs after that step and before any rendering.
             await service._run_logged_command(task.task_uuid, title='Reuse Published Research Snapshot',
-                cmd=[str(python_path), 'scripts/reuse_published_research.py', '--run', str(research_run)],
+                cmd=[str(python_path), 'scripts/reuse_published_research.py', '--run', str(research_run),
+                     '--output', str(runtime.astro_dir / 'src/data'),
+                     '--public', str(runtime.astro_dir / 'public/site-data')],
                 cwd=runtime.root_dir, env=papers_environment(service, git_env),
                 metadata={'event': 'site_research_snapshot_reused'}, timeout_seconds=300)
         from .build_stage import build_release_site
 
+        # Reject a changed plan before copying gigabytes of data or rendering.
+        # The final ready checkpoint repeats this guard for changes during build.
+        await asyncio.to_thread(stage_receipts.assert_signature, 'ready', ready_signature, release_identity)
+        data_paths = [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"]
+        if job.include_cloudflare_deploy:
+            # Freeze before the renderer; only promote if its actual inputs
+            # still match afterwards. Background updates never get attested
+            # merely because they happened before the deploy command ended.
+            await asyncio.to_thread(stage_receipts.prepare_published_data, release_identity, data_paths)
         release_identity = await build_release_site(
             service=service, task=task, runtime=runtime, job=job, python_path=python_path,
             git_env=git_env, release_identity=release_identity,
             r2_papers_enabled=r2_papers_enabled, r2_reports_enabled=r2_reports_enabled,
             built_site_digest=_built_site_digest,
         )
+        if job.include_cloudflare_deploy:
+            await asyncio.to_thread(stage_receipts.assert_prepared_inputs, data_paths)
     if needs_projection and not projection_manifest.is_file():
         raise RuntimeError("Data release is missing its frozen publication projection")
     if needs_projection and resumed_identity is not None:
         from src.generation.release_projection_snapshot import validate_read_snapshot_projection
         await asyncio.to_thread(validate_read_snapshot_projection, projection_manifest.parent)
-    release_manifest = service._write_site_release_manifest(release_identity)
+    research_candidate_paths = []
+    research_recovery_files = {}
+    if r2_papers_enabled and (runtime.root_dir / 'scripts/publish_papers_r2.py').is_file():
+        from .surveillance_publish import STARTING_BASELINE
+        baseline_name = f'.publication/{STARTING_BASELINE}'
+        if resumed_identity is None:
+            # Recovery may not create missing candidates. Freeze Papers before
+            # the global ready receipt permits an upload-only retry.
+            await service._run_logged_command(task.task_uuid, title='Prepare Papers Research Candidate',
+                cmd=[*service._publish_papers_r2_command(python_path=python_path,
+                      **({'astro_dir': runtime.astro_dir} if isolated else {})), '--prepare-only'],
+                cwd=runtime.root_dir, env=papers_environment(service, git_env),
+                metadata={'event': 'site_research_publication_prepare'},
+                timeout_seconds=runtime.download_publish_timeout_seconds)
+        for name in ('bundle', 'json', 'projection-v3', 'paper-templates',
+                     'site-ready.json', 'papers-prepared.json', 'papers-build-manifest.json', baseline_name):
+            path = research_run / name
+            if path.exists():
+                research_candidate_paths.append(path)
+        if input_data.get('publication_plan'):
+            for name in ('site-ready.json', 'papers-prepared.json', 'projection-v3/candidate.json', baseline_name):
+                path = research_run / name
+                research_recovery_files[str(path.relative_to(runtime.root_dir))] = hashlib.sha256(path.read_bytes()).hexdigest()
+    release_manifest = service._write_site_release_manifest(release_identity,
+        **({"astro_dir": runtime.astro_dir} if isolated else {}))
     if resumed_identity is None:
         stage_paths = [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data", runtime.astro_dir / "dist"]
-        stage_paths.extend(path for path in [
-            runtime.root_dir / "exports/site-downloads/countries",
-            runtime.root_dir / "exports/site-downloads/diseases",
-            runtime.root_dir / "exports/site-downloads/manifest.json",
-            runtime.root_dir / "exports/papers-site",
-            runtime.root_dir / "exports/reports-site",
-        ] if path.exists())
-        await asyncio.to_thread(stage_receipts.save, "ready", ready_signature, stage_paths, identity=release_identity)
+        shared_outputs = []
+        if not code_only:
+            shared_outputs.extend(runtime.root_dir / name for name in (
+                "exports/site-downloads/countries", "exports/site-downloads/diseases",
+                "exports/site-downloads/manifest.json", "exports/papers-site", "exports/reports-site"))
+        elif r2_papers_enabled and not research_candidate_paths:
+            # Legacy publishers without a frozen research candidate still need
+            # their split bundle; modern code plans depend on private inputs.
+            shared_outputs.append(runtime.root_dir / "exports/papers-site")
+        stage_paths.extend(path for path in shared_outputs if path.exists())
+        stage_paths.extend(research_candidate_paths)
+        await asyncio.to_thread(stage_receipts.save_required, "ready", ready_signature, stage_paths, identity=release_identity)
     if artifact_checkpoint is not None and resumed_identity is None:
         await asyncio.to_thread(artifact_checkpoint.save_ready, artifact_signature, release_identity)
     if input_data.get("publication_plan"):
@@ -519,6 +572,7 @@ async def _execute_release_task(
         await asyncio.to_thread(save_recovery, runtime.root_dir, task, stage_receipts.path,
             checks=checks, ready_signature=ready_signature, deployment_branch=deployment_branch,
             release_identity=release_identity, reports_fence=report_fence,
+            additional_files=research_recovery_files,
             site_baseline=input_data["publication_plan"].get("site_baseline"))
     await runtime.task_manager.add_workbook_entry(
         task.task_uuid,
@@ -530,7 +584,8 @@ async def _execute_release_task(
     )
     await runtime.task_manager.update_task_progress(task.task_uuid, 60)
 
-    if r2_papers_enabled and not literature_detached and job.include_cloudflare_deploy:
+    if (r2_papers_enabled and not literature_detached and job.include_cloudflare_deploy
+            and not (code_only and research_candidate_paths)):
         from .shared_assets import publish_shared_assets
 
         await publish_shared_assets(

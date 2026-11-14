@@ -46,6 +46,7 @@ def source_fingerprint(root: Path) -> str:
             # This is runtime research data, already frozen into the candidate,
             # and may advance between retries just like new database facts.
             and path != root / "configs/literature/weekly_ai_reviews.json"
+            and path != root / "astro-site/src/data/changelog.ts"
         )
     for name in ("requirements.txt", "astro-site/package.json", "astro-site/package-lock.json", "astro-site/astro.config.mjs",
                  "cloudflare/surveillance-data/package.json", "cloudflare/surveillance-data/package-lock.json",

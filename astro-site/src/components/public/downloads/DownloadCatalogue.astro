@@ -1,0 +1,643 @@
+---
+import CountryFlag from '../../CountryFlag.astro';
+import type { downloadCatalogue } from './catalogue';
+import type { downloadMessages } from './messages';
+interface Props { locale: 'en' | 'zh' | 'fr'; model: ReturnType<typeof downloadCatalogue>; copy: ReturnType<typeof downloadMessages> }
+const {locale, model, copy} = Astro.props;
+const {countries, diseases, entries, generatedAt, totalRecords, compact, bytes, subdivisionCount, prefix} = model;
+---
+
+
+<div class="downloads-page">
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">{copy.kicker}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.lead}</p>
+      </div>
+      <dl>
+        <div>
+          <dt>{copy.countrySets}</dt>
+          <dd>{countries.length}</dd>
+        </div>
+        <div>
+          <dt>{copy.diseaseSets}</dt>
+          <dd>{diseases.length}</dd>
+        </div>
+        <div>
+          <dt>{copy.records}</dt>
+          <dd>{compact(totalRecords)}<small class="records-note">{copy.recordsNote}</small></dd>
+        </div>
+        <div>
+          <dt>{copy.date}</dt>
+          <dd class="date">{generatedAt}</dd>
+        </div>
+      </dl>
+    </div>
+  </header>
+
+  <section class="catalogue wrap" aria-labelledby="downloads-catalogue">
+    <header class="heading">
+      <div>
+        <p class="eyebrow">{copy.catalogue}</p>
+        <h2 id="downloads-catalogue">{copy.choose}</h2>
+      </div>
+      <p>{copy.intro}</p>
+    </header>
+
+    {subdivisionCount > 0 && (
+      <a
+        class="mb-6 flex flex-col gap-2 border border-[rgb(var(--border))] bg-[rgb(var(--surface-muted))] p-4 transition-colors hover:border-[rgb(var(--color-teal))] sm:flex-row sm:items-center sm:justify-between"
+        href={`${prefix}/countries/`}
+      >
+        <span>
+          <strong class="block text-[rgb(var(--text-strong))]">{copy.subdivisionTitle}</strong>
+          <span class="mt-1 block text-sm leading-6 text-[rgb(var(--text-muted))]">{copy.subdivisionNote}</span>
+        </span>
+        <span class="shrink-0 text-sm font-semibold text-[rgb(var(--color-teal))]">{copy.subdivisionLink}</span>
+      </a>
+    )}
+
+    <div class="toolbar">
+      <div class="search">
+        <label for={`download-search-${locale}`}>{copy.search}</label>
+        <input
+          id={`download-search-${locale}`}
+          name="dataset"
+          type="search"
+          placeholder={copy.placeholder}
+          autocomplete="off"
+        />
+      </div>
+      <div class="sort">
+        <label for={`download-sort-${locale}`}>{copy.sort}</label>
+        <select id={`download-sort-${locale}`} name="sort">
+          <option value="featured">{copy.featured}</option>
+          <option value="name">{copy.nameAsc}</option>
+          <option value="records">{copy.recordsDesc}</option>
+          <option value="kind">{copy.kindSort}</option>
+        </select>
+      </div>
+      <div class="kind" role="group" aria-label={copy.type}>
+        <button type="button" class="is-active" data-download-kind="all" aria-pressed="true">
+          {copy.all} <span>{entries.length}</span>
+        </button>
+        <button type="button" data-download-kind="country" aria-pressed="false">
+          {copy.countries} <span>{countries.length}</span>
+        </button>
+        <button type="button" data-download-kind="disease" aria-pressed="false">
+          {copy.diseases} <span>{diseases.length}</span>
+        </button>
+      </div>
+    </div>
+
+    <p id={`download-count-${locale}`} class="result-count" aria-live="polite">
+      {copy.showing} {entries.length} {copy.dataset}
+    </p>
+
+    <div class="table-wrap" role="region" aria-label={copy.choose} tabindex="0">
+      <table>
+        <thead>
+          <tr>
+            <th>{copy.catalogue}</th>
+            <th>{copy.range}</th>
+            <th>{copy.formats}</th>
+            <th><span class="sr-only">{copy.details}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            entries.map((entry: any, index: number) => (
+              <tr
+                data-download-row
+                data-index={index}
+                data-kind={entry.kind}
+                data-name={entry.name.toLowerCase()}
+                data-count={entry.count}
+                data-search={`${entry.name} ${entry.aliases} ${entry.id}`.toLowerCase()}
+              >
+                <td data-label={copy.catalogue}>
+                  <div class="dataset-name">
+                    {entry.kind === 'country' ? (
+                      <CountryFlag code={entry.id} name={entry.name} sizeClass="w-9 h-7" />
+                    ) : (
+                      <span class="disease-mark" aria-hidden="true"></span>
+                    )}
+                    <span>
+                      <strong>{entry.name}</strong>
+                      <small>{entry.id}</small>
+                    </span>
+                  </div>
+                </td>
+                <td data-label={copy.range}>
+                  <strong>{entry.period}</strong>
+                  <small>{entry.detail}</small>
+                </td>
+                <td data-label={copy.formats}>
+                  <div class="formats">
+                    {(['csv', 'json', 'xlsx'] as const).map((format) =>
+                      entry.files?.[format]?.url ? (
+                        <a
+                          href={entry.files[format].url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`${copy.download} ${entry.name} ${format.toUpperCase()}`}
+                        >
+                          <strong>{format.toUpperCase()}</strong>
+                          <small>{bytes(entry.files[format].bytes)}</small>
+                        </a>
+                      ) : null,
+                    )}
+                  </div>
+                </td>
+                <td data-label={copy.details}>
+                  <a class="details" href={entry.pageHref}>
+                    {copy.details} →
+                  </a>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <p id={`downloads-empty-${locale}`} class="empty" hidden>{copy.empty}</p>
+    <button id={`downloads-more-${locale}`} class="more" type="button">
+      {copy.more}
+    </button>
+  </section>
+
+  <section class="guidance">
+    <div class="wrap guidance-grid">
+      <div>
+        <p class="eyebrow">{copy.before}</p>
+        <h2>{copy.context}</h2>
+      </div>
+      <div>
+        <p>{copy.guidance}</p>
+        <div>
+          <a href={`${prefix}/about/`}>{copy.methods}</a>
+          <a href={`${prefix}/terms/`}>{copy.terms}</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script is:inline type="application/json" id="download-catalogue-config" set:html={JSON.stringify({ locale, copy }).replaceAll('<', '\\u003c')} />
+<script>
+  import { initializeDownloadCatalogue } from './controller.js';
+  const config = JSON.parse(document.getElementById('download-catalogue-config')?.textContent || '{}');
+  initializeDownloadCatalogue(config.locale, config.copy);
+</script>
+
+<style>
+  .downloads-page {
+    min-width: 0;
+    contain: paint;
+    color: rgb(var(--text));
+  }
+  .wrap {
+    width: min(1160px, calc(100% - 2rem));
+    min-width: 0;
+    margin-inline: auto;
+  }
+  .hero {
+    padding-block: clamp(2rem, 5vw, 3.25rem);
+    background: rgb(var(--surface));
+    border-bottom: 1px solid rgb(var(--border));
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(22rem, .9fr);
+    gap: clamp(1.5rem, 5vw, 4rem);
+    align-items: center;
+  }
+  .eyebrow {
+    margin: 0 0 .65rem;
+    color: rgb(var(--color-teal));
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    margin: 0;
+    color: rgb(var(--text-strong));
+    font-size: clamp(2.2rem, 4vw, 3.15rem);
+    font-weight: 650;
+    line-height: 1.05;
+  }
+  .hero p:not(.eyebrow) {
+    max-width: 45rem;
+    margin: .65rem 0 0;
+    color: rgb(var(--text-muted));
+    font-size: .94rem;
+    line-height: 1.6;
+  }
+  .hero dl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .45rem;
+  }
+  .hero dl div {
+    min-height: 4.8rem;
+    padding: .7rem;
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--surface-raised) / .42);
+  }
+  .hero dt {
+    color: rgb(var(--text-muted));
+    font-size: .68rem;
+  }
+  .hero dd {
+    margin: .4rem 0 0;
+    color: rgb(var(--text-strong));
+    font-size: 1.5rem;
+    font-weight: 650;
+  }
+  .hero .date {
+    font-size: .86rem;
+  }
+  .hero .records-note {
+    display: block;
+    margin-top: .35rem;
+    color: rgb(var(--text-muted));
+    font-size: .68rem;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+  .catalogue {
+    min-width: 0;
+    padding-block: clamp(2rem, 5vw, 3.5rem);
+  }
+  .heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, .65fr);
+    gap: 2rem;
+    align-items: end;
+    padding-bottom: .85rem;
+    border-bottom: 1px solid rgb(var(--border));
+  }
+  .heading h2,
+  .guidance h2 {
+    margin: 0;
+    color: rgb(var(--text-strong));
+    font-size: clamp(1.7rem, 3vw, 2.3rem);
+  }
+  .heading > p {
+    margin: 0;
+    color: rgb(var(--text-muted));
+    font-size: .8rem;
+    line-height: 1.65;
+  }
+  .toolbar {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1fr) minmax(9rem, auto) auto;
+    gap: 1rem;
+    align-items: end;
+    margin-top: 1rem;
+  }
+  .search label,
+  .sort label {
+    display: block;
+    margin-bottom: .35rem;
+    color: rgb(var(--text-strong));
+    font-size: .72rem;
+    font-weight: 650;
+  }
+  .search input,
+  .sort select {
+    width: 100%;
+    min-height: 2.7rem;
+    padding: .55rem .7rem;
+    color: rgb(var(--text-strong));
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--border-soft));
+    border-radius: 0;
+    font-size: .76rem;
+  }
+  .kind {
+    display: flex;
+    border: 1px solid rgb(var(--border));
+  }
+  .kind button {
+    min-height: 2.7rem;
+    padding: .5rem .7rem;
+    color: rgb(var(--text-muted));
+    background: rgb(var(--surface));
+    border: 0;
+    border-right: 1px solid rgb(var(--border));
+    font-size: .72rem;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .kind button:last-child {
+    border-right: 0;
+  }
+  .kind button span {
+    color: rgb(var(--text-faint));
+  }
+  .kind .is-active {
+    color: #fff;
+    background: rgb(var(--color-brand));
+  }
+  .kind .is-active span {
+    color: #dce7ef;
+  }
+  .result-count {
+    margin: 1rem 0 .55rem;
+    color: rgb(var(--text-muted));
+    font-size: .73rem;
+  }
+  .table-wrap {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    contain: inline-size;
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--surface));
+  }
+  table {
+    width: 100%;
+    min-width: 940px;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+  th {
+    position: sticky;
+    top: 4.5rem;
+    z-index: 5;
+    padding: .7rem .8rem;
+    color: rgb(var(--text-muted));
+    background: rgb(var(--bg-soft));
+    border-bottom: 1px solid rgb(var(--border));
+    font-size: .66rem;
+    text-align: left;
+    text-transform: uppercase;
+  }
+  th:nth-child(1),
+  td:nth-child(1) {
+    width: 32%;
+  }
+  th:nth-child(2),
+  td:nth-child(2) {
+    width: 23%;
+  }
+  th:nth-child(3),
+  td:nth-child(3) {
+    width: 24%;
+  }
+  th:nth-child(4),
+  td:nth-child(4) {
+    width: 21%;
+    text-align: right;
+  }
+  td {
+    padding: .75rem .8rem;
+    border-bottom: 1px solid rgb(var(--border));
+    vertical-align: middle;
+  }
+  tr:last-child td {
+    border-bottom: 0;
+  }
+  tr[hidden] {
+    display: none;
+  }
+  .dataset-name {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: .65rem;
+  }
+  .dataset-name > span:last-child {
+    display: grid;
+    min-width: 0;
+  }
+  .dataset-name strong,
+  td:nth-child(2) > strong {
+    color: rgb(var(--text-strong));
+    font-size: .78rem;
+  }
+  .dataset-name small,
+  td:nth-child(2) > small {
+    margin-top: .12rem;
+    color: rgb(var(--text-muted));
+    font-size: .64rem;
+  }
+  .dataset-name strong,
+  .dataset-name small,
+  td:nth-child(2) > strong,
+  td:nth-child(2) > small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .disease-mark {
+    width: 1.55rem;
+    height: 1.55rem;
+    flex: 0 0 auto;
+    border: 5px solid rgb(var(--color-teal) / .2);
+    border-radius: 50%;
+    background: rgb(var(--color-teal));
+    box-shadow: inset 0 0 0 4px rgb(var(--surface));
+  }
+  .formats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 5.25rem));
+    gap: .35rem;
+    align-items: center;
+  }
+  .formats a {
+    display: grid;
+    min-width: 0;
+    padding: .32rem .4rem;
+    color: rgb(var(--text-strong));
+    border: 1px solid rgb(var(--border));
+    text-align: center;
+    text-decoration: none;
+  }
+  .formats strong {
+    font-size: .64rem;
+  }
+  .formats small {
+    color: rgb(var(--text-muted));
+    font-size: .54rem;
+  }
+  .details {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    color: rgb(var(--color-teal));
+    font-size: .7rem;
+    font-weight: 650;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .empty {
+    padding: 2rem;
+    color: rgb(var(--text-muted));
+    border: 1px solid rgb(var(--border));
+    text-align: center;
+  }
+  .more {
+    display: block;
+    min-height: 2.7rem;
+    margin: 1rem auto 0;
+    padding: .55rem 1rem;
+    color: rgb(var(--text-strong));
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--border));
+    font-size: .76rem;
+    font-weight: 650;
+  }
+  .more[hidden] {
+    display: none;
+  }
+  .guidance {
+    padding-block: clamp(1.6rem, 4vw, 2.5rem);
+    background: rgb(var(--surface));
+    border-top: 1px solid rgb(var(--border));
+  }
+  .guidance-grid {
+    display: grid;
+    grid-template-columns: minmax(16rem, .7fr) minmax(0, 1.3fr);
+    gap: clamp(1rem, 4vw, 3rem);
+    align-items: center;
+  }
+  .guidance-grid > div:last-child > p {
+    margin: 0;
+    line-height: 1.75;
+  }
+  .guidance-grid > div:last-child > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .guidance a {
+    color: rgb(var(--color-teal));
+    font-size: .78rem;
+    font-weight: 650;
+  }
+
+  @media (max-width: 900px) {
+    .toolbar {
+      grid-template-columns: minmax(0, 1fr) minmax(9rem, .55fr);
+    }
+    .kind {
+      grid-column: 1 / -1;
+      width: max-content;
+      max-width: 100%;
+    }
+  }
+
+  @media (min-width: 960px) {
+    .table-wrap {
+      overflow: visible;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .hero-grid,
+    .heading,
+    .guidance-grid {
+      grid-template-columns: 1fr;
+    }
+    .hero {
+      padding-block: 2rem;
+    }
+    .hero dl {
+      grid-template-columns: 1fr 1fr;
+    }
+    .toolbar {
+      grid-template-columns: 1fr;
+    }
+    .kind {
+      width: 100%;
+    }
+    .kind button {
+      flex: 1;
+      min-width: 0;
+      padding-inline: .35rem;
+    }
+    .table-wrap {
+      overflow: visible;
+      border: 0;
+      background: transparent;
+    }
+    table,
+    tbody,
+    tr,
+    td {
+      display: block;
+      width: 100%;
+      min-width: 0;
+    }
+    table {
+      border-collapse: separate;
+    }
+    thead {
+      display: none;
+    }
+    tr {
+      border: 1px solid rgb(var(--border));
+      background: rgb(var(--surface));
+    }
+    tr + tr {
+      margin-top: .75rem;
+    }
+    td,
+    td:nth-child(1),
+    td:nth-child(2),
+    td:nth-child(3),
+    td:nth-child(4) {
+      width: 100%;
+      padding: .7rem .8rem;
+      border-bottom: 1px solid rgb(var(--border));
+      text-align: left;
+    }
+    td:last-child {
+      border-bottom: 0;
+    }
+    td::before {
+      display: block;
+      margin-bottom: .3rem;
+      color: rgb(var(--text-faint));
+      content: attr(data-label);
+      font-size: .6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    td:first-child::before {
+      display: none;
+    }
+    .formats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .details {
+      justify-content: flex-start;
+      white-space: normal;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .wrap {
+      width: min(100% - 1rem, 1160px);
+    }
+    .hero dl {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .hero dl div {
+      min-height: 4.1rem;
+      padding: .55rem;
+    }
+    .hero dd {
+      font-size: 1.15rem;
+    }
+  }
+</style>

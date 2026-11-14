@@ -110,16 +110,6 @@
       "reason": "Legacy CN gap repair reads, deletes, and inserts flat rows and must be replaced by a source-series repair workflow.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 8}
     },
-    "scripts/deprecated/reimport_history_data.py": {
-      "classification": "deprecated_tool",
-      "reason": "Deprecated direct legacy reimport is retained only for recovery reference and must not receive new dependencies.",
-      "max_references": {"DiseaseRecord": 0, "disease_records": 5}
-    },
-    "scripts/dev/test_query.py": {
-      "classification": "developer_diagnostic",
-      "reason": "Local database smoke query is not deployed and will disappear with the legacy ORM model.",
-      "max_references": {"DiseaseRecord": 3, "disease_records": 0}
-    },
     "scripts/full_rebuild_database.py": {
       "classification": "historical_import",
       "reason": "Legacy full/history rebuild modes remain for migration recovery but must be superseded by a series-first rebuild orchestrator.",
@@ -170,7 +160,7 @@
       "reason": "US strict history loader directly writes the legacy national projection and is superseded by source-series backfill.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 2}
     },
-    "scripts/migrate_chfl_geography.py": {
+    "scripts/maintenance/migrate_chfl_geography.py": {
       "classification": "migration",
       "reason": "Audited CHFL geography migration inspects the legacy projection to report impact while only moving source-series facts and their revision snapshots.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 1}

@@ -227,7 +227,7 @@ async def download_repo_check(
     # for an already verified, unchanged local version adds no release safety.
     workdir = root_dir / "exports" / "site-downloads"
     if (workdir / ".git").exists():
-        from scripts.publish_download_repo import publication_is_verified
+        from .git_downloads.receipts import publication_is_verified
 
         if await asyncio.to_thread(publication_is_verified, workdir, repo_url, branch):
             payload.update(

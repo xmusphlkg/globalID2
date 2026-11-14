@@ -128,4 +128,4 @@ Scheduled and upstream-triggered data releases automatically retry recognized
 transient external failures with a persisted exponential backoff. A release in
 `retrying` is waiting for its durable deadline and does not require the manual
 Retry action. Code, contract/gate, configuration, and credential failures remain
-terminal. See [Data release automatic recovery](../DATA_RELEASE_RESILIENCE.md).
+terminal. See [Data release automatic recovery](../publishing/DATA_RELEASE_RESILIENCE.md).

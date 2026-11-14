@@ -124,7 +124,28 @@ test('explicit time and source deep links survive reload with a selected place',
   await expect(page.locator('.sit-timeline-wrap select').nth(3)).toHaveValue('7');
 });
 
+test('lower-level area deep links wait for the current catalogue and retain its own series', async ({ page }) => {
+  await mockSituation(page);
+  await page.route('**/site-data/current.json', route => route.fulfill({ status: 404 }));
+  await page.route('**/site-data/meta.json', async route => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await route.fulfill({ json: { countries: [{ code: 'CN-BJ', name_en: 'Beijing', name_zh: '北京市', location_type: 'subdivision', source_info: { parent_country_code: 'CN' }, disease_count: 1 }] } });
+  });
+  await page.route('**/site-data/diseases/d038-summary.json', route => route.fulfill({ json: { reporting_countries: [{ code: 'CN-BJ', cases_tail: [2, 5], dates_tail: ['2026-09-01', '2026-10-01'] }] } }));
+  await page.goto('/situation/?country=CN-BJ&disease=D038&window=all');
+  await expect(page.locator('.sit-detail.is-open')).toContainText('Beijing');
+  await expect(page.locator('.sit-detail.is-open .sit-series-main strong')).toHaveText('5');
+  expect(new URL(page.url()).searchParams.get('country')).toBe('CN-BJ');
+  await page.reload();
+  await expect(page.locator('.sit-detail.is-open')).toContainText('Beijing');
+  expect(new URL(page.url()).searchParams.get('country')).toBe('CN-BJ');
+  await page.goto('/situation/?country=CN-UNKNOWN&window=all');
+  await expect(page.locator('.sit-item')).toHaveCount(3);
+  expect(new URL(page.url()).searchParams.has('country')).toBe(false);
+});
+
 test('situation page: select a place, expand timeline cards, graph stays attached', async ({ page }, testInfo) => {
+  await mockSituation(page);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
 
@@ -160,6 +181,7 @@ test('situation page: select a place, expand timeline cards, graph stays attache
 });
 
 test('situation page: filtering recentres the map without errors', async ({ page }) => {
+  await mockSituation(page);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
 

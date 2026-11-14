@@ -36,6 +36,7 @@ const plan: components["schemas"]["PublicationPlanOut"] = {
   pages_deploy_required: true, worker_deploy_required: false, validation_scope: ["theme"], cost_estimate_confidence: "unknown",
   changed_files: [{ path: "shared/site-theme-v1.json", kind: "theme", reason: "theme_candidate_requires_compatibility_validation" }],
   warnings: ["independent_theme_publication_not_available"], dirty_ids: [], pending_scopes: {}, preview_only: true, executable: false,
+  suppress_subscription_dispatch: false,
 };
 
 describe("publication planning", () => {

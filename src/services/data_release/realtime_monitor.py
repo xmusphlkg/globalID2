@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
 import math
+from pathlib import Path
 import re
 import time
 from types import SimpleNamespace
@@ -16,6 +17,7 @@ from sqlalchemy import and_, case, cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 
 from src.core.country_library import get_country_bootstrap_config
+from src.core.config import get_config
 from src.domain import Country, Task, TaskStatus, TaskType
 from src.domain.collection import PublishDirty
 from .planning import plan_changes
@@ -27,6 +29,7 @@ ACTIVE = (TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.
 LEVEL = {"ok": 0, "warning": 1, "critical": 2}
 IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
 SHA256 = re.compile(r"[a-f0-9]{64}\Z")
+ROOT = Path(__file__).resolve().parents[3]
 
 
 @dataclass(frozen=True)
@@ -119,7 +122,43 @@ def classify_pending(groups, country_rows, *, channel: str, now: datetime) -> di
     return {"pending": total, "publishable_pending": publishable, "blocked_pending": blocked_summary}
 
 
-async def collect_database_snapshot(db, *, now: datetime, channels=CHANNELS) -> dict:
+async def _research_publication_state(db, current, *, now, root, settings):
+    from .research_publication_receipt import verified_research_commit
+
+    expected = current
+    committed_at = timestamp(current.get("completed_at")) if current else None
+    if current and current.get("task_uuid") and current.get("created_at"):
+        proof = await asyncio.to_thread(verified_research_commit, root,
+            task_uuid=current["task_uuid"], release_id=current["release_id"],
+            created_at=timestamp(current["created_at"]), completed_at=committed_at,
+            papers_origin=settings.r2_papers_public_base_url)
+        if proof and proof["manifest_sha256"] == current["manifest_sha256"]:
+            expected = {**current, **proof}
+            committed_at = timestamp(proof["committed_at"])
+    # A site task may complete late, after a newer independent commit. Only its
+    # immutable, verified authority receipt can advance the expected pointer.
+    clauses = [Task.task_type == TaskType.EXPORT_DATA, Task.status == TaskStatus.COMPLETED,
+        Task.input_data["data_only"].as_boolean().is_not(True),
+        Task.output_data["r2_papers_published"].as_boolean().is_(True),
+        Task.completed_at <= now]
+    if committed_at is not None:
+        clauses.append(Task.completed_at >= committed_at)
+    rows = (await db.execute(select(Task.task_uuid, Task.created_at, Task.completed_at,
+        Task.output_data["site_release"]["release_id"].as_string()).where(*clauses)
+        .order_by(Task.completed_at.desc(), Task.id.desc()).limit(100))).all()
+    for task_uuid, created, completed, release_id in rows:
+        proof = await asyncio.to_thread(verified_research_commit, root,
+            task_uuid=task_uuid, release_id=release_id, created_at=timestamp(created),
+            completed_at=timestamp(completed), papers_origin=settings.r2_papers_public_base_url, site=True)
+        if proof and (committed_at is None or timestamp(proof["committed_at"]) > committed_at):
+            expected = {**proof, "status": "completed", "completed_at": iso(completed),
+                "created_at": iso(created), "age_seconds": age(completed, now)}
+            committed_at = timestamp(proof["committed_at"])
+    return expected
+
+
+async def collect_database_snapshot(db, *, now: datetime, channels=CHANNELS,
+                                    root: Path = ROOT, settings=None) -> dict:
     """SELECT bounded task details, aggregate all pending markers; never commit."""
     result = {}
     countries = (await db.execute(select(Country.code, Country.is_active))).all() if "surveillance" in channels else []
@@ -152,15 +191,19 @@ async def collect_database_snapshot(db, *, now: datetime, channels=CHANNELS) -> 
         terminal_fields = (Task.status, Task.completed_at, Task.updated_at,
             Task.output_data["release_id"].as_string(), Task.output_data["manifest_sha256"].as_string())
         async def last_terminal(statuses):
-            row = (await db.execute(select(*terminal_fields).where(
+            extra = (Task.task_uuid, Task.created_at) if channel == "literature" else ()
+            row = (await db.execute(select(*terminal_fields, *extra).where(
                 *clauses, Task.status.in_(statuses),
             ).order_by(func.coalesce(Task.completed_at, Task.updated_at).desc(), Task.id.desc()).limit(1))).first()
             if row is None:
                 return None
-            status, completed, updated, release_id, digest = row
-            return {"status": getattr(status, "value", status), "completed_at": iso(completed or updated),
+            status, completed, updated, release_id, digest = row[:5]
+            result = {"status": getattr(status, "value", status), "completed_at": iso(completed or updated),
                 "age_seconds": age(completed or updated, now), "release_id": _identifier(release_id),
                 "manifest_sha256": _digest(digest)}
+            if extra:
+                result.update(task_uuid=_identifier(row[5]), created_at=iso(row[6]))
+            return result
         recent_failed = (await db.execute(select(func.count(Task.id)).where(
             *clauses, recent_failure_clause(now),
         ))).scalar_one()
@@ -169,6 +212,22 @@ async def collect_database_snapshot(db, *, now: datetime, channels=CHANNELS) -> 
             "failed_last_24h": recent_failed,
             "last_completed": await last_terminal((TaskStatus.COMPLETED,)),
             "latest_terminal": await last_terminal((TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED))}
+        if channel == "literature":
+            config = settings or get_config().data_release
+            result[channel]["last_completed"] = await _research_publication_state(
+                db, result[channel]["last_completed"], now=now, root=root, settings=config)
+            latest_created = (await db.execute(select(Task.created_at).where(*clauses)
+                .order_by(Task.created_at.desc(), Task.id.desc()).limit(1))).scalar_one_or_none()
+            last = timestamp(latest_created)
+            interval = int(config.literature_publish_interval_minutes)
+            due = last + timedelta(minutes=interval) if last and last <= now else None
+            pending = result[channel]["publishable_pending"]
+            oldest = timestamp(pending["oldest_at"])
+            pending_due = max(oldest, due) if oldest and due else oldest
+            result[channel]["schedule"] = {"interval_minutes": interval,
+                "last_task_created_at": iso(last), "next_due_at": iso(due),
+                "pending_due_at": iso(pending_due), "pending_overdue_seconds": age(pending_due, now),
+                "waiting_for_schedule": bool(pending["count"] and due and due > now)}
     return result
 
 
@@ -279,7 +338,11 @@ def evaluate_channel(database: dict | None, public: dict, *, now: datetime,
     else:
         pending = database["publishable_pending"]
         if not paused:
-            timed(pending["oldest_age_seconds"], thresholds.pending_warning_seconds,
+            pending_delay = pending["oldest_age_seconds"]
+            due = timestamp(database.get("schedule", {}).get("next_due_at"))
+            if due is not None and pending_delay is not None:
+                pending_delay = min(pending_delay, age(due, now))
+            timed(pending_delay, thresholds.pending_warning_seconds,
                 thresholds.pending_critical_seconds, "pending_changes_delayed")
         if database["blocked_pending"]["count"]:
             issue("warning", "pending_scopes_blocked")

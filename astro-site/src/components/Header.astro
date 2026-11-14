@@ -3,8 +3,6 @@ import BrandLogo from './BrandLogo.astro';
 import GIDSLoading from './GIDSLoading.astro';
 import { createTranslator, localizedPath, LOCALES, stripLocalePrefix, type Lang } from '../utils/i18n';
 import { siteHref } from '../lib/papers';
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 interface Props { initialLanguage?: Lang; hideLanguageToggle?: boolean; pathOverride?: string; }
 
@@ -19,20 +17,15 @@ const localize = (path: string) => pathFor(currentLanguage, path);
 const copy = createTranslator(currentLanguage);
 const languageOptions = LOCALES;
 const languageMenuLabel = copy('Language', '语言', 'Langue');
-// Pin this decision for the whole build. A concurrent data refresh can replace
-// the source tree while Astro prerenders thousands of pages; reading the file
-// separately for every route otherwise produces multiple header shells.
-const configuredSituationNav = process.env.GIDS_SITUATION_NAV_VISIBLE;
-const situationVisible = configuredSituationNav === '1'
-  || (configuredSituationNav !== '0' && existsSync(resolve('./src/data/situation/international/map.json')));
-
+// Public navigation is identical in main-site, research and report builds.
+// Situation loads its data at runtime; a local snapshot is not a feature flag.
 const primaryLinks = [
-  ...(situationVisible ? [{ href: '/situation/', en: 'Situation', zh: '全球态势', fr: 'Situation' }] : []),
+  { href: '/situation/', en: 'Situation', zh: '全球态势', fr: 'Situation' },
   { href: '/research/', en: 'Research', zh: '研究', fr: 'Recherche' },
   { href: '/about/', en: 'Methods & About', zh: '方法与关于', fr: 'Méthodes et à propos' },
 ];
 const dataLinks = [
-  { href: '/countries/', en: 'Countries', zh: '国家与地区', fr: 'Pays et régions' },
+  { href: '/countries/', en: 'Geographic areas', zh: '地理区域', fr: 'Zones géographiques' },
   { href: '/diseases/', en: 'Diseases', zh: '疾病目录', fr: 'Répertoire des maladies' },
   { href: '/reports/', en: 'Reports', zh: '监测报告', fr: 'Rapports' },
   { href: '/compare/', en: 'Compare', zh: '对比工具', fr: 'Comparer' },
@@ -119,10 +112,10 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
       <div><p class="academic-kicker">{copy('Global search', '全站检索', 'Recherche globale')}</p><h2 id="site-search-title">{copy('Find data and evidence', '查找数据与证据', 'Trouver des données et des preuves')}</h2></div>
       <button class="site-search-close focus-ring" value="cancel" aria-label={copy('Close search', '关闭搜索', 'Fermer la recherche')}>Esc</button>
     </header>
-    <label for="site-search-input" class="sr-only">{copy('Search countries, diseases, reports, and research', '搜索国家、疾病、报告和研究', 'Rechercher des pays, maladies, rapports et études')}</label>
+    <label for="site-search-input" class="sr-only">{copy('Search areas, diseases, reports, and research', '搜索区域、疾病、报告和研究', 'Rechercher des zones, maladies, rapports et études')}</label>
     <div class="site-search-input-wrap">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.4-4.4m2.4-5.1a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" /></svg>
-      <input id="site-search-input" name="q" type="search" autocomplete="off" placeholder={copy('Search countries, diseases, reports, research…', '搜索国家、疾病、报告、研究…', 'Rechercher des pays, maladies, rapports, études…')} aria-describedby="site-search-help" />
+      <input id="site-search-input" name="q" type="search" autocomplete="off" placeholder={copy('Search areas, diseases, reports, research…', '搜索区域、疾病、报告、研究…', 'Rechercher des zones, maladies, rapports, études…')} aria-describedby="site-search-help" />
     </div>
     <p id="site-search-help" class="site-search-help">{copy('Type at least 2 characters. Use arrow keys to review and Enter to open.', '输入至少 2 个字符。使用方向键浏览，Enter 打开。', 'Saisissez au moins 2 caractères. Utilisez les flèches puis Entrée pour ouvrir.')}</p>
     <div id="site-search-loading" hidden><GIDSLoading language={currentLanguage} compact label={copy('Loading search…', '正在准备搜索…', 'Chargement de la recherche…')} /></div>
@@ -406,7 +399,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
       return;
     }
     const kinds: Record<string, string> = {
-      country: localized('Countries', '国家与地区', 'Pays'), disease: localized('Disease', '疾病', 'Maladie'),
+      country: localized('Geographic areas', '地理区域', 'Zones géographiques'), disease: localized('Disease', '疾病', 'Maladie'),
       situation: localized('Situation', '态势', 'Situation'), report: localized('Report', '报告', 'Rapport'),
       research: localized('Research', '文献', 'Recherche'), page: localized('Explore', '探索', 'Explorer'),
     };

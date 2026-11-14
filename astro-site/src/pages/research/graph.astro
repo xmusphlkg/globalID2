@@ -32,11 +32,11 @@ const nodes: any[] = (graph.nodes ?? []).map((node: any) => ({
 const edgeCount = Array.isArray(graph.edges) ? graph.edges.length : 0;
 const nodeTypes = [...new Set(nodes.map((node: any) => String(node.type || 'unknown')))].sort();
 const nodeTypeLabelsFr: Record<string, string> = {
-  article: 'publication', country: 'pays ou région', disease: 'maladie', intervention: 'intervention',
+  article: 'publication', country: 'zone', disease: 'maladie', intervention: 'intervention',
   pathogen: 'agent pathogène', pathogen_type: 'type d’agent pathogène', policy: 'politique',
   population: 'population', population_setting: 'population et contexte', study_type: 'type d’étude', topic: 'thème',
 };
-const nodeTypeLabelsZh: Record<string, string> = { article: '文献', country: '国家或地区', disease: '疾病', intervention: '干预措施', pathogen: '病原体', pathogen_type: '病原体类型', policy: '政策领域', population: '研究人群', population_setting: '人群与场景', study_type: '研究类型', topic: '研究主题' };
+const nodeTypeLabelsZh: Record<string, string> = { article: '文献', country: '区域', disease: '疾病', intervention: '干预措施', pathogen: '病原体', pathogen_type: '病原体类型', policy: '政策领域', population: '研究人群', population_setting: '人群与场景', study_type: '研究类型', topic: '研究主题' };
 const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
   ABOUT_DISEASE: { en: 'About disease', zh: '涉及疾病', fr: 'Concerne la maladie' },
   STUDIED_IN: { en: 'Studied in', zh: '研究地区', fr: 'Étudié dans' },
@@ -89,7 +89,7 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
           <span>{pick('Node type', '节点类型', 'Type de nœud')}</span>
           <select class="site-control-input" data-graph-type>
             <option value="">{pick('All node types', '全部节点类型', 'Tous les types de nœuds')}</option>
-            {nodeTypes.map(type => <option value={type}>{zh ? nodeTypeLabelsZh[type] ?? '实体' : fr ? nodeTypeLabelsFr[type] ?? 'entité' : type.replaceAll('_', ' ')}</option>)}
+            {nodeTypes.map(type => <option value={type}>{zh ? nodeTypeLabelsZh[type] ?? '实体' : fr ? nodeTypeLabelsFr[type] ?? 'entité' : (type === 'country' ? 'area' : type.replaceAll('_', ' '))}</option>)}
           </select>
         </label>
       </div>
@@ -112,7 +112,7 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
 
     <section class="graph-method card">
       <h2>{pick('Provenance and limits', '关联来源与使用说明', 'Provenance et limites')}</h2>
-      <p>{pick('Disease, country, topic, pathogen, and study-design edges retain classifier confidence. Population-setting edges copy only a bilingual, quality-gated structured-summary field. Intervention and policy edges use a small published topic mapping. No raw abstracts, PDFs, or private source payloads are exported.', '疾病、地区、主题、病原体和研究设计的关联保留分类置信度。人群和场景信息来自已通过质量检查的结构化摘要，干预与政策关联依据公开主题映射。图谱用于查找相关资料，使用研究结论前请核对原文。', 'Les liens de maladie, pays, thème, agent pathogène et plan d’étude conservent la confiance du classificateur. Les liens de population et de contexte ne reprennent qu’un champ de résumé structuré contrôlé par la qualité. Aucun résumé brut, PDF ou contenu privé n’est exporté.')}</p>
+      <p>{pick('Disease, area, topic, pathogen, and study-design edges retain classifier confidence. Population-setting edges copy only a bilingual, quality-gated structured-summary field. Intervention and policy edges use a small published topic mapping. No raw abstracts, PDFs, or private source payloads are exported.', '疾病、地区、主题、病原体和研究设计的关联保留分类置信度。人群和场景信息来自已通过质量检查的结构化摘要，干预与政策关联依据公开主题映射。图谱用于查找相关资料，使用研究结论前请核对原文。', 'Les liens de maladie, zone, thème, agent pathogène et plan d’étude conservent la confiance du classificateur. Les liens de population et de contexte ne reprennent qu’un champ de résumé structuré contrôlé par la qualité. Aucun résumé brut, PDF ou contenu privé n’est exporté.')}</p>
     </section>
   </div>
 
@@ -133,7 +133,7 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
 
       const lang = () => root.dataset.graphLocale === 'zh' ? 'zh' : root.dataset.graphLocale === 'fr' ? 'fr' : 'en';
       const nodeLabel = node => !node ? '' : lang() === 'zh' ? (node.label_zh || node.label) : lang() === 'fr' ? (node.label_fr || node.label) : node.label;
-      const nodeTypeLabel = node => lang() === 'zh' ? (nodeTypeLabelsZh[node.type] || '实体') : lang() === 'fr' ? (nodeTypeLabelsFr[node.type] || 'entité') : String(node.type || '').replaceAll('_', ' ');
+      const nodeTypeLabel = node => lang() === 'zh' ? (nodeTypeLabelsZh[node.type] || '实体') : lang() === 'fr' ? (nodeTypeLabelsFr[node.type] || 'entité') : node.type === 'country' ? 'area' : String(node.type || '').replaceAll('_', ' ');
       const routePrefix = root.dataset.graphPrefix || '';
       // Article pages are served from the papers host; local preview renders them itself.
       const papersHref = (path) => {

@@ -8,9 +8,9 @@ import type { DiseaseDatasetMonthlyData } from './diseaseDataset';
 
 type Language = 'en' | 'zh' | 'fr';
 const labels = {
-  en: { cases: 'Cases', deaths: 'Deaths', allYears: 'Show all years', recentYears: 'Show recent years', low: 'Lower', high: 'Higher', empty: 'No monthly observations are available.', note: 'Each cell belongs to the selected country’s published monthly series. Blank cells mean unavailable data, not zero.', rows: 'Monthly values' },
-  zh: { cases: '病例', deaths: '死亡', allYears: '显示全部年份', recentYears: '仅显示近 10 年', low: '低', high: '高', empty: '暂无月度监测记录。', note: '每个单元格来自所选国家发布的月度序列。空白代表数据缺失，并非零。', rows: '月度数值' },
-  fr: { cases: 'Cas', deaths: 'Décès', allYears: 'Afficher toutes les années', recentYears: 'Afficher les années récentes', low: 'Faible', high: 'Élevé', empty: 'Aucune observation mensuelle.', note: 'Chaque cellule appartient à la série mensuelle publiée par le pays choisi. Une cellule vide indique une donnée absente, et non zéro.', rows: 'Valeurs mensuelles' },
+  en: { cases: 'Cases', deaths: 'Deaths', allYears: 'Show all years', recentYears: 'Show recent years', low: 'Lower', high: 'Higher', empty: 'No monthly observations are available.', note: 'Each cell belongs to the selected area’s published monthly series. Blank cells mean unavailable data, not zero.', rows: 'Monthly values' },
+  zh: { cases: '病例', deaths: '死亡', allYears: '显示全部年份', recentYears: '仅显示近 10 年', low: '低', high: '高', empty: '暂无月度监测记录。', note: '每个单元格来自所选区域发布的月度序列。空白代表数据缺失，并非零。', rows: '月度数值' },
+  fr: { cases: 'Cas', deaths: 'Décès', allYears: 'Afficher toutes les années', recentYears: 'Afficher les années récentes', low: 'Faible', high: 'Élevé', empty: 'Aucune observation mensuelle.', note: 'Chaque cellule appartient à la série mensuelle publiée par la zone choisie. Une cellule vide indique une donnée absente, et non zéro.', rows: 'Valeurs mensuelles' },
 };
 
 export default function DiseaseSeasonalityHeatmap({ data, dataUrl, language = 'en', filename = 'disease-seasonality' }: { data: DiseaseDatasetMonthlyData; dataUrl?: string; language?: Language; filename?: string }) {

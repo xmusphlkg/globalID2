@@ -39,7 +39,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
             <h1>{pick('Ask GIDS Research', '问研究雷达')}</h1>
             <span class="ask-title-index">01 / 03</span>
           </div>
-          <p class="ask-lede">{pick('Ask about a disease, country, study design, or public-health topic. Results come only from published Research Radar records and their verified public surveillance links.', '可询问疾病、国家、研究设计或公共卫生主题。结果仅来自研究雷达已发布记录及其已核验的公开监测关联。')}</p>
+          <p class="ask-lede">{pick('Ask about a disease, area, study design, or public-health topic. Results come only from published Research Radar records and their verified public surveillance links.', '可询问疾病、区域、研究设计或公共卫生主题。结果仅来自研究雷达已发布记录及其已核验的公开监测关联。')}</p>
         </div>
         <aside class="ask-method-card" aria-label={pick('How Ask GIDS works', 'Ask GIDS 如何工作')}>
           <p class="ask-method-kicker">{pick('How it works', '工作方式')}</p>
@@ -284,8 +284,8 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
               ? frenchRegionName({ code: surveillanceDetail.countryCodes[0], name_fr: surveillanceDetail.countryNameFr })
               : surveillanceDetail.countryNameEn || surveillanceDetail.countryCodes[0])
         : surveillanceDetail.countryCodes.length > 1
-          ? (isZh() ? `${surveillanceDetail.countryCodes.length} 个相关国家/地区` : isFr() ? `${surveillanceDetail.countryCodes.length} lieux associés` : `${surveillanceDetail.countryCodes.length} related locations`)
-          : (isZh() ? '报告国家/地区' : isFr() ? 'lieux déclarants' : 'reporting locations');
+          ? (isZh() ? `${surveillanceDetail.countryCodes.length} 个相关区域` : isFr() ? `${surveillanceDetail.countryCodes.length} lieux associés` : `${surveillanceDetail.countryCodes.length} related locations`)
+          : (isZh() ? '报告区域' : isFr() ? 'lieux déclarants' : 'reporting locations');
       surveillanceIntro.textContent = isZh()
         ? `已根据问题匹配 ${diseaseLabel} × ${countryLabel} 的公开报告病例序列。`
         : isFr()
