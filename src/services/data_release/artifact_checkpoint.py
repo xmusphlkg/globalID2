@@ -35,19 +35,34 @@ def _fingerprint(value) -> str:
 def source_fingerprint(root: Path) -> str:
     digest = hashlib.sha256()
     paths = []
+    generated_data = root / "astro-site/src/data"
+    generated_public = root / "astro-site/public/site-data"
+    excluded_files = {
+        # Runtime research data is already frozen into the candidate and may
+        # advance between retries just like new database facts.
+        root / "configs/literature/weekly_ai_reviews.json",
+        generated_data / "changelog.ts",
+    }
     for name in ("src", "scripts", "configs", "shared", "astro-site/src", "astro-site/scripts", "astro-site/public",
                  "cloudflare/surveillance-data/src", "cloudflare/surveillance-data/scripts", "cloudflare/papers-json/src"):
         directory = root / name
-        paths.extend(
-            path for path in directory.rglob("*") if path.is_file()
-            and "__pycache__" not in path.parts
-            and not (path.is_relative_to(root / "astro-site/src/data") and path.suffix == ".json")
-            and not path.is_relative_to(root / "astro-site/public/site-data")
-            # This is runtime research data, already frozen into the candidate,
-            # and may advance between retries just like new database facts.
-            and path != root / "configs/literature/weekly_ai_reviews.json"
-            and path != root / "astro-site/src/data/changelog.ts"
-        )
+        # Prune whole excluded trees before scanning them. Keep walking the
+        # build-data directory: authored non-JSON files there still contribute
+        # to the signature. Like rglob, do not follow directory symlinks.
+        for current, directories, filenames in os.walk(directory, followlinks=False):
+            current = Path(current)
+            if "__pycache__" in current.parts or current.is_relative_to(generated_public):
+                directories.clear()
+                continue
+            directories[:] = [child for child in directories
+                              if child != "__pycache__" and current / child != generated_public]
+            data_directory = current.is_relative_to(generated_data)
+            for filename in filenames:
+                if filename == "__pycache__" or (data_directory and Path(filename).suffix == ".json"):
+                    continue
+                path = current / filename
+                if path not in excluded_files and path.is_file():
+                    paths.append(path)
     for name in ("requirements.txt", "astro-site/package.json", "astro-site/package-lock.json", "astro-site/astro.config.mjs",
                  "cloudflare/surveillance-data/package.json", "cloudflare/surveillance-data/package-lock.json",
                  "cloudflare/surveillance-data/wrangler.jsonc"):

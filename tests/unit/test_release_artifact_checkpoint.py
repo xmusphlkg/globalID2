@@ -118,3 +118,80 @@ def test_candidate_source_excludes_runtime_changelog_but_tracks_other_authored_t
     assert source_fingerprint(tmp_path) == before
     (path.parent / "acknowledgements.ts").write_text("export const acknowledgements = ['new']")
     assert source_fingerprint(tmp_path) != before
+
+
+def test_source_fingerprint_prunes_ignored_trees_before_scanning_or_stating_json(tmp_path, monkeypatch):
+    from src.services.data_release import artifact_checkpoint
+
+    ignored_directories = {tmp_path / "src/__pycache__", tmp_path / "astro-site/public/site-data"}
+    for directory in ignored_directories:
+        directory.mkdir(parents=True)
+        (directory / "runtime.bin").write_bytes(b"ignored")
+    generated = tmp_path / "astro-site/src/data/research/articles/record.json"
+    generated.parent.mkdir(parents=True)
+    generated.write_text('{"generated":true}')
+    authored = generated.parent / "policy.ts"
+    authored.write_text("export const policy = 1")
+    original_scandir, original_is_file = artifact_checkpoint.os.scandir, Path.is_file
+
+    def guarded_scandir(directory):
+        assert Path(directory) not in ignored_directories, "Excluded runtime trees must not be traversed"
+        return original_scandir(directory)
+
+    def guarded_is_file(path):
+        assert path != generated, "Generated JSON must be excluded before per-file stat calls"
+        return original_is_file(path)
+
+    monkeypatch.setattr(artifact_checkpoint.os, "scandir", guarded_scandir)
+    monkeypatch.setattr(Path, "is_file", guarded_is_file)
+    before = artifact_checkpoint.source_fingerprint(tmp_path)
+    authored.write_text("export const policy = 2")
+    assert artifact_checkpoint.source_fingerprint(tmp_path) != before
+
+
+def test_pruned_source_fingerprint_preserves_exact_legacy_file_selection(tmp_path):
+    import hashlib
+    from src.services.data_release.artifact_checkpoint import source_fingerprint
+
+    files = [
+        "src/nested/source.py", "src/__pycache__/ignored.pyc", "scripts/build.py",
+        "configs/literature/weekly_ai_reviews.json", "configs/literature/policy.json",
+        "shared/research-urls.ts", "astro-site/src/data/research/record.json",
+        "astro-site/src/data/changelog.ts", "astro-site/src/data/nested/authored.ts",
+        "astro-site/src/data/nested/.json", "astro-site/src/data/nested/authored.JSON",
+        "astro-site/scripts/build.mjs", "astro-site/public/site-data/nested/ignored.bin",
+        "astro-site/public/scripts/client.js", "cloudflare/papers-json/src/index.ts",
+        "cloudflare/surveillance-data/src/index.ts", "cloudflare/surveillance-data/scripts/build.mjs",
+        "requirements.txt", "astro-site/package.json", "astro-site/package-lock.json",
+        "astro-site/astro.config.mjs", "cloudflare/surveillance-data/package.json",
+        "cloudflare/surveillance-data/package-lock.json", "cloudflare/surveillance-data/wrangler.jsonc",
+    ]
+    for relative in files:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(relative)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "code.py").write_text("linked code")
+    (tmp_path / "src/linked-file.py").symlink_to(outside / "code.py")
+    (tmp_path / "src/linked-directory").symlink_to(outside, target_is_directory=True)
+    expected = []
+    for name in ("src", "scripts", "configs", "shared", "astro-site/src", "astro-site/scripts", "astro-site/public",
+                 "cloudflare/surveillance-data/src", "cloudflare/surveillance-data/scripts", "cloudflare/papers-json/src"):
+        expected.extend(path for path in (tmp_path / name).rglob("*") if path.is_file()
+                        and "__pycache__" not in path.parts
+                        and not (path.is_relative_to(tmp_path / "astro-site/src/data") and path.suffix == ".json")
+                        and not path.is_relative_to(tmp_path / "astro-site/public/site-data")
+                        and path != tmp_path / "configs/literature/weekly_ai_reviews.json"
+                        and path != tmp_path / "astro-site/src/data/changelog.ts")
+    expected.extend(tmp_path / name for name in files if name in {
+        "requirements.txt", "astro-site/package.json", "astro-site/package-lock.json", "astro-site/astro.config.mjs",
+        "cloudflare/surveillance-data/package.json", "cloudflare/surveillance-data/package-lock.json",
+        "cloudflare/surveillance-data/wrangler.jsonc",
+    })
+    legacy = hashlib.sha256()
+    for path in sorted(expected):
+        legacy.update(path.relative_to(tmp_path).as_posix().encode())
+        legacy.update(b"\0")
+        legacy.update(hashlib.sha256(path.read_bytes()).digest())
+    assert source_fingerprint(tmp_path) == legacy.hexdigest()
