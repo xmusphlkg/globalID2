@@ -66,6 +66,7 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
   if (existsSync(destination)) throw new Error('Research build destination already exists');
   const prepared = prepareResearchWorkspace({ site, snapshot, work });
   // A full isolated candidate must not inherit another release's partial plan.
+  /** @type {NodeJS.ProcessEnv} */
   const env = { ...process.env, GIDS_RESEARCH_BUILD_DIR: prepared.buildRoot,
     GIDS_SITE_DATA_ROOT: prepared.data, GIDS_RESEARCH_PUBLIC_ROOT: resolve(snapshot, 'public/research'),
     GIDS_STATIC_RENDER: '1', GIDS_RESEARCH_BUILD_SCOPE: scope,
