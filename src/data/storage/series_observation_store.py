@@ -843,7 +843,10 @@ class SeriesObservationStore:
         ]
         skipped_registry = len(built.observations) - len(observations)
         history = (
-            await self._load_recent_history(db, observations, policy)
+            await self._load_recent_history(
+                db, observations, policy,
+                include_metadata=country_code.strip().upper() != "JP",
+            )
             if observations and policy.mode != "off"
             else []
         )
@@ -1507,6 +1510,8 @@ class SeriesObservationStore:
         db: AsyncSession,
         observations: list[dict[str, Any]],
         policy: SeriesObservationQualityPolicy,
+        *,
+        include_metadata: bool = True,
     ) -> list[dict[str, Any]]:
         requested_codes = {row["series_code"] for row in observations}
         earliest = min(_as_utc(row["time"]) for row in observations)
@@ -1515,17 +1520,24 @@ class SeriesObservationStore:
         # Quality checks compare identity, values and frequency. Historical raw
         # provenance is never consulted (revision overrides apply to incoming
         # rows), so do not transfer/decode millions of large JSON payloads here.
+        columns = [
+            DiseaseSeriesObservation.time,
+            DiseaseSeriesObservation.series_code,
+            DiseaseSeriesObservation.geography_key,
+            DiseaseSeriesObservation.dimension_key,
+            DiseaseSeriesObservation.value,
+            DiseaseSeriesObservation.suppressed,
+            DiseaseSeriesObservation.quality_status,
+        ]
+        # JP checks can span millions of historical rows. Their frequency is
+        # taken from the incoming series and revision permissions belong only
+        # to incoming observations, so decoding historical metadata is unused
+        # work on the worker's event loop. Keep the default read contract for
+        # other callers; provenance writes and revision snapshots are separate.
+        if include_metadata:
+            columns.append(DiseaseSeriesObservation.metadata_.label("metadata"))
         result = await db.execute(
-            select(
-                DiseaseSeriesObservation.time,
-                DiseaseSeriesObservation.series_code,
-                DiseaseSeriesObservation.geography_key,
-                DiseaseSeriesObservation.dimension_key,
-                DiseaseSeriesObservation.value,
-                DiseaseSeriesObservation.suppressed,
-                DiseaseSeriesObservation.quality_status,
-                DiseaseSeriesObservation.metadata_.label("metadata"),
-            ).where(
+            select(*columns).where(
                 DiseaseSeriesObservation.series_code.in_(requested_codes),
                 DiseaseSeriesObservation.time >= lower_bound,
                 DiseaseSeriesObservation.time <= latest,
