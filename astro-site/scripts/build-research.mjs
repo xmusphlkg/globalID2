@@ -60,20 +60,30 @@ export function prepareResearchWorkspace({ site, snapshot, work }) {
   return { data, buildRoot, output: resolve(buildRoot, 'dist') };
 }
 
-export function buildResearch({ site, project, snapshot, destination, work, cacheDir, run = spawnSync }) {
+export function buildResearch({ site, project, snapshot, destination, work, cacheDir, scope = 'full', run = spawnSync }) {
+  if (!['full', 'collections'].includes(scope)) throw new Error(`Unknown research build scope: ${scope}`);
   const started = performance.now();
   if (existsSync(destination)) throw new Error('Research build destination already exists');
   const prepared = prepareResearchWorkspace({ site, snapshot, work });
   // A full isolated candidate must not inherit another release's partial plan.
   const env = { ...process.env, GIDS_RESEARCH_BUILD_DIR: prepared.buildRoot,
     GIDS_SITE_DATA_ROOT: prepared.data, GIDS_RESEARCH_PUBLIC_ROOT: resolve(snapshot, 'public/research'),
-    GIDS_STATIC_RENDER: '1',
+    GIDS_STATIC_RENDER: '1', GIDS_RESEARCH_BUILD_SCOPE: scope,
     PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN: process.env.GIDS_RESEARCH_STATIC_HOST === '1' ? '0' : '1' };
   delete env.GIDS_RESEARCH_BUILD_PLAN;
   delete env.GIDS_PAGE_BUILD_PLAN;
   delete env.GIDS_REPORTS_BUILD_DIR;
+  delete env.GIDS_COUNTRY_BUILD_DIR;
+  delete env.GIDS_CODE_BUILD_DIR;
   let inputs, previous, plan;
-  if (cacheDir && existsSync(resolve(snapshot, 'article-inputs.json'))) {
+  if (scope === 'collections') {
+    // Collections use the current frozen JSON and templates. Existing v3
+    // article projections are composed by the publisher; never restore their
+    // old HTML here or replace the full article cache with this partial build.
+    const planPath = resolve(work, 'article-plan.json');
+    writeFileSync(planPath, JSON.stringify({ selected: [] }));
+    env.GIDS_RESEARCH_BUILD_PLAN = planPath;
+  } else if (cacheDir && existsSync(resolve(snapshot, 'article-inputs.json'))) {
     inputs = researchInputs({ site, project, snapshot });
     previous = readResearchCache(cacheDir);
     plan = planResearchArticles(inputs, previous?.manifest);
@@ -92,7 +102,7 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
     if (result.status !== 0) throw new Error(`Research build failed (${result.status})`);
   };
   render();
-  if (env.GIDS_RESEARCH_BUILD_PLAN) {
+  if (scope === 'full' && env.GIDS_RESEARCH_BUILD_PLAN) {
     try { restoreResearchArticles({ previous, inputs, reusable: plan.reusable, output: prepared.output }); }
     catch (error) {
       // A lost local cache must trigger a complete render, never a partial release.
@@ -111,14 +121,17 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
     if (error.code !== 'EXDEV') throw error;
     cpSync(prepared.output, destination, { recursive: true, errorOnExist: true, force: false });
   }
-  if (inputs) {
+  if (inputs || scope === 'collections') {
     const receipt = `${destination}.inputs.json`, temporary = `${receipt}.${process.pid}.tmp`;
-    writeFileSync(temporary, JSON.stringify({ schema: 1, inputs, reused: plan.reusable,
-      previous_cache_version: previous?.version ?? null, cache_version: cacheVersion }));
+    const result = scope === 'collections'
+      ? { schema: 1, scope, article_pages_rendered: 0, snapshot: resolve(snapshot) }
+      : { schema: 1, scope, inputs, reused: plan.reusable,
+        previous_cache_version: previous?.version ?? null, cache_version: cacheVersion };
+    writeFileSync(temporary, JSON.stringify(result));
     renameSync(temporary, receipt);
   }
   console.log(JSON.stringify({ event: 'research_build_completed', elapsed_seconds: (performance.now() - started) / 1000,
-    destination, snapshot }));
+    destination, snapshot, scope }));
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
@@ -143,6 +156,6 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
   }
   const work = resolve(cache, 'research-isolated-work');
   try { buildResearch({ site, project, snapshot: resolve(snapshot), destination, work,
-    cacheDir: resolve(cache, 'isolated-research-build-cache') }); }
+    cacheDir: resolve(cache, 'isolated-research-build-cache'), scope: process.env.GIDS_RESEARCH_BUILD_SCOPE || 'full' }); }
   finally { rmSync(work, { recursive: true, force: true }); }
 }
