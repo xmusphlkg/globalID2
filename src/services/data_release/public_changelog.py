@@ -9,6 +9,7 @@ when the Markdown file contains a version the website file does not list.
 from __future__ import annotations
 
 import re
+from datetime import date
 from pathlib import Path
 
 _MARKDOWN_VERSION = re.compile(
@@ -16,6 +17,40 @@ _MARKDOWN_VERSION = re.compile(
     re.MULTILINE,
 )
 _TYPESCRIPT_VERSION = re.compile(r"""version:\s*['"](\d+\.\d+\.\d+)['"]""")
+
+
+def validate_public_changelog(value: object) -> int:
+    """Validate the complete multilingual records required by the public reader.
+
+    History publishes independently; its latest version need not match this
+    template release. Only a readable, valid history can enable the combined chart.
+    """
+    if (not isinstance(value, dict) or type(value.get("schema_version")) is not int
+            or value["schema_version"] != 1 or not isinstance(value.get("releases"), list)
+            or not value["releases"]):
+        raise ValueError("Invalid public website history schema")
+
+    def text_fields(record: dict, fields: tuple[str, ...]) -> bool:
+        return all(isinstance(record.get(key), str) and record[key].strip() for key in fields)
+
+    versions: set[str] = set()
+    for release in value["releases"]:
+        if (not isinstance(release, dict) or not isinstance(release.get("version"), str)
+                or not re.fullmatch(r"\d+\.\d+\.\d+", release["version"])
+                or release["version"] in versions or not isinstance(release.get("date"), str)
+                or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", release["date"])
+                or not text_fields(release, ("titleEn", "titleZh", "titleFr", "summaryEn", "summaryZh", "summaryFr"))
+                or not isinstance(release.get("sections"), list) or not release["sections"]):
+            raise ValueError("Invalid public website release")
+        date.fromisoformat(release["date"])
+        for section in release["sections"]:
+            if (not isinstance(section, dict) or section.get("kind") not in ("new", "improved", "fixed")
+                    or not text_fields(section, ("labelEn", "labelZh", "labelFr"))
+                    or not isinstance(section.get("items"), list) or not section["items"]
+                    or not all(isinstance(item, dict) and text_fields(item, ("en", "zh", "fr")) for item in section["items"])):
+                raise ValueError("Invalid public website release translation")
+        versions.add(release["version"])
+    return len(versions)
 
 
 def changelog_markdown_versions(markdown: str) -> list[str]:

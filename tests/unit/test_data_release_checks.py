@@ -5,6 +5,31 @@ import pytest
 from src.services.data_release import checks
 
 
+def website_history():
+    return {"schema_version": 1, "releases": [{
+        "version": "0.1.0", "date": "2026-01-01",
+        **{key: "Published website release" for key in ("titleEn", "titleZh", "titleFr", "summaryEn", "summaryZh", "summaryFr")},
+        "sections": [{"kind": "improved", "labelEn": "Changes", "labelZh": "更新", "labelFr": "Modifications",
+                      "items": [{"en": "Updated", "zh": "更新", "fr": "Mis à jour"}]}],
+    }]}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [200, 201])
+async def test_public_json_requires_http_200(monkeypatch, status):
+    from unittest.mock import MagicMock
+    response = MagicMock()
+    response.__enter__.return_value = response
+    response.getcode.return_value = status
+    response.read.return_value = b'{"schema_version":1}'
+    monkeypatch.setattr(checks.urlrequest, "urlopen", lambda *args, **kwargs: response)
+    if status == 200:
+        assert await checks.public_json("https://public.example/feed.json") == {"schema_version": 1}
+    else:
+        with pytest.raises(RuntimeError, match="HTTP 201"):
+            await checks.public_json("https://public.example/feed.json")
+
+
 def test_normalize_cloudflare_deployment_projects_stable_fields():
     deployment = {
         "id": "deploy-1",
@@ -134,6 +159,8 @@ async def test_verify_cloudflare_release_accepts_matching_normalized_payload():
         }
 
     async def public_json(url: str):
+        if url == "https://public.example/site-data/updates/changelog.json":
+            return website_history()
         assert url.startswith("https://globalid.pages.dev/release.json?")
         return {
             "release_id": "release-1",
@@ -148,10 +175,48 @@ async def test_verify_cloudflare_release_accepts_matching_normalized_payload():
         release_identity=identity,
         latest_deployment=latest_deployment,
         fetch_public_json=public_json,
+        public_origin="https://public.example/",
     )
 
     assert result["verified"] is True
     assert result["production_url"] == "https://globalid.pages.dev"
+    assert result["public_dependencies"]["changelog"] == {
+        "url": "https://public.example/site-data/updates/changelog.json",
+        "schema_version": 1, "release_count": 1,
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fault", ["404", "schema", "empty", "translation", "date"])
+async def test_matching_pages_release_cannot_hide_unavailable_public_changelog(monkeypatch, fault):
+    from unittest.mock import AsyncMock
+    from urllib.error import HTTPError
+
+    identity = {"release_id": "new-release", "deployment_branch": "main", "source_commit": "abc123", "build_digest": "a" * 64}
+    deployment = {"environment": "production", "status": "success", "branch": "main", "commit_hash": "abc123"}
+    urls = []
+
+    async def public_json(url):
+        urls.append(url)
+        if "/release.json?" in url:
+            return identity
+        assert url == "https://public.example/site-data/updates/changelog.json"
+        if fault == "404":
+            raise HTTPError(url, 404, "Not Found", {}, None)
+        history = website_history()
+        if fault == "schema": history["schema_version"] = 2
+        if fault == "empty": history["releases"] = []
+        if fault == "translation": history["releases"][0]["sections"][0]["items"][0].pop("fr")
+        if fault == "date": history["releases"][0]["date"] = "2026-02-30"
+        return history
+
+    monkeypatch.setattr(checks.asyncio, "sleep", AsyncMock())
+    with pytest.raises(RuntimeError, match="deploy the current cloudflare/surveillance-data Worker"):
+        await checks.verify_cloudflare_production_release(project_name="globalid", subdomain="globalid.pages.dev",
+            release_identity=identity, latest_deployment=AsyncMock(return_value=deployment),
+            fetch_public_json=public_json, public_origin="https://public.example")
+    assert sum("/release.json?" in url for url in urls) == 8
+    assert urls.count("https://public.example/site-data/updates/changelog.json") == 8
 
 
 @pytest.mark.asyncio

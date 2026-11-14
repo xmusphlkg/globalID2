@@ -544,6 +544,8 @@ async def public_json(url: str) -> dict[str, Any]:
 
     def fetch() -> dict[str, Any]:
         with urlrequest.urlopen(request, timeout=15) as response:
+            if response.getcode() != 200:
+                raise RuntimeError(f"Public JSON endpoint returned HTTP {response.getcode()}")
             return json.loads(response.read().decode("utf-8", errors="replace"))
 
     return await asyncio.to_thread(fetch)
@@ -556,12 +558,15 @@ async def verify_cloudflare_production_release(
     release_identity: dict[str, Any],
     latest_deployment: LatestDeployment,
     fetch_public_json: JsonFetch,
+    public_origin: str = "",
 ) -> dict[str, Any]:
     if not subdomain:
         raise RuntimeError(
             "Cloudflare production subdomain is missing; release cannot be verified."
         )
     production_url = f"https://{subdomain}"
+    # Custom-domain Workers can shadow an otherwise correct Pages deployment.
+    changelog_url = f"{(public_origin or production_url).rstrip('/')}/site-data/updates/changelog.json"
     manifest_url = f"{production_url}/release.json?" + urlparse.urlencode(
         {
             "release": release_identity["release_id"],
@@ -592,12 +597,24 @@ async def verify_cloudflare_production_release(
                 and papers_binding_matches(last_manifest, release_identity)
             )
             if deployment_matches and manifest_matches:
+                from .public_changelog import validate_public_changelog
+                try:
+                    history = await fetch_public_json(changelog_url)
+                    release_count = validate_public_changelog(history)
+                except (RuntimeError, urlerror.URLError, TimeoutError, ValueError) as exc:
+                    raise RuntimeError(
+                        "Public website changelog is unavailable or invalid at " + changelog_url
+                        + "; deploy the current cloudflare/surveillance-data Worker and publish the website changelog."
+                    ) from exc
                 return {
                     "verified": True,
                     "production_url": production_url,
                     "manifest_url": manifest_url,
                     "deployment": last_deployment,
                     "release": last_manifest,
+                    "public_dependencies": {"changelog": {
+                        "url": changelog_url, "schema_version": 1, "release_count": release_count,
+                    }},
                 }
         except (
             RuntimeError,

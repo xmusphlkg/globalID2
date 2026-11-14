@@ -2509,6 +2509,7 @@ class DataReleaseService:
             release_identity=release_identity,
             latest_deployment=self._cloudflare_latest_deployment,
             fetch_public_json=self._public_json,
+            public_origin=self._config().main_site_origin,
         )
 
     async def _run_capture(
