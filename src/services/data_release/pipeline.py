@@ -175,8 +175,27 @@ async def execute_release_task(
     release_started = time.monotonic()
     if (getattr(task, "input_data", None) or {}).get("code_only"):
         from .code_workspace import prepare
+        # Use the same (possibly replayed) service configuration as build_stage,
+        # not a process environment flag that the build command will override.
+        independent_research = bool(getattr(service._config(), "literature_json_enabled", False))
+        recovery_workspace = bool(getattr(service, "_publication_recovery", None))
+        workspace_started = time.monotonic()
+        workspace_metadata = {"independent_research": independent_research, "recovery": recovery_workspace}
+        await runtime.task_manager.update_task_progress(task.task_uuid, 2)
+        await runtime.task_manager.add_workbook_entry(
+            task.task_uuid, entry_type="info", title="Prepare Template Workspace",
+            content="Preparing private published inputs and the renderer caches needed by this build.",
+            content_type="text", metadata={"event": "template_workspace_preparing", **workspace_metadata},
+        )
         private_astro = await asyncio.to_thread(prepare, runtime.root_dir, str(task.task_uuid),
-            recovery=bool(getattr(service, "_publication_recovery", None)))
+            recovery=recovery_workspace, independent_research=independent_research)
+        workspace_metadata["elapsed_seconds"] = round(time.monotonic() - workspace_started, 3)
+        await runtime.task_manager.add_workbook_entry(
+            task.task_uuid, entry_type="info", title="Template Workspace Ready",
+            content=json.dumps(workspace_metadata), content_type="json",
+            metadata={"event": "template_workspace_ready", **workspace_metadata},
+        )
+        await runtime.task_manager.update_task_progress(task.task_uuid, 3)
         runtime = replace(runtime, astro_dir=private_astro)
     paths = [
         runtime.astro_dir / "src" / "data",

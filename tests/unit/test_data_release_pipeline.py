@@ -139,11 +139,12 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
     command_args = {}
     boundary_events = []
     progress = []
+    workbook = []
     stored_task = SimpleNamespace(output_data=None)
 
     class Manager:
         async def add_workbook_entry(self, *_args, **_kwargs):
-            return None
+            workbook.append(_kwargs)
 
         async def update_task_progress(self, _task_uuid, value):
             progress.append(value)
@@ -300,7 +301,13 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
             # This fixture isolates stage order; private workspace/data-byte
             # behavior is covered by the artifact-producing integration tests.
             from src.services.data_release import code_workspace
-            monkeypatch.setattr(code_workspace, 'prepare', lambda *_args, **_kwargs: runtime.astro_dir)
+            monkeypatch.setenv('GIDS_RESEARCH_PUBLICATION_ENABLED', '0' if research_mode == 'detached' else '1')
+            def prepare_workspace(*_args, **kwargs):
+                assert kwargs['independent_research'] is (research_mode == 'detached')
+                assert workbook[-1]['metadata']['event'] == 'template_workspace_preparing'
+                assert progress[-1] == 2
+                return runtime.astro_dir
+            monkeypatch.setattr(code_workspace, 'prepare', prepare_workspace)
             monkeypatch.setattr(StageReceipts, 'assert_published_data',
                 lambda *_args: boundary_events.append('assert published inputs'))
             for name in ('meta.json', 'downloads.json', 'research/routes.json'):
@@ -364,8 +371,15 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
         if research_mode not in {'code', 'detached'}:
             assert dict(zip(commands, timeouts))['Export Situation'] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
         assert command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=12288"
-    assert progress == ([5, 15, 60, 88, 100] if resume else
+        assert command_envs["Build Astro Site"]["GIDS_RESEARCH_PUBLICATION_ENABLED"] == ('1' if research_mode == 'detached' else '0')
+    workspace_progress = [2, 3] if research_mode in {'code', 'detached'} else []
+    assert progress == workspace_progress + ([5, 15, 60, 88, 100] if resume else
                         [5, 15, 45, 60, 88, 100] if research_mode in {'code', 'detached'} else [5, 15, 22, 35, 45, 60, 88, 100])
+    if workspace_progress:
+        entries = [row['metadata'] for row in workbook if row.get('metadata', {}).get('event', '').startswith('template_workspace_')]
+        assert [row['event'] for row in entries] == ['template_workspace_preparing', 'template_workspace_ready']
+        assert entries[-1]['elapsed_seconds'] >= 0
+        assert entries[-1]['independent_research'] is (research_mode == 'detached')
     assert output["release_timing"]["within_target"]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False

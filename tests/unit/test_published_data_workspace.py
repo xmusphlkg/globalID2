@@ -154,6 +154,64 @@ def test_private_cache_import_remains_independent_and_keeps_validation_manifests
     assert (cache / 'site-pages/index.html').read_text() == 'validated page'
 
 
+@pytest.mark.parametrize('independent_research', [False, True])
+@pytest.mark.parametrize('previous_workspace', [False, True])
+def test_workspace_imports_only_the_caches_used_by_its_research_mode(tmp_path, monkeypatch, independent_research, previous_workspace):
+    baseline(tmp_path)
+    cache_root = tmp_path
+    if previous_workspace:
+        cache_root = tmp_path / 'exports/code-workspaces/full-task'
+        cache_root.mkdir(parents=True)
+        (cache_root / 'workspace.json').write_text('{}')
+    cache = cache_root / 'data/cache'
+    entries = ['site-page-manifest.json', 'site-pages/index.html', 'astro-assets/client.js',
+               'research-build-manifest.json', 'research-pages/article.html']
+    for relative in entries:
+        path = cache / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(relative)
+    original_files = code_workspace.files
+
+    def scan(source):
+        # Skipping the tree must avoid walking it, not just discard its copies.
+        assert not (independent_research and source == cache / 'research-pages')
+        return original_files(source)
+
+    monkeypatch.setattr(code_workspace, 'files', scan)
+    work = code_workspace.prepare(tmp_path, 'mode-cache', independent_research=independent_research)
+    imported = work.parent / 'data/cache'
+    for relative in entries:
+        target = imported / relative
+        if independent_research and relative.startswith('research-'):
+            assert not target.exists()
+        else:
+            assert target.read_text() == relative
+            assert target.stat().st_ino != (cache / relative).stat().st_ino
+        assert (cache / relative).read_text() == relative
+    assert (work / 'src/data/meta.json').read_text() == '{"published":1}'
+
+
+def test_research_mode_change_rebuilds_nonfrozen_workspace_but_recovery_preserves_it(tmp_path):
+    baseline(tmp_path)
+    legacy = tmp_path / 'data/cache/research-pages/article.html'
+    legacy.parent.mkdir(parents=True)
+    legacy.write_text('legacy cache')
+    work = code_workspace.prepare(tmp_path, 'mode-change', independent_research=True)
+    task = StageReceipts(tmp_path, 'mode-change', {}, {})
+    identity = {'release_id': 'mode-change-release'}
+    assert task.save('ready', task.signature('ready', identity), [work / 'src/data'], identity=identity)
+    original_inode = (work / 'src/data/meta.json').stat().st_ino
+    assert code_workspace.prepare(tmp_path, 'mode-change', independent_research=True) == work
+    assert (work / 'src/data/meta.json').stat().st_ino == original_inode
+    rebuilt = code_workspace.prepare(tmp_path, 'mode-change', independent_research=False)
+    assert (rebuilt.parent / 'data/cache/research-pages/article.html').read_text() == 'legacy cache'
+    frozen_before = (rebuilt.parent / 'workspace.json').read_bytes()
+    recovered = code_workspace.prepare(tmp_path, 'mode-change', recovery=True, independent_research=True)
+    assert recovered == rebuilt
+    assert (recovered.parent / 'workspace.json').read_bytes() == frozen_before
+    assert (recovered.parent / 'data/cache/research-pages/article.html').read_text() == 'legacy cache'
+
+
 def test_nonfrozen_retry_reloads_changed_rendering_configuration(tmp_path):
     baseline(tmp_path)
     settings = tmp_path / 'data/system-settings.json'

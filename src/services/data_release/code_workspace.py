@@ -17,7 +17,7 @@ def _workspace_inputs(root: Path) -> str:
     return _fingerprint({'source': source_fingerprint(root), 'rendering': rendering_configuration(root)})
 
 
-def prepare(root: Path, task_uuid: str, *, recovery: bool = False) -> Path:
+def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_research: bool = False) -> Path:
     if Path(task_uuid).name != task_uuid or task_uuid in {"", ".", ".."}:
         raise ValueError("Invalid template task identity")
     work = root / "exports/code-workspaces" / task_uuid
@@ -40,7 +40,8 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False) -> Path:
         own_publication = (marker.get('task_uuid') == task_uuid
             and marker.get('release_id') == ready.get('release_id')
             and marker.get('build_digest') == ready.get('build_digest'))
-        if (same_baseline or own_publication) and saved.get("source_fingerprint") == _workspace_inputs(root):
+        if ((same_baseline or own_publication) and saved.get("source_fingerprint") == _workspace_inputs(root)
+                and saved.get("independent_research", False) == independent_research):
             return site
     fingerprint = _workspace_inputs(root)
     marker_body = (root / "exports/successful-site-release.json").read_bytes() if (root / "exports/successful-site-release.json").is_file() else b''
@@ -95,8 +96,13 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False) -> Path:
     previous_work = root / 'exports/code-workspaces' / previous_task
     cache_source = (previous_work if previous_task not in {'', '.', '..'} and Path(previous_task).name == previous_task
                     and (previous_work / 'workspace.json').is_file() else root) / 'data/cache'
-    for name in ('site-page-manifest.json', 'research-build-manifest.json',
-                 'site-pages', 'research-pages', 'astro-assets'):
+    # build_stage derives GIDS_RESEARCH_PUBLICATION_ENABLED from the same
+    # configuration flag. In that mode build-site/finalize skip article HTML
+    # caches entirely; importing them would copy gigabytes of unused old pages.
+    cache_names = ['site-page-manifest.json', 'site-pages', 'astro-assets']
+    if not independent_research:
+        cache_names += ['research-build-manifest.json', 'research-pages']
+    for name in cache_names:
         source, target = cache_source / name, work / 'data/cache' / name
         if source.is_file():
             clone_file(source, target)
@@ -113,5 +119,6 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False) -> Path:
     if (root / "exports/successful-site-release.json").read_bytes() != marker_body:
         raise ValueError("Published baseline changed while preparing template workspace")
     (work / "workspace.json").write_text(json.dumps({"schema": 1, "task_uuid": task_uuid,
-        "source_fingerprint": fingerprint, "baseline_sha256": hashlib.sha256(marker_body).hexdigest()}))
+        "source_fingerprint": fingerprint, "baseline_sha256": hashlib.sha256(marker_body).hexdigest(),
+        "independent_research": independent_research}))
     return site

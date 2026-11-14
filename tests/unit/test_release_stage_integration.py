@@ -255,6 +255,22 @@ async def test_code_only_uses_retained_snapshot_without_overwriting_background_d
     assert "Generate Site Data" not in r.service.commands
 
 
+async def test_workspace_failure_logs_start_without_claiming_readiness(release, monkeypatch):
+    from src.services.data_release import code_workspace
+    release.task.input_data['code_only'] = True
+
+    def fail(*_args, **_kwargs):
+        raise RuntimeError('workspace copy failed')
+
+    monkeypatch.setattr(code_workspace, 'prepare', fail)
+    with pytest.raises(RuntimeError, match='workspace copy failed'):
+        await execute_release_task(release.service, release.task, runtime=release.runtime)
+    events = [call.kwargs.get('metadata', {}).get('event') for call in release.manager.add_workbook_entry.await_args_list]
+    assert events == ['template_workspace_preparing']
+    release.manager.update_task_progress.assert_awaited_once_with(release.task.task_uuid, 2)
+    assert release.service.commands == []
+
+
 async def test_changed_build_input_prevents_all_external_publication(release):
     r = release
     run = r.service._run_logged_command
