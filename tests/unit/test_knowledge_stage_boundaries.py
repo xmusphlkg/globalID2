@@ -164,7 +164,7 @@ async def test_source_refresh_writes_only_in_store_and_retries_once(harness):
         assert result["source_only"] is True
         assert result["source_gap"] is False
         assert len(await h.rows(DiseaseKnowledgeSource)) == 1
-        assert len(await h.rows(PublishDirty)) == attempt
+        assert len(await h.rows(PublishDirty)) == 1
     assert_stages(await h.rows(RunStage), attempts=(1, 2), source_only=True)
     assert h.fetches == 2 and not h.models
     assert all(row.scope_key == "sources" for row in await h.rows(PublishDirty))

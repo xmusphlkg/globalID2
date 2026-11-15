@@ -45,7 +45,7 @@ async def test_changed_transaction_publishes_once_and_rebuild_noop_does_not_mark
     await rebuild_outbreaks(as_of=AS_OF, task_uuid="grouped-again")
     async with db() as session:
         markers = list((await session.execute(select(PublishDirty))).scalars())
-        assert [row.source_task_uuid for row in markers] == ["collect", "accepted", "grouped"]
+        assert [row.source_task_uuid for row in markers] == ["grouped"]
     # A changed attachment can be reviewed again without changing public facts.
     from src.domain import SituationDocument
     from src.core.database import get_db
@@ -55,7 +55,7 @@ async def test_changed_transaction_publishes_once_and_rebuild_noop_does_not_mark
     assert (await extract_pending(Scripted([DRAFT], [{"verdict": "accept", "issues": []}]), task_uuid="same-facts"))["published"] == 1
     await rebuild_outbreaks(as_of=AS_OF, task_uuid="same-groups")
     async with db() as session:
-        assert len(list((await session.execute(select(PublishDirty))).scalars())) == 3
+        assert len(list((await session.execute(select(PublishDirty))).scalars())) == 1
 
 
 async def test_json_snapshot_derives_groups_before_managed_rebuild_and_preserves_private_text(db, tmp_path):

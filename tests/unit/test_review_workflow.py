@@ -1226,5 +1226,5 @@ async def test_batch_archives_and_completed_summary_reviews_apply_together(
             assert await db.scalar(select(func.count(PublishDirty.id))) == 0
         else:
             assert [row.outcome for row in rows] == ["published", "archived"]
-            # Both application groups mark the same scope in the same transaction.
-            assert await db.scalar(select(func.count(PublishDirty.id))) == 2
+            # Both application groups share one unpublished row for the scope.
+            assert await db.scalar(select(func.count(PublishDirty.id))) == 1

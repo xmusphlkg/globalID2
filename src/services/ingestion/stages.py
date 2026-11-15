@@ -98,6 +98,9 @@ def _selected_ids(values) -> set[int]:
 
 
 async def _tasks_table_available(db: AsyncSession) -> bool:
+    # Test doubles and sync wrappers can mark a row without a task inspector.
+    if not hasattr(db, "get_bind") or not hasattr(db, "connection"):
+        return False
     bind = db.get_bind()
     key = id(bind)
     if key in _TASKS_READY:
@@ -132,8 +135,26 @@ async def _marker_is_frozen(db: AsyncSession, dirty_id: int) -> bool:
     return False
 
 
+def _tracked_new(db):
+    """Pending objects on a real session, including a wrapper around one."""
+    for candidate in (db, getattr(db, "session", None), getattr(db, "_session", None)):
+        pending = getattr(candidate, "new", None)
+        if pending is not None:
+            return pending
+    return ()
+
+
+def _can_read_dirty_rows(db) -> bool:
+    if not hasattr(db, "execute"):
+        return False
+    if hasattr(db, "get_bind"):
+        return True
+    inner = getattr(db, "session", None) or getattr(db, "_session", None)
+    return inner is not None and hasattr(inner, "get_bind")
+
+
 def _pending_in_session(db: AsyncSession, *, line: str, scope_key: str) -> PublishDirty | None:
-    for obj in db.new:
+    for obj in _tracked_new(db):
         if (
             isinstance(obj, PublishDirty)
             and obj.line == line
@@ -157,7 +178,7 @@ async def mark_dirty(
     """
     if not _precise_change(change_set):
         pending = _pending_in_session(db, line=line, scope_key=scope_key)
-        if pending is None:
+        if pending is None and _can_read_dirty_rows(db):
             pending = (
                 await db.execute(
                     select(PublishDirty)
