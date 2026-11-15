@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { WORLD_CENTER, ageDays, buildAnchors, buildGraph, deduplicateAlerts, deduplicatePoints, filterPoints, fitView, placePoints, recencyOf, sortPoints, visibleSituationPoints } from './model.ts';
+import { WORLD_CENTER, ageDays, buildAnchors, buildGraph, deduplicateAlerts, deduplicatePoints, filterPoints, fitView, latestMatchingPlaces, placePoints, recencyOf, sortPoints, situationPlaceKey, visibleSituationPoints } from './model.ts';
 
 const AS_OF = '2026-10-28';
 const point = (id: string, day: string, extra: Record<string, unknown> = {}) =>
@@ -71,12 +71,70 @@ test('repeated facts from different feeds form one event and retain both sources
 test('distinct updates, places, outbreaks and count bases never collapse', () => {
   const rows = [
     alert('a'), alert('b', { cases: 7 }), alert('c', { deaths: 1 }),
-    alert('d', { published_date: '2026-10-27' }), alert('e', { as_of: '2026-10-27' }),
+    alert('e', { as_of: '2026-10-27' }),
     alert('f', { country_code: 'KE' }), alert('g', { admin_area: 'Mombasa' }),
     alert('h', { outbreak_id: 'OB-2' }), alert('i', { count_basis: 'suspected' }),
     alert('j', { status: 'ended' }), alert('k', { disease_id: 'D999' }),
   ];
   assert.equal(deduplicateAlerts(rows).length, rows.length);
+});
+
+test('publication dates do not split reports of the same dated figures', () => {
+  const reports = [alert('a'), alert('b', { published_date: '2026-10-27', source_id: 'ecdc_cdtr' })];
+  const [group] = deduplicateAlerts(reports, 'b');
+  assert.equal(deduplicateAlerts(reports).length, 1);
+  assert.equal(group.alert_id, 'a', 'an older deep-linked report must not replace the latest facts');
+  assert.equal(group.reports.length, 2);
+});
+
+// The Saudi Arabia MERS example: ECDC monthly events, WHO DON, and ECDC CDTR
+// repeat the same year-to-date totals with different publication/cut-off dates.
+const mersReports = [
+  alert('e0ed903256a8d578', { source_id: 'ecdc_events', published_date: '2026-11-10', as_of: '2026-11-09', cases: 8, deaths: 1, count_basis: 'total', quote: 'Since the beginning of 2026, and as of 9 November 2026, eight MERS cases, including one fatality, have been reported in Saudi Arabia.' }),
+  alert('2116ee479cc76e6d', { source_id: 'ecdc_events', published_date: '2026-10-19', as_of: '2026-10-19', cases: 8, deaths: 1, quote: 'Since the beginning of 2026, and as of 19 October 2026, eight MERS cases, including one fatality, have been reported in Saudi Arabia.' }),
+  alert('461af4f262285453', { published_date: '2026-10-15', as_of: '2026-10-05', cases: 8, deaths: 1, quote: 'Between 1 January and 5 October 2026, the Kingdom of Saudi Arabia reported eight laboratory-confirmed cases of Middle East Respiratory Syndrome Coronavirus (MERS-CoV) infection, including one death.' }),
+  alert('5d32bf2799447655', { source_id: 'ecdc_cdtr', published_date: '2026-10-02', as_of: '2026-09-29', cases: 2, deaths: 1, count_basis: 'total', quote: 'Since the beginning of 2026, and as of 29 September 2026, two MERS cases, including one fatality, have been reported in Saudi Arabia.' }),
+  alert('c9441a3b5a30704e', { source_id: 'ecdc_events', published_date: '2026-09-30', as_of: '2026-09-29', cases: 2, deaths: 1, count_basis: 'total', quote: 'Since the beginning of 2026, and as of 29 September 2026, two MERS cases, including one fatality, have been reported in Saudi Arabia.' }),
+  alert('1142153f5438b77c', { source_id: 'ecdc_events', published_date: '2026-09-01', as_of: '2026-08-31', cases: 2, deaths: 1, quote: 'Since the beginning of 2026, and as of 31 August 2026, two MERS cases, including one fatality, have been reported in Saudi Arabia.' }),
+].map(report => ({ ...report, outbreak_id: 'OB-8c592ec14dae', disease_id: 'D049', country_code: 'SA', admin_area: null }));
+
+test('MERS Saudi Arabia annual totals form two cards with all six source reports', () => {
+  const filters = { country: 'SA', disease: 'D049', source: '', window: '90' } as const;
+  const groups = deduplicateAlerts(filterPoints(mersReports, filters, '2026-11-15'), 'e0ed903256a8d578');
+  assert.deepEqual(groups.map(group => [group.cases, group.deaths, group.reports.length]), [[8, 1, 3], [2, 1, 3]]);
+  assert.deepEqual(groups.map(group => group.alert_id), ['e0ed903256a8d578', '5d32bf2799447655']);
+  const sourceOnly = deduplicateAlerts(filterPoints(mersReports, { ...filters, source: 'who_don' }, '2026-11-15'));
+  assert.equal(sourceOnly.length, 1);
+  assert.deepEqual(sourceOnly[0].reports.map(report => report.alert_id), ['461af4f262285453']);
+  const recentOnly = deduplicateAlerts(filterPoints(mersReports, { ...filters, window: '7' }, '2026-11-15'));
+  assert.equal(recentOnly[0].reports.length, 1);
+});
+
+test('annual grouping separates years, suspected counts and different reporting periods', () => {
+  const first = mersReports[0];
+  const variants = [
+    first,
+    { ...first, alert_id: 'prior-year', quote: first.quote.replaceAll('2026', '2025'), published_date: '2025-11-10', as_of: '2025-11-09' },
+    { ...first, alert_id: 'suspected', count_basis: 'suspected' },
+    { ...first, alert_id: 'probable', count_basis: 'probable' },
+    { ...first, alert_id: 'daily', quote: 'Eight MERS cases, including one fatality, reported on 9 November 2026.' },
+  ];
+  assert.equal(deduplicateAlerts(variants as any).length, variants.length);
+});
+
+test('New Zealand is a place name, while new laboratory-confirmed cases remain incident evidence', () => {
+  const first = alert('a', { country_code: 'NZ', as_of: '2026-10-27', count_basis: 'total', quote: 'Since the beginning of 2026, New Zealand reported six cases.' });
+  const repeat = alert('b', { country_code: 'NZ', quote: 'Since the beginning of 2026, six cases have been reported in New Zealand.' });
+  const groups = deduplicateAlerts([first, repeat]);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].reports.length, 2);
+
+  const mixed = alert('mixed', { country_code: 'NZ', quote: 'Since the beginning of 2026, six cases included two new laboratory-confirmed cases.' });
+  assert.equal(deduplicateAlerts([first, mixed]).length, 2);
+
+  const incident = { as_of: '2026-10-07', quote: 'Six new laboratory-confirmed cases between 1 October and 7 October 2026.' };
+  const incidentReports = [alert('c', incident), alert('d', { ...incident, published_date: '2026-10-27' })];
+  assert.equal(deduplicateAlerts(incidentReports).length, 1);
 });
 
 test('reports without figures need matching evidence, not just matching empty fields', () => {
@@ -90,6 +148,106 @@ test('map points collapse repeated place reports after source filtering', () => 
   assert.deepEqual(deduplicatePoints(rows).map(row => row.alert_id), ['a', 'c']);
   const filtered = filterPoints(rows, { country: '', disease: '', source: 'ecdc_cdtr', window: '30' }, AS_OF);
   assert.deepEqual(deduplicatePoints(filtered).map(row => row.alert_id), ['b']);
+});
+
+test('full history filtering keeps old channels and reduces each outbreak place to its newest matching marker', () => {
+  const latest = alert('latest', { published_date: '2026-10-27', source_id: 'ecdc_cdtr' });
+  const historical = alert('historical', { published_date: '2026-10-20', source_id: 'who_don', admin_area: ' NAIROBI ' });
+  const sameSourceOlder = alert('older', { published_date: '2026-10-01', source_id: 'who_don' });
+  const nearby = alert('nearby', { published_date: '2026-10-21', admin_area: 'Mombasa' });
+  const rows = [historical, sameSourceOlder, latest, nearby];
+  const base = { disease: '', country: '', source: '', window: 'all' } as const;
+  assert.deepEqual(latestMatchingPlaces(rows, AS_OF, base).map(item => item.alert_id), ['latest', 'nearby']);
+  assert.deepEqual(latestMatchingPlaces(rows, AS_OF, { ...base, source: 'who_don' }).map(item => item.alert_id), ['nearby', 'historical']);
+  assert.deepEqual(latestMatchingPlaces(rows, AS_OF, { ...base, window: '7', source: 'who_don' }).map(item => item.alert_id), ['nearby']);
+  assert.equal(situationPlaceKey(historical), situationPlaceKey(latest));
+  assert.notEqual(situationPlaceKey(historical), situationPlaceKey(nearby));
+});
+
+test('structured cumulative data merge only across the same start, figures and literal count basis', () => {
+  const first = alert('a', { as_of: '2026-10-27', reporting_period: { kind: 'cumulative', start: '2026-03-01', end: '2026-10-27' } });
+  const repeat = alert('b', { published_date: '2026-10-27', as_of: '2026-10-26', reporting_period: { kind: 'cumulative', start: '2026-03-01', end: '2026-10-26' } });
+  const otherStart = alert('c', { reporting_period: { kind: 'cumulative', start: '2026-04-01', end: AS_OF } });
+  const total = alert('d', { as_of: first.as_of, count_basis: 'total', reporting_period: first.reporting_period });
+  const groups = deduplicateAlerts([first, repeat, otherStart, total]);
+  assert.equal(groups.length, 3);
+  assert.deepEqual(groups[0].reports.map(row => row.alert_id), ['a', 'b']);
+});
+
+test('structured incident data require the same complete interval and take precedence over annual prose', () => {
+  const common = { kind: 'incident', start: '2026-10-01', end: '2026-10-07' };
+  const first = alert('a', { as_of: common.end, quote: mersReports[0].quote, reporting_period: common });
+  const repeat = alert('b', { as_of: common.end, reporting_period: common, published_date: '2026-10-27' });
+  const following = alert('c', { as_of: '2026-10-14', reporting_period: { ...common, start: '2026-10-08', end: '2026-10-14' } });
+  const cumulative = alert('d', { as_of: common.end, reporting_period: { ...common, kind: 'cumulative' } });
+  assert.deepEqual(deduplicateAlerts([first, repeat, following, cumulative]).map(group => group.reports.length), [2, 1, 1]);
+});
+
+test('invalid structured dates and missing incident ends cannot silently use annual fallback', () => {
+  const rows = [
+    alert('a', { reporting_period: { kind: 'incident', start: '2026-10-01' } }),
+    alert('b', { reporting_period: { kind: 'incident', start: '2026-10-01' } }),
+    alert('c', { reporting_period: { kind: 'cumulative', start: '2026-02-30' } }),
+    alert('d', { reporting_period: { kind: 'cumulative', start: AS_OF, end: '2026-10-01' } }),
+  ];
+  assert.equal(deduplicateAlerts(rows).length, 4);
+});
+
+test('a quoted incident interval blocks a conflicting annual summary', () => {
+  const summary = 'Since the beginning of 2026, six cases were reported.';
+  const first = alert('a', { as_of: '2026-10-07', quote: 'Six new cases between 1 October and 7 October 2026.', summary_en: summary });
+  const repeat = alert('b', { as_of: '2026-10-07', quote: 'Six new cases between 1 October and 7 October 2026.', summary_en: summary, published_date: '2026-10-27' });
+  const following = alert('c', { as_of: '2026-10-14', quote: 'Six new cases between 8 October and 14 October 2026.', summary_en: summary });
+  const cumulative = alert('d', { quote: summary, summary_en: summary });
+  assert.deepEqual(deduplicateAlerts([first, repeat, following, cumulative]).map(group => group.reports.length), [2, 1, 1]);
+});
+
+test('ambiguous periods and conflicting quoted years do not combine with annual totals', () => {
+  const first = mersReports[0];
+  const rows = [
+    first,
+    { ...first, alert_id: 'conflict', quote: 'Since the beginning of 2025 and as of 9 November 2026, eight cases were reported.' },
+    { ...first, alert_id: 'mixed', quote: 'Since the beginning of 2026 there were eight cases including six new cases this week.' },
+    { ...first, alert_id: 'last-week', quote: 'Eight cases were reported last week.', summary_en: first.quote },
+    { ...first, alert_id: 'this-week', quote: 'Eight cases were reported this week.', summary_en: first.quote },
+  ];
+  assert.equal(deduplicateAlerts(rows as any).length, rows.length);
+});
+
+test('explicit annual start alone does not equate total, confirmed, suspected or probable bases', () => {
+  const period = { kind: 'cumulative', start: '2026-01-01', end: AS_OF };
+  const rows = ['total', 'confirmed', 'suspected', 'probable'].map((count_basis, index) => alert(String(index), { reporting_period: period, count_basis }));
+  assert.equal(deduplicateAlerts(rows).length, 4);
+  const proven = rows.slice(0, 2).map(row => ({ ...row, quote: 'Since the beginning of 2026, six cases were reported.' }));
+  assert.equal(deduplicateAlerts(proven).length, 1);
+  const nextYear = proven.map(row => ({ ...row, published_date: '2027-01-08', as_of: '2027-01-07', reporting_period: { ...period, end: '2027-01-07' } }));
+  assert.equal(deduplicateAlerts(nextYear).length, 2, 'a cumulative interval spanning years is not proof of an annual count basis');
+});
+
+test('period dates beyond publication or inconsistent with the count cutoff stay individual', () => {
+  const base = alert('a', { reporting_period: { kind: 'cumulative', start: '2026-01-01', end: AS_OF } });
+  const rows = [
+    base,
+    { ...base, alert_id: 'future-start', reporting_period: { kind: 'cumulative', start: '2027-01-01' } },
+    { ...base, alert_id: 'future-end', reporting_period: { kind: 'cumulative', start: '2026-01-01', end: '2026-11-01' } },
+    { ...base, alert_id: 'cutoff-mismatch', reporting_period: { kind: 'cumulative', start: '2026-01-01', end: '2026-10-27' } },
+    { ...base, alert_id: 'prior-cutoff', as_of: '2025-12-31' },
+    { ...base, alert_id: 'future-cutoff', as_of: '2026-11-01' },
+  ];
+  assert.equal(deduplicateAlerts(rows as any).length, rows.length);
+  const futureAnnual = [alert('x', { quote: 'Since the beginning of 2027, six cases were reported.' }), alert('y', { quote: 'Since the beginning of 2027, six cases were reported.' })];
+  assert.equal(deduplicateAlerts(futureAnnual).length, 2);
+});
+
+test('multiple incident intervals and undated month evidence cannot use an annual summary', () => {
+  const summary_en = 'Since the beginning of 2026, six cases were reported.';
+  const rows = [
+    alert('a', { summary_en, quote: 'Six new cases from 2026-10-01 to 2026-10-07 and from 2026-10-08 to 2026-10-14.' }),
+    alert('b', { summary_en, quote: 'Six new cases from 2026-10-01 to 2026-10-07.' }),
+    alert('c', { summary_en, quote: 'Six cases reported during October.' }),
+    alert('d', { summary_en, quote: summary_en }),
+  ];
+  assert.equal(deduplicateAlerts(rows).length, rows.length);
 });
 
 test('anchors use the largest landmass and points in one country fan out', () => {

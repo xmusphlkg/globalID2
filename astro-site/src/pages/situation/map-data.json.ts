@@ -17,6 +17,7 @@ export const GET: APIRoute = () => {
     generated_at: map.generated_at,
     as_of: map.as_of,
     points: map.points,
+    filter_points: map.filter_points ?? map.points,
     monitoring: readMonitoring(),
     active_outbreaks: map.outbreaks.filter(outbreak => outbreak.status === 'active').length,
     sources_ok: sources.filter(source => source.status === 'ok').length,

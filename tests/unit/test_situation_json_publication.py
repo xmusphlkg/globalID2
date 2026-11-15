@@ -70,6 +70,9 @@ async def test_json_snapshot_derives_groups_before_managed_rebuild_and_preserves
     assert set(manifest["files"]) >= {"map-data.json", "sources.json", "weekly/index.json", "by-country/CD.json", "by-disease/D050.json"}
     mapping = json.loads((public / manifest["files"]["map-data.json"]["url"]).read_text())
     assert len(mapping["points"]) == 3
+    assert len(mapping["filter_points"]) == 3
+    assert all("notice_id" in point for point in mapping["filter_points"])
+    assert all(set(point).isdisjoint({"quote", "summary_en", "summary_zh", "summary_fr", "ai", "url", "cases", "deaths"}) for point in mapping["filter_points"])
     ids = {row["outbreak_id"] for row in mapping["points"]}
     assert len(ids) == 1 and None not in ids
     for outbreak_id in ids:
@@ -209,3 +212,58 @@ async def test_independent_pipeline_freezes_retry_and_acks_only_selected_ids(rel
         assert not (await session.get(PublishDirty, ids[2])).published_at
     assert "site-data/situation/current.json" in store.objects
     assert "site-data/surveillance/current.json" not in store.objects
+
+
+async def test_history_filter_index_keeps_older_reports_after_latest_place_marker_selection(db, tmp_path):
+    await store_notices(_run(
+        _event("history", ref={"kind": "who_don", "slug": "history"}, published="2026-10-21"),
+        _event("latest", ref={"kind": "who_don", "slug": "latest"}, published="2026-10-23"),
+    ), run_id="history")
+    await fetch_pending_documents(fetch=_fetcher([]))
+    assert (await extract_pending(Scripted([DRAFT, DRAFT], [
+        {"verdict": "accept", "issues": []}, {"verdict": "accept", "issues": []},
+    ])))["published"] == 2
+    # The older channel must remain filterable although the latest marker uses
+    # another channel. Each place still has a single default marker.
+    async with db() as session:
+        await session.execute(update(SituationAlert).where(
+            SituationAlert.published_date == datetime(2026, 10, 21).date(),
+        ).values(source_id="ecdc_events"))
+        await session.commit()
+    public = tmp_path / "public"
+    await export_json_publication(tmp_path / "state", public, release_id="history-index")
+    mapping = json.loads((public / "map-data.json").read_text())
+    assert len(mapping['points']) == 3
+    assert {point['source_id'] for point in mapping['points']} == {'who_don'}
+    assert len(mapping['filter_points']) == 6
+    historical = [point for point in mapping['filter_points'] if point['source_id'] == 'ecdc_events']
+    assert len(historical) == 3
+    assert {point['published_date'] for point in historical} == {'2026-10-21'}
+    assert {point['country_code'] for point in historical} == {'CD', 'KE', 'NG'}
+    assert all(point['outbreak_id'] for point in historical)
+    assert b'SECRET-FULL-TEXT-MARKER' not in (public / 'map-data.json').read_bytes()
+
+
+async def test_monitoring_publication_structures_coverage_even_without_alerts(db, tmp_path):
+    from src.domain import SituationDocument, SituationExtraction
+    notice_id = 'who_don:monitoring-coverage'
+    await store_notices(_run(_event('monitoring-coverage', ref={'kind': 'who_don', 'slug': 'coverage'})), run_id='coverage')
+    async with db() as session:
+        await session.execute(update(SituationNotice).where(SituationNotice.notice_id == notice_id).values(
+            title_en='Weekly surveillance roundup', ai_status='extracted'))
+        await session.execute(update(SituationDocument).where(SituationDocument.notice_id == notice_id).values(
+            status='ready', text='# Contents\n## Influenza – Japan\nNothing unusual.\nSECRET-FULL-TEXT-MARKER'))
+        session.add(SituationExtraction(notice_id=notice_id, document_hash='coverage-document',
+            prompt_version='test', status='published', document_type='monitoring_product', alert_count=0,
+            review_notes=[]))
+        await session.commit()
+    public = tmp_path / 'public'
+    await export_json_publication(tmp_path / 'state', public, release_id='coverage')
+    mapping = json.loads((public / 'map-data.json').read_text())
+    assert mapping['points'] == [] and mapping['filter_points'] == []
+    product, = mapping['monitoring']
+    assert product['title_en'] == 'Weekly surveillance roundup'
+    assert product['alert_count'] == 0
+    assert product['disease_ids'] == ['D038']
+    assert product['country_codes'] == ['JP']
+    assert b'SECRET-FULL-TEXT-MARKER' not in (public / 'map-data.json').read_bytes()

@@ -1,0 +1,12 @@
+.sit-monitor-products { border-top: 1px solid rgb(var(--border)); display: grid; gap: .5rem; padding-top: .8rem; }
+.sit-monitor-heading { align-items: center; display: flex; gap: .65rem; justify-content: space-between; }
+.sit-monitor-count { background: rgb(var(--color-teal) / .1); border-radius: 999px; color: rgb(var(--color-teal)); flex: none; font-size: .72rem; font-variant-numeric: tabular-nums; font-weight: 750; min-width: 1.8rem; padding: .15rem .5rem; text-align: center; }
+.sit-monitor-products > .sit-muted { margin: 0; }
+.sit-monitor-cards { display: grid; gap: .6rem; list-style: none; margin: 0; padding: 0; }
+.sit-monitor-card { background: rgb(var(--bg-soft)); border: 1px solid rgb(var(--border)); border-radius: .4rem; display: grid; gap: .4rem; padding: .65rem; }
+.sit-monitor-card:focus-within, .sit-monitor-card:hover { border-color: rgb(var(--color-teal)); }
+.sit-monitor-meta { color: rgb(var(--text-faint)); display: grid; font-size: .65rem; gap: .15rem; line-height: 1.4; }
+.sit-monitor-meta time { font-variant-numeric: tabular-nums; }
+.sit-monitor-card a { color: rgb(var(--color-teal)); font-size: .77rem; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; text-decoration: none; }
+.sit-monitor-card a:hover { text-decoration: underline; }
+.sit-monitor-card a:focus-visible { outline: 2px solid rgb(var(--color-teal)); outline-offset: 3px; }

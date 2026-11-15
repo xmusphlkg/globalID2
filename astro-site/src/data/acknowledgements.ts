@@ -6,6 +6,7 @@ export interface AcknowledgementRole {
 
 export interface AcknowledgementEntry {
   name: string;
+  nameZh?: string;
   affiliationEn: string;
   affiliationZh: string;
   roles: AcknowledgementRole[];
@@ -31,6 +32,7 @@ export const acknowledgementIntro = {
 export const acknowledgementEntries: AcknowledgementEntry[] = [
   {
     name: 'Tianmu Chen',
+    nameZh: '陈田木',
     affiliationEn: 'School of Public Health, Xiamen University',
     affiliationZh: '厦门大学公共卫生学院',
     roles: [
@@ -53,5 +55,19 @@ export const acknowledgementEntries: AcknowledgementEntry[] = [
       "Provided valuable comments on the site's structure, content organisation, and overall presentation.",
     contributionZh:
       '就网站结构、内容组织与整体呈现提供了宝贵意见与专业建议。',
+  },
+  {
+    name: 'Hong Liu',
+    nameZh: '刘弘',
+    affiliationEn: 'School of Public Health, Xiamen University',
+    affiliationZh: '厦门大学公共卫生学院',
+    roles: [
+      { en: 'AI API Sponsorship', zh: 'AI API 赞助', tone: 'support' },
+      { en: 'Information Sharing', zh: '信息共享' },
+    ],
+    contributionEn:
+      'Provided AI API sponsorship and shared valuable information to support the development and maintenance of the project.',
+    contributionZh:
+      '为项目提供 AI API 赞助，并分享有价值的信息，支持项目的开发与维护。',
   },
 ];

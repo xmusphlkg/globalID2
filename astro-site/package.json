@@ -35,7 +35,7 @@
     "optimize:map": "node scripts/optimize-world-map.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "test:public": "node --experimental-strip-types --test src/lib/site-search.test.ts src/lib/download-presentation.test.ts src/components/situation/model.test.ts"
+    "test:public": "node --experimental-strip-types --test src/lib/site-search.test.ts src/lib/download-presentation.test.ts src/components/situation/model.test.ts src/components/situation/monitoring.test.ts src/components/situation/overview-data.test.ts"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.2",

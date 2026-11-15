@@ -43,6 +43,7 @@ async def _export(state_dir: Path, public_dir: Path, *, release_id: str) -> dict
     _write(public_dir / "map-data.json", {
         "schema_version": mapping["schema_version"], "generated_at": mapping["generated_at"],
         "as_of": mapping["as_of"], "points": mapping["points"],
+        "filter_points": mapping.get("filter_points", mapping["points"]),
         "monitoring": monitoring["products"],
         "active_outbreaks": sum(row["status"] == "active" for row in mapping["outbreaks"]),
         "sources_ok": sum(row["status"] == "ok" for row in sources["sources"]),

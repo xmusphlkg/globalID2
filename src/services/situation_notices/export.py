@@ -41,6 +41,8 @@ from src.services.global_sources.catalogue import (
     iso_week,
 )
 
+from .coverage import monitoring_coverage
+from .reporting_period import reporting_period
 from .gazetteer import locate
 from .pipeline import cluster_alerts, utc_now
 
@@ -85,6 +87,7 @@ def alert_record(
     disease = diseases.get(alert.disease_id or "", {})
     country = country_row(alert.country_code)
     quotable = notice.redistribution != NO_QUOTE_TERMS
+    period = reporting_period(alert)
     return {
         "alert_id": alert.alert_id,
         "outbreak_id": alert.outbreak_id,
@@ -107,6 +110,7 @@ def alert_record(
         "count_basis": alert.count_basis,
         "as_of": alert.as_of.isoformat() if alert.as_of else None,
         "published_date": alert.published_date.isoformat(),
+        **({"reporting_period": period} if period else {}),
         "quote": alert.quote if quotable else None,
         "summary_en": alert.summary_en,
         "summary_zh": alert.summary_zh,
@@ -311,6 +315,7 @@ async def export_site(
         monitoring_rows = (
             await db.execute(
                 select(SituationNotice, SituationExtraction)
+                .options(selectinload(SituationNotice.document))
                 .join(SituationExtraction, SituationExtraction.notice_id == SituationNotice.notice_id)
                 .where(
                     SituationExtraction.status == "published",
@@ -366,6 +371,16 @@ async def export_site(
         map_marker(point)
         for point in latest_per_place(record for record in records if record["status"] != "routine")
     ]
+    # Each published report stays available to source/date facets. Collapse
+    # places only after the reader's filters, rather than dropping old channels.
+    filter_points = [
+        {**map_marker(record), "notice_id": record["notice_id"]}
+        for record in sorted(records, key=_sort_key, reverse=True)
+        if record["status"] != "routine"
+    ]
+    monitoring_by_notice: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        monitoring_by_notice[record["notice_id"]].append(record)
     generated = utc_now().isoformat()
     stamp = as_of.isoformat()
 
@@ -381,6 +396,7 @@ async def export_site(
             "since_date": since.isoformat(),
             "point_count": len(points),
             "points": points,
+            "filter_points": filter_points,
             "facets": facets(points),
             "outbreaks": [{k: v for k, v in item.items() if k != "alerts"} for item in outbreaks],
         },
@@ -424,6 +440,7 @@ async def export_site(
                     "url": notice.url,
                     "published_date": notice.published_date.isoformat(),
                     "alert_count": extraction.alert_count,
+                    **monitoring_coverage(notice, monitoring_by_notice.get(notice.notice_id, [])),
                 }
                 for notice, extraction in monitoring_rows
             ],

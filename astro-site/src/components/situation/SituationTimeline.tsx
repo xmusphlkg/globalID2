@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react';
 import type { Locale, SituationAlertRecord } from '../../utils/situationTypes.ts';
 import { placeLabel, type AlertGroup, type GraphRow, type Lane } from './model.ts';
-import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, countsLine, formatCount, formatDay, sourceLabel } from './labels.ts';
+import { resolveReportingPeriod } from './report-period.ts';
+import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, diseaseName, countsLine, formatCount, formatDay, sourceLabel } from './labels.ts';
 
 
 export function shortCounts(alert: SituationAlertRecord, locale: Locale): string {
@@ -65,25 +66,33 @@ export function GraphCell({ row, lanes, width }: { row: GraphRow<SituationAlertR
   );
 }
 
-export function AlertItem({ alert, row, lanes, width, selected, featured, showPlace, locale }: { alert: AlertGroup; row: GraphRow<SituationAlertRecord>; lanes: Lane[]; width: number; selected: boolean; featured: boolean; showPlace: boolean; locale: Locale }) {
+export function AlertItem({ alert, row, lanes, width, selected, featured, showPlace, showDisease = false, onSelect, locale }: { alert: AlertGroup; row: GraphRow<SituationAlertRecord>; lanes: Lane[]; width: number; selected: boolean; featured: boolean; showPlace: boolean; showDisease?: boolean; onSelect?: () => void; locale: Locale }) {
   const copy = COPY[locale];
   const short = shortCounts(alert, locale);
   const summary = alertSummary(alert, locale);
+  const period = resolveReportingPeriod(alert).period;
+  const periodLabel = period?.kind === 'cumulative'
+    ? { en: 'Cumulative', zh: '累计', fr: 'Cumul' }[locale]
+    : { en: 'New in period', zh: '期间新增', fr: 'Nouveaux sur la période' }[locale];
+  const reports = alert.reports.filter((report, index, items) => items.findIndex(item => item.source_id === report.source_id && item.url === report.url) === index);
   return (
     <li className={`sit-alert${selected ? ' is-selected' : ''}`} data-alert-id={alert.alert_id} data-country={alert.country_code}>
       <GraphCell row={row} lanes={lanes} width={width} />
       <details open={featured}>
         <summary>
           <span className="sit-alert-head">
+            {showDisease && <span className="sit-alert-disease">{diseaseName(alert, locale)}</span>}
             {showPlace && <span className="sit-alert-place">{placeLabel(alert, countryName(alert, locale))}</span>}
             <span className={`sit-status sit-status-${alert.status}`}>{STATUS_LABELS[alert.status][locale]}</span>
           </span>
           <span className="sit-alert-sub">
             <time dateTime={alert.published_date}>{formatDay(alert.published_date, locale)}</time>
             {short && <> · <span className="sit-alert-counts">{short}</span></>}
+            {reports.length > 1 && <span className="sit-report-count">{copy.reportsCount(reports.length)}</span>}
           </span>
         </summary>
         <div className="sit-alert-body">
+          {period && <p className="sit-period">{periodLabel} · <time dateTime={period.start}>{formatDay(period.start, locale)}</time>{(period.end || alert.as_of) && <> – <time dateTime={period.end || alert.as_of!}>{formatDay(period.end || alert.as_of, locale)}</time></>}</p>}
           {!featured && countsLine(alert, locale) && <p className="sit-counts">{countsLine(alert, locale)}</p>}
           {!featured && !short && alert.status !== 'routine' && <p className="sit-muted">{copy.noCounts}</p>}
           {summary && <p className="sit-summary">{summary}</p>}
@@ -94,10 +103,13 @@ export function AlertItem({ alert, row, lanes, width, selected, featured, showPl
           ) : (
             <p className="sit-muted">{copy.quoteWithheld}</p>
           )}
-          {alert.reports.filter((report, index, reports) => reports.findIndex(item => item.source_id === report.source_id && item.url === report.url) === index).map(report => (
+          {onSelect && <button type="button" className="sit-text-btn sit-alert-focus" onClick={onSelect}>{locale === 'zh' ? '查看此地点' : locale === 'fr' ? 'Voir ce lieu' : 'Open this place'} →</button>}
+          {reports.map(report => (
             <p className="sit-links" key={report.alert_id}>
               <a className="sit-source-link" href={report.url} target="_blank" rel="noopener noreferrer">{copy.originalReport} ↗</a>
               <span>{sourceLabel(report, locale)}</span>
+              <time dateTime={report.published_date}>{formatDay(report.published_date, locale)}</time>
+              {report.as_of && <span>{copy.statAsOf} <time dateTime={report.as_of}>{formatDay(report.as_of, locale)}</time></span>}
             </p>
           ))}
         </div>

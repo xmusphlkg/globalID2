@@ -203,3 +203,97 @@ def test_map_point_prefers_the_recent_alert_with_counts_over_a_newer_empty_state
     assert point["alert_id"] == "who-ke"
     assert point["place_updated"] == "2026-10-27"
     assert point["place_alert_count"] == 2
+
+
+def test_reporting_period_exports_annual_and_incident_intervals_but_rejects_conflicting_evidence():
+    annual = alert_record(_alert(
+        quote='Since the beginning of 2026, and as of 20 October 2026, nine cases were reported in Kenya.',
+    ), _notice(), _extraction(), DISEASES)
+    assert annual['reporting_period'] == {'kind': 'cumulative', 'start': '2026-01-01', 'end': '2026-10-20'}
+    incident = alert_record(_alert(
+        quote='Nine new cases were reported from 2026-10-14 to 2026-10-20 in Kenya.',
+    ), _notice(), _extraction(), DISEASES)
+    assert incident['reporting_period'] == {'kind': 'incident', 'start': '2026-10-14', 'end': '2026-10-20'}
+    for quote in (
+        'Since the beginning of 2026, nine cases were reported, including two new cases in the past 7 days.',
+        'Since the beginning of 2026, nine cases were reported, compared with three in 2025.',
+        'Nine new cases were reported from 2026-10-22 to 2026-10-20 in Kenya.',
+        'Nine new cases have been reported in Kenya.',
+    ):
+        record = alert_record(_alert(quote=quote,
+            summary_en='Since the beginning of 2026, nine cases were reported.'), _notice(), _extraction(), DISEASES)
+        assert 'reporting_period' not in record
+
+
+def test_reporting_period_prefers_quote_and_can_tag_blocked_quote_without_publishing_text():
+    quote = 'Between 1 January and 20 October 2026, nine cases were reported in Kenya.'
+    record = alert_record(_alert(quote=quote, summary_en='Six new cases were reported since the previous update.'),
+        _notice(redistribution='blocked'), _extraction(), DISEASES)
+    assert record['quote'] is None
+    assert record['reporting_period'] == {'kind': 'cumulative', 'start': '2026-01-01', 'end': '2026-10-20'}
+    # A date-bearing source quote may never silently inherit a conflicting
+    # annual period from an AI summary.
+    record = alert_record(_alert(quote='On 20 October 2026, nine cases were reported in Kenya.',
+        summary_en='Since the beginning of 2026, nine cases were reported.'), _notice(), _extraction(), DISEASES)
+    assert 'reporting_period' not in record
+
+
+def test_monitoring_tags_routine_facts_and_generic_roundup_topic_headings_without_private_text():
+    from src.domain import SituationDocument
+    from src.services.situation_notices.coverage import monitoring_coverage
+    notice = _notice()
+    notice.title_en = 'Weekly surveillance roundup'
+    notice.document = SituationDocument(notice_id=notice.notice_id, ref={}, text=(
+        '# Contents\n## Influenza – Japan\nOrdinary surveillance with nothing unusual.\n'
+        f'{SECRET_BODY}\nBackground: travellers from Canada should consult their doctor.\n'
+    ))
+    coverage = monitoring_coverage(notice, [{
+        'disease_id': 'D050', 'country_code': 'KE', 'status': 'routine',
+    }])
+    assert {'D050', 'D038'} <= set(coverage['disease_ids'])
+    assert coverage['country_codes'] == ['JP', 'KE']
+    assert SECRET_BODY not in json.dumps(coverage)
+    assert 'CA' not in coverage['country_codes']
+
+
+def test_monitoring_unknown_coverage_stays_omitted_and_explicit_ids_are_validated():
+    from src.domain import SituationDocument
+    from src.services.situation_notices.coverage import monitoring_coverage
+    notice = _notice()
+    notice.title_en = 'Weekly public health roundup'
+    notice.document = SituationDocument(notice_id=notice.notice_id, ref={}, text='No unusual event was reported.')
+    assert monitoring_coverage(notice, []) == {}
+    notice.document.ref = {'disease_ids': ['D050', 'D-UNKNOWN', 10], 'country_codes': ['ke', 'UNKNOWN', 10]}
+    assert monitoring_coverage(notice, []) == {'disease_ids': ['D050'], 'country_codes': ['KE']}
+    notice.title_en = 'Middle East respiratory syndrome coronavirus – Saudi Arabia'
+    assert monitoring_coverage(notice, []) == {'disease_ids': ['D049', 'D050'], 'country_codes': ['KE', 'SA']}
+
+
+
+def test_annual_export_does_not_mistake_new_zealand_for_new_cases():
+    record = alert_record(_alert(
+        country_code='NZ',
+        quote='Since the beginning of 2026, New Zealand reported nine cases including one death.',
+    ), _notice(), _extraction(), DISEASES)
+    assert record['reporting_period'] == {'kind': 'cumulative', 'start': '2026-01-01', 'end': '2026-10-20'}
+    for mixed in (
+        'Since the beginning of 2026, nine cases were reported; three cases were reported in the monthly update.',
+        'Since the beginning of 2026, nine cases were reported; three since the previous update.',
+        'Since the beginning of 2026, nine cases were reported, including three new laboratory-confirmed cases.',
+        'Since the beginning of 2026, nine cases were reported, including three new MERS cases.',
+    ):
+        assert 'reporting_period' not in alert_record(_alert(quote=mixed), _notice(), _extraction(), DISEASES)
+
+
+def test_monitoring_coverage_ignores_travel_background_and_publisher_sections():
+    from src.domain import SituationDocument
+    from src.services.situation_notices.coverage import monitoring_coverage
+    notice = _notice()
+    notice.title_en = 'Weekly surveillance roundup'
+    notice.document = SituationDocument(notice_id=notice.notice_id, ref={}, text=(
+        '## Influenza – Japan\nOrdinary surveillance.\n'
+        '## Travel advice – Kenya\nConsult a doctor.\n'
+        '## Historical Ebola in Canada\nPast outbreaks.\n'
+        '## Contact WHO country office – Switzerland\nContact details.\n'
+    ))
+    assert monitoring_coverage(notice, []) == {'disease_ids': ['D038'], 'country_codes': ['JP']}

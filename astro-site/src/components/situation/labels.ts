@@ -16,12 +16,17 @@ export interface SituationCopy {
   winAll: string;
   listHeading: string;
   noResults: string;
+  noFilterResults: string;
   places: (n: number) => string;
   fresh: string;
   recent: string;
   older: string;
   stale: string;
   detailHeading: string;
+  timelineScope: string;
+  currentPlace: string;
+  allMatchingEvents: string;
+  viewResults: string;
   otherCountries: string;
   showEarlier: (shown: number, total: number) => string;
   pickHint: string;
@@ -62,7 +67,7 @@ export interface SituationCopy {
   openDisease: string;
   openResearch: (n: number) => string;
   vsPrevious: string;
-  seriesLegend: string;
+  reportsCount: (n: number) => string;
   monitoringHeading: string;
   monitoringLead: string;
   close: string;
@@ -87,12 +92,17 @@ export const COPY: Record<Locale, SituationCopy> = {
     winAll: 'Whole period',
     listHeading: 'Places with news',
     noResults: 'No place matches these filters.',
+    noFilterResults: 'No matching options.',
     places: n => `${n} ${n === 1 ? 'place' : 'places'}`,
     fresh: '≤ 7 days',
     recent: '8–30 days',
     older: '31–90 days',
     stale: '> 90 days',
     detailHeading: 'Alert timeline',
+    timelineScope: 'Timeline scope',
+    currentPlace: 'Current place',
+    allMatchingEvents: 'All matching events',
+    viewResults: 'View results',
     otherCountries: 'Other areas',
     showEarlier: (shown, total) => `Show earlier alerts (${shown} of ${total} shown)`,
     pickHint: 'Select a place on the map or in the list to see the alerts reported for this outbreak.',
@@ -133,7 +143,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     openDisease: 'Disease page',
     openResearch: n => `${n} ${n === 1 ? 'paper' : 'papers'}`,
     vsPrevious: 'vs previous period',
-    seriesLegend: 'Shading: latest GIDS value for the selected disease.',
+    reportsCount: n => `${n} reports`,
     monitoringHeading: 'Monitoring products',
     monitoringLead: 'Periodic roundups with nothing unusual. They add no point.',
     close: 'Close',
@@ -156,12 +166,17 @@ export const COPY: Record<Locale, SituationCopy> = {
     winAll: '全部时段',
     listHeading: '有新消息的地点',
     noResults: '没有符合筛选条件的地点。',
+    noFilterResults: '没有匹配的选项。',
     places: n => `${n} 个地点`,
     fresh: '7 天内',
     recent: '8–30 天',
     older: '31–90 天',
     stale: '90 天以上',
     detailHeading: '警报时间线',
+    timelineScope: '时间线范围',
+    currentPlace: '当前地点',
+    allMatchingEvents: '全部匹配事件',
+    viewResults: '查看结果',
     otherCountries: '其他区域',
     showEarlier: (shown, total) => `显示更早的警报（已显示 ${shown} / ${total} 条）`,
     pickHint: '在地图或列表中选择一个地点，查看这起疫情的警报。',
@@ -202,7 +217,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     openDisease: '疾病页',
     openResearch: n => `${n} 篇研究`,
     vsPrevious: '较上一周期',
-    seriesLegend: '底色：所选疾病在 GIDS 中的最新值。',
+    reportsCount: n => `${n} 份报告`,
     monitoringHeading: '监测产品',
     monitoringLead: '没有异常事件的定期汇总，不会在地图上增加点。',
     close: '关闭',
@@ -225,12 +240,17 @@ export const COPY: Record<Locale, SituationCopy> = {
     winAll: 'Toute la période',
     listHeading: 'Lieux avec des nouvelles',
     noResults: 'Aucun lieu ne correspond à ces filtres.',
+    noFilterResults: 'Aucune option correspondante.',
     places: n => `${n} ${n === 1 ? 'lieu' : 'lieux'}`,
     fresh: '≤ 7 jours',
     recent: '8–30 jours',
     older: '31–90 jours',
     stale: '> 90 jours',
     detailHeading: 'Chronologie des alertes',
+    timelineScope: 'Portée de la chronologie',
+    currentPlace: 'Lieu sélectionné',
+    allMatchingEvents: 'Tous les événements correspondants',
+    viewResults: 'Voir les résultats',
     otherCountries: 'Autres zones',
     showEarlier: (shown, total) => `Afficher les alertes plus anciennes (${shown} sur ${total})`,
     pickHint: 'Sélectionnez un lieu sur la carte ou dans la liste pour voir les alertes de cette flambée.',
@@ -271,7 +291,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     openDisease: 'Page de la maladie',
     openResearch: n => `${n} ${n === 1 ? 'article' : 'articles'}`,
     vsPrevious: 'vs période précédente',
-    seriesLegend: 'Teinte : dernière valeur GIDS pour la maladie choisie.',
+    reportsCount: n => `${n} rapports`,
     monitoringHeading: 'Produits de surveillance',
     monitoringLead: 'Synthèses périodiques sans événement inhabituel. Elles n’ajoutent aucun point.',
     close: 'Fermer',

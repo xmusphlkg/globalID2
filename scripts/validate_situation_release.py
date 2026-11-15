@@ -5,6 +5,8 @@ File-only checks (no database), against ``gids.situation_alerts.v1``:
 
 * ``map.json`` exists with the expected schema version, in every export file;
 * every map point links to an outbreak timeline by alert id;
+* optional full-history filter indices have unique marker-only entries and
+  exactly cover non-routine timeline alerts with matching source/place/date;
 * map points are markers: they carry no quote, summary or review metadata;
 * every outbreak alert carries a quote, except for sources whose terms are ``blocked``;
 * no field carries full report text (``text``, ``document``, ``full_text``...);
@@ -15,6 +17,7 @@ File-only checks (no database), against ``gids.situation_alerts.v1``:
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import sys
 from pathlib import Path
@@ -54,7 +57,14 @@ def _is_url(value: Any) -> bool:
     return str(value or "").startswith(("http://", "https://"))
 
 
-def validate(data_dir: Path = DATA, site_dir: Path = DIST) -> dict:
+def validate(
+    data_dir: Path = DATA,
+    site_dir: Path = DIST,
+    *,
+    require_pages: bool = True,
+    require_points: bool = True,
+    require_filter_index: bool = False,
+) -> dict:
     checks: list[dict] = []
 
     def check(check_id: str, passed: bool, detail: str = "") -> None:
@@ -66,6 +76,8 @@ def validate(data_dir: Path = DATA, site_dir: Path = DIST) -> dict:
     points = map_file.get("points") or []
 
     files = [data_dir / name for name in ("map.json", "monitoring.json", "sources.json")]
+    if (data_dir / "map-data.json").is_file():
+        files.append(data_dir / "map-data.json")
     files += sorted((data_dir / "outbreaks").glob("*.json")) + sorted((data_dir / "weekly").glob("*.json"))
     payloads = {path: _read(path) for path in files}
     bad_schema = [
@@ -75,7 +87,10 @@ def validate(data_dir: Path = DATA, site_dir: Path = DIST) -> dict:
     ]
     check("schema_version", not bad_schema, ", ".join(bad_schema[:5]))
 
-    check("points_present", len(points) > 0, f"{len(points)} map points")
+    if require_points:
+        check("points_present", len(points) > 0, f"{len(points)} map points")
+    if require_filter_index:
+        check("filter_index_present", "filter_points" in map_file, "New exports require a full-history filter index")
     prose_on_map = [
         str(point.get("alert_id"))
         for point in points
@@ -116,11 +131,14 @@ def validate(data_dir: Path = DATA, site_dir: Path = DIST) -> dict:
     check("no_full_text", not leaked, ", ".join(leaked[:5]))
 
     timelines: dict[str, set[str]] = {}
+    timeline_records: dict[str, dict[str, dict]] = {}
     for path, payload in payloads.items():
         if path.parent.name == "outbreaks" and payload:
-            timelines[str(payload.get("outbreak_id") or path.stem)] = {
-                str(alert.get("alert_id")) for alert in payload.get("alerts") or []
+            outbreak_id = str(payload.get("outbreak_id") or path.stem)
+            timeline_records[outbreak_id] = {
+                str(alert.get("alert_id")): alert for alert in payload.get("alerts") or []
             }
+            timelines[outbreak_id] = set(timeline_records[outbreak_id])
     missing_files = [
         str(item.get("outbreak_id"))
         for item in map_file.get("outbreaks") or []
@@ -134,16 +152,65 @@ def validate(data_dir: Path = DATA, site_dir: Path = DIST) -> dict:
         and str(point.get("alert_id")) not in timelines.get(str(point["outbreak_id"]), set())
     ]
     check("point_in_timeline", not orphans, ", ".join(orphans[:5]))
+    # Older releases only carried the latest marker per place. Once a full
+    # index is present, missing or stale rows would silently break source/date
+    # filtering, so check exact correspondence to the public timelines.
+    if "filter_points" in map_file:
+        raw_index = map_file["filter_points"]
+        shape_ok = isinstance(raw_index, list) and all(
+            isinstance(point, dict) and isinstance(point.get("alert_id"), str) and bool(point["alert_id"].strip())
+            for point in raw_index
+        )
+        check("filter_index_shape", shape_ok, "filter_points must be a list of markers with alert ids")
+        index = [point for point in raw_index if isinstance(point, dict)] if isinstance(raw_index, list) else []
+        prose = [str(point.get("alert_id")) for point in index if MARKER_PROSE_KEYS.intersection(point)]
+        check("filter_index_markers", not prose, ", ".join(prose[:5]))
+        counts = Counter(str(point.get("alert_id")) for point in index)
+        duplicates = sorted(alert_id for alert_id, count in counts.items() if count > 1)
+        check("filter_index_unique", not duplicates, ", ".join(duplicates[:5]))
+        mismatches: list[str] = []
+        for point in index:
+            outbreak_id, alert_id = str(point.get("outbreak_id") or ""), str(point.get("alert_id") or "")
+            alert = timeline_records.get(outbreak_id, {}).get(alert_id)
+            if alert is None:
+                mismatches.append(f"{alert_id}: absent from {outbreak_id or 'missing outbreak'}")
+                continue
+            fields = ("source_id", "country_code", "disease_id", "disease_label", "admin_area", "status", "published_date")
+            stale = [field for field in fields if point.get(field) != alert.get(field)]
+            if "notice_id" in point and point["notice_id"] != alert.get("notice_id"):
+                stale.append("notice_id")
+            if stale:
+                mismatches.append(f"{alert_id}: mismatched {', '.join(stale)}")
+        check("filter_index_in_timeline", not mismatches, "; ".join(mismatches[:5]))
+        expected = {
+            (outbreak_id, alert_id)
+            for outbreak_id, alerts in timeline_records.items()
+            for alert_id, alert in alerts.items()
+            if alert.get("status") != "routine"
+        }
+        indexed = {(str(point.get("outbreak_id") or ""), str(point.get("alert_id") or "")) for point in index}
+        missing, unexpected = expected - indexed, indexed - expected
+        detail = []
+        if missing:
+            detail.append("missing: " + ", ".join(f"{outbreak}/{alert}" for outbreak, alert in sorted(missing)[:5]))
+        if unexpected:
+            detail.append("unexpected: " + ", ".join(f"{outbreak}/{alert}" for outbreak, alert in sorted(unexpected)[:5]))
+        check("filter_index_complete", not missing and not unexpected, "; ".join(detail))
+        public_map = payloads.get(data_dir / "map-data.json")
+        if public_map is not None:
+            check("filter_index_publication", public_map.get("filter_points") == raw_index,
+                  "map-data.json filter_points must match map.json")
     empty = [outbreak for outbreak, alerts in timelines.items() if not alerts]
     check("timelines_not_empty", not empty, ", ".join(empty[:5]))
 
-    site_dir = site_dir.resolve()
-    missing_pages = [
-        f"{prefix}situation/index.html"
-        for prefix in LOCALE_PREFIXES
-        if not (site_dir / prefix / "situation" / "index.html").is_file()
-    ]
-    check("built_pages", not missing_pages, ", ".join(missing_pages))
+    if require_pages:
+        site_dir = site_dir.resolve()
+        missing_pages = [
+            f"{prefix}situation/index.html"
+            for prefix in LOCALE_PREFIXES
+            if not (site_dir / prefix / "situation" / "index.html").is_file()
+        ]
+        check("built_pages", not missing_pages, ", ".join(missing_pages))
 
     return {"passed": all(item["passed"] for item in checks), "points": len(points), "checks": checks}
 

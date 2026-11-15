@@ -1,5 +1,11 @@
-import { applyDeepLinks, tally, type Selection, type Option } from './explorer-state.ts';
+import { applyDeepLinks, tally, type Selection } from './explorer-state.ts';
 import { AlertItem, Figures } from './SituationTimeline.tsx';
+import SearchableFilter from './SearchableFilter.tsx';
+import MonitoringProducts from './MonitoringProducts.tsx';
+import ActiveSituationFilters from './ActiveSituationFilters.tsx';
+import TimelineOverview from './TimelineOverview.tsx';
+import { useSituationOverview } from './useSituationOverview.ts';
+import { useSituationPanelScroll } from './useSituationPanelScroll.ts';
 import { FusionCard, CountryDossier } from './CountryDossier.tsx';
 import GIDSLoader from '../GIDSLoader';
 // Full-viewport situation stage. The map fills the page; filters, the place list
@@ -9,7 +15,7 @@ import type { ComponentType, CSSProperties } from 'react';
 import './situation.css';
 import { situationData } from '../../lib/situation-data';
 import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SiteIndex, SituationAlertRecord, SituationMapDataFile } from '../../utils/situationTypes.ts';
-import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts, deduplicatePoints, filterPoints, placeLabel, recencyOf, sortPoints, visibleSituationPoints, type Filters, type WindowKey } from './model.ts';
+import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts, deduplicatePoints, latestMatchingPlaces, situationPlaceKey, filterPoints, placeLabel, recencyOf, sortPoints, visibleSituationPoints, type Filters, type WindowKey } from './model.ts';
 import { COPY, STATUS_LABELS, countryName, diseaseName, formatCount, formatDay, sourceLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
 import type { CanvasProps, RegionTint } from './SituationMapCanvas.tsx';
@@ -40,21 +46,6 @@ const LIST_LIMIT = 300;
 const TIMELINE_PAGE = 30;
 const OUTBREAK_URL = (id: string) => `/situation/outbreaks/${encodeURIComponent(id)}.json`;
 
-function Select({ label, value, options, anyLabel, onChange }: { label: string; value: string; options: Option[]; anyLabel: string; onChange: (value: string) => void }) {
-  return (
-    <label className="sit-field">
-      <span>{label}</span>
-      <select value={value} onChange={event => onChange(event.target.value)}>
-        <option value="">{anyLabel}</option>
-        {value && !options.some(option => option.id === value) && <option value={value}>{value}</option>}
-        {options.map(option => (
-          <option key={option.id} value={option.id}>{option.label} ({option.count})</option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
 export default function SituationExplorer({
   locale,
   asOf: initialAsOf,
@@ -67,6 +58,9 @@ export default function SituationExplorer({
   const [asOf, setAsOf] = useState(initialAsOf);
   const [generatedAt, setGeneratedAt] = useState(initialGeneratedAt);
   const [points, setPoints] = useState<MapPoint[]>([]);
+  const [completeIndex, setCompleteIndex] = useState(false);
+  const [focusedAlert, setFocusedAlert] = useState<SituationAlertRecord | null>(null);
+  const [timelineScope, setTimelineScope] = useState<'place' | 'all'>('place');
   const [monitoring, setMonitoring] = useState<MonitoringProduct[]>([]);
   const [activeOutbreaks, setActiveOutbreaks] = useState(0);
   const [sourcesOk, setSourcesOk] = useState(0);
@@ -99,7 +93,7 @@ export default function SituationExplorer({
     applyWide();
     query.addEventListener('change', applyWide);
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelection(null);
+      if (event.key === 'Escape') { setSelection(null); setTimelineScope('place'); }
     };
     window.addEventListener('keydown', onKey);
     return () => {
@@ -117,7 +111,9 @@ export default function SituationExplorer({
       .then(payload => {
         if (!live) return;
         if (payload.schema_version !== 'gids.situation_alerts.v1' || !Array.isArray(payload.points)) throw new Error('Invalid situation map');
-        const nextPoints = Array.isArray(payload.points) ? payload.points : [];
+        const indexed = Array.isArray(payload.filter_points);
+        const nextPoints = indexed ? payload.filter_points! : payload.points;
+        setCompleteIndex(indexed);
         const nextAsOf = payload.as_of || initialAsOf;
         setPoints(nextPoints);
         setMonitoring(Array.isArray(payload.monitoring) ? payload.monitoring : []);
@@ -126,9 +122,10 @@ export default function SituationExplorer({
         setSourceCount(Number(payload.source_count) || 0);
         setAsOf(nextAsOf);
         setGeneratedAt(payload.generated_at || initialGeneratedAt);
-        const deep = applyDeepLinks(nextPoints, site, nextAsOf);
+        const deep = applyDeepLinks(nextPoints, site, nextAsOf, payload.monitoring ?? [], indexed);
         setFilters(deep.filters);
         setSelection(deep.selection);
+        setTimelineScope(new URLSearchParams(window.location.search).get('timeline') === 'all' ? 'all' : 'place');
         setDataState('ready');
       })
       .catch(() => {
@@ -150,6 +147,7 @@ export default function SituationExplorer({
     }
     const url = new URL(window.location.href);
     const write = (key: string, value: string) => (value ? url.searchParams.set(key, value) : url.searchParams.delete(key));
+    write('timeline', timelineScope === 'all' ? 'all' : '');
     write('place', selection?.kind === 'place' ? selection.id : '');
     write('country', filters.country || (selection?.kind === 'country' ? selection.code : ''));
     write('disease', filters.disease);
@@ -160,10 +158,14 @@ export default function SituationExplorer({
     if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
       window.history.replaceState(null, '', next);
     }
-  }, [selection, filters]);
+  }, [selection, filters, timelineScope]);
 
-  const visible = useMemo(() => visibleSituationPoints(points, asOf, filters), [points, filters, asOf]);
-  const selected = selection?.kind === 'place' ? visible.find(point => point.alert_id === selection.id) ?? null : null;
+  const visible = useMemo(() => completeIndex ? latestMatchingPlaces(points, asOf, filters) : visibleSituationPoints(points, asOf, filters), [points, filters, asOf, completeIndex]);
+  const selectedRaw = selection?.kind === 'place' ? points.find(point => point.alert_id === selection.id)
+    ?? (focusedAlert?.alert_id === selection.id ? focusedAlert : null) : null;
+  const selected = selectedRaw && filterPoints([selectedRaw], filters, asOf).length ? selectedRaw : null;
+  const selectedMarker = selected ? visible.find(point => situationPlaceKey(point) === situationPlaceKey(selected)) ?? selected : null;
+  const overview = useSituationOverview(timelineScope === 'all' && dataState === 'ready', points, filters, asOf);
   const selectedDisease = selected?.disease_id;
   useEffect(() => {
     for (const rawId of new Set([filters.disease, selectedDisease].filter(Boolean))) {
@@ -180,23 +182,31 @@ export default function SituationExplorer({
     : selected?.country_code.toUpperCase() ?? '';
   const countryGlance = selectedCountryCode ? site.countries[selectedCountryCode] : undefined;
   const listOpen = listMode === 'open' || (listMode === 'auto' && wide);
+  const detailOpen = Boolean(selection) || timelineScope === 'all';
+  const leftScroll = useSituationPanelScroll<HTMLElement>(listOpen, 'filters');
+  const rightScroll = useSituationPanelScroll<HTMLElement>(detailOpen && (wide || !listOpen), timelineScope === 'all' ? 'all' : selection?.kind === 'place' ? `place:${selection.id}` : `country:${selectedCountryCode}`);
 
-  const diseases = useMemo(() => tally(deduplicatePoints(points), point => point.disease_id ?? point.disease_label, point => diseaseName(point, locale)), [points, locale]);
-  const countries = useMemo(() => tally(deduplicatePoints(points), point => point.country_code, point => countryName(point, locale)), [points, locale]);
-  const sources = useMemo(() => tally(points, point => point.source_id, point => sourceLabel(point, locale)), [points, locale]);
+  const facetPoints = useMemo(() => completeIndex ? latestMatchingPlaces(points, asOf, { ...DEFAULT_FILTERS, window: 'all' }) : deduplicatePoints(points), [points, completeIndex, asOf]);
+  const diseases = useMemo(() => {
+    const options = new Map(tally(facetPoints, point => point.disease_id ?? point.disease_label, point => diseaseName(point, locale)).map(option => [option.id, option]));
+    for (const [id, disease] of Object.entries(site.diseases)) {
+      if (!options.has(id)) options.set(id, { id, label: diseaseName({ disease_label: disease.name_en, disease_name_en: disease.name_en, disease_name_zh: disease.name_zh }, locale), count: 0 });
+    }
+    return [...options.values()];
+  }, [facetPoints, site.diseases, locale]);
+  const countries = useMemo(() => {
+    const options = new Map(tally(facetPoints, point => point.country_code, point => countryName(point, locale)).map(option => [option.id, option]));
+    for (const [id, country] of Object.entries(site.countries)) {
+      if (!options.has(id)) options.set(id, { id, label: countryName({ country_code: id, country_name_en: country.name_en, country_name_zh: country.name_zh }, locale), count: 0 });
+    }
+    return [...options.values()];
+  }, [facetPoints, site.countries, locale]);
+  const sources = useMemo(() => tally([...points, ...monitoring], point => point.source_id, point => sourceLabel(point, locale)), [points, monitoring, locale]);
   const linked = useMemo(
     () => visible.filter(point => point.disease_id && site.series[seriesKey(point.country_code, point.disease_id)]).length,
     [visible, site.series],
   );
   const linksKnown = visible.every(point => !point.disease_id || surveillanceSummaries[String(point.disease_id).toUpperCase()]);
-  const monitoringRows = useMemo(() => {
-    const seen = new Set<string>();
-    return monitoring.filter(product => {
-      if (seen.has(product.notice_id)) return false;
-      seen.add(product.notice_id);
-      return true;
-    });
-  }, [monitoring]);
 
   const outbreakId = selected?.outbreak_id ?? null;
   useEffect(() => {
@@ -210,19 +220,19 @@ export default function SituationExplorer({
 
   const remote = outbreakId ? outbreaks[outbreakId] : undefined;
   const file = remote && typeof remote === 'object' ? remote : null;
-  const timeline = useMemo(
+  const outbreakTimeline = useMemo(
     () => deduplicateAlerts(filterPoints(file?.alerts ?? [], filters, asOf), selected?.alert_id),
     [file, filters, asOf, selected?.alert_id],
   );
-  const outbreakAlertCount = useMemo(() => deduplicateAlerts(file?.alerts ?? []).length, [file]);
+  const timeline = useMemo(() => selected ? outbreakTimeline.filter(alert => situationPlaceKey(alert) === situationPlaceKey(selected)) : [], [outbreakTimeline, selected]);
   const placesInOutbreak = useMemo(() => {
     const seen = new Map<string, SituationAlertRecord>();
-    for (const alert of timeline) {
+    for (const alert of outbreakTimeline) {
       const key = `${alert.country_code}:${alert.admin_area ?? ''}`;
       if (!seen.has(key)) seen.set(key, alert);
     }
     return [...seen.values()];
-  }, [timeline]);
+  }, [outbreakTimeline]);
 
   const graph = useMemo(() => buildGraph(timeline, selected?.country_code ?? ''), [timeline, selected?.country_code]);
   const laneNames = useMemo(() => graph.lanes.map(lane => {
@@ -235,7 +245,7 @@ export default function SituationExplorer({
     if (!selected) return null;
     const samePlace = (alert: SituationAlertRecord) =>
       alert.country_code === selected.country_code && (alert.admin_area ?? '') === (selected.admin_area ?? '');
-    return timeline.find(alert => alert.alert_id === selected.alert_id) ?? timeline.find(samePlace) ?? null;
+    return timeline.find(alert => alert.reports.some(report => report.alert_id === selected.alert_id)) ?? timeline.find(samePlace) ?? null;
   }, [timeline, selected]);
   const selectedRecency = selected ? recencyOf(selected.published_date, asOf) : 'stale';
   const headlineIndex = headline ? graph.rows.findIndex(row => row.alert.alert_id === headline.alert_id) : -1;
@@ -245,25 +255,27 @@ export default function SituationExplorer({
   const applyFilters = (next: Filters) => {
     setFilters(next);
     setTimelineShown({});
-    if (selection?.kind === 'place') {
-      const candidates = deduplicatePoints(sortPoints(filterPoints(points, next, asOf), asOf));
-      const target = candidates.find(point => point.alert_id === selection.id)
-        ?? candidates.find(point => point.outbreak_id === selected?.outbreak_id)
-        ?? candidates[0];
-      setSelection(target ? { kind: 'place', id: target.alert_id } : null);
-    } else if (selection?.kind === 'country') {
-      setSelection(next.country ? { kind: 'country', code: next.country } : null);
-    }
+    const active = next.disease || next.country || next.source || next.window !== DEFAULT_FILTERS.window;
+    const candidates = completeIndex ? latestMatchingPlaces(points, asOf, next) : visibleSituationPoints(points, asOf, next);
+    const target = candidates.find(point => point.alert_id === selectedMarker?.alert_id)
+      ?? candidates.find(point => point.outbreak_id === selected?.outbreak_id
+        && point.country_code === selected?.country_code && point.admin_area === selected?.admin_area)
+      ?? candidates[0];
+    setSelection(active && target ? { kind: 'place', id: target.alert_id } : null);
+    setFocusedAlert(null);
+    if (!active) setTimelineScope('place');
   };
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => applyFilters({ ...filters, [key]: value });
   const closeListOnNarrow = () => {
     if (window.matchMedia('(max-width: 899px)').matches) setListMode('closed');
   };
   const selectPlace = (id: string) => {
+    setTimelineScope('place');
     setSelection({ kind: 'place', id });
     closeListOnNarrow();
   };
   const selectCountry = (code: string) => {
+    setTimelineScope('place');
     setFilters(state => ({ ...state, country: code.toUpperCase() }));
     setTimelineShown({});
     setSelection({ kind: 'country', code: code.toUpperCase() });
@@ -299,14 +311,14 @@ export default function SituationExplorer({
     return out;
   }, [site.countries, site.series, diseaseOn, filters.disease, locale, copy]);
 
-  const detailTitle = selected
+  const detailTitle = timelineScope === 'all' ? copy.allMatchingEvents : selected
     ? diseaseName(selected, locale)
     : selection?.kind === 'country'
       ? countryGlance
         ? countryName({ country_code: selection.code, country_name_en: countryGlance.name_en, country_name_zh: countryGlance.name_zh }, locale)
         : selection.code
       : copy.detailHeading;
-  const detailSubtitle = selected
+  const detailSubtitle = timelineScope === 'all' ? copy.places(visible.length) : selected
     ? placeLabel(selected, countryName(selected, locale))
     : selection?.kind === 'country' && countryGlance
       ? [countryGlance.seriesCount > 0 ? copy.trackedDiseases(countryGlance.seriesCount) : '', countryGlance.latestDate ? formatDay(countryGlance.latestDate, locale) : ''].filter(Boolean).join(' · ')
@@ -319,23 +331,17 @@ export default function SituationExplorer({
       && (!filters.disease || (point.disease_id ?? point.disease_label) === filters.disease)
       && (!filters.source || point.source_id === filters.source))
     : [];
-  const countryAlerts = deduplicatePoints(sortPoints(
-    filterPoints(countryPool, { ...filters, country: '', disease: '', source: '' }, asOf),
-    asOf,
+  const countryAlerts = completeIndex ? latestMatchingPlaces(countryPool, asOf, { ...filters, country: '', disease: '', source: '' }) : deduplicatePoints(sortPoints(
+    filterPoints(countryPool, { ...filters, country: '', disease: '', source: '' }, asOf), asOf,
   ));
   const countryHasOlder = filters.window !== 'all' && countryPool.some(point => ageDays(point.published_date, asOf) > Number(filters.window));
 
   const filterControls = (
     <div className="sit-filter-grid">
-      <Select label={copy.disease} value={filters.disease} options={diseases} anyLabel={copy.any} onChange={value => set('disease', value)} />
-      <Select label={copy.country} value={filters.country} options={countries} anyLabel={copy.any} onChange={value => set('country', value)} />
-      <Select label={copy.source} value={filters.source} options={sources} anyLabel={copy.any} onChange={value => set('source', value)} />
-      <label className="sit-field">
-        <span>{copy.window}</span>
-        <select value={filters.window} onChange={event => set('window', event.target.value as WindowKey)}>
-          {windows.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
-      </label>
+      <SearchableFilter label={copy.disease} value={filters.disease} options={diseases} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('disease', value)} />
+      <SearchableFilter label={copy.country} value={filters.country} options={countries} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('country', value)} />
+      <SearchableFilter label={copy.source} value={filters.source} options={sources} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('source', value)} />
+      <SearchableFilter includeAny={false} noResults={copy.noFilterResults} label={copy.window} value={filters.window} options={windows.map(([id, label]) => ({ id, label, count: -1 }))} anyLabel={copy.winAll} onChange={value => set('window', (value || 'all') as WindowKey)} />
     </div>
   );
 
@@ -361,6 +367,7 @@ export default function SituationExplorer({
         </div>
       </header>
 
+      <ActiveSituationFilters locale={locale} filters={filters} options={{ diseases, countries, sources, windows: windows.map(([id, label]) => ({ id, label, count: -1 })) }} onRemove={key => applyFilters({ ...filters, [key]: DEFAULT_FILTERS[key] })} onReset={() => applyFilters(DEFAULT_FILTERS)} />
       <div className="sit-map-wrap">
         <section className="sit-map" aria-label={copy.mapLabel}>
           {dataState === 'error' ? (
@@ -371,7 +378,7 @@ export default function SituationExplorer({
             <Canvas
               points={visible}
               asOf={asOf}
-              selectedId={selected?.alert_id ?? null}
+              selectedId={selectedMarker?.alert_id ?? null}
               highlightCountry={selectedCountryCode || null}
               locale={locale}
               regions={regions}
@@ -385,12 +392,13 @@ export default function SituationExplorer({
           )}
         </section>
 
-        <aside className="sit-panel sit-list" aria-label={copy.filters}>
+        <aside {...leftScroll} className="sit-panel sit-list" aria-label={copy.filters}>
           <div className="sit-panel-head">
             <h2>{copy.filters}</h2>
             <button type="button" className="sit-reset" disabled={!filtersActive} onClick={() => applyFilters(DEFAULT_FILTERS)}>{copy.reset}</button>
           </div>
           {filterControls}
+          {(selected || visible.length > 0 || timelineScope === 'all') && <button type="button" className="sit-text-btn sit-view-timeline" onClick={() => { if (!selection) setTimelineScope('all'); setListMode('closed'); }}>{copy.viewResults} · {copy.places(visible.length)} →</button>}
           {filters.country && (
             <button type="button" className="sit-text-btn" onClick={() => selectCountry(filters.country)}>{copy.countryDossier}</button>
           )}
@@ -404,7 +412,7 @@ export default function SituationExplorer({
                   const recency = recencyOf(point.published_date, asOf);
                   return (
                     <li key={point.alert_id}>
-                      <button type="button" className={`sit-item${point.alert_id === selected?.alert_id ? ' is-selected' : ''}`} aria-pressed={point.alert_id === selected?.alert_id} onClick={() => selectPlace(point.alert_id)}>
+                      <button type="button" className={`sit-item${point.alert_id === selectedMarker?.alert_id ? ' is-selected' : ''}`} aria-pressed={point.alert_id === selectedMarker?.alert_id} onClick={() => selectPlace(point.alert_id)}>
                         <span className={`sit-dot${recency === 'fresh' ? ' is-live' : ''}${recency === 'recent' ? ' is-live-slow' : ''}`} style={{ background: RECENCY_COLORS[recency] }} aria-hidden="true" />
                         <span className="sit-sr">{copy[recency]}</span>
                         <span className="sit-item-main">
@@ -422,25 +430,12 @@ export default function SituationExplorer({
               </ul>
             )}
           </section>
-          {monitoringRows.length > 0 && (
-            <details className="sit-monitor">
-              <summary>{copy.monitoringHeading} <small>{monitoringRows.length}</small></summary>
-              <p className="sit-muted">{copy.monitoringLead}</p>
-              <ul>
-                {monitoringRows.map(product => (
-                  <li key={product.notice_id}>
-                    <a href={product.url} target="_blank" rel="noopener noreferrer">{product.title_en}</a>
-                    <span>{sourceLabel(product, locale)} · {formatDay(product.published_date, locale)}</span>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
+          <MonitoringProducts locale={locale} monitoring={monitoring} filters={filters} asOf={asOf} site={site} points={points} />
         </aside>
 
-        <aside className={`sit-panel sit-detail${selection ? ' is-open' : ''}`} aria-live="polite" aria-labelledby="sit-detail-heading">
+        <aside {...rightScroll} className={`sit-panel sit-detail${detailOpen ? ' is-open' : ''}`} aria-live="polite" aria-labelledby="sit-detail-heading">
           <div className="sit-detail-bar">
-            {selected && (
+            {selected && timelineScope === 'place' && (
               <>
                 <span className={`sit-dot${selectedRecency === 'fresh' ? ' is-live' : ''}${selectedRecency === 'recent' ? ' is-live-slow' : ''}`} style={{ background: RECENCY_COLORS[selectedRecency] }} aria-hidden="true" />
                 <span className="sit-sr">{copy[selectedRecency]}</span>
@@ -450,96 +445,104 @@ export default function SituationExplorer({
               <h2 id="sit-detail-heading">{detailTitle}</h2>
               {detailSubtitle && <p>{detailSubtitle}</p>}
             </div>
-            {selected && <span className={`sit-status sit-status-${selected.status}`}>{STATUS_LABELS[selected.status][locale]}</span>}
-            {selection && <button type="button" className="sit-close" onClick={() => setSelection(null)} aria-label={copy.close} title={copy.close}>×</button>}
+            {selected && timelineScope === 'place' && <span className={`sit-status sit-status-${selected.status}`}>{STATUS_LABELS[selected.status][locale]}</span>}
+            {detailOpen && <button type="button" className="sit-close" onClick={() => { setSelection(null); setTimelineScope('place'); }} aria-label={copy.close} title={copy.close}>×</button>}
           </div>
-          {!selection && <p className="sit-muted">{copy.pickHint}</p>}
-          {selection?.kind === 'country' && countryGlance && (
-            <CountryDossier
-              locale={locale}
-              country={countryGlance}
-              diseaseId={diseaseOn ? filters.disease : ''}
-              series={diseaseOn ? site.series[seriesKey(selection.code, filters.disease)] : undefined}
-              disease={diseaseOn ? site.diseases[filters.disease] : undefined}
-              alerts={countryAlerts}
-              asOf={asOf}
-              canWiden={countryHasOlder && filters.window !== 'all'}
-              onWiden={() => set('window', 'all')}
-              onSelect={selectPlace}
-            />
-          )}
-          {selected && (
-            <>
-              <p className="sit-detail-meta">
-                {file ? (
-                  <>
-                    <span>{copy.firstReported} <time dateTime={file.first_published}>{formatDay(file.first_published, locale)}</time></span>
-                    <span>{copy.updated} <time dateTime={file.last_published}>{formatDay(file.last_published, locale)}</time></span>
-                    <span>{copy.alertsCount(outbreakAlertCount)}</span>
-                  </>
-                ) : (
-                  <span>{copy.updated} <time dateTime={selected.published_date}>{formatDay(selected.published_date, locale)}</time></span>
-                )}
-              </p>
-              {headline && <Figures alert={headline} locale={locale} />}
-              <FusionCard locale={locale} point={selected} site={site} />
-              {placesInOutbreak.length > 1 && (
-                <details className="sit-places">
-                  <summary>{copy.placesInOutbreak} <small>{placesInOutbreak.length}</small></summary>
-                  <ul>
-                    {placesInOutbreak.map(alert => (
-                      <li key={`${alert.country_code}:${alert.admin_area ?? ''}`}>
-                        <button type="button" className={alert.country_code === selected.country_code && (alert.admin_area ?? '') === (selected.admin_area ?? '') ? 'is-selected' : ''} onClick={() => {
-                          const samePlace = (point: MapPoint) => point.outbreak_id === selected.outbreak_id && point.country_code === alert.country_code;
-                          const target = visible.find(point => samePlace(point) && (point.admin_area ?? '') === (alert.admin_area ?? ''))
-                            ?? visible.find(samePlace);
-                          if (target) selectPlace(target.alert_id);
-                        }}>
-                          {placeLabel(alert, countryName(alert, locale))}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-              {remote === 'loading' && <GIDSLoader language={locale} compact label={copy.mapLoading} />}
-              {remote === 'error' && <p className="sit-muted" role="status">{copy.timelineFailed}</p>}
-              {file && (
-                <section className="sit-timeline-wrap" aria-labelledby="sit-timeline-heading">
-                  <h3 id="sit-timeline-heading">{copy.detailHeading} <small>{copy.alertsCount(timeline.length)}</small></h3>
-                  {filterControls}
-                  {timeline.length === 0 && <p className="sit-muted">{copy.noResults}</p>}
-                  {graph.lanes.length > 1 && (
-                    <ul className="sit-lanes">
-                      {graph.lanes.map((lane, index) => (
-                        <li key={lane.key}><i style={{ '--c': lane.color } as CSSProperties} aria-hidden="true" />{laneNames[index]}</li>
+          <div className="sit-scope" role="group" aria-label={copy.timelineScope}>
+            <button type="button" className="sit-text-btn" data-scope="place" aria-pressed={timelineScope === 'place'} disabled={!selected} onClick={() => setTimelineScope('place')}>{copy.currentPlace}</button>
+            <button type="button" className="sit-text-btn" data-scope="all" aria-pressed={timelineScope === 'all'} onClick={() => setTimelineScope('all')}>{copy.allMatchingEvents}</button>
+          </div>
+          <div hidden={timelineScope !== 'all'}>
+            <TimelineOverview locale={locale} alerts={overview.alerts} filters={filters} asOf={asOf} loading={overview.loading} failed={overview.failed} onSelect={alert => { setFocusedAlert(alert); selectPlace(alert.alert_id); }} />
+          </div>
+          <div className="sit-current-place" hidden={timelineScope !== 'place'}>
+            {!selection && <p className="sit-muted">{copy.pickHint}</p>}
+            {selection?.kind === 'country' && countryGlance && (
+              <CountryDossier
+                locale={locale}
+                country={countryGlance}
+                diseaseId={diseaseOn ? filters.disease : ''}
+                series={diseaseOn ? site.series[seriesKey(selection.code, filters.disease)] : undefined}
+                disease={diseaseOn ? site.diseases[filters.disease] : undefined}
+                alerts={countryAlerts}
+                asOf={asOf}
+                canWiden={countryHasOlder && filters.window !== 'all'}
+                onWiden={() => set('window', 'all')}
+                onSelect={selectPlace}
+              />
+            )}
+            {selected && (
+              <>
+                <p className="sit-detail-meta">
+                  {file ? (
+                    <>
+                      <span>{copy.firstReported} <time dateTime={file.first_published}>{formatDay(file.first_published, locale)}</time></span>
+                      <span>{copy.updated} <time dateTime={file.last_published}>{formatDay(file.last_published, locale)}</time></span>
+                      <span>{copy.alertsCount(timeline.length)}</span>
+                    </>
+                  ) : (
+                    <span>{copy.updated} <time dateTime={selected.published_date}>{formatDay(selected.published_date, locale)}</time></span>
+                  )}
+                </p>
+                {headline && <Figures alert={headline} locale={locale} />}
+                <FusionCard locale={locale} point={selected} site={site} />
+                {placesInOutbreak.length > 1 && (
+                  <details className="sit-places">
+                    <summary>{copy.placesInOutbreak} <small>{placesInOutbreak.length}</small></summary>
+                    <ul>
+                      {placesInOutbreak.map(alert => (
+                        <li key={`${alert.country_code}:${alert.admin_area ?? ''}`}>
+                          <button type="button" className={alert.country_code === selected.country_code && (alert.admin_area ?? '') === (selected.admin_area ?? '') ? 'is-selected' : ''} onClick={() => {
+                            const samePlace = (point: MapPoint) => point.outbreak_id === selected.outbreak_id && point.country_code === alert.country_code;
+                            const target = visible.find(point => samePlace(point) && (point.admin_area ?? '') === (alert.admin_area ?? ''))
+                              ?? visible.find(samePlace);
+                            if (target) selectPlace(target.alert_id);
+                          }}>
+                            {placeLabel(alert, countryName(alert, locale))}
+                          </button>
+                        </li>
                       ))}
                     </ul>
-                  )}
-                  <ol className="sit-timeline">
-                    {visibleRows.map(row => (
-                      <AlertItem
-                        key={`${selected.alert_id}:${row.alert.alert_id}`}
-                        alert={row.alert}
-                        row={row}
-                        lanes={graph.lanes}
-                        width={graph.width}
-                        locale={locale}
-                        featured={row.alert.alert_id === headline?.alert_id}
-                        showPlace={placesInOutbreak.length > 1}
-                        selected={row.alert.country_code === selected.country_code && (row.alert.admin_area ?? '') === (selected.admin_area ?? '')}
-                      />
-                    ))}
-                  </ol>
-                  {graph.rows.length > rowLimit && (
-                    <button type="button" className="sit-text-btn sit-more" onClick={() => outbreakId && setTimelineShown(state => ({ ...state, [outbreakId]: rowLimit + TIMELINE_PAGE }))}>
-                      {copy.showEarlier(rowLimit, graph.rows.length)}
-                    </button>
-                  )}
-                </section>
-              )}
-            </>
-          )}
+                  </details>
+                )}
+                {remote === 'loading' && <GIDSLoader language={locale} compact label={copy.mapLoading} />}
+                {remote === 'error' && <p className="sit-muted" role="status">{copy.timelineFailed}</p>}
+                {file && (
+                  <section className="sit-timeline-wrap" aria-labelledby="sit-timeline-heading">
+                    <h3 id="sit-timeline-heading">{copy.detailHeading} <small>{copy.alertsCount(timeline.length)}</small></h3>
+                    {timeline.length === 0 && <p className="sit-muted">{copy.noResults}</p>}
+                    {graph.lanes.length > 1 && (
+                      <ul className="sit-lanes">
+                        {graph.lanes.map((lane, index) => (
+                          <li key={lane.key}><i style={{ '--c': lane.color } as CSSProperties} aria-hidden="true" />{laneNames[index]}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <ol className="sit-timeline">
+                      {visibleRows.map(row => (
+                        <AlertItem
+                          key={`${selected.alert_id}:${row.alert.alert_id}`}
+                          alert={row.alert}
+                          row={row}
+                          lanes={graph.lanes}
+                          width={graph.width}
+                          locale={locale}
+                          featured={row.alert.alert_id === headline?.alert_id}
+                          showPlace={placesInOutbreak.length > 1}
+                          selected={row.alert.alert_id === headline?.alert_id}
+                        />
+                      ))}
+                    </ol>
+                    {graph.rows.length > rowLimit && (
+                      <button type="button" className="sit-text-btn sit-more" onClick={() => outbreakId && setTimelineShown(state => ({ ...state, [outbreakId]: rowLimit + TIMELINE_PAGE }))}>
+                        {copy.showEarlier(rowLimit, graph.rows.length)}
+                      </button>
+                    )}
+                  </section>
+                )}
+              </>
+            )}
+          </div>
         </aside>
 
         <div className="sit-legend-float">
@@ -551,7 +554,6 @@ export default function SituationExplorer({
               </li>
             ))}
           </ul>
-          {diseaseOn && <p className="sit-muted">{copy.seriesLegend}</p>}
         </div>
       </div>
     </div>
