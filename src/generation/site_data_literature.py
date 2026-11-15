@@ -429,9 +429,10 @@ def empty_literature_export() -> dict[str, Any]:
 
 async def _load_article_links_in_batches(session: AsyncSession, model: Any, article_ids: list[str], *filters: Any) -> list[Any]:
     """Keep expanding IN queries below the database driver's parameter limit."""
+    from src.literature.query_batches import argument_batches
+
     rows = []
-    for start in range(0, len(article_ids), 10000):
-        batch = article_ids[start:start + 10000]
+    for batch in argument_batches(article_ids):
         result = await session.execute(select(model).where(model.article_id.in_(batch), *filters))
         rows.extend(result.scalars().all())
     return rows
