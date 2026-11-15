@@ -112,6 +112,20 @@ test('Situation uses an independent pointer, immutable namespace and legacy alia
   assert.equal((await worker.fetch(new Request('https://site.test/site-data/situation/objects/bad.json'), f.env)).status, 404);
 });
 
+test('research bootstrap keeps the publication time and leaves the file catalogue on the pointer', async () => {
+  const entry = { url: `objects/${hash}.json`, sha256: hash, bytes: 2 };
+  const content = JSON.stringify({ schema_version: 1, release_id: 'research-one', generated_at: '2026-11-15T04:04:13.324507+00:00',
+    files: { 'index.json': entry, 'shards/a.json': entry } });
+  const f = fixture(content);
+  const response = await worker.fetch(new Request('https://site.test/site-data/research-publication/bootstrap.json'), f.env);
+  const data = await response.json() as { generated_at?: string; files?: Record<string, unknown> };
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(data.generated_at, '2026-11-15T04:04:13.324507+00:00');
+  assert.deepEqual(data.files, {});
+  assert.deepEqual(f.keys, ['site-data/research-publication/current.json']);
+});
+
 test('research publication is isolated and exposes only its pointer and immutable objects', async () => {
   const f = fixture();
   const pointer = await worker.fetch(new Request('https://site.test/site-data/research-publication/current.json'), f.env);

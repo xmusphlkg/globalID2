@@ -102,10 +102,28 @@ const maintainer = copy({
           </li>
           <li>
             <span>
-              {copy('Latest database date', '数据库最新日期', 'Date la plus récente de la base de données')}
+              {copy('Surveillance updated', '监测更新', 'Surveillance mise à jour')}
             </span>:
             {' '}
             <span class="site-footer-meta-value" data-database-updated>
+              {pendingDate}
+            </span>
+          </li>
+          <li>
+            <span>
+              {copy('Situation updated', '态势更新', 'Situation mise à jour')}
+            </span>:
+            {' '}
+            <span class="site-footer-meta-value" data-situation-updated>
+              {pendingDate}
+            </span>
+          </li>
+          <li>
+            <span>
+              {copy('Research updated', '研究更新', 'Recherche mise à jour')}
+            </span>:
+            {' '}
+            <span class="site-footer-meta-value" data-research-updated>
               {pendingDate}
             </span>
           </li>
@@ -148,6 +166,8 @@ const maintainer = copy({
 
 <script>
   import { mainSiteBase } from '../lib/papers';
+  import { researchPublicationData } from '../lib/research-publication-data';
+  import { situationData } from '../lib/situation-data';
   import { surveillanceData } from '../lib/surveillance-data';
 
   const pageLanguage = document.documentElement.lang;
@@ -161,19 +181,22 @@ const maintainer = copy({
       ? new Intl.DateTimeFormat(language, { dateStyle: 'long', timeZone: 'UTC' }).format(date)
       : fallback;
   };
+  const showManifestDate = (selector: string, load: Promise<{ generated_at?: string } | null>) => {
+    void load.then(manifest => showDate(selector, manifest?.generated_at)).catch(() => showDate(selector, null));
+  };
   const loadFooterDates = () => {
-  if (import.meta.env.DEV) {
-    const target = document.querySelector<HTMLElement>('[data-site-updated]');
-    if (target) target.textContent = language === 'zh-CN' ? '本地预览' : language === 'fr-FR' ? 'Aperçu local' : 'Local preview';
-  } else {
-    void fetch(`${mainSiteBase()}/release.json`, { cache: 'no-store' })
-      .then(response => response.ok ? response.json() : null)
-      .then(data => showDate('[data-site-updated]', data?.built_at))
-      .catch(() => showDate('[data-site-updated]', null));
-  }
-  void surveillanceData.manifest()
-    .then(manifest => showDate('[data-database-updated]', manifest?.generated_at))
-    .catch(() => showDate('[data-database-updated]', null));
+    if (import.meta.env.DEV) {
+      const target = document.querySelector<HTMLElement>('[data-site-updated]');
+      if (target) target.textContent = language === 'zh-CN' ? '本地预览' : language === 'fr-FR' ? 'Aperçu local' : 'Local preview';
+    } else {
+      void fetch(`${mainSiteBase()}/release.json`, { cache: 'no-store' })
+        .then(response => response.ok ? response.json() : null)
+        .then(data => showDate('[data-site-updated]', data?.built_at))
+        .catch(() => showDate('[data-site-updated]', null));
+    }
+    showManifestDate('[data-database-updated]', surveillanceData.manifest());
+    showManifestDate('[data-situation-updated]', situationData.manifest());
+    showManifestDate('[data-research-updated]', researchPublicationData.manifest());
   };
   const footer = document.querySelector('footer.site-footer');
   if (footer && 'IntersectionObserver' in window) {
@@ -187,7 +210,7 @@ const maintainer = copy({
 <style>
   .site-footer-main {
     display: grid;
-    grid-template-columns: 1.25fr .75fr 1fr 1.15fr;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, .7fr) minmax(20rem, 1.45fr) minmax(0, 1.05fr);
     gap: clamp(2rem, 4vw, 4.5rem);
   }
   :global(.site-footer-wordmark) {
