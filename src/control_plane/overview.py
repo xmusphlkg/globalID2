@@ -114,9 +114,11 @@ class ControlPlaneOverviewService:
 
     async def action_items(self, limit: int = 20) -> list[dict[str, Any]]:
         cutoff = datetime.now(timezone.utc) - timedelta(days=SUMMARY_LOOKBACK_DAYS)
+        latest_task = select(func.max(Task.id).label("id")).group_by(Task.task_name).subquery()
         tasks = (
             await self.db.execute(
                 select(Task)
+                .join(latest_task, latest_task.c.id == Task.id)
                 .where(
                     Task.status == TaskStatus.FAILED,
                     Task.created_at >= cutoff,

@@ -51,9 +51,12 @@ async def collect(writer, *, source, months, history_csv, start_year=None, count
                 except Exception as exc:
                     if subdivision:
                         raise
+                    cause = f"{type(exc).__name__}: {exc}"
+                    if len(cause) > 240:
+                        cause = cause[:239].rstrip() + "…"
                     raise RuntimeError(
                         f"[BR-SINAN] Failed to download {item.filename}; "
-                        "refusing to aggregate an incomplete file set"
+                        f"refusing to aggregate an incomplete file set ({cause})"
                     ) from exc
                 metadata = asdict(item)
                 metadata["modified_at"] = item.modified_at.isoformat() if item.modified_at else None

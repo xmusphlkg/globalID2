@@ -73,7 +73,7 @@ async def test_success_is_three_stages_and_retry_keeps_uuid_and_attempt_history(
         for attempt in (1, 2):
             assert {(row.stage, row.status) for row in stages if row.attempt == attempt} == {("collect", "completed"), ("organize", "completed"), ("store", "completed")}
         assert all(row.sha256 and row.byte_size and row.relative_path.startswith("data/raw/us/") for row in artifacts)
-        assert len(dirty) == 2 and all(row.published_at is None and row.scope_key == "US" for row in dirty)
+        assert len(dirty) == 1 and dirty[0].published_at is None and dirty[0].scope_key == "US"
 
 
 @pytest.mark.parametrize("stage,error", [("collect", RuntimeError), ("organize", ValueError), ("store", RuntimeError)])

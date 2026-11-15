@@ -80,6 +80,79 @@ async def test_successful_store_marks_scope_dirty(db):
     )
 
 
+async def test_repeated_coarse_marks_share_one_unpublished_scope(db):
+    async with database_module.get_db() as session:
+        await stages_module.mark_dirty(
+            session, task_uuid="first", line="literature", scope_key="*"
+        )
+    async with database_module.get_db() as session:
+        await stages_module.mark_dirty(
+            session, task_uuid="second", line="literature", scope_key="*"
+        )
+        await stages_module.mark_dirty(
+            session,
+            task_uuid="precise",
+            line="surveillance",
+            scope_key="US",
+            change_set={"version": 1, "precise": True, "changes": [{"geography_key": "country:US:national"}]},
+        )
+        await stages_module.mark_dirty(
+            session,
+            task_uuid="precise-2",
+            line="surveillance",
+            scope_key="US",
+            change_set={"version": 1, "precise": True, "changes": [{"geography_key": "country:US:national"}]},
+        )
+
+    dirty = await _all_dirty(db)
+    literature = [row for row in dirty if row.line == "literature"]
+    precise = [row for row in dirty if row.line == "surveillance"]
+    assert len(literature) == 1
+    assert literature[0].source_task_uuid == "second"
+    assert len(precise) == 2
+
+
+async def test_open_release_gets_a_new_marker_for_later_edits(db):
+    from src.domain.task import Task, TaskStatus, TaskType
+
+    async with db() as session:
+        connection = await session.connection()
+        await connection.run_sync(lambda sync: Task.__table__.create(sync, checkfirst=True))
+        await stages_module.mark_dirty(
+            session, task_uuid="stored", line="literature", scope_key="*"
+        )
+        await session.commit()
+        marker_id = (await session.execute(select(PublishDirty))).scalar_one().id
+        session.add(
+            Task(
+                task_uuid="release",
+                task_type=TaskType.EXPORT_DATA,
+                task_name="Literature Publication",
+                status=TaskStatus.QUEUED,
+                input_data={"publish_dirty_ids": [marker_id], "continuation_dirty_ids": []},
+            )
+        )
+        await session.commit()
+        await stages_module.mark_dirty(
+            session, task_uuid="after-snapshot", line="literature", scope_key="*"
+        )
+        await session.commit()
+
+    dirty = await _pending(db)
+    assert sorted(row.source_task_uuid for row in dirty) == ["after-snapshot", "stored"]
+
+
+async def test_pending_scope_counts_collapse_repeated_markers(db):
+    from dashboard.api.routers.collection import pending_scope_counts
+
+    async with database_module.get_db() as session:
+        await stages_module.mark_dirty(session, task_uuid="a", line="literature", scope_key="*")
+        await stages_module.mark_dirty(session, task_uuid="b", line="literature", scope_key="*")
+        await stages_module.mark_dirty(session, task_uuid="c", line="situation", scope_key="*")
+        counts = await pending_scope_counts(session)
+    assert counts == {"literature": 1, "situation": 1}
+
+
 async def test_published_dirty_row_is_not_seen_again(db):
     async with database_module.get_db() as session:
         await stages_module.mark_dirty(
