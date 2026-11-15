@@ -6,6 +6,12 @@ import { createSurveillanceDataClient } from './surveillance-data.ts';
 const sha = (body: string | ArrayBuffer) => createHash('sha256').update(typeof body === 'string' ? body : new Uint8Array(body)).digest('hex');
 const file = (body: string, url: string) => ({ url, sha256: sha(body), bytes: Buffer.byteLength(body) });
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
+const deferred = <T>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+};
 
 test('one page pins summary, curves and lazy source details to one publication', async () => {
   const calls: string[] = [];
@@ -126,4 +132,217 @@ test('a missing bootstrap supports legacy servers; corrupt lazy manifests never 
   const body=JSON.stringify({schema_version:1,release_id:'one',files:{}});
   const corrupt=createSurveillanceDataClient({digest:async value=>sha(value),fetcher:async(url:any)=>String(url).endsWith('bootstrap.json')?json({schema_version:1,release_id:'one',files:{},manifest:file(body,'manifests/one.json')}):new Response(body+' ')});
   await assert.rejects(corrupt.read('/site-data/countries/jp.json'),/publication checksum mismatch/);
+});
+
+for (const phase of ['bootstrap.json', 'current.json', 'manifests/one.json', 'objects/one.json']) {
+  for (const stalledPart of ['fetch', 'body']) {
+    test(`${phase} has a bounded ${stalledPart} wait and can retry`, async context => {
+      context.mock.timers.enable({ apis: ['setTimeout'] });
+      const body = '{"value":1}';
+      const full = { schema_version: 1, release_id: 'one', files: { 'countries/jp.json': file(body, 'objects/one.json') } };
+      const fullBody = JSON.stringify(full);
+      const bootstrap = { ...full, files: {}, manifest: file(fullBody, 'manifests/one.json') };
+      const blocked = deferred<void>();
+      let stalled = true;
+      let blockedSignal: AbortSignal | undefined;
+      let attempts = 0;
+      const client = createSurveillanceDataClient({ requestTimeoutMs: 100, digest: async value => sha(value), fetcher: async (url: any, init?: RequestInit) => {
+        const path = new URL(String(url)).pathname;
+        if (path.endsWith(phase)) {
+          attempts++;
+          if (stalled) {
+            blockedSignal = init!.signal!;
+            if (stalledPart === 'fetch') { blocked.resolve(); return new Promise<Response>(() => {}); }
+            const response = new Response();
+            const hang = () => { blocked.resolve(); return new Promise<never>(() => {}); };
+            response.json = hang;
+            response.arrayBuffer = hang;
+            return response;
+          }
+        }
+        if (path.endsWith('bootstrap.json')) return phase === 'current.json' ? json({}, 404) : json(bootstrap);
+        if (path.endsWith('current.json')) return json(full);
+        return new Response(path.endsWith('manifests/one.json') ? fullBody : body);
+      } });
+      const failed = assert.rejects(client.read('/site-data/countries/jp.json'), { name: 'TimeoutError' });
+      await blocked.promise;
+      context.mock.timers.tick(99);
+      assert.equal(blockedSignal?.aborted, false);
+      context.mock.timers.tick(1);
+      await failed;
+      assert.equal(blockedSignal?.aborted, true);
+      stalled = false;
+      assert.deepEqual(await client.read('/site-data/countries/jp.json'), { value: 1 });
+      assert.equal(attempts, 2);
+    });
+  }
+}
+
+for (const path of ['/other/dataset.json', '/site-data/legacy.json']) {
+  test(`body waits on ${path} also time out`, async context => {
+    context.mock.timers.enable({ apis: ['setTimeout'] });
+    const blocked = deferred<void>();
+    let signal: AbortSignal | undefined;
+    const client = createSurveillanceDataClient({ requestTimeoutMs: 100, fetcher: async (url: any, init?: RequestInit) => {
+      if (String(url).endsWith('bootstrap.json') || String(url).endsWith('current.json')) return json({}, 404);
+      signal = init!.signal!;
+      const response = new Response();
+      response.json = () => { blocked.resolve(); return new Promise<never>(() => {}); };
+      return response;
+    } });
+    const failed = assert.rejects(client.read(path), { name: 'TimeoutError' });
+    await blocked.promise;
+    context.mock.timers.tick(100);
+    await failed;
+    assert.equal(signal?.aborted, true);
+  });
+}
+
+for (const phase of ['bootstrap.json', 'current.json', 'manifests/one.json', 'objects/one.json']) {
+  test(`canceling a consumer during ${phase} leaves other consumers and the in-flight cache intact`, async () => {
+    const body = '{"value":1}';
+    const full = JSON.stringify({ schema_version: 1, release_id: 'one', files: { 'a.json': file(body, 'objects/one.json'), 'b.json': file(body, 'objects/one.json') } });
+    const bootstrap = { schema_version: 1, release_id: 'one', files: {}, manifest: file(full, 'manifests/one.json') };
+    const blocked = deferred<void>();
+    const resume = deferred<void>();
+    const calls: string[] = [];
+    let blockedSignal: AbortSignal | undefined;
+    const client = createSurveillanceDataClient({ digest: async value => sha(value), fetcher: async (url: any, init?: RequestInit) => {
+      const path = new URL(String(url)).pathname;
+      calls.push(path);
+      if (path.endsWith(phase)) { blockedSignal = init!.signal!; blocked.resolve(); await resume.promise; }
+      if (path.endsWith('bootstrap.json')) return phase === 'current.json' ? json({}, 404) : json(bootstrap);
+      return path.endsWith('current.json') ? json(bootstrap) : new Response(path.endsWith('manifests/one.json') ? full : body);
+    } });
+    const controller = new AbortController();
+    const canceled = assert.rejects(client.read('/site-data/a.json', { signal: controller.signal, retain: false }), { name: 'AbortError' });
+    // Different keys must share the lazy manifest as well as bootstrap.
+    const other = client.read(phase.startsWith('manifests/') ? '/site-data/b.json' : '/site-data/a.json', { retain: false });
+    await blocked.promise;
+    controller.abort();
+    await canceled;
+    assert.equal(blockedSignal?.aborted, false);
+    const replacement = client.read('/site-data/a.json', { retain: false });
+    resume.resolve();
+    assert.deepEqual(await other, { value: 1 });
+    assert.deepEqual(await replacement, { value: 1 });
+    const objectCalls = phase.startsWith('manifests/') ? 2 : 1;
+    assert.equal(calls.filter(path => path.endsWith('objects/one.json')).length, objectCalls);
+    assert.equal(calls.filter(path => path.endsWith('bootstrap.json')).length, 1);
+    assert.equal(calls.filter(path => path.endsWith('manifests/one.json')).length, 1);
+    await client.read('/site-data/a.json', { retain: false });
+    assert.equal(calls.filter(path => path.endsWith('objects/one.json')).length, objectCalls + 1);
+  });
+}
+
+test('successful retain:true consumers keep the cache even when retain:false consumers finish later', async () => {
+  const body = '{"value":1}';
+  let objects = 0;
+  const client = createSurveillanceDataClient({ digest: async value => sha(value), fetcher: async (url: any) => {
+    if (String(url).endsWith('bootstrap.json')) return json({ schema_version: 1, release_id: 'one', files: { 'a.json': file(body, 'objects/one.json') } });
+    objects++;
+    return new Response(body);
+  } });
+  const [retained, released] = await Promise.all([client.read('/site-data/a.json'), client.read('/site-data/a.json', { retain: false })]);
+  assert.equal(retained, released);
+  assert.equal(await client.read('/site-data/a.json', { retain: false }), retained);
+  assert.equal(await client.read('/site-data/a.json'), retained);
+  assert.equal(objects, 1);
+});
+
+test('all canceled consumers release unretained results while preserving the pinned manifest', async () => {
+  const body = '{"value":1}';
+  const blocked = deferred<void>();
+  const resume = deferred<void>();
+  let objects = 0;
+  let manifests = 0;
+  const client = createSurveillanceDataClient({ digest: async value => sha(value), fetcher: async (url: any) => {
+    if (String(url).endsWith('bootstrap.json')) { manifests++; return json({ schema_version: 1, release_id: 'one', files: { 'a.json': file(body, 'objects/one.json') } }); }
+    objects++;
+    blocked.resolve();
+    await resume.promise;
+    return new Response(body);
+  } });
+  const a = new AbortController();
+  const b = new AbortController();
+  const canceledA = assert.rejects(client.read('/site-data/a.json', { signal: a.signal }), { name: 'AbortError' });
+  const canceledB = assert.rejects(client.read('/site-data/a.json', { signal: b.signal, retain: false }), { name: 'AbortError' });
+  await blocked.promise;
+  a.abort(); b.abort();
+  await Promise.all([canceledA, canceledB]);
+  resume.resolve();
+  // Drain completion, including response decoding and the abandoned consumers'
+  // handlers. Timers are not involved in this successful-request cleanup.
+  await new Promise<void>(resolve => setImmediate(resolve));
+  assert.deepEqual(await client.read('/site-data/a.json'), { value: 1 });
+  assert.equal(objects, 2);
+  assert.equal(manifests, 1);
+});
+
+test('abandoned requests abort at their deadline, and a late failure cannot evict the retry', async context => {
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  const body = '{"value":1}';
+  const blocked = deferred<void>();
+  const firstObject = deferred<Response>();
+  const retryStarted = deferred<void>();
+  const retryObject = deferred<Response>();
+  let objects = 0;
+  let objectSignal: AbortSignal | undefined;
+  const client = createSurveillanceDataClient({ requestTimeoutMs: 100, digest: async value => sha(value), fetcher: async (url: any, init?: RequestInit) => {
+    if (String(url).endsWith('bootstrap.json')) return json({ schema_version: 1, release_id: 'one', files: { 'a.json': file(body, 'objects/one.json') } });
+    if (++objects === 1) { objectSignal = init!.signal!; blocked.resolve(); return firstObject.promise; }
+    retryStarted.resolve();
+    return retryObject.promise;
+  } });
+  const controller = new AbortController();
+  const canceled = assert.rejects(client.read('/site-data/a.json', { signal: controller.signal, retain: false }), { name: 'AbortError' });
+  await blocked.promise;
+  controller.abort();
+  await canceled;
+  context.mock.timers.tick(100);
+  await new Promise<void>(resolve => setImmediate(resolve));
+  assert.equal(objectSignal?.aborted, true);
+  const retried = client.read('/site-data/a.json', { retain: false });
+  await retryStarted.promise;
+  firstObject.reject(new Error('late original failure'));
+  await new Promise<void>(resolve => setImmediate(resolve));
+  const sharedRetry = client.read('/site-data/a.json', { retain: false });
+  retryObject.resolve(new Response(body));
+  assert.equal(await retried, await sharedRetry);
+  assert.equal(objects, 2);
+});
+
+test('already canceled callers start no requests, and manifest subscribers cancel independently', async () => {
+  const resume = deferred<Response>();
+  let calls = 0;
+  const client = createSurveillanceDataClient({ fetcher: async () => { calls++; return resume.promise; } });
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(client.read('/site-data/a.json', { signal: controller.signal }), { name: 'AbortError' });
+  await assert.rejects(client.manifest({ signal: controller.signal }), { name: 'AbortError' });
+  assert.equal(calls, 0);
+  const other = new AbortController();
+  const canceled = assert.rejects(client.manifest({ signal: other.signal }), { name: 'AbortError' });
+  const waiting = client.manifest();
+  other.abort();
+  await canceled;
+  resume.resolve(json({ schema_version: 1, release_id: 'one', files: {} }));
+  assert.equal((await waiting)?.release_id, 'one');
+  assert.equal(calls, 1);
+});
+
+test('successful requests clear their deadlines after completing the response body', async context => {
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  const signals: AbortSignal[] = [];
+  const body = '{"value":1}';
+  const client = createSurveillanceDataClient({ requestTimeoutMs: 100, digest: async value => sha(value), fetcher: async (url: any, init?: RequestInit) => {
+    signals.push(init!.signal!);
+    return String(url).endsWith('bootstrap.json')
+      ? json({ schema_version: 1, release_id: 'one', files: { 'a.json': file(body, 'objects/one.json') } })
+      : new Response(body);
+  } });
+  assert.deepEqual(await client.read('/site-data/a.json'), { value: 1 });
+  context.mock.timers.tick(100);
+  assert.equal(signals.length, 2);
+  assert.ok(signals.every(signal => !signal.aborted));
 });

@@ -190,6 +190,14 @@ export interface SituationSourceAdapter {
   latest_task_uuid?: string | null;
   latest_task_status?: string | null;
   stages?: Array<{ stage: string; status?: string | null; attempt?: number | null; error?: string | null; task_uuid?: string | null }>;
+  next_sample_at?: string | null;
+  phase_minute?: number | null;
+  interval_minutes?: number | null;
+  upstream?: string | null;
+  schedule_status?: string | null;
+  sample_pool_size?: number | null;
+  read_next_run_at?: string | null;
+  read_interval_minutes?: number | null;
   history: Array<{ run_id: string; started_at: string; status: string; fetched_count: number; new_count: number; updated_count: number; error: string | null }>;
 }
 

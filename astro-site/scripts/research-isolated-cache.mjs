@@ -2,12 +2,48 @@
 // The cache is an optimization; no cached page is read back for verification.
 import { createHash, randomUUID } from 'node:crypto';
 import { constants, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { articlePaths, sharedFingerprint } from './research-build-cache.mjs';
-import { createSourceDependencyFingerprinter } from './source-dependencies.mjs';
+import { createSourceDependencyFingerprinter, sourceFiles } from './source-dependencies.mjs';
 
 const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 const hash = value => createHash('sha256').update(value).digest('hex');
+
+// A template baseline must survive article additions, removals and metadata
+// changes. Conservatively cover every static source dependency, including
+// dynamic imports, while JSON export membership belongs to the frozen snapshot.
+export function researchTemplateFingerprint({ site, project }) {
+  const generatedRoot = resolve(site, 'src/data') + '/';
+  const publicData = resolve(site, 'public/site-data') + '/';
+  const paths = [
+    ...sourceFiles(resolve(site, 'src')).filter(path => !(path.startsWith(generatedRoot) && path.endsWith('.json'))),
+    ...sourceFiles(resolve(site, 'public')).filter(path => !path.startsWith(publicData)),
+    ...sourceFiles(resolve(project, 'shared')),
+    // These small non-article exports can enter the shared shell/navigation.
+    ...['meta.json', 'diseases/index.json', 'reports/index.json'].map(path => resolve(site, 'src/data', path)),
+    ...['package.json', 'package-lock.json', 'astro.config.mjs', 'tsconfig.json',
+      'tailwind.config.mjs', 'postcss.config.mjs', 'scripts/build-research.mjs',
+      'scripts/research-isolated-cache.mjs', 'scripts/research-build-cache.mjs',
+      'scripts/source-dependencies.mjs', 'scripts/public-build-inputs.mjs'].map(path => resolve(site, path)),
+  ];
+  const digest = createHash('sha256').update('research-template-v1\n');
+  for (const path of [...new Set(paths)].sort()) {
+    digest.update(relative(project, path) + '\0');
+    digest.update(existsSync(path) ? readFileSync(path) : 'missing');
+  }
+  for (const key of ['GLOBALID_SITE_URL', 'SITE_URL', 'PUBLIC_GIDS_MAINTENANCE_MESSAGE',
+    'SITUATION_SHADOW_PREVIEW', 'PUBLIC_GIDS_DATA_MANIFEST_URL', 'PUBLIC_GIDS_SITUATION_MANIFEST_URL',
+    'PUBLIC_GIDS_THEME_V1_URL', 'GIDS_PAGES_DATA_WORKER', 'GIDS_EXTERNAL_SURVEILLANCE_DATA',
+    'GIDS_RESEARCH_STATIC_HOST', 'PUBLIC_GA4_MEASUREMENT_ID']) {
+    digest.update(`${key}=${process.env[key] ?? ''}\n`);
+  }
+  if (process.env.PUBLIC_GA4_MEASUREMENT_ID === undefined) {
+    try { digest.update(JSON.stringify(readJson(resolve(project, 'data/system-settings.json'))?.site?.public_ga4_measurement_id ?? 'G-8P39XV52NC')); }
+    catch { digest.update(JSON.stringify('G-8P39XV52NC')); }
+  }
+  digest.update(String(new Date().getUTCFullYear()));
+  return digest.digest('hex');
+}
 
 export function researchInputs({ site, project, snapshot }) {
   const receipt = readJson(resolve(snapshot, 'article-inputs.json'));

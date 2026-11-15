@@ -180,7 +180,7 @@ const words = {
     "Rechercher un nom ou un code",
   ],
   scope: ["Candidate locations", "候选地区范围", "Lieux proposés"],
-  national: ["Countries / regions", "国家／地区", "Pays et régions"],
+  national: ["Top-level areas", "上级区域", "Zones de niveau supérieur"],
   mixed: ["All locations", "所有地区", "Tous les lieux"],
   selected: ["Selected", "已选", "Sélection"],
   clear: ["Clear selection", "清空选择", "Effacer la sélection"],

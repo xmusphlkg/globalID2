@@ -28,6 +28,13 @@ from src.data.processors.is_history import (
 from scripts.import_iceland_history import _retire_ineligible_compatibility_rows
 
 
+def test_history_import_result_preserves_runtime_date_annotation() -> None:
+    from typing import get_type_hints
+    from src.data.processors.is_history import IcelandHistoryImportResult
+
+    assert get_type_hints(IcelandHistoryImportResult)["source_latest_date"] == date | None
+
+
 ICELANDIC_MONTHS = [
     "Janúar",
     "Febrúar",

@@ -49,6 +49,8 @@ from src.services.database_rebuild_plan import (  # noqa: E402
 )
 from src.services.database_rebuild_import import (  # noqa: E402
     insert_with_savepoint_fallback,
+    normalize_history_label,
+    prepare_history_row,
 )
 from src.services.database_rebuild_run import (  # noqa: E402
     RebuildRunTracker,
@@ -791,17 +793,11 @@ class DatabaseRebuilder:
         """), {"code": self.country_code})
         
         # Use normalized keys for better matching tolerance
-        def _norm(s):
-            try:
-                return s.strip().lower()
-            except Exception:
-                return None
-        
         mapping_dict = {}
         for row in result:
             local_name = row[0]
             db_id = row[1]
-            normalized = _norm(local_name)
+            normalized = normalize_history_label(local_name)
             if normalized:
                 mapping_dict[normalized] = db_id
         
@@ -837,115 +833,18 @@ class DatabaseRebuilder:
         for idx, row in df.iterrows():
             try:
                 # Extract basic fields
-                disease_cn = str(row[disease_cn_col]) if pd.notna(row[disease_cn_col]) else None
-                if not disease_cn or disease_cn == 'nan':
+                prepared, unmapped = prepare_history_row(
+                    row, idx, columns=df.columns,
+                    field_columns=(date_col, disease_cn_col, disease_en_col, cases_col, deaths_col),
+                    country_code=self.country_code, country_id=country_id, mapping_dict=mapping_dict,
+                    source_filename=self.history_file.name, normalize_report_time=self._normalize_report_time,
+                )
+                if prepared is None:
+                    if unmapped:
+                        error_diseases.add(unmapped)
                     skipped += 1
                     continue
-                
-                disease_en = str(row[disease_en_col]) if disease_en_col and pd.notna(row[disease_en_col]) else None
-                
-                # Find mapping (using normalization)
-                db_disease_id = None
-                if disease_en:
-                    db_disease_id = mapping_dict.get(_norm(disease_en))
-                if not db_disease_id:
-                    db_disease_id = mapping_dict.get(_norm(disease_cn))
-                
-                if not db_disease_id:
-                    # Track unmapped diseases for reporting
-                    if disease_cn not in error_diseases:
-                        error_diseases.add(disease_cn)
-                    skipped += 1
-                    continue
-                
-                # Parse date
-                date_str = str(row[date_col])
-                date_obj = self._normalize_report_time(date_str)
-                if date_obj is None:
-                    skipped += 1
-                    continue
-                
-                # Real data source from CSV. Resolve it before parsing counts so
-                # source-specific missing-value contracts can fail closed.
-                data_source = 'Historical Data Import'
-                if 'Source' in df.columns and pd.notna(row['Source']):
-                    data_source = str(row['Source'])
-
-                # A blank NNDSS cell is missing/unknown, never a reported zero.
-                cases_missing = not pd.notna(row[cases_col]) or str(row[cases_col]) in ['', '-10', 'nan']
-                if cases_missing and self.country_code == "US" and data_source == US_NNDSS_SOURCE_NAME:
-                    skipped += 1
-                    continue
-                cases = int(row[cases_col]) if not cases_missing else 0
-                # A blank death field means the source does not report deaths;
-                # preserving NULL prevents diagnosis-only feeds such as NNDSS
-                # and NHSS from being misrepresented as zero mortality.
-                deaths = int(row[deaths_col]) if pd.notna(row[deaths_col]) and str(row[deaths_col]) not in ['', '-10', 'nan'] else None
-                
-                # Extract additional fields
-                incidence = None
-                if 'Incidence' in df.columns and pd.notna(row['Incidence']):
-                    val = float(row['Incidence'])
-                    incidence = val if val >= 0 else None
-                
-                mortality = None
-                if 'Mortality' in df.columns and pd.notna(row['Mortality']):
-                    val = float(row['Mortality'])
-                    mortality = val if val >= 0 else None
-                
-                region = None
-                if 'ProvinceCN' in df.columns and pd.notna(row['ProvinceCN']) and str(row['ProvinceCN']) not in ['China', 'National', 'Nationwide']:
-                    region = str(row['ProvinceCN'])
-                elif 'Province' in df.columns and pd.notna(row['Province']) and str(row['Province']) not in ['China', 'National', 'Nationwide']:
-                    region = str(row['Province'])
-                
-                # Build metadata object
-                metadata_obj = {
-                    'source_csv': self.history_file.name,
-                    'row_index': int(idx)
-                }
-                if data_source == 'US CDC NHSS':
-                    metadata_obj.update({
-                        'frequency': 'annual',
-                        'measure': 'hiv_diagnoses_or_aids_classifications',
-                        'death_reporting': 'not_provided_by_source',
-                    })
-                elif data_source == US_NNDSS_SOURCE_NAME:
-                    metadata_obj.update({
-                        'reporting_area': str(row.get('ReportingArea', '')),
-                        'population_scope': 'us_residents_excluding_territories',
-                        'death_reporting': 'not_provided_by_source',
-                    })
-                
-                if '__source_file' in df.columns and pd.notna(row.get('__source_file')):
-                    metadata_obj['source_file'] = str(row['__source_file'])
-                if 'DOI' in df.columns and pd.notna(row['DOI']):
-                    metadata_obj['doi'] = str(row['DOI'])
-                if 'URL' in df.columns and pd.notna(row['URL']):
-                    metadata_obj['url'] = str(row['URL'])
-                if 'ADCode' in df.columns and pd.notna(row['ADCode']):
-                    metadata_obj['adcode'] = str(int(row['ADCode']))
-                
-                # Prepare raw data for traceability
-                raw_obj = None
-                try:
-                    raw_obj = {k: (None if pd.isna(v) else v) for k, v in row.items()}
-                except Exception:
-                    pass
-                
-                batch_data.append({
-                    'time': date_obj,
-                    'disease_id': db_disease_id,
-                    'country_id': country_id,
-                    'cases': max(0, cases),
-                    'deaths': max(0, deaths) if deaths is not None else None,
-                    'incidence_rate': normalize_rate_value(incidence),
-                    'mortality_rate': normalize_rate_value(mortality),
-                    'region': region,
-                    'data_source': data_source,
-                    'metadata': json.dumps(metadata_obj),
-                    'raw_data': json.dumps(raw_obj) if raw_obj else None
-                })
+                batch_data.append(prepared)
                 
             except Exception:
                 skipped += 1

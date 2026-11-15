@@ -119,3 +119,39 @@ async def test_planned_static_release_requires_public_verification_before_ack(re
         assert result["website_verification"] == "verified"
         assert result["cloudflare_deployment"]["public_verified"]
         r.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_planned_release_with_correct_pages_and_missing_worker_route_is_not_acknowledged(release, monkeypatch):
+    from urllib.error import HTTPError
+    from src.services.data_release import checks
+    from src.services.data_release.pipeline import _execute_release_task
+
+    r = release
+    r.task.input_data["publication_plan"] = {"plan_id": "test"}
+    r.service.integration_checks = AsyncMock(return_value={
+        "overall_ready": True, "cloudflare": {"production_branch": "main", "subdomain": "site.pages.dev"},
+    })
+    r.service._record_release_checkpoint = AsyncMock()
+    marker = r.runtime.root_dir / "exports/publicly-verified-site-release.json"
+    previous = marker.read_bytes() if marker.exists() else None
+
+    async def verify(*, release_identity, **kwargs):
+        async def public_json(url):
+            if "/release.json?" in url:
+                return release_identity
+            raise HTTPError(url, 404, "Not Found", {}, None)
+        deployment = {"environment": "production", "status": "success",
+                      "branch": release_identity["deployment_branch"], "commit_hash": release_identity["source_commit"]}
+        return await checks.verify_cloudflare_production_release(**kwargs, release_identity=release_identity,
+            latest_deployment=AsyncMock(return_value=deployment), fetch_public_json=public_json,
+            public_origin="https://public.example")
+
+    r.service._verify_cloudflare_production_release = verify
+    monkeypatch.setattr(checks.asyncio, "sleep", AsyncMock())
+    with pytest.raises(RuntimeError, match="surveillance-data Worker"):
+        await _execute_release_task(r.service, r.task, runtime=r.runtime)
+    r.commit.assert_not_awaited()
+    assert (marker.read_bytes() if marker.exists() else None) == previous
+    assert not any(call.args[2].get("public_verified") is True
+                   for call in r.service._record_release_checkpoint.await_args_list)

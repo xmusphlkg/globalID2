@@ -4,11 +4,155 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.19.4] - 2026-11-14
+
+### Fixed
+
+- Rebuild Research collection pages from current frozen JSON and templates.
+  The previous template release removed collection routes even though its
+  build omitted those pages. Validate all current geographic, disease, topic
+  and weekly routes before publication, including bibliographic-only diseases.
+- Keep Compare selector headings inside their panels and enable the independent
+  shared theme on English, Chinese and French Compare routes.
+- Prune excluded directories before scanning publication source fingerprints,
+  preserving the exact fingerprint contract. A local three-run comparison reduced
+  median fingerprint time from 0.848s to 0.248s; this is not an end-to-end release
+  benchmark.
+
+- Reuse exact cached Research recommendation rankings when only other candidates
+  change. Merge affected candidates with unchanged top results, and fall back to
+  a full calculation when targets, winners or cache validity change. Randomized
+  regression tests verify the complete output against full recomputation.
+- Make an explicit planned `full` publication render all main-site and Report
+  pages freshly, bypassing whole-build and HTML-page reuse while retaining
+  validation gates and recovery of already prepared publication artifacts.
+- Allow a separately configured process count for Research collection rendering.
+  On the same frozen 4,782-page input, two workers completed in 173.762s versus
+  237.540s; article and main-site renderer settings remain independent.
+
+Publication evidence and verification results are recorded in
+[the acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).
+
+## [0.19.3] - 2026-11-14
+
+### Fixed
+
+- Isolate Brazil SINAN DBF parsing in bounded spawn processes so CPU work cannot
+  starve the publication worker. Cancellation terminates and joins parsers and
+  removes their temporary files; database writes remain in the parent.
+- Skip legacy article HTML caches when Research uses its independent publisher;
+  report workspace preparation and timing instead of leaving progress at zero.
+- Avoid decoding unused historical metadata in Japanese quality checks while
+  preserving quality decisions, stored provenance and revision snapshots.
+- Preserve completed deployment checkpoints when resuming a frozen publication
+  after a source update, avoiding duplicate builds and Pages uploads.
+- Stop inheriting retired static HTML routes when composing a new Papers
+  publication. Preserve current article and supporting asset references.
+- Deploy the main-site data route for the independently published changelog JSON;
+  its missing route prevented the default daily activity chart from appearing.
+- Respect the origin cache policy for the exact theme compatibility stylesheet
+  URL, removing the zone's four-hour browser-cache override on that entry point.
+
+### Operations
+
+- Add reviewed Papers generation cleanup with a minimum 48-hour retention window,
+  protection of shared dependencies and current articles, an enforced publication
+  maintenance window, resumable batch receipts and final object verification.
+- Add reusable live acceptance scripts for cross-host publication identity and
+  multilingual daily update counts. Public release confirmation now also checks
+  the main site's website-history JSON route.
+- Complete cleanup of 838 stale Pages deployments and 35,964 expired Papers
+  objects (2,763,282,763 bytes), preserving current and retained dependencies.
+- Deploy source `c1c99f6` through the planned template-only workflow, with public
+  verification and database confirmation. The final run took 12m 14s versus
+  22m 34s for the preceding run; the 10-minute target remains unmet. Workspace
+  preparation took 51.596s; Pages uploaded 35 files and reused 4,369.
+
+Operational deployment and real-network acceptance evidence are recorded in
+[the acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).
+
+## [0.19.2] - 2026-11-14
+
+### Fixed
+
+- Keep Compare disease and geographic-area controls inside the layout on narrow
+  screens, including French labels. Restore child-area deep links and refresh
+  selections from the current JSON catalogue.
+- Expose available lower-level administrative units in comparison, seasonality
+  and Situation selectors, using source metadata rather than two-letter filters.
+  Use neutral geographic terminology in English, Chinese and French while
+  preserving existing URLs, identifiers and API fields.
+- Preserve missing values in dashboard chart tooltips and correct QR format-bit
+  placement so exported chart links decode correctly.
+- Preserve missing historical values and source provenance during database
+  rebuilds; fix a missing NNDSS source constant that could silently skip rows.
+- Report publication input changes before expensive rendering and preserve the
+  specific cause when a required preparation receipt cannot be saved.
+
+### Changed
+
+- Apply the core-code reorganization in reviewed batches: separate parsing,
+  query contracts, pure policy and presentation from transaction, lock, task
+  and publication ownership. Keep legacy entry points and explicit test seams.
+- Keep the shared header/footer, map footer suppression, independent version
+  JSON and daily data-update counts. Editorial changelog changes no longer
+  invalidate the reusable code-only publication workspace.
+- Ignore dependency directories and symlinks, Vite caches and local worktrees;
+  retain source tests and fixtures in Git.
+
+Validation and actual deployment status are recorded separately in
+[the implementation record](docs/architecture/CORE_CODE_REORGANIZATION_PROGRESS.md)
+and [the acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).
+
+## [0.19.1] - 2026-11-14
+
+### Changed
+
+- Retain content-verified source-data snapshots for template publication and
+  build code-only releases in a private Astro workspace. Background exports
+  no longer overwrite those inputs or force repeated full data releases.
+  Legacy installations require one normal release to establish the snapshot.
+- Preserve the independent Reports publication during template-only releases;
+  publish report-template changes through `reports_only` or a full release.
+- Show range-specific data-update and website-version totals beside the daily
+  chart, and remove the explanatory paragraphs from the public updates page.
+
+### Fixed
+
+- Use UTC consistently for the public update range and daily counts, including
+  timestamps with timezone offsets. Reject incomplete or invalid date ranges.
+- Keep missing monthly archives from appearing as zero publication activity;
+  retain known records with an explicit refresh error.
+- Bound Literature gap association lookups to 10,000 article IDs per query to
+  avoid PostgreSQL parameter limits. Read only the six article fields needed
+  by the projection, leaving large raw payloads out of the query.
+- Let Literature monitoring recognize verified full-site Research commits and
+  use its actual publication interval when judging pending-data delays.
+- Verify Papers v3 public canaries in full-site research publication before
+  recording public success, including retries after pointer commit.
+- Bind prepared-publication recovery to the actual
+  `.publication/starting-baseline.json` receipt produced by baseline capture.
+  Regression coverage now uses the real capture helper and rejects changed
+  or missing baseline receipts.
+
+### Validation and release scope
+
+- Both public monthly update archives and the index matched completed,
+  acknowledged database publications at 01:35 UTC on November 14: 2,218
+  Surveillance, 96 Situation and 33 Literature records; Knowledge had none.
+- The previous template publication was blocked by a changed local data
+  snapshot. This release uses the publication plan and task workflow to build
+  a fresh baseline; deployment and test results are tracked in
+  [the acceptance record](docs/acceptance/DATA_UPDATES_20261114.md).
+- Multi-source operation is partial: source-specific failures and a large
+  Literature review backlog remain visible. Successful channel publication
+  does not imply that all sources or historical content have passed acceptance.
+
 ## [0.19.0] - 2026-11-13
 
-This release completes the GIDS data-line and control-plane migration while
-keeping public routes, data contracts and previously published research assets
-compatible for existing users.
+This release introduces the GIDS data-line and control-plane migration,
+Papers v3 and the independent theme. Production acceptance is tracked
+separately; the November 14 record corrects the earlier broad completion claim.
 
 ### Added
 
@@ -62,7 +206,7 @@ compatible for existing users.
 - Production canaries return HTTP 200 for Surveillance, Situation and Literature
   JSON, the three locale Papers v3 routes and the six main-site locale/country
   routes. Theme v1 readiness and its public CSS probe return `ready=true`.
-- The current Papers generation contains 8,352 articles in three locales and
+- The initial Papers v3 cutover generation contained 8,352 articles in three locales and
   is published under generation
   `318580a640b1885153b721990f21eee324cd015af92783da50603d76a29a07c0`.
 

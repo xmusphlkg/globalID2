@@ -24,6 +24,21 @@ test('Pages data Worker packaging survives every enabled template build', async 
   assert.deepEqual(groups.at(-2), ['finalize page caches']);
 });
 
+test('independent template publication rebuilds collections before all output gates', async () => {
+  const names = [];
+  await buildPipeline({ env: { GIDS_RESEARCH_PUBLICATION_ENABLED: '1' }, run: async stages => {
+    names.push(...stages.map(stage => stage.name));
+  } });
+  assert.ok(names.indexOf('render independent research collections') > names.indexOf('render and restore'));
+  assert.ok(names.indexOf('render independent research collections') < names.indexOf('split research evidence'));
+  const failed = [];
+  await assert.rejects(buildPipeline({ env: { GIDS_RESEARCH_PUBLICATION_ENABLED: '1' }, run: async stages => {
+    failed.push(...stages.map(stage => stage.name));
+    if (stages.some(stage => stage.name === 'render independent research collections')) throw new Error('collection missing');
+  } }), /collection missing/);
+  assert.equal(failed.includes('finalize page caches'), false);
+});
+
 test('independent validators execute concurrently in separate processes', async () => {
   const root = mkdtempSync(join(tmpdir(), 'gids-parallel-checks-'));
   try {

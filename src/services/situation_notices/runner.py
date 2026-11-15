@@ -59,6 +59,7 @@ async def run_situation(
     skip_ai: bool = False,
     require_cross_model: bool = False,
     fetch: bool = True,
+    rebuild: bool = True,
     sources: list[str] | None = None,
     task_uuid: str | None = None,
     progress: Progress = _noop,
@@ -76,13 +77,13 @@ async def run_situation(
     from src.services.ingestion.capture import capture_sources
     try:
         with capture_sources(stages.task_uuid, stages.attempt, "situation"):
-            return await _run_stages(summary=summary, now=now, run_id=run_id, stages=stages, since_days=since_days, don_limit=don_limit, document_limit=document_limit, ai_limit=ai_limit, concurrency=concurrency, skip_ai=skip_ai, require_cross_model=require_cross_model, fetch=fetch, sources=scoped, progress=progress)
+            return await _run_stages(summary=summary, now=now, run_id=run_id, stages=stages, since_days=since_days, don_limit=don_limit, document_limit=document_limit, ai_limit=ai_limit, concurrency=concurrency, skip_ai=skip_ai, require_cross_model=require_cross_model, fetch=fetch, rebuild=rebuild, sources=scoped, progress=progress)
     except BaseException as exc:
         await stages.finish(error=str(exc) or type(exc).__name__)
         raise
 
 
-async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, document_limit, ai_limit, concurrency, skip_ai, require_cross_model, fetch, sources, progress):
+async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, document_limit, ai_limit, concurrency, skip_ai, require_cross_model, fetch, rebuild, sources, progress):
     from .source_log import log_situation_event, log_situation_sources
 
     if fetch:
@@ -151,19 +152,25 @@ async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, do
     await progress(75)
 
     await stages.transition("store")
-    summary["outbreaks"] = await rebuild_outbreaks(
-        since_days=max(int(since_days), HISTORY_SINCE_DAYS),
-        as_of=now.date(),
-        task_uuid=stages.task_uuid,
-    )
+    if rebuild:
+        summary["outbreaks"] = await rebuild_outbreaks(
+            since_days=max(int(since_days), HISTORY_SINCE_DAYS),
+            as_of=now.date(),
+            task_uuid=stages.task_uuid,
+        )
+        store_content = "Rebuilt outbreaks from stored alerts."
+    else:
+        summary["outbreaks"] = None
+        summary["rebuild"] = False
+        store_content = "Sampling stores reports; outbreak rebuild waits for the reading task."
     await log_situation_event(
         stages.task_uuid,
         title="Situation store",
-        content="Rebuilt outbreaks from stored alerts.",
+        content=store_content,
         entry_type="success",
-        metadata={"event": "situation_store", "outbreaks": summary["outbreaks"], "sources": sources or []},
+        metadata={"event": "situation_store", "outbreaks": summary["outbreaks"], "rebuild": rebuild, "sources": sources or []},
     )
-    await stages.finish(metrics={"outbreaks": summary["outbreaks"]})
+    await stages.finish(metrics={"outbreaks": summary["outbreaks"], "rebuild": rebuild})
     summary["finished_at"] = utc_now().isoformat()
     await progress(100)
     return summary

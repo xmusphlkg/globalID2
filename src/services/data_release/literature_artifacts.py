@@ -21,6 +21,13 @@ def build_research_papers_manifest(root: Path, *, origin: str, build: dict[str, 
                                    index: ArtifactIndex | None = None) -> dict:
     root = Path(root).resolve()
     inputs = build.get('inputs')
+    if build.get('scope') == 'collections':
+        from .literature_projection import verify_snapshot_collections
+        verify_snapshot_collections(root, build)
+        # The current complete collection output owns this manifest. No old
+        # article HTML receipt can enter a structured snapshot publication.
+        inputs = {'schema': 1, 'articles': {}}
+        build = {**build, 'inputs': inputs, 'reused': []}
     if (build.get('schema') != 1 or not isinstance(inputs, dict) or inputs.get('schema') != 1
             or not isinstance(inputs.get('articles'), dict) or not isinstance(build.get('reused'), list)):
         raise ValueError('Invalid isolated research build receipt')

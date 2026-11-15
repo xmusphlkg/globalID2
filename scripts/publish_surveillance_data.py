@@ -25,6 +25,7 @@ def main(argv=None):
         help="Before generation, retain the remote pointer once; no local current.json is required")
     parser.add_argument("--require-starting-baseline", action="store_true",
         help="Fail closed when a managed candidate lacks its pre-generation baseline")
+    parser.add_argument("--result-file", type=Path, help="Write structured publication metrics after success")
     args = parser.parse_args(argv)
     config = _config_from_env()
     expected = {}
@@ -35,6 +36,11 @@ def main(argv=None):
     else:
         result = publish_surveillance_data(args.source_dir, config, prefix=args.prefix, workers=args.workers,
             objects_dir=args.objects_dir, require_starting_baseline=args.require_starting_baseline)
+    if args.result_file:
+        args.result_file.parent.mkdir(parents=True, exist_ok=True)
+        temporary = args.result_file.with_suffix(".tmp")
+        temporary.write_text(json.dumps(result, ensure_ascii=False))
+        temporary.replace(args.result_file)
     print(json.dumps(result, ensure_ascii=False))
 
 

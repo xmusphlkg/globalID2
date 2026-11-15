@@ -8,6 +8,7 @@ from src.domain import Country
 from src.domain.collection import PublishDirty
 
 from .planning import plan_changes
+from .global_selection import selection_batches
 
 
 async def validate_data_selection(db, *, country_codes: list[str], dirty_ids: list[int], expected_task_uuid: str | None = None) -> dict:
@@ -26,9 +27,11 @@ async def validate_data_selection(db, *, country_codes: list[str], dirty_ids: li
             or len(set(country_codes)) != len(country_codes)):
         raise ValueError("JSON publication requires unique canonical country scopes")
 
-    rows = list((await db.execute(select(PublishDirty).where(
-        PublishDirty.id.in_(dirty_ids),
-    ).order_by(PublishDirty.id))).scalars().all())
+    rows = []
+    for batch in selection_batches(dirty_ids):
+        rows.extend((await db.execute(select(PublishDirty).where(
+            PublishDirty.id.in_(batch),
+        ).order_by(PublishDirty.id))).scalars().all())
     missing = sorted(set(dirty_ids) - {row.id for row in rows})
     if missing:
         raise ValueError(f"Selected JSON dirty IDs are missing: {missing}")

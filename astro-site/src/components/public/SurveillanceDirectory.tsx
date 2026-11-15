@@ -57,20 +57,20 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
     {!parentCode && <>
       <p className="figure-caption">{activeCount} {pick('active', '个已支持', 'actifs')} · {rows.length - activeCount} {pick('planned or unavailable', '个规划中或暂不可用', 'prévus ou indisponibles')}</p>
       {!!parents.length && <div className="border border-[rgb(var(--border))] p-4">
-        <h3 className="font-semibold">{pick('Regional datasets by parent country', '按所属国家浏览分省／地区数据', 'Jeux régionaux par pays')}</h3>
-        <p className="figure-caption mt-2">{regional.length} {pick('regional datasets, counted separately from national totals.', '个地区数据集，与国家级总量分开统计。', 'jeux régionaux, comptés séparément des totaux nationaux.')}</p>
+        <h3 className="font-semibold">{pick('Subdivision datasets by parent area', '按上级区域浏览分省／地区数据', 'Jeux régionaux par zone')}</h3>
+        <p className="figure-caption mt-2">{regional.length} {pick('subdivision datasets, counted separately from parent-area totals.', '个下级行政单位数据集，与上级区域总量分开统计。', 'jeux de données des subdivisions, comptés séparément des totaux de leur zone parente.')}</p>
         <div className="flex flex-wrap gap-2 mt-3">{parents.map(row => <a key={row.code} className="site-action-secondary border px-3 py-2 text-sm" href={`${prefix}/countries/${row.code.toLowerCase()}/#subnational-data`}>{countryLabel(row, language)} · {row.count}</a>)}</div>
       </div>}
     </>}
     {!parentCode && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-      <label className="coverage-filter"><span>{pick('Country or region', '国家或地区', 'Pays ou région')}</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={pick('Search name or code', '搜索名称或代码', 'Rechercher un nom ou code')} /></label>
+      <label className="coverage-filter"><span>{pick('Area', '区域', 'Zone')}</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={pick('Search name or code', '搜索名称或代码', 'Rechercher un nom ou code')} /></label>
       <label className="coverage-filter"><span>{pick('WHO region', 'WHO 区域', 'Région OMS')}</span><select value={who} onChange={event => setWho(event.target.value)}><option value="">{pick('All', '全部', 'Toutes')}</option>{options(WHO_REGION_LABELS, rows.map(row => row.classification?.who_region))}</select></label>
       <label className="coverage-filter"><span>{pick('World Bank region', '世界银行区域', 'Région Banque mondiale')}</span><select value={wb} onChange={event => setWb(event.target.value)}><option value="">{pick('All', '全部', 'Toutes')}</option>{options(WORLD_BANK_REGION_LABELS, rows.map(row => row.classification?.wb_region))}</select></label>
       <label className="coverage-filter"><span>{pick('Income group', '收入组', 'Groupe de revenu')}</span><select value={income} onChange={event => setIncome(event.target.value)}><option value="">{pick('All', '全部', 'Tous')}</option>{options(INCOME_GROUP_LABELS, rows.map(row => row.classification?.income_group))}</select></label>
       <label className="coverage-filter"><span>{pick('Data status', '数据状态', 'État des données')}</span><select value={status} onChange={event => setStatus(event.target.value)}><option value="">{pick('All', '全部', 'Tous')}</option><option value="supported">{pick('Supported', '已支持', 'Disponible')}</option><option value="scheduled">{pick('Scheduled', '规划中', 'Prévu')}</option></select></label>
       <button type="button" className="site-action-secondary border px-3 py-2 text-sm" onClick={reset}>{pick('Reset filters', '重置筛选', 'Réinitialiser les filtres')}</button>
     </div>}
-    <p className="figure-caption" aria-live="polite">{filtered.length.toLocaleString()} {pick('countries and regions', '个国家和地区', 'pays et régions')}</p>
+    <p className="figure-caption" aria-live="polite">{filtered.length.toLocaleString()} {pick('geographic areas', '个地理区域', 'zones géographiques')}</p>
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {filtered.map(row => { const active = hasData(row);
         const name = countryLabel(row, language);
@@ -83,6 +83,6 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
       })}
     </div>
     {!parentCode && <p className="figure-caption">{pick(`WHO regions and World Bank FY${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} regions/income groups; catalogue updated ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}.`, `WHO 区域及世界银行 ${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} 财年区域／收入组；分类目录更新于 ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}。`, `Régions OMS et régions/groupes de revenu Banque mondiale, exercice ${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} ; catalogue mis à jour le ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}.`)}</p>}
-    {!filtered.length && <p className="figure-caption">{pick('No matching countries or regions.', '没有符合筛选条件的国家或地区。', 'Aucun pays ou région correspondant.')}</p>}
+    {!filtered.length && <p className="figure-caption">{pick('No matching areas.', '没有符合筛选条件的区域。', 'Aucune zone ne correspond aux filtres.')}</p>}
   </div>;
 }

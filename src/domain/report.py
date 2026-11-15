@@ -15,6 +15,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import BaseModel, utc_now
 
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .country import Country
+
+
 class ReportStatus(str, PyEnum):
     """报告状态枚举"""
     PENDING = "pending"  # 待生成

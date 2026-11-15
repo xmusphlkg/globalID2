@@ -11,3 +11,14 @@ test('situation surveillance context uses the current summary and never falls ba
   assert.equal(current.series['JP:D038'].value, 20); assert.equal(current.series['JP:D038'].date, '2026-11-01');
   assert.equal(current.series['JP:D038'].curveHref, '/countries/jp/diseases/influenza/');
 });
+
+test('published lower-level areas keep their own summary without creating a parent aggregate', () => {
+  const current = currentSurveillanceSite({ countries: {}, diseases: {}, series: {} }, { countries: [
+    { code: 'CN-BJ', name_en: 'Beijing', name_zh: '北京市', location_type: 'subdivision', source_info: { parent_country_code: 'CN' }, disease_count: 1 },
+  ] }, { D038: { reporting_countries: [{ code: 'CN-BJ', cases_tail: [2, 5], dates_tail: ['2026-09-01', '2026-10-01'] }] } });
+  assert.equal(current.countries['CN-BJ'].name_zh, '北京市');
+  assert.equal(current.countries['CN-BJ'].seriesCount, 1);
+  assert.equal(current.series['CN-BJ:D038'].value, 5);
+  assert.equal(current.countries.CN, undefined);
+  assert.equal(current.series['CN:D038'], undefined);
+});

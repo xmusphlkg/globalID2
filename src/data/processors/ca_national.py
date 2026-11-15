@@ -27,6 +27,7 @@ class CNDSSUpdateFetchResult:
     source_latest_date: Optional[date]
     source_csv: Path
     script_logs: List[str]
+    authoritative_window_start_year: int | None = None
 
 
 @dataclass(frozen=True)
@@ -121,6 +122,7 @@ class CanadaCNDSSAnnualUpdater:
     async def delete_authoritative_window(
         self, db: AsyncSession, *, start_year: int
     ) -> int:
+        """Legacy maintenance helper; live ingestion diffs validated windows in the store."""
         result = await db.execute(text(
             "DELETE FROM disease_series_observations obs "
             "USING disease_surveillance_series series "

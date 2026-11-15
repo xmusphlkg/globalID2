@@ -23,7 +23,7 @@ from src.generation.site_data_views import (
 from src.generation.site_series_projection import apply_series_first_projection
 
 
-@pytest.mark.parametrize("module_name", ["rows", "windows", "disease_merge", "runtime", "formats"])
+@pytest.mark.parametrize("module_name", ["rows", "windows", "disease_merge", "runtime", "formats", "partitions"])
 def test_projection_fingerprint_tracks_extracted_module_changes(tmp_path, monkeypatch, module_name):
     module = getattr(direct_download_files, module_name)
     copied_source = tmp_path / f"{module_name}.py"
@@ -208,6 +208,29 @@ def test_build_writes_three_formats_for_every_partition(tmp_path) -> None:
     xlsx_path = tmp_path / current["files"]["xlsx"]["relative_path"]
     workbook = load_workbook(xlsx_path, read_only=True)
     assert workbook.sheetnames == ["records", "metadata"]
+
+
+def test_country_partition_worker_spawn_matches_serial_bytes(tmp_path) -> None:
+    from concurrent.futures import ProcessPoolExecutor
+    import multiprocessing
+
+    country = _context()["country_exports"][0]
+    base = "https://raw.githubusercontent.com/example/data/main"
+    serial_root, spawned_root = tmp_path / "serial", tmp_path / "spawned"
+    serial = direct_download_files._build_country_parts_task(
+        country, serial_root, base, 100_000, {},
+    )
+    with ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context("spawn")) as pool:
+        spawned = pool.submit(
+            direct_download_files._build_country_parts_task,
+            country, spawned_root, base, 100_000, {},
+        ).result(timeout=30)
+
+    assert serial["parts"] == spawned["parts"]
+    assert serial["row_count"] == spawned["row_count"]
+    serial_files = {path.relative_to(serial_root): path.read_bytes() for path in serial["paths"]}
+    spawned_files = {path.relative_to(spawned_root): path.read_bytes() for path in spawned["paths"]}
+    assert serial_files == spawned_files
 
 
 def test_full_refresh_skips_unchanged_datasets_and_rebuilds_only_changed_scope(
@@ -524,6 +547,41 @@ def test_historical_partition_bytes_stay_stable_when_current_data_changes(tmp_pa
     for format_name in ("csv", "json", "xlsx"):
         path = tmp_path / historical_after["files"][format_name]["relative_path"]
         assert path.read_bytes() == before[format_name]
+
+
+def test_withdrawn_last_point_removes_download_partition_and_matches_full_rebuild(tmp_path) -> None:
+    base = "https://raw.githubusercontent.com/example/data/main"
+    output, complete = tmp_path / "incremental", tmp_path / "complete"
+    previous = build_direct_download_files(_context(), output, download_url_base=base, workers=1)
+    removed_paths = [
+        file["relative_path"] for kind in ("countries", "diseases")
+        for entry in previous[kind] for part in entry["parts"] if part["id"] == "2020-2025"
+        for file in part["files"].values()
+    ]
+    assert removed_paths
+    current = _context(["2010-01-01", "2015-01-01", "2026-01-01"])
+    incremental = build_direct_download_files(
+        current, output, download_url_base=base, workers=1,
+        changed_country_codes={"CN"}, changed_disease_ids={"D007"},
+    )
+    rebuilt = build_direct_download_files(current, complete, download_url_base=base, workers=1)
+    for relative in removed_paths:
+        assert not (output / relative).exists()
+    for kind in ("countries", "diseases"):
+        # Incremental disease inputs use the verified dependency receipt;
+        # a full build hashes the complete input object instead. Public
+        # content, partition metadata and emitted bytes must still agree.
+        assert [{k: v for k, v in entry.items() if k != "input_sha256"}
+                for entry in incremental[kind]] == [
+                    {k: v for k, v in entry.items() if k != "input_sha256"}
+                    for entry in rebuilt[kind]
+                ]
+        for entry in incremental[kind]:
+            assert "2020-2025" not in {part["id"] for part in entry["parts"]}
+            for part in entry["parts"]:
+                for file in part["files"].values():
+                    relative = file["relative_path"]
+                    assert (output / relative).read_bytes() == (complete / relative).read_bytes()
 
 
 def test_reused_partition_metadata_uses_the_current_download_base(tmp_path) -> None:

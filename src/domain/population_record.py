@@ -11,6 +11,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import BaseModel
 
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .country import Country
+
+
 class PopulationRecord(BaseModel):
     """国家或省级地区的年度人口及来源、参照日期。"""
 

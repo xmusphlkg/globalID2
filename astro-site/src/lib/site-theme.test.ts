@@ -3,12 +3,14 @@ import test from 'node:test';
 import { themeStylesheetHref } from './site-theme.ts';
 
 const entry = 'https://static.example.org/theme/compat/v1/theme.css';
-test('theme pilot covers localized home and country pages only and is opt-in', () => {
-  for (const page of ['/', '/zh/', '/fr/', '/countries/china/', '/zh/countries/china/', '/fr/countries/france/']) {
+test('theme covers localized home, country and comparison pages and is opt-in', () => {
+  for (const page of ['/', '/zh/', '/fr/', '/countries/china/', '/zh/countries/china/', '/fr/countries/france/',
+    '/compare/', '/zh/compare/', '/fr/compare/']) {
     assert.equal(themeStylesheetHref(page), null);
     assert.equal(themeStylesheetHref(page, entry), entry);
   }
-  for (const page of ['/research/', '/research/articles/a/', '/countries/', '/countries/china/reports/1/', '/diseases/flu/']) {
+  for (const page of ['/research/', '/research/articles/a/', '/countries/', '/countries/china/reports/1/', '/diseases/flu/',
+    '/compare/unrelated/', '/comparison/']) {
     assert.equal(themeStylesheetHref(page, entry), null);
   }
 });

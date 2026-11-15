@@ -572,7 +572,18 @@ class SituationSettings(_BaseEnvSettings):
     """Scheduled Situation refresh: collect reports, read them and write alerts to the database."""
 
     schedule_enabled: bool = Field(default=True, description="Run the Situation refresh on the scheduler")
-    interval_minutes: int = Field(default=180, ge=15, le=10080, description="Minutes between refreshes")
+    interval_minutes: int = Field(
+        default=30,
+        ge=15,
+        le=10080,
+        description="Minutes between samples of each situation source, matching surveillance ingestion",
+    )
+    sample_pool_size: int = Field(
+        default=2,
+        ge=1,
+        le=8,
+        description="Situation sampling tasks that may be queued or running together",
+    )
     catch_up_interval_minutes: int = Field(
         default=20, ge=5, le=240, description="Follow-up delay while reports are still waiting to be read"
     )

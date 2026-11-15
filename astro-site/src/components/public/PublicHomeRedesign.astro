@@ -24,16 +24,16 @@ const t = zh ? {
   sloganWords: ['比较趋势', '复用数据', '核对证据', '了解研究'],
   summary: '汇集官方监测数据、疫情动态和相关研究，方便你查找来源、比较趋势、下载数据。',
   searchLabel: '搜索 GIDS',
-  searchPlaceholder: '搜索国家、疾病、报告或研究',
+  searchPlaceholder: '搜索区域、疾病、报告或研究',
   search: '搜索',
   situation: '查看当前态势',
-  countries: '浏览国家与地区',
+  countries: '浏览地理区域',
   downloads: '下载数据',
   release: '公开数据概览',
   updated: '已发布',
   observations: '监测记录',
   reportedCases: '报告病例',
-  jurisdictions: '国家与地区',
+  jurisdictions: '地理区域',
   diseases: '收录疾病',
   sources: '官方来源',
   through: '数据截至',
@@ -50,16 +50,16 @@ const t = zh ? {
   fullReview: '打开态势地图',
   explore: '开始探索',
   exploreTitle: '按你的问题查找数据和研究',
-  exploreText: '选择国家或疾病，查看监测趋势、核对官方来源，再了解相关研究。',
+  exploreText: '选择区域或疾病，查看监测趋势、核对官方来源，再了解相关研究。',
   countryPath: '按地区看',
-  countryPathText: '查看国家和地区的监测范围、来源、疾病列表与时间跨度。',
+  countryPathText: '查看地理区域的监测范围、来源、疾病列表与时间跨度。',
   diseasePath: '按疾病看',
   diseasePathText: '从疾病目录进入跨地区记录，比较同一疾病在不同来源中的覆盖。',
   downloadPath: '下载与使用',
   downloadPathText: '获取可下载数据集，并在引用前查看字段说明和限制。',
   researchPath: '查阅相关研究',
   researchPathText: '按疾病、地区和主题查找文献，结合监测数据了解研究背景。',
-  countryList: '数据较丰富的国家与地区',
+  countryList: '数据较丰富的地理区域',
   common: '常用疾病入口',
   viewAll: '查看全部',
   analysis: '监测报告',
@@ -76,16 +76,16 @@ const t = zh ? {
   sloganWords: ['compare trends', 'reuse data', 'check evidence', 'act faster'],
   summary: 'Search official surveillance records, situation reviews, research context, and download-ready datasets from one public data workspace.',
   searchLabel: 'Search GIDS',
-  searchPlaceholder: 'Search a country, disease, report, or study',
+  searchPlaceholder: 'Search an area, disease, report, or study',
   search: 'Search',
   situation: 'View current situation',
-  countries: 'Browse countries',
+  countries: 'Browse areas',
   downloads: 'Download data',
   release: 'Current public release',
   updated: 'Snapshot generated',
   observations: 'Surveillance records',
   reportedCases: 'Reported cases',
-  jurisdictions: 'Countries and regions',
+  jurisdictions: 'Geographic areas',
   diseases: 'Diseases tracked',
   sources: 'Official sources',
   through: 'Data through',
@@ -102,9 +102,9 @@ const t = zh ? {
   fullReview: 'Open the situation map',
   explore: 'Start exploring',
   exploreTitle: 'Enter public health evidence like a data catalog',
-  exploreText: 'Start with a country, disease, or study, then follow the source, trend, and download links to check the evidence.',
+  exploreText: 'Start with an area, disease, or study, then follow the source, trend, and download links to check the evidence.',
   countryPath: 'Explore by place',
-  countryPathText: 'Review each country or region by surveillance scope, source, disease list, and time span.',
+  countryPathText: 'Review each area by surveillance scope, source, disease list, and time span.',
   diseasePath: 'Explore by disease',
   diseasePathText: 'Open the disease directory and compare coverage for the same condition across sources.',
   downloadPath: 'Reuse directly',
@@ -129,13 +129,13 @@ if (fr) Object.assign(t, {
   eyebrow: 'GIDS · surveillance à source officielle', titleLines: ['Repérer les signaux', 'Retracer les sources'],
   sloganPrefix: 'Puis', sloganWords: ['comparer les tendances', 'réutiliser les données', 'vérifier les preuves', 'agir plus vite'],
   summary: 'Recherchez les données officielles, les synthèses de situation, le contexte scientifique et les jeux de données téléchargeables depuis un même espace public.',
-  searchLabel: 'Rechercher dans GIDS', searchPlaceholder: 'Rechercher un pays, une maladie, un rapport ou une étude', search: 'Rechercher',
-  situation: 'Voir la situation actuelle', countries: 'Parcourir les pays', downloads: 'Télécharger les données', release: 'Publication publique actuelle',
-  observations: 'Séries de surveillance', reportedCases: 'Cas déclarés', jurisdictions: 'Pays et régions', diseases: 'Maladies suivies', sources: 'Sources officielles', through: 'Données jusqu’au',
+  searchLabel: 'Rechercher dans GIDS', searchPlaceholder: 'Rechercher une zone, une maladie, un rapport ou une étude', search: 'Rechercher',
+  situation: 'Voir la situation actuelle', countries: 'Parcourir les zones', downloads: 'Télécharger les données', release: 'Publication publique actuelle',
+  observations: 'Séries de surveillance', reportedCases: 'Cas déclarés', jurisdictions: 'Zones géographiques', diseases: 'Maladies suivies', sources: 'Sources officielles', through: 'Données jusqu’au',
   updated: 'Instantané généré', recentBoard: 'Périodes de déclaration les plus récentes', cadence: 'Fréquence de déclaration', sourceNote: 'La couverture, les définitions et les calendriers varient selon la source; une valeur manquante ne doit pas être interprétée comme zéro.',
   methods: 'Sources et méthodes', review: 'Synthèse de situation', attention: 'Points d’attention', reviewText: 'Les rapports officiels complets de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS sont lus et transformés en alertes « maladie en un lieu » sur une carte, publiées après relecture croisée par deux modèles.', events: 'Lieux avec des nouvelles', signals: 'Flambées actives', reviewed: 'Sources contributrices', fullReview: 'Ouvrir la carte de situation',
-  explore: 'Commencer l’exploration', exploreTitle: 'Accéder aux preuves de santé publique comme à un catalogue de données', exploreText: 'Choisissez un pays, une maladie ou une étude, puis suivez les liens vers les sources, les tendances et les téléchargements.',
-  countryPath: 'Explorer par lieu', countryPathText: 'Consultez la couverture, les sources, les maladies et la période de chaque pays ou région.', diseasePath: 'Explorer par maladie', diseasePathText: 'Comparez la couverture d’une même maladie entre les différentes sources.', downloadPath: 'Réutiliser directement', downloadPathText: 'Téléchargez les jeux de données publics et vérifiez les champs et limites avant citation.', researchPath: 'Relier la recherche', researchPathText: 'Interprétez les signaux de surveillance à la lumière des données publiées.', countryList: 'Pays les mieux couverts', common: 'Maladies courantes', viewAll: 'Tout voir', analysis: 'Analyses publiées', latest: 'Derniers rapports de surveillance', research: 'Parcourir les preuves', openReport: 'Ouvrir le rapport', unavailable: 'Indisponible', empty: 'Aucun rapport public disponible.', curveLabel: 'Grippe au Japon · grippe en Chine',
+  explore: 'Commencer l’exploration', exploreTitle: 'Accéder aux preuves de santé publique comme à un catalogue de données', exploreText: 'Choisissez une zone, une maladie ou une étude, puis suivez les liens vers les sources, les tendances et les téléchargements.',
+  countryPath: 'Explorer par lieu', countryPathText: 'Consultez la couverture, les sources, les maladies et la période de chaque zone.', diseasePath: 'Explorer par maladie', diseasePathText: 'Comparez la couverture d’une même maladie entre les différentes sources.', downloadPath: 'Réutiliser directement', downloadPathText: 'Téléchargez les jeux de données publics et vérifiez les champs et limites avant citation.', researchPath: 'Relier la recherche', researchPathText: 'Interprétez les signaux de surveillance à la lumière des données publiées.', countryList: 'Zones les mieux couvertes', common: 'Maladies courantes', viewAll: 'Tout voir', analysis: 'Analyses publiées', latest: 'Derniers rapports de surveillance', research: 'Parcourir les preuves', openReport: 'Ouvrir le rapport', unavailable: 'Indisponible', empty: 'Aucun rapport public disponible.', curveLabel: 'Grippe au Japon · grippe en Chine',
 });
 const latestReports = (reportsRaw as any[]).slice(0, 3);
 const preferredDiseases = ['covid-19', 'cholera', 'dengue', 'measles', 'malaria', 'tuberculosis', 'hepatitis-a', 'pertussis'];
@@ -174,7 +174,7 @@ const explorePaths = [
         </form>
         <div class="actions" aria-label={zh ? '主要入口' : 'Primary entry points'}>
           <a class="primary" href={href('/situation/')}>{t.situation}</a>
-          <a href={href('/compare/')}>{zh ? '对比国家与疾病' : fr ? 'Comparer les pays' : 'Compare trends'}</a>
+          <a href={href('/compare/')}>{zh ? '对比区域与疾病' : fr ? 'Comparer les zones' : 'Compare trends'}</a>
           <a href={href('/countries/')}>{t.countries}</a>
           <a href={href('/downloads/')}>{t.downloads}</a>
         </div>
@@ -221,7 +221,7 @@ const explorePaths = [
         <p>{t.exploreText}</p>
       </header>
       <a class="compare-feature" href={href('/compare/')}>
-        <span class="compare-feature-copy"><small>{zh ? '交互工具 / 01' : fr ? 'Outil interactif / 01' : 'Interactive tool / 01'}</small><strong>{zh ? '比较国家与疾病趋势' : fr ? 'Comparer les tendances par pays et maladie' : 'Compare country and disease trends'}</strong><span>{zh ? '选择最多两种疾病与四个国家，查看保留原始报告周期和定义的监测曲线。' : fr ? 'Sélectionnez jusqu’à deux maladies et quatre pays ; chaque courbe conserve sa période et sa définition.' : 'Select up to two diseases and four countries. Each series keeps its original reporting period and definition.'}</span></span>
+        <span class="compare-feature-copy"><small>{zh ? '交互工具 / 01' : fr ? 'Outil interactif / 01' : 'Interactive tool / 01'}</small><strong>{zh ? '比较区域与疾病趋势' : fr ? 'Comparer les tendances par zone et maladie' : 'Compare area and disease trends'}</strong><span>{zh ? '选择最多两种疾病与四个区域，查看保留原始报告周期和定义的监测曲线。' : fr ? 'Sélectionnez jusqu’à deux maladies et quatre zones ; chaque courbe conserve sa période et sa définition.' : 'Select up to two diseases and four areas. Each series keeps its original reporting period and definition.'}</span></span>
         <span class="compare-feature-arrow" aria-hidden="true">↗</span>
       </a>
       <div class="path-grid">

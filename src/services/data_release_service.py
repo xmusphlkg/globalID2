@@ -31,6 +31,8 @@ from src.domain.collection import PublishDirty
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
 from src.services.data_release.channel_control import is_automatic_json_paused
+from src.services.data_release.global_selection import selection_batches
+from src.services.data_release.planning import publishable_scope_keys
 from src.services.data_release.public_changelog import (
     missing_public_changelog_versions,
     public_changelog_blocker,
@@ -1143,17 +1145,17 @@ class DataReleaseService:
         if is_automatic_json_paused(other):
             return False
         async with get_database() as db:
-            waiting = list((await db.execute(select(PublishDirty).where(
-                PublishDirty.line == other, PublishDirty.published_at.is_(None)))).scalars())
-            if not waiting:
-                return False
+            available = set()
             if other == "surveillance":
                 known = list((await db.execute(select(Country.code, Country.is_active))).all())
                 available = {str(code).strip().upper() for code, active in known if active
                     and get_country_bootstrap_config(code).get("public_release_enabled", True) is not False}
-                from .data_release.planning import plan_changes
-                if not plan_changes(waiting, available, max_countries=1)["dirty_ids"]:
-                    return False
+            waiting = (await db.execute(select(select(PublishDirty.id).where(
+                PublishDirty.line == other, PublishDirty.published_at.is_(None),
+                PublishDirty.scope_key.in_(publishable_scope_keys(other, available)),
+            ).exists()))).scalar_one()
+            if not waiting:
+                return False
             latest = (await db.execute(select(Task).where(
                 Task.task_type == TaskType.EXPORT_DATA,
                 Task.input_data["data_only"].as_boolean().is_(True),
@@ -1282,7 +1284,8 @@ class DataReleaseService:
                 if data_line in {"situation", "literature"}:
                     # The Situation exporter attests one global snapshot. Keep
                     # malformed/legacy scopes visible for operator review.
-                    selection_query = selection_query.where(PublishDirty.scope_key == "*")
+                    selection_query = selection_query.where(
+                        PublishDirty.scope_key.in_(publishable_scope_keys(data_line)))
             else:
                 if content_only:
                     selection_query = selection_query.where(PublishDirty.line != "surveillance")
@@ -1290,9 +1293,16 @@ class DataReleaseService:
                     selection_query = selection_query.where(PublishDirty.line != "situation")
                 if literature_detached:
                     selection_query = selection_query.where(PublishDirty.line != "literature")
-            if pending_ids is not None:
-                selection_query = selection_query.where(PublishDirty.id.in_(pending_ids))
-            dirty = [] if reports_only or code_only or theme_only else list((await db.execute(selection_query.order_by(PublishDirty.id))).scalars().all())
+            dirty = []
+            if not (reports_only or code_only or theme_only):
+                if pending_ids is None:
+                    dirty = list((await db.execute(selection_query.order_by(PublishDirty.id))).scalars().all())
+                else:
+                    # Sorted disjoint batches preserve the planner's global
+                    # ordering and keep legacy parent groups together.
+                    for batch in selection_batches(pending_ids):
+                        dirty.extend((await db.execute(selection_query.where(
+                            PublishDirty.id.in_(batch)).order_by(PublishDirty.id))).scalars().all())
             if pending_ids is not None and not dirty and not full:
                 return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid, "reason": "no_pending_changes"}
             if full:
@@ -1442,9 +1452,11 @@ class DataReleaseService:
                     selected_ids = set(dirty_ids) | set(release_plan.get("continuation_dirty_ids", []))
                     if frozen_ids != selected_ids:
                         raise PublicationPlanError("publication_selection_changed")
-                    pending_now = set((await db.execute(select(PublishDirty.id).where(
-                        PublishDirty.id.in_(sorted(frozen_ids)), (PublishDirty.line == data_line) if data_only else True,
-                        PublishDirty.published_at.is_(None)).with_for_update())).scalars())
+                    pending_now = set()
+                    for batch in selection_batches(list(frozen_ids)):
+                        pending_now.update((await db.execute(select(PublishDirty.id).where(
+                            PublishDirty.id.in_(batch), (PublishDirty.line == data_line) if data_only else True,
+                            PublishDirty.published_at.is_(None)).order_by(PublishDirty.id).with_for_update())).scalars())
                     if pending_now != frozen_ids:
                         raise PublicationPlanError("publication_selection_changed")
             if pending_ids is not None and trigger_task_uuid:
@@ -1490,7 +1502,6 @@ class DataReleaseService:
                 # reservation. Another completed publisher may have consumed
                 # those exact IDs while this enqueue waited; never create a
                 # stale JSON candidate from that older selection.
-                from .data_release.global_selection import selection_batches
                 pending = set()
                 for batch in selection_batches(dirty_ids):
                     pending.update((await db.execute(select(PublishDirty.id).where(
@@ -1715,7 +1726,7 @@ class DataReleaseService:
 
             try:
                 await asyncio.to_thread(
-                    StageReceipts(ROOT_DIR, "preflight", {}, {}).assert_published_data,
+                    StageReceipts(ROOT_DIR, "preflight", {}, {}).published_data_paths,
                     [ASTRO_DIR / "src/data", ASTRO_DIR / "public/site-data"],
                 )
             except RuntimeError as exc:
@@ -1851,7 +1862,17 @@ class DataReleaseService:
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Persist and reuse one release identity across retries of the same task."""
 
-        generated = await self._site_release_identity(deployment_branch)
+        recovery = getattr(self, "_publication_recovery", None)
+        if recovery:
+            # A verified prepared candidate still belongs to its original
+            # source commit. Initializing from the live checkout would erase
+            # successful upload checkpoints before the pipeline restores this
+            # frozen identity, causing an unnecessary second Pages deployment.
+            generated = dict(recovery["release_identity"])
+            if generated.get("deployment_branch") != deployment_branch:
+                raise ValueError("publication_recovery_identity_mismatch")
+        else:
+            generated = await self._site_release_identity(deployment_branch)
         async with get_database() as db:
             task_obj = (
                 await db.execute(
@@ -1861,6 +1882,8 @@ class DataReleaseService:
             if task_obj is None:
                 return generated, {}
             metadata = dict(task_obj.metadata_ or {})
+            if recovery:
+                return generated, dict(metadata.get("release_checkpoints") or {})
             existing = dict(metadata.get("release_identity") or {})
             if (
                 existing.get("source_commit") == generated.get("source_commit")
@@ -2039,8 +2062,8 @@ class DataReleaseService:
             "commit_dirty": bool(await self._git_status_paths()),
         }
 
-    def _write_site_release_manifest(self, identity: dict[str, Any]) -> dict[str, Any]:
-        dist_dir = ASTRO_DIR / "dist"
+    def _write_site_release_manifest(self, identity: dict[str, Any], *, astro_dir: Path | None = None) -> dict[str, Any]:
+        dist_dir = (astro_dir or ASTRO_DIR) / "dist"
         if not dist_dir.is_dir():
             raise RuntimeError(f"Astro build output is missing: {dist_dir}")
 
@@ -2055,7 +2078,7 @@ class DataReleaseService:
             "visual_modules": visual_modules,
         }
         from src.generation.site_data_writer import _write_if_changed
-        _write_if_changed(SITE_RELEASE_MANIFEST, (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+        _write_if_changed(dist_dir / "release.json", (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
         return payload
 
     def _cloudflare_deploy_command(
@@ -2212,11 +2235,11 @@ class DataReleaseService:
             return False
         return True
 
-    def _split_papers_bundle_command(self, *, python_path: Path) -> list[str]:
+    def _split_papers_bundle_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:
         cfg = self._config()
         return build_split_papers_bundle_command(
             python_path=python_path,
-            dist_dir=ASTRO_DIR / "dist",
+            dist_dir=(astro_dir or ASTRO_DIR) / "dist",
             papers_dir=self._papers_site_dir(),
             main_origin=str(cfg.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
             papers_origin=str(
@@ -2227,18 +2250,22 @@ class DataReleaseService:
             research_on_main=bool(getattr(cfg, "literature_json_enabled", False)),
         )
 
-    def _publish_papers_r2_command(self, *, python_path: Path) -> list[str]:
-        return build_publish_papers_r2_command(
+    def _publish_papers_r2_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:
+        command = build_publish_papers_r2_command(
             python_path=python_path,
             source_dir=self._papers_site_dir(),
-            articles_dir=ASTRO_DIR / "src" / "data" / "research" / "articles",
+            articles_dir=(astro_dir or ASTRO_DIR) / "src" / "data" / "research" / "articles",
         )
+        if astro_dir is not None:
+            command.extend(["--site-dist", str(astro_dir / "dist"),
+                            "--research-source", str(astro_dir / "public/site-data/research")])
+        return command
 
-    def _split_reports_bundle_command(self, *, python_path: Path) -> list[str]:
+    def _split_reports_bundle_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:
         cfg = self._config()
         return build_split_reports_bundle_command(
             python_path=python_path,
-            dist_dir=ASTRO_DIR / "dist",
+            dist_dir=(astro_dir or ASTRO_DIR) / "dist",
             reports_dir=self._reports_site_dir(),
             main_origin=str(cfg.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
             reports_origin=str(cfg.r2_reports_public_base_url or DEFAULT_REPORTS_ORIGIN),
@@ -2493,6 +2520,7 @@ class DataReleaseService:
             release_identity=release_identity,
             latest_deployment=self._cloudflare_latest_deployment,
             fetch_public_json=self._public_json,
+            public_origin=self._config().main_site_origin,
         )
 
     async def _run_capture(

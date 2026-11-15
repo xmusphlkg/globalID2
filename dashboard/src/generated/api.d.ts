@@ -6304,6 +6304,11 @@ export interface components {
              * @enum {string}
              */
             kind: "auto" | "theme" | "content" | "full" | "template";
+            /**
+             * Suppress Subscription Dispatch
+             * @default false
+             */
+            suppress_subscription_dispatch: boolean;
         };
         /** PublicationPlanOut */
         PublicationPlanOut: {
@@ -6377,6 +6382,11 @@ export interface components {
             rollback_of?: string | null;
             /** Source Revision */
             source_revision: string | null;
+            /**
+             * Suppress Subscription Dispatch
+             * @default false
+             */
+            suppress_subscription_dispatch: boolean;
             /** Validation Scope */
             validation_scope: string[];
             /** Warnings */

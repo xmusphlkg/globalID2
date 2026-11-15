@@ -12,9 +12,13 @@ from src.generation.literature_publication import _atomic_write, freeze_literatu
 from .literature_publish import PREFIX, publish_literature_candidate
 from .papers_bundle import build_papers_manifest, is_obsolete_research_build_path
 from .papers_content import prepare_papers_content_from_manifest, verified_existing_objects
-from .papers_projection import assert_v3_candidate, load_projection_candidate, prepare_projection_candidate
+from .papers_projection import (
+    assert_v3_candidate, load_projection_candidate, prepare_projection_candidate,
+    verify_projected_publication,
+)
 from .papers_r2 import R2S3Client
 from .surveillance_publish import _starting_baseline
+from .site_research_collections import verify_collection_build
 
 
 def freeze_site_research(*, papers_dir: Path, site_dist: Path, research_source: Path,
@@ -75,8 +79,15 @@ def freeze_site_research(*, papers_dir: Path, site_dist: Path, research_source: 
                 raise ValueError('Research generation requires every locale landing page')
         manifest = build_papers_manifest(bundle, papers_origin=papers_origin)
         frozen_json = work / 'json'
-        freeze_literature_json(frozen_source, frozen_json, release_id=release_id,
+        frozen_manifest = freeze_literature_json(frozen_source, frozen_json, release_id=release_id,
                                generated_at=datetime.now(timezone.utc).isoformat(), logical_names=names)
+        collection_receipt = site_dist / 'research-collections-build.json'
+        if collection_receipt.exists():
+            split_manifest = papers_dir / 'papers-manifest.json'
+            rewritten = {item['path']: item for item in json.loads(split_manifest.read_bytes())['files']} if split_manifest.exists() else {}
+            verified = verify_collection_build(collection_receipt, bundle=bundle,
+                index_sha256=frozen_manifest['files']['index.json']['sha256'], rewritten=rewritten)
+            _atomic_write(run / 'research-collections-build.json', json.dumps(verified, separators=(',', ':')).encode())
         _atomic_write(work / 'papers-build-manifest.json', json.dumps(manifest, separators=(',', ':')).encode())
         # No public changes happen here; leftovers only belong to this run.
         for name in ('bundle', 'json'):
@@ -128,7 +139,7 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
                           articles_dir: Path | None = None,
                           template_dir: Path | None = None, inventory: dict | None = None,
                           workers: int = 32, client=None, prepare_only: bool = False,
-                          preserve_research_data: bool = False) -> dict:
+                          preserve_research_data: bool = False, projection_verifier=None) -> dict:
     captured, previous = _starting_baseline(run, config, PREFIX)
     if not captured:
         raise ValueError('Capture the research baseline before building the site')
@@ -155,8 +166,24 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
             raise ValueError('Invalid projection directory')
         if directory.exists():
             shutil.rmtree(directory)
-        candidate, _receipt = prepare_projection_candidate(base, articles=_article_documents(articles_dir, slugs),
-            directory=directory, release_id=release_id, migration=True)
+        if slugs:
+            candidate, _receipt = prepare_projection_candidate(base, articles=_article_documents(articles_dir, slugs),
+                directory=directory, release_id=release_id, migration=True)
+        else:
+            from .site_research_baseline import compose_site_candidate
+            verify_collection_build(run / 'research-collections-build.json', bundle=run / 'bundle',
+                index_sha256=json.loads((run / 'current.json').read_bytes())['files']['index.json']['sha256'])
+            prior = json.loads(previous) if previous else {}
+            if prior and json.loads((run / 'current.json').read_bytes())['files'] != prior.get('files'):
+                raise ValueError('Static research projections differ from the captured Papers v3 baseline')
+            active = client or R2S3Client(config)
+            try:
+                candidate = compose_site_candidate(run=run, static=base,
+                    previous=prior, client=active,
+                    release_id=release_id, directory=directory, workers=workers)
+            finally:
+                if client is None:
+                    active.close()
         assert_v3_candidate(candidate)
         _atomic_write(run / 'papers-prepared.json', json.dumps({
             'schema': 3, 'release_id': release_id, 'generation': candidate.generation,
@@ -171,6 +198,10 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
     try:
         result = publish_literature_candidate(run=run, objects_dir=run / 'json/objects', papers=candidate,
             config=config, receipt=receipt, client=active, workers=workers, known_staged_objects=known, build=None)
+        # A committed pointer alone does not prove that the Worker can render
+        # this v3 generation. Keep the frozen candidate recoverable on failure;
+        # only record completion after canonical canaries pass in every locale.
+        result['public_verification'] = (projection_verifier or verify_projected_publication)(candidate)
         _atomic_write(run / 'published.json', json.dumps(result, separators=(',', ':')).encode())
         return result
     finally:

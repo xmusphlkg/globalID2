@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { directoryFactsPath, directoryFactsVersion } from './directory-build-cache.mjs';
 import { writeBuildRedirects } from './build-redirects.mjs';
-import { astroAssetCacheRoot, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, summarizeBuildPlan, writePending } from './research-build-cache.mjs';
+import { astroAssetCacheRoot, incrementalBuildEnabled, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, summarizeBuildPlan, writePending } from './research-build-cache.mjs';
 import { pageSourceSnapshot, planSitePages, pagePlanPath, sitePageCacheRoot, writePagePending } from './page-build-cache.mjs';
 import { preparePublicBuildInputs } from './public-build-inputs.mjs';
 
@@ -81,7 +81,7 @@ const snapshot = independentResearch ? { schema: 1, shared: 'independent', artic
 const directoryStats = {};
 const pageSnapshot = pageSourceSnapshot({ directoryStats });
 process.stdout.write(`[directory-cache] ${JSON.stringify(directoryStats)}\n`);
-const incremental = Boolean(process.env.PUBLIC_GIDS_RELEASE_ID || process.env.GIDS_RESEARCH_INCREMENTAL === '1');
+const incremental = incrementalBuildEnabled();
 let pagePlan = planSitePages(pageSnapshot, incremental);
 let plan = independentResearch ? { mode: 'incremental', selected: [], reused: [], removed: [], reasons: {}, snapshot } : planResearchBuild({
   incremental,
@@ -105,7 +105,6 @@ writeFileSync(resolve(projectRoot, 'data/cache/site-build-plan-report.json'), JS
 
 const runAstro = (selectedPath, selectedPagePath) => {
   const started = performance.now();
-  const situationNavVisible = existsSync(resolve(import.meta.dirname, 'src/data/situation/international/map.json')) ? '1' : '0';
   const publicInputs = preparePublicBuildInputs({
     publicRoot: resolve(import.meta.dirname, '..', 'public'),
     stageRoot: resolve(projectRoot, 'data/cache/public-build-inputs', String(process.pid)),
@@ -117,7 +116,6 @@ const runAstro = (selectedPath, selectedPagePath) => {
     env: {
       ...process.env,
       GIDS_STATIC_RENDER: '1',
-      GIDS_SITUATION_NAV_VISIBLE: situationNavVisible,
       GIDS_SITE_DIRECTORY_FACTS: directoryFactsPath(),
       GIDS_SITE_DIRECTORY_VERSION: directoryFactsVersion(),
       PUBLIC_GA4_MEASUREMENT_ID: measurementId,

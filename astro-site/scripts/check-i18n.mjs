@@ -74,8 +74,8 @@ for (const release of changelogReleases) {
   }
 }
 
-// Data release builds this site from changelog.ts. CHANGELOG.md is not copied
-// into that file, so a newer Markdown release would otherwise ship a stale page.
+// The independent update publisher exports changelog.ts. CHANGELOG.md is not
+// copied into it; keep the engineering and multilingual public records aligned.
 // The CI fixture copies only astro-site, where this sibling file is absent.
 const changelogMarkdownPath = resolve(import.meta.dirname, '../../CHANGELOG.md');
 if (existsSync(changelogMarkdownPath)) {
@@ -111,11 +111,13 @@ const sourceChecks = [
   },
   {
     path: 'src/components/charts/ReportV4Panel.tsx',
+    related: ['src/components/charts/report-v4/presentation.ts'],
     required: ["Traduction française en attente.", "fr: 'Évaluation actuelle'", "'Cas sur la période'"],
     forbidden: ['return typeof value === \'string\' ? value : fallback;', 'const zh = record.zh;'],
   },
   {
     path: 'src/components/charts/DiseaseDetailView.tsx',
+    related: ['src/components/charts/disease-detail/ReportSection.tsx'],
     required: ["Traduction française en attente.", "fr: 'Points clés'", "'Cas cumulés'"],
     forbidden: ['value?.en || value?.zh'],
   },
@@ -126,7 +128,7 @@ const sourceChecks = [
   },
 ];
 for (const check of sourceChecks) {
-  const content = readFileSync(resolve(check.path), 'utf8');
+  const content = [check.path, ...(check.related ?? [])].map(path => readFileSync(resolve(path), 'utf8')).join('\n');
   for (const marker of check.required) {
     if (!content.includes(marker)) fail(`${check.path} is missing i18n marker: ${marker}`);
   }

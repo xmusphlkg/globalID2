@@ -29,11 +29,11 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
   const national = nationalRows(data);
   const subdivisions = subdivisionRows(data);
   const sourceCount = officialSourceCount(data);
-  if (mode === 'coverage-caption') return <p className="figure-caption">{number(national.length, language)} {pick('countries with data', '个国家有监测数据', 'pays avec des données')} · {pick('Data updated', '数据更新于', 'Données mises à jour')} {String(data.generated_at ?? '—').slice(0, 10)}</p>;
+  if (mode === 'coverage-caption') return <p className="figure-caption">{number(national.length, language)} {pick('areas with data', '个区域有监测数据', 'zones avec des données')} · {pick('Data updated', '数据更新于', 'Données mises à jour')} {String(data.generated_at ?? '—').slice(0, 10)}</p>;
   if (mode === 'global-coverage') {
     const starts = national.map((row: Summary) => row.date_range?.start).filter(Boolean).sort();
     const ends = national.map((row: Summary) => row.date_range?.end).filter(Boolean).sort();
-    return <p className="figure-caption" data-surveillance-version={version}>{pick('Coverage across national series', '国家级序列时间覆盖', 'Couverture des séries nationales')} {starts[0] ?? '—'} → {ends.at(-1) ?? '—'}</p>;
+    return <p className="figure-caption" data-surveillance-version={version}>{pick('Coverage across top-level area series', '上级区域序列时间覆盖', 'Couverture des séries des zones de niveau supérieur')} {starts[0] ?? '—'} → {ends.at(-1) ?? '—'}</p>;
   }
   if (mode === 'country-coverage') return <div className="academic-meta-grid xl:grid-cols-2">
     <div className="academic-meta-item"><div className="academic-meta-label">{pick('Coverage window', '覆盖区间', 'Période couverte')}</div><div className="academic-meta-value text-sm">{coverage(data)}</div></div>
@@ -47,8 +47,8 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
       [pick('Diseases tracked', '追踪疾病数', 'Maladies suivies'), data.disease_count],
       ...(reportCount !== undefined ? [[pick('Published reports', '已发布报告', 'Rapports publiés'), reportCount]] : []),
     ] : [
-      [pick('National jurisdictions', '国家级辖区', 'Juridictions nationales'), national.length],
-      [pick('Subnational datasets', '省级／地区数据集', 'Jeux infranationaux'), subdivisions.length],
+      [pick('Top-level areas', '上级区域', 'Zones de niveau supérieur'), national.length],
+      [pick('Subdivision datasets', '下级行政单位数据集', 'Jeux de données des subdivisions'), subdivisions.length],
       [pick('Diseases tracked', '追踪疾病数', 'Maladies suivies'), data.total_diseases ?? data.disease_count],
       [pick('Official sources', '官方来源', 'Sources officielles'), sourceCount],
       ...(reportCount !== undefined ? [[pick('Published reports', '已发布报告', 'Rapports publiés'), reportCount]] : []),
@@ -57,7 +57,7 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
       <dl className="site-stat-grid grid grid-cols-2 sm:grid-cols-4 gap-px border">
         {values.map(([name, value]) => <div className="site-stat-item px-4 py-5 text-center" key={String(name)}><dt className="academic-kicker mb-2">{name}</dt><dd className="font-semibold tabular-nums">{number(value, language)}</dd></div>)}
       </dl>{revision}
-      {mode !== 'country-indicators' && <p className="figure-caption mt-2">{pick('National and subnational coverage are counted separately.', '国家级与省级／地区覆盖分别统计，地区数据不叠加到全国总量。', 'Les couvertures nationale et infranationale sont comptées séparément, sans additionner leurs totaux.')}</p>}
+      {mode !== 'country-indicators' && <p className="figure-caption mt-2">{pick('Top-level areas and subdivisions are counted separately; their totals are not added together.', '上级区域与下级行政单位分别统计，子级数据不叠加到上级总量。', 'Les zones de niveau supérieur et leurs subdivisions sont comptées séparément, sans additionner leurs totaux.')}</p>}
     </div>;
   }
   if (mode === 'country-diseases') return <div><ul className="mt-4 flex flex-wrap gap-2">

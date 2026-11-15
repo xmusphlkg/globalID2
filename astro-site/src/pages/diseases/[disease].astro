@@ -197,9 +197,9 @@ const diseaseMetaDescriptionEn = buildDiseaseMetaDescription({
 
 });
 const diseaseMetaDescription = zh
-  ? `${diseaseNameZh}多国监测序列，包含最新各国趋势、来源与下载。`
+  ? `${diseaseNameZh}跨区域监测序列，包含最新各区域趋势、来源与下载。`
   : fr
-    ? `Séries de surveillance de ${diseaseNameFr} par pays, avec tendances, sources et téléchargements.`
+    ? `Séries de surveillance de ${diseaseNameFr} par zone, avec tendances, sources et téléchargements.`
     : diseaseMetaDescriptionEn;
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
 const diseasePageUrl = new URL(Astro.url.pathname, siteOrigin).toString();
@@ -211,7 +211,7 @@ const diseaseSourceUrls = [
 const diseaseDatasetStructuredData = buildDatasetStructuredData({
   id: `${diseasePageUrl}#dataset`,
   url: diseasePageUrl,
-  name: zh ? `${diseaseNameZh}各国监测序列数据集` : fr ? `Jeu de données de surveillance par pays de ${diseaseNameFr}` : `${diseaseNameEn} country surveillance series dataset`,
+  name: zh ? `${diseaseNameZh}各区域监测序列数据集` : fr ? `Jeu de données de surveillance par zone de ${diseaseNameFr}` : `${diseaseNameEn} area surveillance series dataset`,
   description: diseaseMetaDescription,
   siteOrigin,
   start: coverageStart,
@@ -324,7 +324,7 @@ const diseaseSeo = {
                   {zh ? '关注此疾病' : fr ? 'Suivre cette maladie' : 'Follow this disease'}
                 </a>
                 <a href={localeHref(`/compare/?d=${encodeURIComponent(diseaseId)}`)} class="site-action-secondary mt-4 ml-2 inline-flex items-center px-4 py-2 rounded-none border text-sm font-semibold transition-all">
-                  {zh ? '比较国家趋势' : fr ? 'Comparer les pays' : 'Compare countries'}
+                  {zh ? '比较区域趋势' : fr ? 'Comparer les zones' : 'Compare areas'}
                 </a>
               </div>
 
@@ -474,7 +474,7 @@ const diseaseSeo = {
         </section>
 
         <PageAnchorNav locale={locale} items={[
-          { href: '#main-trend', label: 'Country trends', labelZh: '国家趋势', labelFr: 'Tendances nationales' },
+          { href: '#main-trend', label: 'Area trends', labelZh: '区域趋势', labelFr: 'Tendances nationales' },
           { href: '#coverage', label: 'Coverage', labelZh: '覆盖范围', labelFr: 'Couverture' },
           { href: '#seasonality', label: 'Seasonality', labelZh: '季节性', labelFr: 'Saisonnalité' },
           { href: '#research', label: 'Research', labelZh: '研究证据', labelFr: 'Recherche' },
@@ -483,8 +483,8 @@ const diseaseSeo = {
         ]} />
 
         <section id="main-trend" class="figure-panel scroll-mt-24">
-            <p class="figure-kicker">{zh ? '国家监测趋势' : fr ? 'Tendances nationales' : 'Country surveillance trends'}</p>
-            <p class="figure-caption mt-2">{zh ? '选择国家、来源和指标；每条曲线保留原始报告周期与定义。' : fr ? 'Choisissez le pays, la source et la mesure ; chaque courbe conserve sa période et sa définition de déclaration.' : 'Choose a country, source, and measure. Each line retains its published reporting period and definition.'}</p>
+            <p class="figure-kicker">{zh ? '区域监测趋势' : fr ? 'Tendances nationales' : 'Area surveillance trends'}</p>
+            <p class="figure-caption mt-2">{zh ? '选择区域、来源和指标；每条曲线保留原始报告周期与定义。' : fr ? 'Choisissez la zone, la source et la mesure ; chaque courbe conserve sa période et sa définition de déclaration.' : 'Choose an area, source, and measure. Each line retains its published reporting period and definition.'}</p>
             <div class="mt-4"><DiseaseCountryCurve client:load dataUrl={diseaseDataUrl} initialLanguage={locale} initialSelectionIds={preferredCountry ? [preferredCountry] : undefined} /></div>
         </section>
 
@@ -493,7 +493,7 @@ const diseaseSeo = {
               <div>
                 <p class="figure-kicker">{zh ? '数据覆盖' : fr ? 'Couverture des données' : 'Coverage'}</p>
                 <h2 class="figure-title">
-                  {zh ? '报告国家和地区' : fr ? 'Pays et régions déclarants' : 'Reporting countries and regions'}
+                  {zh ? '报告地理区域' : fr ? 'Zones géographiques déclarants' : 'Reporting areas and regions'}
                 </h2>
                 <p class="figure-caption">{zh ? '地图显示报告覆盖范围；选择指标可查看来源报告总量，点击着色地区进入该地区页面。' : fr ? 'La carte montre la couverture déclarée. Choisissez une mesure ou ouvrez un lieu coloré pour consulter ses données.' : 'The map shows reporting coverage. Select a measure or open a shaded location to inspect its data.'}</p>
               </div>
@@ -509,8 +509,8 @@ const diseaseSeo = {
 
         <section id="seasonality" class="figure-panel scroll-mt-24">
             <p class="figure-kicker">{zh ? '监测模式' : fr ? 'Profil de surveillance' : 'Surveillance pattern'}</p>
-            <h2 class="figure-title">{zh ? '所选国家的年 × 月季节分布' : fr ? 'Saisonnalité du pays sélectionné' : 'Year × month seasonality by country'}</h2>
-            <p class="figure-caption">{zh ? '逐年查看同一国家的月度报告值。颜色深浅表示该序列中的相对高低，空白表示来源未提供数值。' : fr ? 'Consultez les valeurs mensuelles d’un pays par année. Les cases vides indiquent une valeur non publiée.' : 'Review one country’s published monthly values by year. Empty cells indicate values the source did not publish.'}</p>
+            <h2 class="figure-title">{zh ? '所选区域的年 × 月季节分布' : fr ? 'Saisonnalité de la zone sélectionné' : 'Year × month seasonality by area'}</h2>
+            <p class="figure-caption">{zh ? '逐年查看同一区域的月度报告值。颜色深浅表示该序列中的相对高低，空白表示来源未提供数值。' : fr ? 'Consultez les valeurs mensuelles d’une zone par année. Les cases vides indiquent une valeur non publiée.' : 'Review one area’s published monthly values by year. Empty cells indicate values the source did not publish.'}</p>
             <div class="mt-5"><CountrySeasonalityPicker client:visible dataUrl={diseaseDataUrl} language={locale} initialCountry={preferredCountry} /></div>
         </section>
 

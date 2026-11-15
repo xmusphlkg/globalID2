@@ -2,6 +2,9 @@ import GIDSLoader from '../GIDSLoader';
 import { useEffect, useMemo, useState } from 'react';
 import { loadDiseaseDataset, type DiseaseDatasetSeriesEntry, type DiseaseDatasetMonthlyData } from './diseaseDataset';
 import DiseaseSeasonalityHeatmap from './DiseaseSeasonalityHeatmap';
+import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
+import { countryLabel } from '../../lib/surveillance-presentation';
+import { isSubdivision } from '../../lib/surveillance-coverage';
 
 type Language = 'en' | 'zh' | 'fr';
 function monthlySeries(entry: DiseaseDatasetSeriesEntry): DiseaseDatasetMonthlyData | null {
@@ -17,6 +20,8 @@ function monthlySeries(entry: DiseaseDatasetSeriesEntry): DiseaseDatasetMonthlyD
 }
 
 export default function CountrySeasonalityPicker({ dataUrl, language = 'en', initialCountry }: { dataUrl: string; language?: Language; initialCountry?: string }) {
+  const publication = useSurveillanceSummary('/site-data/meta.json');
+  const geography = useMemo(() => new Map<string, Record<string, any>>((publication.data?.countries ?? []).map((row: Record<string, any>) => [row.code, row])), [publication.data]);
   const [series, setSeries] = useState<Record<string, DiseaseDatasetSeriesEntry>>({});
   const [country, setCountry] = useState(initialCountry ?? '');
   const [loading, setLoading] = useState(true);
@@ -25,10 +30,12 @@ export default function CountrySeasonalityPicker({ dataUrl, language = 'en', ini
     loadDiseaseDataset(dataUrl).then(data => { if (!cancelled) { setSeries(data.country_series ?? {}); setLoading(false); } }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [dataUrl]);
-  const options = useMemo(() => Object.entries(series).filter(([code, entry]) => /^[A-Z]{2}$/.test(code) && monthlySeries(entry)).sort((a, b) => a[1].name_en.localeCompare(b[1].name_en)), [series]);
-  const active = options.some(([code]) => code === country) ? country : options[0]?.[0];
+  const options = useMemo(() => Object.entries(series).filter(([, entry]) => monthlySeries(entry))
+    .map(([code]) => ({ code, name: countryLabel(geography.get(code) ?? { code }, language), subdivision: isSubdivision(geography.get(code) ?? { code }) }))
+    .sort((a, b) => Number(a.subdivision) - Number(b.subdivision) || a.name.localeCompare(b.name, language)), [series, geography, language]);
+  const active = options.some(option => option.code === country) ? country : options[0]?.code;
   const data = active ? monthlySeries(series[active]) : null;
   if (loading) return <div className="chart-loading-panel" style={{ height: 260 }}><GIDSLoader language={language} /></div>;
-  if (!data) return <p className="disease-trend-empty">{language === 'zh' ? '暂无可用的国家级月度序列。' : language === 'fr' ? 'Aucune série mensuelle nationale disponible.' : 'No national monthly series is available.'}</p>;
-  return <div><div className="disease-seasonality-toolbar"><label className="disease-seasonality-select">{language === 'zh' ? '报告国家/地区' : language === 'fr' ? 'Pays déclarant' : 'Reporting country'} <select value={active} onChange={event => setCountry(event.target.value)}>{options.map(([code, entry]) => <option key={code} value={code}>{language === 'zh' ? entry.name_zh : language === 'fr' ? entry.name_fr : entry.name_en} ({code})</option>)}</select></label><span>{data.months[0]} — {data.months[data.months.length - 1]}</span></div><DiseaseSeasonalityHeatmap key={active} data={data} dataUrl={`/site-data/countries/${active.toLowerCase()}.json`} language={language} filename={`gids-${active.toLowerCase()}-seasonality`} /></div>;
+  if (!data) return <p className="disease-trend-empty">{language === 'zh' ? '暂无可用的区域月度序列。' : language === 'fr' ? 'Aucune série mensuelle disponible pour les zones géographiques.' : 'No monthly series for geographic areas is available.'}</p>;
+  return <div><div className="disease-seasonality-toolbar"><label className="disease-seasonality-select">{language === 'zh' ? '报告区域' : language === 'fr' ? 'Zone déclarante' : 'Reporting area'} <select value={active} onChange={event => setCountry(event.target.value)}>{[false, true].map(subdivision => <optgroup key={String(subdivision)} label={subdivision ? language === 'zh' ? '下一级行政单位' : language === 'fr' ? 'Unités administratives de niveau inférieur' : 'Lower-level administrative units' : language === 'zh' ? '上级区域' : language === 'fr' ? 'Zones de niveau supérieur' : 'Top-level areas'}>{options.filter(option => option.subdivision === subdivision).map(option => <option key={option.code} value={option.code}>{option.name} ({option.code})</option>)}</optgroup>)}</select></label><span>{data.months[0]} — {data.months[data.months.length - 1]}</span></div><DiseaseSeasonalityHeatmap key={active} data={data} dataUrl={`/site-data/countries/${active.toLowerCase()}.json`} language={language} filename={`gids-${active.toLowerCase()}-seasonality`} /></div>;
 }

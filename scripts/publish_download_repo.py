@@ -6,15 +6,12 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
-import json
 import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from collections import Counter
-from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +21,10 @@ from src.core.data_share import (  # noqa: E402
     get_data_share_repo_branch,
     get_data_share_repo_url,
 )
+
+from src.services.data_release.git_downloads import assets as _assets  # noqa: E402
+from src.services.data_release.git_downloads import receipts as _receipts  # noqa: E402
+from src.services.data_release.git_downloads import transport as _transport  # noqa: E402
 
 DEFAULT_SOURCE_DIR = ROOT / "exports" / "site-downloads"
 DEFAULT_WORKDIR = DEFAULT_SOURCE_DIR
@@ -75,34 +76,11 @@ def summarize_git_status(status: str, *, max_paths: int = 8) -> str:
 
 
 def files_match(source_path: Path, target_path: Path) -> bool:
-    """Compare file contents without relying on filecmp's stat-based cache."""
-
-    if source_path.stat().st_size != target_path.stat().st_size:
-        return False
-    with source_path.open("rb") as source_file, target_path.open("rb") as target_file:
-        while source_chunk := source_file.read(1024 * 1024):
-            if source_chunk != target_file.read(len(source_chunk)):
-                return False
-        return not target_file.read(1)
+    return _assets.files_match(source_path, target_path)
 
 
 def run_git(args: list[str], cwd: Path) -> str:
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        text=True,
-        capture_output=True,
-    )
-    if completed.returncode != 0:
-        output = "\n".join(
-            part.strip() for part in (completed.stdout, completed.stderr) if part.strip()
-        )
-        command = "git " + " ".join(args)
-        raise RuntimeError(
-            f"Git command failed with exit code {completed.returncode}: {command}"
-            + (f"\n{output}" if output else "\nGit returned no diagnostic output.")
-        )
-    return completed.stdout.strip()
+    return _transport.run_git(args, cwd)
 
 
 def _is_github_ssh_repo(repo_url: str) -> bool:
@@ -135,32 +113,11 @@ def _is_transient_git_error(exc: RuntimeError) -> bool:
     return any(marker in detail for marker in TRANSIENT_GIT_ERROR_MARKERS)
 
 
-def run_git_with_retry(
-    args: list[str],
-    cwd: Path,
-    *,
-    attempts: int = NETWORK_ATTEMPTS,
-    retry_delay_seconds: float = NETWORK_RETRY_DELAY_SECONDS,
-) -> str:
-    """Retry a Git network operation only for transient transport failures."""
-
-    if attempts < 1:
-        raise ValueError("Git attempts must be at least 1")
-    for attempt in range(1, attempts + 1):
-        try:
-            return run_git(args, cwd)
-        except RuntimeError as exc:
-            if attempt == attempts or not _is_transient_git_error(exc):
-                raise
-            delay = retry_delay_seconds * (2 ** (attempt - 1))
-            print(
-                f"Git network attempt {attempt}/{attempts} failed with a "
-                f"transient error; retrying in {delay:g} seconds.\n{exc}",
-                file=sys.stderr,
-                flush=True,
-            )
-            time.sleep(delay)
-    raise AssertionError("unreachable Git retry state")
+def run_git_with_retry(args: list[str], cwd: Path, *, attempts: int = NETWORK_ATTEMPTS,
+                       retry_delay_seconds: float = NETWORK_RETRY_DELAY_SECONDS) -> str:
+    return _transport.run_git_with_retry(args, cwd, run_git=run_git,
+        is_transient_error=_is_transient_git_error, sleep=time.sleep,
+        attempts=attempts, retry_delay_seconds=retry_delay_seconds)
 
 
 def push_branch(
@@ -190,208 +147,17 @@ def remote_branch_exists(repo_url: str, branch: str) -> bool:
 
 
 def push_download_snapshot(workdir: Path, branch: str, *, batch_bytes: int = PUSH_BATCH_BYTES) -> None:
-    """Preload bounded batches on a resumable ref, then atomically publish HEAD.
-
-    GitHub limits each received pack to 2 GiB. A temporary branch makes each
-    batch's objects available to the next push without exposing partial data
-    on the public branch. Its name is content-addressed so a restarted export
-    with the same tree can resume even if its commit timestamp changed.
-    """
-    if batch_bytes < 1:
-        raise ValueError("Push batch size must be positive")
-    target = run_git(["rev-parse", "HEAD"], workdir)
-    tree = run_git(["rev-parse", "HEAD^{tree}"], workdir)
-    branch_key = hashlib.sha256(branch.encode()).hexdigest()[:12]
-    staging = f"globalid-upload/{branch_key}-{tree}"
-    remote = run_git_with_retry(["ls-remote", "--heads", "origin", branch, staging], workdir)
-    refs = {line.split()[1]: line.split()[0] for line in remote.splitlines()}
-    remote_head = refs.get(f"refs/heads/{branch}")
-    base = refs.get(f"refs/heads/{staging}") or remote_head
-    staged = f"refs/heads/{staging}" in refs
-    if base:
-        run_git_with_retry(["fetch", "origin", base], workdir)
-    if staged and remote_head and remote_head != base:
-        run_git_with_retry(["fetch", "origin", remote_head], workdir)
-        if subprocess.run(
-            ["git", "merge-base", "--is-ancestor", remote_head, base], cwd=workdir,
-            capture_output=True,
-        ).returncode != 0:
-            raise RuntimeError("Public download branch advanced during staged upload")
-    if remote_head and subprocess.run(
-        ["git", "merge-base", "--is-ancestor", remote_head, target],
-        cwd=workdir, capture_output=True,
-    ).returncode != 0:
-        # In particular, do not build a staging history on a concurrent remote
-        # commit and then silently replace its files with our older snapshot.
-        raise RuntimeError("Download publication is non-fast-forward: remote branch advanced; reconcile the local export repository")
-    # A new repository needs an empty tree as the comparison/index base.
-    empty_tree = subprocess.run(
-        ["git", "hash-object", "-t", "tree", "--stdin", "-w"], cwd=workdir,
-        input="", text=True, capture_output=True, check=True,
-    ).stdout.strip()
-    raw = run_git(["diff", "--raw", "-z", "--no-abbrev", "--no-renames", base or empty_tree, target], workdir)
-    fields = raw.split("\0")
-    changes: list[tuple[str, str, str]] = []
-    for offset in range(0, len(fields) - 1, 2):
-        meta, path = fields[offset].split(), fields[offset + 1]
-        if meta[1] != "000000":  # Deletions need no uploaded blob.
-            changes.append((meta[1], meta[3], path))
-    sizes: dict[str, int] = {}
-    if changes:
-        checked = subprocess.run(
-            ["git", "cat-file", "--batch-check=%(objectname) %(objectsize)"], cwd=workdir,
-            input="".join(f"{oid}\n" for _, oid, _ in changes),
-            text=True, capture_output=True, check=True,
-        )
-        sizes = {oid: int(size) for oid, size in (line.split() for line in checked.stdout.splitlines())}
-    if any(sizes[oid] > batch_bytes for _, oid, _ in changes):
-        raise RuntimeError("A download blob exceeds the push batch limit")
-    if sum(sizes[oid] for _, oid, _ in changes) > batch_bytes:
-        with tempfile.TemporaryDirectory(prefix="globalid-upload-index-") as directory:
-            env = {**os.environ, "GIT_INDEX_FILE": str(Path(directory) / "index")}
-
-            def index_git(args: list[str], payload: str | None = None) -> str:
-                return subprocess.run(
-                    ["git", *args], cwd=workdir, env=env, input=payload,
-                    text=True, capture_output=True, check=True,
-                ).stdout.strip()
-
-            index_git(["read-tree", base or empty_tree])
-            batches: list[list[tuple[str, str, str]]] = []
-            current: list[tuple[str, str, str]] = []
-            current_bytes = 0
-            for change in changes:
-                size = sizes[change[1]]
-                if current and current_bytes + size > batch_bytes:
-                    batches.append(current)
-                    current, current_bytes = [], 0
-                current.append(change)
-                current_bytes += size
-            if current:
-                batches.append(current)
-            for number, batch in enumerate(batches, 1):
-                index_git(["update-index", "-z", "--index-info"], "".join(
-                    f"{mode} {oid}\t{path}\0" for mode, oid, path in batch
-                ))
-                staged_tree = index_git(["write-tree"])
-                commit_args = ["commit-tree", staged_tree, "-m", "Stage bounded download objects"]
-                if base:
-                    commit_args.extend(["-p", base])
-                staged_commit = run_git(commit_args, workdir)
-                print(f"Upload download batch {number}/{len(batches)} ({sum(sizes[oid] for _, oid, _ in batch)} bytes)", flush=True)
-                # Large generated partitions are already compressed as Git
-                # objects. Avoid expensive delta searches for these bounded
-                # backfill batches; ordinary small releases retain Git defaults.
-                run_git_with_retry(
-                    ["-c", "pack.window=0", "push", "origin", f"{staged_commit}:refs/heads/{staging}"],
-                    workdir,
-                )
-                base = staged_commit
-                staged = True
-    if staged:
-        # Git's push negotiation is scoped to the destination ref; merely
-        # uploading blobs to an unrelated ref does not keep the final pack
-        # small. Make the completed snapshot a child of the staging history,
-        # so the final fast-forward contains only the remaining bounded blobs.
-        message = run_git(["log", "-1", "--format=%B", target], workdir)
-        final = run_git(["commit-tree", tree, "-p", base, "-m", message], workdir)
-        run_git(["update-ref", f"refs/heads/{branch}", final, target], workdir)
-    # This remains a normal fast-forward push: concurrent releases cannot be overwritten.
-    push_branch(workdir, branch)
-    if staged:
-        try:
-            run_git_with_retry(["push", "origin", "--delete", staging], workdir)
-        except RuntimeError as exc:
-            print(f"Published successfully; staging ref cleanup deferred: {exc}", file=sys.stderr, flush=True)
+    _transport.push_download_snapshot(workdir, branch, batch_bytes=batch_bytes,
+        run_git=run_git, run_git_with_retry=run_git_with_retry, push_branch=push_branch)
 
 
 def _asset_relative_path(relative_path: str) -> Path:
-    """Return a safe, managed download asset path from manifest metadata."""
-
-    candidate = Path(relative_path)
-    if (
-        not relative_path
-        or candidate.is_absolute()
-        or ".." in candidate.parts
-        or not candidate.parts
-        or candidate.parts[0] not in ASSET_DIRECTORIES
-    ):
-        raise RuntimeError(f"Unsafe manifest asset path: {relative_path!r}")
-    return candidate
+    return _assets._asset_relative_path(relative_path, asset_directories=ASSET_DIRECTORIES)
 
 
 def validate_source(source_dir: Path, branch: str) -> dict:
-    manifest_path = source_dir / "manifest.json"
-    if not manifest_path.exists():
-        raise FileNotFoundError(
-            f"Missing generated manifest: {manifest_path}. "
-            "Run scripts/generate_site_data.py first."
-        )
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("schema_version") != 4:
-        raise RuntimeError("Download manifest must use partition schema version 4")
-    if manifest.get("formats") != ["csv", "json", "xlsx"]:
-        raise RuntimeError("Download manifest must advertise CSV, JSON and XLSX")
-    base = str(manifest.get("download_url_base") or "")
-    if not base.startswith("https://raw.githubusercontent.com/") or not base.endswith(
-        f"/{branch}"
-    ):
-        raise RuntimeError(
-            f"Manifest Raw base must target branch {branch!r}; got {base!r}"
-        )
-    entries = list(manifest.get("countries") or []) + list(
-        manifest.get("diseases") or []
-    )
-    if not entries:
-        raise RuntimeError("Refusing to publish an empty download manifest")
-    declared_paths: set[Path] = set()
-    for entry in entries:
-        for part in entry.get("parts") or []:
-            files = part.get("files") or {}
-            for format_name in ("csv", "json", "xlsx"):
-                file_meta = files.get(format_name) or {}
-                relative = str(file_meta.get("relative_path") or "")
-                public_url = str(file_meta.get("url") or "")
-                asset_path = _asset_relative_path(relative)
-                if asset_path in declared_paths:
-                    raise RuntimeError(f"Manifest declares the same asset twice: {relative}")
-                declared_paths.add(asset_path)
-                file_path = source_dir / asset_path
-                if not file_path.is_file():
-                    raise FileNotFoundError(
-                        f"Missing {format_name.upper()} asset for "
-                        f"{entry.get('id')}/{part.get('id')}: {file_path}"
-                    )
-                if public_url != f"{base}/{asset_path.as_posix()}":
-                    raise RuntimeError(
-                        f"Public URL does not match generated file: {public_url!r}"
-                    )
-                size = file_path.stat().st_size
-                if size != int(file_meta.get("bytes") or -1):
-                    raise RuntimeError(f"Manifest size mismatch: {file_path}")
-                if size >= GITHUB_MAX_FILE_BYTES:
-                    raise RuntimeError(
-                        f"GitHub rejects files of 100 MiB or more: {file_path} ({size} bytes)"
-                    )
-                digest = str(file_meta.get("sha256") or "")
-                if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest.lower()):
-                    raise RuntimeError(f"Manifest has an invalid SHA-256: {file_path}")
-
-    actual_paths = {
-        path.relative_to(source_dir)
-        for directory in ASSET_DIRECTORIES
-        for path in (source_dir / directory).rglob("*")
-        if path.is_file()
-    }
-    unexpected_paths = sorted(actual_paths - declared_paths)
-    if unexpected_paths:
-        displayed = ", ".join(path.as_posix() for path in unexpected_paths[:10])
-        suffix = "" if len(unexpected_paths) <= 10 else f" (+{len(unexpected_paths) - 10} more)"
-        raise RuntimeError(
-            "Generated download assets are not declared by manifest.json: "
-            f"{displayed}{suffix}"
-        )
-    return manifest
+    return _assets.validate_source(source_dir, branch, parse_asset_path=_asset_relative_path,
+        asset_directories=ASSET_DIRECTORIES, max_file_bytes=GITHUB_MAX_FILE_BYTES)
 
 
 def ensure_repo(repo_url: str, branch: str, workdir: Path) -> None:
@@ -465,44 +231,16 @@ def prepare_export_repo(repo_url: str, branch: str, workdir: Path) -> None:
 
 
 def _receipt_path(workdir: Path) -> Path:
-    return Path(run_git(["rev-parse", "--absolute-git-dir"], workdir)) / "download-publication.json"
+    return _receipts._receipt_path(workdir, run_git=run_git)
 
 
 def publication_is_verified(workdir: Path, repo_url: str, branch: str) -> bool:
-    try:
-        receipt = json.loads(_receipt_path(workdir).read_text())
-        return (
-            isinstance(receipt, dict)
-            and receipt.get("schema") == 1
-            and receipt.get("repo_url") == repo_url
-            and receipt.get("branch") == branch
-            and receipt.get("commit") == run_git(["rev-parse", "HEAD"], workdir)
-            and not run_git(["status", "--porcelain", "--untracked-files=all"], workdir)
-        )
-    except (OSError, ValueError, RuntimeError):
-        return False
+    return _receipts.publication_is_verified(workdir, repo_url, branch,
+        run_git=run_git, receipt_path=_receipt_path)
 
 
 def record_publication(workdir: Path, repo_url: str, branch: str, commit: str) -> None:
-    """Advance the durable receipt only after push and remote verification."""
-    path = _receipt_path(workdir)
-    temporary = path.with_suffix(".tmp")
-    receipt = {
-        "schema": 1, "repo_url": repo_url, "branch": branch,
-        "commit": commit, "verified_at": datetime.now(timezone.utc).isoformat(),
-    }
-    # Keep the audit history outside public content so timestamps never dirty
-    # a dataset. A crash before the latest pointer is replaced may repeat an
-    # event on retry; the commit remains its stable publication identity.
-    with (path.parent / "download-publications.jsonl").open("a") as journal:
-        journal.write(json.dumps(receipt, sort_keys=True) + "\n")
-        journal.flush()
-        os.fsync(journal.fileno())
-    with temporary.open("w") as handle:
-        json.dump(receipt, handle, sort_keys=True)
-        handle.flush()
-        os.fsync(handle.fileno())
-    os.replace(temporary, path)
+    _receipts.record_publication(workdir, repo_url, branch, commit, receipt_path=_receipt_path)
 
 
 def ensure_commit_identity(workdir: Path) -> dict[str, str]:
@@ -563,105 +301,16 @@ def ensure_commit_identity(workdir: Path) -> dict[str, str]:
 
 
 def _manifest_assets(manifest_path: Path) -> dict[str, tuple[int, str]]:
-    """Index declared asset sizes and hashes without reading the asset bytes."""
-    if not manifest_path.is_file():
-        return {}
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    indexed: dict[str, tuple[int, str]] = {}
-    for entry in [*(manifest.get("countries") or []), *(manifest.get("diseases") or [])]:
-        for part in entry.get("parts") or []:
-            for file_meta in (part.get("files") or {}).values():
-                relative = str(file_meta.get("relative_path") or "")
-                path = _asset_relative_path(relative).as_posix()
-                indexed[path] = (int(file_meta.get("bytes") or -1), str(file_meta.get("sha256") or ""))
-    return indexed
+    return _assets._manifest_assets(manifest_path, asset_path=_asset_relative_path)
 
 
 def sync_managed_assets(source_dir: Path, workdir: Path) -> dict[str, int]:
-    """Copy changed assets using manifest hashes; avoid rereading multi-GB files."""
-
-    copied = 0
-    removed = 0
-    expected: set[Path] = set()
-    source_assets = _manifest_assets(source_dir / "manifest.json")
-    target_assets = _manifest_assets(workdir / "manifest.json")
-    for directory_name in ("countries", "diseases"):
-        source_root = source_dir / directory_name
-        target_root = workdir / directory_name
-        if not source_root.is_dir():
-            raise FileNotFoundError(f"Expected generated directory missing: {source_root}")
-        for source_path in source_root.rglob("*"):
-            if not source_path.is_file():
-                continue
-            relative = source_path.relative_to(source_dir)
-            target_path = workdir / relative
-            expected.add(target_path)
-            relative_key = relative.as_posix()
-            source_meta = source_assets.get(relative_key)
-            target_meta = target_assets.get(relative_key)
-            if source_meta is None:
-                raise RuntimeError(f"Asset is missing from generated manifest: {relative_key}")
-            if (
-                target_path.is_file()
-                and source_meta is not None
-                and target_meta == source_meta
-                and target_path.stat().st_size == source_meta[0]
-            ):
-                continue
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-            fd, temporary_name = tempfile.mkstemp(prefix=f".{target_path.name}.", dir=target_path.parent)
-            os.close(fd)
-            temporary_path = Path(temporary_name)
-            try:
-                shutil.copy2(source_path, temporary_path)
-                if _sha256_file(temporary_path) != source_meta[1]:
-                    raise RuntimeError(f"Manifest checksum mismatch: {source_path}")
-                os.replace(temporary_path, target_path)
-            finally:
-                temporary_path.unlink(missing_ok=True)
-            copied += 1
-        if target_root.exists():
-            for target_path in sorted(target_root.rglob("*"), reverse=True):
-                if target_path.is_file() and target_path not in expected:
-                    target_path.unlink()
-                    removed += 1
-                elif target_path.is_dir() and not any(target_path.iterdir()):
-                    target_path.rmdir()
-
-    source_manifest = source_dir / "manifest.json"
-    target_manifest = workdir / "manifest.json"
-    if not target_manifest.exists() or not files_match(source_manifest, target_manifest):
-        shutil.copy2(source_manifest, target_manifest)
-        copied += 1
-    return {"copied": copied, "removed": removed}
+    return _assets.sync_managed_assets(source_dir, workdir, manifest_assets=_manifest_assets,
+        compare_files=files_match, sha256_file=_sha256_file)
 
 
 def write_readme(workdir: Path, manifest: dict) -> None:
-    generated_at = manifest.get("generated_at") or "unspecified"
-    countries = len(manifest.get("countries") or [])
-    diseases = len(manifest.get("diseases") or [])
-    base = manifest.get("download_url_base") or ""
-    readme = f"""# GlobalID Data Downloads
-
-This repository stores directly downloadable datasets for the GlobalID public site.
-
-- Generated at: `{generated_at}`
-- Country datasets: `{countries}`
-- Disease datasets: `{diseases}`
-- Formats: CSV, JSON and XLSX
-- Partitioning: stable calendar windows; only changed windows are committed
-- Manifest: [`manifest.json`](./manifest.json)
-
-Public files are stable branch links under:
-
-`{base}`
-"""
-    path = workdir / "README.md"
-    if not path.exists() or path.read_text(encoding="utf-8") != readme:
-        # Export backups may hard-link old artifacts. Replace, never truncate.
-        temporary = path.with_suffix(".tmp")
-        temporary.write_text(readme, encoding="utf-8")
-        os.replace(temporary, path)
+    _assets.write_readme(workdir, manifest)
 
 
 def commit_and_push(
@@ -695,11 +344,7 @@ def _git_blob_sha(content: bytes) -> str:
 
 
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return _assets._sha256_file(path)
 
 
 def _read_remote_blob_sha(

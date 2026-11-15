@@ -26,10 +26,10 @@ const alternatePaths = {
 };
 const title = zh ? '传染病监测报告' : fr ? 'Rapports de surveillance' : 'Infectious Disease Surveillance Reports';
 const description = zh
-  ? '按国家和数据更新频率浏览 GIDS 的传染病监测报告。'
+  ? '按区域和数据更新频率浏览 GIDS 的传染病监测报告。'
   : fr
-    ? 'Parcourez les rapports de surveillance GIDS par pays et fréquence des données.'
-    : 'Browse GIDS infectious-disease surveillance reports by country and reporting cadence.';
+    ? 'Parcourez les rapports de surveillance GIDS par zone et fréquence des données.'
+    : 'Browse GIDS infectious-disease surveillance reports by area and reporting cadence.';
 const typeLabel = (type: string) => {
   const key = type.toUpperCase();
   if (zh) return ({ DAILY: '日报', WEEKLY: '周报', MONTHLY: '月报', QUARTERLY: '季报', ANNUAL: '年报' } as Record<string, string>)[key] ?? '定期报告';
@@ -51,7 +51,7 @@ const countLabel = zh ? '份报告' : fr ? 'rapports' : 'reports';
       <p class="academic-kicker tracking-[0.18em] uppercase mb-3">GIDS · {zh ? '公开报告库' : fr ? 'Archives publiques' : 'Public report archive'}</p>
       <h1 class="text-3xl sm:text-4xl font-bold text-[rgb(var(--text-strong))] mb-3">{title}</h1>
       <p class="text-[rgb(var(--text-muted))]">{description}</p>
-      <p class="mt-4 text-sm text-[rgb(var(--text-muted))]">{reports.length} {zh ? '份可公开报告，涵盖' : fr ? 'rapports publics dans' : 'public reports across'} {countries.length} {zh ? '个国家。报告周期按来源数据的实际频率标注。' : fr ? 'pays. Chaque période reflète la fréquence de la source.' : 'countries. Each period follows the source data cadence.'}</p>
+      <p class="mt-4 text-sm text-[rgb(var(--text-muted))]">{reports.length} {zh ? '份可公开报告，涵盖' : fr ? 'rapports publics dans' : 'public reports across'} {countries.length} {zh ? '个区域。报告周期按来源数据的实际频率标注。' : fr ? 'zones. Chaque période reflète la fréquence de la source.' : 'areas. Each period follows the source data cadence.'}</p>
     </header>
 
     {countries.length ? (
@@ -74,7 +74,7 @@ const countLabel = zh ? '份报告' : fr ? 'rapports' : 'reports';
                 <span class="border border-[rgb(var(--border))] bg-[rgb(var(--surface-raised))] px-2.5 py-1 text-xs font-medium text-[rgb(var(--text-muted))]">{typeLabel(latestType)}</span>
               </div>
               <a class="block text-sm font-medium text-[rgb(var(--text-strong))] hover:underline transition-colors" href={href(`/countries/${code}/reports/`)}>
-                {latest?.summary.title ?? (zh ? '浏览国家报告' : fr ? 'Voir les rapports' : 'Browse country reports')}
+                {latest?.summary.title ?? (zh ? '浏览区域报告' : fr ? 'Voir les rapports' : 'Browse area reports')}
               </a>
               <p class="mt-2 text-xs text-[rgb(var(--text-muted))]">{latest?.summary.period_start} – {latest?.summary.period_end}</p>
               <a class="mt-4 inline-flex text-sm font-semibold text-[rgb(var(--text-strong))] underline decoration-[rgb(var(--border-soft))] underline-offset-4 hover:decoration-current transition-colors" href={href(`/countries/${code}/reports/`)}>

@@ -9,7 +9,7 @@ interface Props {
   sizeClass?: string;
 }
 
-const { code, name = 'Country flag', sizeClass = 'w-9 h-7' } = Astro.props;
+const { code, name = 'Geographic area symbol', sizeClass = 'w-9 h-7' } = Astro.props;
 
 const flagIso2 = resolveFlagIso2(code);
 const fallbackEmoji = toFlagEmoji(flagIso2);

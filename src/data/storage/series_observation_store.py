@@ -11,7 +11,7 @@ from dataclasses import dataclass, field as dataclass_field
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
-from sqlalchemy import and_, case, func, or_, select, tuple_, update
+from sqlalchemy import and_, case, delete, func, or_, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,12 +24,51 @@ from src.domain import (
 )
 from src.ontology import DiseaseOntology, load_disease_ontology
 
-_SUPPRESSED_VALUES = {"*", "suppressed", "suppression", "<5", "-"}
-_SUPPRESSED_THRESHOLD = re.compile(r"^<\s*\d+\s*$")
+from src.data.storage.series.identity import (
+    _SUPPRESSED_VALUES,
+    _SUPPRESSED_THRESHOLD,
+    _as_utc,
+    _advance_period,
+    _previous_period,
+    _periods_are_consecutive,
+    _period_range,
+    _days_in_month,
+    _parse_report_time,
+    _mmwr_week_end_date,
+    _parse_value,
+    _first_text,
+    _normalized_identity,
+    _dimension_key,
+    _parse_dimensions,
+    _source_id_for_row,
+    _geography_key,
+    _series_valid_at,
+    _canonical_source_code,
+    _json_safe,
+    _quality_status,
+    _allows_authoritative_revision,
+    _allows_equal_quality_overwrite,
+    _observation_allows_authoritative_revision,
+)
+from src.data.storage.series.quality import (
+    _QUALITY_MODES,
+    _REGISTRY_COVERAGE_MODES,
+    _SEVERITY_RANK,
+    SeriesObservationQualityIssue,
+    SeriesObservationQualityReport,
+    SeriesObservationQualityPolicy,
+    SeriesObservationQualityError,
+    SeriesObservationQuarantinedError,
+    _mapping_coverage_issues,
+    _zero_tail_issues,
+    _single_series_revision_issues,
+    _time_completeness_issues,
+    _frequency_by_series,
+    _cohort_period_rows,
+    _period_is_cross_series_zero,
+)
+
 _WRITE_BATCH_SIZE = 500
-_QUALITY_MODES = {"off", "report", "quarantine", "fail_closed"}
-_REGISTRY_COVERAGE_MODES = {"auto", "required", "legacy_only"}
-_SEVERITY_RANK = {"info": 0, "warning": 1, "error": 2, "critical": 3}
 _UNMAPPED_GROUP_CODE = "G_UNMAPPED_SOURCE_CATEGORIES"
 
 
@@ -343,174 +382,14 @@ async def _persist_observation_revisions_batch(
 
 
 @dataclass(frozen=True)
-class SeriesObservationQualityIssue:
-    """One machine-readable anomaly found before an observation batch is committed."""
-
-    code: str
-    severity: str
-    stage: str
-    message: str
-    details: dict[str, Any] = dataclass_field(default_factory=dict)
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "code": self.code,
-            "severity": self.severity,
-            "stage": self.stage,
-            "message": self.message,
-            "details": _json_safe(self.details),
-        }
-
-
-@dataclass(frozen=True)
-class SeriesObservationQualityReport:
-    """Structured pre-save and projected-post-save quality assessment."""
-
-    country_code: str
-    source_row_count: int
-    analyzed_observations: int
-    history_observations: int
-    issues: tuple[SeriesObservationQualityIssue, ...] = ()
-
-    @property
-    def highest_severity(self) -> str | None:
-        if not self.issues:
-            return None
-        return max(
-            (issue.severity for issue in self.issues),
-            key=lambda severity: _SEVERITY_RANK.get(severity, -1),
-        )
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "country_code": self.country_code,
-            "source_row_count": self.source_row_count,
-            "analyzed_observations": self.analyzed_observations,
-            "history_observations": self.history_observations,
-            "highest_severity": self.highest_severity,
-            "issue_count": len(self.issues),
-            "issues": [issue.to_dict() for issue in self.issues],
-        }
-
-
-@dataclass(frozen=True)
-class SeriesObservationQualityPolicy:
-    """Configurable guardrails for source-series imports.
-
-    ``report`` never blocks a write. ``quarantine`` blocks only critical,
-    high-confidence batch anomalies. ``fail_closed`` additionally blocks
-    error-level anomalies. ``registry_coverage=required`` promotes any mapping
-    or Registry synchronization loss to critical even for a one-row batch;
-    ``legacy_only`` is the explicit exemption for sources outside Registry
-    scope. Warnings such as an isolated time gap remain report-only in every
-    mode so legitimate sparse and zero-valued series are not rejected.
-    """
-
-    mode: str = "quarantine"
-    minimum_cross_series: int = 5
-    critical_zero_tail_periods: int = 3
-    coverage_drop_ratio: float = 0.5
-    low_mapping_coverage_ratio: float = 0.5
-    history_lookback_days: int = 740
-    max_examples: int = 20
-    registry_coverage: str = "auto"
-    material_revision_drop_ratio: float = 0.8
-
-    def __post_init__(self) -> None:
-        normalized_mode = str(self.mode).strip().casefold().replace("-", "_")
-        if normalized_mode not in _QUALITY_MODES:
-            raise ValueError(
-                "Series observation quality mode must be one of: "
-                + ", ".join(sorted(_QUALITY_MODES))
-            )
-        object.__setattr__(self, "mode", normalized_mode)
-        normalized_coverage = (
-            str(self.registry_coverage).strip().casefold().replace("-", "_")
-        )
-        if normalized_coverage not in _REGISTRY_COVERAGE_MODES:
-            raise ValueError(
-                "Registry coverage must be one of: "
-                + ", ".join(sorted(_REGISTRY_COVERAGE_MODES))
-            )
-        object.__setattr__(self, "registry_coverage", normalized_coverage)
-        if self.minimum_cross_series < 2:
-            raise ValueError("minimum_cross_series must be at least 2")
-        if self.critical_zero_tail_periods < 2:
-            raise ValueError("critical_zero_tail_periods must be at least 2")
-        if not 0 < self.coverage_drop_ratio < 1:
-            raise ValueError("coverage_drop_ratio must be between 0 and 1")
-        if not 0 < self.low_mapping_coverage_ratio < 1:
-            raise ValueError("low_mapping_coverage_ratio must be between 0 and 1")
-        if self.history_lookback_days < 0:
-            raise ValueError("history_lookback_days cannot be negative")
-        if self.max_examples < 1:
-            raise ValueError("max_examples must be positive")
-        if not 0 < self.material_revision_drop_ratio < 1:
-            raise ValueError("material_revision_drop_ratio must be between 0 and 1")
-
-    @classmethod
-    def from_mapping(
-        cls, value: Mapping[str, Any] | None
-    ) -> "SeriesObservationQualityPolicy":
-        raw = dict(value or {})
-        allowed = {
-            "mode",
-            "minimum_cross_series",
-            "critical_zero_tail_periods",
-            "coverage_drop_ratio",
-            "low_mapping_coverage_ratio",
-            "history_lookback_days",
-            "max_examples",
-            "registry_coverage",
-            "material_revision_drop_ratio",
-        }
-        selected = {key: raw[key] for key in allowed if key in raw}
-        for key in {
-            "minimum_cross_series",
-            "critical_zero_tail_periods",
-            "history_lookback_days",
-            "max_examples",
-        }:
-            if key in selected:
-                selected[key] = int(selected[key])
-        for key in {
-            "coverage_drop_ratio",
-            "low_mapping_coverage_ratio",
-            "material_revision_drop_ratio",
-        }:
-            if key in selected:
-                selected[key] = float(selected[key])
-        return cls(**selected)
-
-    def blocks(self, report: SeriesObservationQualityReport) -> bool:
-        if self.mode in {"off", "report"}:
-            return False
-        threshold = 3 if self.mode == "quarantine" else 2
-        return any(
-            _SEVERITY_RANK.get(issue.severity, -1) >= threshold
-            for issue in report.issues
-        )
-
-
-class SeriesObservationQualityError(RuntimeError):
-    """Raised when a fail-closed observation quality policy rejects a batch."""
-
-    def __init__(self, report: SeriesObservationQualityReport) -> None:
-        self.report = report
-        payload = json.dumps(report.to_dict(), ensure_ascii=False, sort_keys=True)
-        super().__init__(f"Disease series observation quality gate failed: {payload}")
-
-
-class SeriesObservationQuarantinedError(SeriesObservationQualityError):
-    """Raised when a critical batch is quarantined before transaction commit."""
-
-
-@dataclass(frozen=True)
 class SeriesObservationBuildResult:
     observations: list[dict[str, Any]]
     skipped_unmatched: int
     skipped_ambiguous: int
     skipped_invalid: int
+    # Retain failed input identities so an optional historical tail cannot
+    # masquerade as missing coverage inside an authoritative source window.
+    unhandled_rows: tuple[dict[str, Any], ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -527,10 +406,15 @@ class SeriesObservationSaveResult:
     # None means coverage is unknown; an empty tuple proves a semantic no-op.
     # Keep None as the default for compatibility stores and legacy-only imports.
     publication_changes: tuple[dict[str, Any], ...] | None = None
+    deleted: int = 0
+    # Available only when a complete source snapshot was compared with facts.
+    # Generic upsert counts cannot distinguish inserts from updates/no-ops.
+    window_change_counts: dict[str, int] | None = None
 
 
 def observation_publication_changes(
     observations: list[dict[str, Any]],
+    *, operation: str = "upsert",
 ) -> tuple[dict[str, Any], ...]:
     """Compact changed fact identities without merging distinct historical years."""
     ranges: dict[tuple[str, str, int], dict[str, Any]] = {}
@@ -542,7 +426,7 @@ def observation_publication_changes(
             ranges[key] = {
                 "geography_key": key[0], "series_code": key[1],
                 "time_start": timestamp, "time_end": timestamp,
-                "operation": "upsert",
+                "operation": operation,
             }
         else:
             ranges[key]["time_start"] = min(ranges[key]["time_start"], timestamp)
@@ -720,6 +604,7 @@ class SeriesObservationStore:
         geography_key: str | None = None,
     ) -> SeriesObservationBuildResult:
         observations: list[dict[str, Any]] = []
+        unhandled_rows: list[dict[str, Any]] = []
         skipped_unmatched = 0
         skipped_ambiguous = 0
         skipped_invalid = 0
@@ -736,6 +621,7 @@ class SeriesObservationStore:
                 value is None and not suppressed and not source_missing
             ):
                 skipped_invalid += 1
+                unhandled_rows.append(row)
                 continue
 
             label = _first_text(
@@ -766,9 +652,11 @@ class SeriesObservationStore:
             ]
             if not matches:
                 skipped_unmatched += 1
+                unhandled_rows.append(row)
                 continue
             if len(matches) != 1:
                 skipped_ambiguous += 1
+                unhandled_rows.append(row)
                 continue
 
             series = matches[0]
@@ -777,6 +665,7 @@ class SeriesObservationStore:
             )
             if dimensions is None:
                 skipped_invalid += 1
+                unhandled_rows.append(row)
                 continue
             dimension_key = _dimension_key(dimensions)
             resolved_geography = _geography_key(
@@ -862,6 +751,7 @@ class SeriesObservationStore:
             skipped_unmatched=skipped_unmatched,
             skipped_ambiguous=skipped_ambiguous,
             skipped_invalid=skipped_invalid,
+            unhandled_rows=tuple(unhandled_rows),
         )
 
     async def save_rows(
@@ -875,9 +765,12 @@ class SeriesObservationStore:
         geography_key: str | None = None,
         quality_policy: SeriesObservationQualityPolicy | None = None,
         jp_holding_profiles: dict | None = None,
+        authoritative_window_start: datetime | None = None,
     ) -> SeriesObservationSaveResult:
         policy = quality_policy or SeriesObservationQualityPolicy()
         if policy.registry_coverage == "legacy_only":
+            if authoritative_window_start is not None:
+                raise ValueError("Authoritative source windows require registry coverage")
             quality_report = self.assess_quality(
                 [],
                 country_code=country_code,
@@ -913,13 +806,25 @@ class SeriesObservationStore:
             jp_holding_profiles=jp_holding_profiles,
         )
         if holding_observations:
+            unhandled_rows = built.unhandled_rows
+            if authoritative_window_start is not None and unhandled_rows is not None:
+                retained_holding = {
+                    json.dumps(row["raw_data"], sort_keys=True, default=str)
+                    for row in holding_observations
+                }
+                unhandled_rows = tuple(
+                    row for row in unhandled_rows
+                    if json.dumps(_json_safe(dict(row)), sort_keys=True, default=str)
+                    not in retained_holding
+                )
             built = SeriesObservationBuildResult(
                 observations=[*built.observations, *holding_observations],
                 skipped_unmatched=max(0, built.skipped_unmatched - holding_handled),
                 skipped_ambiguous=built.skipped_ambiguous,
                 skipped_invalid=built.skipped_invalid,
+                unhandled_rows=unhandled_rows,
             )
-        if not built.observations:
+        if not built.observations and authoritative_window_start is None:
             quality_report = self.assess_quality(
                 [],
                 country_code=country_code,
@@ -967,7 +872,10 @@ class SeriesObservationStore:
         ]
         skipped_registry = len(built.observations) - len(observations)
         history = (
-            await self._load_recent_history(db, observations, policy)
+            await self._load_recent_history(
+                db, observations, policy,
+                include_metadata=country_code.strip().upper() != "JP",
+            )
             if observations and policy.mode != "off"
             else []
         )
@@ -988,14 +896,41 @@ class SeriesObservationStore:
         # rolls back both stores instead of leaving a partially imported batch.
         self.enforce_quality(quality_report, policy)
 
+        withdrawn: list[dict[str, Any]] = []
+        window_before: dict[tuple[Any, ...], dict[str, Any]] = {}
+        input_observation_count = (
+            len({_revision_identity(row) for row in observations})
+            if authoritative_window_start is not None else 0
+        )
+        if authoritative_window_start is not None:
+            window_start = _as_utc(authoritative_window_start)
+            lost_mapping = bool(built.skipped_unmatched or built.skipped_ambiguous or built.skipped_invalid)
+            lost_window_mapping = lost_mapping and (
+                built.unhandled_rows is None or any(
+                    (when := _parse_report_time(row)) is None or _as_utc(when) >= window_start
+                    for row in built.unhandled_rows
+                )
+            )
+            lost_window_registry = any(
+                row["series_code"] not in available_codes and _as_utc(row["time"]) >= window_start
+                for row in built.observations
+            )
+            if lost_window_registry or lost_window_mapping:
+                raise ValueError("Authoritative source window has incomplete observation coverage")
+            observations, withdrawn, window_before = await self._prepare_authoritative_window(
+                db, observations, country_code=country_code, source_id=source_id,
+                geography_key=geography_key, window_start=authoritative_window_start,
+            )
+
         revision_time = datetime.now(timezone.utc)
         await _persist_observation_revisions(
             db,
-            observations,
+            [*observations, *withdrawn] if withdrawn else observations,
             recorded_at=revision_time,
             seed_current_state=True,
         )
         affected_rows = 0
+        accepted_changes: list[dict[str, Any]] = []
         for offset in range(0, len(observations), _WRITE_BATCH_SIZE):
             batch = observations[offset : offset + _WRITE_BATCH_SIZE]
             # Build the insert against the underlying table.  Passing the ORM
@@ -1049,9 +984,21 @@ class SeriesObservationStore:
                     )
                     == "true",
                 ),
-            ).returning(DiseaseSeriesObservation.series_code)
+            )
+            if authoritative_window_start is not None:
+                statement = statement.returning(*DiseaseSeriesObservation.__table__.c)
+            else:
+                statement = statement.returning(DiseaseSeriesObservation.series_code)
             write_result = await db.execute(statement, batch)
-            affected_rows += len(write_result.scalars().all())
+            if authoritative_window_start is not None:
+                accepted = [dict(row) for row in write_result.mappings().all()]
+                affected_rows += len(accepted)
+                for row in accepted:
+                    previous = window_before.get(_revision_identity(row))
+                    if previous is None or _revision_state(previous) != _revision_state(row):
+                        accepted_changes.append(row)
+            else:
+                affected_rows += len(write_result.scalars().all())
 
         changed_observations: list[dict[str, Any]] = []
         await _persist_observation_revisions(
@@ -1062,6 +1009,36 @@ class SeriesObservationStore:
             changed_observations=changed_observations,
         )
 
+        deleted_observations: list[dict[str, Any]] = []
+        for offset in range(0, len(withdrawn), _WRITE_BATCH_SIZE):
+            keys = [_revision_identity(row) for row in withdrawn[offset:offset + _WRITE_BATCH_SIZE]]
+            deleted = await db.execute(
+                delete(DiseaseSeriesObservation.__table__).where(
+                    tuple_(*(DiseaseSeriesObservation.__table__.c[key]
+                             for key in _REVISION_KEY_COLUMNS)).in_(keys)
+                ).returning(*(DiseaseSeriesObservation.__table__.c[key]
+                              for key in _REVISION_KEY_COLUMNS))
+            )
+            deleted_observations.extend(dict(row) for row in deleted.mappings().all())
+
+        if authoritative_window_start is not None:
+            # A withdrawn value may later reappear with the same old revision.
+            # Publication follows the current facts before/after, not merely
+            # whether a new snapshot happened to be appended to the ledger.
+            changed_observations = accepted_changes
+
+        window_counts = None
+        if authoritative_window_start is not None:
+            inserted = sum(_revision_identity(row) not in window_before for row in accepted_changes)
+            window_counts = {
+                "input": input_observation_count,
+                "inserted": inserted,
+                "updated": len(accepted_changes) - inserted,
+                "deleted": len(deleted_observations),
+                "unchanged": input_observation_count - len(observations),
+                "rejected": len(observations) - affected_rows,
+            }
+
         return SeriesObservationSaveResult(
             upserted=affected_rows,
             skipped_unmatched=built.skipped_unmatched,
@@ -1070,13 +1047,69 @@ class SeriesObservationStore:
             skipped_registry_not_synced=skipped_registry,
             quality_report=quality_report,
             holding_observations=len(holding_observations),
+            deleted=len(deleted_observations),
+            window_change_counts=window_counts,
             publication_changes=(
-                observation_publication_changes(changed_observations)
+                (observation_publication_changes(changed_observations)
+                 + observation_publication_changes(deleted_observations, operation="delete"))
                 if not (missing_codes or skipped_registry or built.skipped_unmatched
                         or built.skipped_ambiguous or built.skipped_invalid)
                 else None
             ),
         )
+
+    async def _prepare_authoritative_window(
+        self, db, observations, *, country_code, source_id, geography_key, window_start,
+    ):
+        """Compare a fully parsed source window under the caller's country lock.
+
+        Only the selected source, geography and lower window boundary authorize
+        withdrawals. Historical rows supplied alongside the window may be
+        upserted, but their absence never authorizes deleting older history.
+        """
+        if not isinstance(source_id, str) or not source_id or not geography_key:
+            raise ValueError("Authoritative source windows require a source and geography")
+        window_start = _as_utc(window_start)
+        codes = {row["series_code"] for row in observations}
+        scoped_codes = set((await db.execute(
+            select(DiseaseSurveillanceSeries.series_code).where(
+                DiseaseSurveillanceSeries.series_code.in_(codes),
+                DiseaseSurveillanceSeries.country_code == country_code.upper(),
+                DiseaseSurveillanceSeries.source_system == source_id,
+            )
+        )).scalars())
+        if scoped_codes != codes or any(
+            row["geography_key"] != geography_key
+            or (row.get("metadata") or {}).get("source_id") != source_id
+            for row in observations
+        ):
+            raise ValueError("Authoritative source window contains observations outside its scope")
+
+        incoming: dict[tuple[Any, ...], dict[str, Any]] = {}
+        for row in observations:
+            key = _revision_identity(row)
+            if key in incoming and _revision_state(incoming[key]) != _revision_state(row):
+                raise ValueError("Authoritative source window contains conflicting observation identities")
+            incoming[key] = row
+        read_start = min([window_start, *(key[0] for key in incoming)])
+        table = DiseaseSeriesObservation.__table__
+        result = await db.execute(
+            select(table).join(
+                DiseaseSurveillanceSeries,
+                table.c.series_code == DiseaseSurveillanceSeries.series_code,
+            ).where(
+                DiseaseSurveillanceSeries.country_code == country_code.upper(),
+                DiseaseSurveillanceSeries.source_system == source_id,
+                table.c.geography_key == geography_key,
+                table.c.time >= read_start,
+            )
+        )
+        before = {_revision_identity(row): dict(row) for row in result.mappings().all()}
+        changed = [row for key, row in incoming.items()
+                   if key not in before or _revision_state(before[key]) != _revision_state(row)]
+        withdrawn = [row for key, row in before.items()
+                     if key[0] >= window_start and key not in incoming]
+        return changed, withdrawn, before
 
     def _jp_mixed_holding_profiles(
         self,
@@ -1631,6 +1664,8 @@ class SeriesObservationStore:
         db: AsyncSession,
         observations: list[dict[str, Any]],
         policy: SeriesObservationQualityPolicy,
+        *,
+        include_metadata: bool = True,
     ) -> list[dict[str, Any]]:
         requested_codes = {row["series_code"] for row in observations}
         earliest = min(_as_utc(row["time"]) for row in observations)
@@ -1639,17 +1674,24 @@ class SeriesObservationStore:
         # Quality checks compare identity, values and frequency. Historical raw
         # provenance is never consulted (revision overrides apply to incoming
         # rows), so do not transfer/decode millions of large JSON payloads here.
+        columns = [
+            DiseaseSeriesObservation.time,
+            DiseaseSeriesObservation.series_code,
+            DiseaseSeriesObservation.geography_key,
+            DiseaseSeriesObservation.dimension_key,
+            DiseaseSeriesObservation.value,
+            DiseaseSeriesObservation.suppressed,
+            DiseaseSeriesObservation.quality_status,
+        ]
+        # JP checks can span millions of historical rows. Their frequency is
+        # taken from the incoming series and revision permissions belong only
+        # to incoming observations, so decoding historical metadata is unused
+        # work on the worker's event loop. Keep the default read contract for
+        # other callers; provenance writes and revision snapshots are separate.
+        if include_metadata:
+            columns.append(DiseaseSeriesObservation.metadata_.label("metadata"))
         result = await db.execute(
-            select(
-                DiseaseSeriesObservation.time,
-                DiseaseSeriesObservation.series_code,
-                DiseaseSeriesObservation.geography_key,
-                DiseaseSeriesObservation.dimension_key,
-                DiseaseSeriesObservation.value,
-                DiseaseSeriesObservation.suppressed,
-                DiseaseSeriesObservation.quality_status,
-                DiseaseSeriesObservation.metadata_.label("metadata"),
-            ).where(
+            select(*columns).where(
                 DiseaseSeriesObservation.series_code.in_(requested_codes),
                 DiseaseSeriesObservation.time >= lower_bound,
                 DiseaseSeriesObservation.time <= latest,
@@ -1698,962 +1740,6 @@ class SeriesObservationStore:
         resolved = [candidates[key] for key in sorted(candidates)]
         self._resolved_series_cache[cache_key] = resolved
         return resolved
-
-
-def _mapping_coverage_issues(
-    *,
-    observation_count: int,
-    source_row_count: int,
-    skipped_unmatched: int,
-    skipped_ambiguous: int,
-    skipped_invalid: int,
-    skipped_registry_not_synced: int,
-    policy: SeriesObservationQualityPolicy,
-) -> list[SeriesObservationQualityIssue]:
-    if policy.registry_coverage == "legacy_only":
-        return []
-    if policy.registry_coverage == "required":
-        required_failures = {
-            "skipped_unmatched": skipped_unmatched,
-            "skipped_ambiguous": skipped_ambiguous,
-            "skipped_invalid": skipped_invalid,
-            "skipped_registry_not_synced": skipped_registry_not_synced,
-        }
-        if source_row_count > 0 and (
-            observation_count == 0 or any(required_failures.values())
-        ):
-            return [
-                SeriesObservationQualityIssue(
-                    code="required_registry_coverage_incomplete",
-                    severity="critical",
-                    stage="pre_save",
-                    message=(
-                        "A source declared as Registry-covered did not resolve and "
-                        "stage every source row; the dual write is fail-closed."
-                    ),
-                    details={
-                        "source_rows": source_row_count,
-                        "resolved_observations": observation_count,
-                        **required_failures,
-                    },
-                )
-            ]
-    if source_row_count < policy.minimum_cross_series:
-        return []
-    usable_ratio = observation_count / source_row_count if source_row_count else 1.0
-    if usable_ratio >= policy.low_mapping_coverage_ratio:
-        return []
-    return [
-        SeriesObservationQualityIssue(
-            code="batch_mapping_coverage_low",
-            severity="warning",
-            stage="pre_save",
-            message=(
-                "Fewer than the configured share of source rows resolved to a "
-                "synced surveillance series."
-            ),
-            details={
-                "source_rows": source_row_count,
-                "resolved_observations": observation_count,
-                "resolved_ratio": round(usable_ratio, 6),
-                "minimum_ratio": policy.low_mapping_coverage_ratio,
-                "skipped_unmatched": skipped_unmatched,
-                "skipped_ambiguous": skipped_ambiguous,
-                "skipped_invalid": skipped_invalid,
-                "skipped_registry_not_synced": skipped_registry_not_synced,
-            },
-        )
-    ]
-
-
-def _zero_tail_issues(
-    incoming: list[dict[str, Any]],
-    *,
-    history: list[dict[str, Any]],
-    policy: SeriesObservationQualityPolicy,
-) -> list[SeriesObservationQualityIssue]:
-    """Find implausible all-zero tails without flagging isolated series zeros."""
-
-    issues: list[SeriesObservationQualityIssue] = []
-    incoming_cohorts = _cohort_period_rows(incoming)
-    history_cohorts = _cohort_period_rows(
-        history,
-        frequency_by_series=_frequency_by_series(incoming),
-    )
-
-    for cohort_key, rows_by_time in incoming_cohorts.items():
-        frequency = cohort_key[0]
-        all_zero_times = {
-            report_time
-            for report_time, period_rows in rows_by_time.items()
-            if _period_is_cross_series_zero(period_rows, policy.minimum_cross_series)
-        }
-        if not all_zero_times:
-            continue
-
-        ordered_times = sorted(rows_by_time)
-        zero_tail: list[datetime] = []
-        for report_time in reversed(ordered_times):
-            if report_time not in all_zero_times:
-                break
-            if zero_tail and not _periods_are_consecutive(
-                report_time, zero_tail[-1], frequency
-            ):
-                break
-            zero_tail.append(report_time)
-        zero_tail.reverse()
-        if not zero_tail:
-            continue
-
-        latest = zero_tail[-1]
-        latest_rows = rows_by_time[latest]
-        series_codes = sorted({str(row["series_code"]) for row in latest_rows})
-        details = {
-            "frequency": frequency,
-            "geography_key": cohort_key[1],
-            "dimension_key": cohort_key[2],
-            "unit": cohort_key[3],
-            "tail_period_count": len(zero_tail),
-            "tail_start": zero_tail[0].isoformat(),
-            "tail_end": latest.isoformat(),
-            "series_count": len(series_codes),
-            "series_examples": series_codes[: policy.max_examples],
-        }
-
-        history_by_time = history_cohorts.get(cohort_key, {})
-        overwritten_rows = history_by_time.get(latest, [])
-        overwritten = {
-            str(row["series_code"]): row
-            for row in overwritten_rows
-            if row.get("value") is not None and not row.get("suppressed")
-        }
-        overwritten_positive = sorted(
-            code
-            for code in series_codes
-            if code in overwritten and float(overwritten[code]["value"]) > 0
-        )
-        if overwritten_positive:
-            issues.append(
-                SeriesObservationQualityIssue(
-                    code="cross_series_zero_overwrites_positive",
-                    severity="critical",
-                    stage="pre_save",
-                    message=(
-                        "An all-zero multi-disease period would overwrite existing "
-                        "positive observations."
-                    ),
-                    details={
-                        **details,
-                        "positive_overwrite_count": len(overwritten_positive),
-                        "positive_overwrite_examples": overwritten_positive[
-                            : policy.max_examples
-                        ],
-                    },
-                )
-            )
-            continue
-
-        # "Sudden" requires a baseline. Prefer the period immediately before
-        # the zero tail from the same source batch, then fall back to stored
-        # history. This keeps a long run of perfectly legitimate rare-disease
-        # zeros reportable without quarantining it merely for being zero.
-        prior_time = _previous_period(zero_tail[0], frequency)
-        prior_rows = rows_by_time.get(prior_time, []) if prior_time else []
-        prior_stage = "incoming_batch"
-        if not prior_rows and prior_time:
-            prior_rows = history_by_time.get(prior_time, [])
-            prior_stage = "stored_history"
-        prior_by_series = {
-            str(row["series_code"]): row
-            for row in prior_rows
-            if row.get("value") is not None and not row.get("suppressed")
-        }
-        overlapping = [code for code in series_codes if code in prior_by_series]
-        prior_positive = [
-            code for code in overlapping if float(prior_by_series[code]["value"]) > 0
-        ]
-        has_positive_baseline = (
-            len(overlapping) >= policy.minimum_cross_series and bool(prior_positive)
-        )
-        baseline_details = (
-            {
-                "prior_period": prior_time.isoformat(),
-                "prior_stage": prior_stage,
-                "prior_overlap_count": len(overlapping),
-                "prior_positive_count": len(prior_positive),
-                "prior_positive_examples": prior_positive[: policy.max_examples],
-            }
-            if prior_time and overlapping
-            else {}
-        )
-
-        if len(zero_tail) >= policy.critical_zero_tail_periods:
-            issues.append(
-                SeriesObservationQualityIssue(
-                    code=(
-                        "cross_series_all_zero_tail"
-                        if has_positive_baseline
-                        else "cross_series_all_zero_tail_unverified"
-                    ),
-                    severity="critical" if has_positive_baseline else "error",
-                    stage="pre_save",
-                    message=(
-                        "A multi-period, multi-disease zero tail follows a positive "
-                        "baseline and is likely an upstream missing-to-zero failure."
-                        if has_positive_baseline
-                        else "A multi-period, multi-disease batch is all zero, but "
-                        "no adjacent positive baseline is available; source "
-                        "verification is required before fail-closed imports."
-                    ),
-                    details={**details, **baseline_details},
-                )
-            )
-        elif has_positive_baseline:
-            issues.append(
-                SeriesObservationQualityIssue(
-                    code="sudden_cross_series_all_zero_period",
-                    severity="error",
-                    stage="pre_save",
-                    message=(
-                        "Many disease series simultaneously changed from a prior "
-                        "period containing positives to all zero."
-                    ),
-                    details={**details, **baseline_details},
-                )
-            )
-        elif len(zero_tail) >= 2:
-            issues.append(
-                SeriesObservationQualityIssue(
-                    code="cross_series_all_zero_tail_short",
-                    severity="error",
-                    stage="pre_save",
-                    message=(
-                        "Several consecutive periods are zero across many disease "
-                        "series and require source verification."
-                    ),
-                    details=details,
-                )
-            )
-        else:
-            # A single period is report-only. In particular, a legitimate zero
-            # for one disease can never reach the cross-series threshold here.
-            issues.append(
-                SeriesObservationQualityIssue(
-                    code="cross_series_all_zero_period",
-                    severity="warning",
-                    stage="pre_save",
-                    message=(
-                        "One period is zero across many disease series; retained as "
-                        "a warning because a single all-zero period can be valid."
-                    ),
-                    details=details,
-                )
-            )
-
-    return issues
-
-
-def _single_series_revision_issues(
-    incoming: list[dict[str, Any]],
-    *,
-    history: list[dict[str, Any]],
-    policy: SeriesObservationQualityPolicy,
-) -> list[SeriesObservationQualityIssue]:
-    """Reject destructive same-identity revisions unless explicitly authorized.
-
-    Period-to-period disease counts can legitimately fall to zero. The high
-    confidence failure mode is narrower: a refresh overwriting an already
-    stored positive value at the same natural fact identity with zero or a
-    material retreat. That catches parser/source regressions without inventing
-    epidemiological constraints.
-    """
-
-    history_by_identity: dict[tuple[object, ...], dict[str, Any]] = {}
-    for row in history:
-        try:
-            identity = (
-                _as_utc(row["time"]),
-                str(row["series_code"]),
-                str(row.get("geography_key") or ""),
-                str(row.get("dimension_key") or "all"),
-            )
-        except (KeyError, TypeError, ValueError):
-            continue
-        history_by_identity[identity] = row
-
-    issues: list[SeriesObservationQualityIssue] = []
-    for row in incoming:
-        identity = (
-            _as_utc(row["time"]),
-            str(row["series_code"]),
-            str(row.get("geography_key") or ""),
-            str(row.get("dimension_key") or "all"),
-        )
-        previous = history_by_identity.get(identity)
-        if previous is None or row.get("suppressed") or previous.get("suppressed"):
-            continue
-        if _observation_allows_authoritative_revision(row):
-            continue
-        try:
-            old_value = float(previous["value"])
-            new_value = float(row["value"])
-        except (KeyError, TypeError, ValueError):
-            continue
-        if not math.isfinite(old_value) or not math.isfinite(new_value) or old_value <= 0:
-            continue
-
-        drop_ratio = (old_value - new_value) / old_value
-        if new_value == 0:
-            code = "single_series_positive_overwritten_by_zero"
-            message = (
-                "A source refresh would overwrite a stored positive observation "
-                "with zero without explicit correction semantics."
-            )
-        elif drop_ratio >= policy.material_revision_drop_ratio:
-            code = "single_series_material_revision_retreat"
-            message = (
-                "A source refresh would materially reduce a stored observation "
-                "without explicit correction semantics."
-            )
-        else:
-            continue
-        issues.append(
-            SeriesObservationQualityIssue(
-                code=code,
-                severity="critical",
-                stage="pre_save",
-                message=message,
-                details={
-                    "series_code": identity[1],
-                    "time": identity[0].isoformat(),
-                    "geography_key": identity[2],
-                    "dimension_key": identity[3],
-                    "stored_value": old_value,
-                    "incoming_value": new_value,
-                    "drop_ratio": round(drop_ratio, 6),
-                    "required_override": "authoritative_revision",
-                },
-            )
-        )
-    return issues
-
-
-def _time_completeness_issues(
-    incoming: list[dict[str, Any]],
-    *,
-    history: list[dict[str, Any]],
-    policy: SeriesObservationQualityPolicy,
-) -> list[SeriesObservationQualityIssue]:
-    """Report inferred batch gaps and gaps in the projected stored timeline."""
-
-    if not incoming:
-        return []
-    issues: list[SeriesObservationQualityIssue] = []
-    frequency_by_series = _frequency_by_series(incoming)
-    cohorts = _cohort_period_rows(incoming)
-    missing_batch_period_examples: list[dict[str, Any]] = []
-    coverage_drop_examples: list[dict[str, Any]] = []
-    missing_batch_period_count = 0
-    coverage_drop_period_count = 0
-
-    for cohort_key, rows_by_time in cohorts.items():
-        frequency = cohort_key[0]
-        if frequency not in {"daily", "weekly", "monthly", "quarterly", "annual"}:
-            continue
-        ordered = sorted(rows_by_time)
-        if len(ordered) < 2:
-            continue
-        expected = _period_range(ordered[0], ordered[-1], frequency)
-        missing = [item for item in expected if item not in rows_by_time]
-        missing_batch_period_count += len(missing)
-        remaining_examples = policy.max_examples - len(missing_batch_period_examples)
-        for report_time in missing[: max(0, remaining_examples)]:
-            missing_batch_period_examples.append(
-                {
-                    "frequency": frequency,
-                    "geography_key": cohort_key[1],
-                    "dimension_key": cohort_key[2],
-                    "time": report_time.isoformat(),
-                }
-            )
-
-        series_counts = {
-            report_time: len({str(row["series_code"]) for row in period_rows})
-            for report_time, period_rows in rows_by_time.items()
-        }
-        maximum = max(series_counts.values(), default=0)
-        if maximum >= policy.minimum_cross_series and len(series_counts) >= 2:
-            cutoff = maximum * (1 - policy.coverage_drop_ratio)
-            for report_time, count in sorted(series_counts.items()):
-                if count <= cutoff:
-                    coverage_drop_period_count += 1
-                    if len(coverage_drop_examples) < policy.max_examples:
-                        coverage_drop_examples.append(
-                            {
-                                "frequency": frequency,
-                                "geography_key": cohort_key[1],
-                                "dimension_key": cohort_key[2],
-                                "time": report_time.isoformat(),
-                                "series_count": count,
-                                "maximum_series_count": maximum,
-                            }
-                        )
-
-    if missing_batch_period_examples:
-        issues.append(
-            SeriesObservationQualityIssue(
-                code="incoming_batch_period_gap",
-                severity="warning",
-                stage="pre_save",
-                message=(
-                    "The incoming batch has inferred calendar periods with no "
-                    "observations between its first and last period."
-                ),
-                details={
-                    "missing_period_count": missing_batch_period_count,
-                    "examples": missing_batch_period_examples,
-                    "inference_note": (
-                        "Expected periods are inferred from series frequency; pass "
-                        "a source-specific review for intentionally sparse extracts."
-                    ),
-                },
-            )
-        )
-    if coverage_drop_examples:
-        issues.append(
-            SeriesObservationQualityIssue(
-                code="incoming_batch_series_coverage_drop",
-                severity="warning",
-                stage="pre_save",
-                message=(
-                    "One or more periods contain substantially fewer disease series "
-                    "than another period in the same batch."
-                ),
-                details={
-                    "period_count": coverage_drop_period_count,
-                    "configured_drop_ratio": policy.coverage_drop_ratio,
-                    "examples": coverage_drop_examples,
-                },
-            )
-        )
-
-    projected_by_identity: dict[tuple[object, ...], dict[str, Any]] = {}
-    for row in [*history, *incoming]:
-        try:
-            identity = (
-                _as_utc(row["time"]),
-                str(row["series_code"]),
-                str(row.get("geography_key") or ""),
-                str(row.get("dimension_key") or "all"),
-            )
-        except (KeyError, TypeError, ValueError):
-            continue
-        projected_by_identity[identity] = row
-
-    incoming_times = [_as_utc(row["time"]) for row in incoming]
-    window_start, window_end = min(incoming_times), max(incoming_times)
-    projected_series: dict[tuple[str, str, str], set[datetime]] = {}
-    for identity in projected_by_identity:
-        report_time, series_code, geography_key, dimension_key = identity
-        if window_start <= report_time <= window_end:
-            projected_series.setdefault(
-                (series_code, geography_key, dimension_key), set()
-            ).add(report_time)
-
-    gap_examples: list[dict[str, Any]] = []
-    total_gap_count = 0
-    affected_series: set[str] = set()
-    for (series_code, geography_key, dimension_key), times in projected_series.items():
-        frequency = frequency_by_series.get(series_code, "unknown")
-        if frequency not in {"daily", "weekly", "monthly", "quarterly", "annual"}:
-            continue
-        ordered = sorted(times)
-        if len(ordered) < 2:
-            continue
-        missing = [
-            item
-            for item in _period_range(ordered[0], ordered[-1], frequency)
-            if item not in times
-        ]
-        if not missing:
-            continue
-        affected_series.add(series_code)
-        total_gap_count += len(missing)
-        for report_time in missing:
-            if len(gap_examples) >= policy.max_examples:
-                break
-            gap_examples.append(
-                {
-                    "series_code": series_code,
-                    "frequency": frequency,
-                    "geography_key": geography_key,
-                    "dimension_key": dimension_key,
-                    "time": report_time.isoformat(),
-                }
-            )
-
-    if total_gap_count:
-        issues.append(
-            SeriesObservationQualityIssue(
-                code="projected_series_time_gap",
-                severity="warning",
-                stage="projected_post_save",
-                message=(
-                    "The timeline that would exist after this upsert still contains "
-                    "one or more inferred series gaps."
-                ),
-                details={
-                    "affected_series_count": len(affected_series),
-                    "missing_period_count": total_gap_count,
-                    "series_examples": sorted(affected_series)[: policy.max_examples],
-                    "gap_examples": gap_examples,
-                },
-            )
-        )
-    return issues
-
-
-def _frequency_by_series(
-    observations: Iterable[Mapping[str, Any]],
-) -> dict[str, str]:
-    result: dict[str, str] = {}
-    for row in observations:
-        series_code = str(row.get("series_code") or "")
-        metadata = row.get("metadata") or row.get("metadata_") or {}
-        frequency = (
-            str(metadata.get("frequency") or "unknown").strip().casefold()
-            if isinstance(metadata, Mapping)
-            else "unknown"
-        )
-        if series_code:
-            result[series_code] = frequency
-    return result
-
-
-def _cohort_period_rows(
-    observations: Iterable[Mapping[str, Any]],
-    *,
-    frequency_by_series: Mapping[str, str] | None = None,
-) -> dict[tuple[str, str, str, str], dict[datetime, list[dict[str, Any]]]]:
-    rows = [dict(row) for row in observations]
-    frequencies = dict(frequency_by_series or _frequency_by_series(rows))
-    cohorts: dict[tuple[str, str, str, str], dict[datetime, list[dict[str, Any]]]] = {}
-    for row in rows:
-        series_code = str(row.get("series_code") or "")
-        if not series_code or row.get("time") is None:
-            continue
-        metadata = row.get("metadata") or row.get("metadata_") or {}
-        frequency = frequencies.get(series_code)
-        if not frequency and isinstance(metadata, Mapping):
-            frequency = str(metadata.get("frequency") or "unknown").casefold()
-        cohort_key = (
-            frequency or "unknown",
-            str(row.get("geography_key") or ""),
-            str(row.get("dimension_key") or "all"),
-            str(row.get("unit") or "count"),
-        )
-        cohorts.setdefault(cohort_key, {}).setdefault(_as_utc(row["time"]), []).append(
-            row
-        )
-    return cohorts
-
-
-def _period_is_cross_series_zero(
-    rows: list[dict[str, Any]], minimum_cross_series: int
-) -> bool:
-    series_codes: set[str] = set()
-    for row in rows:
-        if row.get("suppressed") or row.get("value") is None:
-            return False
-        try:
-            if float(row["value"]) != 0:
-                return False
-        except (TypeError, ValueError):
-            return False
-        series_codes.add(str(row.get("series_code") or ""))
-    series_codes.discard("")
-    return len(series_codes) >= minimum_cross_series
-
-
-def _as_utc(value: object) -> datetime:
-    if isinstance(value, date) and not isinstance(value, datetime):
-        return datetime.combine(value, time.min, tzinfo=timezone.utc)
-    if not isinstance(value, datetime):
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    else:
-        parsed = value
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
-def _advance_period(value: datetime, frequency: str) -> datetime | None:
-    if frequency == "daily":
-        return value + timedelta(days=1)
-    if frequency == "weekly":
-        return value + timedelta(days=7)
-    if frequency in {"monthly", "quarterly"}:
-        step = 1 if frequency == "monthly" else 3
-        zero_based = value.month - 1 + step
-        year = value.year + zero_based // 12
-        month = zero_based % 12 + 1
-        day = min(value.day, _days_in_month(year, month))
-        return value.replace(year=year, month=month, day=day)
-    if frequency == "annual":
-        try:
-            return value.replace(year=value.year + 1)
-        except ValueError:
-            return value.replace(year=value.year + 1, month=2, day=28)
-    return None
-
-
-def _previous_period(value: datetime, frequency: str) -> datetime | None:
-    if frequency == "daily":
-        return value - timedelta(days=1)
-    if frequency == "weekly":
-        return value - timedelta(days=7)
-    if frequency in {"monthly", "quarterly"}:
-        step = 1 if frequency == "monthly" else 3
-        zero_based = value.month - 1 - step
-        year = value.year + zero_based // 12
-        month = zero_based % 12 + 1
-        day = min(value.day, _days_in_month(year, month))
-        return value.replace(year=year, month=month, day=day)
-    if frequency == "annual":
-        try:
-            return value.replace(year=value.year - 1)
-        except ValueError:
-            return value.replace(year=value.year - 1, month=2, day=28)
-    return None
-
-
-def _periods_are_consecutive(
-    earlier: datetime, later: datetime, frequency: str
-) -> bool:
-    expected = _advance_period(earlier, frequency)
-    return expected == later if expected is not None else False
-
-
-def _period_range(start: datetime, end: datetime, frequency: str) -> list[datetime]:
-    result = [start]
-    current = start
-    # Hard cap protects the quality reporter from malformed century-spanning
-    # input while still covering every supported surveillance history.
-    for _ in range(5000):
-        if current >= end:
-            break
-        following = _advance_period(current, frequency)
-        if following is None or following <= current or following > end:
-            break
-        result.append(following)
-        current = following
-    return result
-
-
-def _days_in_month(year: int, month: int) -> int:
-    if month == 12:
-        following = date(year + 1, 1, 1)
-    else:
-        following = date(year, month + 1, 1)
-    return (following - timedelta(days=1)).day
-
-
-def _parse_report_time(row: dict[str, Any]) -> datetime | None:
-    value = row.get("Date") or row.get("date") or row.get("time")
-    if isinstance(value, datetime):
-        if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc)
-    if value:
-        text = str(value).strip()
-        for parser in (datetime.fromisoformat,):
-            try:
-                parsed = parser(text.replace("Z", "+00:00"))
-            except ValueError:
-                continue
-            if parsed.tzinfo is None:
-                return parsed.replace(tzinfo=timezone.utc)
-            return parsed.astimezone(timezone.utc)
-
-    mmwr_year = _first_text(row, "MMWRYear", "Current MMWR Year")
-    mmwr_week = _first_text(row, "MMWRWeek", "MMWR WEEK")
-    if mmwr_year and mmwr_week:
-        try:
-            year = int(float(mmwr_year))
-            week = int(float(mmwr_week))
-            if not 1 <= week <= 53:
-                return None
-            return datetime.combine(
-                _mmwr_week_end_date(year, week), time.min, tzinfo=timezone.utc
-            )
-        except (OverflowError, TypeError, ValueError):
-            return None
-
-    try:
-        year = int(row.get("Year"))
-        month = int(row.get("Month"))
-        return datetime.combine(
-            datetime(year, month, 1).date(), time.min, tzinfo=timezone.utc
-        )
-    except (TypeError, ValueError):
-        return None
-
-
-def _mmwr_week_end_date(year: int, week: int) -> date:
-    """Return the Sunday ending a Japanese IDWR epidemiological week.
-
-    IDWR weeks run Monday through Sunday and follow ISO week-year numbering.
-    In particular, 2015 week 53 ends on 2016-01-03 and must not collide with
-    2016 week 1, which ends on 2016-01-10.
-    """
-
-    return date.fromisocalendar(year, week, 7)
-
-
-def _parse_value(value: object) -> tuple[float | None, bool]:
-    text = "" if value is None else str(value).strip()
-    if (
-        text.casefold() in _SUPPRESSED_VALUES
-        or _SUPPRESSED_THRESHOLD.fullmatch(text) is not None
-    ):
-        return None, True
-    if not text:
-        return None, False
-    try:
-        numeric = float(text.replace(",", ""))
-        return (numeric, False) if math.isfinite(numeric) else (None, False)
-    except ValueError:
-        return None, False
-
-
-def _first_text(row: dict[str, Any], *keys: str) -> str | None:
-    for key in keys:
-        value = str(row.get(key) or "").strip()
-        if value:
-            return value
-    return None
-
-
-def _normalized_identity(value: object) -> str:
-    """Return a stable, whitespace-insensitive identity for source labels."""
-
-    return " ".join(str(value or "").split()).casefold()
-
-
-def _dimension_key(dimensions: dict[str, Any]) -> str:
-    if not dimensions:
-        return "all"
-    canonical = json.dumps(
-        dimensions, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )
-    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def _parse_dimensions(value: object) -> dict[str, Any] | None:
-    if value is None or value == "":
-        return {}
-    if isinstance(value, dict):
-        return _json_safe(value)
-    if isinstance(value, str):
-        try:
-            parsed = json.loads(value)
-        except json.JSONDecodeError:
-            return None
-        return _json_safe(parsed) if isinstance(parsed, dict) else None
-    return None
-
-
-def _source_id_for_row(
-    row: Mapping[str, Any], source_id: str | Mapping[str, str] | None
-) -> str | None:
-    if not isinstance(source_id, Mapping):
-        return source_id
-    source_name = _first_text(dict(row), "Source", "source", "DataSource")
-    if not source_name:
-        return None
-    normalized = source_name.casefold().strip()
-    return next(
-        (
-            registry_id
-            for configured_name, registry_id in source_id.items()
-            if str(configured_name).casefold().strip() == normalized
-        ),
-        None,
-    )
-
-
-def _geography_key(
-    row: dict[str, Any], country_code: str, *, source_id: str | None = None
-) -> str:
-    explicit = _first_text(row, "GeographyKey", "geography_key")
-    reporting_area = _first_text(
-        row, "ReportingArea", "Reporting Area", "states", "Province"
-    )
-    normalized_area = (reporting_area or "").casefold()
-    if source_id == "SRC_US_NNDSS":
-        if normalized_area == "total":
-            expected = "source:SRC_US_NNDSS:reporting-area:total"
-        elif normalized_area in {
-            "us residents",
-            "u.s. residents",
-            "united states residents",
-        }:
-            expected = "country:US:national"
-        else:
-            jurisdiction = (
-                _first_text(row, "JurisdictionCode", "jurisdiction_code") or ""
-            ).upper()
-            expected = f"country:{jurisdiction}:national"
-            if (
-                not re.fullmatch(r"US-[A-Z]{2}", jurisdiction)
-                or not reporting_area
-                or explicit != expected
-            ):
-                raise ValueError(
-                    "Unsupported SRC_US_NNDSS ReportingArea; expected TOTAL, "
-                    "US RESIDENTS, or a state/territory row with an explicit "
-                    f"jurisdiction GeographyKey, received {reporting_area!r}"
-                )
-        if explicit and explicit != expected:
-            raise ValueError(
-                "Explicit geography_key conflicts with SRC_US_NNDSS "
-                f"ReportingArea: expected {expected!r}, received {explicit!r}"
-            )
-        return explicit or expected
-    if explicit:
-        return explicit
-    national_aliases = {
-        "total",
-        "national",
-        "総数",
-        "全国",
-    }
-    if not reporting_area or normalized_area in national_aliases:
-        return f"country:{country_code.upper()}:national"
-    geocode = _first_text(row, "Geocode", "geocode")
-    identifier = geocode or reporting_area.casefold().replace(" ", "-")
-    return f"country:{country_code.upper()}:source-area:{identifier}"
-
-
-def _series_valid_at(series: dict[str, Any], report_time: datetime) -> bool:
-    if series["status"] not in {"active", "historical"}:
-        return False
-    report_date = report_time.date()
-    valid_from = series.get("valid_from")
-    valid_to = series.get("valid_to")
-    return not (
-        (valid_from and report_date < datetime.fromisoformat(valid_from).date())
-        or (valid_to and report_date > datetime.fromisoformat(valid_to).date())
-    )
-
-
-def _canonical_source_code(
-    series: Mapping[str, Any],
-    *,
-    explicit_local_code: str | None,
-    local_label: str | None,
-) -> str | None:
-    """Return a unique canonical code for one resolved ontology series."""
-
-    codes = [str(value).strip() for value in series.get("local_codes", []) if str(value).strip()]
-    labels = [str(value).strip() for value in series.get("local_labels", []) if str(value).strip()]
-    if explicit_local_code:
-        normalized_code = explicit_local_code.casefold()
-        canonical_matches = [code for code in codes if code.casefold() == normalized_code]
-        if len(canonical_matches) == 1:
-            return canonical_matches[0]
-        series_id = str(series.get("id") or "").strip()
-        if not codes and series_id.casefold() == normalized_code:
-            return series_id
-        return None
-
-    if len(codes) == 1:
-        return codes[0]
-    if not codes:
-        return str(series.get("id") or "").strip() or None
-    if local_label and len(labels) == len(codes):
-        normalized_label = local_label.casefold()
-        paired_codes = [
-            codes[index]
-            for index, label in enumerate(labels)
-            if label.casefold() == normalized_label
-        ]
-        if len(set(paired_codes)) == 1:
-            return paired_codes[0]
-    return None
-
-
-def _json_safe(value: Any) -> Any:
-    if isinstance(value, float) and not math.isfinite(value):
-        return None
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, dict):
-        return {str(key): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_safe(item) for item in value]
-    return str(value)
-
-
-def _quality_status(row: dict[str, Any]) -> str:
-    status = " ".join(
-        str(row.get(key) or "")
-        for key in ("DatasetStatus", "DataStatus", "IsProvisional", "UpdateMode")
-    ).casefold()
-    if "final" in status:
-        return "final"
-    if any(marker in status for marker in ("revised", "revision", "corrected")):
-        return "revised"
-    if any(marker in status for marker in ("provisional", "preliminary", "true")):
-        return "provisional"
-    return "raw"
-
-
-def _allows_authoritative_revision(row: Mapping[str, Any]) -> bool:
-    explicit = row.get("AuthoritativeRevision", row.get("authoritative_revision"))
-    if isinstance(explicit, bool):
-        return explicit
-    if str(explicit or "").strip().casefold() in {"1", "true", "yes"}:
-        return True
-    status = " ".join(
-        str(row.get(key) or "")
-        for key in ("DatasetStatus", "UpdateMode")
-    ).casefold()
-    if any(marker in status for marker in ("revised", "revision", "corrected")):
-        return True
-    semantics = " ".join(
-        str(row.get(key) or "")
-        for key in ("RevisionSemantics", "revision_semantics", "CorrectionType")
-    ).strip().casefold()
-    return semantics in {
-        "authoritative_revision",
-        "source_correction",
-        "restatement",
-    }
-
-
-def _allows_equal_quality_overwrite(row: Mapping[str, Any]) -> bool:
-    explicit = row.get(
-        "AllowEqualQualityOverwrite",
-        row.get("allow_equal_quality_overwrite"),
-    )
-    if explicit is None:
-        # Preserve the established behavior for sources that have not opted
-        # into replay protection. CA official-file replays set this false.
-        return True
-    if isinstance(explicit, bool):
-        return explicit
-    return str(explicit).strip().casefold() in {"1", "true", "yes"}
-
-
-def _observation_allows_authoritative_revision(row: Mapping[str, Any]) -> bool:
-    metadata = row.get("metadata") or row.get("metadata_") or {}
-    if isinstance(metadata, Mapping) and metadata.get("authoritative_revision") is True:
-        return True
-    raw_data = row.get("raw_data") or {}
-    return isinstance(raw_data, Mapping) and _allows_authoritative_revision(raw_data)
 
 
 __all__ = [

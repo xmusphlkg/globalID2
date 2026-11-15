@@ -1,0 +1,31 @@
+---
+import { subscriptionText } from './messages';
+interface Props { locale: 'en' | 'zh' | 'fr' }
+const { locale } = Astro.props;
+const pick = subscriptionText(locale);
+---
+  <div id="subscription-modal" class="subscribe-modal" role="dialog" aria-modal="true" aria-labelledby="subscription-modal-title" hidden>
+    <div class="subscribe-modal-backdrop" data-modal-close></div>
+    <div class="subscribe-modal-panel">
+      <button class="subscribe-modal-close" type="button" aria-label={pick('Close', '关闭')} data-modal-close>
+        <span aria-hidden="true">×</span>
+      </button>
+      <p class="subscribe-kicker">{pick('Subscription received', '订阅已收到')}</p>
+      <h2 id="subscription-modal-title">{pick('Check your inbox', '请查收确认邮件')}</h2>
+      <p id="subscription-modal-message" class="subscribe-modal-message"></p>
+      <div class="subscribe-trust-note">
+        <strong>{pick('Trusted sender', '可信发件人')}</strong>
+        <span>GIDS Alerts &lt;noreply@globalinfectiousdisease.com&gt;</span>
+      </div>
+      <p class="subscribe-modal-help">{pick('Add this sender to your contacts or allowlist so future GIDS updates are not filtered as spam.', '可将发件人加入联系人或白名单，避免后续更新被误判为垃圾邮件。')}</p>
+      <div class="subscribe-modal-actions">
+        <button id="subscription-resend" class="subscribe-modal-secondary" type="button">
+          <span>{pick('Resend confirmation', '再次发送确认邮件')}</span>
+        </button>
+        <button class="subscribe-modal-primary" type="button" data-modal-close>
+          <span>{pick('Done', '完成')}</span>
+        </button>
+      </div>
+      <p id="subscription-resend-status" class="subscribe-modal-resend" role="status" aria-live="polite"></p>
+    </div>
+  </div>

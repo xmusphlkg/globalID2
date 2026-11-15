@@ -86,15 +86,15 @@ const seo = {
 ---
 
 <ReportLayout title={seo.title} description={seo.description} initialLanguage={locale} seo={seo} structuredData={dataset} breadcrumbs={[
-  { label: 'Countries', labelZh: '国家/地区', labelFr: 'Pays', href: localeHref('/countries/') },
+  { label: 'Geographic areas', labelZh: '区域', labelFr: 'Zones géographiques', href: localeHref('/countries/') },
   { label: countryNameEn, labelZh: countryNameZh, labelFr: countryNameFr, href: localeHref(`/countries/${code}/`) },
   { label: diseaseNameEn, labelZh: diseaseNameZh, labelFr: diseaseNameFr },
 ]}>
   <article class="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
     <header class="academic-hero">
-      <div class="flex items-center gap-3"><CountryFlag code={String(code)} name={countryName} sizeClass="h-8 w-11" /><span class="academic-kicker">{copy('Country disease surveillance profile', '国家疾病监测画像', 'Profil de surveillance par pays et maladie')}</span></div>
+      <div class="flex items-center gap-3"><CountryFlag code={String(code)} name={countryName} sizeClass="h-8 w-11" /><span class="academic-kicker">{copy('Area disease surveillance profile', '区域疾病监测画像', 'Profil de surveillance par zone et maladie')}</span></div>
       <h1 class="academic-title mt-4">{copy(`${diseaseName} surveillance in ${countryName}`, `${countryName}${diseaseName}监测`, `Surveillance de ${diseaseName} en ${countryName}`)}</h1>
-      <p class="academic-lead">{copy('Official-source observations, coverage details, trend context, and a direct route to the underlying country dataset.', '汇总官方来源观测、覆盖范围、趋势解释以及底层国家数据入口。', 'Observations officielles, couverture, contexte des tendances et accès direct au jeu de données national sous-jacent.')}</p>
+      <p class="academic-lead">{copy('Official-source observations, coverage details, trend context, and a direct route to the underlying area dataset.', '汇总官方来源观测、覆盖范围、趋势解释以及底层区域数据入口。', 'Observations officielles, couverture, contexte des tendances et accès direct au jeu de données national sous-jacent.')}</p>
       <SurveillanceSummary client:load dataUrl={`/site-data/countries/${code}-summary.json`} mode="country-disease-indicators" diseaseId={diseaseId} language={locale} />
     </header>
     <section class="mt-6 grid gap-6 lg:grid-cols-2">
@@ -115,7 +115,7 @@ const seo = {
       data-disease-names={JSON.stringify({ en: diseaseNameEn, zh: diseaseNameZh, fr: diseaseNameFr })}
     >
       <h2 class="figure-title">{copy('Surveillance trend', '监测趋势', 'Tendance de surveillance')}</h2>
-      <p class="figure-caption mt-2">{copy('This chart opens with this disease selected for this country. Reporting periods and source differences remain visible in the chart controls.', '图表已预选此国家和疾病；报告周期与来源差异会在图表中保留。', 'Le graphique est préconfiguré pour cette maladie et ce pays. Les périodes et différences de source restent indiquées.')}</p>
+      <p class="figure-caption mt-2">{copy('This chart opens with this disease selected for this area. Reporting periods and source differences remain visible in the chart controls.', '图表已预选此区域和疾病；报告周期与来源差异会在图表中保留。', 'Le graphique est préconfiguré pour cette maladie et cette zone. Les périodes et différences de source restent indiquées.')}</p>
       <div class="mt-5">
         <EpidemicCurve
           client:visible

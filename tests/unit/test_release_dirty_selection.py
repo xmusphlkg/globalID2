@@ -474,6 +474,80 @@ async def test_blocked_surveillance_does_not_starve_situation(release_db, monkey
     assert not await service._yield_json_turn("site-release", "situation")
 
 
+@pytest.mark.parametrize("scopes,latest,cooldown,expected", [
+    (["legacy"], "surveillance", False, False),
+    (["legacy", "*"], "surveillance", False, True),
+    (["*"], "surveillance", True, False),
+    (["*"], "literature", False, False),
+    (["*"], "situation", False, False),
+])
+async def test_rotation_checks_only_publishable_situation_scopes(
+    release_db, monkeypatch, scopes, latest, cooldown, expected,
+):
+    maker, service, statements = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC",
+        surveillance_json_enabled=True, situation_json_enabled=True))
+    monkeypatch.setattr(service, "_release_failure_cooldown_reason", AsyncMock(
+        return_value="failure" if cooldown else None))
+    async with maker() as db:
+        db.add_all([PublishDirty(line="situation", scope_key=scope,
+            source_task_uuid="situation", marked_at=datetime.now(timezone.utc)) for scope in scopes])
+        db.add(Task(task_uuid="latest", task_type=TaskType.EXPORT_DATA, task_name="Latest",
+            status=TaskStatus.COMPLETED, input_data={"data_only": True, "data_line": latest}))
+        await db.commit()
+    statements.clear()
+    assert await service._yield_json_turn("site-release", "surveillance") is expected
+    dirty_queries = [sql for sql in statements if "publish_dirty" in sql]
+    assert len(dirty_queries) == 1
+    assert "EXISTS" in dirty_queries[0]
+    assert "change_set" not in dirty_queries[0]
+    async with maker() as db:
+        assert len(list((await db.execute(select(PublishDirty).where(
+            PublishDirty.published_at.is_(None)))).scalars())) == len(scopes)
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+async def test_rotation_respects_public_surveillance_visibility(release_db, monkeypatch, enabled):
+    maker, service, statements = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC",
+        surveillance_json_enabled=True, situation_json_enabled=True, auto_failure_cooldown_minutes=0))
+    monkeypatch.setattr(module, "get_country_bootstrap_config", lambda code: {"public_release_enabled": enabled})
+    async with maker() as db:
+        db.add(PublishDirty(line="surveillance", scope_key="US", source_task_uuid="source",
+            marked_at=datetime.now(timezone.utc)))
+        db.add(Task(task_uuid="latest", task_type=TaskType.EXPORT_DATA, task_name="Latest",
+            status=TaskStatus.COMPLETED, input_data={"data_only": True, "data_line": "situation"}))
+        await db.commit()
+    statements.clear()
+    assert await service._yield_json_turn("site-release", "situation") is enabled
+    dirty_queries = [sql for sql in statements if "publish_dirty" in sql]
+    assert len(dirty_queries) == 1 and "EXISTS" in dirty_queries[0]
+    assert "change_set" not in dirty_queries[0]
+
+
+async def test_invalid_situation_scope_does_not_prevent_surveillance_enqueue(release_db, monkeypatch):
+    maker, service, _ = release_db
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(timezone="UTC",
+        surveillance_json_enabled=True, situation_json_enabled=True, auto_failure_cooldown_minutes=0))
+    async with maker() as db:
+        valid = PublishDirty(line="surveillance", scope_key="US", source_task_uuid="source",
+            marked_at=datetime.now(timezone.utc))
+        invalid = PublishDirty(line="situation", scope_key="legacy", source_task_uuid="source",
+            marked_at=datetime.now(timezone.utc))
+        db.add_all([valid, invalid, Task(task_uuid="latest", task_type=TaskType.EXPORT_DATA,
+            task_name="Latest", status=TaskStatus.COMPLETED, input_data={"data_only": True})])
+        await db.commit()
+    assert not await service._yield_json_turn("site-release", "surveillance")
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site"), manual=False,
+        trigger="test", trigger_task_uuid=None, data_only=True)
+    assert result["status"] == "queued"
+    async with maker() as db:
+        task = (await db.execute(select(Task).where(Task.task_uuid == result["task_uuid"]))).scalar_one()
+        assert task.input_data["publish_dirty_ids"] == [valid.id]
+        assert (await db.get(PublishDirty, invalid.id)).published_at is None
+
+
 @pytest.mark.parametrize("flags", [
     {"full": True}, {"reports_only": True}, {"code_only": True},
 ])

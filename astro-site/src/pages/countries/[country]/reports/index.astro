@@ -72,7 +72,7 @@ for (const r of reports) {
   initialLanguage={locale}
   seo={seo}
   breadcrumbs={[
-    { label: 'Countries', labelZh: '国家/地区', labelFr: 'Pays', href: localeHref('/countries/') },
+    { label: 'Geographic areas', labelZh: '区域', labelFr: 'Zones géographiques', href: localeHref('/countries/') },
     { label: countryNameEn, labelZh: countryNameZh, labelFr: countryNameFr, href: localeHref(`/countries/${country}/`) },
     { label: 'Reports', labelZh: '报告', labelFr: 'Rapports' },
   ]}
@@ -118,7 +118,7 @@ for (const r of reports) {
 
     {reports.length === 0 && (
       <div class="text-center py-24 text-[rgb(var(--text-muted))]">
-        <p>{zh ? '该国家暂无报告。' : fr ? 'Aucun rapport n’est disponible pour ce pays.' : 'No reports available for this country.'}</p>
+        <p>{zh ? '该区域暂无报告。' : fr ? 'Aucun rapport n’est disponible pour cette zone.' : 'No reports available for this area.'}</p>
       </div>
     )}
   </div>

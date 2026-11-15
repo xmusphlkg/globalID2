@@ -13,7 +13,10 @@ from tests.unit.test_release_dirty_selection import release_db
 
 
 @pytest.mark.parametrize('planned', [False, True])
-async def test_literature_release_retries_frozen_candidate_and_acks_only_selected_ids(release_db, tmp_path, monkeypatch, planned):
+@pytest.mark.parametrize('lost_build_receipt', [False, True])
+async def test_literature_release_retries_frozen_candidate_and_acks_only_selected_ids(
+    release_db, tmp_path, monkeypatch, planned, lost_build_receipt,
+):
     maker, service, _ = release_db
     async with maker() as db:
         rows = [PublishDirty(line=line, scope_key='*', source_task_uuid='source', marked_at=datetime.now(timezone.utc))
@@ -54,10 +57,15 @@ async def test_literature_release_retries_frozen_candidate_and_acks_only_selecte
             target.mkdir()
             (target / 'article-inputs.json').write_text('{}')
         elif 'scripts/build-research.mjs' in cmd:
+            assert kwargs['env']['GIDS_RESEARCH_BUILD_SCOPE'] == 'auto'
+            assert kwargs['env']['GIDS_RESEARCH_PROJECTION_BASELINE'].endswith('projection-build-baseline.json')
             stage = tmp_path / 'exports/research-stage-research-test'
             stage.mkdir(parents=True)
             stage.with_name(stage.name + '.inputs.json').write_text('{}')
         elif 'scripts/publish_research_candidate.py' in cmd:
+            if '--prepare-build' in cmd:
+                (tmp_path / 'exports/research-runs/research-test/projection-build-baseline.json').write_text('{"schema":1,"mode":"full"}')
+                return
             if fail:
                 fail = False
                 raise RuntimeError('upload failed')
@@ -78,10 +86,14 @@ async def test_literature_release_retries_frozen_candidate_and_acks_only_selecte
     # A process launch failure before complete Papers preparation must remain
     # retryable, rather than becoming an impossible recovery-only publication.
     assert not (tmp_path / 'exports/publication-recovery/research-test.json').exists()
+    if lost_build_receipt:
+        (tmp_path / 'exports/research-stage-research-test.inputs.json').unlink()
     async with maker() as db:
         assert (await db.get(PublishDirty, ids[0])).published_at is None
     result = await data_pipeline.execute_data_release(service, task, runtime=runtime)
     assert result['release_id'] == 'literature-research-test'
+    assert result['stage_timing']['publish_seconds'] >= 0
+    assert result['stage_timing']['acknowledge_seconds'] >= 0
     assert len(snapshots) == 1
     assert sum('scripts/build-research.mjs' in cmd for cmd in commands) == 1
     assert sum('scripts/capture_research_context.py' in cmd for cmd in commands) == 1

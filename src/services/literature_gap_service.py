@@ -49,6 +49,8 @@ ROOT = Path(__file__).resolve().parents[2]
 ACTIVE_GAP_STATUSES = {"open", "searching", "review", "no_results", "error"}
 REVIEW_STATUSES = {"review", "confirmed", "rejected"}
 RELATION_LEVELS = {"exact_disease_geography", "disease_context", "candidate"}
+# asyncpg accepts at most 32,767 bound parameters per statement.
+_PROJECTION_LINK_BATCH_SIZE = 10_000
 
 
 def _utc_now() -> datetime:
@@ -188,37 +190,46 @@ class LiteratureGapService:
     async def _published_projection(db: AsyncSession) -> list[dict[str, Any]]:
         articles = (
             await db.execute(
-                select(LiteratureArticle).where(
+                select(
+                    LiteratureArticle.article_id,
+                    LiteratureArticle.slug,
+                    LiteratureArticle.title,
+                    LiteratureArticle.journal,
+                    LiteratureArticle.study_type,
+                    LiteratureArticle.published_at,
+                ).where(
                     LiteratureArticle.publication_status == "published",
                     LiteratureArticle.integrity_status.notin_(("retracted", "expression_of_concern")),
                 )
             )
-        ).scalars().all()
+        ).all()
         if not articles:
             return []
         article_ids = [article.article_id for article in articles]
-        disease_links = (
-            await db.execute(
-                select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(article_ids))
-            )
-        ).scalars().all()
-        country_links = (
-            await db.execute(
-                select(LiteratureCountryLink).where(LiteratureCountryLink.article_id.in_(article_ids))
-            )
-        ).scalars().all()
         diseases: dict[str, list[dict[str, Any]]] = {article_id: [] for article_id in article_ids}
         countries: dict[str, list[dict[str, Any]]] = {article_id: [] for article_id in article_ids}
-        for link in disease_links:
-            diseases[link.article_id].append({
-                "disease_id": link.disease_id,
-                "confidence": link.confidence,
-            })
-        for link in country_links:
-            countries[link.article_id].append({
-                "code": link.country_code,
-                "confidence": link.confidence,
-            })
+        for start in range(0, len(article_ids), _PROJECTION_LINK_BATCH_SIZE):
+            batch_ids = article_ids[start:start + _PROJECTION_LINK_BATCH_SIZE]
+            disease_links = (
+                await db.execute(
+                    select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(batch_ids))
+                )
+            ).scalars().all()
+            country_links = (
+                await db.execute(
+                    select(LiteratureCountryLink).where(LiteratureCountryLink.article_id.in_(batch_ids))
+                )
+            ).scalars().all()
+            for link in disease_links:
+                diseases[link.article_id].append({
+                    "disease_id": link.disease_id,
+                    "confidence": link.confidence,
+                })
+            for link in country_links:
+                countries[link.article_id].append({
+                    "code": link.country_code,
+                    "confidence": link.confidence,
+                })
         return [
             {
                 "article_id": article.article_id,

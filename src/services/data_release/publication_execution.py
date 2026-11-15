@@ -191,6 +191,8 @@ def prepare_execution(plan: dict, *, root: Path, data_dir: Path, service, kind: 
         plan["blocked_reason"] = "publication_select_execution_scope"
         return
     plan.pop("_dirty_rows", None)
+    if kind == "template":
+        plan["warnings"].append("reports_preserved_use_reports_only")
     if kind != "theme":
         from .publication_recovery import freeze_environment
         execution["environment"] = freeze_environment(service, job_configuration)
@@ -291,6 +293,8 @@ async def enqueue_plan(body, *, db, root: Path, data_dir: Path, service) -> dict
     mode = plan["execution_mode"]
     kwargs = {"theme_only": mode == "theme", "full": mode == "full", "code_only": mode in {"code_only", "country_template"},
               "data_only": mode == "content", "publication_plan": frozen}
+    if plan.get("suppress_subscription_dispatch"):
+        kwargs["suppress_subscription_dispatch"] = True
     if mode == "content":
         kwargs.update(data_line=plan["channels"][0], pending_ids=plan["dirty_ids"])
     elif mode == "full":

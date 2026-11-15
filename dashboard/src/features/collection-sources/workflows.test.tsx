@@ -15,13 +15,15 @@ const clients: QueryClient[] = [];
 function show(element: React.ReactNode) { const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client); return render(<QueryClientProvider client={client}>{element}</QueryClientProvider>); }
 beforeEach(() => { useAppStore.setState({ lang: "en", countryId: 1, countryCode: "US", countryName: "United States" }); });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.resetAllMocks(); });
-const source = { source_id: "who", label_en: "WHO notices", label_zh: "世卫通报", status: "failed", stored_notices: 3, last_error: "Source unavailable", history: [{ run_id: "source-run", started_at: "2026-10-30T00:00:00Z", status: "failed", fetched_count: 3, new_count: 1, updated_count: 0, error: "Source unavailable" }] };
+const source = { source_id: "who", label_en: "WHO notices", label_zh: "世卫通报", status: "failed", stored_notices: 3, last_error: "Source unavailable", next_sample_at: "2026-11-15T18:12:00Z", phase_minute: 12, upstream: "who.int", interval_minutes: 30, sample_pool_size: 2, read_next_run_at: "2026-11-15T18:20:00Z", read_interval_minutes: 20, history: [{ run_id: "source-run", started_at: "2026-10-30T00:00:00Z", status: "failed", fetched_count: 3, new_count: 1, updated_count: 0, error: "Source unavailable" }] };
 
 describe("independent collection source workflows", () => {
  it("collects situation metadata without requesting AI or export", async () => {
   vi.mocked(apiFetch).mockImplementation((_path, init) => Promise.resolve(init?.method === "POST" ? { task_uuid: "situation-task", status: "queued" } : [source]));
   show(<SituationSourcesView />);
   await screen.findByRole("heading", { name: "WHO notices" });
+  expect(screen.getByText(/who\.int/)).toBeInTheDocument();
+  expect(screen.getByText(/Next reading/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Collect notice sources" }));
   expect(await screen.findByRole("link", { name: "Open collection run" })).toHaveAttribute("href", "/collection/runs/situation-task");
   expect(apiFetch).toHaveBeenCalledWith("/collection/runs", { method: "POST", body: JSON.stringify({ line: "situation", mode: "metadata_only" }) });

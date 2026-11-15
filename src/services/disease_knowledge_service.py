@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+from src.knowledge.repair_policy import (
+    _bilingual_alignment_failures,
+    _knowledge_repair_task_priority,
+    _normalize_requested_sections_by_language,
+    _normalize_repair_reasons_by_language,
+ )
+
 import asyncio
 import csv
 import json
@@ -1219,40 +1226,6 @@ def _generated_profile_failures(
     return failures
 
 
-def _bilingual_alignment_failures(results: list[dict[str, Any]]) -> list[str]:
-    """Ensure both localized profiles were rendered from one evidence boundary."""
-    payloads = {
-        str((result.get("payload") or {}).get("language") or ""): result.get("payload") or {}
-        for result in results
-    }
-    if not all(language in payloads for language in ("en", "zh")):
-        return []
-    failures: list[str] = []
-    metadata = {
-        language: payloads[language].get("metadata")
-        if isinstance(payloads[language].get("metadata"), dict)
-        else {}
-        for language in ("en", "zh")
-    }
-    newly_generated_languages = {
-        str((result.get("payload") or {}).get("language") or "")
-        for result in results
-        if (result.get("trace") or {}).get("generator") == "ai"
-    }
-    manifest_ids = {
-        language: (metadata[language].get("evidence_manifest") or {}).get("manifest_id")
-        for language in newly_generated_languages
-        if isinstance(metadata[language].get("evidence_manifest"), dict)
-    }
-    if len(manifest_ids) > 1 and len(set(manifest_ids.values())) != 1:
-        failures.append("bilingual profiles used different evidence manifests")
-    profile_types = {
-        language: (metadata[language].get("profile_schema") or {}).get("profile_type")
-        for language in ("en", "zh")
-    }
-    if profile_types["en"] != profile_types["zh"]:
-        failures.append("bilingual profiles used different profile schemas")
-    return failures
 
 
 def _profile_repair_sections(
@@ -1528,22 +1501,6 @@ def _select_knowledge_repair_candidates(
     return selected, skipped
 
 
-def _knowledge_repair_task_priority(
-    requested: str | TaskPriority | None,
-    repair_priority: str,
-) -> TaskPriority:
-    if isinstance(requested, TaskPriority):
-        return requested
-    requested_value = str(requested or "").strip().lower()
-    mapping = {
-        "urgent": TaskPriority.URGENT,
-        "high": TaskPriority.HIGH,
-        "normal": TaskPriority.NORMAL,
-        "low": TaskPriority.LOW,
-    }
-    if requested_value in mapping:
-        return mapping[requested_value]
-    return mapping.get(str(repair_priority or "").strip().lower(), TaskPriority.HIGH)
 
 
 def _profile_repair_sections_by_language(
@@ -1645,60 +1602,8 @@ def _resolve_repair_sections_by_language(
     return targets
 
 
-def _normalize_requested_sections_by_language(
-    value: Any,
-    *,
-    ordered_sections: list[str],
-) -> dict[str, list[str]]:
-    """Validate a persisted governance repair plan before it reaches a prompt."""
-    if not isinstance(value, dict):
-        return {}
-    allowed = set(ordered_sections)
-    normalized: dict[str, list[str]] = {}
-    for language in ("en", "zh"):
-        raw_sections = value.get(language)
-        if not isinstance(raw_sections, list):
-            continue
-        selected = {
-            str(section).strip()
-            for section in raw_sections
-            if str(section).strip() in allowed
-        }
-        if selected:
-            normalized[language] = [
-                section for section in ordered_sections if section in selected
-            ]
-    return normalized
 
 
-def _normalize_repair_reasons_by_language(value: Any) -> dict[str, list[str]]:
-    """Keep deterministic gate feedback concise before it enters a model prompt."""
-    if not isinstance(value, dict):
-        return {}
-    normalized: dict[str, list[str]] = {}
-    for language in ("en", "zh"):
-        raw_reasons = value.get(language)
-        if isinstance(raw_reasons, str):
-            raw_reasons = [raw_reasons]
-        if not isinstance(raw_reasons, list):
-            continue
-        reasons: list[str] = []
-        seen: set[str] = set()
-        for raw_reason in raw_reasons:
-            reason = " ".join(str(raw_reason or "").split()).strip()
-            if not reason:
-                continue
-            reason = reason[:600]
-            key = reason.casefold()
-            if key in seen:
-                continue
-            seen.add(key)
-            reasons.append(reason)
-            if len(reasons) >= 3:
-                break
-        if reasons:
-            normalized[language] = reasons
-    return normalized
 
 
 def _locked_existing_brief_result(brief: Any, disease: dict[str, Any]) -> dict[str, Any]:

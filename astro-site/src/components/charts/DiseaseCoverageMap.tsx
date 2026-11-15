@@ -104,7 +104,7 @@ function paletteFor(theme: 'light' | 'dark') {
       };
 }
 
-/** Roll sub-national series into their parent country and total each metric. */
+/** Roll sub-national series into their parent area and total each metric. */
 export function buildLocationCoverage(dataset: DiseaseDataset, lang: Lang): LocationCoverage[] {
   const series = dataset?.country_series ?? {};
   const rolled = new Map<string, LocationCoverage>();
@@ -300,7 +300,7 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
           if (location.regions) {
             rows.push(`<span style="color:${palette.muted}">${ui(lang, `${location.regions} sub-national series`, `${location.regions} 个地区数据集`, `${location.regions} séries infranationales`)}</span>`);
           }
-          rows.push(`<span style="color:${palette.muted}">${ui(lang, 'Click to open country page ↗', '单击打开国家页 ↗', 'Cliquez pour ouvrir la page du pays ↗')}</span>`);
+          rows.push(`<span style="color:${palette.muted}">${ui(lang, 'Click to open area page ↗', '单击打开区域页 ↗', 'Cliquez pour ouvrir la page de la zone ↗')}</span>`);
           return rows.join('<br/>');
         },
       },
@@ -427,7 +427,7 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
       ? ui(lang, 'Reported cases', '累计报告病例', 'Cas déclarés')
       : value === 'deaths'
         ? ui(lang, 'Reported deaths', '累计报告死亡', 'Décès déclarés')
-        : ui(lang, 'Reporting locations', '报告国家/地区', 'Lieux déclarant');
+        : ui(lang, 'Reporting locations', '报告区域', 'Lieux déclarant');
 
   const zoomLabel = ui(lang, 'Map zoom', '地图缩放', 'Zoom de la carte');
 
@@ -441,7 +441,7 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
     <div className="disease-coverage-map panel-fullscreen" ref={shellRef}>
       <div className="disease-coverage-toolbar">
         <span className="site-control-pill" style={{ fontSize: '.7rem' }}>
-          {ui(lang, `${drawn.length} locations`, `${drawn.length} 个报告国家/地区`, `${drawn.length} lieux`)}
+          {ui(lang, `${drawn.length} locations`, `${drawn.length} 个报告区域`, `${drawn.length} lieux`)}
           {regionalSeriesCount > 0
             ? ` · ${ui(
                 lang,
@@ -501,9 +501,9 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
         role="img"
         aria-label={ui(
           lang,
-          `World map highlighting ${drawn.length} countries and territories reporting this disease`,
-          `世界地图：高亮显示报告该疾病的 ${drawn.length} 个国家和地区`,
-          `Carte mondiale : ${drawn.length} pays et territoires déclarant cette maladie`,
+          `World map highlighting ${drawn.length} areas reporting this disease`,
+          `世界地图：高亮显示报告该疾病的 ${drawn.length} 个地理区域`,
+          `Carte mondiale : ${drawn.length} zones déclarant cette maladie`,
         )}
       >
         <ReactEChartsCore
@@ -583,9 +583,9 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
         {activeMetric === 'coverage'
           ? ui(
               lang,
-              'Shaded locations publish surveillance data for this disease. Regional series are rolled up into their parent country.',
-              '着色地区表示该疾病已有监测数据；地区级数据已汇总至所属国家。',
-              'Les lieux colorés publient des données de surveillance pour cette maladie. Les séries régionales sont agrégées à leur pays.',
+              'Shaded locations publish surveillance data for this disease. Regional series are rolled up into their parent area.',
+              '着色地区表示该疾病已有监测数据；地区级数据已汇总至上级区域。',
+              'Les lieux colorés publient des données de surveillance pour cette maladie. Les séries régionales sont agrégées à leur zone parente.',
             )
           : ui(
               lang,

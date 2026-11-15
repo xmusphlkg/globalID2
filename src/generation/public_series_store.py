@@ -1,7 +1,7 @@
 """Build and commit public disease-series rows within a verified site release.
 
 The row builder is pure. Database refresh reuses the site export projection,
-then replaces that country's published rows in one transaction.
+then reconciles that country's published rows in one transaction.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from src.core.database import get_db
@@ -252,7 +252,12 @@ async def _replace_country_rows(
     *,
     source_high_water: datetime | None,
     stored_disease_ids: set[str],
-) -> None:
+) -> dict[str, int]:
+    # Callers supply the complete, frozen country projection. Validate before
+    # issuing any mutations; an incomplete selection must never delete curves.
+    ids = [row["disease_id"] for row in rows]
+    if len(ids) != len(set(ids)) or any(row["country_code"] != country_code for row in rows):
+        raise ValueError("Public projection contains duplicate or foreign country rows")
     missing = sorted(
         {
             row["disease_id"]
@@ -266,16 +271,53 @@ async def _replace_country_rows(
             + ", ".join(missing)
         )
     now = datetime.now(timezone.utc)
-    await session.execute(
-        delete(PublicDiseaseSeries).where(
-            PublicDiseaseSeries.country_code == country_code
-        )
-    )
-    if rows:
-        for row in rows:
-            row["created_at"] = now
-            row["updated_at"] = now
-        await session.execute(pg_insert(PublicDiseaseSeries), rows)
+    high_water = _as_utc(source_high_water)
+    # Keep large arrays out of the comparison query and out of unchanged writes.
+    existing = {
+        row.disease_id: row
+        for row in (await session.execute(
+            select(PublicDiseaseSeries.disease_id, PublicDiseaseSeries.content_hash,
+                   PublicDiseaseSeries.projection_version, PublicDiseaseSeries.source_high_water)
+            .where(PublicDiseaseSeries.country_code == country_code)
+        )).all()
+    }
+    counts = {"inserted": 0, "changed": 0, "deleted": 0, "watermark_only": 0, "unchanged": 0}
+    changed = []
+    watermark_ids = []
+    for row in rows:
+        old = existing.get(row["disease_id"])
+        if old is None or (old.content_hash, old.projection_version) != (
+            row["content_hash"], row["projection_version"]
+        ):
+            counts["inserted" if old is None else "changed"] += 1
+            changed.append({**row, "source_high_water": high_water, "created_at": now, "updated_at": now})
+        elif _as_utc(old.source_high_water) != high_water:
+            watermark_ids.append(row["disease_id"])
+        else:
+            counts["unchanged"] += 1
+    removed = sorted(set(existing) - set(ids))
+    counts["deleted"] = len(removed)
+    counts["watermark_only"] = len(watermark_ids)
+    # Bound statements even for unusually large catalogues. The caller owns
+    # the transaction, so a failure in any batch rolls the entire country back.
+    for offset in range(0, len(removed), 1000):
+        await session.execute(delete(PublicDiseaseSeries).where(
+            PublicDiseaseSeries.country_code == country_code,
+            PublicDiseaseSeries.disease_id.in_(removed[offset:offset + 1000]),
+        ).execution_options(synchronize_session=False))
+    for offset in range(0, len(changed), 1000):
+        statement = pg_insert(PublicDiseaseSeries).values(changed[offset:offset + 1000])
+        await session.execute(statement.on_conflict_do_update(
+            index_elements=["country_code", "disease_id"],
+            set_={key: getattr(statement.excluded, key) for key in changed[0]
+                  if key not in {"country_code", "disease_id", "created_at"}},
+        ))
+    for offset in range(0, len(watermark_ids), 1000):
+        await session.execute(update(PublicDiseaseSeries).where(
+            PublicDiseaseSeries.country_code == country_code,
+            PublicDiseaseSeries.disease_id.in_(watermark_ids[offset:offset + 1000]),
+        ).values(source_high_water=high_water, updated_at=now)
+         .execution_options(synchronize_session=False))
 
     country_hash = (
         country_publish_hash(row["content_hash"] for row in rows)
@@ -306,8 +348,14 @@ async def _replace_country_rows(
                 "published_at": insert_state.excluded.published_at,
                 "updated_at": insert_state.excluded.updated_at,
             },
+            where=or_(*(
+                getattr(CountryPublishState, key).is_distinct_from(getattr(insert_state.excluded, key))
+                for key in ("source_high_water", "series_count", "point_count", "content_hash", "projection_version")
+            )),
         )
     )
+    logger.info("Public series delta {}: {}", country_code, counts)
+    return counts
 
 
 async def _publish_country(
@@ -358,7 +406,7 @@ async def _publish_country(
         )
         if row is not None:
             rows.append(row)
-    await _replace_country_rows(
+    write_counts = await _replace_country_rows(
         session,
         country_code,
         rows,
@@ -379,4 +427,5 @@ async def _publish_country(
         "series_count": len(rows),
         "point_count": sum(row["point_count"] for row in rows),
         "elapsed_seconds": round(elapsed, 3),
+        "write_counts": write_counts,
     }

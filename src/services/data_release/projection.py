@@ -16,6 +16,7 @@ from src.core.country_library import expand_country_scopes, get_country_bootstra
 from src.domain import Country, CountryPublishState, PublicDiseaseSeries
 from src.domain.collection import PublishDirty
 from src.generation.public_series_store import _load_publish_context, _publish_country
+from .global_selection import selection_batches
 
 
 async def _retire_disabled_publications(db) -> set[str]:
@@ -59,12 +60,13 @@ async def commit_release_projection(
     prepared_dir: Path | None = None,
     country_scopes_exact: bool = False,
     require_prepared: bool = False,
-) -> None:
+) -> dict[str, dict[str, int]]:
     if require_prepared and (full or country_codes) and prepared_dir is None:
         raise ValueError("Concurrent release requires a frozen publication projection")
     if require_prepared and marked_before:
         raise ValueError("Concurrent release requires exact dirty IDs, not a timestamp cutoff")
     published_codes = []
+    write_counts = {}
     if full or country_codes:
         context = await _load_publish_context()
         available = set(context["countries_by_code"])
@@ -93,7 +95,9 @@ async def commit_release_projection(
             # A single transaction covers all countries: one failure rolls back
             # every public row and leaves every selected marker pending.
             if manifest is None:
-                await _publish_country(db, code, context, force=True)
+                refreshed = await _publish_country(db, code, context, force=True)
+                if isinstance(refreshed, dict) and refreshed.get("write_counts") is not None:
+                    write_counts[code] = refreshed["write_counts"]
             else:
                 from src.generation.release_projection_snapshot import read_projection_country
                 from src.generation.public_series_store import build_public_series_row, _replace_country_rows
@@ -106,7 +110,7 @@ async def commit_release_projection(
                     row = build_public_series_row(code, disease_id, series, source_high_water=high_water)
                     if row is not None:
                         rows.append(row)
-                await _replace_country_rows(
+                write_counts[code] = await _replace_country_rows(
                     db, code, rows, source_high_water=high_water,
                     stored_disease_ids=context["stored_disease_ids"],
                 )
@@ -115,10 +119,12 @@ async def commit_release_projection(
     # site-only release, without scanning facts or touching active timestamps.
     retired = await _retire_disabled_publications(db)
     published_codes = [code for code in published_codes if code not in retired]
-    predicate = PublishDirty.id.in_(dirty_ids)
     if full and marked_before:
-        predicate = PublishDirty.marked_at <= datetime.fromisoformat(marked_before)
-    if dirty_ids or (full and marked_before):
+        predicates = [PublishDirty.marked_at <= datetime.fromisoformat(marked_before)]
+    else:
+        predicates = (PublishDirty.id.in_(batch) for batch in selection_batches(dirty_ids))
+    published_at = datetime.now(timezone.utc)
+    for predicate in predicates:
         await db.execute(
             update(PublishDirty)
             .where(
@@ -130,6 +136,7 @@ async def commit_release_projection(
                 ),
             )
             .values(
-                published_at=datetime.now(timezone.utc), published_task_uuid=task_uuid
+                published_at=published_at, published_task_uuid=task_uuid
             )
         )
+    return write_counts

@@ -74,7 +74,7 @@ test('builds unique, descriptive country and disease snippets', () => {
   assert.match(country, /^Japan surveillance data/);
   assert.match(country, /12 tracked infectious diseases/);
   assert.match(disease, /^Plague \(bacterial\) surveillance data/);
-  assert.match(disease, /7 countries/);
+  assert.match(disease, /7 areas/);
   assert.ok(country.length >= 100);
   assert.ok(disease.length >= 100);
 });

@@ -27,10 +27,19 @@ def _digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def _same_inventory(expected: dict, current: dict) -> bool:
+    """Racy-stat digests may age out between two otherwise identical reads."""
+    return expected.keys() == current.keys() and all(
+        entry["stat"] == current[name]["stat"]
+        and (not entry.get("sha256") or _digest(Path(name)) == entry["sha256"])
+        for name, entry in expected.items())
+
+
 def _generated_data_files(root: Path, files: dict) -> dict:
     # These hand-authored TypeScript modules share src/data with generated JSON.
-    # Their content is covered by source/build fingerprints, not the database
-    # snapshot gate. Keep this exact allowlist narrow; JSON must remain frozen.
+    # Acknowledgements are template source; changelog records use their own JSON
+    # publisher. Neither belongs to the database snapshot gate. Keep this exact
+    # allowlist narrow; generated JSON must remain frozen.
     editorial = {str(root.resolve() / "astro-site/src/data" / name)
                  for name in ("changelog.ts", "acknowledgements.ts")}
     return {name: entry for name, entry in files.items() if name not in editorial}
@@ -96,21 +105,45 @@ class StageReceipts:
         self.selection = selection
         self.destinations = destinations
         self.records = {}
+        self.prepared_data = None
+        self.prepared_input_files = None
+        self._signature_contexts = {}
+        self.last_save_error = None
         try:
             data = json.loads(self.path.read_text())
             if data.get("schema") == 1:
                 self.records = data.get("stages", {})
+                self.prepared_data = self.records.get("ready", {}).get("published_data")
         except (OSError, ValueError):
             pass
 
     def signature(self, stage: str, identity: dict) -> str:
-        return _fingerprint({
+        context = {
             "selection": self.selection, "destinations": self.destinations,
             "source": _generation_source(self.root) if stage == "generated" else source_fingerprint(self.root),
             "rendering": rendering_configuration(self.root),
             "release": None if stage == "generated" else identity.get("release_id"),
             "published_baseline": self._baseline(identity),
-        })
+        }
+        signature = _fingerprint(context)
+        self._signature_contexts[(stage, signature)] = context
+        return signature
+
+    def assert_signature(self, stage: str, signature: str, identity: dict) -> None:
+        current = self.signature(stage, identity)
+        if current == signature:
+            return
+        before = self._signature_contexts.get((stage, signature), {})
+        after = self._signature_contexts[(stage, current)]
+        reasons = {
+            'source': 'publication_source_changed',
+            'rendering': 'publication_rendering_configuration_changed',
+            'published_baseline': 'publication_baseline_changed',
+        }
+        for field, reason in reasons.items():
+            if field in before and before[field] != after[field]:
+                raise ValueError(reason)
+        raise ValueError('publication_stage_inputs_changed')
 
     def _baseline(self, identity: dict):
         marker = self.root / "exports/successful-site-release.json"
@@ -151,7 +184,16 @@ class StageReceipts:
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {**identity, "schema": 1, "task_uuid": self.task_uuid}
         data_error = None
-        if data_paths is not None:
+        if self.prepared_data is not None:
+            try:
+                from .published_data import verify
+                if self.prepared_data["release_id"] != identity["release_id"]:
+                    raise ValueError("Retained data belongs to a different release")
+                verify(self.root, self.prepared_data)
+                payload["retained_data_snapshot"] = self.prepared_data
+            except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+                data_error = error
+        if data_paths is not None and self.prepared_data is None:
             roots = [path.resolve() for path in data_paths]
             try:
                 files = _generated_data_files(self.root, _inventory(roots))
@@ -178,6 +220,50 @@ class StageReceipts:
             Path(temporary).unlink(missing_ok=True)
         if data_error is not None:
             raise RuntimeError("Published baseline saved, but its data snapshot could not be recorded") from data_error
+
+    def prepare_published_data(self, identity: dict, paths: list[Path]) -> None:
+        """Freeze inputs before rendering, then bind that copy to this candidate."""
+        from .published_data import capture, EDITORIAL
+        before = _inventory(paths)
+        for name in EDITORIAL:
+            before.pop(str(paths[0] / name), None)
+        descriptor = capture(self.root, paths)
+        after = _inventory(paths)
+        for name in EDITORIAL:
+            after.pop(str(paths[0] / name), None)
+        if not _same_inventory(before, after):
+            raise RuntimeError("Release data changed while freezing build inputs")
+        self.prepared_data = {**descriptor, "release_id": identity["release_id"]}
+        self.prepared_input_files = before
+        # Pin even a candidate whose rendering has not reached its ready
+        # receipt. Failed/in-flight tasks keep this pin for safe recovery.
+        from .surveillance_publish import _atomic_receipt
+        _atomic_receipt(self.root / "exports/published-data-prepared" / f"{self.task_uuid}.json",
+                        self.prepared_data)
+
+    def assert_prepared_inputs(self, paths: list[Path]) -> None:
+        from .published_data import EDITORIAL
+        current = _inventory(paths)
+        for name in EDITORIAL:
+            current.pop(str(paths[0] / name), None)
+        if self.prepared_input_files is None or not _same_inventory(self.prepared_input_files, current):
+            raise RuntimeError("Release data changed during rendering; frozen baseline not promoted")
+
+    def published_data_paths(self, paths: list[Path]) -> list[Path]:
+        """Use a retained successful snapshot, or the strict legacy attestation."""
+        try:
+            marker = json.loads((self.root / "exports/successful-site-release.json").read_bytes())
+            descriptor = marker.get("retained_data_snapshot")
+            if descriptor is not None:
+                if marker.get("schema") != 1 or descriptor.get("release_id") != marker.get("release_id"):
+                    raise ValueError("Published data is not bound to the current release")
+                from .published_data import verify
+                return verify(self.root, descriptor)
+            self.assert_published_data(paths)
+            return paths
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+            raise RuntimeError("Code-only release requires a verified published data snapshot; "
+                               "complete a normal data release first.") from error
 
     def is_current_publication(self, identity: dict) -> bool:
         """A prior deploy checkpoint is reusable only while it is still current."""
@@ -266,18 +352,26 @@ class StageReceipts:
             return None
 
     def save(self, stage: str, signature: str, paths: list[Path], *, identity: dict) -> bool:
-        if self.signature(stage, identity) != signature:
+        self.last_save_error = None
+        try:
+            self.assert_signature(stage, signature, identity)
+        except ValueError as error:
+            self.last_save_error = str(error)
             return False
         try:
             files = _inventory(paths)
-        except (OSError, ValueError):
+        except (OSError, ValueError) as error:
+            self.last_save_error = f'publication_stage_inventory_invalid: {error}'
             return False
         if not files:
+            self.last_save_error = 'publication_stage_empty'
             return False
         self.records[stage] = {
             "signature": signature, "roots": [str(p) for p in paths],
             "files": files, "identity": identity, "baseline": self._baseline(identity),
         }
+        if stage == "ready" and self.prepared_data is not None:
+            self.records[stage]["published_data"] = self.prepared_data
         if stage == "generated":
             self.records.pop("ready", None)
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -286,5 +380,10 @@ class StageReceipts:
         temporary.replace(self.path)
         return True
 
+    def save_required(self, stage: str, signature: str, paths: list[Path], *, identity: dict) -> None:
+        if not self.save(stage, signature, paths, identity=identity):
+            raise ValueError(self.last_save_error or 'publication_stage_checkpoint_unavailable')
+
     def discard(self):
         self.path.unlink(missing_ok=True)
+        (self.root / "exports/published-data-prepared" / f"{self.task_uuid}.json").unlink(missing_ok=True)

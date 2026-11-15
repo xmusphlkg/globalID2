@@ -14,18 +14,18 @@ const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 0);
 if (!Number.isInteger(renderWorkers) || renderWorkers < 0 || renderWorkers > 32) {
   throw new Error('GIDS_ASTRO_RENDER_WORKERS must be an integer from 0 to 32');
 }
-if ([process.env.GIDS_RESEARCH_BUILD_DIR, process.env.GIDS_REPORTS_BUILD_DIR, process.env.GIDS_COUNTRY_BUILD_DIR].filter(Boolean).length > 1) {
+if ([process.env.GIDS_RESEARCH_BUILD_DIR, process.env.GIDS_REPORTS_BUILD_DIR, process.env.GIDS_COUNTRY_BUILD_DIR, process.env.GIDS_CODE_BUILD_DIR].filter(Boolean).length > 1) {
   throw new Error('Research, reports and country builds require separate workspaces');
 }
-const isolatedBuildDir = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_REPORTS_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR;
-const privateRoot = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR;
+const isolatedBuildDir = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_REPORTS_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR || process.env.GIDS_CODE_BUILD_DIR;
+const privateRoot = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR || process.env.GIDS_CODE_BUILD_DIR;
 export default defineConfig({
   ...(privateRoot ? { root: resolve(privateRoot) } : {}),
   experimental: { parallelPrerender: renderWorkers ? { workers: renderWorkers } : false },
   ...(process.env.GIDS_BUILD_PUBLIC_DIR ? { publicDir: resolve(process.env.GIDS_BUILD_PUBLIC_DIR) } : {}),
   ...(isolatedBuildDir ? {
     srcDir: resolve(isolatedBuildDir, 'src'),
-    publicDir: resolve(isolatedBuildDir, 'public'),
+    publicDir: process.env.GIDS_BUILD_PUBLIC_DIR ? resolve(process.env.GIDS_BUILD_PUBLIC_DIR) : resolve(isolatedBuildDir, 'public'),
     outDir: resolve(isolatedBuildDir, 'dist'),
     ...(privateRoot ? { cacheDir: resolve(isolatedBuildDir, '.astro') } : {}),
   } : {}),
@@ -42,6 +42,7 @@ export default defineConfig({
     inlineStylesheets: 'auto',
   },
   vite: {
+    ...(privateRoot ? { cacheDir: resolve(privateRoot, '.vite') } : {}),
     ...(privateRoot ? { ssr: { noExternal: ['@astrojs/react'] } } : {}),
     plugins: [{
       name: 'local-subscription-options',

@@ -188,7 +188,8 @@ def publish_surveillance_data(
                 _, previous_objects = validate_manifest(previous)
             if previous == body:
                 return {"release_id": manifest["release_id"], "uploaded": 0,
-                        "unchanged": len(objects), "bytes_uploaded": 0, "pointer_changed": False}
+                        "unchanged": len(objects), "bytes_uploaded": 0, "pointer_changed": False,
+                        "manifest_sha256": hashlib.sha256(body).hexdigest()}
             if captured and previous != starting_previous:
                 raise R2S3Error("Public JSON changed since the starting baseline was captured before generation", status=412)
             candidate_sha = hashlib.sha256(body).hexdigest()
@@ -244,8 +245,10 @@ def publish_surveillance_data(
                     return 0, 0
                 return 1, len(wire)
 
+            upload_started = time.monotonic()
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 results = list(pool.map(upload, selected))
+            object_upload_seconds = time.monotonic() - upload_started
             uploaded = sum(count for count, _ in results)
             transferred = sum(size for _, size in results)
             # Retain immutable version manifests for audit/rollback. No garbage
@@ -257,6 +260,7 @@ def publish_surveillance_data(
             except R2S3Error as error:
                 if error.status != 412 or active.get_object(version) != body:
                     raise
+            pointer_started = time.monotonic()
             # This is the only mutable key. A competing publisher cannot silently
             # overwrite a newer pointer; an ambiguous successful PUT is resumable.
             try:
@@ -264,13 +268,16 @@ def publish_surveillance_data(
             except R2S3Error as error:
                 if error.status != 412 or active.get_object(pointer) != body:
                     raise
+            pointer_commit_seconds = time.monotonic() - pointer_started
             if trust_frozen_objects:
                 logger.info("Research JSON published: release={} uploaded={} reused={} bytes={} seconds={:.2f}",
                             manifest["release_id"], uploaded, len(objects) - uploaded, transferred,
                             time.monotonic() - started)
             return {"release_id": manifest["release_id"], "uploaded": uploaded,
                     "unchanged": len(objects) - uploaded, "bytes_uploaded": transferred,
-                    "pointer_changed": True, "manifest_sha256": hashlib.sha256(body).hexdigest()}
+                    "pointer_changed": True, "manifest_sha256": hashlib.sha256(body).hexdigest(),
+                    "release_timing": {"object_upload_seconds": round(object_upload_seconds, 3),
+                                       "pointer_commit_seconds": round(pointer_commit_seconds, 3)}}
     finally:
         if client is None:
             active.close()

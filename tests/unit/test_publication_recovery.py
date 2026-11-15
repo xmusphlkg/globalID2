@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy import select
 
-from src.domain import DataReleaseJob, Task
+from src.domain import DataReleaseJob, Task, TaskType
 from src.domain.collection import PublishDirty
 from src.services.data_release import publication_execution as execution
 from src.services.data_release import publication_recovery as recovery
@@ -52,6 +52,37 @@ def test_environment_never_persists_credentials_and_replays_original_destination
     config.r2_account_id = "different-account"
     with pytest.raises(execution.PublicationPlanError, match="credential_account_changed"):
         recovery.replay_environment(service, frozen)
+
+
+@pytest.mark.parametrize("collection_workers", [None, "2"])
+async def test_collection_render_workers_freeze_and_replay_without_changing_global_workers(monkeypatch, collection_workers):
+    from src.services.data_release_service import DataReleaseService
+    from src.services.data_release.process_runner import subprocess_environment
+
+    service = DataReleaseService()
+    config = SimpleNamespace(r2_account_id="account")
+    key = "GIDS_RESEARCH_COLLECTION_RENDER_WORKERS"
+    monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("GIDS_ASTRO_RENDER_WORKERS", "0")
+    monkeypatch.setattr(service, "_config", lambda: config)
+    monkeypatch.setattr(service, "_cloudflare_account_id", lambda: "account")
+    monkeypatch.setattr(service, "_env_file_values", lambda: {key: collection_workers} if collection_workers is not None else {})
+    captured = {}
+
+    async def command(*args, **kwargs):
+        captured.update(kwargs["env"])
+
+    monkeypatch.setattr(service, "_run_logged_command", command)
+    frozen = recovery.freeze_environment(service, {"job_id": "site-release", "name": "Site"})
+    assert frozen["environment"].get(key) == collection_workers
+    monkeypatch.setenv(key, "8")
+    monkeypatch.setenv("GIDS_ASTRO_RENDER_WORKERS", "4")
+    scoped = recovery.replay_environment(service, frozen)
+    await scoped._run_logged_command("task", env={})
+    child_env = subprocess_environment(captured)
+    assert child_env.get(key) == collection_workers
+    assert child_env["GIDS_ASTRO_RENDER_WORKERS"] == "0"
+    assert os.environ[key] == "8" and os.environ["GIDS_ASTRO_RENDER_WORKERS"] == "4"
 
 
 async def test_replayed_environment_parses_in_real_config_subprocess(monkeypatch):
@@ -210,7 +241,7 @@ def test_recovery_never_recreates_a_missing_prepared_candidate():
 
 @pytest.mark.parametrize("mode", ["full", "code_only"])
 @pytest.mark.parametrize("after_commit", ["recover", "newer_remote", "missing_artifact"])
-async def test_static_deploy_then_edits_reuses_candidate_and_never_overwrites_newer(release, monkeypatch, mode, after_commit):
+async def test_static_deploy_then_edits_reuses_candidate_and_never_overwrites_newer(release, release_db, monkeypatch, mode, after_commit):
     r = release
     # Establish the published data snapshot required by a template-only plan.
     await execute_release_task(r.service, r.task, runtime=r.runtime)
@@ -233,13 +264,20 @@ async def test_static_deploy_then_edits_reuses_candidate_and_never_overwrites_ne
     r.runtime = replace(r.runtime, get_config=lambda: SimpleNamespace(data_dir=r.root / "data",
                         raw_archive=SimpleNamespace(enabled=False, repo_url="")))
     r.service.identity = {**r.service.identity, "release_id": "prepared-release"}
-    checkpoints = {}
-    async def record(_task, stage, value):
-        checkpoints[stage] = value
-    async def identity(*args):
-        return dict(r.service.identity), dict(checkpoints)
-    r.service._record_release_checkpoint = record
-    r.service._release_identity_for_task = identity
+    # Exercise the real identity initializer and durable checkpoint writes.
+    # A fake initializer missed the production failure: changing source_commit
+    # cleared a successful deploy before the pipeline restored frozen identity.
+    from src.services.data_release_service import DataReleaseService
+    maker, _, _ = release_db
+    async with maker() as db:
+        stored = Task(task_uuid=r.task.task_uuid, task_type=TaskType.EXPORT_DATA,
+                      task_name="Prepared release", input_data=r.task.input_data)
+        db.add(stored)
+        await db.commit()
+        r.task.id = stored.id
+    monkeypatch.setattr(type(r.service), "_record_release_checkpoint", DataReleaseService._record_release_checkpoint)
+    monkeypatch.setattr(type(r.service), "_release_identity_for_task", DataReleaseService._release_identity_for_task)
+    r.service._site_release_identity = AsyncMock(side_effect=lambda _branch: dict(r.service.identity))
     r.service.integration_checks = AsyncMock(return_value={"overall_ready": True,
         "cloudflare": {"production_branch": "main", "subdomain": "site.pages.dev"}})
     r.service._cloudflare_check = AsyncMock(return_value={"blockers": [], "payload": {
@@ -250,19 +288,30 @@ async def test_static_deploy_then_edits_reuses_candidate_and_never_overwrites_ne
     monkeypatch.setattr(release_projection_snapshot, "validate_read_snapshot_projection", lambda *args: None)
     with pytest.raises(RuntimeError, match="after deploy"):
         await execute_release_task(r.service, r.task, runtime=r.runtime)
+    async with maker() as db:
+        stored = await db.get(Task, r.task.id)
+        checkpoints = stored.metadata_["release_checkpoints"]
     assert checkpoints["cloudflare_deploy"]["release_id"] == "prepared-release"
+    identity_calls = r.service._site_release_identity.await_count
     commands = list(r.service.commands)
     r.commit.assert_not_awaited()
     r.put(r.astro / "src/pages/index.astro", "<h1>new source</h1>")
     r.put(r.astro / "src/data/changelog.ts", "export const entries = ['new source'];")
+    r.service.identity = {**r.service.identity, "source_commit": "new-source-commit",
+                          "release_id": "new-source-release"}
+    if mode == 'code_only':
+        r.put(r.root / 'exports/site-downloads/countries/test.json', 'new independent downloads')
+        r.put(r.root / 'exports/reports-site/new-report.html', 'new independent report')
     cfg.timezone = "Asia/Shanghai"
     r.service.job.cloudflare_project_name = "new-default-project"
     r.service._cloudflare_project_name = lambda _value: "new-default-project"
-    public = json.loads((r.astro / "dist/release.json").read_text())
+    candidate_astro = (r.root / "exports/code-workspaces/prepared-static/astro-site"
+                       if mode == "code_only" else r.astro)
+    public = json.loads((candidate_astro / "dist/release.json").read_text())
     if after_commit == "newer_remote":
         public["release_id"] = "other-writer"
     if after_commit == "missing_artifact":
-        (r.astro / "dist/index.html").unlink()
+        (candidate_astro / "dist/index.html").unlink()
     r.service._public_json = AsyncMock(return_value=public)
     if after_commit == "recover":
         result = await execute_release_task(r.service, r.task, runtime=r.runtime)
@@ -270,6 +319,11 @@ async def test_static_deploy_then_edits_reuses_candidate_and_never_overwrites_ne
         assert result["cloudflare_project_name"] == "site"
         assert r.service.commands.count("Build Astro Site") == commands.count("Build Astro Site")
         assert r.service.commands.count("Deploy Cloudflare Pages") == commands.count("Deploy Cloudflare Pages")
+        assert r.service._site_release_identity.await_count == identity_calls
+        async with maker() as db:
+            stored = await db.get(Task, r.task.id)
+            assert stored.metadata_["release_identity"]["release_id"] == "prepared-release"
+            assert stored.metadata_["release_checkpoints"]["cloudflare_deploy"] == checkpoints["cloudflare_deploy"]
         assert r.commit.await_count == (1 if mode == "full" else 0)
     else:
         with pytest.raises(ValueError, match="baseline_changed|prepared_candidate_unavailable"):

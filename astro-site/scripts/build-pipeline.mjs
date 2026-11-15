@@ -102,6 +102,9 @@ export async function buildPipeline({ cwd = resolve(import.meta.dirname, '..'), 
     check('source translations', 'check-i18n'),
     check('map ISO mapping', 'build-world-feature-iso', '--check'),
   ], { ...options, concurrency: concurrency + 1 });
+  if (env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1') {
+    await run([stage('render independent research collections', 'build-site-research-collections')], options);
+  }
   await run([stage('split research evidence', 'split-research-evidence')], options);
   await run([stage('optimize map', 'optimize-world-map')], options);
   await run([

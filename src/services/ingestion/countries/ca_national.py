@@ -88,4 +88,5 @@ def organize(artifacts, *, updater, source=DEFAULT_SCOPE, start_year=1924, **opt
         [
             f"[artifacts] {len(artifacts)} captured responses; {len(rows)} national CNDSS annual observations"
         ],
+        authoritative_window_start_year=int(start_year),
     )

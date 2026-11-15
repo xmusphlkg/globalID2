@@ -139,7 +139,7 @@ async def test_complete_noop_and_legacy_fallback(changes, conservative, expected
 @pytest.mark.parametrize("strategy,code", [
     (EcdcWindowCommitStrategy, "DE"), (CanadaCndssWindowCommitStrategy, "CA"),
 ])
-async def test_empty_authoritative_replacement_cannot_hide_withdrawals(monkeypatch, strategy, code):
+async def test_authoritative_replacement_forwards_precise_withdrawals(monkeypatch, strategy, code):
     markers = []
 
     async def lock(_db, _country_code):
@@ -154,16 +154,71 @@ async def test_empty_authoritative_replacement_cannot_hide_withdrawals(monkeypat
             return None
 
         async def delete_authoritative_window(self, _db, **_kwargs):
-            return 12
+            pytest.fail("window replacement must not eagerly delete observations")
 
     class Service:
         async def _import_rows_with_series(self, *_args, publication_results, **_kwargs):
-            publication_results.append(SimpleNamespace(publication_changes=()))
+            assert _kwargs["authoritative_window_start"] == datetime(2024, 1, 1, tzinfo=timezone.utc)
+            publication_results.append(SimpleNamespace(publication_changes=observation_publication_changes(
+                [_point(geography_key=f"country:{code}:national")], operation="delete",
+            )))
             return SimpleNamespace(inserted_or_updated=0)
 
     await strategy().commit(
         SimpleNamespace(add=markers.append), updater=Updater(), service=Service(),
-        fetched=SimpleNamespace(rows=[]), force=True, task_uuid="crawl-1", start_year=2024,
+        fetched=SimpleNamespace(rows=[], authoritative_window_start_year=2024),
+        force=True, task_uuid="crawl-1", start_year=2024,
     )
     assert [row.scope_key for row in markers] == [code]
-    assert markers[0].change_set is None
+    assert markers[0].change_set["changes"][0]["operation"] == "delete"
+
+
+@pytest.mark.parametrize("strategy,code", [
+    (EcdcWindowCommitStrategy, "DE"), (CanadaCndssWindowCommitStrategy, "CA"),
+])
+@pytest.mark.parametrize("validated_year", [None, 2025])
+async def test_unvalidated_source_window_never_reaches_storage(strategy, code, validated_year):
+    with pytest.raises(ValueError, match="completely validated"):
+        await strategy().commit(
+            None, updater=SimpleNamespace(country_code=code),
+            fetched=SimpleNamespace(rows=[], authoritative_window_start_year=validated_year),
+            start_year=2024,
+        )
+
+
+async def test_complete_empty_window_passes_service_and_selection_and_reports_withdrawal(monkeypatch):
+    from src.data.processors.ca_national import CanadaCNDSSAnnualUpdater
+    from src.data.storage.series_observation_store import (
+        RegistryRowSelection, SeriesObservationQualityReport, SeriesObservationSaveResult,
+    )
+    from src.services.crawl_service import CrawlService
+
+    async def noop(*_args, **_kwargs):
+        pass
+
+    class Store:
+        def select_registry_rows(self, rows, *_args, **_kwargs):
+            assert rows == []
+            return RegistryRowSelection([], 0, 0)
+
+        async def save_rows(self, _db, rows, code, *, authoritative_window_start, **_kwargs):
+            assert rows == [] and code == "CA"
+            assert authoritative_window_start.year == 2024
+            return SeriesObservationSaveResult(
+                0, 0, 0, 0, 0, SeriesObservationQualityReport("CA", 0, 0, 0),
+                deleted=1, publication_changes=observation_publication_changes(
+                    [_point(geography_key="country:CA:national")], operation="delete",
+                ),
+            )
+
+    monkeypatch.setattr("src.services.crawl_service.SeriesObservationStore", Store)
+    monkeypatch.setattr("src.services.crawl_service.acquire_country_data_mutation_lock", noop)
+    publications = []
+    result = await CrawlService._import_rows_with_series(
+        SimpleNamespace(), CanadaCNDSSAnnualUpdater(), [],
+        db_latest_date=None, source_latest_date=None, force=True,
+        authoritative_window_start=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        publication_results=publications,
+    )
+    assert result.inserted_or_updated == 0 and result.imported_new_data is True
+    assert publications[0].deleted == 1

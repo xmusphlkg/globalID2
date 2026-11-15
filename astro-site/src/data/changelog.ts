@@ -1,30 +1,67 @@
-export type ChangeKind = 'new' | 'improved' | 'fixed';
-
-export type ChangelogSection = {
-  kind: ChangeKind;
-  labelEn: string;
-  labelZh: string;
-  labelFr?: string;
-  items: Array<{
-    en: string;
-    zh: string;
-    fr?: string;
-  }>;
-};
-
-export type ChangelogRelease = {
-  version: string;
-  date: string;
-  titleEn: string;
-  titleZh: string;
-  titleFr?: string;
-  summaryEn: string;
-  summaryZh: string;
-  summaryFr?: string;
-  sections: ChangelogSection[];
-};
+import type { ChangelogRelease } from '../lib/changelog';
+export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/changelog';
 
 export const changelogReleases: ChangelogRelease[] = [
+  {
+    version: '0.19.4', date: '2026-11-14',
+    titleEn: 'Research collections and clearer comparison filters',
+    titleZh: '恢复文献集合与清晰的对比筛选',
+    titleFr: 'Collections de recherche et filtres de comparaison plus clairs',
+    summaryEn: 'Rebuild research collections from current data and align comparison filters with the shared theme.',
+    summaryZh: '从当前数据重新生成文献集合，让对比筛选布局与共享主题保持一致。',
+    summaryFr: 'Régénérez les collections à partir des données actuelles et harmonisez les filtres avec le thème partagé.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Restore geographic, disease, topic and weekly research collection links across all three languages. Keep comparison headings inside their panels and load the shared theme on Compare pages.',
+      zh: '恢复三语区域、疾病、主题和每周文献集合链接；对比筛选标题放在面板内部，Compare 页面加载共享主题。',
+      fr: 'Rétablissez les liens vers les collections géographiques, par maladie, par thème et par semaine dans les trois langues. Placez les titres des filtres dans leurs panneaux et chargez le thème partagé sur les pages de comparaison.',
+    }] }],
+  },
+  {
+    version: '0.19.3', date: '2026-11-14',
+    titleEn: 'Reliable publication history and faster updates',
+    titleZh: '可靠的发布历史与更顺畅的数据更新',
+    titleFr: 'Historique de publication fiable et mises à jour plus fluides',
+    summaryEn: 'Restore the daily activity chart and keep current pages and styles available as data updates run.',
+    summaryZh: '恢复每日更新趋势图，让数据更新期间的页面与样式保持最新。',
+    summaryFr: 'Rétablissez le graphique quotidien et gardez les pages et les styles à jour pendant les mises à jour des données.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Website version history loads with data release records. Removed pages stay removed, and the shared theme checks for updates promptly.',
+      zh: '网站版本历史与数据发布记录一起正常加载；已移除页面不再重新出现，共享主题及时检查更新。',
+      fr: 'L’historique des versions se charge avec les publications de données. Les pages supprimées restent supprimées et le thème partagé vérifie rapidement les mises à jour.',
+    }] }],
+  },
+  {
+    version: '0.19.2', date: '2026-11-14',
+    titleEn: 'Clearer geographic selection and reliable updates',
+    titleZh: '更清晰的区域选择与可靠更新',
+    titleFr: 'Sélection géographique plus claire et mises à jour fiables',
+    summaryEn: 'Compare available administrative areas with controls that fit small screens and keep selections aligned with current data.',
+    summaryZh: '对比可用的各级行政区域，筛选控件适配小屏幕，并随当前数据同步选择项。',
+    summaryFr: 'Comparez les zones administratives disponibles avec des filtres adaptés aux petits écrans et synchronisés avec les données actuelles.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Comparison, seasonality and Situation selectors include available lower-level areas and preserve direct links. Geographic labels are consistent across languages.',
+      zh: '对比、季节性和态势选择器纳入可用的下级区域并保留直接链接；各语言使用准确一致的地理标签。',
+      fr: 'Les sélecteurs de comparaison, de saisonnalité et de situation incluent les subdivisions disponibles et conservent les liens directs, avec des libellés géographiques cohérents.',
+    }] }],
+  },
+  {
+    version: '0.19.1', date: '2026-11-14',
+    titleEn: 'Daily update trends across date ranges',
+    titleZh: '按日期范围查看每日更新趋势',
+    titleFr: 'Tendances quotidiennes sur une période choisie',
+    summaryEn: 'Choose a date range and publication type to explore daily update counts, with clearer chart scales and reliable UTC dates.',
+    summaryZh: '按日期范围和发布类型查看每日更新数量，完善图表刻度与 UTC 日期统计。',
+    summaryFr: 'Choisissez une période et un type de publication pour consulter les volumes quotidiens, avec des dates UTC cohérentes et des axes plus lisibles.',
+    sections: [{ kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'The update chart supports ranges across months, adapts to mobile screens and includes an accessible table of daily counts.',
+      zh: '更新趋势图支持跨月筛选、手机浏览，并提供可访问的每日数量表格。',
+      fr: 'Le graphique couvre plusieurs mois, s’adapte aux mobiles et propose un tableau accessible des volumes quotidiens.',
+    }] }, { kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Filtering and counting use the same UTC dates. Unavailable history is identified explicitly instead of appearing as zero activity.',
+      zh: '筛选与计数统一使用 UTC 日期；历史记录读取异常会明确提示，避免误显示为零更新。',
+      fr: 'Le filtrage et le comptage utilisent les mêmes dates UTC. Un historique indisponible est signalé au lieu d’apparaître comme une absence d’activité.',
+    }] }],
+  },
   {
     version: '0.19.0', date: '2026-11-13',
     titleEn: 'Current research pages and a clearer update history',

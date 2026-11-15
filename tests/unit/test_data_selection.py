@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy import event, insert
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.domain import Base, Country
@@ -129,3 +130,54 @@ async def test_malformed_selection_does_not_query_the_database(codes, ids):
     with pytest.raises(ValueError):
         await data_selection.validate_data_selection(db, country_codes=codes, dirty_ids=ids)
     db.execute.assert_not_awaited()
+
+
+@pytest.mark.parametrize("count", [1, 4999, 5000, 5001])
+async def test_selection_batches_preserve_all_ids_and_legacy_parent_expansion(selection_db, count):
+    async with selection_db() as db:
+        await db.execute(insert(PublishDirty), [{
+            "id": index, "line": "surveillance", "scope_key": "US", "source_task_uuid": "collection",
+            "marked_at": datetime.now(timezone.utc),
+            "change_set": {"version": 1, "precise": True} if index < count else None,
+        } for index in range(1, count + 1)])
+        await db.commit()
+        bind_counts = []
+
+        def record(_conn, _cursor, statement, parameters, *_args):
+            if statement.lstrip().startswith("SELECT") and "publish_dirty" in statement:
+                bind_counts.append(len(parameters))
+
+        engine = db.bind.sync_engine
+        event.listen(engine, "before_cursor_execute", record)
+        try:
+            plan = await data_selection.validate_data_selection(db,
+                country_codes=["US", "US-AK"], dirty_ids=list(range(count, 0, -1)))
+        finally:
+            event.remove(engine, "before_cursor_execute", record)
+        assert plan["dirty_ids"] == list(range(1, count + 1))
+        assert [change["id"] for change in plan["changes"]] == list(range(1, count + 1))
+        assert plan["country_codes"] == ["US", "US-AK"]
+        assert sum(bind_counts) == count and max(bind_counts) <= 5000
+
+
+@pytest.mark.parametrize("last_change,error", [
+    ("missing", "missing"), ("wrong_line", "surveillance change"),
+    ("other_owner", "another task"), ("own_retry", None),
+])
+async def test_last_batch_cannot_hide_invalid_selection(selection_db, last_change, error):
+    count = 5001
+    async with selection_db() as db:
+        await db.execute(insert(PublishDirty), [{
+            "id": index, "line": "surveillance" if index < count or last_change != "wrong_line" else "situation",
+            "scope_key": "US", "source_task_uuid": "collection", "marked_at": datetime.now(timezone.utc),
+            "change_set": {"version": 1, "precise": True},
+            "published_at": datetime.now(timezone.utc) if index == count and last_change in {"other_owner", "own_retry"} else None,
+            "published_task_uuid": "publisher" if last_change == "own_retry" else "other",
+        } for index in range(1, count + (last_change != "missing"))])
+        await db.commit()
+        kwargs = dict(country_codes=["US"], dirty_ids=list(range(1, count + 1)), expected_task_uuid="publisher")
+        if error:
+            with pytest.raises(ValueError, match=error):
+                await data_selection.validate_data_selection(db, **kwargs)
+        else:
+            assert (await data_selection.validate_data_selection(db, **kwargs))["dirty_ids"] == kwargs["dirty_ids"]

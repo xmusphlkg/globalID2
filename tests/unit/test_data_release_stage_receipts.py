@@ -167,10 +167,33 @@ def test_editorial_changes_allow_code_only_without_relaxing_generated_data_check
     before = receipt.signature('ready', identity)
     notes.write_text('export const version = 2;')
     receipt.assert_published_data([data])
-    assert receipt.signature('ready', identity) != before
+    assert receipt.signature('ready', identity) == before
     observations.write_text('{"cases":2}')
     with pytest.raises(RuntimeError, match='Code-only release requires'):
         receipt.assert_published_data([data])
+
+
+@pytest.mark.parametrize('change,reason', [
+    ('source', 'publication_source_changed'),
+    ('rendering', 'publication_rendering_configuration_changed'),
+    ('baseline', 'publication_baseline_changed'),
+    ('missing', 'publication_stage_inventory_invalid'),
+])
+def test_required_checkpoint_reports_why_publication_cannot_continue(tmp_path, monkeypatch, change, reason):
+    downloads, receipt, signature = _download_receipt(tmp_path)
+    identity = {'release_id': 'release-1'}
+    if change == 'source':
+        source = tmp_path / 'src/render.py'
+        source.parent.mkdir()
+        source.write_text('changed = True')
+    elif change == 'rendering':
+        monkeypatch.setenv('PUBLIC_GIDS_MAINTENANCE_MESSAGE', 'changed')
+    elif change == 'baseline':
+        StageReceipts(tmp_path, 'other-task', {}, {}).mark_published({'release_id': 'newer'})
+    else:
+        (downloads / 'manifest.json').unlink()
+    with pytest.raises(ValueError, match=reason):
+        receipt.save_required('ready', signature, [downloads / 'manifest.json'], identity=identity)
 
 
 def test_success_baseline_is_recorded_even_when_data_inventory_fails(tmp_path):

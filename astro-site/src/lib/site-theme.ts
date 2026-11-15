@@ -1,6 +1,7 @@
-/** Only the home/country templates participate in the first theme contract. */
+/** Templates whose layouts consume the independent v1 theme tokens. */
 export function isThemePilotPage(pathname: string): boolean {
   return /^(?:\/(?:zh|fr))?\/$/.test(pathname)
+    || /^(?:\/(?:zh|fr))?\/compare\/$/.test(pathname)
     || /^(?:\/(?:zh|fr))?\/countries\/[^/]+\/$/.test(pathname);
 }
 

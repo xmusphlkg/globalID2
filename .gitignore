@@ -12,8 +12,8 @@ pip-wheel-metadata/
 
 # Virtual environments
 env/
-venv/
-.venv/
+venv
+.venv
 ENV/
 
 # Environment and secrets (backend + frontend)
@@ -33,6 +33,7 @@ ENV/
 .mypy_cache/
 .ruff_cache/
 .astro/
+.vite/
 .hypothesis/
 .tox/
 .nox/
@@ -46,7 +47,7 @@ coverage.xml
 .ipynb_checkpoints/
 
 # Node.js dependencies (dashboard, Astro and subscription worker)
-node_modules/
+node_modules
 .next/
 
 # Next.js control plane (including isolated GLOBALID_NEXT_DIST_DIR builds)
@@ -82,6 +83,8 @@ pnpm-debug.log*
 # Project generated data and outputs
 /logs/
 /exports/
+# Isolated worktrees belong outside the checkout; ignore accidental local copies.
+/.worktrees/
 /reports/
 /dashboard/logs/
 /astro-site/logs/
@@ -142,6 +145,7 @@ pnpm-debug.log*
 *Backup*.sql
 *.tmp
 *.bak
+*.backup
 
 # System files
 .DS_Store

@@ -55,6 +55,7 @@ async def _create_plan(body: PublicationPlanCreate, *, db, rollback_of=None):
             job_id=body.job_id, config=config.data_release, dirty_rows=frozen_rows,
             job_configuration={column.name: getattr(job, column.name) for column in DataReleaseJob.__table__.columns},
             execution_service=data_release_service, requested_kind=body.kind, channel=body.channel, rollback_of=rollback_of,
+            suppress_subscription_dispatch=body.suppress_subscription_dispatch,
         )
     except publication_execution.PublicationPlanError as exc:
         raise HTTPException(exc.status, {"code": exc.code}) from exc

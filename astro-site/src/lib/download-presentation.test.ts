@@ -17,7 +17,7 @@ test('all download surfaces use the same decimal unit', () => {
 });
 
 test('catalogue row total explains repeated observations beside the metric in every language', () => {
-  const source = readFileSync(new URL('../components/public/PublicDownloads.astro', import.meta.url), 'utf8');
+  const source = ['messages.ts', 'DownloadCatalogue.astro'].map(file => readFileSync(new URL(`../components/public/downloads/${file}`, import.meta.url), 'utf8')).join('\n');
   for (const label of ['目录行数（含重复）', 'Catalogue rows (with repeats)', 'Lignes du catalogue (avec doublons)']) {
     assert.ok(source.includes(label), label);
   }

@@ -41,6 +41,12 @@ async def build_release_site(
             and not getattr(config, "surveillance_json_enabled", False)):
         raise RuntimeError("Runtime data templates require an initialized JSON channel and Worker; enable DATA_RELEASE__SURVEILLANCE_JSON_ENABLED after initialization before publishing templates")
     task_data = dict(getattr(task, "input_data", None) or {})
+    # A frozen full publication explicitly requests fresh HTML. Other tasks
+    # retain validated incremental rendering; upload-only recovery still uses
+    # its already frozen candidate before reaching this stage.
+    force_full_render = (task_data.get("publication_plan") or {}).get("execution_mode") == "full"
+    isolated = runtime.astro_dir != runtime.root_dir / "astro-site"
+    path_options = {"astro_dir": runtime.astro_dir} if isolated else {}
     if task_data.get("country_template_only"):
         if not task_data.get("code_only") or not task_data.get("publication_plan"):
             raise ValueError("Country template compilation requires a frozen code plan")
@@ -109,21 +115,28 @@ async def build_release_site(
     inputs = None
     matched = False
     reason = "cache-unavailable"
-    try:
-        reuse = BuildReuse(runtime.root_dir, split=split, configuration={
-            "settings": config.model_dump() if hasattr(config, "model_dump") else vars(config),
-            "job": job.model_dump() if hasattr(job, "model_dump") else vars(job),
-            "deployment_branch": release_identity["deployment_branch"],
-            "r2_papers": r2_papers_enabled, "r2_reports": r2_reports_enabled,
-            "external_surveillance": external_surveillance,
-            "pages_data_worker": bool(getattr(config, "pages_data_worker_enabled", False)),
-        })
-        inputs = await asyncio.to_thread(reuse.inputs)
-        matched = await asyncio.to_thread(reuse.matches, inputs)
-        reason = reuse.reason
-    except CACHE_ERRORS:
-        logger.warning("Build reuse unavailable; running normal validation", exc_info=True)
-        reuse = None
+    if isolated:
+        # The shared receipt indexes the active tree, not these private inputs.
+        reason = "private-published-data-workspace"
+    else:
+        try:
+            reuse = BuildReuse(runtime.root_dir, split=split, configuration={
+                "settings": config.model_dump() if hasattr(config, "model_dump") else vars(config),
+                "job": job.model_dump() if hasattr(job, "model_dump") else vars(job),
+                "deployment_branch": release_identity["deployment_branch"],
+                "r2_papers": r2_papers_enabled, "r2_reports": r2_reports_enabled,
+                "external_surveillance": external_surveillance,
+                "pages_data_worker": bool(getattr(config, "pages_data_worker_enabled", False)),
+            })
+            inputs = await asyncio.to_thread(reuse.inputs)
+            if force_full_render:
+                reason = "explicit-full-render"
+            else:
+                matched = await asyncio.to_thread(reuse.matches, inputs)
+                reason = reuse.reason
+        except CACHE_ERRORS:
+            logger.warning("Build reuse unavailable; running normal validation", exc_info=True)
+            reuse = None
     if matched:
         stamped = await asyncio.to_thread(stamp_homepages, runtime.astro_dir / "dist", release_identity)
         if await _save_receipt(reuse, inputs, stamped=stamped):
@@ -152,10 +165,12 @@ async def build_release_site(
         cmd=["npm", "run", "build"],
         cwd=runtime.astro_dir,
         env={
+            **({"GIDS_CODE_BUILD_DIR": str(runtime.astro_dir)} if isolated else {}),
             # Publication latency takes priority over minimizing heap use.
             # The production worker has a 60 GiB memory budget.
             "NODE_OPTIONS": "--max-old-space-size=12288",
             "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
+            "GIDS_FORCE_FULL_RENDER": "1" if force_full_render else "0",
             "GIDS_EXTERNAL_SURVEILLANCE_DATA": "1" if external_surveillance else "0",
             "GIDS_RUNTIME_DATA_READY": "1" if getattr(config, "surveillance_json_enabled", False) else "0",
             "GIDS_RUNTIME_SITUATION_READY": "1" if getattr(config, "situation_json_enabled", False) else "0",
@@ -175,7 +190,9 @@ async def build_release_site(
     await service._run_logged_command(
         task.task_uuid,
         title="Validate Situation Release Gate",
-        cmd=service._validate_situation_release_command(python_path=python_path),
+        cmd=[*service._validate_situation_release_command(python_path=python_path),
+             *(["--data-dir", str(runtime.astro_dir / "src/data/situation/international"),
+                "--site-dir", str(runtime.astro_dir / "dist")] if isolated else [])],
         cwd=runtime.root_dir,
         env=git_env,
         metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
@@ -187,7 +204,7 @@ async def build_release_site(
         await service._run_logged_command(
             task.task_uuid,
             title="Split Papers Bundle",
-            cmd=service._split_papers_bundle_command(python_path=python_path),
+            cmd=service._split_papers_bundle_command(python_path=python_path, **path_options),
             cwd=runtime.root_dir,
             env=git_env,
             metadata={"event": "split_papers_bundle", "release_job_id": job.job_id},
@@ -197,7 +214,7 @@ async def build_release_site(
         await service._run_logged_command(
             task.task_uuid,
             title="Split Reports Bundle",
-            cmd=service._split_reports_bundle_command(python_path=python_path),
+            cmd=service._split_reports_bundle_command(python_path=python_path, **path_options),
             cwd=runtime.root_dir,
             env=git_env,
             metadata={"event": "split_reports_bundle", "release_job_id": job.job_id},

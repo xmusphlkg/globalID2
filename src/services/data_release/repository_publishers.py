@@ -76,13 +76,15 @@ async def prepare_repository_publications(
 
     if r2_papers_enabled:
         r2_env = papers_environment(service, git_env)
+        path_options = ({"astro_dir": runtime.astro_dir}
+                        if runtime.astro_dir != runtime.root_dir / "astro-site" else {})
         repository_publications.append(
             (
                 "r2_papers",
                 service._run_logged_command(
                     task.task_uuid,
                     title="Publish Papers Bundle to R2",
-                    cmd=service._publish_papers_r2_command(python_path=python_path),
+                    cmd=service._publish_papers_r2_command(python_path=python_path, **path_options),
                     cwd=runtime.root_dir,
                     env=r2_env,
                     metadata={

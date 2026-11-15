@@ -59,8 +59,8 @@ export default function ResearchAskSurveillance({ initialLanguage = 'en' }: { in
         ? selection.countryNameZh || selection.countryNameEn || countryCodes[0]
         : selection.countryNameEn || countryCodes[0])
       : countryCodes.length > 1
-      ? (lang === 'zh' ? `${countryCodes.length} 个相关国家/地区` : lang === 'fr' ? `${countryCodes.length} régions concernées` : `${countryCodes.length} related locations`)
-      : (lang === 'zh' ? '报告国家/地区' : lang === 'fr' ? 'régions déclarantes' : 'reporting locations');
+      ? (lang === 'zh' ? `${countryCodes.length} 个相关区域` : lang === 'fr' ? `${countryCodes.length} régions concernées` : `${countryCodes.length} related locations`)
+      : (lang === 'zh' ? '报告区域' : lang === 'fr' ? 'régions déclarantes' : 'reporting locations');
   const diseaseHref = selection.diseaseSlug
     ? `${prefix}/diseases/${selection.diseaseSlug}/`
     : `${prefix}/diseases/`;

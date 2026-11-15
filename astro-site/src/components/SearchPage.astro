@@ -6,11 +6,11 @@ const zh = locale === 'zh';
 const fr = locale === 'fr';
 const canonicalPath = zh ? '/zh/search/' : locale === 'fr' ? '/fr/search/' : '/search/';
 ---
-<BaseLayout title={zh ? '全站检索' : locale === 'fr' ? 'Recherche' : 'Search'} description={zh ? '检索 GIDS 的国家、疾病、态势、报告与研究证据。' : locale === 'fr' ? 'Recherchez dans les pays, maladies, rapports et études GIDS.' : 'Search GIDS countries, diseases, situation reports, and research evidence.'} initialLanguage={locale} noindex seo={{ title: zh ? '全站检索 | GIDS' : locale === 'fr' ? 'Recherche | GIDS' : 'Search | GIDS', description: zh ? '检索 GIDS 的公开数据与证据。' : locale === 'fr' ? 'Recherchez dans les données et preuves publiques GIDS.' : 'Search public GIDS data and evidence.', locale, canonicalPath, alternatePaths: { en: '/search/', zh: '/zh/search/', fr: '/fr/search/' }, noindex: true }}>
+<BaseLayout title={zh ? '全站检索' : locale === 'fr' ? 'Recherche' : 'Search'} description={zh ? '检索 GIDS 的区域、疾病、态势、报告与研究证据。' : locale === 'fr' ? 'Recherchez dans les zones, maladies, rapports et études GIDS.' : 'Search GIDS areas, diseases, situation reports, and research evidence.'} initialLanguage={locale} noindex seo={{ title: zh ? '全站检索 | GIDS' : locale === 'fr' ? 'Recherche | GIDS' : 'Search | GIDS', description: zh ? '检索 GIDS 的公开数据与证据。' : locale === 'fr' ? 'Recherchez dans les données et preuves publiques GIDS.' : 'Search public GIDS data and evidence.', locale, canonicalPath, alternatePaths: { en: '/search/', zh: '/zh/search/', fr: '/fr/search/' }, noindex: true }}>
   <section class="search-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
     <p class="academic-kicker">{zh ? '证据发现' : fr ? 'Découverte des preuves' : 'Evidence discovery'}</p>
     <h1 class="academic-title">{zh ? '检索 GIDS' : fr ? 'Rechercher dans GIDS' : 'Search GIDS'}</h1>
-    <p class="academic-lead">{zh ? '跨国家、疾病、态势、监测报告和研究文献查找公开证据。' : fr ? 'Trouvez des preuves publiques parmi les pays, maladies, situations, rapports et publications de recherche.' : 'Find public evidence across countries, diseases, situation intelligence, surveillance reports, and research.'}</p>
+    <p class="academic-lead">{zh ? '跨区域、疾病、态势、监测报告和研究文献查找公开证据。' : fr ? 'Trouvez des preuves publiques parmi les zones, maladies, situations, rapports et publications de recherche.' : 'Find public evidence across areas, diseases, situation intelligence, surveillance reports, and research.'}</p>
     <form class="search-page-form" role="search">
       <label for="search-page-input">{zh ? '搜索词' : fr ? 'Requête' : 'Search query'}</label>
       <div><input id="search-page-input" name="q" type="search" autocomplete="off" minlength="2" placeholder={zh ? '例如：登革热、日本、气候…' : fr ? 'Par exemple : dengue, Japon, vaccination…' : 'For example: dengue, Japan, climate…'} /><button type="submit">{zh ? '搜索' : fr ? 'Rechercher' : 'Search'}</button></div>
@@ -30,7 +30,7 @@ const canonicalPath = zh ? '/zh/search/' : locale === 'fr' ? '/fr/search/' : '/s
   const input = document.querySelector<HTMLInputElement>('#search-page-input');
   const status = document.querySelector('#search-page-status');
   const root = document.querySelector('#search-page-results');
-  const labels: Record<string, string> = { country: zh ? '国家与地区' : fr ? 'Pays et régions' : 'Countries', disease: zh ? '疾病' : fr ? 'Maladies' : 'Diseases', situation: zh ? '态势' : fr ? 'Situation' : 'Situation', report: zh ? '报告' : fr ? 'Rapports' : 'Reports', research: zh ? '文献' : fr ? 'Recherche' : 'Research', page: zh ? '探索' : fr ? 'Pages' : 'Pages' };
+  const labels: Record<string, string> = { country: zh ? '地理区域' : fr ? 'Zones géographiques' : 'Geographic areas', disease: zh ? '疾病' : fr ? 'Maladies' : 'Diseases', situation: zh ? '态势' : fr ? 'Situation' : 'Situation', report: zh ? '报告' : fr ? 'Rapports' : 'Reports', research: zh ? '文献' : fr ? 'Recherche' : 'Research', page: zh ? '探索' : fr ? 'Pages' : 'Pages' };
   let entries: SiteSearchEntry[] = [];
   let loaded = false;
   let loading = false;

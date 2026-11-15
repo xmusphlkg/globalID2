@@ -43,7 +43,8 @@ def sources(tmp_path):
     }))
     config = replace(CONFIG, public_base_url='https://papers.example')
     args = dict(papers_dir=papers, site_dist=dist, research_source=research, articles_dir=articles,
-                run=tmp_path / 'run', release_id='site-one', config=config, receipt=tmp_path / 'receipt.json')
+                run=tmp_path / 'run', release_id='site-one', config=config, receipt=tmp_path / 'receipt.json',
+                projection_verifier=lambda candidate: {'status': 'verified', 'generation': candidate.generation})
     return args
 
 
@@ -68,6 +69,7 @@ def test_site_merges_all_locales_assets_index_and_template_articles_before_one_s
     pointer = json.loads(store.get_object(f'{PREFIX}/current.json'))
     published = entries(store, pointer)
     assert result['release_id'] == pointer['release_id'] == 'site-one'
+    assert result['public_verification'] == {'status': 'verified', 'generation': pointer['papers']['papers_generation_sha256']}
     assert store.writes[-1][0] == f'{PREFIX}/current.json'
     for key in ('research/', 'zh/research/', 'fr/research/', '_astro/old.css', '_astro/new.css',
                 'scripts/research.js', 'research/catalogue/manifest.json'):
@@ -113,6 +115,55 @@ def test_failed_switch_retries_frozen_site_instead_of_new_mutable_source(tmp_pat
     index = pointer['files']['index.json']
     assert json.loads(store.get_object(f"{PREFIX}/{index['url']}"))['version'] == 1
     assert store.writes[-1][0] == f'{PREFIX}/current.json'
+
+
+def test_site_canary_failure_keeps_committed_candidate_for_verification_only_retry(tmp_path, monkeypatch):
+    from src.services.data_release import site_research_publish as module
+    args, store = sources(tmp_path), Store()
+    args.pop('projection_verifier')
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    attempts = []
+
+    def verify(candidate):
+        pointer = json.loads(store.get_object(f'{PREFIX}/current.json'))
+        assert pointer['papers']['papers_generation_sha256'] == candidate.generation
+        authority = json.loads((args['run'] / 'authority-committed.json').read_bytes())
+        assert authority['authoritative_committed'] is True
+        assert authority['public_verification_required'] is True
+        attempts.append(candidate.generation)
+        if len(attempts) == 1:
+            raise ValueError('Projected public canary version mismatch')
+        return {'status': 'verified', 'generation': candidate.generation}
+
+    monkeypatch.setattr(module, 'verify_projected_publication', verify)
+    with pytest.raises(ValueError, match='canary version mismatch'):
+        publish_site_research(**args, client=store)
+    assert not (args['run'] / 'published.json').exists()
+    committed = store.get_object(f'{PREFIX}/current.json')
+    writes = list(store.writes)
+    article = args['articles_dir'] / 'paper-a.json'
+    article.write_text('{"unrelated":"later mutable source"}')
+    result = publish_site_research(**args, client=store)
+    assert attempts == [result['papers']['generation_sha256']] * 2
+    assert result['json']['pointer_changed'] is False
+    assert result['public_verification']['status'] == 'verified'
+    assert store.get_object(f'{PREFIX}/current.json') == committed
+    assert store.writes == writes
+    assert json.loads((args['run'] / 'published.json').read_bytes()) == result
+
+
+def test_site_preparation_does_not_probe_or_publish_public_candidate(tmp_path):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+
+    def forbidden_probe(candidate):
+        pytest.fail('Preparation must not probe an unpublished candidate')
+
+    args['projection_verifier'] = forbidden_probe
+    result = publish_site_research(**args, client=store, prepare_only=True)
+    assert result['generation']
+    assert store.writes == []
+    assert not (args['run'] / 'published.json').exists()
 
 
 def test_changed_article_updates_shared_record_and_json_in_same_generation(tmp_path):
@@ -218,3 +269,243 @@ def test_style_release_preserves_published_json_and_reuses_all_article_records(t
     assert not any(key.startswith('paper-template-v3/records/') for key, _ in store.writes)
     assert not any(key.startswith('paper-template-v2/') for key, _ in store.writes)
     assert store.writes[-1][0] == f'{PREFIX}/current.json'
+
+
+def independent_site_sources(args):
+    for path in args['papers_dir'].glob('**/articles/*/index.html'):
+        path.unlink()
+    (args['papers_dir'] / '_astro/old.css').unlink()
+    (args['site_dist'] / '_astro/template-update.css').write_text('body{color:green}')
+    (args['site_dist'] / 'research/index.html').write_text('<html>Updated research directory</html>')
+    collection_receipt(args)
+
+
+def collection_receipt(args, paths=()):
+    (args['site_dist'] / 'research-collections-build.json').write_text(json.dumps({
+        'schema': 1, 'scope': 'collections', 'article_pages_rendered': 0,
+        'research_index_sha256': hashlib.sha256((args['research_source'] / 'index.json').read_bytes()).hexdigest(),
+        'pages': {path: hashlib.sha256((args['site_dist'] / path).read_bytes()).hexdigest() for path in paths},
+    }))
+
+
+def test_independent_site_preserves_complete_v3_articles_and_freezes_before_upload(tmp_path):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    first = json.loads(store.get_object(f'{PREFIX}/current.json'))
+    original_entries = entries(store, first)
+    independent_site_sources(args)
+    next_args = {**args, 'run': tmp_path / 'independent', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    writes = list(store.writes)
+    prepared = publish_site_research(**next_args, client=store, prepare_only=True)
+    assert prepared['article_pages'] == 3
+    assert store.writes == writes
+    assert store.get_object(f'{PREFIX}/current.json') == json.dumps(first, sort_keys=True, separators=(',', ':')).encode()
+    frozen = json.loads((next_args['run'] / 'projection-v3/candidate.json').read_bytes())
+    projected = {item['logical_key']: item for item in frozen['entries']}
+    for key, value in original_entries.items():
+        if 'paper_template' in value:
+            assert projected[key] == value
+    assert projected['_astro/old.css'] == original_entries['_astro/old.css']
+    assert '_astro/template-update.css' in projected
+    assert projected['research/'] != original_entries['research/']
+    # Prepared publication must no longer depend on mutable build outputs or
+    # on the previous release's remote immutable objects.
+    for path in args['papers_dir'].glob('**/*'):
+        if path.is_file():
+            path.unlink()
+    result = publish_site_research(**next_args, client=store)
+    second = json.loads(store.get_object(f'{PREFIX}/current.json'))
+    assert second['files'] == first['files']
+    assert result['public_verification']['status'] == 'verified'
+    assert entries(store, second) == projected
+
+
+@pytest.mark.parametrize('local_baseline', [False, True])
+def test_independent_site_removes_retired_non_article_pages_without_losing_papers(tmp_path, local_baseline):
+    args, store = sources(tmp_path), Store()
+    if local_baseline:
+        args['run'] = tmp_path / 'exports/site-research-runs/first-task/site-one'
+    retired_paths = []
+    for locale in ('', 'zh', 'fr'):
+        path = args['site_dist'] / locale / 'research/collections/retired/index.html'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('<html>Retired collection</html>')
+        retired_paths.append(path)
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    before = entries(store, json.loads(store.get_object(f'{PREFIX}/current.json')))
+    retired_keys = {f'{locale + "/" if locale else ""}research/collections/retired/' for locale in ('', 'zh', 'fr')}
+    assert retired_keys.issubset(before)
+    for path in retired_paths:
+        path.unlink()
+    independent_site_sources(args)
+    next_args = {**args, 'run': tmp_path / 'exports/site-research-runs/second-task/site-two', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**next_args, client=store)
+    after = entries(store, json.loads(store.get_object(f'{PREFIX}/current.json')))
+    assert not retired_keys.intersection(after)
+    for key, entry in before.items():
+        if 'paper_template' in entry:
+            assert after[key] == entry
+    assert after['_astro/old.css'] == before['_astro/old.css']
+    assert after['scripts/research.js'] == before['scripts/research.js']
+    assert after['research/'] != before['research/']
+    # Removing a route does not delete immutable history or supporting bytes.
+    assert all(before[key]['key'] in store.objects for key in retired_keys)
+    frozen = next_args['run'] / 'bundle'
+    assert not any(frozen.glob('**/collections/retired/index.html'))
+
+
+@pytest.mark.parametrize('local_baseline', [False, True])
+def test_independent_site_publishes_newly_rendered_collections_in_all_locales(tmp_path, local_baseline):
+    args, store = sources(tmp_path), Store()
+    if local_baseline:
+        args['run'] = tmp_path / 'exports/site-research-runs/first-task/site-one'
+    paths = [f'{locale}research/{group}/{slug}/index.html'
+        for locale in ('', 'zh/', 'fr/')
+        for group, slug in [('countries', 'jp'), ('diseases', 'influenza'), ('topics', 'surveillance'), ('weekly', '2026-W46')]]
+    for path in paths:
+        target = args['site_dist'] / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text('<h1>Old collection</h1>')
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    before = entries(store, json.loads(store.get_object(f'{PREFIX}/current.json')))
+    independent_site_sources(args)
+    for path in paths:
+        (args['site_dist'] / path).write_text(f'<h1>Current template {path}</h1><a href="/countries/jp/">Japan</a>')
+    collection_receipt(args, paths)
+    from src.services.data_release.papers_bundle import split_papers_bundle
+    split_papers_bundle(args['site_dist'], papers_dir=args['papers_dir'])
+    next_args = {**args, 'run': tmp_path / 'exports/site-research-runs/second-task/site-two', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**next_args, client=store)
+    after = entries(store, json.loads(store.get_object(f'{PREFIX}/current.json')))
+    for path in paths:
+        key = path.removesuffix('index.html')
+        assert after[key]['sha256'] != before[key]['sha256']
+        source = args['papers_dir'] / path
+        if not source.exists():
+            source = args['site_dist'] / path
+        assert store.get_object(after[key]['key']) == source.read_bytes()
+    assert len([entry for entry in after.values() if 'paper_template' in entry]) == 3
+    for key, entry in before.items():
+        if 'paper_template' in entry:
+            assert after[key] == entry
+
+
+@pytest.mark.parametrize('fault', ['missing_receipt', 'missing_route', 'changed_route', 'different_index'])
+def test_independent_site_cannot_publish_unrendered_or_mismatched_collection_candidate(tmp_path, fault):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    independent_site_sources(args)
+    relative = 'fr/research/diseases/influenza/index.html'
+    page = args['site_dist'] / relative
+    page.parent.mkdir(parents=True, exist_ok=True)
+    page.write_text('<h1>Newly rendered collection</h1>')
+    collection_receipt(args, [relative])
+    if fault == 'missing_receipt':
+        (args['site_dist'] / 'research-collections-build.json').unlink()
+    elif fault == 'missing_route':
+        page.unlink()
+    elif fault == 'changed_route':
+        page.write_text('changed after rendering')
+    else:
+        receipt = json.loads((args['site_dist'] / 'research-collections-build.json').read_text())
+        receipt['research_index_sha256'] = '0' * 64
+        (args['site_dist'] / 'research-collections-build.json').write_text(json.dumps(receipt))
+    next_args = {**args, 'run': tmp_path / 'bad-collections', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    writes, pointer = list(store.writes), store.get_object(f'{PREFIX}/current.json')
+    with pytest.raises((ValueError, FileNotFoundError)):
+        publish_site_research(**next_args, client=store, prepare_only=True)
+    assert store.writes == writes
+    assert store.get_object(f'{PREFIX}/current.json') == pointer
+    assert not (next_args['run'] / 'papers-prepared.json').exists()
+
+
+@pytest.mark.parametrize('fault', ['missing_baseline', 'v2_baseline', 'missing_record', 'changed_json'])
+def test_independent_site_rejects_unproven_or_incompatible_baseline_without_upload(tmp_path, fault):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    first = json.loads(store.get_object(f'{PREFIX}/current.json'))
+    original_entries = entries(store, first)
+    independent_site_sources(args)
+    if fault == 'missing_baseline':
+        store.objects.pop(f'{PREFIX}/current.json')
+    elif fault == 'missing_record':
+        article = next(entry for entry in original_entries.values() if 'paper_template' in entry)
+        store.objects.pop(article['key'])
+    elif fault == 'changed_json':
+        (args['research_source'] / 'index.json').write_text('{"unpublished":true}')
+    else:
+        from src.services.data_release.papers_content import catalogue_from_entries
+        changed = list(original_entries.values())
+        for entry in changed:
+            if 'paper_template' in entry:
+                entry['paper_template']['schema'] = 2
+        old = catalogue_from_entries(root=args['papers_dir'], origin=args['config'].public_base_url,
+            release_id=first['release_id'], entries=changed)
+        for key, body in old.shards:
+            store.objects[key] = body
+        store.objects[old.manifest_key] = old.manifest
+        first['papers'].update(papers_manifest_url=old.origin + '/' + old.manifest_key,
+            papers_manifest_sha256=hashlib.sha256(old.manifest).hexdigest(), papers_generation_sha256=old.generation)
+        store.objects[f'{PREFIX}/current.json'] = json.dumps(first).encode()
+    next_args = {**args, 'run': tmp_path / 'independent', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    writes = list(store.writes)
+    pointer = store.get_object(f'{PREFIX}/current.json')
+    with pytest.raises(ValueError):
+        publish_site_research(**next_args, client=store, prepare_only=True)
+    assert store.writes == writes
+    assert store.get_object(f'{PREFIX}/current.json') == pointer
+    assert not (next_args['run'] / 'papers-prepared.json').exists()
+
+
+def test_independent_site_prepared_retry_refuses_newer_research_pointer(tmp_path, monkeypatch):
+    args, store = sources(tmp_path), Store()
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    independent_site_sources(args)
+    next_args = {**args, 'run': tmp_path / 'independent', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**next_args, client=store, prepare_only=True)
+    monkeypatch.setenv('GIDS_PUBLICATION_RECOVERY_ONLY', '1')
+    newer = b'{"release_id":"newer-literature"}'
+    store.objects[f'{PREFIX}/current.json'] = newer
+    writes = list(store.writes)
+    with pytest.raises(R2S3Error, match='baseline changed'):
+        publish_site_research(**next_args, client=store)
+    assert store.writes == writes
+    assert store.get_object(f'{PREFIX}/current.json') == newer
+
+
+@pytest.mark.parametrize('tamper', [False, True])
+def test_independent_site_verifies_local_committed_candidate_before_reuse(tmp_path, tamper):
+    args, store = sources(tmp_path), Store()
+    args['run'] = tmp_path / 'exports/site-research-runs/first-task/site-one'
+    capture_surveillance_baseline(args['run'], args['config'], prefix=PREFIX, client=store)
+    publish_site_research(**args, client=store)
+    independent_site_sources(args)
+    next_args = {**args, 'run': tmp_path / 'exports/site-research-runs/second-task/site-two', 'release_id': 'site-two'}
+    capture_surveillance_baseline(next_args['run'], args['config'], prefix=PREFIX, client=store)
+    candidate_path = args['run'] / 'projection-v3/candidate.json'
+    if tamper:
+        frozen = json.loads(candidate_path.read_bytes())
+        frozen['template_objects'] = []
+        candidate_path.write_text(json.dumps(frozen))
+    def no_remote_read(key):
+        pytest.fail('A verified local baseline must not download remote objects')
+    store.get_object = no_remote_read
+    writes = list(store.writes)
+    if tamper:
+        with pytest.raises(ValueError, match='missing dependencies'):
+            publish_site_research(**next_args, client=store, prepare_only=True)
+    else:
+        assert publish_site_research(**next_args, client=store, prepare_only=True)['article_pages'] == 3
+    assert store.writes == writes

@@ -10,6 +10,7 @@ any of its content.
 from __future__ import annotations
 
 import re
+from datetime import date
 from typing import Any
 from urllib.parse import urljoin
 

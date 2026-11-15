@@ -193,6 +193,8 @@ class ECDCAtlasCrawler(BaseCrawler):
         raw_results: list[dict] = []
         for population, measures_payload, result_payload in payloads:
             measure = _annual_count_measure(measures_payload.get("Measures") or [])
+            if not isinstance(result_payload, dict) or not isinstance(result_payload.get("MeasureResults"), list):
+                raise ECDCContractError("ECDC annual response requires a MeasureResults array")
             values: dict[int, float] = {}
             for item in result_payload.get("MeasureResults") or []:
                 if item.get("GeoCountry") != self.source_geo_code or item.get("YValue") is None:

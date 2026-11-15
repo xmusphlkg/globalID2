@@ -37,6 +37,7 @@ class PublicationPlanCreate(BaseModel):
     job_id: str = Field(default="site-release", min_length=1, max_length=128)
     kind: Literal["auto", "theme", "content", "full", "template"] = "auto"
     channel: Literal["surveillance", "situation", "literature"] | None = None
+    suppress_subscription_dispatch: bool = False
 
 
 class PublicationRollbackPlanCreate(BaseModel):
@@ -80,6 +81,7 @@ class PublicationPlanOut(BaseModel):
     execution_mode: str | None = None
     blocked_reason: str | None = None
     rollback_of: str | None = None
+    suppress_subscription_dispatch: bool = False
 
 
 class PublicationServiceUsageOut(BaseModel):

@@ -7,6 +7,15 @@ from typing import Any
 from src.core.country_library import expand_country_scopes
 
 
+def publishable_scope_keys(line: str, available_codes: set[str] | None = None) -> set[str]:
+    """Use the same scope eligibility for planning, rotation and monitoring."""
+    if line == "surveillance":
+        return set(available_codes or ())
+    if line in {"situation", "literature"}:
+        return {"*"}
+    raise ValueError(f"Unknown JSON publication line: {line}")
+
+
 def plan_changes(rows: list[Any], available_codes: set[str], *, max_countries: int = 8, full: bool = False) -> dict:
     """Keep a legacy parent marker atomic; precise markers never fan out.
 
@@ -17,6 +26,7 @@ def plan_changes(rows: list[Any], available_codes: set[str], *, max_countries: i
     """
     if max_countries < 1:
         raise ValueError("Publication country budget must be positive")
+    available_codes = publishable_scope_keys("surveillance", available_codes)
     groups: OrderedDict[tuple[str, str], list[Any]] = OrderedDict()
     for row in rows:
         groups.setdefault((row.line, row.scope_key), []).append(row)
