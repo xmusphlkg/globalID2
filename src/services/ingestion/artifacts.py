@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import os
+import stat
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -100,7 +101,7 @@ class ArtifactWriter:
         }.get(kind, "bin")
         # UUIDs also avoid collisions between writer instances for the same run.
         path = self.directory / f"{uuid4().hex}-{digest[:16]}.{extension}"
-        await run_artifact_io(_save_atomic, path, payload)
+        await run_artifact_io(_save_atomic, path, payload, digest)
         try:
             artifact = SourceArtifact(
                 task_uuid=self.task_uuid,
@@ -119,7 +120,7 @@ class ArtifactWriter:
         except BaseException:
             # Never expose unregistered bytes to parsers. Cleanup errors also
             # propagate, with the registration failure retained as their context.
-            await run_artifact_io(_remove_file, path)
+            await run_artifact_io(_remove_published, path, digest)
             raise
         self.artifacts.append(artifact)
         return artifact
@@ -146,31 +147,81 @@ def _remove_file(path: Path) -> None:
     _sync_directory(path.parent)
 
 
-def _save_atomic(path: Path, payload: bytes) -> None:
+def _remove_published(path: Path, digest: str) -> None:
+    try:
+        _remove_file(path)
+    finally:
+        _discard_orphan_blob(_blob_path(digest))
+
+
+def _blob_path(digest: str) -> Path:
+    # Shared inode for identical payloads. The task path stays unique so each
+    # source_artifacts row keeps its own name; only the bytes are shared.
+    return _checked_path(Path("data/raw") / ".cas" / digest[:2] / digest)
+
+
+def _usable_blob(blob: Path, size: int) -> bool:
+    try:
+        info = blob.lstat()
+    except FileNotFoundError:
+        return False
+    return stat.S_ISREG(info.st_mode) and info.st_size == size
+
+
+def _discard_orphan_blob(blob: Path) -> None:
+    try:
+        info = blob.lstat()
+    except FileNotFoundError:
+        return
+    if stat.S_ISREG(info.st_mode) and info.st_nlink == 1:
+        blob.unlink()
+
+
+def _save_atomic(path: Path, payload: bytes, digest: str | None = None) -> None:
     path = _checked_path(path)
+    digest = digest or hashlib.sha256(payload).hexdigest()
+    blob = _blob_path(digest)
     path.parent.mkdir(parents=True, exist_ok=True)
-    _checked_path(path)
+    blob.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
+    created_blob = False
     published = False
     try:
+        if _usable_blob(blob, len(payload)):
+            os.link(blob, path)
+            published = True
+            _sync_directory(path.parent)
+            return
         with tempfile.NamedTemporaryFile(
-            dir=path.parent, prefix=".artifact-", suffix=".tmp", delete=False
+            dir=blob.parent, prefix=".artifact-", suffix=".tmp", delete=False
         ) as stream:
             temporary = Path(stream.name)
             if stream.write(payload) != len(payload):
                 raise OSError("Incomplete artifact write")
             stream.flush()
             os.fsync(stream.fileno())
-        # A same-directory hard link publishes complete bytes atomically and
-        # refuses to overwrite an existing immutable artifact.
-        os.link(temporary, path)
-        published = True
+        try:
+            # Publishing the blob by hard link refuses to replace a digest that
+            # already exists. A concurrent writer either wins this link or
+            # adopts the existing inode below.
+            os.link(temporary, blob)
+            created_blob = True
+        except FileExistsError:
+            if not _usable_blob(blob, len(payload)):
+                raise OSError(
+                    "Content-addressed artifact does not match this payload"
+                ) from None
         temporary.unlink()
         temporary = None
+        _sync_directory(blob.parent)
+        os.link(blob, path)
+        published = True
         _sync_directory(path.parent)
     except BaseException:
         if published:
             _remove_file(path)
+        if created_blob:
+            _discard_orphan_blob(blob)
         raise
     finally:
         if temporary is not None:

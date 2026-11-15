@@ -46,7 +46,12 @@ async def records(maker):
 
 
 def files():
-    return [path for path in Path("data/raw").rglob("*") if path.is_file()]
+    root = Path("data/raw")
+    return [
+        path
+        for path in root.rglob("*")
+        if path.is_file() and ".cas" not in path.relative_to(root).parts
+    ]
 
 
 async def test_concurrent_identical_writes_are_unique_and_serialized(
@@ -77,6 +82,19 @@ async def test_concurrent_identical_writes_are_unique_and_serialized(
         len(await records(artifact_db)) == len(target.artifacts) == len(files()) == 24
     )
     assert all(artifacts.read_artifact(item) == b"original bytes" for item in saved)
+
+
+async def test_identical_payloads_share_one_inode(artifact_db):
+    first = await write(writer(), b"same-bytes")
+    second = await write(writer(), b"same-bytes")
+    assert first.relative_path != second.relative_path
+    first_path = Path(first.relative_path)
+    second_path = Path(second.relative_path)
+    assert first_path.stat().st_ino == second_path.stat().st_ino
+    assert first_path.stat().st_nlink >= 2
+    assert artifacts.read_artifact(first) == artifacts.read_artifact(second) == b"same-bytes"
+    other = await write(writer(), b"different-bytes")
+    assert Path(other.relative_path).stat().st_ino != first_path.stat().st_ino
 
 
 async def test_separate_writers_for_same_attempt_do_not_collide(artifact_db):
@@ -112,8 +130,11 @@ async def test_file_is_complete_and_synced_before_atomic_publication(
     monkeypatch.setattr(artifacts.os, "fsync", sync)
     monkeypatch.setattr(artifacts.os, "link", publish)
     saved = await write(writer())
-    assert publications == [Path(saved.relative_path).resolve()]
-    assert len(synced) == 2  # file, then containing directory
+    published = Path(saved.relative_path).resolve()
+    assert publications[-1] == published
+    assert publications[0] != published
+    assert published.read_bytes() == b"original bytes"
+    assert len(synced) == 3  # payload, content-addressed directory, task directory
     assert not list(Path("data/raw").rglob("*.tmp"))
 
 
@@ -234,11 +255,11 @@ async def test_cancellation_settles_inflight_file_and_registration(
     release = threading.Event()
     original_save = artifacts._save_atomic
 
-    def blocked_save(path, payload):
+    def blocked_save(path, payload, digest=None):
         entered.set()
         if not release.wait(timeout=5):
             raise TimeoutError("test did not release file writer")
-        original_save(path, payload)
+        original_save(path, payload, digest)
 
     @asynccontextmanager
     async def fail_commit():
