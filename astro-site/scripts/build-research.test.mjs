@@ -123,6 +123,7 @@ test('collection rebuild skips articles without reading or replacing the complet
     process.env.GIDS_ASTRO_RENDER_WORKERS = '3';
     for (const [scope, override, expected] of [
       ['collections', undefined, '3'], ['collections', '', '3'], ['collections', '0', '0'],
+      ['shell', '2', '2'],
       ['full', '2', '3'], ['full', 'invalid-collection-only-setting', '3'],
     ]) {
       if (override === undefined) delete process.env.GIDS_RESEARCH_COLLECTION_RENDER_WORKERS;
@@ -156,7 +157,7 @@ test('auto build reuses only an explicitly frozen compatible template baseline',
     for (const path of ['shared', 'site/src/pages/research', 'site/src/data', 'site/public',
       'snapshot/build/research', 'snapshot/public/research']) mkdirSync(resolve(root, path), { recursive: true });
     writeFileSync(resolve(site, 'src/pages/research/index.astro'), 'template');
-    writeFileSync(resolve(snapshot, 'build/research/routes.json'), '{"articles":[]}');
+    writeFileSync(resolve(snapshot, 'build/research/routes.json'), '{"articles":[{"slug":"paper-a"}]}');
     writeFileSync(resolve(snapshot, 'build/research/index.json'), '{}');
     writeFileSync(resolve(snapshot, 'public/research/index.json'), '{}');
     writeFileSync(resolve(snapshot, 'article-inputs.json'), '{"schema":1,"articles":{}}');
@@ -166,7 +167,7 @@ test('auto build reuses only an explicitly frozen compatible template baseline',
     const fingerprint = researchTemplateFingerprint({ site, project: root });
     const valid = { schema: 1, template_fingerprint: fingerprint, candidate, generation: 'a'.repeat(64) };
     for (const [index, baseline, scope] of [
-      [0, valid, 'collections'], [1, { ...valid, template_fingerprint: 'b'.repeat(64) }, 'full'],
+      [0, valid, 'collections'], [1, { ...valid, template_fingerprint: 'b'.repeat(64) }, 'shell'],
       [2, { ...valid, candidate: resolve(root, 'missing.json') }, 'full'],
       [3, { schema: 1, mode: 'full' }, 'full'],
     ]) {
@@ -175,6 +176,9 @@ test('auto build reuses only an explicitly frozen compatible template baseline',
       buildResearch({ site, project: root, snapshot, destination, work, scope: 'auto', projectionBaseline,
         run: (_cmd, _args, opts) => {
           assert.equal(opts.env.GIDS_RESEARCH_BUILD_SCOPE, scope);
+          if (scope === 'shell') {
+            assert.deepEqual(JSON.parse(readFileSync(opts.env.GIDS_RESEARCH_BUILD_PLAN, 'utf8')), { selected: ['paper-a'] });
+          }
           mkdirSync(resolve(opts.cwd, 'dist/research'), { recursive: true });
           writeFileSync(resolve(opts.cwd, 'dist/research/index.html'), 'current collection');
           return { status: 0 };
@@ -182,13 +186,17 @@ test('auto build reuses only an explicitly frozen compatible template baseline',
       const receipt = JSON.parse(readFileSync(`${destination}.inputs.json`, 'utf8'));
       assert.equal(receipt.scope, scope);
       assert.equal(receipt.template_fingerprint, fingerprint);
-      if (scope === 'collections') {
+      if (scope === 'collections' || scope === 'shell') {
         assert.equal(receipt.projection_baseline, candidate);
         for (const key of ['article_inputs_sha256', 'routes_sha256', 'research_index_sha256',
           'public_research_index_sha256', 'public_research_catalogue_sha256'])
           assert.match(receipt[key], /^[a-f0-9]{64}$/);
       }
+      if (scope === 'shell') assert.equal(receipt.shell_slug, 'paper-a');
     }
+    writeFileSync(resolve(snapshot, 'build/research/routes.json'), '{"articles":[]}');
+    assert.throws(() => buildResearch({ site, project: root, snapshot, destination: resolve(root, 'empty-shell'),
+      work, scope: 'shell' }), /one published article/);
     // Article membership/metadata are snapshot inputs, never template identity.
     mkdirSync(resolve(site, 'src/data/research'), { recursive: true });
     writeFileSync(resolve(site, 'src/data/research/routes.json'), '{"articles":[{"slug":"new"}]}');

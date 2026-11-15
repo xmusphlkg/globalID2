@@ -63,7 +63,7 @@ export function prepareResearchWorkspace({ site, snapshot, work }) {
 
 export function buildResearch({ site, project, snapshot, destination, work, cacheDir, scope = 'full',
   projectionBaseline = process.env.GIDS_RESEARCH_PROJECTION_BASELINE, run = spawnSync }) {
-  if (!['full', 'collections', 'auto'].includes(scope)) throw new Error(`Unknown research build scope: ${scope}`);
+  if (!['full', 'collections', 'shell', 'auto'].includes(scope)) throw new Error(`Unknown research build scope: ${scope}`);
   const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
   const snapshotPaths = { article_inputs_sha256: 'article-inputs.json',
     routes_sha256: 'build/research/routes.json', research_index_sha256: 'build/research/index.json',
@@ -73,15 +73,21 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
     [key, existsSync(resolve(snapshot, path)) ? sha(resolve(snapshot, path)) : null]));
   const inputHashes = snapshotHashes();
   const templateFingerprint = researchTemplateFingerprint({ site, project });
+  const reusableBaseline = value => value?.schema === 1
+    && typeof value.candidate === 'string' && isAbsolute(value.candidate)
+    && existsSync(value.candidate) && /^[a-f0-9]{64}$/.test(value.generation);
   let baseline;
   if (scope === 'auto') {
     try { baseline = JSON.parse(readFileSync(projectionBaseline, 'utf8')); } catch { baseline = null; }
-    scope = baseline?.schema === 1 && baseline.template_fingerprint === templateFingerprint
-      && typeof baseline.candidate === 'string' && isAbsolute(baseline.candidate)
-      && existsSync(baseline.candidate) && /^[a-f0-9]{64}$/.test(baseline.generation)
-      ? 'collections' : 'full';
+    // A matching fingerprint reuses the published shells. A changed fingerprint
+    // with that same baseline compiles one new shell per locale. Only a missing
+    // baseline still renders every article.
+    scope = reusableBaseline(baseline)
+      ? (baseline.template_fingerprint === templateFingerprint ? 'collections' : 'shell')
+      : 'full';
   }
-  const collectionWorkers = scope === 'collections' ? process.env.GIDS_RESEARCH_COLLECTION_RENDER_WORKERS?.trim() : undefined;
+  const collectionWorkers = scope === 'collections' || scope === 'shell'
+    ? process.env.GIDS_RESEARCH_COLLECTION_RENDER_WORKERS?.trim() : undefined;
   if (collectionWorkers && (!Number.isInteger(Number(collectionWorkers)) || Number(collectionWorkers) < 0 || Number(collectionWorkers) > 32))
     throw new Error('GIDS_RESEARCH_COLLECTION_RENDER_WORKERS must be an integer from 0 to 32');
   const started = performance.now();
@@ -100,13 +106,24 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
   delete env.GIDS_COUNTRY_BUILD_DIR;
   delete env.GIDS_CODE_BUILD_DIR;
   delete env.GIDS_BUILD_PUBLIC_DIR;
-  let inputs, previous, plan;
-  if (scope === 'collections') {
-    // Collections use the current frozen JSON and templates. Existing v3
+  let inputs, previous, plan, shellSlug = null;
+  if (scope === 'collections' || scope === 'shell') {
+    // Collections and shell compiles use the current frozen JSON. Existing v3
     // article projections are composed by the publisher; never restore their
     // old HTML here or replace the full article cache with this partial build.
     const planPath = resolve(work, 'article-plan.json');
-    writeFileSync(planPath, JSON.stringify({ selected: [] }));
+    let selected = [];
+    if (scope === 'shell') {
+      const routes = JSON.parse(readFileSync(resolve(snapshot, 'build/research/routes.json'), 'utf8'));
+      const slugs = [...(Array.isArray(routes.articles) ? routes.articles : [])]
+        .map(article => article && typeof article.slug === 'string' ? article.slug : '')
+        .filter(slug => /^[a-z0-9][a-z0-9-]{0,239}$/.test(slug))
+        .sort();
+      if (!slugs.length) throw new Error('Shell update requires one published article');
+      shellSlug = slugs[0];
+      selected = [shellSlug];
+    }
+    writeFileSync(planPath, JSON.stringify({ selected }));
     env.GIDS_RESEARCH_BUILD_PLAN = planPath;
   } else if (cacheDir && existsSync(resolve(snapshot, 'article-inputs.json'))) {
     inputs = researchInputs({ site, project, snapshot });
@@ -169,10 +186,11 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
     ...(inputs ? { inputs, reused: plan.reusable,
       previous_cache_version: previous?.version ?? null, cache_version: cacheVersion } : {}),
   };
-  if (scope === 'collections') {
+  if (scope === 'collections' || scope === 'shell') {
     if (baseline) result.projection_baseline = baseline.candidate;
     Object.assign(result, Object.fromEntries(Object.entries(inputHashes).filter(([, value]) => value !== null)));
   }
+  if (scope === 'shell') result.shell_slug = shellSlug;
   const receipt = `${destination}.inputs.json`, temporary = `${receipt}.${process.pid}.tmp`;
   writeFileSync(temporary, JSON.stringify(result));
   renameSync(temporary, receipt);

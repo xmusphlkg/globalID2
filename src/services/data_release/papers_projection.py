@@ -135,6 +135,28 @@ def _read_object(candidate: PapersContentCandidate, key: str) -> dict:
     return json.loads(raw)
 
 
+def locale_shell_template(locale: str, chunks: list, main: str) -> dict:
+    """Wrap one factored locale shell for the v3 renderer.
+
+    The renderer emits a single head document and one main. Repeated head slots
+    from the factored page collapse to that one slot; chrome outside the main,
+    including the shared footer, stays in the shell.
+    """
+    converted, inserted = [], False
+    for chunk in chunks:
+        if isinstance(chunk, dict) and chunk.get('field') == 'head':
+            if not inserted:
+                converted.append({'field': 'head', 'index': 0})
+                inserted = True
+        else:
+            converted.append(chunk)
+    if not inserted:
+        raise ValueError('Locale shell has no SEO slot')
+    scope = sorted(set(re.findall(r'data-astro-cid-[a-z0-9]{4,32}', main)))
+    return {'schema': 3, 'content_schema': 3, 'renderer': 'gids-evidence-v1', 'locale': locale,
+            'shell': {'schema': 1, 'chunks': converted}, 'scope_attributes': scope}
+
+
 def _template(base: PapersContentCandidate, locale: str, entry: dict) -> dict:
     descriptor = entry['paper_template']
     if descriptor.get('schema') == 3:
@@ -143,19 +165,7 @@ def _template(base: PapersContentCandidate, locale: str, entry: dict) -> dict:
     record = _read_object(base, entry['key'])
     # One verified locale shell is migrated once. Article records are generated
     # directly from JSON thereafter; no per-article HTML splitting takes place.
-    chunks, inserted = [], False
-    for chunk in old['chunks']:
-        if isinstance(chunk, dict) and chunk.get('field') == 'head':
-            if not inserted:
-                chunks.append({'field': 'head', 'index': 0})
-                inserted = True
-        else:
-            chunks.append(chunk)
-    if not inserted:
-        raise ValueError('Locale shell has no SEO slot')
-    scope = sorted(set(re.findall(r'data-astro-cid-[a-z0-9]{4,32}', record['locales'][locale]['main'])))
-    return {'schema': 3, 'content_schema': 3, 'renderer': 'gids-evidence-v1', 'locale': locale,
-            'shell': {'schema': 1, 'chunks': chunks}, 'scope_attributes': scope}
+    return locale_shell_template(locale, old['chunks'], record['locales'][locale]['main'])
 
 
 def assert_v3_candidate(candidate: PapersContentCandidate) -> None:
@@ -291,7 +301,7 @@ def prepare_projection_candidate(base: PapersContentCandidate, *, articles: list
 
 def prepare_full_snapshot_candidate(base: PapersContentCandidate, *, articles: list[dict],
                                     static: PapersContentCandidate, directory: Path,
-                                    release_id: str) -> tuple[PapersContentCandidate, dict]:
+                                    release_id: str, locale_shells: dict[str, dict] | None = None) -> tuple[PapersContentCandidate, dict]:
     """Replace the complete public article set and freshly built collections.
 
     This is deliberately separate from the body-only entry point: titles,
@@ -334,6 +344,13 @@ def prepare_full_snapshot_candidate(base: PapersContentCandidate, *, articles: l
                 locale_templates[_read_object(base, item['key'])['locale']] = item['key']
     if set(locale_templates) != set(LOCALES):
         raise ValueError('Full snapshot requires all three locale templates')
+    if locale_shells is not None:
+        if set(locale_shells) != set(LOCALES):
+            raise ValueError('Shell update requires all three locale templates')
+        for locale, value in locale_shells.items():
+            if (not isinstance(value, dict) or value.get('schema') != 3 or value.get('locale') != locale
+                    or value.get('renderer') != 'gids-evidence-v1'):
+                raise ValueError('Invalid projected locale template')
 
     # Keep immutable template resources, while current static output owns all
     # directory pages. Old collections and article cards cannot reappear.
@@ -367,7 +384,7 @@ def prepare_full_snapshot_candidate(base: PapersContentCandidate, *, articles: l
     payloads = {asset['key']: asset}
     templates = {}
     for locale, key in locale_templates.items():
-        value = _read_object(base, key)
+        value = locale_shells[locale] if locale_shells is not None else _read_object(base, key)
         if value.get('schema') != 3 or value.get('locale') != locale or value.get('renderer') != 'gids-evidence-v1':
             raise ValueError('Invalid projected locale template')
         references = set(re.findall(r'/_astro/([A-Za-z0-9._/-]+)', _json(value).decode()))
@@ -408,7 +425,10 @@ def prepare_full_snapshot_candidate(base: PapersContentCandidate, *, articles: l
         'deleted_slugs': sorted(old_articles.keys() - records.keys()),
         'article_pages_rendered': 0, 'article_pages_restored': 0,
         'html_assembly_count': 0, 'content_render_count': 0,
-        'directory_projection_policy': 'complete_snapshot_and_rebuilt_collections'}
+        'template_compile_count': 3 if locale_shells is not None else 0,
+        'shell_update': locale_shells is not None,
+        'directory_projection_policy': 'compiled_locale_shell_and_json_records' if locale_shells is not None
+        else 'complete_snapshot_and_rebuilt_collections'}
     save_projection_candidate(candidate, directory / 'candidate.json', base_generation=base.generation)
     (directory / 'projection-receipt.json').write_bytes(_json(receipt))
     return candidate, receipt

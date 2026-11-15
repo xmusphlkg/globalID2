@@ -24,8 +24,8 @@ from src.services.data_release.papers_projection import (  # noqa: E402
     prepare_full_snapshot_candidate, verify_projected_publication,
 )
 from src.services.data_release.literature_projection import (  # noqa: E402
-    complete_snapshot_articles, freeze_projection_build_baseline, save_template_compatibility,
-    verify_snapshot_collections,
+    complete_snapshot_articles, compile_locale_shells, freeze_projection_build_baseline,
+    save_template_compatibility, verify_snapshot_collections, verify_snapshot_shell,
 )
 from src.services.data_release.papers_reuse import load_committed_papers_receipt  # noqa: E402
 from src.services.data_release.surveillance_publish import _starting_baseline, _target, validate_manifest  # noqa: E402
@@ -145,7 +145,7 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
                        if previous_manifest and previous_manifest.get('papers') else None)
                 manifest = build_research_papers_manifest(stage, origin=config.public_base_url, build=build, previous=old)
                 _atomic_write(manifest_path, json.dumps(manifest, ensure_ascii=False, separators=(',', ':')).encode())
-            if build.get('scope') == 'collections':
+            if build.get('scope') in {'collections', 'shell'}:
                 # JSON freezing can succeed before Papers preparation crashes.
                 # A later build in the same run must never pair newer papers
                 # with that already-frozen older index/catalogue generation.
@@ -162,11 +162,23 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
                 baseline = json.loads((run / 'projection-build-baseline.json').read_bytes())
                 base = load_projection_candidate(baseline_path)
                 prior = validate_manifest(previous)[0] if previous else {}
+                published_fingerprint = baseline.get('template_fingerprint')
                 if (base.generation != prior.get('papers', {}).get('papers_generation_sha256')
                         or base.generation != baseline.get('generation') or base.origin != config.public_base_url
-                        or build.get('template_fingerprint') != baseline.get('template_fingerprint')):
+                        or not isinstance(published_fingerprint, str)):
                     raise ValueError('Full snapshot template baseline does not match captured publication')
-                verify_snapshot_collections(stage, build)
+                shells = None
+                if build.get('scope') == 'collections':
+                    if build.get('template_fingerprint') != published_fingerprint:
+                        raise ValueError('Full snapshot template baseline does not match captured publication')
+                    verify_snapshot_collections(stage, build)
+                else:
+                    # A shared chrome change compiles one page per locale and
+                    # retargets every published paper. It must not keep the old
+                    # shell or render the whole catalogue to extract chrome.
+                    if build.get('template_fingerprint') == published_fingerprint:
+                        raise ValueError('Shell update requires a changed template fingerprint')
+                    shells = compile_locale_shells(stage, verify_snapshot_shell(stage, build))
                 articles = complete_snapshot_articles(snapshot, build)
                 static = prepare_papers_content_from_manifest(stage, manifest,
                     papers_origin=config.public_base_url, release_id=release_id)
@@ -177,7 +189,7 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
                     import shutil
                     shutil.rmtree(directory)
                 projected, _projection_receipt = prepare_full_snapshot_candidate(base, articles=articles,
-                    static=static, directory=directory, release_id=release_id)
+                    static=static, directory=directory, release_id=release_id, locale_shells=shells)
                 _write_v3_marker(run, projected)
             else:
                 projected = _project_stage(run=run, stage=stage, snapshot=snapshot, manifest=manifest,

@@ -223,9 +223,12 @@ scheduled literature job exports the snapshot, freezes a verified local template
 baseline with `publish_research_candidate.py --prepare-build`, and runs
 `build-research.mjs` in `auto` scope. A compatible fingerprint builds only the
 current collections and assembles the complete article catalogue from JSON.
-The fallback full stage builds an intermediate template only as private
-migration input, replaces every article entry with projection v3, and uploads
-with no legacy HTML build receipt.
+A changed fingerprint with that verified baseline compiles one representative
+article in each locale, installs those shells, overlays new compiled assets,
+and retargets every published paper without rewriting unchanged records.
+A missing baseline still uses the full stage. That stage builds an intermediate
+template only as private migration input, replaces every article entry with
+projection v3, and uploads with no legacy HTML build receipt.
 `paper-template-v2/` keys are not part of the published candidate. A frozen
 schema-1 `papers-prepared.json` cannot be resumed. The v3 resume marker is
 schema 3 and points at `projection-v3/candidate.json`.
@@ -259,10 +262,13 @@ The captured public generation and manifest identify the reusable template
 baseline. Every reused template/resource is copied and checked before the build.
 The source fingerprint covers template dependencies, public render settings and
 the shared shell inputs `meta.json`, `diseases/index.json`, and
-`reports/index.json`; it excludes Research article and route membership. The
-first new-fingerprint run, source incompatibility, or missing cache requires a
-full build. A compatible run renders collections, then handles new/deleted
-slugs and metadata changes in JSON while preserving unchanged record hashes.
+`reports/index.json`; it excludes Research article and route membership. A
+changed template fingerprint compiles one article page per locale and installs
+those shells; it does not render the catalogue. A missing baseline still
+requires a full build. A compatible run renders collections, then handles
+new/deleted slugs and metadata changes in JSON while preserving unchanged
+record hashes. A shell run does the same record update and retargets every
+paper at the newly compiled locale shells. Unchanged records keep their hashes.
 All three locale descriptors are required for every baseline article. Old
 collection pages are not carried into the new complete catalogue.
 

@@ -14,7 +14,7 @@ from src.services.data_release.literature_publish import PREFIX as RESEARCH_PREF
 from src.services.data_release.papers_content import prepare_papers_content_from_manifest, publish_papers_content
 from src.services.data_release.papers_immutable import ImmutablePapersError
 from src.services.data_release.papers_projection import (
-    PREFIX, _read_object, assert_v3_candidate, prepare_full_snapshot_candidate,
+    PREFIX, _read_object, assert_v3_candidate, load_projection_candidate, prepare_full_snapshot_candidate,
     verify_projected_publication,
 )
 from src.services.data_release.surveillance_publish import capture_surveillance_baseline
@@ -325,6 +325,94 @@ def test_collection_asset_closure_ignores_a_quoted_node_runtime_name(tmp_path):
         directory=tmp_path / 'complete', release_id='next')
     assert '_astro/Node.js' not in {item['path'] for item in candidate.entries}
     assert '_astro/style.css' in {item['path'] for item in candidate.entries}
+
+
+def shell_html(slug, locale):
+    return (f'<html><head><title>{slug}</title><meta name="description" content="{slug}">'
+            f'<link rel="canonical" href="https://example.test/{slug}">'
+            f'<link rel="stylesheet" href="/_astro/shell.abc123.css">'
+            f'</head><body><a href="/{slug}">language</a>'
+            f'<main id="main-content"><p data-astro-cid-abcd1234>{slug}</p></main>'
+            f'<footer>new-footer-{locale}</footer></body></html>')
+
+
+def write_shell_fixture(stage, build, slug='paper-a'):
+    css = stage / '_astro/shell.abc123.css'
+    css.parent.mkdir(parents=True, exist_ok=True)
+    css.write_text('footer{color:#123}')
+    pages = dict(build['pages'])
+    for locale, prefix in (('en', ''), ('zh', 'zh/'), ('fr', 'fr/')):
+        relative = f'{prefix}research/articles/{slug}/index.html'
+        path = stage / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(shell_html(slug, locale))
+        pages[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+    build.update(pages=pages, scope='shell', article_pages_rendered=3, article_pages_restored=0,
+                 shell_slug=slug, template_fingerprint='b' * 64)
+    Path(f'{stage}.inputs.json').write_text(json.dumps(build))
+    return build
+
+
+def test_shell_update_retargets_every_published_paper_without_rewriting_records(tmp_path, monkeypatch):
+    base = initial(tmp_path / 'base')
+    before = {path.relative_to(base.root): hashlib.sha256(path.read_bytes()).hexdigest()
+              for path in base.root.rglob('*') if path.is_file()}
+    config = replace(CONFIG, public_base_url=base.origin)
+    store = Store()
+    old_snapshot, _, _, _ = snapshot_and_collections(tmp_path / 'old', [article('paper-a'), article('paper-b')])
+    old_run = tmp_path / 'old-run'
+    old_run.mkdir()
+    shared = tmp_path / 'shared'
+    capture_surveillance_baseline(old_run, config, prefix=RESEARCH_PREFIX, client=store)
+    freeze_literature_json(old_snapshot / 'public/research', shared, release_id=base.release_id,
+        generated_at='2026-11-15T00:00:00Z', logical_names=select_index_artifacts(old_snapshot / 'public/research'))
+    (old_run / 'current.json').write_bytes((shared / 'current.json').read_bytes())
+    publish_literature_candidate(run=old_run, objects_dir=shared / 'objects', papers=base, config=config,
+        receipt=tmp_path / 'receipt', client=store)
+    literature_projection.save_template_compatibility(base, {'template_fingerprint': 'a' * 64})
+    monkeypatch.setattr(literature_projection, '_local_candidate', lambda *args: base)
+    snapshot, stage, build, _ = snapshot_and_collections(tmp_path / 'new', [article('paper-a'), article('paper-b')])
+    write_shell_fixture(stage, build)
+    run = tmp_path / 'run'
+    run.mkdir()
+    capture_surveillance_baseline(run, config, prefix=RESEARCH_PREFIX, client=store)
+    monkeypatch.setenv('GIDS_PAPERS_PROJECTION_V3', '1')
+    marker = publish(run=run, snapshot=snapshot, stage=stage, shared=shared, receipt=tmp_path / 'receipt',
+        release_id='next', config=config, client=store, prepare_build=True)
+    build['projection_baseline'] = marker['candidate']
+    Path(f'{stage}.inputs.json').write_text(json.dumps(build))
+    publish(run=run, snapshot=snapshot, stage=stage, shared=shared, receipt=tmp_path / 'receipt',
+        release_id='next', config=config, client=store, prepare_only=True)
+    candidate = load_projection_candidate(run / 'projection-v3/candidate.json')
+    old_records = {(entry['paper_template']['slug'], entry['paper_template']['locale']): entry['paper_template']['record_sha256']
+                   for entry in base.entries if 'paper_template' in entry}
+    old_templates = {(entry['paper_template']['slug'], entry['paper_template']['locale']): entry['paper_template']['template_sha256']
+                     for entry in base.entries if 'paper_template' in entry}
+    projected = [entry for entry in candidate.entries if 'paper_template' in entry]
+    assert {(entry['paper_template']['slug'], entry['paper_template']['locale']) for entry in projected} == {
+        (slug, locale) for slug in ('paper-a', 'paper-b') for locale in ('en', 'zh', 'fr')}
+    for entry in projected:
+        descriptor = entry['paper_template']
+        identity = (descriptor['slug'], descriptor['locale'])
+        assert descriptor['record_sha256'] == old_records[identity]
+        assert descriptor['template_sha256'] != old_templates[identity]
+    same_locale = [entry['paper_template']['template_sha256'] for entry in projected if entry['paper_template']['locale'] == 'en']
+    assert len(set(same_locale)) == 1
+    shell = _read_object(candidate, f"{PREFIX}/templates/{same_locale[0]}.json")
+    assert 'new-footer-en' in json.dumps(shell)
+    assert '_astro/shell.abc123.css' in {entry['path'] for entry in candidate.entries}
+    assert not any('paper_template' not in entry and 'research/articles/' in entry['path'] for entry in candidate.entries)
+    compatibility = json.loads((candidate.template_root / 'template-compatibility.json').read_bytes())
+    assert compatibility['template_fingerprint'] == 'b' * 64
+    assert {path.relative_to(base.root): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in base.root.rglob('*') if path.is_file()} == before
+    broken = literature_projection.compile_locale_shells(stage, 'paper-a')
+    broken['en']['shell']['chunks'].append('<link rel="stylesheet" href="/_astro/missing.css">')
+    with pytest.raises(ValueError, match='outside the retained catalogue'):
+        prepare_full_snapshot_candidate(base, articles=[article('paper-a'), article('paper-b')],
+            static=prepare_papers_content_from_manifest(stage, build_research_papers_manifest(
+                stage, origin=base.origin, build=build), papers_origin=base.origin, release_id='next'),
+            directory=tmp_path / 'missing-asset', release_id='next', locale_shells=broken)
 
 
 def test_collection_asset_closure_checks_complete_dependencies_and_their_hashes(tmp_path):

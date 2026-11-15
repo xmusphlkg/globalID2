@@ -10,7 +10,7 @@ import shutil
 from src.generation.literature_publication import _atomic_write
 from .papers_content import _hash, _json
 from .papers_immutable import ImmutablePapersError, _source
-from .papers_projection import HASH, SLUG, save_projection_candidate
+from .papers_projection import HASH, LOCALES, SLUG, locale_shell_template, save_projection_candidate
 from .site_research_baseline import _local_candidate
 
 
@@ -135,3 +135,47 @@ def verify_snapshot_collections(stage: Path, build: dict) -> None:
             raise ValueError('Research collection page changed or contains article HTML')
     if not {'research/index.html', 'zh/research/index.html', 'fr/research/index.html'}.issubset(actual):
         raise ValueError('Research collection build requires all three landing pages')
+
+
+ARTICLE_PAGE = re.compile(r'(?:(?P<prefix>zh|fr)/)?research/articles/(?P<slug>[a-z0-9][a-z0-9-]{0,239})/index\.html\Z')
+
+
+def verify_snapshot_shell(stage: Path, build: dict) -> str:
+    """Accept one representative article page per locale and the collection build."""
+    slug = build.get('shell_slug')
+    if (build.get('schema') != 1 or build.get('scope') != 'shell'
+            or build.get('article_pages_rendered') != 3 or build.get('article_pages_restored') != 0
+            or not isinstance(build.get('pages'), dict) or not isinstance(slug, str) or not SLUG.fullmatch(slug)):
+        raise ValueError('Shell update requires one rendered article in every locale')
+    expected = {f'{prefix}research/articles/{slug}/index.html' for prefix in ('', 'zh/', 'fr/')}
+    actual = {path.relative_to(stage).as_posix() for path in stage.rglob('*.html')}
+    if actual != set(build['pages']):
+        raise ValueError('Research shell page set changed after rendering')
+    rendered = {relative for relative in actual if ARTICLE_PAGE.fullmatch(relative)}
+    if rendered != expected:
+        raise ValueError('Shell update must render exactly one article in every locale')
+    for relative, digest in build['pages'].items():
+        if _hash(_source(stage, relative).read_bytes()) != digest:
+            raise ValueError('Research shell page changed after rendering')
+    if not {'research/index.html', 'zh/research/index.html', 'fr/research/index.html'}.issubset(actual):
+        raise ValueError('Shell update requires all three landing pages')
+    return slug
+
+
+def compile_locale_shells(stage: Path, slug: str) -> dict[str, dict]:
+    """Factor the representative pages into v3 shells. Records stay in JSON."""
+    from .papers_template import assemble_paper, factor_paper
+    if not SLUG.fullmatch(slug):
+        raise ValueError('Shell update requires one rendered article in every locale')
+    templates = {}
+    for locale, relative in (('en', f'research/articles/{slug}/index.html'),
+                             ('zh', f'zh/research/articles/{slug}/index.html'),
+                             ('fr', f'fr/research/articles/{slug}/index.html')):
+        html = _source(stage, relative).read_text(encoding='utf-8')
+        pair = factor_paper(html, slug)
+        if assemble_paper(pair.template, pair.record) != html:
+            raise ValueError(f'Paper shell round trip mismatch: {relative}')
+        templates[locale] = locale_shell_template(locale, pair.template['chunks'], pair.record['main'])
+    if set(templates) != set(LOCALES):
+        raise ValueError('Shell update requires all three locale templates')
+    return templates
