@@ -94,11 +94,20 @@ def compose_site_candidate(*, run: Path, static, previous: dict | None, client,
             release_id=previous["release_id"], entries=entries)
         if base.manifest != body or len(entries) != binding.get("papers_file_count"):
             raise ValueError("Captured Papers catalogue content differs from its binding")
-        assert_v3_candidate(base)
+        if any('paper_template' in entry for entry in entries):
+            assert_v3_candidate(base)
         dependencies = {}
         for entry in entries:
             descriptor = entry.get("paper_template")
             if descriptor is None:
+                # Empty complete snapshots retain locale shells and their
+                # asset manifest as normal immutable JSON catalogue objects.
+                key = entry.get('key', '')
+                if re.fullmatch(r'paper-template-v3/(?:templates|assets)/[a-f0-9]{64}\.json', key):
+                    digest = key.rsplit('/', 1)[-1].removesuffix('.json')
+                    if entry.get('sha256') != digest or entry.get('logical_key') != key:
+                        raise ValueError('Invalid empty Papers template dependency')
+                    dependencies[key] = digest
                 continue
             for group, field in (("records", "record_sha256"), ("templates", "template_sha256"), ("assets", "assets_sha256")):
                 digest = descriptor[field]
@@ -115,7 +124,8 @@ def compose_site_candidate(*, run: Path, static, previous: dict | None, client,
         with ThreadPoolExecutor(max_workers=min(workers, 16)) as pool:
             objects = tuple(pool.map(dependency, dependencies.items()))
         base = replace(base, template_root=directory, template_objects=objects)
-    assert_v3_candidate(base)
+    if not remote_payloads:
+        assert_v3_candidate(base)
     dependencies = {item['key']: item for item in base.template_objects}
     for entry in base.entries:
         descriptor = entry.get('paper_template')
@@ -148,7 +158,7 @@ def compose_site_candidate(*, run: Path, static, previous: dict | None, client,
         descriptor = entry.get("paper_template")
         if descriptor:
             locales.setdefault(descriptor["slug"], set()).add(descriptor["locale"])
-    if not locales or any(value != {"en", "zh", "fr"} for value in locales.values()):
+    if any(value != {"en", "zh", "fr"} for value in locales.values()):
         raise ValueError("Captured Papers v3 baseline has incomplete article locales")
     directory.mkdir(parents=True, exist_ok=True)
     copies = [(entry, base.root, static.root) for entry in base.entries

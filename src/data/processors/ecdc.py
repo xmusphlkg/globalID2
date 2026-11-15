@@ -26,6 +26,7 @@ class ECDCUpdateFetchResult:
     source_latest_date: Optional[date]
     source_csv: Path
     script_logs: List[str]
+    authoritative_window_start_year: int | None = None
 
 
 @dataclass(frozen=True)
@@ -93,7 +94,7 @@ class ECDCAnnualUpdater:
     async def delete_authoritative_window(
         self, db: AsyncSession, *, start_year: int
     ) -> int:
-        """Delete only this source's fetched window before atomic reimport.
+        """Legacy maintenance helper; live ingestion uses the store's window diff.
 
         ECDC may withdraw a previously published cell. Replacing the fetched
         window in the same transaction ensures that withdrawal becomes unknown

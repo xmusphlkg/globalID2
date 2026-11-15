@@ -11,6 +11,7 @@ from src.data.storage import (
     SeriesObservationQualityError, SeriesObservationQualityPolicy,
     SeriesObservationSaveResult,
 )
+from src.data.storage.series.identity import _as_utc, _parse_report_time
 
 
 def series_quality_policy(updater, *, source_ids, country_config) -> SeriesObservationQualityPolicy:
@@ -62,6 +63,7 @@ async def save_series_rows(
     series_rows=None,
     _bounded_batch=False,
     _jp_holding_profiles=None,
+    authoritative_window_start=None,
     store_type,
     save_batch,
     quality_policy_for,
@@ -184,6 +186,7 @@ async def save_series_rows(
         )
     skipped_unregistered = 0
     skipped_missing = 0
+    selection_source_rows = source_series_rows
     if bool(getattr(updater, "series_registered_rows_only", False)):
         selection = await asyncio.to_thread(
             series_store.select_registry_rows,
@@ -241,6 +244,15 @@ async def save_series_rows(
                     "NNDSS Registry dual write is missing required reporting "
                     "scope(s): " + ", ".join(missing_scopes)
                 )
+    if authoritative_window_start is not None and (skipped_unregistered or skipped_missing):
+        retained = {json.dumps(row, sort_keys=True, default=str) for row in source_series_rows}
+        if any(
+            json.dumps(row, sort_keys=True, default=str) not in retained
+            and ((when := _parse_report_time(row)) is None
+                 or _as_utc(when) >= _as_utc(authoritative_window_start))
+            for row in selection_source_rows
+        ):
+            raise ValueError("Authoritative source window lost rows during registry selection")
     try:
         series_result = await series_store.save_rows(
             db,
@@ -249,6 +261,8 @@ async def save_series_rows(
             source_id=source_id,
             geography_key=geography_key,
             quality_policy=quality_policy,
+            **({"authoritative_window_start": authoritative_window_start}
+               if authoritative_window_start is not None else {}),
             **({"jp_holding_profiles": _jp_holding_profiles} if _jp_holding_profiles is not None else {}),
         )
     except SeriesObservationQualityError as exc:
@@ -276,6 +290,11 @@ async def save_series_rows(
         setattr(series_result, "skipped_unregistered", skipped_unregistered)
         setattr(series_result, "skipped_missing", skipped_missing)
     quality_report = series_result.quality_report
+    if getattr(series_result, "window_change_counts", None) is not None:
+        logger.info(
+            "Authoritative source window compared | country={} source={} counts={}",
+            series_country_code, source_id, series_result.window_change_counts,
+        )
     logger.info(
         "Disease source-series dual write complete | country={} upserted={} "
         "unregistered={} missing={} unmatched={} ambiguous={} invalid={} "

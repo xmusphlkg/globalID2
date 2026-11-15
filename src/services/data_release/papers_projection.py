@@ -162,7 +162,16 @@ def assert_v3_candidate(candidate: PapersContentCandidate) -> None:
     """Reject a catalogue that would publish or resume template v2 articles."""
     articles = [entry for entry in candidate.entries if 'paper_template' in entry]
     if not articles:
-        raise ValueError('Papers publication has no projected articles')
+        # A complete snapshot may remove its last public article. Retain the
+        # verified locale templates for the next first article and require all
+        # three current landing pages for public verification.
+        templates = [_read_object(candidate, item['key']) for item in candidate.template_objects
+                     if item['key'].startswith(f'{PREFIX}/templates/')]
+        locales = {value.get('locale') for value in templates
+                   if value.get('schema') == 3 and value.get('renderer') == 'gids-evidence-v1'}
+        required = {'research/', 'zh/research/', 'fr/research/'}
+        if locales != set(LOCALES) or not required.issubset({entry['logical_key'] for entry in candidate.entries}):
+            raise ValueError('Papers publication has no projected articles or complete empty snapshot')
     for entry in articles:
         descriptor = entry.get('paper_template') or {}
         if (descriptor.get('schema') != 3 or entry.get('integrity') != 'independent-v3'
@@ -280,6 +289,131 @@ def prepare_projection_candidate(base: PapersContentCandidate, *, articles: list
     return candidate, receipt
 
 
+def prepare_full_snapshot_candidate(base: PapersContentCandidate, *, articles: list[dict],
+                                    static: PapersContentCandidate, directory: Path,
+                                    release_id: str) -> tuple[PapersContentCandidate, dict]:
+    """Replace the complete public article set and freshly built collections.
+
+    This is deliberately separate from the body-only entry point: titles,
+    associations, new routes and deletions are permitted only for a full frozen
+    snapshot whose collections/index are rebuilt by the caller.
+    """
+    assert_v3_candidate(base)
+    if static.origin != base.origin or static.release_id != release_id:
+        raise ValueError('Full snapshot static candidate has a different identity')
+    directory = Path(directory).resolve()
+    if directory.exists() and any(directory.iterdir()):
+        raise ValueError('Projection candidate directory must be new or empty')
+    directory.mkdir(parents=True, exist_ok=True)
+    records = {}
+    article_ids = set()
+    for article in articles:
+        record = project_article(article)
+        if record['slug'] in records or record['article_id'] in article_ids:
+            raise ValueError('Duplicate projected article slug or identity')
+        records[record['slug']] = record
+        article_ids.add(record['article_id'])
+    old_articles = {}
+    old_locales = {}
+    locale_templates = {}
+    for entry in base.entries:
+        descriptor = entry.get('paper_template')
+        if descriptor:
+            old_articles[descriptor['slug']] = descriptor['record_sha256']
+            locale = descriptor['locale']
+            old_locales.setdefault(descriptor['slug'], set()).add(locale)
+            key = f'{PREFIX}/templates/{descriptor["template_sha256"]}.json'
+            if locale in locale_templates and locale_templates[locale] != key:
+                raise ValueError('Full snapshot requires one compatible template per locale')
+            locale_templates[locale] = key
+    if any(locales != set(LOCALES) for locales in old_locales.values()):
+        raise ValueError('Full snapshot baseline has incomplete article locales')
+    if not locale_templates:
+        for item in base.template_objects:
+            if item['key'].startswith(f'{PREFIX}/templates/'):
+                locale_templates[_read_object(base, item['key'])['locale']] = item['key']
+    if set(locale_templates) != set(LOCALES):
+        raise ValueError('Full snapshot requires all three locale templates')
+
+    # Keep immutable template resources, while current static output owns all
+    # directory pages. Old collections and article cards cannot reappear.
+    entries = {entry['logical_key']: entry for entry in base.entries
+               if 'paper_template' not in entry and not entry['logical_key'].endswith('/')
+               and not entry['path'].lower().endswith(('.html', '.htm'))
+               and not entry['path'].startswith(('research/', PREFIX + '/'))}
+    for entry in static.entries:
+        if 'paper_template' in entry or re.fullmatch(r'(?:zh/|fr/)?research/articles/[^/]+/', entry['logical_key']):
+            raise ValueError('Full snapshot collections must not contain article HTML')
+        old = entries.get(entry['logical_key'])
+        if old and entry['path'].startswith('_astro/') and old['sha256'] != entry['sha256']:
+            raise ValueError('Full snapshot immutable asset collision')
+        entries[entry['logical_key']] = entry
+    static_keys = {entry['logical_key'] for entry in static.entries}
+    for entry in entries.values():
+        if entry['logical_key'] not in static_keys:
+            body = _source(base.root, entry['path']).read_bytes()
+            if _hash(body) != entry['sha256'] or len(body) != entry['bytes']:
+                raise ValueError('Full snapshot template resource changed')
+            target = static.root / entry['path']
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.is_symlink() or (target.exists() and target.read_bytes() != body):
+                raise ValueError('Full snapshot template resource collision')
+            if not target.exists():
+                target.write_bytes(body)
+
+    assets = [{key: entry[key] for key in ('path', 'key', 'sha256', 'bytes')}
+              for entry in entries.values() if entry['path'].startswith('_astro/')]
+    asset = _payload(directory, 'assets', {'schema': 1, 'items': sorted(assets, key=lambda item: item['path'])})
+    payloads = {asset['key']: asset}
+    templates = {}
+    for locale, key in locale_templates.items():
+        value = _read_object(base, key)
+        if value.get('schema') != 3 or value.get('locale') != locale or value.get('renderer') != 'gids-evidence-v1':
+            raise ValueError('Invalid projected locale template')
+        references = set(re.findall(r'/_astro/([A-Za-z0-9._/-]+)', _json(value).decode()))
+        if not references.issubset({item['path'].removeprefix('_astro/') for item in assets}):
+            raise ValueError('Template references an asset outside the retained catalogue')
+        templates[locale] = _payload(directory, 'templates', value)
+        payloads[templates[locale]['key']] = templates[locale]
+    changed, unchanged = [], []
+    for slug, record in sorted(records.items()):
+        spec = _payload(directory, 'records', record)
+        payloads[spec['key']] = spec
+        (unchanged if old_articles.get(slug) == spec['sha256'] else changed).append(slug)
+        for locale in LOCALES:
+            logical = ('' if locale == 'en' else locale + '/') + f'research/articles/{slug}/'
+            entries[logical] = {'path': logical + 'index.html', 'logical_key': logical,
+                'key': spec['key'], 'content_type': 'text/html; charset=utf-8', 'integrity': 'independent-v3',
+                'paper_template': {'schema': 3, 'slug': slug, 'locale': locale,
+                    'record_sha256': spec['sha256'], 'template_sha256': templates[locale]['sha256'],
+                    'assets_sha256': asset['sha256']}}
+    if not records:
+        # With no article descriptors, retain the locale shells/assets through
+        # ordinary immutable catalogue entries. This uses the existing JSON
+        # object protocol and keeps them reachable by GC and remote recovery.
+        for item in payloads.values():
+            entries[item['key']] = {**item, 'logical_key': item['key']}
+            target = static.root / item['path']
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((directory / item['path']).read_bytes())
+    candidate = catalogue_from_entries(root=static.root, origin=base.origin, release_id=release_id,
+        entries=list(entries.values()), template_root=directory, template_objects=tuple(payloads.values()))
+    assert_v3_candidate(candidate)
+    from .papers_asset_closure import verify_candidate_asset_closure
+    verify_candidate_asset_closure(candidate)
+    receipt = {'schema': 1, 'protocol': 'paper-template-v3', 'mode': 'full_snapshot',
+        'base_generation': base.generation, 'generation': candidate.generation,
+        'content_record_count': len(records), 'changed_slugs': changed, 'unchanged_slugs': unchanged,
+        'added_slugs': sorted(set(records) - old_articles.keys()),
+        'deleted_slugs': sorted(old_articles.keys() - records.keys()),
+        'article_pages_rendered': 0, 'article_pages_restored': 0,
+        'html_assembly_count': 0, 'content_render_count': 0,
+        'directory_projection_policy': 'complete_snapshot_and_rebuilt_collections'}
+    save_projection_candidate(candidate, directory / 'candidate.json', base_generation=base.generation)
+    (directory / 'projection-receipt.json').write_bytes(_json(receipt))
+    return candidate, receipt
+
+
 def save_projection_candidate(candidate: PapersContentCandidate, path: Path, *, base_generation: str) -> None:
     Path(path).write_bytes(_json({'schema': 1, 'protocol': 'paper-template-v3', 'root': str(candidate.root),
         'origin': candidate.origin, 'release_id': candidate.release_id, 'generation': candidate.generation, 'base_generation': base_generation,
@@ -310,15 +444,22 @@ def verify_projected_publication(candidate: PapersContentCandidate, *, opener=No
             return None
     open_url = opener or build_opener(NoRedirect()).open
     selected = {}
+    empty = not any('paper_template' in entry for entry in candidate.entries)
     for entry in candidate.entries:
         descriptor = entry.get('paper_template', {})
         if descriptor.get('schema') == 3 and (not candidate.verification_keys or entry['logical_key'] in candidate.verification_keys):
             selected.setdefault(descriptor['locale'], entry)
+    if empty:
+        for locale in LOCALES:
+            key = ('' if locale == 'en' else locale + '/') + 'research/'
+            entry = next((entry for entry in candidate.entries if entry['logical_key'] == key), None)
+            if entry is not None:
+                selected[locale] = entry
     if set(selected) != set(LOCALES):
         raise ValueError('Projected publication has no complete locale canaries')
     checked = []
     for locale, entry in selected.items():
-        descriptor = entry['paper_template']
+        descriptor = entry.get('paper_template', {})
         url = candidate.origin + '/' + entry['logical_key']
         # Cloudflare may reject urllib's implicit `Python-urllib` user agent
         # with a challenge even though the public route is healthy.  Use the
@@ -330,14 +471,19 @@ def verify_projected_publication(candidate: PapersContentCandidate, *, opener=No
         with open_url(request, timeout=20) as response:
             if response.status != 200 or response.geturl() != url:
                 raise ValueError('Projected public canary was not served directly')
-            expected = {'X-GIDS-Paper-Mode': 'projection-v3', 'X-GIDS-Research-Release': candidate.release_id,
+            expected = {'X-GIDS-Research-Release': candidate.release_id} if empty else {
+                        'X-GIDS-Paper-Mode': 'projection-v3', 'X-GIDS-Research-Release': candidate.release_id,
                         'X-GIDS-Paper-Content-SHA256': descriptor['record_sha256'],
                         'X-GIDS-Paper-Template-SHA256': descriptor['template_sha256'],
                         'X-GIDS-Paper-Assets-SHA256': descriptor['assets_sha256']}
             if any(response.headers.get(key) != value for key, value in expected.items()):
                 raise ValueError('Projected public canary version mismatch')
             raw = response.read(3 * 1024 * 1024 + 1)
-            if len(raw) > 3 * 1024 * 1024 or f'data-research-article-sha256="{descriptor["record_sha256"]}"'.encode() not in raw:
+            # Static HTML is rewritten by the Worker (including generation
+            # metadata), so its raw stored digest cannot attest the HTTP body.
+            invalid = (f'<meta name="gids-research-generation" content="{candidate.generation}">'.encode() not in raw) if empty else (
+                f'data-research-article-sha256="{descriptor["record_sha256"]}"'.encode() not in raw)
+            if len(raw) > 3 * 1024 * 1024 or invalid:
                 raise ValueError('Projected public canary body mismatch')
             checked.append({'locale': locale, 'url': url, 'html_sha256': _hash(raw)})
     return {'status': 'verified', 'generation': candidate.generation, 'canaries': checked}

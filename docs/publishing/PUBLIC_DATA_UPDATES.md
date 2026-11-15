@@ -24,3 +24,20 @@ The header always includes Situation regardless of local snapshot availability o
 Template dependency graphs, validated build reuse, country template fingerprints and publication source discovery no longer treat the authored changelog as a template input. `CHANGELOG.md` likewise does not invalidate compiled artifacts; the standalone exporter still checks that every documented engineering release exists in the multilingual catalogue. Tests cover independent JSON changes, cache reuse, cross-page navigation and live browser refresh without page reload.
 
 This separation covers public version records and the data publication history. It does not change the existing rendering rules for new routes, report bodies, knowledge pages or other content outside these feeds.
+
+## 2026-11-14：持久发布收据
+
+每分钟 reconciler 默认使用私有 `exports/.public-updates-receipt.json`。收据绑定 R2 endpoint、account、bucket 和 prefix 的摘要，不保存凭据；通过权限 0600 的临时文件、fsync 和原子替换持久化。输入文件摘要与收据一致且未到核对周期时，该文件不执行 GET 或 PUT。
+
+默认每个文件至少每 24 小时与远端比较一次，跳过和失败不会刷新核对时间。缺失、损坏、目标变化、未来时间戳或过期收据都重新比较；强制核对前先持久撤销该文件的旧确认，避免修复失败后下次误跳。月份文件成功后才写 latest 索引，网站变更历史和数据 feed 仍各自尝试。没有数据库迁移，不需要修改既有 timer。
+
+```bash
+# 强制核对所有文件并按现有 CAS 契约修复差异（会实际写远端）
+venv/bin/python scripts/publish_public_updates.py --verify-remote
+# 临时恢复每次远端比较的旧行为（会实际写远端）
+venv/bin/python scripts/publish_public_updates.py --verify-interval-seconds 0
+```
+
+日志增加 `remote_reads`、`remote_writes`、`receipt_skips`，统计接口调用次数。2026-11-14 21:44:13 和 21:46:18（Asia/Shanghai）现有 timer 已观察到 `remote_reads=0, remote_writes=0, receipt_skips=4`；21:45:18 有真实新数据时为 2 次读、2 次写、2 项跳过。该优化已经由现有定时入口加载。
+
+数据库历史聚合仍使用完整 `project_updates`，未实施可选的 P7b 事件/月增量投影，避免提前增加投影表和迁移。隔离故障与收据测试详情见 [整体实施记录](../audits/WEBSITE_DATA_UPDATE_REVIEW_2026-11-14.md)。

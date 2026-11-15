@@ -56,8 +56,15 @@ try {
   await expect(page.locator('.updates-status')).toBeEmpty({timeout:30000});
   await expect.poll(()=>latest?.schema_version===1&&Array.isArray(latest.months)&&changelog?.schema_version===1&&Array.isArray(changelog.releases),{timeout:30000}).toBe(true);
   const requiredMonths=latest.months.filter(month=>month>=from.slice(0,7)&&month<=through.slice(0,7));
-  await expect.poll(()=>requiredMonths.every(month=>archives.has(month)),{timeout:30000}).toBe(true);
+  await expect.poll(()=>latest.months.every(month=>archives.has(month)),{timeout:30000}).toBe(true);
   await Promise.all(reads);
+  const chartBeforeFilter=await page.evaluate(()=>{
+   const chart=document.querySelector('.updates-trend');
+   const controls=document.querySelector('.updates-controls');
+   return !!chart&&!!controls&&(chart.compareDocumentPosition(controls)&Node.DOCUMENT_POSITION_FOLLOWING)===Node.DOCUMENT_POSITION_FOLLOWING;
+  });
+  expect(chartBeforeFilter).toBe(true);
+  await expect(page.locator('.updates-metrics,.site-stat-grid')).toHaveCount(0);
   const events=requiredMonths.flatMap(month=>archives.get(month)).filter(e=>{const day=new Date(e.published_at).toISOString().slice(0,10);return day>=from&&day<=through;});
   const expectedVersions=changelog.releases.filter(release=>release.date>=from&&release.date<=through);
   const number=async locator=>Number((await locator.textContent()).replace(/\D/g,''));
@@ -67,15 +74,19 @@ try {
   await expect(page.locator('.updates-trend-note,.updates-metrics-note')).toHaveCount(0);
   checkpoint='daily chart';
   await page.locator('.updates-trend-table summary').click();
-  const daily=await page.locator('.updates-trend-table tbody tr').evaluateAll(rows=>Object.fromEntries(rows.map(row=>[row.querySelector('th').textContent,Number(row.querySelector('td').textContent.replace(/\D/g,''))])));
+  const dailyRows=await page.locator('.updates-trend-table tbody tr').evaluateAll(rows=>rows.map(row=>({day:row.querySelector('th').textContent,count:Number(row.querySelector('td').textContent.replace(/\D/g,'')),range:row.getAttribute('data-range')})));
+  const daily=Object.fromEntries(dailyRows.map(row=>[row.day,row.count]));
   const versionDays=await page.locator('.updates-marker-website').evaluateAll(markers=>markers.map(marker=>marker.closest('li').querySelector('time').getAttribute('datetime')));
   expect(versionDays.sort()).toEqual(expectedVersions.map(release=>release.date).sort());
+  const allEvents=latest.months.flatMap(month=>archives.get(month));
+  const historyDays=[...allEvents.map(event=>new Date(event.published_at).toISOString().slice(0,10)),...changelog.releases.map(release=>release.date)].sort();
   const expectedDaily={};
-  for(let day=new Date(`${from}T00:00:00Z`);day.toISOString().slice(0,10)<=through;day.setUTCDate(day.getUTCDate()+1))expectedDaily[day.toISOString().slice(0,10)]=0;
-  for(const day of [...events.map(event=>new Date(event.published_at).toISOString().slice(0,10)),...versionDays])expectedDaily[day]++;
+  for(let day=new Date(`${historyDays[0]}T00:00:00Z`);day.toISOString().slice(0,10)<=historyDays.at(-1);day.setUTCDate(day.getUTCDate()+1))expectedDaily[day.toISOString().slice(0,10)]=0;
+  for(const day of historyDays)expectedDaily[day]++;
   expect(daily).toEqual(expectedDaily);
+  for(const row of dailyRows)expect(row.range).toBe(row.day>=from&&row.day<=through?'in':'out');
   const plottedTotal=Object.values(daily).reduce((a,b)=>a+b,0);
-  expect(plottedTotal).toBe(events.length+websiteVersions);
+  expect(plottedTotal).toBe(allEvents.length+changelog.releases.length);
   checkpoint='channel filters';
   const byChannel={};
   for(const channel of channels){

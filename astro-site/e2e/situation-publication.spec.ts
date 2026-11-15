@@ -2,11 +2,15 @@ import { createHash } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 
 const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
+// Astro dev annotates islands with per-request timing; all other HTML bytes
+// must remain identical across the independently published data versions.
+const htmlHash = (value: Buffer) => hash(value.toString('utf8').replace(/ server-render-time="[^"]*"/g, ''));
 function publication(version: number) {
   const day = version === 1 ? '2026-11-07' : '2026-11-08';
   const alert = { alert_id: 'situation-update', outbreak_id: 'OB-runtime', notice_id: 'notice-runtime', source_id: 'official', source_label_en: 'Official source', agency_en: null, title_en: 'Reviewed report', url: 'https://example.test/report', disease_id: 'D038', disease_slug: 'influenza', disease_label: 'Influenza', disease_name_en: 'Influenza', country_code: 'JP', country_name_en: 'Japan', admin_area: null, status: 'ongoing', cases: version * 17, deaths: 0, count_basis: 'confirmed', as_of: day, published_date: day, quote: `Situation release ${version}.`, summary_en: `Reviewed update ${version}.`, ai: null };
   const week = { schema_version: 'gids.situation_alerts.v1', period_key: '2026-W45', new_outbreaks: ['OB-runtime'], updated_outbreaks: [], new_places: version, alerts: version, outbreaks: [{ outbreak_id: 'OB-runtime', disease_id: 'D038', disease_name_en: 'Influenza', disease_label: 'Influenza', country_codes: ['JP'], first_published: day }] };
   const entries = {
+    'summary.json': { schema_version: 'gids.situation_alerts.v1', generated_at: day, as_of: day, recent_places: version, active_outbreaks: version, sources_ok: 1 },
     'map-data.json': { schema_version: 'gids.situation_alerts.v1', generated_at: day, as_of: day, points: [alert], monitoring: [], active_outbreaks: version, sources_ok: 1, source_count: 1 },
     'outbreaks/OB-runtime.json': { schema_version: 'gids.situation_alerts.v1', outbreak_id: 'OB-runtime', disease_id: 'D038', disease_label: 'Influenza', disease_name_en: 'Influenza', first_published: day, last_published: day, country_codes: ['JP'], alert_count: 1, notice_count: 1, source_ids: ['official'], status: 'active', as_of: day, alerts: [alert] },
     'by-country/JP.json': { schema_version: 'gids.situation_alerts.v1', alerts: [alert] },
@@ -24,6 +28,11 @@ function publication(version: number) {
 
 async function mock(page: Page) {
   let current = publication(1); const objects = new Map([...current.objects, ...publication(2).objects]);
+  // Development chrome is absent from the published site and can cover the
+  // first map result on narrow screens, intercepting otherwise valid clicks.
+  await page.route('**/astro/runtime/client/dev-toolbar/entrypoint.js', route => route.fulfill({ body: '', contentType: 'application/javascript' }));
+  // Exercise the legacy current.json fallback regardless of local generated data.
+  await page.route('**/site-data/situation/bootstrap.json', route => route.fulfill({ status: 404 }));
   await page.route('**/site-data/situation/current.json', route => route.fulfill({ json: current.manifest }));
   await page.route('**/site-data/situation/objects/*.json', route => {
     const key = new URL(route.request().url()).pathname.split('/').at(-1)!.replace('.json', '');
@@ -34,7 +43,7 @@ async function mock(page: Page) {
 
 test('Situation JSON updates map and lazy timeline without rebuilding HTML; one page pins its release', async ({ page, request }) => {
   const publication = await mock(page);
-  const before = hash(await (await request.get('/situation/')).body());
+  const before = htmlHash(await (await request.get('/situation/')).body());
   await page.goto('/situation/?window=all', { waitUntil: 'networkidle' });
   await expect(page.locator('.sit-item').first()).toBeAttached();
   publication.update();
@@ -45,12 +54,12 @@ test('Situation JSON updates map and lazy timeline without rebuilding HTML; one 
   await expect(page.locator('.sit-detail')).not.toContainText('Situation release 2.');
   await page.goto('/situation/?place=situation-update&window=all', { waitUntil: 'networkidle' });
   await expect(page.locator('.sit-detail')).toContainText('Situation release 2.');
-  expect(hash(await (await request.get('/situation/')).body())).toBe(before);
+  expect(htmlHash(await (await request.get('/situation/')).body())).toBe(before);
 });
 
 test('country notices, homepage metrics and previously unbuilt weekly periods follow independent JSON', async ({ page, request }) => {
   const publication = await mock(page);
-  const before = hash(await (await request.get('/countries/jp/')).body());
+  const before = htmlHash(await (await request.get('/countries/jp/')).body());
   await page.goto('/countries/jp/');
   await page.locator('#international').scrollIntoViewIfNeeded();
   await expect(page.locator('#international')).toContainText('Situation release 1.');
@@ -58,8 +67,9 @@ test('country notices, homepage metrics and previously unbuilt weekly periods fo
   await page.goto('/countries/jp/');
   await page.locator('#international').scrollIntoViewIfNeeded();
   await expect(page.locator('#international')).toContainText('Situation release 2.');
-  expect(hash(await (await request.get('/countries/jp/')).body())).toBe(before);
+  expect(htmlHash(await (await request.get('/countries/jp/')).body())).toBe(before);
   await page.goto('/');
+  await page.locator('.situation-strip').scrollIntoViewIfNeeded();
   await expect(page.locator('.situation-strip')).toContainText('2026-11-08');
   await page.goto('/situation/weekly/?period=2026-W45');
   await expect(page.locator('[data-situation-version="situation-2"]')).toContainText('2 alerts');

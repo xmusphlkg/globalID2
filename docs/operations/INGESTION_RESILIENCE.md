@@ -2,7 +2,7 @@
 
 Surveillance ingestion is designed to run without routine operator action while
 remaining fail-closed. A completed task means that the official source and all
-configured quality gates were satisfied; an empty or structurally incompatible
+configured quality gates were satisfied; an unexpectedly empty or structurally incompatible
 payload is never converted into a successful refresh.
 
 ## Production audit baseline
@@ -59,7 +59,8 @@ last classification are persisted in `Task.metadata.ingestion_automatic_retry`.
 
 ## Empty, stale, and drift behavior
 
-- Official-source adapters continue to reject empty normalized batches.
+- Official-source adapters continue to reject unexpected empty normalized batches;
+  validated authoritative windows follow the explicit completeness contract below.
 - China processing now fails when every selected report produces no usable
   dataset. Partial success remains visible and does not discard valid reports.
 - Any pipeline exception finalizes the current `crawl_runs` row as `failed` and
@@ -86,3 +87,34 @@ without guessing during normal scheduling.
 - Empty payloads fail first. Retry is recovery from a failure, never a way to
   relabel empty data as healthy.
 - Quality and contract failures never enter a retry loop.
+
+## Validated authoritative windows
+
+CA national CNDSS and ECDC annual imports carry
+`authoritative_window_start_year` only after the captured source responses have
+passed their complete parser contracts. The commit strategy requires that
+proof to match the requested replacement boundary. An empty result without
+that proof cannot reach window replacement.
+
+An explicitly valid empty window is different from a malformed response:
+CNDSS must still supply its complete annual grid (null source cells can leave
+no observations), and ECDC must supply all requested response artifacts with
+an actual `MeasureResults` array. A missing, null, or non-array ECDC field is
+rejected; a valid empty array can authorize withdrawals. Other adapters retain
+their own existing empty-payload rules.
+
+Storage validates quality and complete coverage before calculating withdrawals.
+Unknown or invalid rows inside the declared window block replacement even if
+quality reporting is configured to be non-blocking. Optional historical rows
+outside that window retain their existing quality policy and never authorize
+historical deletion. A complete semantic repeat writes no facts, revisions, or
+dirty markers. A withdrawal-only refresh sets `imported_new_data=true` while
+keeping the actual inserted/updated count at zero.
+
+`Authoritative source window compared` logs `input`, `inserted`, `updated`,
+`deleted`, `unchanged`, and `rejected` counts for the normalized observation
+candidates. These counts describe the completed storage operation; transaction
+commit remains the authority for whether they became durable. They are not
+inferred for ordinary upsert paths without a complete before/after comparison.
+The revision table retains prior values, but does not gain withdrawal tombstones
+or claim a new historical-as-of deletion model.

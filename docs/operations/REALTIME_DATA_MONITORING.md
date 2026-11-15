@@ -84,7 +84,7 @@ only that group's age enters the 120/600-second thresholds. Precise parent
 markers stay exact, and coarse parents include eligible descendants.
 `blocked_pending` exposes disabled, inactive or unknown scopes with a warning,
 including counts, age and up to 100 scope codes. Monitoring never acknowledges
-or hides them. Situation markers form a directly publishable global group.
+or hides them. Situation and Literature are publishable only for the global `*` scope. Invalid scopes remain visible as blocked work and do not make Surveillance yield its queue turn.
 
 The age of `generated_at` alone does **not** cause an alert: an idle channel
 can legitimately retain the same version. The monitor compares the public
@@ -250,3 +250,25 @@ GLOBALID_DASHBOARD_HOST=127.0.0.1 GLOBALID_DASHBOARD_PORT=3112 \
 Run `npx playwright test --config=playwright.realtime.config.ts` from
 `dashboard/`, then stop that test server. The configuration rejects nonlocal
 targets and does not start or reuse the production service on port 3000.
+
+## Release timing fields added on 2026-11-14
+
+Surveillance task `release_timing` preserves the existing `export_seconds`,
+`publish_and_ack_seconds`, and `elapsed_seconds`. Additional optional fields
+measure the initial selection, export subprocess (including its read snapshot),
+candidate freeze, JSON publishing command, object uploads, pointer commit,
+download publication, and projection/dirty SQL acknowledgment. The last field
+excludes the final transaction commit. Legacy `export_seconds` still includes
+baseline capture, output-lock wait, generation and freezing; it is not a pure
+SQL export measurement. Queue waiting is separate.
+
+Structured publisher results are bound to the frozen release ID and manifest
+hash before their counters/timings are added to task output. `candidate_reused`
+identifies frozen-candidate retries. A skipped phase has no new timing field;
+zero-duration legacy fields keep their previous meaning. Missing metrics from
+older tasks must not be treated as measured zero. No new public-verification
+metric is reported unless that verification was actually measured.
+
+A successful unchanged CA/ECDC crawl may generate no dirty marker or public
+release. Observe source capture and quality results separately from publication
+time; do not change `generated_at` merely to make an unchanged channel look fresh.

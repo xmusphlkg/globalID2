@@ -31,6 +31,15 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
     if not isinstance(task.task_uuid, str) or not re.fullmatch(r'[A-Za-z0-9-]{1,128}', task.task_uuid):
         raise ValueError('Invalid literature release task UUID')
     started = time.monotonic()
+    stage_timing = {}
+
+    async def command(**kwargs):
+        phase = kwargs['metadata']['event'].removeprefix('literature_publication_')
+        phase_started = time.monotonic()
+        try:
+            return await service._run_logged_command(task.task_uuid, **kwargs)
+        finally:
+            stage_timing[f'{phase}_seconds'] = round(time.monotonic() - phase_started, 3)
     async with runtime.get_database() as db:
         await validate_global_selection(db, dirty_ids, line='literature', task_uuid=task.task_uuid)
     root = runtime.root_dir
@@ -61,12 +70,12 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
     if getattr(service, "_publication_recovery", None):
         env['GIDS_PUBLICATION_RECOVERY_ONLY'] = '1'
     if not ready:
-        await service._run_logged_command(task.task_uuid, title='Capture Literature Publication Baseline',
+        await command(title='Capture Literature Publication Baseline',
             cmd=[str(python), 'scripts/publish_surveillance_data.py', '--source-dir', str(run), '--prefix',
                  'site-data/research-publication', '--capture-baseline-only'], cwd=root, env=env,
             metadata={'event': 'literature_publication_baseline'}, timeout_seconds=runtime.download_publish_timeout_seconds)
         if not context.is_file():
-            await service._run_logged_command(task.task_uuid, title='Capture Published Research Context',
+            await command(title='Capture Published Research Context',
                 cmd=[str(python), 'scripts/capture_research_context.py', '--output', str(context)], cwd=root, env=env,
                 metadata={'event': 'literature_publication_context'}, timeout_seconds=runtime.generate_timeout_seconds)
         if not (snapshot / 'article-inputs.json').is_file():
@@ -75,7 +84,7 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
             if snapshot.exists():
                 await asyncio.to_thread(shutil.rmtree, snapshot)
             async with runtime.read_snapshot() as snapshot_env:
-                await service._run_logged_command(task.task_uuid, title='Export Literature Snapshot',
+                await command(title='Export Literature Snapshot',
                     cmd=[str(python), 'scripts/export_research_snapshot.py', '--context', str(context), '--candidate', str(snapshot)],
                     cwd=root, env={**snapshot_env, 'PYTHONUNBUFFERED': '1'}, metadata={'event': 'literature_publication_export'},
                     timeout_seconds=runtime.generate_timeout_seconds)
@@ -85,16 +94,22 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
                 raise ValueError('Invalid literature stage directory')
             if stage.exists():
                 await asyncio.to_thread(shutil.rmtree, stage)
-            await service._run_logged_command(task.task_uuid, title='Build Literature Pages',
+            await command(title='Freeze Literature Template Baseline',
+                cmd=[str(python), 'scripts/publish_research_candidate.py', '--run', str(run), '--snapshot', str(snapshot),
+                     '--stage', str(stage), '--release-id', release_id, '--prepare-build'], cwd=root, env=env,
+                metadata={'event': 'literature_publication_template_baseline'}, timeout_seconds=runtime.generate_timeout_seconds)
+            await command(title='Build Literature Pages',
                 cmd=['node', 'scripts/build-research.mjs'], cwd=runtime.astro_dir,
                 env={'GIDS_RESEARCH_SNAPSHOT_DIR': str(snapshot), 'GIDS_RESEARCH_BUILD_OUTPUT': str(stage),
+                     'GIDS_RESEARCH_BUILD_SCOPE': 'auto',
+                     'GIDS_RESEARCH_PROJECTION_BASELINE': str(run / 'projection-build-baseline.json'),
                      'NODE_OPTIONS': '--max-old-space-size=12288'},
                 metadata={'event': 'literature_publication_build'}, timeout_seconds=max(runtime.astro_build_timeout_seconds, runtime.generate_timeout_seconds))
         await asyncio.to_thread(_atomic_write, run / 'ready.json', json.dumps(
             {'schema': 1, 'task_uuid': task.task_uuid, 'dirty_ids': dirty_ids}, separators=(',', ':')).encode())
     if data.get('publication_plan'):
         if not getattr(service, "_publication_recovery", None):
-            await service._run_logged_command(task.task_uuid, title='Prepare Literature Publication',
+            await command(title='Prepare Literature Publication',
                 cmd=[str(python), 'scripts/publish_research_candidate.py', '--run', str(run), '--snapshot', str(snapshot),
                      '--stage', str(stage), '--release-id', release_id, '--prepare-only'], cwd=root, env=env,
                 metadata={'event': 'literature_publication_prepare'}, timeout_seconds=runtime.generate_timeout_seconds)
@@ -105,17 +120,29 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
         await validate_global_selection(db, dirty_ids, line='literature', task_uuid=task.task_uuid)
     await runtime.task_manager.update_task_progress(task.task_uuid, 65)
     publish_started = time.monotonic()
-    await service._run_logged_command(task.task_uuid, title='Publish Literature Generation',
+    await command(title='Publish Literature Generation',
         cmd=[str(python), 'scripts/publish_research_candidate.py', '--run', str(run), '--snapshot', str(snapshot),
              '--stage', str(stage), '--release-id', release_id, '--workers', '96'], cwd=root, env=env,
         metadata={'event': 'literature_publication_publish'}, timeout_seconds=max(runtime.download_publish_timeout_seconds, 3 * 60 * 60))
     published = json.loads((run / 'published.json').read_bytes())
     if published.get('release_id') != release_id:
         raise ValueError('Published literature receipt belongs to a different task')
+    # A committed candidate can finish recovery after optional build receipts
+    # have been cleaned up; acknowledgements depend on the frozen candidate.
+    build = json.loads(build_receipt.read_bytes()) if build_receipt.is_file() else {}
+    ack_started = time.monotonic()
     async with runtime.get_database() as db:
         await acknowledge_global_selection(db, dirty_ids, line='literature', task_uuid=task.task_uuid)
+        stage_timing['acknowledge_seconds'] = round(time.monotonic() - ack_started, 3)
         result = {'data_only': True, 'data_line': 'literature', 'release_id': release_id,
             'publish_dirty_count': len(dirty_ids), 'papers': published['papers'], 'json': published['json'],
+            'projection': published.get('projection'),
+            'build_scope': build.get('scope', 'full'),
+            'article_pages_rendered': build.get('article_pages_rendered'),
+            'article_pages_restored': build.get('article_pages_restored'),
+            'stage_timing': {**stage_timing, **{
+                f'publisher_{name}': value for name, value in published.get('stage_timing', {}).items()
+            }},
             'manifest_sha256': hashlib.sha256((run / 'current.json').read_bytes()).hexdigest(),
             'release_timing': {'build_seconds': round(publish_started - build_started, 3),
                 'publish_and_ack_seconds': round(time.monotonic() - publish_started, 3),

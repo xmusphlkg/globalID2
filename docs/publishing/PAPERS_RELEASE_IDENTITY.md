@@ -1,5 +1,39 @@
 # Papers article identity and subscription publication boundary
 
+## Current v3 publication and the 2026-11-14 implementation
+
+Current scheduled research publication uses the single conditional
+`site-data/research-publication/current.json` authority and immutable v3
+record/template/asset identities. The 2026-11-14 code adds a complete JSON
+snapshot path with rebuilt collections; it does not change that authority or
+enable subscription delivery. The implementation has only been tested locally;
+no production deployment, restart, pointer mutation or email was performed.
+
+The captured generation, template fingerprint, complete route/index/input
+receipts and copied resource hashes must agree before preparation. New and
+deleted articles and changed titles/associations belong to this complete path;
+the explicit body-only entry point still requires unchanged directory/index
+identity. A v3 article's content SHA identifies its structured public projection,
+with independent template and asset hashes; it is not a legacy full-HTML digest.
+Public en/zh/fr canaries must pass before `published.json` and dirty-ID
+acknowledgements. After a pointer commit followed by canary failure, retries
+reuse the frozen candidate and repeat verification, rather than rebuild from
+new facts. Optional build receipt cleanup does not prevent finalization of an
+already-frozen candidate.
+
+An intentionally empty complete snapshot retains its compatible locale
+templates as ordinary immutable catalogue objects and verifies three landing
+pages. Empty snapshots with missing/incompatible templates fail before upload;
+see [the full snapshot contract](PAPERS_TEMPLATE_MIGRATION.md). This does not
+relax the separate subscription verifier's integrity or source-version checks.
+
+The sections below retain the historical full-HTML prototype and proposed
+subscription/Pages binding analysis. They must not be interpreted as a
+description of current v3 object writes or as authorization to send research
+subscriptions.
+
+## Historical full-HTML identity analysis
+
 Article detail pages carry the stable article ID and SHA-256 of the exact
 article JSON bytes rendered by the en/zh/fr variants. The marker enables a
 future verifier to compare versions; it does not prove that a page is

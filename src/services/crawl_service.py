@@ -243,9 +243,11 @@ class CrawlService:
 
     @staticmethod
     async def _save_series_rows(db, updater, rows, *, series_rows=None,
-                               _bounded_batch=False, _jp_holding_profiles=None):
+                               _bounded_batch=False, _jp_holding_profiles=None,
+                               authoritative_window_start=None):
         return await _series_rows.save_series_rows(db, updater, rows, series_rows=series_rows,
             _bounded_batch=_bounded_batch, _jp_holding_profiles=_jp_holding_profiles,
+            authoritative_window_start=authoritative_window_start,
             store_type=SeriesObservationStore, save_batch=CrawlService._save_series_rows,
             quality_policy_for=CrawlService._series_quality_policy,
             source_ids=CrawlService._SERIES_SOURCE_IDS,
@@ -262,6 +264,7 @@ class CrawlService:
         source_latest_date,
         force: bool,
         publication_results: list | None = None,
+        authoritative_window_start=None,
     ):
         """Persist legacy projections and lossless source-series facts atomically."""
 
@@ -282,6 +285,8 @@ class CrawlService:
             updater,
             rows,
             series_rows=series_rows,
+            **({"authoritative_window_start": authoritative_window_start}
+               if authoritative_window_start is not None else {}),
         )
         # Public curves still attach legacy supplemental metrics. A complete
         # case-series comparison cannot prove that deaths/recoveries or rates
@@ -303,7 +308,8 @@ class CrawlService:
         # task/control-plane result instead of incorrectly reporting zero.
         if (
             int(getattr(import_result, "inserted_or_updated", 0) or 0) == 0
-            and int(getattr(series_result, "upserted", 0) or 0) > 0
+            and (int(getattr(series_result, "upserted", 0) or 0)
+                 + int(getattr(series_result, "deleted", 0) or 0)) > 0
         ):
             try:
                 return replace(

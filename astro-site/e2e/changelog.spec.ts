@@ -44,5 +44,6 @@ test('the same runtime history supplies all three languages and update counts', 
   releases = [release('91.0.0'), ...releases];
   await page.clock.fastForward(61_000);
   await expect(page.locator('.updates-kind').filter({ hasText: 'v91.0.0' })).toHaveCount(1);
-  await expect(page.locator('.updates-metrics .site-stat-item').filter({ hasText: '已记录的网站版本' }).locator('strong')).toHaveText('2');
+  await expect(page.locator('.updates-metrics, .site-stat-grid')).toHaveCount(0);
+  await expect(page.locator('.updates-trend-counts dd').nth(1)).toHaveText('2');
 });

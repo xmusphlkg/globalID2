@@ -11,7 +11,7 @@ from dataclasses import dataclass, field as dataclass_field
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
-from sqlalchemy import and_, case, func, or_, select, tuple_, update
+from sqlalchemy import and_, case, delete, func, or_, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -387,6 +387,9 @@ class SeriesObservationBuildResult:
     skipped_unmatched: int
     skipped_ambiguous: int
     skipped_invalid: int
+    # Retain failed input identities so an optional historical tail cannot
+    # masquerade as missing coverage inside an authoritative source window.
+    unhandled_rows: tuple[dict[str, Any], ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -403,10 +406,15 @@ class SeriesObservationSaveResult:
     # None means coverage is unknown; an empty tuple proves a semantic no-op.
     # Keep None as the default for compatibility stores and legacy-only imports.
     publication_changes: tuple[dict[str, Any], ...] | None = None
+    deleted: int = 0
+    # Available only when a complete source snapshot was compared with facts.
+    # Generic upsert counts cannot distinguish inserts from updates/no-ops.
+    window_change_counts: dict[str, int] | None = None
 
 
 def observation_publication_changes(
     observations: list[dict[str, Any]],
+    *, operation: str = "upsert",
 ) -> tuple[dict[str, Any], ...]:
     """Compact changed fact identities without merging distinct historical years."""
     ranges: dict[tuple[str, str, int], dict[str, Any]] = {}
@@ -418,7 +426,7 @@ def observation_publication_changes(
             ranges[key] = {
                 "geography_key": key[0], "series_code": key[1],
                 "time_start": timestamp, "time_end": timestamp,
-                "operation": "upsert",
+                "operation": operation,
             }
         else:
             ranges[key]["time_start"] = min(ranges[key]["time_start"], timestamp)
@@ -596,6 +604,7 @@ class SeriesObservationStore:
         geography_key: str | None = None,
     ) -> SeriesObservationBuildResult:
         observations: list[dict[str, Any]] = []
+        unhandled_rows: list[dict[str, Any]] = []
         skipped_unmatched = 0
         skipped_ambiguous = 0
         skipped_invalid = 0
@@ -612,6 +621,7 @@ class SeriesObservationStore:
                 value is None and not suppressed and not source_missing
             ):
                 skipped_invalid += 1
+                unhandled_rows.append(row)
                 continue
 
             label = _first_text(
@@ -642,9 +652,11 @@ class SeriesObservationStore:
             ]
             if not matches:
                 skipped_unmatched += 1
+                unhandled_rows.append(row)
                 continue
             if len(matches) != 1:
                 skipped_ambiguous += 1
+                unhandled_rows.append(row)
                 continue
 
             series = matches[0]
@@ -653,6 +665,7 @@ class SeriesObservationStore:
             )
             if dimensions is None:
                 skipped_invalid += 1
+                unhandled_rows.append(row)
                 continue
             dimension_key = _dimension_key(dimensions)
             resolved_geography = _geography_key(
@@ -738,6 +751,7 @@ class SeriesObservationStore:
             skipped_unmatched=skipped_unmatched,
             skipped_ambiguous=skipped_ambiguous,
             skipped_invalid=skipped_invalid,
+            unhandled_rows=tuple(unhandled_rows),
         )
 
     async def save_rows(
@@ -751,9 +765,12 @@ class SeriesObservationStore:
         geography_key: str | None = None,
         quality_policy: SeriesObservationQualityPolicy | None = None,
         jp_holding_profiles: dict | None = None,
+        authoritative_window_start: datetime | None = None,
     ) -> SeriesObservationSaveResult:
         policy = quality_policy or SeriesObservationQualityPolicy()
         if policy.registry_coverage == "legacy_only":
+            if authoritative_window_start is not None:
+                raise ValueError("Authoritative source windows require registry coverage")
             quality_report = self.assess_quality(
                 [],
                 country_code=country_code,
@@ -789,13 +806,25 @@ class SeriesObservationStore:
             jp_holding_profiles=jp_holding_profiles,
         )
         if holding_observations:
+            unhandled_rows = built.unhandled_rows
+            if authoritative_window_start is not None and unhandled_rows is not None:
+                retained_holding = {
+                    json.dumps(row["raw_data"], sort_keys=True, default=str)
+                    for row in holding_observations
+                }
+                unhandled_rows = tuple(
+                    row for row in unhandled_rows
+                    if json.dumps(_json_safe(dict(row)), sort_keys=True, default=str)
+                    not in retained_holding
+                )
             built = SeriesObservationBuildResult(
                 observations=[*built.observations, *holding_observations],
                 skipped_unmatched=max(0, built.skipped_unmatched - holding_handled),
                 skipped_ambiguous=built.skipped_ambiguous,
                 skipped_invalid=built.skipped_invalid,
+                unhandled_rows=unhandled_rows,
             )
-        if not built.observations:
+        if not built.observations and authoritative_window_start is None:
             quality_report = self.assess_quality(
                 [],
                 country_code=country_code,
@@ -867,14 +896,41 @@ class SeriesObservationStore:
         # rolls back both stores instead of leaving a partially imported batch.
         self.enforce_quality(quality_report, policy)
 
+        withdrawn: list[dict[str, Any]] = []
+        window_before: dict[tuple[Any, ...], dict[str, Any]] = {}
+        input_observation_count = (
+            len({_revision_identity(row) for row in observations})
+            if authoritative_window_start is not None else 0
+        )
+        if authoritative_window_start is not None:
+            window_start = _as_utc(authoritative_window_start)
+            lost_mapping = bool(built.skipped_unmatched or built.skipped_ambiguous or built.skipped_invalid)
+            lost_window_mapping = lost_mapping and (
+                built.unhandled_rows is None or any(
+                    (when := _parse_report_time(row)) is None or _as_utc(when) >= window_start
+                    for row in built.unhandled_rows
+                )
+            )
+            lost_window_registry = any(
+                row["series_code"] not in available_codes and _as_utc(row["time"]) >= window_start
+                for row in built.observations
+            )
+            if lost_window_registry or lost_window_mapping:
+                raise ValueError("Authoritative source window has incomplete observation coverage")
+            observations, withdrawn, window_before = await self._prepare_authoritative_window(
+                db, observations, country_code=country_code, source_id=source_id,
+                geography_key=geography_key, window_start=authoritative_window_start,
+            )
+
         revision_time = datetime.now(timezone.utc)
         await _persist_observation_revisions(
             db,
-            observations,
+            [*observations, *withdrawn] if withdrawn else observations,
             recorded_at=revision_time,
             seed_current_state=True,
         )
         affected_rows = 0
+        accepted_changes: list[dict[str, Any]] = []
         for offset in range(0, len(observations), _WRITE_BATCH_SIZE):
             batch = observations[offset : offset + _WRITE_BATCH_SIZE]
             # Build the insert against the underlying table.  Passing the ORM
@@ -928,9 +984,21 @@ class SeriesObservationStore:
                     )
                     == "true",
                 ),
-            ).returning(DiseaseSeriesObservation.series_code)
+            )
+            if authoritative_window_start is not None:
+                statement = statement.returning(*DiseaseSeriesObservation.__table__.c)
+            else:
+                statement = statement.returning(DiseaseSeriesObservation.series_code)
             write_result = await db.execute(statement, batch)
-            affected_rows += len(write_result.scalars().all())
+            if authoritative_window_start is not None:
+                accepted = [dict(row) for row in write_result.mappings().all()]
+                affected_rows += len(accepted)
+                for row in accepted:
+                    previous = window_before.get(_revision_identity(row))
+                    if previous is None or _revision_state(previous) != _revision_state(row):
+                        accepted_changes.append(row)
+            else:
+                affected_rows += len(write_result.scalars().all())
 
         changed_observations: list[dict[str, Any]] = []
         await _persist_observation_revisions(
@@ -941,6 +1009,36 @@ class SeriesObservationStore:
             changed_observations=changed_observations,
         )
 
+        deleted_observations: list[dict[str, Any]] = []
+        for offset in range(0, len(withdrawn), _WRITE_BATCH_SIZE):
+            keys = [_revision_identity(row) for row in withdrawn[offset:offset + _WRITE_BATCH_SIZE]]
+            deleted = await db.execute(
+                delete(DiseaseSeriesObservation.__table__).where(
+                    tuple_(*(DiseaseSeriesObservation.__table__.c[key]
+                             for key in _REVISION_KEY_COLUMNS)).in_(keys)
+                ).returning(*(DiseaseSeriesObservation.__table__.c[key]
+                              for key in _REVISION_KEY_COLUMNS))
+            )
+            deleted_observations.extend(dict(row) for row in deleted.mappings().all())
+
+        if authoritative_window_start is not None:
+            # A withdrawn value may later reappear with the same old revision.
+            # Publication follows the current facts before/after, not merely
+            # whether a new snapshot happened to be appended to the ledger.
+            changed_observations = accepted_changes
+
+        window_counts = None
+        if authoritative_window_start is not None:
+            inserted = sum(_revision_identity(row) not in window_before for row in accepted_changes)
+            window_counts = {
+                "input": input_observation_count,
+                "inserted": inserted,
+                "updated": len(accepted_changes) - inserted,
+                "deleted": len(deleted_observations),
+                "unchanged": input_observation_count - len(observations),
+                "rejected": len(observations) - affected_rows,
+            }
+
         return SeriesObservationSaveResult(
             upserted=affected_rows,
             skipped_unmatched=built.skipped_unmatched,
@@ -949,13 +1047,69 @@ class SeriesObservationStore:
             skipped_registry_not_synced=skipped_registry,
             quality_report=quality_report,
             holding_observations=len(holding_observations),
+            deleted=len(deleted_observations),
+            window_change_counts=window_counts,
             publication_changes=(
-                observation_publication_changes(changed_observations)
+                (observation_publication_changes(changed_observations)
+                 + observation_publication_changes(deleted_observations, operation="delete"))
                 if not (missing_codes or skipped_registry or built.skipped_unmatched
                         or built.skipped_ambiguous or built.skipped_invalid)
                 else None
             ),
         )
+
+    async def _prepare_authoritative_window(
+        self, db, observations, *, country_code, source_id, geography_key, window_start,
+    ):
+        """Compare a fully parsed source window under the caller's country lock.
+
+        Only the selected source, geography and lower window boundary authorize
+        withdrawals. Historical rows supplied alongside the window may be
+        upserted, but their absence never authorizes deleting older history.
+        """
+        if not isinstance(source_id, str) or not source_id or not geography_key:
+            raise ValueError("Authoritative source windows require a source and geography")
+        window_start = _as_utc(window_start)
+        codes = {row["series_code"] for row in observations}
+        scoped_codes = set((await db.execute(
+            select(DiseaseSurveillanceSeries.series_code).where(
+                DiseaseSurveillanceSeries.series_code.in_(codes),
+                DiseaseSurveillanceSeries.country_code == country_code.upper(),
+                DiseaseSurveillanceSeries.source_system == source_id,
+            )
+        )).scalars())
+        if scoped_codes != codes or any(
+            row["geography_key"] != geography_key
+            or (row.get("metadata") or {}).get("source_id") != source_id
+            for row in observations
+        ):
+            raise ValueError("Authoritative source window contains observations outside its scope")
+
+        incoming: dict[tuple[Any, ...], dict[str, Any]] = {}
+        for row in observations:
+            key = _revision_identity(row)
+            if key in incoming and _revision_state(incoming[key]) != _revision_state(row):
+                raise ValueError("Authoritative source window contains conflicting observation identities")
+            incoming[key] = row
+        read_start = min([window_start, *(key[0] for key in incoming)])
+        table = DiseaseSeriesObservation.__table__
+        result = await db.execute(
+            select(table).join(
+                DiseaseSurveillanceSeries,
+                table.c.series_code == DiseaseSurveillanceSeries.series_code,
+            ).where(
+                DiseaseSurveillanceSeries.country_code == country_code.upper(),
+                DiseaseSurveillanceSeries.source_system == source_id,
+                table.c.geography_key == geography_key,
+                table.c.time >= read_start,
+            )
+        )
+        before = {_revision_identity(row): dict(row) for row in result.mappings().all()}
+        changed = [row for key, row in incoming.items()
+                   if key not in before or _revision_state(before[key]) != _revision_state(row)]
+        withdrawn = [row for key, row in before.items()
+                     if key[0] >= window_start and key not in incoming]
+        return changed, withdrawn, before
 
     def _jp_mixed_holding_profiles(
         self,

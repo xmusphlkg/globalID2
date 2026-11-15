@@ -13,6 +13,9 @@ SELECTION_BATCH_SIZE = 5000
 
 def selection_batches(dirty_ids: list[int]):
     """Keep PostgreSQL bind counts bounded for a large review backlog."""
+    if (any(type(value) is not int or value <= 0 for value in dirty_ids)
+            or len(set(dirty_ids)) != len(dirty_ids)):
+        raise ValueError("Publication selection requires unique positive dirty IDs")
     ordered = sorted(dirty_ids)
     for offset in range(0, len(ordered), SELECTION_BATCH_SIZE):
         yield ordered[offset:offset + SELECTION_BATCH_SIZE]
@@ -53,4 +56,24 @@ async def acknowledge_global_selection(db, dirty_ids: list[int], *, line: str, t
         await db.execute(update(PublishDirty).where(
             PublishDirty.id.in_(batch), PublishDirty.line == line,
             PublishDirty.scope_key == "*", PublishDirty.published_at.is_(None),
+        ).values(published_at=published_at, published_task_uuid=task_uuid))
+
+
+async def acknowledge_content_selection(db, dirty_ids: list[int], *, task_uuid: str,
+                                       situation_detached: bool, literature_detached: bool) -> None:
+    """Consume exact static-content markers without advancing detached channels.
+
+    Every batch shares the caller's transaction; a later failure must roll back
+    earlier acknowledgements. Surveillance is always owned by its JSON publisher.
+    """
+    excluded_lines = ["surveillance"]
+    if situation_detached:
+        excluded_lines.append("situation")
+    if literature_detached:
+        excluded_lines.append("literature")
+    published_at = datetime.now(timezone.utc)
+    for batch in selection_batches(dirty_ids):
+        await db.execute(update(PublishDirty).where(
+            PublishDirty.id.in_(batch), PublishDirty.line.not_in(excluded_lines),
+            PublishDirty.published_at.is_(None),
         ).values(published_at=published_at, published_task_uuid=task_uuid))

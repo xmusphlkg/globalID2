@@ -282,6 +282,31 @@ downloads, and R2 papers readiness.
 
 ## Independent research publication and build reuse
 
+The 2026-11-14 optimization is implemented and locally tested; it has not been
+deployed. The job first captures the public baseline, freezes its compatible v3
+templates and resources, then asks `build-research.mjs` for `auto` scope. A
+matching template fingerprint selects `collections`: article HTML rendered and
+restored are both zero, while current landing/collection pages are rebuilt. The
+publisher generates every en/zh/fr article descriptor directly from the complete
+frozen JSON snapshot, including additions, deletions, titles and associations.
+The existing body-only CLI keeps its narrower unchanged-directory requirement.
+
+The first run with the new fingerprint, a missing or damaged local template
+cache, or changed template dependencies selects the existing full build.
+`src/data/meta.json`, `src/data/diseases/index.json`, and
+`src/data/reports/index.json` are shared shell dependencies; changing them also
+invalidates template reuse. Research route membership and article contents do
+not invalidate the template fingerprint. Existing staged full builds and frozen
+publication candidates retain their retry contract.
+
+Build receipts bind the snapshot inputs and rendered collection pages to their
+hashes. `published.json` records projection additions/deletions and prepare,
+upload/commit and public-verification timings; task output also records build
+scope, article render/restore counts and command-stage durations. These are
+measured stages, not a claimed production speedup. The reference tests and
+remaining empty-snapshot restriction are described in
+[Papers JSON publication](PAPERS_TEMPLATE_MIGRATION.md).
+
 The independent Literature channel selects exact committed dirty IDs, exports
 one PostgreSQL read snapshot and captures the already published Surveillance
 and Situation inputs. Its private candidate must not overwrite the running

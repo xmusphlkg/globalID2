@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
-from src.data.crawlers.ecdc import ECDCAtlasCrawler
+from src.data.crawlers.ecdc import ECDCAtlasCrawler, ECDCContractError
 from src.data.processors.ecdc import ECDCAnnualUpdater
 from src.services.ingestion.countries import ecdc
 from src.services.ingestion.strategies import (
@@ -92,6 +92,7 @@ def test_ecdc_country_contract_matches_previous_parser(country, tmp_path, monkey
         start_year=2020,
     )
     assert stable(actual.rows) == stable(expected)
+    assert actual.authoritative_window_start_year == 2020
     assert_native_observations_match(actual.rows, expected, ECDCAnnualUpdater(country))
     assert any(row["Date"] == "1989-01-01" for row in actual.rows)
     assert not any(row["SourceDiseaseCode"] == "withdrawn" for row in actual.rows)
@@ -136,16 +137,44 @@ async def test_ecdc_collect_records_bytes_before_business_parser(tmp_path, monke
     )
 
 
-async def test_ecdc_delete_is_confined_to_its_commit_strategy(monkeypatch):
+async def test_ecdc_window_is_confined_to_its_commit_strategy(monkeypatch):
     lock = AsyncMock()
     monkeypatch.setattr("src.services.ingestion.strategies.acquire_country_data_mutation_lock", lock)
     updater = SimpleNamespace(country_code="FR", delete_authoritative_window=AsyncMock(return_value=3))
     commit = AsyncMock(return_value="stored")
     monkeypatch.setattr(UpdaterCommitStrategy, "commit", commit)
     assert (
-        await EcdcWindowCommitStrategy().commit("db", updater=updater, start_year=2020)
+        await EcdcWindowCommitStrategy().commit(
+            "db", updater=updater, start_year=2020,
+            fetched=SimpleNamespace(authoritative_window_start_year=2020),
+        )
         == "stored"
     )
     lock.assert_awaited_once_with("db", "FR")
-    updater.delete_authoritative_window.assert_awaited_once_with("db", start_year=2020)
+    updater.delete_authoritative_window.assert_not_awaited()
+    assert commit.call_args.kwargs["authoritative_window_start"].year == 2020
     assert commit.call_args.kwargs["updater"] is updater
+
+
+@pytest.mark.parametrize("payload", [{}, {"MeasureResults": None}, {"MeasureResults": "invalid"}])
+def test_ecdc_malformed_response_cannot_authorize_withdrawal(tmp_path, monkeypatch, payload):
+    monkeypatch.chdir(tmp_path)
+    requests = fixture_requests("FR")
+    next(item for item in requests if item["endpoint"] == "GetMeasureResultsForTimeUnitAndGeoRegion")["payload"] = payload
+    artifacts = [save_artifact(item["payload"], {"endpoint": item["endpoint"], "params": item["params"]}, i)
+                 for i, item in enumerate(requests)]
+    with pytest.raises(ECDCContractError, match="MeasureResults array"):
+        ecdc.organize(artifacts, updater=ECDCAnnualUpdater("FR"), start_year=2020)
+
+
+def test_ecdc_complete_empty_responses_authorize_empty_window(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    requests = fixture_requests("FR")
+    for item in requests:
+        if item["endpoint"] == "GetMeasureResultsForTimeUnitAndGeoRegion":
+            item["payload"]["MeasureResults"] = []
+    artifacts = [save_artifact(item["payload"], {"endpoint": item["endpoint"], "params": item["params"]}, i)
+                 for i, item in enumerate(requests)]
+    fetched = ecdc.organize(artifacts, updater=ECDCAnnualUpdater("FR"), start_year=2020)
+    assert fetched.rows == []
+    assert fetched.authoritative_window_start_year == 2020

@@ -53,7 +53,8 @@ def publish_literature_candidate(*, run: Path, objects_dir: Path, papers: Papers
     manifest, _ = validate_manifest((run / "current.json").read_bytes())
     bound = bind_literature_candidate(manifest, papers, expected_papers_origin=config.public_base_url)
     body = json.dumps(bound, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
-    verification_required = any(entry.get("paper_template", {}).get("schema") == 3 for entry in papers.entries)
+    verification_required = (any(entry.get("paper_template", {}).get("schema") == 3 for entry in papers.entries)
+        or any(item.get('key', '').startswith('paper-template-v3/templates/') for item in papers.template_objects))
     active = client or R2S3Client(config)
     try:
         current = active.get_object(f"{PREFIX}/current.json")

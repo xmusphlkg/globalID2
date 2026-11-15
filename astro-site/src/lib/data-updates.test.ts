@@ -45,4 +45,9 @@ test('incomplete and impossible calendar dates do not create a false empty range
     assert.equal(utcDay(date), null);
   }
   assert.deepEqual(daysCovering('2024-02-28', '2024-03-01'), ['2024-02-28', '2024-02-29', '2024-03-01']);
+  assert.equal(daysCovering('2024-01-01', '2026-11-14').length, 800);
+  const history = daysCovering('2024-01-01', '2026-11-14', 12000);
+  assert.equal(history[0], '2024-01-01');
+  assert.equal(history.at(-1), '2026-11-14');
+  assert.ok(history.length > 800);
 });

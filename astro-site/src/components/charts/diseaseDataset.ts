@@ -190,7 +190,7 @@ export function loadDiseaseDataset(dataUrl?: string | null): Promise<DiseaseData
       return normalizeDiseaseDataset(raw as DiseaseDataset | CompactDiseaseDataset);
     })
     .catch((error) => {
-      cache.delete(dataUrl);
+      if (cache.get(dataUrl) === request) cache.delete(dataUrl);
       throw error;
     });
 

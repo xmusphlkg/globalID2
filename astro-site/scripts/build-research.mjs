@@ -1,9 +1,10 @@
 // Render research routes from a private snapshot without modifying main dist.
-import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { cpSync, readFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, relative, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { researchInputs, planResearchArticles, readResearchCache, restoreResearchArticles, saveResearchCache } from './research-isolated-cache.mjs';
+import { researchTemplateFingerprint, researchInputs, planResearchArticles, readResearchCache, restoreResearchArticles, saveResearchCache } from './research-isolated-cache.mjs';
 
 export function prepareResearchWorkspace({ site, snapshot, work }) {
   site = resolve(site); snapshot = resolve(snapshot); work = resolve(work);
@@ -60,8 +61,26 @@ export function prepareResearchWorkspace({ site, snapshot, work }) {
   return { data, buildRoot, output: resolve(buildRoot, 'dist') };
 }
 
-export function buildResearch({ site, project, snapshot, destination, work, cacheDir, scope = 'full', run = spawnSync }) {
-  if (!['full', 'collections'].includes(scope)) throw new Error(`Unknown research build scope: ${scope}`);
+export function buildResearch({ site, project, snapshot, destination, work, cacheDir, scope = 'full',
+  projectionBaseline = process.env.GIDS_RESEARCH_PROJECTION_BASELINE, run = spawnSync }) {
+  if (!['full', 'collections', 'auto'].includes(scope)) throw new Error(`Unknown research build scope: ${scope}`);
+  const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+  const snapshotPaths = { article_inputs_sha256: 'article-inputs.json',
+    routes_sha256: 'build/research/routes.json', research_index_sha256: 'build/research/index.json',
+    public_research_index_sha256: 'public/research/index.json',
+    public_research_catalogue_sha256: 'public/research/catalogue.json' };
+  const snapshotHashes = () => Object.fromEntries(Object.entries(snapshotPaths).map(([key, path]) =>
+    [key, existsSync(resolve(snapshot, path)) ? sha(resolve(snapshot, path)) : null]));
+  const inputHashes = snapshotHashes();
+  const templateFingerprint = researchTemplateFingerprint({ site, project });
+  let baseline;
+  if (scope === 'auto') {
+    try { baseline = JSON.parse(readFileSync(projectionBaseline, 'utf8')); } catch { baseline = null; }
+    scope = baseline?.schema === 1 && baseline.template_fingerprint === templateFingerprint
+      && typeof baseline.candidate === 'string' && isAbsolute(baseline.candidate)
+      && existsSync(baseline.candidate) && /^[a-f0-9]{64}$/.test(baseline.generation)
+      ? 'collections' : 'full';
+  }
   const collectionWorkers = scope === 'collections' ? process.env.GIDS_RESEARCH_COLLECTION_RENDER_WORKERS?.trim() : undefined;
   if (collectionWorkers && (!Number.isInteger(Number(collectionWorkers)) || Number(collectionWorkers) < 0 || Number(collectionWorkers) > 32))
     throw new Error('GIDS_RESEARCH_COLLECTION_RENDER_WORKERS must be an integer from 0 to 32');
@@ -80,6 +99,7 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
   delete env.GIDS_REPORTS_BUILD_DIR;
   delete env.GIDS_COUNTRY_BUILD_DIR;
   delete env.GIDS_CODE_BUILD_DIR;
+  delete env.GIDS_BUILD_PUBLIC_DIR;
   let inputs, previous, plan;
   if (scope === 'collections') {
     // Collections use the current frozen JSON and templates. Existing v3
@@ -118,7 +138,7 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
       render();
     }
   }
-  const cacheVersion = inputs ? saveResearchCache({ cache: cacheDir, inputs, output: prepared.output }) : null;
+  const cacheVersion = scope === 'full' && inputs ? saveResearchCache({ cache: cacheDir, inputs, output: prepared.output }) : null;
   // The sharded public snapshot is a build input only. Browser queries use
   // the rendered research catalogue; do not copy the old data into releases.
   try { renameSync(prepared.output, destination); }
@@ -126,15 +146,36 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
     if (error.code !== 'EXDEV') throw error;
     cpSync(prepared.output, destination, { recursive: true, errorOnExist: true, force: false });
   }
-  if (inputs || scope === 'collections') {
-    const receipt = `${destination}.inputs.json`, temporary = `${receipt}.${process.pid}.tmp`;
-    const result = scope === 'collections'
-      ? { schema: 1, scope, article_pages_rendered: 0, snapshot: resolve(snapshot) }
-      : { schema: 1, scope, inputs, reused: plan.reusable,
-        previous_cache_version: previous?.version ?? null, cache_version: cacheVersion };
-    writeFileSync(temporary, JSON.stringify(result));
-    renameSync(temporary, receipt);
+  const pages = {};
+  const collectPages = (directory, prefix = '') => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = resolve(directory, entry.name), name = prefix + entry.name;
+      if (entry.isDirectory()) collectPages(path, name + '/');
+      else if (entry.isFile() && name.endsWith('.html')) pages[name] = sha(path);
+    }
+  };
+  collectPages(destination);
+  // Validate that mutable source/config did not change while Astro was using
+  // the prepared workspace. A receipt cannot attest two different templates.
+  if (researchTemplateFingerprint({ site, project }) !== templateFingerprint)
+    throw new Error('Research template inputs changed during the build');
+  if (JSON.stringify(snapshotHashes()) !== JSON.stringify(inputHashes))
+    throw new Error('Research snapshot inputs changed during the build');
+  const restored = plan?.reusable?.length ?? 0;
+  const result = { schema: 1, scope, template_fingerprint: templateFingerprint,
+    snapshot: resolve(snapshot), pages,
+    article_pages_rendered: scope === 'collections' ? 0 : Object.keys(pages).filter(path => /^(?:zh\/|fr\/)?research\/articles\/[^/]+\/index\.html$/.test(path)).length - restored * 3,
+    article_pages_restored: restored * 3,
+    ...(inputs ? { inputs, reused: plan.reusable,
+      previous_cache_version: previous?.version ?? null, cache_version: cacheVersion } : {}),
+  };
+  if (scope === 'collections') {
+    if (baseline) result.projection_baseline = baseline.candidate;
+    Object.assign(result, Object.fromEntries(Object.entries(inputHashes).filter(([, value]) => value !== null)));
   }
+  const receipt = `${destination}.inputs.json`, temporary = `${receipt}.${process.pid}.tmp`;
+  writeFileSync(temporary, JSON.stringify(result));
+  renameSync(temporary, receipt);
   console.log(JSON.stringify({ event: 'research_build_completed', elapsed_seconds: (performance.now() - started) / 1000,
     destination, snapshot, scope }));
 }

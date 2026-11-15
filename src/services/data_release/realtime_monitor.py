@@ -20,7 +20,7 @@ from src.core.country_library import get_country_bootstrap_config
 from src.core.config import get_config
 from src.domain import Country, Task, TaskStatus, TaskType
 from src.domain.collection import PublishDirty
-from .planning import plan_changes
+from .planning import plan_changes, publishable_scope_keys
 from .surveillance_publish import validate_manifest
 
 CHANNELS = ("surveillance", "situation")
@@ -111,8 +111,9 @@ def classify_pending(groups, country_rows, *, channel: str, now: datetime) -> di
         blocked = [row for index, row in enumerate(groups, 1) if index not in selected]
         expanded_countries = len(plan["country_codes"])
     else:
-        accepted = [row for row in groups if row[0] == "*"]
-        blocked = [row for row in groups if row[0] != "*"]
+        scopes = publishable_scope_keys(channel)
+        accepted = [row for row in groups if row[0] in scopes]
+        blocked = [row for row in groups if row[0] not in scopes]
         expanded_countries = 0
     blocked_summary = summarize(blocked)
     blocked_summary["scopes"] = [row[0] if re.fullmatch(r"[A-Z0-9-]{1,64}", row[0]) else "<invalid-scope>" for row in blocked[:100]]

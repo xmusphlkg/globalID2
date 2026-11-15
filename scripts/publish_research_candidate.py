@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -19,7 +20,12 @@ from src.services.data_release.literature_artifacts import build_research_papers
 from src.services.data_release.literature_publish import PREFIX, publish_literature_candidate  # noqa: E402
 from src.services.data_release.papers_content import prepare_papers_content_from_manifest  # noqa: E402
 from src.services.data_release.papers_projection import (  # noqa: E402
-    assert_v3_candidate, load_projection_candidate, prepare_projection_candidate, verify_projected_publication,
+    assert_v3_candidate, load_projection_candidate, prepare_projection_candidate,
+    prepare_full_snapshot_candidate, verify_projected_publication,
+)
+from src.services.data_release.literature_projection import (  # noqa: E402
+    complete_snapshot_articles, freeze_projection_build_baseline, save_template_compatibility,
+    verify_snapshot_collections,
 )
 from src.services.data_release.papers_reuse import load_committed_papers_receipt  # noqa: E402
 from src.services.data_release.surveillance_publish import _starting_baseline, _target, validate_manifest  # noqa: E402
@@ -85,13 +91,17 @@ def _project_stage(*, run: Path, stage: Path, snapshot: Path, manifest: dict, re
 def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Path,
             release_id: str, config, workers: int = 16, client=None,
             projection_candidate: Path | None = None, projection_verifier=None,
-            prepare_only: bool = False) -> dict:
+            prepare_only: bool = False, prepare_build: bool = False) -> dict:
+    started = time.monotonic()
     run, snapshot, stage, shared, receipt = map(Path, (run, snapshot, stage, shared, receipt))
     captured, previous = _starting_baseline(run, config, PREFIX)
     if not captured:
         raise ValueError('Research publication baseline was not captured before export')
     if os.environ.get('GIDS_PAPERS_PROJECTION_V3') != '1':
         raise ValueError('Papers v3 publication requires the explicit projection feature gate')
+    if prepare_build:
+        return freeze_projection_build_baseline(run=run,
+            previous=validate_manifest(previous)[0] if previous else None, origin=config.public_base_url)
     projected = None
     direct_update = projection_candidate is not None
     if projection_candidate is not None:
@@ -135,14 +145,59 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
                        if previous_manifest and previous_manifest.get('papers') else None)
                 manifest = build_research_papers_manifest(stage, origin=config.public_base_url, build=build, previous=old)
                 _atomic_write(manifest_path, json.dumps(manifest, ensure_ascii=False, separators=(',', ':')).encode())
-            projected = _project_stage(run=run, stage=stage, snapshot=snapshot, manifest=manifest,
-                release_id=release_id, origin=config.public_base_url)
+            if build.get('scope') == 'collections':
+                # JSON freezing can succeed before Papers preparation crashes.
+                # A later build in the same run must never pair newer papers
+                # with that already-frozen older index/catalogue generation.
+                for name, field in (('index.json', 'public_research_index_sha256'),
+                                    ('catalogue.json', 'public_research_catalogue_sha256')):
+                    frozen_index = current['files'].get(name, {})
+                    source = snapshot / 'public/research' / name
+                    if (frozen_index.get('sha256') != build.get(field)
+                            or frozen_index.get('bytes') != source.stat().st_size):
+                        raise ValueError('Frozen research index does not match the collection build')
+                baseline_path = run / 'template-baseline/candidate.json'
+                if Path(build.get('projection_baseline', '')).resolve() != baseline_path.resolve():
+                    raise ValueError('Full snapshot requires its own frozen template baseline')
+                baseline = json.loads((run / 'projection-build-baseline.json').read_bytes())
+                base = load_projection_candidate(baseline_path)
+                prior = validate_manifest(previous)[0] if previous else {}
+                if (base.generation != prior.get('papers', {}).get('papers_generation_sha256')
+                        or base.generation != baseline.get('generation') or base.origin != config.public_base_url
+                        or build.get('template_fingerprint') != baseline.get('template_fingerprint')):
+                    raise ValueError('Full snapshot template baseline does not match captured publication')
+                verify_snapshot_collections(stage, build)
+                articles = complete_snapshot_articles(snapshot, build)
+                static = prepare_papers_content_from_manifest(stage, manifest,
+                    papers_origin=config.public_base_url, release_id=release_id)
+                directory = run / 'projection-v3'
+                if directory.is_symlink():
+                    raise ValueError('Invalid projection directory')
+                if directory.exists():
+                    import shutil
+                    shutil.rmtree(directory)
+                projected, _projection_receipt = prepare_full_snapshot_candidate(base, articles=articles,
+                    static=static, directory=directory, release_id=release_id)
+                _write_v3_marker(run, projected)
+            else:
+                projected = _project_stage(run=run, stage=stage, snapshot=snapshot, manifest=manifest,
+                    release_id=release_id, origin=config.public_base_url)
+            save_template_compatibility(projected, build)
         if prepare_only:
-            return {'prepared': True, 'release_id': release_id, 'generation': projected.generation}
+            return {'prepared': True, 'release_id': release_id, 'generation': projected.generation,
+                    'prepare_seconds': round(time.monotonic() - started, 3)}
+        prepared_at = time.monotonic()
         result = publish_literature_candidate(run=run, objects_dir=shared / 'objects', papers=projected,
             config=config, receipt=receipt, client=client, workers=workers)
+        published_at = time.monotonic()
         verification = (projection_verifier or verify_projected_publication)(projected)
         result['public_verification'] = verification
+        result['stage_timing'] = {'prepare_seconds': round(prepared_at - started, 3),
+            'upload_and_commit_seconds': round(published_at - prepared_at, 3),
+            'public_verification_seconds': round(time.monotonic() - published_at, 3)}
+        projection_receipt_path = run / 'projection-v3/projection-receipt.json'
+        if projection_receipt_path.is_file():
+            result['projection'] = json.loads(projection_receipt_path.read_bytes())
         _atomic_write(run / 'published.json', json.dumps(result, ensure_ascii=False, separators=(',', ':')).encode())
         return result
 
@@ -155,12 +210,13 @@ def main() -> None:
     parser.add_argument('--release-id', required=True)
     parser.add_argument('--workers', type=int, default=96)
     parser.add_argument('--prepare-only', action='store_true', help='Freeze the complete candidate without uploading')
+    parser.add_argument('--prepare-build', action='store_true', help='Freeze compatible templates before selecting the build scope')
     parser.add_argument('--projection-candidate', type=Path, help='Frozen v3 candidate; requires GIDS_PAPERS_PROJECTION_V3=1')
     args = parser.parse_args()
     result = publish(run=args.run, snapshot=args.snapshot, stage=args.stage, release_id=args.release_id,
         shared=ROOT / 'exports/research-json', receipt=ROOT / 'data/cache/isolated-research-publication.json',
         config=_config_from_env(), workers=args.workers, projection_candidate=args.projection_candidate,
-        prepare_only=args.prepare_only)
+        prepare_only=args.prepare_only, prepare_build=args.prepare_build)
     print(json.dumps({'event': 'research_publication_complete', **result}, ensure_ascii=False))
 
 

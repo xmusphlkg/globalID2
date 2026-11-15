@@ -63,6 +63,7 @@ def test_ca_national_source_contract_and_history(tmp_path, monkeypatch):
         ("2024-01-01", "70", "12"),
     ]
     assert all(r["GeographyKey"] == "country:CA:national" for r in actual.rows)
+    assert actual.authoritative_window_start_year == 2023
 
 
 async def test_ca_collect_does_not_parse_rows(monkeypatch):
@@ -89,20 +90,21 @@ async def test_ca_collect_does_not_parse_rows(monkeypatch):
     assert len(artifacts) == 2
 
 
-async def test_ca_delete_is_confined_to_national_commit_strategy(monkeypatch):
+async def test_ca_window_is_confined_to_national_commit_strategy(monkeypatch):
     lock = AsyncMock()
     monkeypatch.setattr("src.services.ingestion.strategies.acquire_country_data_mutation_lock", lock)
     updater = SimpleNamespace(
         country_code="CA", delete_authoritative_window=AsyncMock(return_value=4)
     )
-    monkeypatch.setattr(
-        UpdaterCommitStrategy, "commit", AsyncMock(return_value="stored")
-    )
+    commit = AsyncMock(return_value="stored")
+    monkeypatch.setattr(UpdaterCommitStrategy, "commit", commit)
     strategy = CanadaCndssWindowCommitStrategy()
-    assert await strategy.commit("db", updater=updater, start_year=2023) == "stored"
+    fetched = SimpleNamespace(authoritative_window_start_year=2023)
+    assert await strategy.commit("db", updater=updater, fetched=fetched, start_year=2023) == "stored"
     lock.assert_awaited_once_with("db", "CA")
-    updater.delete_authoritative_window.assert_awaited_once_with("db", start_year=2023)
+    updater.delete_authoritative_window.assert_not_awaited()
+    assert commit.call_args.kwargs["authoritative_window_start"].year == 2023
     updater.country_code = "CA-ON"
     with pytest.raises(ValueError, match="national Canada"):
         await strategy.commit("db", updater=updater, start_year=2023)
-    assert updater.delete_authoritative_window.await_count == 1
+    assert updater.delete_authoritative_window.await_count == 0

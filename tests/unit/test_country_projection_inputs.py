@@ -39,10 +39,12 @@ def test_scoped_disease_merge_matches_full_country_projection(operation):
     assert build_country_source_series_data(merged) == build_country_source_series_data(complete)
 
 
-def test_precise_scopes_require_all_marker_coverage_and_known_source_dependencies():
+@pytest.mark.parametrize("operation", ["upsert", "delete"])
+def test_precise_scopes_require_all_marker_coverage_and_known_source_dependencies(operation):
     country = {"disease_series": {"D001": {"dates": ["2025-01-01"], "source_series": [{"series_code": "KNOWN"}]}}}
     attach_inputs(country, [_record("D001", "2025-01-01", 1)])
     marker = {"scope": "JP-25", "change_set": {"version": 1, "precise": True, "changes": [{"series_code": "KNOWN", "geography_key": "country:JP-25:national", "operation": "upsert"}]}}
+    marker["change_set"]["changes"][0]["operation"] = operation
     assert precise_disease_scope("JP-25", [marker], country, {"D001"}) == {"D001"}
     assert precise_disease_scope("JP-25", [marker, {"scope": "JP", "change_set": None}], country, {"D001"}) is None
     unknown = copy.deepcopy(marker); unknown["change_set"]["changes"][0]["series_code"] = "NEW_HOLDING"

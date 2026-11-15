@@ -31,6 +31,8 @@ from src.domain.collection import PublishDirty
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
 from src.services.data_release.channel_control import is_automatic_json_paused
+from src.services.data_release.global_selection import selection_batches
+from src.services.data_release.planning import publishable_scope_keys
 from src.services.data_release.public_changelog import (
     missing_public_changelog_versions,
     public_changelog_blocker,
@@ -1143,17 +1145,17 @@ class DataReleaseService:
         if is_automatic_json_paused(other):
             return False
         async with get_database() as db:
-            waiting = list((await db.execute(select(PublishDirty).where(
-                PublishDirty.line == other, PublishDirty.published_at.is_(None)))).scalars())
-            if not waiting:
-                return False
+            available = set()
             if other == "surveillance":
                 known = list((await db.execute(select(Country.code, Country.is_active))).all())
                 available = {str(code).strip().upper() for code, active in known if active
                     and get_country_bootstrap_config(code).get("public_release_enabled", True) is not False}
-                from .data_release.planning import plan_changes
-                if not plan_changes(waiting, available, max_countries=1)["dirty_ids"]:
-                    return False
+            waiting = (await db.execute(select(select(PublishDirty.id).where(
+                PublishDirty.line == other, PublishDirty.published_at.is_(None),
+                PublishDirty.scope_key.in_(publishable_scope_keys(other, available)),
+            ).exists()))).scalar_one()
+            if not waiting:
+                return False
             latest = (await db.execute(select(Task).where(
                 Task.task_type == TaskType.EXPORT_DATA,
                 Task.input_data["data_only"].as_boolean().is_(True),
@@ -1282,7 +1284,8 @@ class DataReleaseService:
                 if data_line in {"situation", "literature"}:
                     # The Situation exporter attests one global snapshot. Keep
                     # malformed/legacy scopes visible for operator review.
-                    selection_query = selection_query.where(PublishDirty.scope_key == "*")
+                    selection_query = selection_query.where(
+                        PublishDirty.scope_key.in_(publishable_scope_keys(data_line)))
             else:
                 if content_only:
                     selection_query = selection_query.where(PublishDirty.line != "surveillance")
@@ -1290,9 +1293,16 @@ class DataReleaseService:
                     selection_query = selection_query.where(PublishDirty.line != "situation")
                 if literature_detached:
                     selection_query = selection_query.where(PublishDirty.line != "literature")
-            if pending_ids is not None:
-                selection_query = selection_query.where(PublishDirty.id.in_(pending_ids))
-            dirty = [] if reports_only or code_only or theme_only else list((await db.execute(selection_query.order_by(PublishDirty.id))).scalars().all())
+            dirty = []
+            if not (reports_only or code_only or theme_only):
+                if pending_ids is None:
+                    dirty = list((await db.execute(selection_query.order_by(PublishDirty.id))).scalars().all())
+                else:
+                    # Sorted disjoint batches preserve the planner's global
+                    # ordering and keep legacy parent groups together.
+                    for batch in selection_batches(pending_ids):
+                        dirty.extend((await db.execute(selection_query.where(
+                            PublishDirty.id.in_(batch)).order_by(PublishDirty.id))).scalars().all())
             if pending_ids is not None and not dirty and not full:
                 return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid, "reason": "no_pending_changes"}
             if full:
@@ -1442,9 +1452,11 @@ class DataReleaseService:
                     selected_ids = set(dirty_ids) | set(release_plan.get("continuation_dirty_ids", []))
                     if frozen_ids != selected_ids:
                         raise PublicationPlanError("publication_selection_changed")
-                    pending_now = set((await db.execute(select(PublishDirty.id).where(
-                        PublishDirty.id.in_(sorted(frozen_ids)), (PublishDirty.line == data_line) if data_only else True,
-                        PublishDirty.published_at.is_(None)).with_for_update())).scalars())
+                    pending_now = set()
+                    for batch in selection_batches(list(frozen_ids)):
+                        pending_now.update((await db.execute(select(PublishDirty.id).where(
+                            PublishDirty.id.in_(batch), (PublishDirty.line == data_line) if data_only else True,
+                            PublishDirty.published_at.is_(None)).order_by(PublishDirty.id).with_for_update())).scalars())
                     if pending_now != frozen_ids:
                         raise PublicationPlanError("publication_selection_changed")
             if pending_ids is not None and trigger_task_uuid:
@@ -1490,7 +1502,6 @@ class DataReleaseService:
                 # reservation. Another completed publisher may have consumed
                 # those exact IDs while this enqueue waited; never create a
                 # stale JSON candidate from that older selection.
-                from .data_release.global_selection import selection_batches
                 pending = set()
                 for batch in selection_batches(dirty_ids):
                     pending.update((await db.execute(select(PublishDirty.id).where(

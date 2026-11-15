@@ -109,6 +109,7 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     started = time.monotonic()
     async with runtime.get_database() as db:
         selected_plan = await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid)
+    timings = {"selection_seconds": round(time.monotonic() - started, 3)}
     root = runtime.root_dir
     state, public = root / "exports/surveillance-state", root / "exports/surveillance-data"
     run = root / "exports/surveillance-runs" / task.task_uuid
@@ -129,6 +130,7 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     expected_generations = data.get("publication_expected_generations") or {}
     if "surveillance" in expected_generations:
         env["GIDS_PUBLICATION_EXPECTED_BASELINE_JSON"] = json.dumps(expected_generations["surveillance"])
+    candidate_reused = receipt is not None
     export_seconds = 0.0
     if receipt is None:
         from src.generation.surveillance_data_export import completed_generation
@@ -166,14 +168,18 @@ async def execute_data_release(service, task, *, runtime) -> dict:
             if not full:
                 for code in codes:
                     cmd.extend(["--incremental-country", code])
+            export_command_started = time.monotonic()
             async with runtime.read_snapshot() as snapshot_env:
                 await service._run_logged_command(task.task_uuid, title="Export Surveillance JSON",
                     cmd=cmd, cwd=root, env={**snapshot_env, "PYTHONUNBUFFERED": "1", LOCKED_ENV: "1"},
                     metadata={"event": "surveillance_json_export", "initialization": full},
                     timeout_seconds=runtime.generate_timeout_seconds)
+            timings["export_command_seconds"] = round(time.monotonic() - export_command_started, 3)
+            freeze_started = time.monotonic()
             receipt = await asyncio.to_thread(_freeze_candidate, run, state, public,
                 task_uuid=task.task_uuid, codes=codes, dirty_ids=dirty_ids, full=full,
                 available_codes=selected_plan["available_country_codes"], downloads=downloads)
+            timings["freeze_seconds"] = round(time.monotonic() - freeze_started, 3)
         export_seconds = time.monotonic() - export_started
     await asyncio.to_thread(save_recovery, root, task, run / "ready.json")
     async with runtime.get_database() as db:
@@ -182,27 +188,45 @@ async def execute_data_release(service, task, *, runtime) -> dict:
         full=receipt["projection_full"], available_codes=before_publish["available_country_codes"])
     await runtime.task_manager.update_task_progress(task.task_uuid, 65)
     publish_started = time.monotonic()
+    metrics_path = run / "publish-result.json"
     await service._run_logged_command(task.task_uuid, title="Publish Surveillance JSON",
         cmd=[str(python), "scripts/publish_surveillance_data.py", "--source-dir", str(run),
-             "--objects-dir", str(public / "objects"), "--require-starting-baseline"],
+             "--objects-dir", str(public / "objects"), "--require-starting-baseline",
+             "--result-file", str(metrics_path)],
         cwd=root, env=env, metadata={"event": "surveillance_json_publish"},
         timeout_seconds=runtime.download_publish_timeout_seconds)
+    timings["json_publish_command_seconds"] = round(time.monotonic() - publish_started, 3)
+    publish_counts = {}
+    if metrics_path.is_file():
+        metrics = json.loads(metrics_path.read_text())
+        if (metrics.get("release_id") != f"data-{task.task_uuid}"
+                or metrics.get("manifest_sha256") != receipt["manifest_sha256"]):
+            raise ValueError("Publication metrics do not match the frozen candidate")
+        timings.update(metrics.get("release_timing") or {})
+        publish_counts = {key: metrics[key] for key in ("uploaded", "unchanged", "bytes_uploaded", "pointer_changed") if key in metrics}
     if downloads:
+        downloads_started = time.monotonic()
         from .surveillance_downloads import publish_download_candidate
         await publish_download_candidate(service, task, runtime=runtime, run=run,
             manifest_sha256=receipt["downloads_manifest_sha256"])
+        timings["downloads_seconds"] = round(time.monotonic() - downloads_started, 3)
+    ack_started = time.monotonic()
     # Upload success publishes only the frozen database snapshot. New dirty IDs
     # arriving during export/upload remain pending for the next JSON release.
     async with runtime.get_database() as db:
         await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid)
-        await commit_release_projection(db, task_uuid=task.task_uuid, country_codes=codes,
+        projection_counts = await commit_release_projection(db, task_uuid=task.task_uuid, country_codes=codes,
             full=receipt["projection_full"], dirty_ids=dirty_ids, country_scopes_exact=True,
             prepared_dir=run / "_release-projection", require_prepared=True)
+        # SQL projection + acknowledgment work, excluding transaction commit.
+        timings["projection_ack_seconds"] = round(time.monotonic() - ack_started, 3)
         result = {"data_only": True, "data_line": "surveillance", "release_id": f"data-{task.task_uuid}",
             "country_codes": codes, "manifest_sha256": receipt["manifest_sha256"],
             "direct_downloads_published": downloads, "git_pushed": downloads,
             "downloads_manifest_sha256": receipt.get("downloads_manifest_sha256"),
-            "release_timing": {"export_seconds": round(export_seconds, 3),
+            "candidate_reused": candidate_reused, "publication_counts": publish_counts,
+            "projection_write_counts": projection_counts or {},
+            "release_timing": {**timings, "export_seconds": round(export_seconds, 3),
                 "publish_and_ack_seconds": round(time.monotonic() - publish_started, 3),
                 "elapsed_seconds": round(time.monotonic() - started, 3)}, "pages_deployed": False}
         if getattr(task, "id", None) is not None:

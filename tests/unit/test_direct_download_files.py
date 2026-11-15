@@ -549,6 +549,41 @@ def test_historical_partition_bytes_stay_stable_when_current_data_changes(tmp_pa
         assert path.read_bytes() == before[format_name]
 
 
+def test_withdrawn_last_point_removes_download_partition_and_matches_full_rebuild(tmp_path) -> None:
+    base = "https://raw.githubusercontent.com/example/data/main"
+    output, complete = tmp_path / "incremental", tmp_path / "complete"
+    previous = build_direct_download_files(_context(), output, download_url_base=base, workers=1)
+    removed_paths = [
+        file["relative_path"] for kind in ("countries", "diseases")
+        for entry in previous[kind] for part in entry["parts"] if part["id"] == "2020-2025"
+        for file in part["files"].values()
+    ]
+    assert removed_paths
+    current = _context(["2010-01-01", "2015-01-01", "2026-01-01"])
+    incremental = build_direct_download_files(
+        current, output, download_url_base=base, workers=1,
+        changed_country_codes={"CN"}, changed_disease_ids={"D007"},
+    )
+    rebuilt = build_direct_download_files(current, complete, download_url_base=base, workers=1)
+    for relative in removed_paths:
+        assert not (output / relative).exists()
+    for kind in ("countries", "diseases"):
+        # Incremental disease inputs use the verified dependency receipt;
+        # a full build hashes the complete input object instead. Public
+        # content, partition metadata and emitted bytes must still agree.
+        assert [{k: v for k, v in entry.items() if k != "input_sha256"}
+                for entry in incremental[kind]] == [
+                    {k: v for k, v in entry.items() if k != "input_sha256"}
+                    for entry in rebuilt[kind]
+                ]
+        for entry in incremental[kind]:
+            assert "2020-2025" not in {part["id"] for part in entry["parts"]}
+            for part in entry["parts"]:
+                for file in part["files"].values():
+                    relative = file["relative_path"]
+                    assert (output / relative).read_bytes() == (complete / relative).read_bytes()
+
+
 def test_reused_partition_metadata_uses_the_current_download_base(tmp_path) -> None:
     legacy_base = "https://raw.githubusercontent.com/example/data/master"
     current_base = "https://raw.githubusercontent.com/example/data/main"

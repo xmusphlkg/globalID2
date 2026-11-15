@@ -85,3 +85,25 @@ TEST_MUTATION_DATABASE_URL=postgresql+asyncpg://... \
 按现有运行时重启流程恢复服务。旧版本继续使用原全局独占 key，与新共享闸门
 兼容，混跑期间会保持较保守的全局串行，因此并发收益要等旧事务结束后出现。
 不要在持有旧连接/事务时热替换锁策略。此改造无需数据库迁移。
+
+## CA / ECDC 来源窗口差量提交（2026-11-14）
+
+CA 全国 CNDSS 和 ECDC 年度策略在国家锁内传递明确的来源窗口起点，不再先删除
+整个来源窗口。完整 artifact 解析、registry/holding 准备、质量检查、规范化事实
+比较、变化行 upsert、撤回删除、修订历史与 dirty 标记仍属于同一事务；任何一批
+SQL 失败均回滚全部写入。后续同国采集必须等待前一个事务提交，比较它实际提交
+的状态，因此并发的相同输入只产生一次事实变更。
+
+窗口比较使用原有观测自然键及修订语义字段，忽略抓取时间和 artifact 路径。
+相同语义的事实不执行 INSERT / UPDATE / DELETE，也不新增修订或 dirty；新的
+原始响应仍由 artifact 阶段留存。同等级覆盖与 final/provisional 保护仍使用原
+条件；CA/ECDC 官方规范行已有的 `AuthoritativeRevision` 负责授权合法来源修订。
+
+删除范围同时受 `country + source + geography + window_start` 约束。随窗口携带的
+更早历史可以按原规则导入，但历史遗漏不能授权删除窗口以前的事实。完整窗口
+证明缺失、窗口内映射/解析覆盖丢失或质量隔离均不能解释为上游撤回。
+
+`tests/integration/test_postgres_source_windows.py` 在独立 PostgreSQL 的临时 schema
+验证相同来源重放、修订、撤回及恢复、来源/地区/历史隔离、质量拒绝、第二批失败
+回滚以及同国等待。通过 `TEST_SNAPSHOT_DATABASE_URL` 启用；额外设置
+`TEST_CA_RAW_ARTIFACT_DIR` 可只读重放一组完整真实 CA capture，验证默认 1924 起点。

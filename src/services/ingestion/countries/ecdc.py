@@ -186,6 +186,7 @@ def organize(
             [
                 f"[artifacts] {len(artifacts)} captured responses; {len(rows)} annual ECDC observations"
             ],
+            authoritative_window_start_year=int(start_year),
         )
     finally:
         crawler.session.close()

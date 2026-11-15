@@ -746,23 +746,14 @@ async def _execute_release_task(
     # collections outside the worker (for example maintenance imports) have
     # different IDs and remain pending for the next release.
     if pages_deployed and not code_only and content_only:
-        from datetime import datetime, timezone
-        from sqlalchemy import update
-        from src.domain.collection import PublishDirty
+        from .global_selection import acknowledge_content_selection
         # Static content never advances surveillance projections or consumes
         # surveillance markers, even if an old/manual task supplied their IDs.
         async with runtime.get_database() as db:
-            excluded_lines = ["surveillance"]
-            if situation_detached:
-                excluded_lines.append("situation")
-            if literature_detached:
-                excluded_lines.append("literature")
-            line_filter = (PublishDirty.line != "surveillance" if len(excluded_lines) == 1
-                           else PublishDirty.line.not_in(excluded_lines))
-            await db.execute(update(PublishDirty).where(
-                PublishDirty.id.in_(input_data.get("publish_dirty_ids") or []),
-                line_filter, PublishDirty.published_at.is_(None),
-            ).values(published_at=datetime.now(timezone.utc), published_task_uuid=task.task_uuid))
+            await acknowledge_content_selection(
+                db, input_data.get("publish_dirty_ids") or [], task_uuid=task.task_uuid,
+                situation_detached=situation_detached, literature_detached=literature_detached,
+            )
             await db.commit()
     elif pages_deployed and not code_only:
         from .projection import commit_release_projection

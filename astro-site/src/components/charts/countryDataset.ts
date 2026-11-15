@@ -325,7 +325,7 @@ export function loadCountrySourceSeries(
         : {};
     })
     .catch((error) => {
-      sourceSeriesCache.delete(dataUrl);
+      if (sourceSeriesCache.get(dataUrl) === request) sourceSeriesCache.delete(dataUrl);
       throw error;
     })
     .finally(() => globalThis.clearTimeout(timeoutId));
@@ -354,7 +354,7 @@ export function loadCountryDataset(
       );
     })
     .catch((error) => {
-      cache.delete(dataUrl);
+      if (cache.get(dataUrl) === request) cache.delete(dataUrl);
       throw error;
     })
     .finally(() => globalThis.clearTimeout(timeoutId));

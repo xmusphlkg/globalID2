@@ -17,6 +17,12 @@ test('footer links to the localized updates page and header stays clear', async 
     await expect(page.locator('footer').getByRole('link', { name: label, exact: true })).toHaveAttribute('href', path);
     await expect(page.locator('header.site-header').getByRole('link', { name: label, exact: true })).toHaveCount(0);
     await expect(page.getByLabel(fromLabel)).toHaveValue('2026-11-01');
+    await expect(page.locator('.updates-metrics, .site-stat-grid')).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => {
+      const chart = document.querySelector('.updates-trend');
+      const controls = document.querySelector('.updates-controls');
+      return !!chart && !!controls && (chart.compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING) === Node.DOCUMENT_POSITION_FOLLOWING;
+    })).toBe(true);
     await expect(page.getByRole('img', { name: chartLabel })).toBeVisible();
     await expect.poll(() => page.locator('.updates-trend-chart svg').evaluate(svg =>
       Math.abs(Number(svg.getAttribute('viewBox')?.split(' ')[2]) - svg.getBoundingClientRect().width) < 2,
@@ -40,13 +46,9 @@ test('shows real published events, filters channels, and loads monthly archives'
     { channel: 'knowledge', published_at: '2026-11-07T09:00:00Z', scopes: ['D038'] },
   ] } }));
   await page.route('**/site-data/updates/2026-10.json', route => route.fulfill({ json: { schema_version: 1, month: '2026-10', events: [{ channel: 'literature', published_at: '2026-10-04T10:00:00Z' }] } }));
-  await page.route('**/site-data/current.json', route => route.fulfill({ status: 404 }));
-  await page.route('**/site-data/meta.json', route => route.fulfill({ json: { total_countries: 294, total_diseases: 239, countries: [{ data_available: true, record_count: 180 }, { data_available: true, record_count: 220 }] } }));
   await page.goto('/zh/data-updates/');
   await expect(page.getByRole('heading', { name: '网站与数据更新', level: 1, exact: true })).toBeVisible();
-  await expect(page.getByText('294', { exact: true })).toBeVisible();
-  await expect(page.getByText('400', { exact: true })).toBeVisible();
-  await expect(page.getByText('91', { exact: true })).toBeVisible();
+  await expect(page.locator('.updates-metrics, .site-stat-grid')).toHaveCount(0);
   await expect(page.getByRole('link', { name: '查看版本与版式更新' }).first()).toBeVisible();
   await expect(page.getByText('数据已发布')).toHaveCount(4);
   await expect(page.locator('.updates-trend-counts > div').filter({ hasText: '数据更新' }).locator('dd')).toHaveText('4');
@@ -58,12 +60,19 @@ test('shows real published events, filters channels, and loads monthly archives'
   await expect(page.getByText('数据已发布')).toHaveCount(1);
   await expect(page.getByText('发布范围：D038')).toBeVisible();
   await expect(page.locator('.updates-trend-counts > div').filter({ hasText: '数据更新' }).locator('dd')).toHaveText('1');
-  await expect(page.getByRole('row', { name: /2026-11-07/ }).getByRole('cell')).toHaveText('1');
+  await expect(page.getByRole('row', { name: /2026-11-07/ }).getByRole('cell')).toHaveText('6');
+  await expect(page.locator('g[data-day="2026-11-07"]')).toHaveAttribute('data-range', 'in');
+  await expect(page.locator('g[data-day="2026-11-07"] .updates-bar-in')).toHaveCount(1);
   await page.getByLabel('更新类型').selectOption('all');
   await page.getByLabel('截止日期（UTC）').fill('2026-10-31');
   await page.getByLabel('起始日期（UTC）').fill('2026-10-01');
   await expect(page.getByText('数据已发布')).toHaveCount(1);
   await expect(page.locator('ol').getByText('论文数据')).toBeVisible();
+  await expect(page.locator('g[data-day="2026-11-07"]')).toHaveAttribute('data-range', 'out');
+  await expect(page.locator('g[data-day="2026-11-07"] .updates-bar-out')).toHaveCount(1);
+  await expect(page.locator('g[data-day="2026-10-04"]')).toHaveAttribute('data-range', 'in');
+  await expect(page.locator('tr[data-day="2026-11-07"]')).toHaveAttribute('data-range', 'out');
+  await expect(page.locator('tr[data-day="2026-10-04"]')).toHaveAttribute('data-range', 'in');
   await page.getByLabel('起始日期（UTC）').fill('2026-11-01');
   await page.getByLabel('截止日期（UTC）').fill('2026-11-30');
   await page.getByLabel('更新类型').selectOption('website');
@@ -176,7 +185,9 @@ test('UTC range filtering and daily counts include offset timestamps on the corr
   await page.getByLabel('截止日期（UTC）').fill('2026-11-01');
   await expect(page.getByText('数据已发布')).toHaveCount(1);
   await expect(page.locator('time[datetime="2026-10-31T23:30:00-03:00"]')).toBeVisible();
-  await expect(page.getByRole('row', { name: /2026-11-01/ }).getByRole('cell')).toHaveText('1');
+  await expect(page.getByRole('row', { name: /2026-11-01/ }).getByRole('cell')).toHaveText('2');
+  await expect(page.locator('tr[data-day="2026-11-01"]')).toHaveAttribute('data-range', 'in');
+  await expect(page.locator('tr[data-day="2026-11-30"]')).toHaveAttribute('data-range', 'out');
 });
 
 test('incomplete, reversed and oversized date ranges explain how to recover', async ({ page }) => {
@@ -187,7 +198,9 @@ test('incomplete, reversed and oversized date ranges explain how to recover', as
   await page.getByLabel('截止日期（UTC）').fill('');
   await expect(page.getByRole('status')).toHaveText('请填写有效的起始日期和截止日期。');
   await expect(page.getByLabel('截止日期（UTC）')).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.getByRole('img', { name: /每日发布记录/ })).toHaveCount(0);
+  await expect(page.getByRole('img', { name: /每日发布记录/ })).toBeVisible();
+  await expect(page.locator('.updates-bar-in')).toHaveCount(0);
+  await expect(page.locator('.updates-bar-out').first()).toBeVisible();
   await page.getByLabel('截止日期（UTC）').fill('2026-10-01');
   await expect(page.getByRole('status')).toHaveText('起始日期不能晚于截止日期。');
   await page.getByLabel('起始日期（UTC）').fill('2024-01-01');
@@ -204,10 +217,10 @@ test('a missing month never becomes a zero-count daily chart', async ({ page }) 
   await page.route('**/site-data/updates/2026-11.json', route => route.fulfill({ json: { schema_version: 1, month: '2026-11', events: [{ channel: 'literature', published_at: '2026-11-07T12:00:00Z' }] } }));
   await page.route('**/site-data/updates/2026-10.json', route => route.fulfill({ status: 503 }));
   await page.goto('/zh/data-updates/');
-  await expect(page.getByRole('img', { name: /每日发布记录/ })).toBeVisible();
-  await page.getByLabel('起始日期（UTC）').fill('2026-10-01');
   await expect(page.getByRole('status')).toContainText('不完整');
   await expect(page.getByText('数据已发布')).toHaveCount(1);
+  await expect(page.getByRole('img', { name: /每日发布记录/ })).toHaveCount(0);
+  await page.getByLabel('起始日期（UTC）').fill('2026-10-01');
   await expect(page.getByRole('img', { name: /每日发布记录/ })).toHaveCount(0);
   await expect(page.getByText('查看每日数量')).toHaveCount(0);
 });

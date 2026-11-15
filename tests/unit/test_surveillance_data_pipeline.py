@@ -16,7 +16,8 @@ from src.services.data_release.pipeline import execute_release_task
 def setup(tmp_path, monkeypatch):
     snapshot_state = {"open": False, "count": 0}
     calls = []
-    commit = AsyncMock()
+    commit = AsyncMock(return_value={"JP": {"inserted": 0, "changed": 0, "deleted": 0,
+                                          "watermark_only": 0, "unchanged": 1}})
     monkeypatch.setattr(data_pipeline, "commit_release_projection", commit)
     stored = SimpleNamespace(output_data=None)
     lines = ["surveillance"]
@@ -103,6 +104,10 @@ async def test_data_update_never_builds_html_or_publishes_other_channels(setup):
     result = await execute_release_task(s.service, s.task, runtime=s.runtime)
     assert [name for name, _ in s.calls] == ["Capture Surveillance Publication Baseline", "Export Surveillance JSON", "Publish Surveillance JSON"]
     assert result["data_only"] and not result["pages_deployed"]
+    assert result["projection_write_counts"]["JP"]["unchanged"] == 1
+    assert result["candidate_reused"] is False
+    assert "freeze_seconds" in result["release_timing"]
+    assert "downloads_seconds" not in result["release_timing"]
     assert s.snapshot == {"open": False, "count": 1}
     s.commit.assert_awaited_once()
     assert s.commit.await_args.kwargs["dirty_ids"] == [11]

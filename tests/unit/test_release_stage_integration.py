@@ -123,7 +123,9 @@ async def test_static_content_release_never_acknowledges_or_reprojects_surveilla
     assert "Publish Partitioned Data Downloads" not in r.service.commands
     r.commit.assert_not_awaited()
     statement = r.database.execute.await_args.args[0]
-    assert "publish_dirty.line !=" in str(statement)
+    sql = str(statement.compile(compile_kwargs={"literal_binds": True}))
+    assert "publish_dirty.line NOT IN ('surveillance'" in sql
+    assert "publish_dirty.id IN (7, 8)" in sql
 
 
 async def test_source_edit_during_export_is_rejected_before_expensive_build(release):

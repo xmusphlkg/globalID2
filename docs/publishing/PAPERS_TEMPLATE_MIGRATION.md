@@ -219,10 +219,13 @@ Literature publication refuses to run unless `GIDS_PAPERS_PROJECTION_V3=1`.
 Full-site research publication always builds a schema-3 candidate and rejects a
 legacy prepared marker. Neither path can switch the live pointer back to
 template v2. The
-scheduled literature job exports the snapshot, runs `build-research.mjs`, and
-then `scripts/publish_research_candidate.py`. That stage path builds an
-intermediate template only as private migration input, replaces every article
-entry with projection v3, and uploads with no legacy HTML build receipt.
+scheduled literature job exports the snapshot, freezes a verified local template
+baseline with `publish_research_candidate.py --prepare-build`, and runs
+`build-research.mjs` in `auto` scope. A compatible fingerprint builds only the
+current collections and assembles the complete article catalogue from JSON.
+The fallback full stage builds an intermediate template only as private
+migration input, replaces every article entry with projection v3, and uploads
+with no legacy HTML build receipt.
 `paper-template-v2/` keys are not part of the published candidate. A frozen
 schema-1 `papers-prepared.json` cannot be resumed. The v3 resume marker is
 schema 3 and points at `projection-v3/candidate.json`.
@@ -234,8 +237,55 @@ baseline captured for the run, and the captured research index file identity
 must be unchanged. This path allows existing-article **summary and updated-at
 changes** and compatible template updates. Changes to title, sources,
 integrity, relationships, identity, or routes, and any new article route,
-require the regular directory/SEO build above. It cannot silently reuse old
+require the complete-snapshot and collection rebuild path above. It cannot silently reuse old
 directory HTML for new index content.
+
+### Complete snapshot projection (implemented, not deployed)
+
+`prepare_full_snapshot_candidate()` is separate from the body-only helper. It
+accepts the complete article set attested by `article-inputs.json`, build
+routes/index, and the public index/catalogue. Each article JSON must retain its
+exported digest. Collection build receipts attest their exact HTML path set,
+content hashes and zero rendered/restored article pages. The builder rejects
+input changes during rendering; the publisher rejects changes after rendering.
+The merged catalogue must also contain the complete collection HTML/hydration,
+JS import, CSS and font dependency chain with matching hashes. A file present
+on disk but absent from the candidate manifest cannot satisfy that closure.
+If index freezing succeeded before a preparation crash, the retry must match
+the already-frozen index/catalogue hashes and byte counts; rebuilding newer
+collections in that run cannot pair them with older frozen JSON.
+
+The captured public generation and manifest identify the reusable template
+baseline. Every reused template/resource is copied and checked before the build.
+The source fingerprint covers template dependencies, public render settings and
+the shared shell inputs `meta.json`, `diseases/index.json`, and
+`reports/index.json`; it excludes Research article and route membership. The
+first new-fingerprint run, source incompatibility, or missing cache requires a
+full build. A compatible run renders collections, then handles new/deleted
+slugs and metadata changes in JSON while preserving unchanged record hashes.
+All three locale descriptors are required for every baseline article. Old
+collection pages are not carried into the new complete catalogue.
+
+The last article may be removed when compatible templates are available. The
+empty candidate keeps three locale templates and the asset manifest reachable
+as ordinary immutable JSON catalogue entries, so reference cleanup and later
+local/remote site composition retain their dependencies. Its public canaries
+verify all three current landing pages against release and Worker-injected
+generation identity. A later first article can reuse those templates.
+**Remaining restriction:** an empty article set with incompatible or missing
+templates cannot supply a real article shell for the fallback full build. That
+case rejects before upload and leaves the previous generation and dirty markers
+untouched. It is not treated as a successful empty publication.
+
+No Worker protocol change, database migration, production publication or service
+restart was performed for this implementation. `published.json` carries the
+projection receipt and measured preparation/upload/verification durations;
+task output adds export/build/acknowledgement stages and article counts. These
+measurements do not establish an end-to-end production latency improvement.
+Local coverage is in `tests/unit/test_literature_full_snapshot.py`, the existing
+projection/publication/recovery suites, and the Node build/cache suites.
+Validation logs are retained under
+`exports/website-data-update-optimization/P6/`.
 
 `scripts/publish_papers_r2.py` publishes the same pointer through
 `publish_site_research` and passes

@@ -40,12 +40,13 @@ export function monthsCovering(from: string, to: string): string[] {
   return months;
 }
 
-export function daysCovering(from: string, to: string): string[] {
+export function daysCovering(from: string, to: string, limit = 800): string[] {
   if (!isCalendarDay(from) || !isCalendarDay(to) || from > to) return [];
   const days: string[] = [];
   const cursor = new Date(`${from}T00:00:00Z`);
   const end = Date.parse(`${to}T00:00:00Z`);
-  while (cursor.getTime() <= end && days.length < 800) {
+  const cap = Number.isSafeInteger(limit) && limit > 0 ? limit : 800;
+  while (cursor.getTime() <= end && days.length < cap) {
     days.push(cursor.toISOString().slice(0, 10));
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }

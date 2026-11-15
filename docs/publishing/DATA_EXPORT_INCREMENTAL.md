@@ -347,3 +347,29 @@ reservation、失败冷却及重试重排均按 JSON/静态通道隔离。JSON �
 `npm run check:surveillance-data` 对账完整与紧凑投影，以及懒加载来源文件。2026-10-12 本地快照：239 个疾病文件、110 个国家文件，各有 5,657 条对应序列；45 个仅有来源观察值的条目保留；4,339 条来源序列对账一致。原先 2,128 条未声明频率的曲线中，1,966 条得到保守的日期规律提示，162 条仍为未定义。
 
 `npm run test:charts`、`npm run check`、`npm run build:with-data` 和浏览器桌面/手机回归验证查询、全屏、来源选择、表格、样式与构建。这些检查保证投影和界面行为一致，不代表上游来源口径已得到外部核实。
+
+## Authoritative source no-ops and withdrawals
+
+CA national CNDSS and ECDC annual ingestion compare their validated source
+windows before changing facts. Transport-only changes (retrieval time or raw
+artifact path) do not produce a surveillance dirty marker. Accepted inserts or
+corrections emit `upsert` changes; withdrawals emit `delete` changes using the
+removed observation's original series, geography and time. Facts, revisions and
+these markers commit together under the existing country lock.
+
+A delete change selects the dependent diseases from the previous completed
+country baseline, so a now-absent series can still invalidate its former curve.
+Unknown/new identities, incomplete mapping coverage or incompatible baselines
+continue to require a full country read. A restored observation is a new public
+change even when its value matches a revision recorded before withdrawal.
+
+The selected disease's complete current history replaces its prior slice;
+withdrawn points are not merged back from the old country projection. Download
+rebuilds likewise replace selected country rows and remove empty historical
+partitions. Regression tests compare scoped deletion with a complete country
+projection and compare incremental country/disease CSV, JSON and XLSX files
+with a complete rebuild after removal of a partition's final point.
+
+The existing immutable revision ledger preserves prior values; this change does
+not add withdrawal events or alter historical-as-of query semantics. Source
+artifact capture remains the provenance record for unchanged refreshes.
