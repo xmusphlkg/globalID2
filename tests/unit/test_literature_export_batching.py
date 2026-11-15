@@ -29,5 +29,5 @@ async def test_export_link_queries_batch_large_article_sets():
     session = Session()
     ids = [f'lit_{i}' for i in range(20001)]
     assert await _load_article_links_in_batches(session, LiteratureDiseaseLink, ids) == ids
-    assert [len(batch) for batch in session.batches] == [10000, 10000, 1]
+    assert [len(batch) for batch in session.batches] == [5000, 5000, 5000, 5000, 1]
     assert await _load_article_links_in_batches(session, LiteratureDiseaseLink, []) == []

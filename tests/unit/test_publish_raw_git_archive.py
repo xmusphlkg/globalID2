@@ -113,6 +113,8 @@ def test_local_archive_is_readable_incremental_and_excludes_auth(tmp_path: Path)
     (source / "ai" / "parent-task" / "request.json").write_text(
         '{"messages":[{"content":"private model request"}]}', encoding="utf-8"
     )
+    (source / ".cas" / "ab").mkdir(parents=True)
+    (source / ".cas" / "ab" / "abc").write_bytes(payload.read_bytes())
 
     first = archive.publish_raw_archive(source, repository)
 
@@ -123,6 +125,7 @@ def test_local_archive_is_readable_incremental_and_excludes_auth(tmp_path: Path)
     assert (repository / "data/raw/us/cases.json").read_bytes() == payload.read_bytes()
     assert not any("_auth" in path.parts for path in (repository / "data/raw").rglob("*"))
     assert not (repository / "data/raw/ai").exists()
+    assert not (repository / "data/raw/.cas").exists()
     assert not (repository / "objects").exists()
     assert not (repository / "manifests").exists()
 

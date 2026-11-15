@@ -20,6 +20,7 @@ from src.domain import (
     LiteratureTopicLink,
 )
 
+from .query_batches import argument_batches
 from .classification import (
     CLASSIFICATION_VERSION,
     classify_candidate,
@@ -108,12 +109,13 @@ async def reclassify_existing_literature(
         existing_countries: dict[str, set[str]] = {article_id: set() for article_id in article_ids}
         existing_topics: dict[str, set[str]] = {article_id: set() for article_id in article_ids}
         if article_ids:
-            for row in (await db.execute(select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(article_ids)))).scalars():
-                existing_diseases[row.article_id].add(row.disease_id)
-            for row in (await db.execute(select(LiteratureCountryLink).where(LiteratureCountryLink.article_id.in_(article_ids)))).scalars():
-                existing_countries[row.article_id].add(row.country_code)
-            for row in (await db.execute(select(LiteratureTopicLink).where(LiteratureTopicLink.article_id.in_(article_ids)))).scalars():
-                existing_topics[row.article_id].add(row.topic)
+            for batch in argument_batches(article_ids):
+                for row in (await db.execute(select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(batch)))).scalars():
+                    existing_diseases[row.article_id].add(row.disease_id)
+                for row in (await db.execute(select(LiteratureCountryLink).where(LiteratureCountryLink.article_id.in_(batch)))).scalars():
+                    existing_countries[row.article_id].add(row.country_code)
+                for row in (await db.execute(select(LiteratureTopicLink).where(LiteratureTopicLink.article_id.in_(batch)))).scalars():
+                    existing_topics[row.article_id].add(row.topic)
 
         repository = LiteratureRepository(db)
         changed = 0
@@ -242,21 +244,21 @@ async def reconcile_automatic_signal_links(*, dry_run: bool = False) -> dict[str
         ]
         gap_ids = {str(link.gap_id) for link in automatic_links}
         article_ids = {str(link.article_id) for link in automatic_links}
-        gaps = {
-            gap.gap_id: gap
+        gaps = {}
+        for batch in argument_batches(gap_ids):
             for gap in (
-                await db.execute(select(LiteratureEvidenceGap).where(LiteratureEvidenceGap.gap_id.in_(gap_ids)))
-            ).scalars().all()
-        } if gap_ids else {}
+                await db.execute(select(LiteratureEvidenceGap).where(LiteratureEvidenceGap.gap_id.in_(batch)))
+            ).scalars().all():
+                gaps[gap.gap_id] = gap
         disease_evidence: dict[str, dict[str, float]] = defaultdict(dict)
         country_evidence: dict[str, dict[str, float]] = defaultdict(dict)
-        if article_ids:
+        for batch in argument_batches(article_ids):
             for row in (
-                await db.execute(select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(article_ids)))
+                await db.execute(select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(batch)))
             ).scalars().all():
                 disease_evidence[row.article_id][row.disease_id] = float(row.confidence or 0.0)
             for row in (
-                await db.execute(select(LiteratureCountryLink).where(LiteratureCountryLink.article_id.in_(article_ids)))
+                await db.execute(select(LiteratureCountryLink).where(LiteratureCountryLink.article_id.in_(batch)))
             ).scalars().all():
                 country_evidence[row.article_id][str(row.country_code).upper()] = float(row.confidence or 0.0)
 
@@ -326,9 +328,11 @@ async def reconcile_automatic_signal_links(*, dry_run: bool = False) -> dict[str
                     strongest_confirmed[persisted_link.article_id] = persisted_link.relation_level
 
         if not dry_run and strongest_confirmed:
-            articles = list((
-                await db.execute(select(LiteratureArticle).where(LiteratureArticle.article_id.in_(strongest_confirmed)))
-            ).scalars().all())
+            articles = []
+            for batch in argument_batches(strongest_confirmed):
+                articles.extend((
+                    await db.execute(select(LiteratureArticle).where(LiteratureArticle.article_id.in_(batch)))
+                ).scalars().all())
             for article in articles:
                 metadata = dict(article.metadata_ or {})
                 discovery = dict(metadata.get("discovery_score_evidence") or {})

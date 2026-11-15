@@ -420,7 +420,7 @@ async def test_discovery_marks_each_formal_transaction_with_real_parent(database
     else:
         result = await discover()
         assert result["updated"] == result["candidate_links"] == 1
-    await assert_owner(database, parent=parent, count={None: 2, "start": 0, "store": 1}[failure])
+    await assert_owner(database, parent=parent, count={None: 1, "start": 0, "store": 1}[failure])
     async with database() as session:
         article = (await session.execute(select(LiteratureArticle))).scalar_one()
         gap = (await session.execute(select(LiteratureEvidenceGap))).scalar_one()

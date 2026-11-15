@@ -95,7 +95,11 @@ class SourceCapture:
 
     def verify(self) -> None:
         if self.error is not None:
-            raise RuntimeError("Source artifact persistence failed") from self.error
+            cause = f"{type(self.error).__name__}: {self.error}".strip()
+            message = "Source artifact persistence failed"
+            if cause:
+                message = f"{message}: {cause}"
+            raise RuntimeError(message) from self.error
 
 
 @contextmanager

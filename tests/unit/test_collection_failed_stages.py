@@ -132,3 +132,106 @@ async def test_unresolved_failed_stages_ignore_recovered_and_orphan_rows():
         assert str(rows[0]["finished_at"]).startswith("2026-10-30T12:05:00")
     finally:
         await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_unresolved_failed_stages_follow_the_latest_run_of_each_job():
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
+    async with engine.begin() as connection:
+        await connection.run_sync(
+            lambda sync: Base.metadata.create_all(
+                sync, tables=[Task.__table__, RunStage.__table__]
+            )
+        )
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        async with maker() as db:
+            db.add_all(
+                [
+                    Task(
+                        task_uuid="us-old",
+                        task_name="Crawl US Data",
+                        task_type=TaskType.CRAWL_DATA,
+                        status=TaskStatus.FAILED,
+                        input_data={},
+                    ),
+                    Task(
+                        task_uuid="us-new",
+                        task_name="Crawl US Data",
+                        task_type=TaskType.CRAWL_DATA,
+                        status=TaskStatus.COMPLETED,
+                        input_data={},
+                    ),
+                    Task(
+                        task_uuid="br-old",
+                        task_name="Crawl BR Data",
+                        task_type=TaskType.CRAWL_DATA,
+                        status=TaskStatus.FAILED,
+                        input_data={},
+                    ),
+                    Task(
+                        task_uuid="br-new",
+                        task_name="Crawl BR Data",
+                        task_type=TaskType.CRAWL_DATA,
+                        status=TaskStatus.FAILED,
+                        input_data={},
+                    ),
+                    Task(
+                        task_uuid="hk",
+                        task_name="Crawl HK Data",
+                        task_type=TaskType.CRAWL_DATA,
+                        status=TaskStatus.FAILED,
+                        input_data={},
+                    ),
+                ]
+            )
+            db.add_all(
+                [
+                    RunStage(
+                        task_uuid="us-old",
+                        stage="collect",
+                        attempt=1,
+                        status="failed",
+                        error="IncompleteRead",
+                        started_at=STARTED,
+                        finished_at=FINISHED,
+                    ),
+                    RunStage(
+                        task_uuid="br-old",
+                        stage="collect",
+                        attempt=1,
+                        status="failed",
+                        error="old file",
+                        started_at=STARTED,
+                        finished_at=FINISHED,
+                    ),
+                    RunStage(
+                        task_uuid="br-new",
+                        stage="collect",
+                        attempt=1,
+                        status="failed",
+                        error="current file",
+                        started_at=FINISHED,
+                        finished_at=FINISHED,
+                    ),
+                    RunStage(
+                        task_uuid="hk",
+                        stage="collect",
+                        attempt=1,
+                        status="failed",
+                        error="live collection failed",
+                        started_at=FINISHED,
+                        finished_at=datetime(2026, 10, 30, 12, 6, tzinfo=timezone.utc),
+                    ),
+                ]
+            )
+            await db.commit()
+            rows = await list_unresolved_failed_stages(db)
+        assert [row["task_uuid"] for row in rows] == ["hk", "br-new"]
+        assert [row["error"] for row in rows] == ["live collection failed", "current file"]
+    finally:
+        await engine.dispose()

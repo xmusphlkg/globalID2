@@ -3,6 +3,35 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.19.5', date: '2026-11-15',
+    titleEn: 'Lighter pages and current update times',
+    titleZh: '更轻的页面与当前更新时间',
+    titleFr: 'Pages plus légères et dates de mise à jour actuelles',
+    summaryEn: 'Pages share one cached loading mark, the situation map centers its loading state, and the footer reads surveillance, situation, and research times from current publications.',
+    summaryZh: '页面共用同一缓存的加载标识，态势地图的加载状态居中显示，页脚从当前发布读取监测、态势和研究的更新时间。',
+    summaryFr: 'Les pages partagent un indicateur de chargement mis en cache, le chargement de la carte de situation est centré, et le pied de page lit les dates de surveillance, de situation et de recherche dans les publications actuelles.',
+    sections: [{
+      kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations',
+      items: [{
+        en: 'The geometric loading mark is one cached image instead of being copied into every page.',
+        zh: '几何加载标识改为单独缓存的图片，不再重复写入每个页面。',
+        fr: 'Le repère géométrique de chargement est une image mise en cache, au lieu d’être recopié dans chaque page.',
+      }, {
+        en: 'The situation loading state is centered on the map.',
+        zh: '态势加载状态在地图中居中显示。',
+        fr: 'L’état de chargement de la situation est centré sur la carte.',
+      }, {
+        en: 'The footer data column is wide enough for each label and date to stay on one line.',
+        zh: '页脚数据栏加宽，使每项标签与日期保持在同一行。',
+        fr: 'La colonne des données du pied de page est assez large pour que chaque libellé et sa date tiennent sur une seule ligne.',
+      }, {
+        en: 'Surveillance, situation, and research times are read from live publication manifests, so a data update does not rebuild pages.',
+        zh: '监测、态势和研究的更新时间直接读取当前发布，因此数据更新不必重新生成页面。',
+        fr: 'Les dates de surveillance, de situation et de recherche sont lues dans les publications actuelles, sans reconstruire les pages après une mise à jour des données.',
+      }],
+    }],
+  },
+  {
     version: '0.19.4', date: '2026-11-14',
     titleEn: 'Research collections and clearer comparison filters',
     titleZh: '恢复文献集合与清晰的对比筛选',

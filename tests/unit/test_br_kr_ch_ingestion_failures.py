@@ -118,10 +118,10 @@ async def test_collect_persistence_failure_is_fatal_with_history(artifact_db, mo
     writer = ArtifactWriter(str(uuid4()), 1, country.lower())
     if failure == "disk":
         original = artifact_module._save_atomic
-        def save(path, payload):
+        def save(path, payload, digest=None):
             if writer.artifacts:
                 raise OSError("artifact disk failure")
-            original(path, payload)
+            original(path, payload, digest)
         monkeypatch.setattr(artifact_module, "_save_atomic", save)
     else:
         original = artifact_module.get_db

@@ -40,6 +40,7 @@ from src.literature.normalization import (
     normalize_pubmed,
 )
 from src.literature.pipeline import _global_country_catalogue
+from src.literature.query_batches import argument_batches
 from src.literature.repository import LiteratureRepository
 from src.literature.transactions import LiteratureCommitError, commit_literature_change
 from src.services.situation_notices.snapshot import latest_situation_snapshot as latest_report_v3
@@ -49,8 +50,6 @@ ROOT = Path(__file__).resolve().parents[2]
 ACTIVE_GAP_STATUSES = {"open", "searching", "review", "no_results", "error"}
 REVIEW_STATUSES = {"review", "confirmed", "rejected"}
 RELATION_LEVELS = {"exact_disease_geography", "disease_context", "candidate"}
-# asyncpg accepts at most 32,767 bound parameters per statement.
-_PROJECTION_LINK_BATCH_SIZE = 10_000
 
 
 def _utc_now() -> datetime:
@@ -208,8 +207,7 @@ class LiteratureGapService:
         article_ids = [article.article_id for article in articles]
         diseases: dict[str, list[dict[str, Any]]] = {article_id: [] for article_id in article_ids}
         countries: dict[str, list[dict[str, Any]]] = {article_id: [] for article_id in article_ids}
-        for start in range(0, len(article_ids), _PROJECTION_LINK_BATCH_SIZE):
-            batch_ids = article_ids[start:start + _PROJECTION_LINK_BATCH_SIZE]
+        for batch_ids in argument_batches(article_ids):
             disease_links = (
                 await db.execute(
                     select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(batch_ids))

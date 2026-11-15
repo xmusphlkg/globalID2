@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <style>
+    .gids-loading__layer-outer,
+    .gids-loading__layer-mid,
+    .gids-loading__layer-inner,
+    .gids-loading__core {
+      transform-box: view-box;
+      transform-origin: 120px 120px;
+    }
+    .gids-loading__layer-outer { animation: gids-loader-spin-cw 14s linear infinite; }
+    .gids-loading__layer-mid { animation: gids-loader-spin-ccw 9.5s ease-in-out infinite; }
+    .gids-loading__layer-inner { animation: gids-loader-spin-cw 7s linear infinite; }
+    .gids-loading__core { animation: gids-loader-core 2.8s ease-in-out infinite; }
+    @keyframes gids-loader-spin-cw { to { transform: rotate(360deg); } }
+    @keyframes gids-loader-spin-ccw {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(-180deg) scale(0.96); }
+    }
+    @keyframes gids-loader-core {
+      0%, 100% { transform: scale(0.93) rotate(10deg); }
+      50% { transform: scale(1.06) rotate(-10deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .gids-loading__layer-outer,
+      .gids-loading__layer-mid,
+      .gids-loading__layer-inner,
+      .gids-loading__core { animation: none; }
+    }
+  </style>
+  <defs>
+    <linearGradient id="gids-loader-grad" x1="75" y1="16" x2="165" y2="224" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2CA0C4" />
+      <stop offset="48%" stop-color="#1B7699" />
+      <stop offset="82%" stop-color="#0F4968" />
+      <stop offset="100%" stop-color="#08283E" />
+    </linearGradient>
+    <mask id="gids-loader-mask">
+      <rect width="240" height="240" fill="white" />
+      <circle cx="114.5" cy="113.5" r="4.8" fill="black" />
+      <circle cx="125.5" cy="114.5" r="2.6" fill="black" />
+      <circle cx="122" cy="123" r="3.4" fill="black" />
+      <circle cx="112.5" cy="122.5" r="1.9" fill="black" />
+      <circle cx="128.5" cy="121" r="1.7" fill="black" />
+    </mask>
+  </defs>
+  <g class="gids-loading__layer-outer" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="120" cy="120" r="96" />
+    <polygon points="120,24 168,36.86 203.14,72 216,120 203.14,168 168,203.14 120,216 72,203.14 36.86,168 24,120 36.86,72 72,36.86" />
+      <line x1="120" y1="24" x2="120" y2="53" />
+      <line x1="120" y1="24" x2="158" y2="54.18" />
+      <line x1="120" y1="24" x2="82" y2="54.18" />
+      <line x1="168" y1="36.86" x2="158" y2="54.18" />
+      <line x1="168" y1="36.86" x2="178.02" y2="86.5" />
+      <line x1="168" y1="36.86" x2="120" y2="53" />
+      <line x1="203.14" y1="72" x2="178.02" y2="86.5" />
+      <line x1="203.14" y1="72" x2="196" y2="120" />
+      <line x1="203.14" y1="72" x2="158" y2="54.18" />
+      <line x1="216" y1="120" x2="196" y2="120" />
+      <line x1="216" y1="120" x2="178.02" y2="153.5" />
+      <line x1="216" y1="120" x2="178.02" y2="86.5" />
+      <line x1="203.14" y1="168" x2="178.02" y2="153.5" />
+      <line x1="203.14" y1="168" x2="158" y2="185.82" />
+      <line x1="203.14" y1="168" x2="196" y2="120" />
+      <line x1="168" y1="203.14" x2="158" y2="185.82" />
+      <line x1="168" y1="203.14" x2="120" y2="187" />
+      <line x1="168" y1="203.14" x2="178.02" y2="153.5" />
+      <line x1="120" y1="216" x2="120" y2="187" />
+      <line x1="120" y1="216" x2="82" y2="185.82" />
+      <line x1="120" y1="216" x2="158" y2="185.82" />
+      <line x1="72" y1="203.14" x2="82" y2="185.82" />
+      <line x1="72" y1="203.14" x2="61.98" y2="153.5" />
+      <line x1="72" y1="203.14" x2="120" y2="187" />
+      <line x1="36.86" y1="168" x2="61.98" y2="153.5" />
+      <line x1="36.86" y1="168" x2="44" y2="120" />
+      <line x1="36.86" y1="168" x2="82" y2="185.82" />
+      <line x1="24" y1="120" x2="44" y2="120" />
+      <line x1="24" y1="120" x2="61.98" y2="86.5" />
+      <line x1="24" y1="120" x2="61.98" y2="153.5" />
+      <line x1="36.86" y1="72" x2="61.98" y2="86.5" />
+      <line x1="36.86" y1="72" x2="82" y2="54.18" />
+      <line x1="36.86" y1="72" x2="44" y2="120" />
+      <line x1="72" y1="36.86" x2="82" y2="54.18" />
+      <line x1="72" y1="36.86" x2="120" y2="53" />
+      <line x1="72" y1="36.86" x2="61.98" y2="86.5" />
+  </g>
+  <g class="gids-loading__layer-mid" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="120,53 158,54.18 178.02,86.5 196,120 178.02,153.5 158,185.82 120,187 82,185.82 61.98,153.5 44,120 61.98,86.5 82,54.18" />
+      <line x1="120" y1="74" x2="120" y2="53" />
+      <line x1="120" y1="74" x2="158" y2="54.18" />
+      <line x1="120" y1="74" x2="82" y2="54.18" />
+      <line x1="159.84" y1="97" x2="178.02" y2="86.5" />
+      <line x1="159.84" y1="97" x2="196" y2="120" />
+      <line x1="159.84" y1="97" x2="158" y2="54.18" />
+      <line x1="159.84" y1="143" x2="178.02" y2="153.5" />
+      <line x1="159.84" y1="143" x2="158" y2="185.82" />
+      <line x1="159.84" y1="143" x2="196" y2="120" />
+      <line x1="120" y1="166" x2="120" y2="187" />
+      <line x1="120" y1="166" x2="82" y2="185.82" />
+      <line x1="120" y1="166" x2="158" y2="185.82" />
+      <line x1="80.16" y1="143" x2="61.98" y2="153.5" />
+      <line x1="80.16" y1="143" x2="44" y2="120" />
+      <line x1="80.16" y1="143" x2="82" y2="185.82" />
+      <line x1="80.16" y1="97" x2="61.98" y2="86.5" />
+      <line x1="80.16" y1="97" x2="82" y2="54.18" />
+      <line x1="80.16" y1="97" x2="44" y2="120" />
+  </g>
+  <g class="gids-loading__layer-inner" stroke="url(#gids-loader-grad)" stroke-width="2.63" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="120,74 159.84,97 159.84,143 120,166 80.16,143 80.16,97" />
+  </g>
+  <g class="gids-loading__layer-outer" fill="url(#gids-loader-grad)">
+      <circle cx="120" cy="24" r="4.32" />
+      <circle cx="168" cy="36.86" r="4.32" />
+      <circle cx="203.14" cy="72" r="4.32" />
+      <circle cx="216" cy="120" r="4.32" />
+      <circle cx="203.14" cy="168" r="4.32" />
+      <circle cx="168" cy="203.14" r="4.32" />
+      <circle cx="120" cy="216" r="4.32" />
+      <circle cx="72" cy="203.14" r="4.32" />
+      <circle cx="36.86" cy="168" r="4.32" />
+      <circle cx="24" cy="120" r="4.32" />
+      <circle cx="36.86" cy="72" r="4.32" />
+      <circle cx="72" cy="36.86" r="4.32" />
+  </g>
+  <g class="gids-loading__layer-mid" fill="url(#gids-loader-grad)">
+      <circle cx="120" cy="53" r="4.08" />
+      <circle cx="158" cy="54.18" r="5.86" />
+      <circle cx="178.02" cy="86.5" r="4.08" />
+      <circle cx="196" cy="120" r="5.86" />
+      <circle cx="178.02" cy="153.5" r="4.08" />
+      <circle cx="158" cy="185.82" r="5.86" />
+      <circle cx="120" cy="187" r="4.08" />
+      <circle cx="82" cy="185.82" r="5.86" />
+      <circle cx="61.98" cy="153.5" r="4.08" />
+      <circle cx="44" cy="120" r="5.86" />
+      <circle cx="61.98" cy="86.5" r="4.08" />
+      <circle cx="82" cy="54.18" r="5.86" />
+  </g>
+  <g class="gids-loading__layer-inner" fill="url(#gids-loader-grad)">
+      <circle cx="120" cy="74" r="4.8" />
+      <circle cx="159.84" cy="97" r="4.8" />
+      <circle cx="159.84" cy="143" r="4.8" />
+      <circle cx="120" cy="166" r="4.8" />
+      <circle cx="80.16" cy="143" r="4.8" />
+      <circle cx="80.16" cy="97" r="4.8" />
+  </g>
+  <g class="gids-loading__core" mask="url(#gids-loader-mask)">
+      <g transform="rotate(0 120 120)">
+        <line x1="120" y1="103" x2="120" y2="89.6" stroke="url(#gids-loader-grad)" stroke-width="3.2" stroke-linecap="round" />
+        <circle cx="120" cy="89.6" r="3.2" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(22.5 120 120)">
+        <line x1="120" y1="103" x2="120" y2="92.4" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="120" cy="92.4" r="2.55" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(45 120 120)">
+        <line x1="120" y1="103" x2="120" y2="89.6" stroke="url(#gids-loader-grad)" stroke-width="3.2" stroke-linecap="round" />
+        <circle cx="120" cy="89.6" r="3.2" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(67.5 120 120)">
+        <line x1="120" y1="103" x2="120" y2="92.4" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="120" cy="92.4" r="2.55" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(90 120 120)">
+        <line x1="120" y1="103" x2="120" y2="89.6" stroke="url(#gids-loader-grad)" stroke-width="3.2" stroke-linecap="round" />
+        <circle cx="120" cy="89.6" r="3.2" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(112.5 120 120)">
+        <line x1="120" y1="103" x2="120" y2="92.4" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="120" cy="92.4" r="2.55" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(135 120 120)">
+        <line x1="120" y1="103" x2="120" y2="89.6" stroke="url(#gids-loader-grad)" stroke-width="3.2" stroke-linecap="round" />
+        <circle cx="120" cy="89.6" r="3.2" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(157.5 120 120)">
+        <line x1="120" y1="103" x2="120" y2="92.4" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="120" cy="92.4" r="2.55" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(180 120 120)">
+        <line x1="120" y1="103" x2="120" y2="89.6" stroke="url(#gids-loader-grad)" stroke-width="3.2" stroke-linecap="round" />
+        <circle cx="120" cy="89.6" r="3.2" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(202.5 120 120)">
+        <line x1="120" y1="103" x2="120" y2="92.4" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="120" cy="92.4" r="2.55" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(225 120 120)">
+        <line x1="120" y1="103" x2="120" y2="89.6" stroke="url(#gids-loader-grad)" stroke-width="3.2" stroke-linecap="round" />
+        <circle cx="120" cy="89.6" r="3.2" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(247.5 120 120)">
+        <line x1="120" y1="103" x2="120" y2="92.4" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="120" cy="92.4" r="2.55" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(270 120 120)">
+        <line x1="120" y1="103" x2="120" y2="89.6" stroke="url(#gids-loader-grad)" stroke-width="3.2" stroke-linecap="round" />
+        <circle cx="120" cy="89.6" r="3.2" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(292.5 120 120)">
+        <line x1="120" y1="103" x2="120" y2="92.4" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="120" cy="92.4" r="2.55" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(315 120 120)">
+        <line x1="120" y1="103" x2="120" y2="89.6" stroke="url(#gids-loader-grad)" stroke-width="3.2" stroke-linecap="round" />
+        <circle cx="120" cy="89.6" r="3.2" fill="url(#gids-loader-grad)" />
+      </g>
+      <g transform="rotate(337.5 120 120)">
+        <line x1="120" y1="103" x2="120" y2="92.4" stroke="url(#gids-loader-grad)" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="120" cy="92.4" r="2.55" fill="url(#gids-loader-grad)" />
+      </g>
+    <circle cx="120" cy="120" r="19.5" fill="url(#gids-loader-grad)" />
+  </g>
+</svg>

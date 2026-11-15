@@ -57,7 +57,6 @@ export function Sidebar({
   const overview = useControlPlaneOverview();
   const data = overview.data;
   const activeTasks = ACTIVE_TASK_STATUSES.reduce((sum, status) => sum + (data?.tasks[status] ?? 0), 0);
-  const failedTasks = data?.tasks.failed ?? 0;
   const actionItems = data?.action_items.length ?? 0;
   const liveServices = data?.runtime.services.length ?? 0;
   const apiLive = data?.runtime.services.some((service) => service.service === "api") ?? false;
@@ -66,7 +65,7 @@ export function Sidebar({
   const schedulesTotal = data?.schedules.total ?? 0;
   const resources = data?.system_resources;
   const proxyLabel = resources?.proxy?.lookup_status === "unavailable" || !resources?.proxy ? t(lang, "cc_unavailable") : proxyLocationLabel(resources.proxy);
-  const hasAttention = overview.isError || actionItems > 0 || failedTasks > 0 || !runtimeAvailable || !apiLive;
+  const hasAttention = overview.isError || actionItems > 0 || !runtimeAvailable || !apiLive;
   const statusLabel = overview.isLoading
     ? t(lang, "cc_checking")
     : hasAttention
@@ -79,7 +78,7 @@ export function Sidebar({
     : overview.isError
       ? t(lang, "cc_unavailable")
       : hasAttention
-        ? `${compactNumber(actionItems || failedTasks || 1)} ${t(lang, "cc_review_count")}`
+        ? `${compactNumber(actionItems || 1)} ${t(lang, "cc_review_count")}`
         : activeTasks > 0
           ? `${compactNumber(activeTasks)} ${t(lang, "cc_active_count")}`
           : `API · ${compactNumber(liveServices)} ${t(lang, "cc_service_count")} · ${compactNumber(schedulesEnabled)}/${compactNumber(schedulesTotal)}`;

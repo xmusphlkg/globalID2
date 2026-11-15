@@ -4,6 +4,15 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.19.5] - 2026-11-15
+
+### Improved
+
+- Serve the geometric loading mark as one cached image instead of copying it into every page.
+- Center the situation loading state on the map.
+- Widen the footer data column so each label and date stay on one line.
+- Read surveillance, situation, and research update times from live publication manifests, so a data update does not rebuild pages.
+
 ## [0.19.4] - 2026-11-14
 
 ### Fixed

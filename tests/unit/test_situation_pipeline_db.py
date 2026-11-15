@@ -712,8 +712,8 @@ async def test_runner_waits_for_extraction_and_records_partial_failure_before_st
         assert stages["organize"].metrics["failed"] == 1
         assert stages["organize"].metrics["published"] == 1
         markers = list((await session.execute(select(PublishDirty))).scalars())
-        assert len(markers) >= 2
-        assert all(row.source_task_uuid == task_uuid for row in markers)
+        assert len(markers) == 1
+        assert markers[0].source_task_uuid == task_uuid
 
     # Retrying the same parent only processes its failed report, with a new stage attempt.
     async with database_module.get_db() as session:

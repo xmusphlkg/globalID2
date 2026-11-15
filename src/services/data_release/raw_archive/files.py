@@ -46,7 +46,11 @@ def iter_source_files(source_dir: Path) -> Iterator[tuple[Path, Path]]:
     files: list[tuple[Path, Path]] = []
     for candidate in source.rglob("*"):
         relative = candidate.relative_to(source)
-        if "_auth" in relative.parts or relative.parts[0] == "ai":
+        # `.cas` holds extra names for bytes already stored under task paths.
+        if (
+            "_auth" in relative.parts
+            or relative.parts[0] in {"ai", ".cas"}
+        ):
             continue
         if candidate.is_symlink():
             raise RawArchiveError(f"Symlinks are forbidden in raw archives: {candidate}")

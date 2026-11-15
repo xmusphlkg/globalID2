@@ -21,11 +21,16 @@ def build_research_papers_manifest(root: Path, *, origin: str, build: dict[str, 
                                    index: ArtifactIndex | None = None) -> dict:
     root = Path(root).resolve()
     inputs = build.get('inputs')
-    if build.get('scope') == 'collections':
-        from .literature_projection import verify_snapshot_collections
-        verify_snapshot_collections(root, build)
-        # The current complete collection output owns this manifest. No old
-        # article HTML receipt can enter a structured snapshot publication.
+    shell = build.get('scope') == 'shell'
+    if build.get('scope') in {'collections', 'shell'}:
+        if shell:
+            from .literature_projection import verify_snapshot_shell
+            verify_snapshot_shell(root, build)
+        else:
+            from .literature_projection import verify_snapshot_collections
+            verify_snapshot_collections(root, build)
+        # The current complete collection output owns this manifest. Article
+        # HTML is a shell compile input, not a published page receipt.
         inputs = {'schema': 1, 'articles': {}}
         build = {**build, 'inputs': inputs, 'reused': []}
     if (build.get('schema') != 1 or not isinstance(inputs, dict) or inputs.get('schema') != 1
@@ -42,7 +47,7 @@ def build_research_papers_manifest(root: Path, *, origin: str, build: dict[str, 
     index = index or ArtifactIndex(root)
     files, reused = [], 0
     for path, local in artifact_files(root):
-        if path == 'papers-manifest.json':
+        if path == 'papers-manifest.json' or (shell and ARTICLE.fullmatch(path)):
             continue
         match = ARTICLE.fullmatch(path) or CARD.fullmatch(path)
         slug = match[1] if match else None

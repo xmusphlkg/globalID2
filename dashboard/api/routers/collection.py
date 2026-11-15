@@ -64,11 +64,26 @@ def public_stage_error(error: str | None, limit: int = 280) -> str | None:
     return line or None
 
 
-async def list_unresolved_failed_stages(db: AsyncSession, limit: int = 20) -> list[dict]:
-    """Latest attempt of a stage that is still failed on a task that is still failed.
+async def pending_scope_counts(db: AsyncSession) -> dict[str, int]:
+    """Unpublished scopes, not one count per repeated marker of the same scope."""
+    rows = (
+        await db.execute(
+            select(
+                PublishDirty.line,
+                func.count(func.distinct(PublishDirty.scope_key)),
+            )
+            .where(PublishDirty.published_at.is_(None))
+            .group_by(PublishDirty.line)
+        )
+    ).all()
+    return {str(line): int(count or 0) for line, count in rows}
 
-    Recovered attempts, completed or cancelled tasks, and stage rows with no task
-    are omitted. The overview otherwise lists historical noise as current work.
+
+async def list_unresolved_failed_stages(db: AsyncSession, limit: int = 20) -> list[dict]:
+    """Latest failed stage of the newest task for each job name.
+
+    A newer run of the same job replaces older failures in this list. Recovered
+    attempts, completed or cancelled tasks, and stage rows with no task are omitted.
     """
     latest_attempt = (
         select(
@@ -78,6 +93,9 @@ async def list_unresolved_failed_stages(db: AsyncSession, limit: int = 20) -> li
         )
         .group_by(RunStage.task_uuid, RunStage.stage)
         .subquery()
+    )
+    latest_task = (
+        select(func.max(Task.id).label("id")).group_by(Task.task_name).subquery()
     )
     rows = (
         await db.execute(
@@ -91,6 +109,7 @@ async def list_unresolved_failed_stages(db: AsyncSession, limit: int = 20) -> li
                 ),
             )
             .join(Task, Task.task_uuid == RunStage.task_uuid)
+            .join(latest_task, latest_task.c.id == Task.id)
             .where(RunStage.status == "failed")
             .where(Task.status == TaskStatus.FAILED)
             .order_by(RunStage.finished_at.desc(), RunStage.started_at.desc())
@@ -126,6 +145,7 @@ async def lines(db: AsyncSession = DB_DEPENDENCY):
         ScheduleOut.model_validate(item).model_dump()
         for item in await schedule_application_service.list()
     ]
+    pending_counts = await pending_scope_counts(db)
     result = []
     for line in LINES:
         kind = {
@@ -152,13 +172,6 @@ async def lines(db: AsyncSession = DB_DEPENDENCY):
                     .limit(1)
                 )
             ).scalar_one_or_none()
-        pending = (
-            await db.execute(
-                select(func.count())
-                .select_from(PublishDirty)
-                .where(PublishDirty.line == line, PublishDirty.published_at.is_(None))
-            )
-        ).scalar_one()
         dates = [item["next_run_at"] for item in related if item.get("next_run_at")]
         result.append(
             LineOut(
@@ -168,7 +181,7 @@ async def lines(db: AsyncSession = DB_DEPENDENCY):
                 latest_task_uuid=task.task_uuid if task else None,
                 latest_stage=stage.stage if stage else None,
                 latest_stage_status=stage.status if stage else None,
-                pending_publish_count=pending,
+                pending_publish_count=pending_counts.get(line, 0),
             )
         )
     return DataResponse(data=result)
@@ -186,15 +199,7 @@ async def summary(db: AsyncSession = DB_DEPENDENCY):
             )
         ).all()
     )
-    pending = dict(
-        (
-            await db.execute(
-                select(PublishDirty.line, func.count())
-                .where(PublishDirty.published_at.is_(None))
-                .group_by(PublishDirty.line)
-            )
-        ).all()
-    )
+    pending = await pending_scope_counts(db)
     schedules = await schedule_application_service.list()
     from datetime import datetime, timezone
 
