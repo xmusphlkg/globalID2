@@ -573,6 +573,8 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "cadence": "monthly",
             "final_ftp_url": "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/FINAIS/",
             "prelim_ftp_url": "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/",
+            "file_index_cache_ttl_seconds": 86400,
+            "download_revalidate_seconds": 2592000,
             "full_history_start_year": 2000,
             "refresh_recent_months": 3,
             "history_batch_months": 120,

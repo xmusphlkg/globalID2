@@ -560,6 +560,7 @@
       "refresh_recent_months": 3,
       "history_batch_months": 120,
       "file_index_cache_ttl_seconds": 86400,
+      "download_revalidate_seconds": 2592000,
       "max_workers": 6,
       "request_delay_seconds": 0.0,
       "max_retries": 3,

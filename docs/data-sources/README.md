@@ -28,7 +28,7 @@ database import have produced a verified site-data snapshot.
 | Code | Country or region | Primary official source | Cadence | Current ingestion pattern |
 | --- | --- | --- | --- | --- |
 | AU | Australia | [Australian NNDSS](https://www.health.gov.au/topics/national-notifiable-diseases-surveillance-system-nndss) | Monthly | Microsoft Power BI data aggregated to national totals. |
-| BR | Brazil | [DATASUS / SINAN](http://siab.datasus.gov.br/DATASUS/index.php?acao=41&area=0901&item=1) | Monthly | Public DBC notification files from final and preliminary FTP collections. |
+| BR | Brazil | [DATASUS / SINAN](http://siab.datasus.gov.br/DATASUS/index.php?acao=41&area=0901&item=1) | Monthly | Public DBC notification files from final and preliminary FTP collections; [incremental refresh and cache policy](BR_SINAN_INCREMENTAL.md). |
 | CA | Canada | [Canadian Notifiable Disease Surveillance System](https://diseases.canada.ca/notifiable/extract-dataset) | Annual | National reported counts for 1924–2023 from the current PHAC CNDSS extract; the national aggregate is not an all-jurisdiction completeness claim because disease/year inclusion varies, including unavailable Manitoba data for 44 disease contracts in 2023. Null cells remain unknown and explicit zeroes are retained under the Open Government Licence – Canada. |
 | CH | Switzerland | [FOPH/BAG IDD](https://www.idd.bag.admin.ch/en/portal-data) | Weekly | Mandatory-reporting REST data normalized to national case rows. |
 | CN | China | [China CDC Weekly](https://weekly.chinacdc.cn) and [National Disease Control and Prevention Administration](https://www.ndcpa.gov.cn) | Monthly, with supplementary sources | National notifiable-disease reports plus supplementary official and literature discovery sources. |

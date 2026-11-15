@@ -8,20 +8,31 @@ from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from src.data.crawlers.br import BrazilSINANCrawler, SINANFile, _deduplicate_sinan_file_aliases
+from src.data.crawlers.br import (
+    BrazilSINANCrawler,
+    SINANFile,
+    _deduplicate_sinan_file_aliases,
+)
+from src.data.crawlers.br_cache import SINANContentCache
 from src.data.processors.br import BRMonthlyUpdater, BRUpdateFetchResult
 from src.data.processors.br_subdivisions import (
-    EXCLUDED_STATE_PREFIXES, STATE_CODES, aggregate_residence_file, coalesce_source_rows,
+    EXCLUDED_STATE_PREFIXES,
+    STATE_CODES,
+    aggregate_residence_file,
+    coalesce_source_rows,
 )
 from src.services.ingestion.artifacts import read_artifact
 from src.services.ingestion.snapshot_merge import merge_snapshot_rows
 
+STATE_PARSER_VERSION = "residence-monthly-v1"
 
-async def collect(writer, *, source, months, history_csv, start_year=None, country_code="BR"):
+
+async def collect(writer, *, source, months, history_csv, start_year=None, country_code="BR", force=False):
     subdivision = country_code != "BR"
     if subdivision and country_code not in {f"BR-{code}" for code in STATE_CODES.values()}:
         raise ValueError(f"Unsupported Brazil residence state: {country_code}")
     crawler = BrazilSINANCrawler(save_raw=False)
+    crawler.force_refresh = force
     target_years = {year for year, _ in months}
     if start_year:
         target_years = {year for year in target_years if year >= start_year}
@@ -34,6 +45,8 @@ async def collect(writer, *, source, months, history_csv, start_year=None, count
             try:
                 index = await asyncio.to_thread(crawler.fetch_file_index)
             except Exception:
+                if force:
+                    raise
                 if not any(a.kind == "history_csv" for a in writer.artifacts):
                     raise
                 index = []
@@ -44,23 +57,22 @@ async def collect(writer, *, source, months, history_csv, start_year=None, count
         selected = [item for item in _deduplicate_sinan_file_aliases(index) if item.year in target_years and item.prefix in requested]
         if subdivision:
             selected = [item for item in selected if item.prefix not in EXCLUDED_STATE_PREFIXES]
-        with tempfile.TemporaryDirectory(prefix="globalid-sinan-collect-") as temporary:
-            for item in selected:
-                try:
-                    path = await asyncio.to_thread(crawler._download_file, item, Path(temporary))
-                except Exception as exc:
-                    if subdivision:
-                        raise
-                    cause = f"{type(exc).__name__}: {exc}"
-                    if len(cause) > 240:
-                        cause = cause[:239].rstrip() + "…"
-                    raise RuntimeError(
-                        f"[BR-SINAN] Failed to download {item.filename}; "
-                        f"refusing to aggregate an incomplete file set ({cause})"
-                    ) from exc
-                metadata = asdict(item)
-                metadata["modified_at"] = item.modified_at.isoformat() if item.modified_at else None
-                await writer.write(await asyncio.to_thread(path.read_bytes), source_url=item.url, kind="sinan_dbc", metadata={"file": metadata})
+        for item in selected:
+            try:
+                path = await asyncio.to_thread(crawler._download_file, item, crawler.download_cache_dir(item))
+            except Exception as exc:
+                if subdivision:
+                    raise
+                cause = f"{type(exc).__name__}: {exc}"
+                if len(cause) > 240:
+                    cause = cause[:239].rstrip() + "…"
+                raise RuntimeError(
+                    f"[BR-SINAN] Failed to download {item.filename}; "
+                    f"refusing to aggregate an incomplete file set ({cause})"
+                ) from exc
+            metadata = asdict(item)
+            metadata["modified_at"] = item.modified_at.isoformat() if item.modified_at else None
+            await writer.write(await asyncio.to_thread(path.read_bytes), source_url=item.url, kind="sinan_dbc", metadata={"file": metadata})
         if not any(a.kind in {"sinan_dbc", "history_csv"} for a in writer.artifacts):
             raise RuntimeError("[BR-SINAN] No SINAN files matched requested months/prefixes")
         return writer.artifacts
@@ -91,23 +103,24 @@ def _organize_process(request):
     )
 
 
-def organize(artifacts, *, updater, source, months, history_csv, start_year=None, country_code="BR", parser_workers=None):
+def organize(artifacts, *, updater, source, months, history_csv, start_year=None, country_code="BR", parser_workers=None, force=False):
     if updater.country_code != "BR":
         return _organize_subdivision(
             artifacts, updater=updater, months=months, history_csv=history_csv,
             country_code=updater.country_code,
+            force=force,
         )
     crawler = BrazilSINANCrawler(save_raw=False)
     if parser_workers is not None:
         # One CPU parser per isolated process; multiple Python parsing threads
         # contend for that process's GIL without increasing throughput.
         crawler.max_workers = parser_workers
-    files, paths, prior = [], {}, []
+    files, paths, digests, prior = [], {}, {}, []
     logs = []
     try:
         with tempfile.TemporaryDirectory(prefix="globalid-sinan-organize-") as temporary:
             root = Path(temporary)
-            for index, artifact in enumerate(artifacts):
+            for artifact in artifacts:
                 if artifact.kind == "history_csv":
                     path = root / "history.csv"
                     path.write_bytes(read_artifact(artifact))
@@ -119,15 +132,17 @@ def organize(artifacts, *, updater, source, months, history_csv, start_year=None
                     metadata = dict(artifact.metadata_["file"])
                     metadata["modified_at"] = datetime.fromisoformat(metadata["modified_at"]) if metadata.get("modified_at") else None
                     item = SINANFile(**metadata)
-                    path = root / f"{index}-{Path(item.filename).name}"
-                    path.write_bytes(read_artifact(artifact))
+                    # Validate immutable run bytes once; decompression can read
+                    # that artifact directly without copying a large DBC again.
+                    read_artifact(artifact)
                     files.append(item)
-                    paths[item.url] = path
+                    paths[item.url] = Path(artifact.relative_path)
+                    digests[item.url] = artifact.sha256
             live = []
             live_error = None
             if files:
                 try:
-                    summary = crawler.crawl_monthly_national(root / "output.csv", months=months, prefixes=updater._prefixes_from_source(source), write_csv=False, file_index=files, collected_files=paths)
+                    summary = crawler.crawl_monthly_national(root / "output.csv", months=months, prefixes=updater._prefixes_from_source(source), write_csv=False, file_index=files, collected_files=paths, collected_digests=digests, use_content_cache=not force)
                     live = updater._filter_rows_for_months(summary.rows, months)
                 except Exception as exc:
                     live_error = exc
@@ -145,11 +160,14 @@ def organize(artifacts, *, updater, source, months, history_csv, start_year=None
         crawler.session.close()
 
 
-def _organize_subdivision(artifacts, *, updater, months, history_csv, country_code):
+def _organize_subdivision(artifacts, *, updater, months, history_csv, country_code, force=False):
     """Read only captured bytes; never reuse a national snapshot for a state."""
     if country_code not in {f"BR-{code}" for code in STATE_CODES.values()}:
         raise ValueError(f"Unsupported Brazil residence state: {country_code}")
     rows, logs, audit = [], [], []
+    crawler = BrazilSINANCrawler()
+    cache_dir = crawler.cache_dir / "content"
+    crawler.session.close()
     with tempfile.TemporaryDirectory(prefix="globalid-sinan-state-organize-") as temporary:
         root = Path(temporary)
         for index, artifact in enumerate(artifacts):
@@ -164,12 +182,21 @@ def _organize_subdivision(artifacts, *, updater, months, history_csv, country_co
                 continue
             dbc = root / f"{index}.dbc"
             dbf = root / f"{index}.dbf"
-            dbc.write_bytes(read_artifact(artifact))
-            BrazilSINANCrawler._decompress_to_dbf(dbc, dbf)
-            try:
-                result = aggregate_residence_file(item, dbf, months=set(months))
-            finally:
-                dbf.unlink(missing_ok=True)
+            # Always verify captured bytes before accepting a derived cache.
+            payload = read_artifact(artifact)
+            cache = SINANContentCache(cache_dir, item, artifact.sha256,
+                                      version=STATE_PARSER_VERSION, scope=sorted(set(months)))
+            result = cache.read() if not force else None
+            if result is None:
+                dbc.write_bytes(payload)
+                BrazilSINANCrawler._decompress_to_dbf(dbc, dbf)
+                try:
+                    result = aggregate_residence_file(item, dbf, months=set(months))
+                finally:
+                    dbf.unlink(missing_ok=True)
+                cache.write(result)
+            else:
+                logs.append(f"[cache] residence parse cache hit: {item.filename}")
             rows.extend(row for row in result["rows"] if row["CountryCode"] == country_code)
             audit.append({"file": item.filename, **{key: value for key, value in result.items() if key != "rows"}})
             logs.append(

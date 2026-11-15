@@ -28,29 +28,39 @@ from src.data.crawlers.br import (
     BrazilSINANCrawler,
     _deduplicate_sinan_file_aliases,
 )
+from src.data.crawlers.br_cache import SINANContentCache
 from src.data.processors.br import BRMonthlyUpdater, BRUpdateImportResult
 from src.data.processors.br_subdivisions import (
-    STATE_CODES, coalesce_source_rows, projected_dbf_records, record_month, residence_state,
+    STATE_CODES,
+    coalesce_source_rows,
+    projected_dbf_records,
+    record_month,
+    residence_state,
 )
 
 CACHE_VERSION = "residence-notification-month-v2"
 
 
-def aggregate_file(item):
+def aggregate_file(item, *, force=False):
     crawler = BrazilSINANCrawler(save_raw=True, raw_dir=ROOT / "data/raw/br")
+    crawler.force_refresh = force
+    try:
+        return _aggregate_file(crawler, item, force=force)
+    finally:
+        crawler.session.close()
+
+
+def _aggregate_file(crawler, item, *, force=False):
     signature = crawler._file_cache_signature(item)
-    cache = ROOT / "data/cache/br/state_aggregates" / (signature + ".json")
-    if cache.exists():
-        payload = json.loads(cache.read_text())
-        compatible = payload.get("version") == CACHE_VERSION or (
-            payload.get("version") == "residence-notification-month-v1"
-            and not payload.get("date_fields", {}).get("year_only_fallback", 0)
-        )
-        if compatible and payload.get("signature") == signature:
-            return payload
-    dbc = crawler._download_file(
-        item, crawler.raw_dir / item.dataset_status / str(item.year)
+    dbc = crawler._download_file(item, crawler.download_cache_dir(item))
+    with dbc.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    cache = SINANContentCache(
+        crawler.cache_dir / "content", item, digest, version=CACHE_VERSION,
     )
+    payload = cache.read() if not force else None
+    if payload is not None:
+        return payload
     counts, months, unknown, date_fields = Counter(), Counter(), Counter(), Counter()
     undated = 0
     with tempfile.TemporaryDirectory(prefix="globalid_br_states_") as directory:
@@ -70,17 +80,21 @@ def aggregate_file(item):
                 else:
                     counts[(state, year, month)] += 1
         except LookupError:
-            return {
+            payload = {
                 "file": item.filename,
                 "excluded": "no residence geography fields",
                 "rows": [],
             }
+            cache.write(payload)
+            return payload
     if not counts:
-        return {
+        payload = {
             "file": item.filename,
             "excluded": "no valid residence state observations",
             "rows": [],
         }
+        cache.write(payload)
+        return payload
     rows = []
     for year, month in sorted(months):
         for state in sorted("BR-" + s for s in STATE_CODES.values()):
@@ -111,7 +125,7 @@ def aggregate_file(item):
         "signature": signature,
         "file": item.filename,
         "source_url": item.url,
-        "sha256": hashlib.sha256(dbc.read_bytes()).hexdigest(),
+        "sha256": digest,
         "record_count": sum(months.values()) + undated,
         "dated_record_count": sum(months.values()),
         "assigned_count": sum(counts.values()),
@@ -120,10 +134,7 @@ def aggregate_file(item):
         "date_fields": dict(date_fields),
         "rows": rows,
     }
-    cache.parent.mkdir(parents=True, exist_ok=True)
-    temporary = cache.with_suffix(".tmp")
-    temporary.write_text(json.dumps(payload) + "\n")
-    temporary.replace(cache)
+    cache.write(payload)
     return payload
 
 
@@ -207,18 +218,25 @@ def main():
     parser.add_argument("--recent-years", type=int)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--prefixes", nargs="+")
+    parser.add_argument("--force", action="store_true", help="Refresh directory listings, redownload and reparse selected files")
     args = parser.parse_args()
     if args.export and not args.apply:
         parser.error("--export requires --apply")
+    if args.recent_years is not None and args.recent_years < 1:
+        parser.error("--recent-years must be positive")
     today = datetime.now(ZoneInfo("America/Sao_Paulo")).date()
     start = today.year - args.recent_years + 1 if args.recent_years else args.start_year
     crawler = BrazilSINANCrawler(save_raw=True, raw_dir=ROOT / "data/raw/br")
-    index = _deduplicate_sinan_file_aliases(crawler.fetch_file_index())
+    crawler.force_refresh = args.force
+    try:
+        index = _deduplicate_sinan_file_aliases(crawler.fetch_file_index())
+    finally:
+        crawler.session.close()
     # NTRA is a survey aggregate, SDTA counts outbreak rows, not individual cases.
     items = [
         i
         for i in index
-        if args.start_year <= i.year <= today.year
+        if start <= i.year <= today.year
         and i.prefix not in {"NTRA", "SDTA"}
         and (not args.prefixes or i.prefix in args.prefixes)
     ]
@@ -228,7 +246,7 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     reports, failures, rows = [], [], []
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        futures = {pool.submit(aggregate_file, item): item for item in items}
+        futures = {pool.submit(aggregate_file, item, force=args.force): item for item in items}
         for n, future in enumerate(as_completed(futures), 1):
             item = futures[future]
             try:

@@ -1046,7 +1046,7 @@ class CrawlService:
         boundary = history_start_year(task, updater, start_year)
         months = await plan_months(task, updater, force=force, fill_missing=fill_missing, start_year=boundary)
         months = updater._resolve_requested_months(months)
-        options = {"months": months, "history_csv": updater.output_csv, "start_year": boundary, "country_code": updater.country_code}
+        options = {"months": months, "history_csv": updater.output_csv, "start_year": boundary, "country_code": updater.country_code, "force": force}
         return await run_surveillance(self, task=task, updater=updater, connector=br, source=source, force=force, process=process, connector_options=options)
 
 
