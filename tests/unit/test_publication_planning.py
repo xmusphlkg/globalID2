@@ -1,6 +1,8 @@
 """Preview honesty, source dependency boundaries and cached account usage."""
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 from types import SimpleNamespace
@@ -45,6 +47,63 @@ def config(**kwargs):
 def plan(root, **kwargs):
     return planning.create_plan(root=root, data_dir=root / "data", job_id="site-release", config=config(),
                                 now=NOW, dirty_rows=kwargs.pop("dirty_rows", []), **kwargs)
+
+
+def simulate_stat_change_during_hash(monkeypatch, token, field):
+    """Model one metadata change exactly between the two inventory checks."""
+    original = token.stat()
+    values = list(original)
+    positions = {"st_ino": 1, "st_dev": 2, "st_size": 6,
+                 "st_atime_ns": 7, "st_mtime_ns": 8, "st_ctime_ns": 9}
+    times = {name: getattr(original, name) for name in (
+        "st_atime", "st_mtime", "st_ctime", "st_atime_ns", "st_mtime_ns", "st_ctime_ns")}
+    if field.endswith("_ns"):
+        times[field] += 1_000_000_000 if field == "st_atime_ns" else 1
+        seconds = field.removesuffix("_ns")
+        times[seconds] = times[field] / 1_000_000_000
+        values[positions[field]] = times[seconds]
+    else:
+        values[positions[field]] += 1
+    changed = os.stat_result(values, times)
+    assert getattr(changed, field) != getattr(original, field)
+    hashed = False
+    real_stat, real_digest = Path.stat, planning.hashlib.file_digest
+
+    def stat(path, *args, **kwargs):
+        if path == token:
+            return changed if hashed else original
+        return real_stat(path, *args, **kwargs)
+
+    def digest(stream, *args, **kwargs):
+        nonlocal hashed
+        result = real_digest(stream, *args, **kwargs)
+        if stream.name == str(token):
+            hashed = True
+        return result
+
+    monkeypatch.setattr(Path, "stat", stat)
+    monkeypatch.setattr(planning.hashlib, "file_digest", digest)
+
+
+def test_source_read_atime_change_preserves_theme_plan(repository, monkeypatch):
+    token = repository / "shared/site-theme-v1.json"
+    payload = b'{"color":"red"}'
+    token.write_bytes(payload)
+    simulate_stat_change_during_hash(monkeypatch, token, "st_atime_ns")
+    result = plan(repository)
+    assert result["kind"] == "theme"
+    assert "source_inventory_unstable" not in result["warnings"]
+    assert planning.inspect_source(repository)["fingerprints"]["shared/site-theme-v1.json"] == hashlib.sha256(payload).hexdigest()
+
+
+@pytest.mark.parametrize("field", ["st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns"])
+def test_source_identity_change_during_hash_still_blocks_narrow_plan(repository, monkeypatch, field):
+    token = repository / "shared/site-theme-v1.json"
+    token.write_text('{"color":"red"}')
+    simulate_stat_change_during_hash(monkeypatch, token, field)
+    result = plan(repository)
+    assert result["kind"] == "full"
+    assert "source_inventory_unstable" in result["warnings"]
 
 
 @pytest.mark.parametrize("path,kind", [

@@ -98,3 +98,69 @@ async def test_compact_history_avoids_json_decode_and_keeps_stored_provenance():
             await db.rollback()
     finally:
         await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("frequency", "predecessor"),
+    [
+        ("weekly", datetime(2011, 12, 25, tzinfo=timezone.utc)),
+        ("monthly", datetime(2011, 12, 1, tzinfo=timezone.utc)),
+        ("annual", datetime(2011, 1, 1, tzinfo=timezone.utc)),
+    ],
+)
+async def test_relevant_history_keeps_preceding_period_and_same_identity(
+    frequency, predecessor,
+):
+    engine = create_async_engine("sqlite+aiosqlite://")
+    table = DiseaseSeriesObservation.__table__
+    current = datetime(2012, 1, 1, tzinfo=timezone.utc)
+    distant = datetime(2007, 1, 1, tzinfo=timezone.utc)
+    incoming = []
+    stored = []
+    for number in range(5):
+        code = f"HOLD_CO_EXAMPLE_{number}"
+        for when in (distant, predecessor, current):
+            stored.append({
+                "time": when, "series_code": code,
+                "geography_key": "country:CO:municipality:11001",
+                "dimension_key": "all", "value": 100, "unit": "count",
+                "suppressed": False, "quality_status": "raw",
+                "metadata": {"frequency": frequency},
+            })
+        incoming.append({
+            **stored[-1], "value": 0,
+        })
+    policy = SeriesObservationQualityPolicy(
+        mode="fail_closed", history_lookback_days=20_000,
+    )
+    try:
+        async with engine.begin() as connection:
+            await connection.execute(CreateTable(table))
+            await connection.execute(insert(table), stored)
+        async with async_sessionmaker(engine)() as db:
+            full = await SeriesObservationStore._load_recent_history(
+                db, incoming, policy,
+            )
+            bounded = await SeriesObservationStore._load_recent_history(
+                db, incoming, policy, relevant_periods_only=True,
+            )
+        assert len(full) == 15
+        assert len(bounded) == 10
+        assert {row["time"].replace(tzinfo=timezone.utc) for row in bounded} == {
+            predecessor, current,
+        }
+        original_report = SeriesObservationStore.assess_quality(
+            incoming, country_code="CO", existing_observations=full, policy=policy,
+        )
+        bounded_report = SeriesObservationStore.assess_quality(
+            incoming, country_code="CO", existing_observations=bounded, policy=policy,
+        )
+        assert bounded_report.issues == original_report.issues
+        assert policy.blocks(bounded_report)
+        assert {issue.code for issue in bounded_report.issues} >= {
+            "cross_series_zero_overwrites_positive",
+            "single_series_positive_overwritten_by_zero",
+        }
+    finally:
+        await engine.dispose()

@@ -1,0 +1,8 @@
+......................................                                   [100%]
+=============================== warnings summary ===============================
+tests/contract/test_legacy_projection_contracts.py: 189 warnings
+  /home/likangguo/globalID/globalID2/venv/lib/python3.13/site-packages/aiosqlite/core.py:63: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+    result = function()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+38 passed, 189 warnings in 6.52s

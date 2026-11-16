@@ -10,6 +10,61 @@ from src.core.source_scopes import scope_display_label
 from src.generation.site_data_views import resolve_country_display_names
 
 SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
+    ('ZA', 'za_nicd_nmc'): {'label': 'South Africa NICD NMC',
+ 'url': 'https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/',
+ 'type': 'official_reports',
+ 'cadence': 'monthly',
+ 'description': 'Official source-native surveillance indicators; preserve reporting periods, measures, '
+                'definitions and geography separately. Archive and parser gaps remain audited. Public '
+                'release awaits verified mappings and snapshots.',
+ 'description_zh': '官方源原生监测指标；统计时期、指标、定义及地域分别保留。原档及解析缺口保留审计，公开支持待映射和快照核验。'},
+    ('ID', 'id_kemkes_profile'): {'label': 'Indonesia Ministry of Health Annual Health Profile',
+ 'url': 'https://kemkes.go.id/id/profil-kesehatan-indonesia-2024',
+ 'type': 'official_reports',
+ 'cadence': 'annual',
+ 'description': 'Official source-native surveillance indicators; preserve reporting periods, measures, '
+                'definitions and geography separately. Archive and parser gaps remain audited. Public '
+                'release awaits verified mappings and snapshots.',
+ 'description_zh': '官方源原生监测指标；统计时期、指标、定义及地域分别保留。原档及解析缺口保留审计，公开支持待映射和快照核验。'},
+    ('MX', 'mx_dge_annual'): {'label': 'Mexico DGE Annual Morbidity',
+ 'url': 'https://epidemiologia.salud.gob.mx/anuario/html/index.html',
+ 'type': 'official_reports',
+ 'cadence': 'annual',
+ 'description': 'Official source-native surveillance indicators; preserve reporting periods, measures, '
+                'definitions and geography separately. Archive and parser gaps remain audited. Public '
+                'release awaits verified mappings and snapshots.',
+ 'description_zh': '官方源原生监测指标；统计时期、指标、定义及地域分别保留。原档及解析缺口保留审计，公开支持待映射和快照核验。'},
+    ('NG', 'ncdc_surveillance'): {'label': 'Nigeria NCDC Surveillance',
+     'url': 'https://ncdc.gov.ng/reports/weekly',
+     'type': 'official_pdf',
+     'cadence': 'weekly',
+     'description': 'NCDC weekly reports and disease-specific situation reports. Suspected, confirmed, deaths '
+                    'and cumulative snapshots retain separate source identities; missing or unreadable reports '
+                    'remain coverage gaps.',
+     'description_zh': 'NCDC 周报与各病种情况报告。疑似、确诊、死亡及累计快照保留独立身份；未发布或无法读取的报告保留为覆盖缺口。'},
+    ('KH', 'kh_camewarn_weekly'): {'label': 'Cambodia CDC CamEWARN Weekly Surveillance',
+     'url': 'https://cdcmoh.gov.kh/surveillance/camewarn',
+     'type': 'official_pdf',
+     'cadence': 'weekly',
+     'description': 'CamEWARN disease and syndrome surveillance. Historical numeric matrices are preserved with '
+                    'the report calendar. Chart-only values remain unknown; absent weeks are not zero.',
+     'description_zh': 'CamEWARN 疾病与综合征监测。历史数值矩阵按报告日历保留；仅有图表的数值保持未知，缺失周不代表零。'},
+    ('AR', 'ar_ben_weekly'): {'label': 'Argentina National Epidemiological Bulletin (BEN)',
+     'url': 'https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional',
+     'type': 'official_pdf',
+     'cadence': 'weekly',
+     'description': 'National BEN surveillance tables, retaining source classifications, cumulative intervals, '
+                    'clinical groupings and laboratory measures separately. Cumulative counts are not weekly '
+                    'incidence.',
+     'description_zh': 'BEN 国家监测表按源分类分别保留累计区间、临床分组和实验室指标；累计数不能视为每周新增。'},
+    ('PE', 'pe_cdc_weekly'): {'label': 'Peru CDC Epidemiological Bulletin',
+     'url': 'https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/',
+     'type': 'official_pdf',
+     'cadence': 'weekly',
+     'description': 'CDC Perú historical epidemiological bulletins. Only explicitly validated numerical '
+                    'observations are normalized; unavailable documents, OCR failures and unverified table '
+                    'layouts remain audited gaps.',
+     'description_zh': '秘鲁 CDC 历史流行病学周报。仅规范化经过验证的数值观察；不可用文件、OCR 错误和未经核验的表格格式保留在缺口审计中。'},
     ("IE", "hpsc_ndh"): {
         "label": "Ireland HPSC Notifiable Disease Weekly Hub",
         "url": "https://notifiabledisease.hpsc.ie/",

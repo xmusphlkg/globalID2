@@ -30,7 +30,7 @@ def test_json_generation_pins_immutable_objects_and_keeps_old_snapshot(tmp_path)
     context = _context()
     logical = dynamic.write_surveillance_artifacts(context, state, public)
     first = dynamic.freeze_public_generation(public, state, logical, release_id="first", generated_at=context["generated_at"])
-    assert set(first["files"]) == {"meta.json", "site-status.json", "home-influenza.json", "home-summary.json", "countries/ca.json", "countries/ca-source-series.json", "countries/ca-summary.json", "diseases/d001.json", "diseases/d001-summary.json"}
+    assert set(first["files"]) == {"meta.json", "site-status.json", "home-influenza.json", "home-summary.json", "countries/ca.json", "countries/ca-source-series.json", "countries/ca-summary.json", "diseases/d001.json", "diseases/d001-summary.json", "subdivision-maps/index.json"}
     previous = {entry["url"]: (public / entry["url"]).read_bytes() for entry in first["files"].values()}
     summary = json.loads(previous[first["files"]["countries/ca-summary.json"]["url"]])
     assert summary["total_cases"] == 7
@@ -171,7 +171,8 @@ async def test_partial_disease_snapshot_has_unknown_country_high_water(tmp_path,
     assert projection["source_high_water"] is None
 
 
-async def test_projection_code_change_cannot_promote_pointer_or_completion(tmp_path, monkeypatch):
+@pytest.mark.parametrize("during_projection", [True, False])
+async def test_projection_code_change_cannot_promote_pointer_or_completion(tmp_path, monkeypatch, during_projection):
     from src.generation import site_data_export
     from src.core import database
     monkeypatch.setattr(site_data_export, "collect_site_export_context", AsyncMock(return_value=_context()))
@@ -180,13 +181,32 @@ async def test_projection_code_change_cannot_promote_pointer_or_completion(tmp_p
     async def session():
         yield db
     monkeypatch.setattr(database, "get_db", session)
-    versions = iter(("original", "changed"))
+    versions = iter(("original", "changed") if during_projection else ("original", "original", "changed"))
     monkeypatch.setattr(dynamic, "_generation_version", lambda: next(versions))
     state, public = tmp_path / "private", tmp_path / "public"
     with pytest.raises(ValueError, match="implementation changed"):
         await dynamic.export_surveillance_data(state, public, release_id="interrupted")
     assert not (public / "current.json").exists()
     assert not (state / dynamic.COMPLETED_GENERATION).exists()
+    if during_projection:
+        assert not (state / "countries/ca.json").exists()
+        db.execute.assert_not_awaited()
+
+
+async def test_stale_projection_does_not_start_expensive_downloads(tmp_path, monkeypatch):
+    from unittest.mock import Mock
+    from src.generation import site_data_export, surveillance_downloads
+    monkeypatch.setattr(site_data_export, "collect_site_export_context", AsyncMock(return_value=_context()))
+    versions = iter(("original", "changed"))
+    monkeypatch.setattr(dynamic, "_generation_version", lambda: next(versions))
+    downloads = Mock(side_effect=AssertionError("stale projection must not generate downloads"))
+    monkeypatch.setattr(surveillance_downloads, "generate_download_candidate", downloads)
+    with pytest.raises(ValueError, match="implementation changed"):
+        await dynamic.export_surveillance_data(
+            tmp_path / "state", tmp_path / "public", release_id="interrupted",
+            download_candidate=tmp_path / "downloads",
+        )
+    downloads.assert_not_called()
 
 
 def test_home_influenza_keeps_real_extrema_and_missing_values_with_bounded_size():

@@ -1,0 +1,41 @@
+..FF.........F.......                                                    [100%]
+=================================== FAILURES ===================================
+_______ test_unclassified_matrix_preserves_all_native_events_and_deaths ________
+
+parsed = {1993: ([{'Date': '1994-01-01', 'Year': '1994', 'Month': '1', 'Week': '52', ...}, {'Date': '1994-01-01', 'Year': '1994...tle': 'Boletín Epidemiológico SE51', ...}, 'pages': 2, 'period_start': '2019-12-15', 'period_end': '2019-12-21', ...})}
+
+    def test_unclassified_matrix_preserves_all_native_events_and_deaths(parsed):
+        rows, audit = parsed[2013]
+>       assert len(audit["national_summary_tables"][0]["categories"]) == 27
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       IndexError: list index out of range
+
+tests/unit/test_pe_cdc.py:63: IndexError
+________ test_classified_matrix_never_sums_confirmed_probable_or_rates _________
+
+parsed = {1993: ([{'Date': '1994-01-01', 'Year': '1994', 'Month': '1', 'Week': '52', ...}, {'Date': '1994-01-01', 'Year': '1994...tle': 'Boletín Epidemiológico SE51', ...}, 'pages': 2, 'period_start': '2019-12-15', 'period_end': '2019-12-21', ...})}
+
+    def test_classified_matrix_never_sums_confirmed_probable_or_rates(parsed):
+        rows, audit = parsed[2019]
+>       assert len(audit["national_summary_tables"][0]["categories"]) == 26
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       IndexError: list index out of range
+
+tests/unit/test_pe_cdc.py:75: IndexError
+________ test_real_2026_multiline_cell_preserves_physical_disease_rows _________
+
+    def test_real_2026_multiline_cell_preserves_physical_disease_rows():
+        directory = FIXTURE.parent
+        provenance = json.loads((directory / "2026w13_provenance.json").read_text())
+        rows, audit = parse_bulletin_pdf((directory / "2026w13_cover_summary.pdf").read_bytes(),
+            source_url=provenance["source_url"], reference=provenance["reference"])
+>       table = audit["national_summary_tables"][0]
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       IndexError: list index out of range
+
+tests/unit/test_pe_cdc.py:160: IndexError
+=========================== short test summary info ============================
+FAILED tests/unit/test_pe_cdc.py::test_unclassified_matrix_preserves_all_native_events_and_deaths
+FAILED tests/unit/test_pe_cdc.py::test_classified_matrix_never_sums_confirmed_probable_or_rates
+FAILED tests/unit/test_pe_cdc.py::test_real_2026_multiline_cell_preserves_physical_disease_rows
+3 failed, 18 passed in 5.70s

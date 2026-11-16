@@ -95,6 +95,13 @@ def _read_receipt(root: Path, name: str) -> dict | None:
         return None
 
 
+def _source_stat(path: Path) -> tuple[int, int, int, int, int]:
+    stat = path.stat()
+    # Hashing can update atime without changing the file. Replacement and
+    # writes still change one of these identity/content metadata fields.
+    return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+
+
 def inspect_source(root: Path) -> dict:
     warnings = ["local_receipts_are_not_verified_remote_pointer_baselines"]
     site = _read_receipt(root, "exports/successful-site-release.json")
@@ -125,10 +132,10 @@ def inspect_source(root: Path) -> dict:
                 fingerprints[relative] = {"symlink": os.readlink(path)}
                 warnings.append("source_symlink_requires_review")
             elif path.is_file():
-                before = path.stat()
+                before = _source_stat(path)
                 with path.open("rb") as stream:
                     fingerprints[relative] = hashlib.file_digest(stream, "sha256").hexdigest()
-                if path.stat() != before:
+                if _source_stat(path) != before:
                     warnings.append("source_inventory_unstable")
             else:
                 fingerprints[relative] = None

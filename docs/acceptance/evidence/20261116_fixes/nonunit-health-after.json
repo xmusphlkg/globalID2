@@ -1,0 +1,10 @@
+{
+  "isolated_database": "globalid_targeted_acceptance_e9e3805e4f5c48b18ea3b02e9e4779d4",
+  "created": true,
+  "dropped": true,
+  "nodes": [
+    "tests/integration/test_postgres_model_health_sampling.py"
+  ],
+  "timeout_seconds": 180,
+  "exit_code": 0
+}

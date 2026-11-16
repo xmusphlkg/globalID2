@@ -37,6 +37,7 @@ def dependency_version() -> str:
         "generation/site_data_views.py", "generation/site_data_queries.py",
         "generation/site_series_projection.py", "generation/site_data_catalogue.py",
         "generation/site_data_about.py", "generation/country_projection_inputs.py",
+        "generation/site_subdivision_maps.py",
         "generation/country_projection_workers.py", "core/reporting_period.py",
         "core/disease_cutover.py", "core/country_library.py",
         "services/disease_series_policy.py",
@@ -46,6 +47,8 @@ def dependency_version() -> str:
         path = root / "configs" / name
         if path.is_file():
             digest.update(path.read_bytes())
+    for path in sorted((root / "external-data/subdivision-boundaries").glob("*.json")):
+        digest.update(path.read_bytes())
     return digest.hexdigest()
 
 

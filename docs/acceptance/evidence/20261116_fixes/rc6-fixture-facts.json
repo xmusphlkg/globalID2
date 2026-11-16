@@ -1,0 +1,20 @@
+[
+  {
+    "year": 1993,
+    "rows": 8,
+    "semantic_facts_unchanged": true,
+    "fixture_pages": 4
+  },
+  {
+    "year": 2013,
+    "rows": 76,
+    "semantic_facts_unchanged": true,
+    "fixture_pages": 2
+  },
+  {
+    "year": 2019,
+    "rows": 111,
+    "semantic_facts_unchanged": true,
+    "fixture_pages": 2
+  }
+]

@@ -86,7 +86,9 @@ async def test_us_fixture_bytes_persist_exact_national_and_state_keys(tmp_path, 
         for code in ("US", "US-CA", "US-AL"):
             updater = USWeeklyUpdater(country_code=code)
             fixture_mapping(monkeypatch, updater, CONTRACT["mappings"]["US"])
-            fetched = organize(artifacts, updater=updater, source="all")
+            # This frozen fixture contains the 2020 archive only; production
+            # bootstrap collections must still enforce their full year plan.
+            fetched = organize(artifacts, updater=updater, source="all", archive_years=(2020,))
             assert fetched.series_rows
             assert bool(fetched.rows) == (code == "US")
             for _ in range(2):
@@ -262,7 +264,7 @@ async def test_updater_commit_strategy_persists_rows_separately_from_series(tmp_
     monkeypatch.setattr(CrawlService, "_save_series_rows", save_series)
     dirty = AsyncMock()
     monkeypatch.setattr(strategies, "mark_observation_changes_dirty", dirty)
-    fetched = organize(us_artifacts(), updater=updater, source="all")
+    fetched = organize(us_artifacts(), updater=updater, source="all", archive_years=(2020,))
     assert len(fetched.series_rows) > len(fetched.rows)
     async with records_database(CONTRACT["countries"]) as sessions:
         async with sessions.begin() as db:

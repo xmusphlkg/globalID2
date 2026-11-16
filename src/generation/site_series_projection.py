@@ -122,6 +122,7 @@ def _source_series_details(records: list[dict]) -> list[dict]:
         "comparability_set", "projection_policy", "projection_priority",
         "series_is_active",
         "calendar",
+        "paired_case_series_code",
     )
     details: list[dict] = []
     for series_code, dimension_key, dimensions_key in sorted(by_series):
@@ -438,6 +439,62 @@ def _attach_legacy_supplemental_metrics(
     return context
 
 
+def _attach_registered_deaths(projected: list[dict], context: dict, records: list[dict]) -> None:
+    """Attach only explicitly paired, identical-source death observations.
+
+    A concept match alone does not establish that a death series describes
+    the selected cases. In particular an onset feed must not inherit deaths
+    from a different reporting source for an overlapping month.
+    """
+    cases = {
+        (str(row.get("series_code") or ""), str(row.get("date") or "")): row
+        for row in records
+        if is_case_count_series(row)
+        and str(row.get("dimension_key") or "all") == "all"
+    }
+    paired: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for row in records:
+        if (
+            row.get("metric_type") == "deaths"
+            and row.get("paired_case_series_code")
+            and str(row.get("dimension_key") or "all") == "all"
+            and str(row.get("series_unit") or row.get("unit") or "") == "count"
+            and row.get("mapping_relation") in {"exact", "narrower"}
+            and row.get("cases") is not None
+        ):
+            key = (str(row["paired_case_series_code"]), str(row.get("date") or ""))
+            case = cases.get(key)
+            if case is None:
+                continue
+            if any(row.get(field) != case.get(field) for field in (
+                "source_system", "geography_key", "disease_id", "definition_version",
+                "temporal_granularity", "reporting_basis", "time_basis",
+            )):
+                continue
+            paired[key].append(row)
+    attached_codes: set[str] = set()
+    attached = 0
+    for row in projected:
+        matches = paired.get((str(row.get("series_code") or ""), str(row.get("date") or "")), [])
+        if not matches:
+            continue
+        values = {_normalise_count(item["cases"]) for item in matches}
+        if len(values) != 1:
+            raise ValueError("Conflicting explicitly paired death observations")
+        row["deaths"] = next(iter(values))
+        attached_codes.update(str(item["series_code"]) for item in matches)
+        attached += 1
+    if attached:
+        context.setdefault("metric_layers", {})["deaths"] = (
+            SERIES_DATA_LAYER if attached == len(projected)
+            or not any(row.get("deaths") is not None and not paired.get(
+                (str(row.get("series_code") or ""), str(row.get("date") or ""))
+            ) for row in projected) else MIXED_DATA_LAYER
+        )
+        context["death_series_codes"] = sorted(attached_codes)
+        context["death_observation_count"] = attached
+
+
 def _semantic_value(value: object, *, granularity: bool = False) -> str:
     normalized = str(value or "").strip().lower()
     if granularity and normalized == "yearly":
@@ -672,6 +729,7 @@ def apply_series_first_projection(
             _attach_legacy_supplemental_metrics(
                 projected, context, compatible_legacy, period_key=period_key,
             )
+            _attach_registered_deaths(projected, context, all_series[disease_id])
             overlaid = _overlay_legacy_coverage_gaps(
                 projected, context, compatible_legacy, period_key=period_key,
             )
