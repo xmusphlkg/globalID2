@@ -4,32 +4,69 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import fcntl
+import json
+import signal
+import subprocess
+import sys
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from decimal import Decimal
-import fcntl
-import json
 from pathlib import Path
-import signal
-import subprocess
-import sys
 
-from sqlalchemy import bindparam, text
+from sqlalchemy import String, bindparam, text
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy import String
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from scripts.imports.kh_camewarn_history import FileSnapshotWriter
 from scripts.imports.import_surveillance_archive import load_archive_manifest
-from src.core.database import get_db, dispose_database
-from src.data.crawlers.co import (COUNT_URL, HISTORY_START_YEAR, METADATA_URL,
-                                  ColombiaINSSivigilaCrawler, can_skip_import,
-                                  parse_metadata)
+from scripts.imports.kh_camewarn_history import FileSnapshotWriter
+from src.core.database import dispose_database, get_db
+from src.data.crawlers.co import (
+    COUNT_URL,
+    HISTORY_START_YEAR,
+    METADATA_URL,
+    ColombiaINSSivigilaCrawler,
+    can_skip_import,
+    parse_metadata,
+)
 from src.data.processors.co import ColombiaINSSivigilaUpdater
 from src.services.ingestion.countries.co import collect, organize
+
+SOURCE_SCOPE = "co_ins_sivigila_historical"
+SOURCE_ID = "SRC_CO_INS_SIVIGILA"
+ARCHIVE_SLUG = "sivigila-history"
+STATE_BASENAME = "history"
+ACCEPTANCE_BASENAME = "database_acceptance"
+
+
+def configure_source(source):
+    """Select one independent release contract for this controller process."""
+    global COUNT_URL, HISTORY_START_YEAR, METADATA_URL, parse_metadata
+    global ColombiaINSSivigilaUpdater, collect, organize
+    global SOURCE_SCOPE, SOURCE_ID, ARCHIVE_SLUG, STATE_BASENAME, ACCEPTANCE_BASENAME
+    if source == "co_ins_sivigila_historical":
+        return
+    from src.data.crawlers import co_current
+    from src.data.processors.co_current import ColombiaINSSivigilaCurrentUpdater
+    from src.services.ingestion.countries import co_current as connector
+    COUNT_URL, METADATA_URL = co_current.COUNT_URL, co_current.METADATA_URL
+    HISTORY_START_YEAR = co_current.HISTORY_START_YEAR
+    parse_metadata = co_current.parse_metadata
+    ColombiaINSSivigilaUpdater = ColombiaINSSivigilaCurrentUpdater
+    collect, organize = connector.collect, connector.organize
+    SOURCE_SCOPE, SOURCE_ID = co_current.DEFAULT_SCOPE, co_current.ONTOLOGY_SOURCE_ID
+    ARCHIVE_SLUG, STATE_BASENAME = "sivigila-current", "current"
+    ACCEPTANCE_BASENAME = "current_database_acceptance"
+
+
+def default_end_year(start_year, requested_end_year, source_scope, *, today=None):
+    return requested_end_year or (
+        (today or datetime.now(timezone.utc).date()).year if source_scope == "co_ins_sivigila_current"
+        else start_year
+    )
 
 
 def atomic_json(path: Path, document: dict):
@@ -114,7 +151,7 @@ async def reconcile_database_page(rows, manifest):
         SELECT obs.time, obs.geography_key, obs.value, obs.raw_data
         FROM disease_series_observations obs
         JOIN disease_surveillance_series series ON series.series_code=obs.series_code
-        WHERE series.country_code='CO' AND series.source_system='SRC_CO_INS_SIVIGILA'
+        WHERE series.country_code='CO' AND series.source_system=:source_id
           AND obs.raw_data->>'SourceRecordID' = ANY(:source_ids)
     """).bindparams(bindparam("source_ids", type_=ARRAY(String)))
     task_query = text("""
@@ -125,7 +162,7 @@ async def reconcile_database_page(rows, manifest):
     try:
         async with get_db() as db:
             found = 0
-            for stored in (await db.execute(query, {"source_ids": list(expected)})).all():
+            for stored in (await db.execute(query, {"source_ids": list(expected), "source_id": SOURCE_ID})).all():
                 source_id = (stored.raw_data or {}).get("SourceRecordID")
                 source = expected.pop(source_id, None)
                 if source is None:
@@ -142,7 +179,9 @@ async def reconcile_database_page(rows, manifest):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--start-year", type=int, default=HISTORY_START_YEAR)
+    parser.add_argument("--source", choices=("co_ins_sivigila_historical", "co_ins_sivigila_current"),
+                        default="co_ins_sivigila_historical")
+    parser.add_argument("--start-year", type=int)
     parser.add_argument("--end-year", type=int)
     parser.add_argument("--page-limit", type=int, default=10_000)
     parser.add_argument("--capture-workers", type=int, default=3,
@@ -152,14 +191,16 @@ def main():
                         help="Report source-version and year-count changes without capture/import")
     parser.add_argument("--apply", action="store_true", help="Import through normal staged runner")
     args = parser.parse_args()
-    end_year = args.end_year or args.start_year
+    configure_source(args.source)
+    args.start_year = args.start_year or HISTORY_START_YEAR
+    end_year = default_end_year(args.start_year, args.end_year, SOURCE_SCOPE)
     if (args.start_year < HISTORY_START_YEAR or end_year < args.start_year
             or not 1 <= args.page_limit <= 20_000 or not 1 <= args.capture_workers <= 4
             or (args.max_batches is not None and args.max_batches < 1)):
         parser.error("Invalid source year range or page limit")
     controller_lock = None
     if not args.check_only:
-        lock_path = ROOT / "data/current/co/history-controller.lock"
+        lock_path = ROOT / f"data/current/co/{STATE_BASENAME}-controller.lock"
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         controller_lock = lock_path.open("a")
         fcntl.flock(controller_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -174,24 +215,29 @@ def main():
         all_counts, counts = live_year_counts(crawler, start_year=args.start_year, end_year=end_year)
     finally:
         crawler.session.close()
+    if SOURCE_SCOPE == "co_ins_sivigila_current":
+        # The requested window may include unpublished future years. Freeze
+        # the actual release extent so unchanged-version checks remain exact.
+        args.start_year, end_year = min(counts), max(counts)
     version_key = f"{version['rows_updated_at']}-{version['view_last_modified']}"
-    run_dir = ROOT / "data/raw/co/sivigila-history" / version_key
+    run_dir = ROOT / "data/raw/co" / ARCHIVE_SLUG / version_key
     state_path = run_dir / "state.json"
     identity = {"dataset_version": version,
                 "year_counts": {str(year): total for year, total in counts.items()},
                 "start_year": args.start_year, "end_year": end_year,
                 "page_limit": args.page_limit}
-    summary_path = ROOT / "data/current/co/history-state.json"
+    summary_path = ROOT / f"data/current/co/{STATE_BASENAME}-state.json"
     if args.check_only:
         prior = json.loads(summary_path.read_text()) if summary_path.exists() else {}
         prior_identity = prior.get("identity", {})
-        acceptance_path = ROOT / "data/current/co/database_acceptance.json"
+        acceptance_path = ROOT / f"data/current/co/{ACCEPTANCE_BASENAME}.json"
         acceptance = json.loads(acceptance_path.read_text()) if acceptance_path.exists() else {}
         version_changed = bool(prior_identity) and prior_identity.get("dataset_version") != version
-        published_counts = {str(year): total for year, total in all_counts.items() if total > 0}
+        published_counts = {str(year): total for year, total in all_counts.items()
+                            if total > 0 and year >= HISTORY_START_YEAR}
         counts_changed = bool(prior_identity) and prior_identity.get("year_counts") != published_counts
         can_skip = can_skip_import(version, published_counts, prior, acceptance)
-        print(json.dumps({"source": "co_ins_sivigila_historical", "dataset_version": version,
+        print(json.dumps({"source": SOURCE_SCOPE, "dataset_version": version,
                           "year_counts": published_counts,
                           "version_changed": version_changed,
                           "year_counts_changed": counts_changed,
@@ -286,6 +332,7 @@ def main():
                         subprocess.run([sys.executable,
                             str(ROOT / "scripts/imports/import_surveillance_archive.py"),
                             "--country", "CO", "--manifest", str(manifest),
+                            "--source", SOURCE_SCOPE,
                             "--start-year", str(year), "--apply",
                             "--receipt-path", str(receipt_path)],
                             cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT, check=True)
@@ -298,7 +345,8 @@ def main():
                     receipt["reconciled_rows"] = rows
                     receipt["recovery"] = "database_identity_value_verified"
                     atomic_json(receipt_path, receipt)
-                atomic_json(ROOT / "data/current/co/years" / f"{year}-receipt.json", receipt)
+                receipt_directory = "years" if STATE_BASENAME == "history" else "current-years"
+                atomic_json(ROOT / "data/current/co" / receipt_directory / f"{year}-receipt.json", receipt)
                 state["batches"][key]["applied"] = True
                 state["batches"][key]["task_uuid"] = receipt["task_uuid"]
             batches_this_run += 1

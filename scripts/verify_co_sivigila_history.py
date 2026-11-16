@@ -25,6 +25,7 @@ from src.data.storage.series.identity import _dimension_key
 from src.services.ingestion.countries import co
 
 SOURCE_ID = "SRC_CO_INS_SIVIGILA"
+SOURCE_SCOPE = "co_ins_sivigila_historical"
 SAMPLE_LIMIT = 20
 
 
@@ -194,10 +195,10 @@ async def verify(state: dict, *, year_filter: int | None = None) -> dict:
                             "country:CO:source-municipality:"
                         )
                         unknown += geography.startswith(
-                            "source:SRC_CO_INS_SIVIGILA:unknown-location:"
+                            f"source:{SOURCE_ID}:unknown-location:"
                         )
                         exterior += geography.startswith(
-                            "source:SRC_CO_INS_SIVIGILA:exterior:"
+                            f"source:{SOURCE_ID}:exterior:"
                         )
                         record_id = (
                             raw.get("SourceRecordID") if isinstance(raw, dict) else None
@@ -298,7 +299,7 @@ async def verify(state: dict, *, year_filter: int | None = None) -> dict:
     finally:
         await dispose_database()
     return {
-        "source": "co_ins_sivigila_historical",
+        "source": SOURCE_SCOPE,
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "dataset_version": state["identity"]["dataset_version"],
         "verification": "frozen_artifact_full_row_and_physical_identity",
@@ -324,9 +325,12 @@ def _year_state(state: dict, year: int) -> dict:
 
 
 def main():
+    global co, ColombiaINSSivigilaUpdater, SOURCE_ID, SOURCE_SCOPE
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source", choices=("co_ins_sivigila_historical", "co_ins_sivigila_current"),
+                        default="co_ins_sivigila_historical")
     parser.add_argument(
-        "--state", type=Path, default=ROOT / "data/current/co/history-state.json"
+        "--state", type=Path
     )
     parser.add_argument("--output", type=Path)
     parser.add_argument(
@@ -334,8 +338,22 @@ def main():
     )
     parser.add_argument("--require-complete", action="store_true")
     args = parser.parse_args()
+    current = args.source == "co_ins_sivigila_current"
+    if current:
+        from src.data.processors.co_current import ColombiaINSSivigilaCurrentUpdater
+        from src.services.ingestion.countries import co_current
+        co = co_current
+        ColombiaINSSivigilaUpdater = ColombiaINSSivigilaCurrentUpdater
+        SOURCE_SCOPE = args.source
+        SOURCE_ID = "SRC_CO_INS_SIVIGILA_CURRENT"
+    args.state = args.state or ROOT / f"data/current/co/{'current' if current else 'history'}-state.json"
     state_bytes = args.state.read_bytes()
     state = json.loads(state_bytes)
+    expected_dataset = "wns8-p38i" if current else "4hyg-wa9d"
+    if state.get("identity", {}).get("dataset_version", {}).get("dataset_id") != expected_dataset:
+        raise SystemExit("CO verification state belongs to another source dataset")
+    if current and any(int(year) < 2023 for year in state["identity"].get("year_counts", {})):
+        raise SystemExit("CO current verification state includes a historical source year")
     report = asyncio.run(verify(state, year_filter=args.year))
     current_bytes = args.state.read_bytes()
     if (args.year is None and current_bytes != state_bytes) or (
@@ -347,9 +365,9 @@ def main():
             "CO history state changed during verification; rerun against a stable snapshot"
         )
     output = args.output or (
-        ROOT / "data/current/co/years" / f"{args.year}-acceptance.json"
+        ROOT / "data/current/co" / ("current-years" if current else "years") / f"{args.year}-acceptance.json"
         if args.year is not None
-        else ROOT / "data/current/co/database_acceptance.json"
+        else ROOT / "data/current/co" / ("current_database_acceptance.json" if current else "database_acceptance.json")
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(".json.tmp")

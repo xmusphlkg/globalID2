@@ -10,14 +10,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
-from importlib import import_module
 import json
-from pathlib import Path
 import sys
-from types import SimpleNamespace
-from datetime import datetime, timezone
-from uuid import uuid4
 from contextlib import suppress
+from datetime import datetime, timezone
+from importlib import import_module
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -32,6 +32,14 @@ COUNTRIES = {
     'KH': ('CambodiaCamEWARNWeeklyUpdater', 'kh_camewarn_weekly'),
     'AR': ('ArgentinaBENUpdater', 'ar_ben_weekly'),
     'PE': ('PeruCDCWeeklyUpdater', 'pe_cdc_weekly'),
+}
+SOURCE_OVERRIDES = {
+    ('AR', 'ar_moh_hiv_annual'):
+        ('ArgentinaHIVAnnualUpdater', 'ar_hiv'),
+    ('CO', 'co_ins_sivigila_current'):
+        ('ColombiaINSSivigilaCurrentUpdater', 'co_current'),
+    ('CO', 'co_ins_bes_weekly'):
+        ('ColombiaINSBESUpdater', 'co_bes'),
 }
 
 
@@ -56,7 +64,8 @@ def load_archive_manifest(path: Path, country: str):
         if not str(record['source_url']).startswith(('https://', 'http://')):
             raise ValueError('Original official source URL required')
         artifacts.append(SimpleNamespace(
-            relative_path=original.relative_to(ROOT).as_posix(),
+            relative_path=(Path('data/raw') / original.relative_to(
+                (ROOT / 'data/raw').resolve())).as_posix(),
             sha256=record['sha256'], byte_size=record['byte_size'],
             source_url=record['source_url'], kind=record['kind'],
             metadata_=record.get('metadata_', {}),
@@ -98,6 +107,10 @@ class ArchiveReplayConnector:
     def organize(self, artifacts, **options):
         return self.delegate.organize(artifacts, **options)
 
+    @property
+    def organize_async(self):
+        return getattr(self.delegate, 'organize_async', None)
+
 
 async def maintain_lease(task_uuid, owner):
     from src.core.task_manager import task_manager
@@ -107,20 +120,38 @@ async def maintain_lease(task_uuid, owner):
             return
 
 
-async def import_archive(country, manifest, *, apply=False, start_year=None, receipt_path=None):
-    from src.core.database import get_db, dispose_database
-    from src.core.country_library import get_country_bootstrap_config, get_country_profile
+async def import_archive(country, manifest, *, apply=False, start_year=None,
+                         receipt_path=None, source=None, parse_workers=None,
+                         task_metadata=None):
+    from sqlalchemy import select
+
+    from src.core.country_library import (
+        get_country_bootstrap_config,
+        get_country_profile,
+    )
+    from src.core.database import dispose_database, get_db
     from src.core.db_schema import ensure_country_scope_for_code
     from src.domain import Country, CrawlRun, RunStage, Task, TaskStatus, TaskType
     from src.services.crawl_service import CrawlService
     from src.services.ingestion.runner import run_surveillance
-    from sqlalchemy import select
     country = country.upper()
-    updater_name, source = COUNTRIES[country]
-    updater = getattr(import_module(f'src.data.processors.{country.lower()}'), updater_name)()
-    connector = import_module(f'src.services.ingestion.countries.{country.lower()}')
+    default_updater, default_source = COUNTRIES[country]
+    source = source or default_source
+    if source == default_source:
+        updater_name, module = default_updater, country.lower()
+    else:
+        try:
+            updater_name, module = SOURCE_OVERRIDES[(country, source)]
+        except KeyError as exc:
+            raise ValueError(f'Unsupported archive source for {country}: {source}') from exc
+    updater = getattr(import_module(f'src.data.processors.{module}'), updater_name)()
+    connector = import_module(f'src.services.ingestion.countries.{module}')
     artifacts = await asyncio.to_thread(load_archive_manifest, Path(manifest), country)
     options = {'start_year': int(start_year or updater.full_history_start_year)}
+    if parse_workers is not None:
+        if not 1 <= int(parse_workers) <= 32:
+            raise ValueError('Parse workers must be within 1 and 32')
+        options['parse_workers'] = int(parse_workers)
     if country == 'KH':
         options['parse_cache_directory'] = ROOT / 'data/cache/kh/camewarn-parses'
     elif country == 'PE':
@@ -155,14 +186,23 @@ async def import_archive(country, manifest, *, apply=False, start_year=None, rec
                 status=TaskStatus.RUNNING, started_at=started,
                 input_data={'country': country, 'source': source, 'start_year': options['start_year'],
                     'archive_manifest': str(Path(manifest).resolve()), 'collection_mode': 'verified_archive_replay'},
-                metadata_={'origin': 'operator_authorized_backfill', 'public_release_enabled': False,
+                metadata_={'origin': 'operator_authorized_backfill', **(task_metadata or {}),
+                    'public_release_enabled': False,
                     'task_lease': {'owner': owner, 'heartbeat_at': started.isoformat()}})
             db.add(task)
         heartbeat = asyncio.create_task(maintain_lease(task_uuid, owner))
         try:
-            result = await run_surveillance(CrawlService(), task=task, updater=updater,
-                connector=ArchiveReplayConnector(artifacts, connector), source=source,
-                force=True, process=True, connector_options=options)
+            async def replay():
+                return await run_surveillance(CrawlService(), task=task, updater=updater,
+                    connector=ArchiveReplayConnector(artifacts, connector), source=source,
+                    force=True, process=True, connector_options=options)
+
+            if source == 'co_ins_bes_weekly':
+                from src.ai.runtime import task_context
+                async with task_context(task):
+                    result = await replay()
+            else:
+                result = await replay()
             async with get_db() as db:
                 saved = (await db.execute(select(Task).where(Task.task_uuid == task_uuid))).scalar_one()
                 saved.status = TaskStatus.COMPLETED
@@ -216,9 +256,12 @@ def main():
     parser.add_argument('--start-year', type=int)
     parser.add_argument('--apply', action='store_true')
     parser.add_argument('--receipt-path', type=Path)
+    parser.add_argument('--source', help='Explicit source scope when a country has multiple archives')
+    parser.add_argument('--parse-workers', type=int, choices=range(1, 33))
     args = parser.parse_args()
     result = asyncio.run(import_archive(args.country, args.manifest, apply=args.apply,
-                                        start_year=args.start_year, receipt_path=args.receipt_path))
+                                        start_year=args.start_year, receipt_path=args.receipt_path,
+                                        source=args.source, parse_workers=args.parse_workers))
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
