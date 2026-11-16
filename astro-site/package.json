@@ -1,7 +1,7 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.19.4",
+  "version": "0.20.0",
   "scripts": {
     "build:theme": "node scripts/build-theme.mjs",
     "test:theme": "node --experimental-strip-types --test scripts/build-theme.test.mjs src/lib/site-theme.test.ts",
@@ -16,6 +16,7 @@
     "test:curve": "node --experimental-strip-types --test src/components/charts/surveillance/__tests__/*.test.ts",
     "check:surveillance-data": "python3 scripts/check-surveillance-data.py",
     "benchmark:curve": "node --experimental-strip-types scripts/benchmark-surveillance.mjs",
+    "test:subdivision-map": "node --experimental-strip-types --test src/components/charts/subdivision-map/*.test.ts",
     "test:monthly": "node --experimental-strip-types --test src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
     "test:charts": "npm run sync:flags && node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/safeCanvasPainter.test.ts src/lib/chart-source-scope.test.ts src/lib/country-coverage.test.ts src/lib/country-classifications.test.ts src/lib/subdivision-map-points.test.ts src/components/charts/surveillance/__tests__/*.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts src/components/charts/reportFigureOptions.test.ts",
     "test:knowledge": "node --experimental-strip-types --test src/utils/knowledge.test.ts",
@@ -35,7 +36,7 @@
     "optimize:map": "node scripts/optimize-world-map.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "test:public": "node --experimental-strip-types --test src/lib/site-search.test.ts src/lib/download-presentation.test.ts src/components/situation/model.test.ts src/components/situation/monitoring.test.ts src/components/situation/overview-data.test.ts"
+    "test:public": "node --experimental-strip-types --test src/lib/site-search.test.ts src/lib/download-presentation.test.ts src/lib/pathogen-resources.test.ts src/lib/situation-rss.test.ts src/components/situation/model.test.ts src/components/situation/noticeLabels.test.ts src/components/situation/monitoring.test.ts src/components/situation/overview-data.test.ts"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.2",

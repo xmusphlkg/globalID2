@@ -4,6 +4,7 @@ import CountryFlag from '../../../../components/CountryFlag.astro';
 import SurveillanceSummary from '../../../../components/public/SurveillanceSummary';
 import EpidemicCurve from '../../../../components/charts/EpidemicCurve';
 import DiseaseResearchPanel from '../../../../components/research/DiseaseResearchPanel.astro';
+import SubdivisionIncidenceMap from '../../../../components/charts/SubdivisionIncidenceMap';
 import InternationalNoticePanel from '../../../../components/InternationalNoticePanel.astro';
 import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
 import { shouldBuildPage } from '../../../../lib/page-build-plan';
@@ -127,6 +128,7 @@ const seo = {
         />
       </div>
     </section>
+    {!String(code).includes('-') && <div class="mt-6"><SubdivisionIncidenceMap client:visible countryCode={String(code)} diseaseId={diseaseId} language={locale} /></div>}
     <div class="mt-6" id="research"><DiseaseResearchPanel diseaseId={diseaseId || slug} locale={locale} /></div>
     <div class="mt-6" id="international">
       <InternationalNoticePanel dataUrl={`/situation/by-country/${String(code).toUpperCase()}.json`} diseaseId={diseaseId} locale={locale} mapHref={diseaseId ? `${prefix}/situation/?country=${String(code).toUpperCase()}&disease=${encodeURIComponent(diseaseId)}` : `${prefix}/situation/?country=${String(code).toUpperCase()}`} />

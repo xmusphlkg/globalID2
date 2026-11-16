@@ -42,10 +42,10 @@ async function openPlaceList(page: Page) {
   if (await toggle.getAttribute('aria-pressed') === 'false') await toggle.click();
 }
 
-async function selectFilter(page: Page, index: number, value: string) {
+async function selectFilter(page: Page, name: 'Disease' | 'Area' | 'Source' | 'Time window', value: string) {
   const toggle = page.locator('.sit-bar-links button');
   if (await toggle.getAttribute('aria-pressed') === 'false') await toggle.click();
-  await page.locator('.sit-list [role="combobox"]').nth(index).click();
+  await page.locator('.sit-list').getByRole('combobox', { name, exact: true }).click();
   await page.locator(`.sit-list [role="option"][data-value="${value}"]`).click();
 }
 
@@ -67,11 +67,11 @@ test('situation filters remove old map series, including an empty result', async
   await openPlaceList(page);
   await expect(page.locator('.sit-item')).toHaveCount(3);
   await expect.poll(() => renderedPointIds(page)).toEqual(['fresh', 'older', 'recent']);
-  await selectFilter(page, 3, '30');
+  await selectFilter(page, 'Time window', '30');
   await expect.poll(() => renderedPointIds(page)).toEqual(['fresh', 'recent']);
-  await selectFilter(page, 3, '7');
+  await selectFilter(page, 'Time window', '7');
   await expect.poll(() => renderedPointIds(page)).toEqual(['fresh']);
-  await selectFilter(page, 1, 'KE');
+  await selectFilter(page, 'Area', 'KE');
   await expect(page.locator('.sit-item')).toHaveCount(0);
   await expect.poll(() => renderedPointIds(page)).toEqual([]);
   await page.locator('.sit-reset').click();
@@ -93,24 +93,24 @@ test('timeline shares filters, merges duplicates and keeps all report links', as
 
   await expect(page.locator('.sit-filter-grid')).toHaveCount(1);
   await expect(page.locator('.sit-timeline-wrap [role="combobox"]')).toHaveCount(0);
-  await selectFilter(page, 1, 'CD');
+  await selectFilter(page, 'Area', 'CD');
   await expect(rows).toHaveCount(1);
   await expect(page.locator('.sit-alert[data-country="KE"]')).toHaveCount(0);
-  await selectFilter(page, 3, '7');
+  await selectFilter(page, 'Time window', '7');
   await expect(rows).toHaveCount(1);
-  await selectFilter(page, 2, 'feed-two');
+  await selectFilter(page, 'Source', 'feed-two');
   await expect(rows.first()).toHaveAttribute('data-alert-id', 'fresh-copy');
   await expect(rows.locator('.sit-source-link')).toHaveCount(1);
   await expect(page).toHaveURL(/source=feed-two/);
-  await selectFilter(page, 2, '');
-  await selectFilter(page, 3, 'all');
-  await selectFilter(page, 1, 'KE');
+  await selectFilter(page, 'Source', '');
+  await selectFilter(page, 'Time window', 'all');
+  await selectFilter(page, 'Area', 'KE');
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toHaveAttribute('data-country', 'KE');
   await page.locator('.sit-reset').click();
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
-  await selectFilter(page, 1, 'KE');
-  await selectFilter(page, 2, 'feed-two');
+  await selectFilter(page, 'Area', 'KE');
+  await selectFilter(page, 'Source', 'feed-two');
   await expect(page.locator('.sit-item')).toHaveCount(0);
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
 });
@@ -120,10 +120,12 @@ test('explicit time and source deep links survive reload with a selected place',
   await page.goto('/situation/?place=fresh-copy&source=feed-two&window=7');
   await expect(page.locator('.sit-item')).toHaveCount(1);
   await expect(page.locator('.sit-alert')).toHaveCount(1);
-  await expect(page.locator('.sit-list [role="combobox"]').nth(2)).toHaveValue('Feed two');
+  await openPlaceList(page);
+  await expect(page.locator('.sit-list').getByRole('combobox', { name: 'Source', exact: true })).toHaveValue('Feed two');
   await page.reload();
   await expect(page.locator('.sit-alert')).toHaveCount(1);
-  await expect(page.locator('.sit-list [role="combobox"]').nth(3)).toHaveValue('Last 7 days');
+  await openPlaceList(page);
+  await expect(page.locator('.sit-list').getByRole('combobox', { name: 'Time window', exact: true })).toHaveValue('Last 7 days');
 });
 
 test('lower-level area deep links wait for the current catalogue and retain its own series', async ({ page }) => {
@@ -190,7 +192,7 @@ test('situation page: filtering recentres the map without errors', async ({ page
   await page.goto('/situation/');
   await openPlaceList(page);
   await expect(page.locator('.sit-item').first()).toBeVisible({ timeout: 30_000 });
-  await selectFilter(page, 1, 'CD');
+  await selectFilter(page, 'Area', 'CD');
   await expect(page.locator('.sit-canvas canvas').first()).toBeVisible();
   await page.locator('.sit-reset').click();
   expect(errors).toEqual([]);
@@ -214,7 +216,7 @@ test('typing filters opens a timeline, scopes monitoring cards and restores canc
     await page.locator('.sit-bar-links button').click();
   }
   await expect(page.locator('.sit-monitor-count')).toHaveText('2');
-  await selectFilter(page, 1, 'KE');
+  await selectFilter(page, 'Area', 'KE');
   await expect(page.locator('.sit-monitor-card')).toHaveCount(1);
   await expect(page.locator('.sit-monitor-card')).toContainText('Ebola monitoring in Kenya');
   await expect(page.locator('.sit-alert')).toHaveCount(1);
@@ -223,19 +225,19 @@ test('typing filters opens a timeline, scopes monitoring cards and restores canc
   await disease.press('Escape');
   await expect(disease).toHaveValue('Ebola');
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
-  await selectFilter(page, 2, 'feed-one');
+  await selectFilter(page, 'Source', 'feed-one');
   await expect(page.locator('.sit-monitor-card')).toHaveCount(0);
   await expect(page.locator('.sit-monitor-products')).toContainText('No monitoring products match');
   await page.locator('.sit-reset').click();
   await expect(page.locator('.sit-monitor-count')).toHaveText('2');
-  await selectFilter(page, 2, 'monitor-only');
+  await selectFilter(page, 'Source', 'monitor-only');
   await expect(page.locator('.sit-monitor-card')).toContainText('Ebola monitoring in Kenya');
   await page.reload();
   await expect(page.locator('.sit-monitor-card')).toContainText('Ebola monitoring in Kenya');
   await expect(page).toHaveURL(/source=monitor-only/);
-  await selectFilter(page, 2, '');
-  await selectFilter(page, 3, 'all');
-  await selectFilter(page, 0, 'D038');
+  await selectFilter(page, 'Source', '');
+  await selectFilter(page, 'Time window', 'all');
+  await selectFilter(page, 'Disease', 'D038');
   await expect(page.locator('.sit-monitor-card')).toHaveCount(1);
   await expect(page.locator('.sit-monitor-card')).toContainText('Influenza monitoring in Kenya');
 });
@@ -252,8 +254,10 @@ test('MERS shared link groups identical cumulative figures across channels and d
   await expect(page.locator('.sit-alert.is-selected')).toHaveCount(1);
   await expect(rows.first().locator('.sit-source-link')).toHaveCount(3);
   await expect(rows.last().locator('.sit-source-link')).toHaveCount(3);
-  await expect(rows.first().locator('.sit-alert-counts')).toHaveText('8 cases · 1 deaths');
-  await expect(rows.last().locator('.sit-alert-counts')).toHaveText('2 cases · 1 deaths');
+  // This historical fixture predates explicit host/unit metadata. Its counts
+  // remain grouped, while the current UI must disclose the unspecified unit.
+  await expect(rows.first().locator('.sit-alert-counts')).toHaveText('8 reported cases (unit unspecified) · 1 reported deaths (unit unspecified)');
+  await expect(rows.last().locator('.sit-alert-counts')).toHaveText('2 reported cases (unit unspecified) · 1 reported deaths (unit unspecified)');
   await expect(page.getByText('Shading: latest GIDS value for the selected disease.')).toHaveCount(0);
   const legend = page.locator('.sit-legend-float');
   if (await legend.isVisible()) expect(await legend.locator('ul').evaluate(node => getComputedStyle(node).overflow)).toBe('visible');

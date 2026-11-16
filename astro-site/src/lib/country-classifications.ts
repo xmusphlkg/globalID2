@@ -6,8 +6,8 @@ export type IncomeGroupCode = 'LIC' | 'LMC' | 'UMC' | 'HIC';
 
 export interface CountryClassification {
   who_region: WhoRegionCode;
-  wb_region: WorldBankRegionCode;
-  income_group: IncomeGroupCode;
+  wb_region: WorldBankRegionCode | null;
+  income_group: IncomeGroupCode | null;
 }
 
 export const WHO_REGION_LABELS: Record<WhoRegionCode, { en: string; zh: string; fr: string }> = {
