@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import unicodedata
 from collections import defaultdict
 from datetime import date, timedelta
 from pathlib import Path
@@ -42,6 +43,7 @@ from src.services.global_sources.catalogue import (
 )
 
 from .coverage import monitoring_coverage
+from .feed_export import build_feed_payload
 from .reporting_period import reporting_period
 from .gazetteer import locate
 from .pipeline import cluster_alerts, utc_now
@@ -108,6 +110,10 @@ def alert_record(
         "cases": alert.cases,
         "deaths": alert.deaths,
         "count_basis": alert.count_basis,
+        "host_type": alert.host_type or "unknown",
+        "host_species": alert.host_species,
+        "count_unit": alert.count_unit or "unknown",
+        "host_evidence": alert.host_evidence if quotable else None,
         "as_of": alert.as_of.isoformat() if alert.as_of else None,
         "published_date": alert.published_date.isoformat(),
         **({"reporting_period": period} if period else {}),
@@ -145,13 +151,17 @@ def latest_per_place(records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     ``place_updated`` is the date of the place's newest alert, whatever it said.
     """
 
-    groups: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    groups: dict[tuple[str, ...], list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         key = (
             record["outbreak_id"] or record["alert_id"],
             record["country_code"],
             record["admin_area"] or "",
             record["disease_id"] or record["disease_label"],
+            record.get("host_type") or "unknown",
+            # Match frontend place identity without AI quote-matching's
+            # broader equivalences (for example, removing inner hyphens).
+            " ".join(unicodedata.normalize("NFKC", record.get("host_species") or "").split()).lower(),
         )
         groups[key].append(record)
 
@@ -187,6 +197,8 @@ _MARKER_FIELDS = (
     "country_name_zh",
     "admin_area",
     "status",
+    "host_type",
+    "host_species",
     "published_date",
 )
 
@@ -348,6 +360,7 @@ async def export_site(
             "source_id": row.source_id, "published_date": row.published_date,
             "disease_id": row.disease_id, "disease_label": row.disease_label,
             "country_code": row.country_code, "status": row.status,
+            "host_type": row.host_type or "unknown", "host_species": row.host_species,
             "document_type": (row.extraction.document_type if row.extraction else None) or "other"}
             for row in alert_rows), as_of=as_of)
         memberships = {alert_id: cluster["outbreak_id"] for cluster in clusters for alert_id in cluster["alert_ids"]}
@@ -383,6 +396,7 @@ async def export_site(
         monitoring_by_notice[record["notice_id"]].append(record)
     generated = utc_now().isoformat()
     stamp = as_of.isoformat()
+    _write(out / "feed.json", build_feed_payload(records, generated_at=generated, as_of=stamp))
 
     for folder in _OWNED:
         shutil.rmtree(out / folder, ignore_errors=True)

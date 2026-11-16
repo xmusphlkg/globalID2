@@ -301,8 +301,11 @@ def disease_key(disease_id: str | None, label: str) -> str:
     return disease_id or f"label:{normalise(label)}"
 
 
-def alert_id(notice_id: str, key: str, country: str, admin_area: str | None) -> str:
+def alert_id(notice_id: str, key: str, country: str, admin_area: str | None,
+             host_type: str = "unknown", host_species: str | None = None) -> str:
     raw = "|".join((notice_id, key, country, normalise(admin_area or "")))
+    if host_type in ("human", "animal"):
+        raw += "|host:" + host_type + "|" + normalise(host_species or "")
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
 
 
@@ -331,7 +334,8 @@ def build_alerts(row: SituationNotice, payload: dict[str, Any]) -> list[Situatio
         as_of = item.get("as_of")
         alerts.append(
             SituationAlert(
-                alert_id=alert_id(row.notice_id, key, item["country_code"], item.get("admin_area")),
+                alert_id=alert_id(row.notice_id, key, item["country_code"], item.get("admin_area"),
+                                  item.get("host_type") or "unknown", item.get("host_species")),
                 notice_id=row.notice_id,
                 disease_id=item.get("disease_id"),
                 disease_label=item["disease_label"],
@@ -341,6 +345,10 @@ def build_alerts(row: SituationNotice, payload: dict[str, Any]) -> list[Situatio
                 cases=item.get("cases"),
                 deaths=item.get("deaths"),
                 count_basis=item.get("count_basis"),
+                host_type=item.get("host_type") or "unknown",
+                host_species=item.get("host_species"),
+                count_unit=item.get("count_unit") or "unknown",
+                host_evidence=item.get("host_evidence"),
                 as_of=date.fromisoformat(as_of) if as_of else None,
                 quote=item["quote"],
                 summary_en=item.get("summary_en"),
@@ -351,6 +359,31 @@ def build_alerts(row: SituationNotice, payload: dict[str, Any]) -> list[Situatio
             )
         )
     return alerts
+
+
+def preserve_alert_ids(previous: list[SituationAlert], current: list[SituationAlert]) -> None:
+    """Retain unique compatible identities through host enrichment and rereads.
+
+    An unclassified old alert can acquire one explicit host. Splits or changed
+    explicit species never guess which old URL should identify the new event.
+    """
+
+    def place(row: SituationAlert) -> tuple[str, ...]:
+        return (row.notice_id, disease_key(row.disease_id, row.disease_label), row.country_code,
+                normalise(row.admin_area or ""))
+
+    def compatible(old: SituationAlert, new: SituationAlert) -> bool:
+        if place(old) != place(new):
+            return False
+        old_host, new_host = old.host_type or "unknown", new.host_type or "unknown"
+        if old_host == "unknown":
+            return True
+        return old_host == new_host and normalise(old.host_species or "") == normalise(new.host_species or "")
+
+    candidates = [[old for old in previous if compatible(old, new)] for new in current]
+    for new, matches in zip(current, candidates):
+        if len(matches) == 1 and sum(matches[0] in options for options in candidates) == 1:
+            new.alert_id = matches[0].alert_id
 
 
 async def requeue_stale_prompts() -> int:
@@ -434,7 +467,7 @@ def _published_signature(extraction, alerts) -> tuple:
     """Public facts only: attempts, timestamps and derived memberships do not publish."""
     fields = ("alert_id", "notice_id", "source_id", "published_date", "disease_id", "disease_label",
         "country_code", "admin_area", "status", "cases", "deaths", "count_basis", "as_of",
-        "quote", "summary_en", "summary_zh", "summary_fr")
+        "quote", "summary_en", "summary_zh", "summary_fr", "host_type", "host_species", "count_unit", "host_evidence")
     from src.ai.peer_review import review_mode
     metadata = tuple(getattr(extraction, key, None) for key in
         ("document_type", "input_mode", "review_verdict", "prompt_version"))
@@ -604,6 +637,7 @@ async def extract_pending(
                 previous_alerts = list((await db.execute(select(SituationAlert).where(
                     SituationAlert.notice_id == row.notice_id))).scalars())
                 new_alerts = build_alerts(row, payload)
+                preserve_alert_ids(previous_alerts, new_alerts)
                 changed = _published_signature(previous_extraction, previous_alerts) != _published_signature(extraction, new_alerts)
                 assignments = {alert.alert_id: alert.outbreak_id for alert in previous_alerts}
                 for alert in new_alerts:
@@ -686,7 +720,11 @@ def cluster_alerts(alerts: Iterable[dict[str, Any]], *, as_of: date) -> list[dic
     for alert in alerts:
         if alert["status"] == "routine":
             continue
-        by_disease[disease_key(alert.get("disease_id"), alert["disease_label"])].append(alert)
+        key = disease_key(alert.get("disease_id"), alert["disease_label"])
+        host = alert.get("host_type") or "unknown"
+        if host in ("human", "animal"):
+            key += "|host:" + host + "|" + normalise(alert.get("host_species") or "")
+        by_disease[key].append(alert)
 
     outbreaks: list[dict[str, Any]] = []
     for key, rows in by_disease.items():
@@ -783,6 +821,8 @@ async def rebuild_outbreaks(*, since_days: int = HISTORY_SINCE_DAYS, as_of: date
                     "disease_label": row.disease_label,
                     "country_code": row.country_code,
                     "status": row.status,
+                    "host_type": row.host_type or "unknown",
+                    "host_species": row.host_species,
                     "document_type": (row.extraction.document_type if row.extraction else None) or "other",
                 }
                 for row in rows

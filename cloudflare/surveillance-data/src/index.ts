@@ -1,6 +1,8 @@
 /** Same-origin, streaming JSON reads; publication never builds this Worker. */
 import { papersContentPath, researchCurrentPath, serveCurrentResearch, servePapersContent } from './papers-content-route.ts';
 import { bootstrap } from './bootstrap.ts';
+import { SITUATION_FEED_PATH } from './situation-feed.ts';
+import { serveSituationFeed } from './situation-feed-route.ts';
 export function objectPath(pathname: string): string | null {
   if (pathname === '/site-data/current.json') return 'current.json';
   if (pathname === '/site-data/bootstrap.json') return 'bootstrap.json';
@@ -11,6 +13,7 @@ export function objectPath(pathname: string): string | null {
 }
 
 export function dataRoute(pathname: string) {
+  if (pathname === SITUATION_FEED_PATH) return { channel: 'situation-feed' as const };
   const papers = papersContentPath(pathname);
   if (papers) return { channel: 'papers' as const, ...papers };
   const researchPage = researchCurrentPath(pathname);
@@ -46,6 +49,7 @@ export default {
   async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const route = dataRoute(new URL(request.url).pathname);
     if (!route) return new Response('{"error":"not_found"}', { status: 404, headers: headers() });
+    if (route.channel === 'situation-feed') return serveSituationFeed(request, env);
     if (route.channel === 'papers') return servePapersContent(request, env, route, ctx);
     if (route.channel === 'research-current') return serveCurrentResearch(request, env, route.key, ctx);
     const { relative, channel, publicRoot } = route;

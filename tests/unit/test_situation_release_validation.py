@@ -84,6 +84,34 @@ def _alert() -> dict:
     }
 
 
+def test_feed_is_validated_against_the_same_public_timeline(tmp_path: Path) -> None:
+    from src.services.situation_notices.feed_export import build_feed_payload
+
+    data = tmp_path / "data"
+    _tree(data, marker=_marker(), alert=_alert())
+    feed = build_feed_payload([_alert()], generated_at="2026-10-30T00:00:00+00:00", as_of="2026-10-30")
+    _write(data / "feed.json", feed)
+    result = validate(data, require_pages=False)
+    assert result["passed"], result["checks"]
+    feed["alerts"][0]["summary_en"] = "Invented outside the source snapshot"
+    _write(data / "feed.json", feed)
+    result = validate(data, require_pages=False)
+    assert any(check["id"] == "feed_provenance" and not check["passed"] for check in result["checks"])
+
+
+def test_feed_full_text_and_duplicate_identities_fail_the_release_gate(tmp_path: Path) -> None:
+    from src.services.situation_notices.feed_export import build_feed_payload
+
+    data = tmp_path / "data"
+    _tree(data, marker=_marker(), alert=_alert())
+    feed = build_feed_payload([_alert()], generated_at="2026-10-30T00:00:00+00:00", as_of="2026-10-30")
+    feed["alerts"].append({**feed["alerts"][0], "raw_text": "PRIVATE FULL TEXT"})
+    _write(data / "feed.json", feed)
+    result = validate(data, require_pages=False)
+    assert any(check["id"] == "feed_order" and not check["passed"] for check in result["checks"])
+    assert any(check["id"] == "no_full_text" and not check["passed"] for check in result["checks"])
+
+
 def test_marker_map_passes_when_the_timeline_keeps_the_quote(tmp_path: Path) -> None:
     data = tmp_path / "data"
     site = tmp_path / "site"
@@ -93,6 +121,14 @@ def test_marker_map_passes_when_the_timeline_keeps_the_quote(tmp_path: Path) -> 
     _tree(data, marker=_marker(), alert=_alert())
     result = validate(data, site)
     assert result["passed"], result["checks"]
+
+
+def test_mismatched_host_count_unit_fails_release_validation(tmp_path: Path) -> None:
+    data, site = tmp_path / "data", tmp_path / "site"
+    row = {**_alert(), "host_type": "animal", "host_species": "wild birds", "count_unit": "people"}
+    _tree(data, marker=_marker(), alert=row)
+    result = validate(data, site, require_pages=False)
+    assert any(check["id"] == "host_metadata" and not check["passed"] for check in result["checks"])
 
 
 def test_prose_on_a_map_point_fails_the_release_gate(tmp_path: Path) -> None:

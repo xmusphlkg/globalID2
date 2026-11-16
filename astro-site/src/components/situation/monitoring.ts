@@ -20,6 +20,9 @@ function titleMatcher(aliases: Array<string | null | undefined>): (title: string
 export function filterMonitoring(
   products: MonitoringProduct[], filters: Filters, asOf: string, site: SiteIndex, points: MapPoint[],
 ): MonitoringProduct[] {
+  // A roundup may cover several hosts; it has no per-event host contract.
+  // Do not present it as a match for any explicit host filter.
+  if (filters.host) return [];
   const disease = site.diseases[filters.disease];
   const country = site.countries[filters.country];
   const diseasePoints = filters.disease ? points.filter(point => (point.disease_id ?? point.disease_label) === filters.disease) : [];

@@ -4,6 +4,11 @@ import type { MapPoint, MonitoringProduct, SiteIndex } from '../../utils/situati
 import { filterMonitoring } from './monitoring.ts';
 import { DEFAULT_FILTERS } from './model.ts';
 
+test('a report without per-event host metadata cannot match an explicit host filter', () => {
+  assert.deepEqual(filterMonitoring([product('a')], { ...DEFAULT_FILTERS, host: 'animal' }, AS_OF, site, []), []);
+  assert.deepEqual(filterMonitoring([product('a')], { ...DEFAULT_FILTERS, host: 'unknown' }, AS_OF, site, []), []);
+});
+
 const AS_OF = '2026-11-15';
 const site: SiteIndex = {
   countries: { SA: { name_en: 'Saudi Arabia', name_zh: '沙特阿拉伯', seriesCount: 0, researchCount: 0 } },

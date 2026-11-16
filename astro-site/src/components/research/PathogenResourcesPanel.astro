@@ -1,0 +1,44 @@
+---
+import { IPSN_RESOURCE_URL, pathogenResourceLabels, pathogenResourceProfile, type PathogenResourceLocale } from '../../lib/pathogen-resources';
+
+interface Props { diseaseId: string; locale?: PathogenResourceLocale }
+const { diseaseId, locale = 'en' } = Astro.props;
+const profile = pathogenResourceProfile(diseaseId);
+const labels = pathogenResourceLabels[locale];
+---
+
+{profile && (
+  <section id="pathogen-resources" class="figure-panel scroll-mt-24" aria-labelledby="pathogen-resources-title">
+    <h2 id="pathogen-resources-title" class="figure-title">{labels.title}</h2>
+    <p class="figure-caption mt-2">{labels.intro}</p>
+    <p class="pathogen-identity"><span>{labels.pathogen}:</span> <strong>{profile.pathogen}</strong> <a href={profile.taxonomyUrl} target="_blank" rel="noopener noreferrer">{labels.taxonomy} ↗</a></p>
+    <ul class="pathogen-resource-list">
+      <li>
+        <a href={profile.sequenceUrl} target="_blank" rel="noopener noreferrer">{labels.sequences} ↗</a>
+        <p>{labels.sequencesDescription}</p>
+      </li>
+      {profile.gisaidUrl && (
+        <li>
+          <a href={profile.gisaidUrl} target="_blank" rel="noopener noreferrer">{labels.gisaid} ↗</a>
+          <span class="resource-access">{labels.account}</span>
+          <p>{labels.gisaidDescription}</p>
+        </li>
+      )}
+      <li>
+        <a href={IPSN_RESOURCE_URL} target="_blank" rel="noopener noreferrer">{labels.ipsn} ↗</a>
+        <p>{labels.ipsnDescription}</p>
+      </li>
+    </ul>
+  </section>
+)}
+
+<style>
+  .pathogen-identity { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .55rem; margin-top: 1rem; font-size: .85rem; color: rgb(var(--text-muted)); }
+  .pathogen-identity strong { color: rgb(var(--text-strong)); }
+  .pathogen-identity a, .pathogen-resource-list a { color: rgb(var(--color-teal)); text-decoration: underline; text-underline-offset: .2rem; }
+  .pathogen-resource-list { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); margin-top: 1.25rem; padding: 0; list-style: none; }
+  .pathogen-resource-list li { border-top: 1px solid rgb(var(--border)); padding-top: .75rem; }
+  .pathogen-resource-list a { display: inline-block; padding: .25rem 0; font-size: .85rem; font-weight: 650; }
+  .pathogen-resource-list p { margin-top: .4rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.6; }
+  .resource-access { display: inline-block; margin-left: .5rem; color: rgb(var(--text-faint)); font-size: .72rem; }
+</style>

@@ -135,6 +135,27 @@ def test_latest_per_place_keeps_the_newest_alert_of_each_outbreak_and_place():
     assert [p["alert_id"] for p in points] == ["new-ke", "other-outbreak", "ke-nairobi", "cd"]
 
 
+def test_species_normalization_keeps_latest_place_and_homepage_count_consistent():
+    from src.generation.home_summary import situation_home_summary
+
+    records = [
+        {**_rec("old", "2026-10-19"), "host_type": "animal", "host_species": "Wild  birds"},
+        {**_rec("new", "2026-10-20"), "host_type": "animal", "host_species": "wild birds"},
+        {**_rec("other", "2026-10-20"), "host_type": "animal", "host_species": "poultry"},
+        {**_rec("human", "2026-10-20"), "host_type": "human", "host_species": None},
+        {**_rec("unknown", "2026-10-20"), "host_type": "unknown", "host_species": None},
+        {**_rec("hyphen", "2026-10-20"), "host_type": "animal", "host_species": "Black-headed gulls"},
+        {**_rec("unhyphenated", "2026-10-20"), "host_type": "animal", "host_species": "Blackheaded gulls"},
+    ]
+    points = latest_per_place(records)
+    assert len(points) == 6
+    wild = next(point for point in points if point["alert_id"] == "new")
+    assert wild["host_species"] == "wild birds"
+    assert wild["place_alert_count"] == 2
+    assert wild["place_updated"] == "2026-10-20"
+    assert situation_home_summary({"as_of": "2026-10-20", "points": points})["recent_places"] == 6
+
+
 def test_facets_count_points_per_value_most_common_first():
     points = [
         _rec("1", "2026-10-01", country="KE"),

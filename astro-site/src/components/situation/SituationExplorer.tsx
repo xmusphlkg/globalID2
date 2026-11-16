@@ -14,9 +14,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties } from 'react';
 import './situation.css';
 import { situationData } from '../../lib/situation-data';
-import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SiteIndex, SituationAlertRecord, SituationMapDataFile } from '../../utils/situationTypes.ts';
+import type { HostType, Locale, MapPoint, MonitoringProduct, OutbreakFile, SiteIndex, SituationAlertRecord, SituationMapDataFile } from '../../utils/situationTypes.ts';
 import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, deduplicateAlerts, deduplicatePoints, latestMatchingPlaces, situationPlaceKey, filterPoints, placeLabel, recencyOf, sortPoints, visibleSituationPoints, type Filters, type WindowKey } from './model.ts';
-import { COPY, STATUS_LABELS, countryName, diseaseName, formatCount, formatDay, sourceLabel } from './labels.ts';
+import { COPY, HOST_FILTER_LABEL, HOST_LABELS, STATUS_LABELS, countryName, diseaseName, formatCount, formatDay, hostLabel, sourceLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
 import type { CanvasProps, RegionTint } from './SituationMapCanvas.tsx';
 import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
@@ -152,6 +152,7 @@ export default function SituationExplorer({
     write('country', filters.country || (selection?.kind === 'country' ? selection.code : ''));
     write('disease', filters.disease);
     write('source', filters.source);
+    write('host', filters.host || '');
     write('window', filters.window === DEFAULT_FILTERS.window ? '' : filters.window);
     url.searchParams.delete('outbreak');
     const next = `${url.pathname}${url.search}${url.hash}`;
@@ -202,8 +203,11 @@ export default function SituationExplorer({
     return [...options.values()];
   }, [facetPoints, site.countries, locale]);
   const sources = useMemo(() => tally([...points, ...monitoring], point => point.source_id, point => sourceLabel(point, locale)), [points, monitoring, locale]);
+  const hosts = useMemo(() => (['human', 'animal', 'unknown'] as const).map(id => ({
+    id, label: HOST_LABELS[id][locale], count: facetPoints.filter(point => (point.host_type ?? 'unknown') === id).length,
+  })), [facetPoints, locale]);
   const linked = useMemo(
-    () => visible.filter(point => point.disease_id && site.series[seriesKey(point.country_code, point.disease_id)]).length,
+    () => visible.filter(point => point.host_type === 'human' && point.disease_id && site.series[seriesKey(point.country_code, point.disease_id)]).length,
     [visible, site.series],
   );
   const linksKnown = visible.every(point => !point.disease_id || surveillanceSummaries[String(point.disease_id).toUpperCase()]);
@@ -255,7 +259,7 @@ export default function SituationExplorer({
   const applyFilters = (next: Filters) => {
     setFilters(next);
     setTimelineShown({});
-    const active = next.disease || next.country || next.source || next.window !== DEFAULT_FILTERS.window;
+    const active = next.disease || next.country || next.source || next.host || next.window !== DEFAULT_FILTERS.window;
     const candidates = completeIndex ? latestMatchingPlaces(points, asOf, next) : visibleSituationPoints(points, asOf, next);
     const target = candidates.find(point => point.alert_id === selectedMarker?.alert_id)
       ?? candidates.find(point => point.outbreak_id === selected?.outbreak_id
@@ -284,6 +288,7 @@ export default function SituationExplorer({
 
   const diseaseOn = Boolean(filters.disease && site.diseases[filters.disease]);
   const regions: RegionTint[] = useMemo(() => {
+    if (filters.host === 'animal' || filters.host === 'unknown') return [];
     if (!diseaseOn) {
       return Object.entries(site.countries)
         .filter(([, country]) => country.seriesCount > 0)
@@ -293,9 +298,10 @@ export default function SituationExplorer({
       const [code, diseaseId] = key.split(':');
       return diseaseId === filters.disease ? [{ code, value: glance.value }] : [];
     });
-  }, [diseaseOn, filters.disease, site.countries, site.series]);
+  }, [diseaseOn, filters.disease, filters.host, site.countries, site.series]);
   const notes = useMemo(() => {
     const out: Record<string, string> = {};
+    if (filters.host === 'animal' || filters.host === 'unknown') return out;
     for (const [code, country] of Object.entries(site.countries)) {
       const name = countryName({ country_code: code, country_name_en: country.name_en, country_name_zh: country.name_zh }, locale);
       if (diseaseOn) {
@@ -309,7 +315,7 @@ export default function SituationExplorer({
       }
     }
     return out;
-  }, [site.countries, site.series, diseaseOn, filters.disease, locale, copy]);
+  }, [site.countries, site.series, diseaseOn, filters.disease, filters.host, locale, copy]);
 
   const detailTitle = timelineScope === 'all' ? copy.allMatchingEvents : selected
     ? diseaseName(selected, locale)
@@ -325,7 +331,7 @@ export default function SituationExplorer({
       : '';
 
   const windows: Array<[WindowKey, string]> = [['all', copy.winAll], ['7', copy.win7], ['30', copy.win30], ['90', copy.win90]];
-  const filtersActive = filters.disease !== '' || filters.country !== '' || filters.source !== '' || filters.window !== DEFAULT_FILTERS.window;
+  const filtersActive = filters.disease !== '' || filters.country !== '' || filters.source !== '' || Boolean(filters.host) || filters.window !== DEFAULT_FILTERS.window;
   const countryPool = selectedCountryCode
     ? points.filter(point => point.country_code.toUpperCase() === selectedCountryCode
       && (!filters.disease || (point.disease_id ?? point.disease_label) === filters.disease)
@@ -341,6 +347,7 @@ export default function SituationExplorer({
       <SearchableFilter label={copy.disease} value={filters.disease} options={diseases} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('disease', value)} />
       <SearchableFilter label={copy.country} value={filters.country} options={countries} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('country', value)} />
       <SearchableFilter label={copy.source} value={filters.source} options={sources} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('source', value)} />
+      <SearchableFilter label={HOST_FILTER_LABEL[locale]} value={filters.host || ''} options={hosts} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('host', value as HostType | '')} />
       <SearchableFilter includeAny={false} noResults={copy.noFilterResults} label={copy.window} value={filters.window} options={windows.map(([id, label]) => ({ id, label, count: -1 }))} anyLabel={copy.winAll} onChange={value => set('window', (value || 'all') as WindowKey)} />
     </div>
   );
@@ -367,7 +374,7 @@ export default function SituationExplorer({
         </div>
       </header>
 
-      <ActiveSituationFilters locale={locale} filters={filters} options={{ diseases, countries, sources, windows: windows.map(([id, label]) => ({ id, label, count: -1 })) }} onRemove={key => applyFilters({ ...filters, [key]: DEFAULT_FILTERS[key] })} onReset={() => applyFilters(DEFAULT_FILTERS)} />
+      <ActiveSituationFilters locale={locale} filters={filters} options={{ diseases, countries, sources, hosts, windows: windows.map(([id, label]) => ({ id, label, count: -1 })) }} onRemove={key => applyFilters({ ...filters, [key]: DEFAULT_FILTERS[key] })} onReset={() => applyFilters(DEFAULT_FILTERS)} />
       <div className="sit-map-wrap">
         <section className="sit-map" aria-label={copy.mapLabel}>
           {dataState === 'error' ? (
@@ -418,6 +425,7 @@ export default function SituationExplorer({
                         <span className="sit-item-main">
                           <strong>{diseaseName(point, locale)}</strong>
                           <span>{placeLabel(point, countryName(point, locale))}</span>
+                          <span>{hostLabel(point, locale)}</span>
                         </span>
                         <span className="sit-item-meta">
                           <span className={`sit-status sit-status-${point.status}`}>{STATUS_LABELS[point.status][locale]}</span>
@@ -462,7 +470,8 @@ export default function SituationExplorer({
                 locale={locale}
                 country={countryGlance}
                 diseaseId={diseaseOn ? filters.disease : ''}
-                series={diseaseOn ? site.series[seriesKey(selection.code, filters.disease)] : undefined}
+                series={diseaseOn && filters.host !== 'animal' && filters.host !== 'unknown' ? site.series[seriesKey(selection.code, filters.disease)] : undefined}
+                seriesWithheldForHost={diseaseOn && (filters.host === 'animal' || filters.host === 'unknown') && Boolean(site.series[seriesKey(selection.code, filters.disease)])}
                 disease={diseaseOn ? site.diseases[filters.disease] : undefined}
                 alerts={countryAlerts}
                 asOf={asOf}

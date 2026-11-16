@@ -67,7 +67,10 @@ async def test_json_snapshot_derives_groups_before_managed_rebuild_and_preserves
     state, public = tmp_path / "state", tmp_path / "public"
     await export_json_publication(state, public, release_id="situation-midrun")
     manifest = json.loads((public / "current.json").read_text())
-    assert set(manifest["files"]) >= {"map-data.json", "sources.json", "weekly/index.json", "by-country/CD.json", "by-disease/D050.json"}
+    assert set(manifest["files"]) >= {"map-data.json", "sources.json", "feed.json", "weekly/index.json", "by-country/CD.json", "by-disease/D050.json"}
+    feed = json.loads((public / manifest["files"]["feed.json"]["url"]).read_text())
+    assert len(feed["alerts"]) == 3
+    assert all(not {"quote", "ai", "host_evidence", "full_text"}.intersection(row) for row in feed["alerts"])
     mapping = json.loads((public / manifest["files"]["map-data.json"]["url"]).read_text())
     assert len(mapping["points"]) == 3
     assert len(mapping["filter_points"]) == 3

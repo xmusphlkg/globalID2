@@ -1,7 +1,7 @@
 import GIDSLoader from '../GIDSLoader';
 import { useSituationData } from './useSituationData';
 import NoticeSnapshots from './NoticeSnapshots';
-import { alertSummary, countryName, countsLine, diseaseName, formatDay, sourceLabel, STATUS_LABELS } from './noticeLabels';
+import { alertSummary, countryName, countsLine, diseaseName, formatDay, hostLabel, sourceLabel, STATUS_LABELS } from './noticeLabels';
 import type { Locale, SituationAlertRecord } from '../../utils/situationTypes';
 
 export default function RuntimeNoticePanel({ dataUrl, locale, limit = 8, mapHref, diseaseId, contextCodes = [] }: {
@@ -26,6 +26,7 @@ export default function RuntimeNoticePanel({ dataUrl, locale, limit = 8, mapHref
         <time className="intl-panel-date" dateTime={alert.published_date}>{formatDay(alert.published_date, locale)}</time>
         <span className="intl-panel-source">{sourceLabel(alert, locale)}</span>
         <span className="intl-panel-status">{STATUS_LABELS[alert.status]?.[locale] ?? alert.status}</span>
+        <span className="intl-panel-status">{hostLabel(alert, locale)}</span>
       </p>
       <a className="intl-panel-title" href={alert.url} target="_blank" rel="noopener noreferrer">{diseaseName(alert, locale)} · {alert.admin_area ? `${alert.admin_area}, ` : ''}{countryName(alert, locale)}</a>
       {countsLine(alert, locale) && <p className="intl-panel-counts">{countsLine(alert, locale)}</p>}

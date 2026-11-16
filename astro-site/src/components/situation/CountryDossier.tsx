@@ -1,8 +1,13 @@
 import type { Locale, MapPoint, SeriesGlance, SiteIndex } from '../../utils/situationTypes.ts';
 import { recencyOf, placeLabel, RECENCY_COLORS } from './model.ts';
-import { COPY, STATUS_LABELS, countryName, diseaseName, formatCount, formatDay, formatSignedPercent } from './labels.ts';
+import { COPY, STATUS_LABELS, countryName, diseaseName, formatCount, formatDay, formatSignedPercent, hostLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
 
+const HOST_SERIES_NOTE: Record<Locale, string> = {
+  en: 'Human surveillance charts apply only to explicitly human events and are hidden for this host scope.',
+  zh: '人类监测图表仅适用于明确的人类事件；当前宿主范围不展示这些图表。',
+  fr: 'Les graphiques de surveillance humaine concernent uniquement les événements explicitement humains et sont masqués pour cette sélection d’hôtes.',
+};
 
 export function Sparkline({ values }: { values: number[] }) {
   if (values.length < 2) return null;
@@ -44,13 +49,18 @@ export function FusionCard({ locale, point, site }: { locale: Locale; point: Map
   const copy = COPY[locale];
   const disease = point.disease_id ? site.diseases[point.disease_id.toUpperCase()] : undefined;
   const country = site.countries[point.country_code.toUpperCase()];
-  const glance = point.disease_id ? site.series[seriesKey(point.country_code, point.disease_id)] : undefined;
+  const availableGlance = point.disease_id ? site.series[seriesKey(point.country_code, point.disease_id)] : undefined;
+  const glance = point.host_type === 'human' ? availableGlance : undefined;
+  const seriesWithheldForHost = point.host_type !== 'human' && Boolean(availableGlance);
   const diseaseLabel = diseaseName(point, locale);
   return (
     <div className="sit-fusion">
       <h3>{copy.surveillanceHeading}</h3>
+      <p>{hostLabel(point, locale)}</p>
       {glance ? (
         <SeriesRow glance={glance} locale={locale} />
+      ) : seriesWithheldForHost ? (
+        <p>{HOST_SERIES_NOTE[locale]}</p>
       ) : country && country.seriesCount > 0 && point.disease_id ? (
         <p>{copy.diseaseNotInSeries(diseaseLabel, country.seriesCount)}</p>
       ) : (
@@ -72,6 +82,7 @@ export function CountryDossier({
   country,
   diseaseId,
   series,
+  seriesWithheldForHost = false,
   disease,
   alerts,
   asOf,
@@ -83,6 +94,7 @@ export function CountryDossier({
   country: SiteIndex['countries'][string];
   diseaseId: string;
   series?: SeriesGlance;
+  seriesWithheldForHost?: boolean;
   disease?: SiteIndex['diseases'][string];
   alerts: MapPoint[];
   asOf: string;
@@ -99,7 +111,8 @@ export function CountryDossier({
           <SeriesRow glance={series} locale={locale} />
         </div>
       )}
-      {diseaseId && !series && country.seriesCount > 0 && disease && (
+      {diseaseId && seriesWithheldForHost && <p className="sit-muted">{HOST_SERIES_NOTE[locale]}</p>}
+      {diseaseId && !series && !seriesWithheldForHost && country.seriesCount > 0 && disease && (
         <p className="sit-muted">{copy.diseaseNotInSeries(locale === 'zh' && disease.name_zh ? disease.name_zh : disease.name_en, country.seriesCount)}</p>
       )}
       <div className="sit-chip-row">
@@ -127,6 +140,7 @@ export function CountryDossier({
                     <span className="sit-item-main">
                       <strong>{diseaseName(point, locale)}</strong>
                       <span>{placeLabel(point, countryName(point, locale))}</span>
+                      <span>{hostLabel(point, locale)}</span>
                     </span>
                     <span className="sit-item-meta">
                       <span className={`sit-status sit-status-${point.status}`}>{STATUS_LABELS[point.status][locale]}</span>

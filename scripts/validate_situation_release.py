@@ -30,7 +30,7 @@ DATA = ROOT / "astro-site" / "src" / "data" / "situation" / "international"
 DIST = ROOT / "astro-site" / "dist"
 LOCALE_PREFIXES = ("", "zh/", "fr/")
 FORBIDDEN_KEYS = {"text", "document", "full_text", "body", "content", "raw_text"}
-MARKER_PROSE_KEYS = {"quote", "summary_en", "summary_zh", "summary_fr", "ai"}
+MARKER_PROSE_KEYS = {"quote", "summary_en", "summary_zh", "summary_fr", "ai", "host_evidence"}
 
 
 def _read(path: Path) -> dict | None:
@@ -78,6 +78,8 @@ def validate(
     files = [data_dir / name for name in ("map.json", "monitoring.json", "sources.json")]
     if (data_dir / "map-data.json").is_file():
         files.append(data_dir / "map-data.json")
+    if (data_dir / "feed.json").is_file():
+        files.append(data_dir / "feed.json")
     files += sorted((data_dir / "outbreaks").glob("*.json")) + sorted((data_dir / "weekly").glob("*.json"))
     payloads = {path: _read(path) for path in files}
     bad_schema = [
@@ -103,12 +105,21 @@ def validate(
         for row in (payloads.get(data_dir / "sources.json") or {}).get("sources") or []
     }
     quote_problems: list[str] = []
+    host_problems: list[str] = []
     for payload in payloads.values():
         if not payload or payload.get("outbreak_id") is None or "alerts" not in payload:
             continue
         for alert in payload.get("alerts") or []:
             quote = alert.get("quote")
             alert_id = alert.get("alert_id")
+            host = alert.get("host_type") or "unknown"
+            unit = alert.get("count_unit") or "unknown"
+            if host not in ("human", "animal", "unknown") or unit not in ("people", "animals", "unknown"):
+                host_problems.append(f"{alert_id}: invalid host or unit")
+            if unit != "unknown" and (host, unit) not in (("human", "people"), ("animal", "animals")):
+                host_problems.append(f"{alert_id}: host/unit mismatch")
+            if host == "animal" and not alert.get("host_species"):
+                host_problems.append(f"{alert_id}: missing animal host")
             if not _is_url(alert.get("url")):
                 quote_problems.append(f"{alert_id}: missing authority URL")
             quotable = sources.get(str(alert.get("source_id"))) != "blocked"
@@ -118,7 +129,13 @@ def validate(
                 quote_problems.append(f"{alert_id}: quote published for a blocked source")
             elif isinstance(quote, str) and len(quote) > QUOTE_LIMIT:
                 quote_problems.append(f"{alert_id}: quote longer than {QUOTE_LIMIT}")
+            evidence = alert.get("host_evidence")
+            if not quotable and evidence:
+                host_problems.append(f"{alert_id}: host quote published for a blocked source")
+            if isinstance(evidence, str) and len(evidence) > QUOTE_LIMIT:
+                host_problems.append(f"{alert_id}: host evidence too long")
     check("quotes", not quote_problems, "; ".join(quote_problems[:5]))
+    check("host_metadata", not host_problems, "; ".join(host_problems[:5]))
 
     leaked = sorted(
         {
@@ -139,6 +156,29 @@ def validate(
                 str(alert.get("alert_id")): alert for alert in payload.get("alerts") or []
             }
             timelines[outbreak_id] = set(timeline_records[outbreak_id])
+    # Older retained snapshots have no feed input. When present, it must be a
+    # bounded view of the same public timelines, not a second notice publisher.
+    if data_dir / "feed.json" in payloads:
+        feed = payloads[data_dir / "feed.json"] or {}
+        rows = feed.get("alerts")
+        shape_ok = isinstance(rows, list) and len(rows) <= 200 and all(
+            isinstance(row, dict) and isinstance(row.get("alert_id"), str) and bool(row["alert_id"].strip())
+            for row in rows
+        )
+        check("feed_shape", shape_ok, "feed.json requires at most 200 notice records with identities")
+        if shape_ok:
+            identities = [row["alert_id"] for row in rows]
+            dates = [(str(row.get("published_date") or ""), row["alert_id"]) for row in rows]
+            check("feed_order", len(set(identities)) == len(identities) and dates == sorted(dates, reverse=True)
+                  and all(row.get("status") != "routine" for row in rows),
+                  "Feed records must be unique, newest first and exclude routine monitoring")
+            published = {key: alert for alerts in timeline_records.values() for key, alert in alerts.items()}
+            mismatched = [row["alert_id"] for row in rows if row["alert_id"] not in published
+                          or any(published[row["alert_id"]].get(key) != value for key, value in row.items())
+                          or {"quote", "ai", "host_evidence"}.intersection(row)]
+            check("feed_provenance", not mismatched, ", ".join(mismatched[:5]))
+            check("feed_snapshot", feed.get("generated_at") == map_file.get("generated_at")
+                  and feed.get("as_of") == map_file.get("as_of"), "Feed and map must share the export snapshot")
     missing_files = [
         str(item.get("outbreak_id"))
         for item in map_file.get("outbreaks") or []
@@ -175,7 +215,7 @@ def validate(
             if alert is None:
                 mismatches.append(f"{alert_id}: absent from {outbreak_id or 'missing outbreak'}")
                 continue
-            fields = ("source_id", "country_code", "disease_id", "disease_label", "admin_area", "status", "published_date")
+            fields = ("source_id", "country_code", "disease_id", "disease_label", "admin_area", "status", "published_date", "host_type", "host_species")
             stale = [field for field in fields if point.get(field) != alert.get(field)]
             if "notice_id" in point and point["notice_id"] != alert.get("notice_id"):
                 stale.append("notice_id")

@@ -24,6 +24,8 @@ export function applyDeepLinks(
     ? countryRaw
     : '';
   const windowParam = params.get('window');
+  const hostRaw = params.get('host');
+  const host = hostRaw === 'human' || hostRaw === 'animal' || hostRaw === 'unknown' ? hostRaw : '';
   const nextWindow: WindowKey = windowParam === '7' || windowParam === '90' || windowParam === 'all' || windowParam === '30'
     ? windowParam
     : DEFAULT_FILTERS.window;
@@ -37,6 +39,7 @@ export function applyDeepLinks(
   const filters: Filters = {
     disease: disease || '',
     country,
+    host,
     source: [...points, ...monitoring].some(point => point.source_id === params.get('source')) ? params.get('source')! : '',
     window: !windowParam && match && ageDays(match.published_date, asOf) > 30 ? 'all' : nextWindow,
   };
@@ -53,7 +56,7 @@ export function applyDeepLinks(
       ? { kind: 'place', id: selected.alert_id }
       : country
         ? { kind: 'country', code: country }
-        : candidates.length && (disease || filters.source || windowParam)
+        : candidates.length && (disease || filters.source || host || windowParam)
           ? { kind: 'place', id: candidates[0].alert_id }
           : null,
   };

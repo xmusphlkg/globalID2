@@ -1,13 +1,13 @@
 import type { Locale } from '../../utils/situationTypes.ts';
 import type { Option } from './explorer-state.ts';
 import { DEFAULT_FILTERS, type Filters } from './model.ts';
-import { COPY } from './labels.ts';
+import { COPY, HOST_FILTER_LABEL } from './labels.ts';
 import './situation-controls.css';
 
 interface Props {
   locale: Locale;
   filters: Filters;
-  options: { diseases: Option[]; countries: Option[]; sources: Option[]; windows: Option[] };
+  options: { diseases: Option[]; countries: Option[]; sources: Option[]; hosts: Option[]; windows: Option[] };
   onRemove: (key: keyof Filters) => void;
   onReset: () => void;
 }
@@ -25,15 +25,16 @@ export default function ActiveSituationFilters({ locale, filters, options, onRem
     { key: 'disease', label: copy.disease, options: options.diseases },
     { key: 'country', label: copy.country, options: options.countries },
     { key: 'source', label: copy.source, options: options.sources },
+    { key: 'host', label: HOST_FILTER_LABEL[locale], options: options.hosts },
     { key: 'window', label: copy.window, options: options.windows },
   ];
-  const selected = fields.filter(field => filters[field.key] !== DEFAULT_FILTERS[field.key]);
+  const selected = fields.filter(field => (filters[field.key] ?? '') !== (DEFAULT_FILTERS[field.key] ?? ''));
   if (!selected.length) return null;
   return (
     <div className="sit-active-filters" role="group" aria-label={text.heading}>
       <ul>
         {selected.map(field => {
-          const value = field.options.find(option => option.id === filters[field.key])?.label ?? filters[field.key];
+          const value = field.options.find(option => option.id === filters[field.key])?.label ?? filters[field.key] ?? '';
           return (
             <li key={field.key}>
               <button type="button" className="sit-filter-chip" data-filter={field.key} onClick={() => onRemove(field.key)} aria-label={text.remove(field.label, value)} title={text.remove(field.label, value)}>

@@ -43,6 +43,22 @@ test('filters combine and the window drops older points', () => {
   assert.equal(filterPoints(rows, { ...base, disease: 'D999' }, AS_OF).length, 0);
 });
 
+test('host filters treat legacy records as unknown and never collapse different hosts', () => {
+  const rows = [
+    alert('human', { host_type: 'human', count_unit: 'people' }),
+    alert('birds', { host_type: 'animal', host_species: 'wild birds', count_unit: 'animals' }),
+    alert('cattle', { host_type: 'animal', host_species: 'cattle', count_unit: 'animals' }),
+    alert('legacy'),
+  ];
+  const base = { disease: '', country: '', source: '', window: 'all' } as const;
+  assert.deepEqual(filterPoints(rows, { ...base, host: 'human' }, AS_OF).map(row => row.alert_id), ['human']);
+  assert.deepEqual(filterPoints(rows, { ...base, host: 'animal' }, AS_OF).map(row => row.alert_id), ['birds', 'cattle']);
+  assert.deepEqual(filterPoints(rows, { ...base, host: 'unknown' }, AS_OF).map(row => row.alert_id), ['legacy']);
+  assert.equal(deduplicateAlerts(rows).length, 4);
+  assert.equal(deduplicatePoints(rows).length, 4);
+  assert.equal(latestMatchingPlaces(rows, AS_OF, base).length, 4);
+});
+
 test('time windows include the boundary but exclude future and invalid dates', () => {
   const rows = [point('boundary', '2026-10-21'), point('old', '2026-10-20'), point('future', '2026-10-29'), point('invalid', 'bad')];
   const filters = { disease: '', country: '', source: '', window: '7' } as const;

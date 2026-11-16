@@ -60,7 +60,8 @@ def situation_home_summary(mapping: dict) -> dict:
     seen, ids = set(), set()
     for row in rows:
         key = (row.get('outbreak_id') or row.get('alert_id'), row.get('disease_id') or normalize(row.get('disease_label')),
-               row.get('country_code'), normalize(row.get('admin_area')), row.get('published_date'), row.get('status'))
+               row.get('country_code'), normalize(row.get('admin_area')), row.get('published_date'), row.get('status'),
+               row.get('host_type') or 'unknown', normalize(row.get('host_species')))
         if row.get('alert_id') in ids or key in seen:
             continue
         ids.add(row.get('alert_id'))

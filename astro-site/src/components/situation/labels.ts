@@ -1,6 +1,6 @@
 /** Map-stage copy; compact notice formatting lives in its own client module. */
 import type { Locale } from '../../utils/situationTypes.ts';
-export { formatDay, formatCount, formatSignedPercent, diseaseName, countryName, sourceLabel, alertSummary, STATUS_LABELS, basisLabel, countsLine } from './noticeLabels';
+export { formatDay, formatCount, formatSignedPercent, diseaseName, countryName, sourceLabel, alertSummary, STATUS_LABELS, basisLabel, countsLine, countLabels, hostLabel, HOST_LABELS, HOST_FILTER_LABEL } from './noticeLabels';
 
 export interface SituationCopy {
   filters: string;

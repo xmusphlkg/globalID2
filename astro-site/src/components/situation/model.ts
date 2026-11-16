@@ -1,6 +1,6 @@
 /** Pure map logic: recency, filtering, ordering and placement. Kept free of React and Node so it is unit-testable. */
 
-import type { MapPoint, SituationAlertRecord } from '../../utils/situationTypes.ts';
+import type { HostType, MapPoint, SituationAlertRecord } from '../../utils/situationTypes.ts';
 import { resolveReportingPeriod } from './report-period.ts';
 
 type FilterablePoint = {
@@ -10,6 +10,7 @@ type FilterablePoint = {
   source_id: string;
   disease_id?: string | null;
   disease_label: string;
+  host_type?: HostType | null;
   lat?: number;
   lng?: number;
 };
@@ -21,11 +22,12 @@ export interface Filters {
   disease: string;
   country: string;
   source: string;
+  host?: HostType | '';
   window: WindowKey;
 }
 
 /** The map opens on the last 30 days; a year of points buries what is new. */
-export const DEFAULT_FILTERS: Filters = { disease: '', country: '', source: '', window: '30' };
+export const DEFAULT_FILTERS: Filters = { disease: '', country: '', source: '', host: '', window: '30' };
 
 const DAY_MS = 86_400_000;
 
@@ -58,6 +60,7 @@ export function filterPoints<T extends FilterablePoint>(points: T[], filters: Fi
     if (filters.disease && (point.disease_id ?? point.disease_label) !== filters.disease) return false;
     if (filters.country && point.country_code !== filters.country) return false;
     if (filters.source && point.source_id !== filters.source) return false;
+    if (filters.host && (point.host_type ?? 'unknown') !== filters.host) return false;
     const age = ageDays(point.published_date, asOf);
     return Number.isFinite(age) && age >= 0 && age <= limit;
   });
@@ -73,6 +76,7 @@ export function deduplicatePoints(points: MapPoint[]): MapPoint[] {
     const key = JSON.stringify([
       point.outbreak_id || point.alert_id, point.disease_id || normalized(point.disease_label),
       point.country_code, normalized(point.admin_area), point.published_date, point.status,
+      point.host_type ?? 'unknown', normalized(point.host_species),
     ]);
     if (ids.has(point.alert_id) || seen.has(key)) return false;
     ids.add(point.alert_id);
@@ -92,6 +96,7 @@ export function situationPlaceKey(point: MapPoint): string {
     point.outbreak_id || point.alert_id,
     point.disease_id || normalized(point.disease_label),
     point.country_code.toUpperCase(), normalized(point.admin_area),
+    point.host_type ?? 'unknown', normalized(point.host_species),
   ]);
 }
 
@@ -136,6 +141,7 @@ export function deduplicateAlerts(alerts: SituationAlertRecord[], preferredId?: 
       alert.outbreak_id || alert.notice_id || alert.alert_id,
       alert.disease_id || normalized(alert.disease_label), alert.country_code,
       normalized(alert.admin_area), alert.status,
+      alert.host_type ?? 'unknown', normalized(alert.host_species), alert.count_unit ?? 'unknown',
       periodKey,
       // Sources can describe the same annual laboratory-confirmed total as
       // "total" or "confirmed". Suspected and probable counts stay separate.

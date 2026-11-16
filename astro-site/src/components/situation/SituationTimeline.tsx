@@ -2,24 +2,25 @@ import type { CSSProperties } from 'react';
 import type { Locale, SituationAlertRecord } from '../../utils/situationTypes.ts';
 import { placeLabel, type AlertGroup, type GraphRow, type Lane } from './model.ts';
 import { resolveReportingPeriod } from './report-period.ts';
-import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, diseaseName, countsLine, formatCount, formatDay, sourceLabel } from './labels.ts';
+import { COPY, STATUS_LABELS, alertSummary, basisLabel, countLabels, countryName, diseaseName, countsLine, formatCount, formatDay, hostLabel, sourceLabel } from './labels.ts';
 
 
 export function shortCounts(alert: SituationAlertRecord, locale: Locale): string {
-  const copy = COPY[locale];
+  const labels = countLabels(alert, locale);
   const parts: string[] = [];
-  if (alert.cases != null) parts.push(`${formatCount(alert.cases, locale)} ${copy.statCases.toLocaleLowerCase(locale)}`);
-  if (alert.deaths != null) parts.push(`${formatCount(alert.deaths, locale)} ${copy.statDeaths.toLocaleLowerCase(locale)}`);
+  if (alert.cases != null) parts.push(`${formatCount(alert.cases, locale)} ${labels.cases}`);
+  if (alert.deaths != null) parts.push(`${formatCount(alert.deaths, locale)} ${labels.deaths}`);
   return parts.join(' · ');
 }
 
 export function Figures({ alert, locale }: { alert: SituationAlertRecord; locale: Locale }) {
   const copy = COPY[locale];
+  const labels = countLabels(alert, locale);
   const tiles: Array<{ key: string; label: string; value: string; note: string }> = [];
   if (alert.cases != null) {
-    tiles.push({ key: 'cases', label: copy.statCases, value: formatCount(alert.cases, locale), note: alert.count_basis ? basisLabel(alert.count_basis, locale) : '' });
+    tiles.push({ key: 'cases', label: labels.cases, value: formatCount(alert.cases, locale), note: alert.count_basis ? basisLabel(alert.count_basis, locale) : '' });
   }
-  if (alert.deaths != null) tiles.push({ key: 'deaths', label: copy.statDeaths, value: formatCount(alert.deaths, locale), note: '' });
+  if (alert.deaths != null) tiles.push({ key: 'deaths', label: labels.deaths, value: formatCount(alert.deaths, locale), note: '' });
   if (tiles.length && alert.as_of) tiles.push({ key: 'asof', label: copy.statAsOf, value: formatDay(alert.as_of, locale), note: '' });
   if (!tiles.length) return alert.status !== 'routine' ? <p className="sit-muted">{copy.noCounts}</p> : null;
   return (
@@ -84,6 +85,7 @@ export function AlertItem({ alert, row, lanes, width, selected, featured, showPl
             {showDisease && <span className="sit-alert-disease">{diseaseName(alert, locale)}</span>}
             {showPlace && <span className="sit-alert-place">{placeLabel(alert, countryName(alert, locale))}</span>}
             <span className={`sit-status sit-status-${alert.status}`}>{STATUS_LABELS[alert.status][locale]}</span>
+            <span className="sit-status">{hostLabel(alert, locale)}</span>
           </span>
           <span className="sit-alert-sub">
             <time dateTime={alert.published_date}>{formatDay(alert.published_date, locale)}</time>

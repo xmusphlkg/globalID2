@@ -3,6 +3,16 @@
 export type Locale = 'en' | 'zh' | 'fr';
 export type AlertStatus = 'new' | 'ongoing' | 'imported' | 'ended' | 'routine';
 export type CountBasis = 'confirmed' | 'probable' | 'suspected' | 'total';
+export type HostType = 'human' | 'animal' | 'unknown';
+export type CountUnit = 'people' | 'animals' | 'unknown';
+
+/** Missing fields in older publications mean unknown, never human. */
+export interface HostMetadata {
+  host_type?: HostType | null;
+  host_species?: string | null;
+  count_unit?: CountUnit | null;
+  host_evidence?: string | null;
+}
 
 export interface AlertAI {
   review_mode: 'cross_model' | 'single_model' | null;
@@ -17,7 +27,7 @@ export interface ReportingPeriod {
   end?: string;
 }
 
-export interface SituationAlertRecord {
+export interface SituationAlertRecord extends HostMetadata {
   alert_id: string;
   outbreak_id: string | null;
   notice_id: string;
@@ -64,7 +74,7 @@ export interface LocalSeries {
  * One place on the map page. Labels and dates only: the quote, summaries and
  * review metadata live on the outbreak timeline fetched when the place is opened.
  */
-export interface MapMarker {
+export interface MapMarker extends HostMetadata {
   alert_id: string;
   notice_id?: string;
   outbreak_id: string | null;
