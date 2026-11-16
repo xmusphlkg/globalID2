@@ -123,3 +123,44 @@ def test_explicit_population_export_queues_dirty_incremental_release(monkeypatch
     assert apply.await_args.args[0]==[data]
     import json
     assert json.loads((tmp_path/"latest.json").read_text())["changes"]["changed_country_codes"]==changed_codes
+
+
+def test_ibge_discovers_all_state_totals_without_separate_registry_api():
+    from types import SimpleNamespace
+    from scripts import refresh_official_population as refresh
+    class Source:
+        def __init__(self):
+            self.urls = []
+        def fetch(self, name, url):
+            self.urls.append(url)
+            census = '6579' not in url
+            year = '2022' if '4714' in url else '2000' if census else '2026'
+            variable = '93' if census else '9324'
+            data = [{}, {'NC': '1', 'MC': '45', 'D1C': '1', 'D1N': 'Brasil', 'D2C': variable, 'D3C': year, 'V': '2700'}]
+            data += [{'NC': '3', 'MC': '45', 'D1C': ident, 'D1N': abbreviation, 'D2C': variable, 'D3C': year, 'V': '100'} for ident, abbreviation in refresh.IBGE_UF.items()]
+            return SimpleNamespace(json=lambda: data)
+    source = Source()
+    rows, states = refresh.fetch_ibge(source)
+    assert len(states) == 27 and len(rows) == 84
+    assert states['35']['sigla'] == 'SP'
+    assert all(url.startswith(refresh.IBGE_BASE) for url in source.urls)
+    assert '/p/all' in source.urls[0]
+
+
+def test_abs_discovers_latest_release_and_its_workbook(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from scripts import refresh_official_population as refresh
+    latest = refresh.ABS_PAGE + '/jun-2027'
+    workbook = 'https://www.abs.gov.au/new-release/310104.xlsx'
+    class Source:
+        output = tmp_path
+        def fetch(self, name, url):
+            if name == 'abs_latest.html':
+                return SimpleNamespace(url=refresh.ABS_PAGE, text=f'<a href="{refresh.ABS_PAGE}/mar-2027">old</a><a href="{latest}">new</a>')
+            if name == 'abs_release.html':
+                assert url == latest
+                return SimpleNamespace(url=latest, text=f'<a href="{workbook}">Table 4</a>')
+            assert name == 'abs_310104.xlsx' and url == workbook
+    load = lambda path, url: ('dynamically-discovered', str(path), url)
+    monkeypatch.setattr(refresh, 'load_abs_population', load)
+    assert refresh.fetch_abs(Source()) == ('dynamically-discovered', str(tmp_path / 'abs_310104.xlsx'), workbook)

@@ -134,7 +134,7 @@ async def test_new_population_year_marks_exact_geography_and_inserts_json_metada
 async def test_unregistered_geography_never_commits_partial_changes(database):
     before = await snapshot(database)
     with pytest.raises(ValueError,match="Unregistered subdivisions"):
-        await importer.apply_rows([row("CN-ZJ",210),row("CN-XX",100)], {"NBS":"input"})
+        await importer.apply_rows([row("CN-ZJ",210),row("CN-BJ",100)], {"NBS":"input"})
     after = await snapshot(database)
     assert after[0] == before[0]
     assert after[1] == after[2] == after[3] == []

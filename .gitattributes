@@ -1,0 +1,2 @@
+# Preserve captured command output exactly, including tool-emitted spaces.
+docs/acceptance/evidence/**/*.log -whitespace

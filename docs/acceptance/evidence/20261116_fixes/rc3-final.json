@@ -1,0 +1,68 @@
+{
+  "model": "/home/likangguo/globalID/globalID2/astro-site/src/components/charts/subdivision-map/model.ts",
+  "input_sha256": {
+    "index": "881eac21d7f132619676275174c1df4e82d1448f8fb2693ef8f179270664d1ba",
+    "population": "07dbc1bc8a477b6e398ff6e865efcd057e9d8e8adb7379e27907faebaac23a1f",
+    "d094": "442a2fe4afb71ce3513fe816c7f5b966be9fc57af013497264e03beba8572e9e"
+  },
+  "samples": [
+    {
+      "cold_shared_ceiling_ms": 378.826,
+      "hot_shared_ceiling_ms": 0.483,
+      "changed_view_ms": 0.306,
+      "changed_dates_ms": 27.756,
+      "default_window_ms": 1.192,
+      "ceiling": 700,
+      "changed_ceiling": 200,
+      "default_window": {
+        "from": "2025-01-01",
+        "to": "2025-12-31",
+        "metric": "rate",
+        "view": "monthly"
+      },
+      "result_sha256": "d7f9cf5e8dbf651b3107f7a7e43fc2ba69b0e6bb56388ad555f8f4773cd873d7",
+      "changed_result_sha256": "3dd44df3e82cd1c567fb145a913c00a5005b0c7dbbc6abc024346b0585f2d8ef"
+    },
+    {
+      "cold_shared_ceiling_ms": 246.982,
+      "hot_shared_ceiling_ms": 0.117,
+      "changed_view_ms": 0.079,
+      "changed_dates_ms": 52.025,
+      "default_window_ms": 0.344,
+      "ceiling": 700,
+      "changed_ceiling": 200,
+      "default_window": {
+        "from": "2025-01-01",
+        "to": "2025-12-31",
+        "metric": "rate",
+        "view": "monthly"
+      },
+      "result_sha256": "d7f9cf5e8dbf651b3107f7a7e43fc2ba69b0e6bb56388ad555f8f4773cd873d7",
+      "changed_result_sha256": "3dd44df3e82cd1c567fb145a913c00a5005b0c7dbbc6abc024346b0585f2d8ef"
+    },
+    {
+      "cold_shared_ceiling_ms": 324.46,
+      "hot_shared_ceiling_ms": 0.125,
+      "changed_view_ms": 0.083,
+      "changed_dates_ms": 20.132,
+      "default_window_ms": 0.621,
+      "ceiling": 700,
+      "changed_ceiling": 200,
+      "default_window": {
+        "from": "2025-01-01",
+        "to": "2025-12-31",
+        "metric": "rate",
+        "view": "monthly"
+      },
+      "result_sha256": "d7f9cf5e8dbf651b3107f7a7e43fc2ba69b0e6bb56388ad555f8f4773cd873d7",
+      "changed_result_sha256": "3dd44df3e82cd1c567fb145a913c00a5005b0c7dbbc6abc024346b0585f2d8ef"
+    }
+  ],
+  "median_ms": {
+    "cold_shared_ceiling_ms": 324.46,
+    "hot_shared_ceiling_ms": 0.125,
+    "changed_view_ms": 0.083,
+    "changed_dates_ms": 27.756,
+    "default_window_ms": 0.621
+  }
+}

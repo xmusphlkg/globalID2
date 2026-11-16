@@ -1,0 +1,374 @@
+/* Forms, actions, tabs and focus states inherit the surveillance explorer. */
+.subdivision-map,
+.subdivision-map-workspace {
+  min-width: 0;
+}
+.subdivision-map-workspace {
+  margin-top: 20px;
+}
+.subdivision-map-workspace .subdivision-map-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.3fr) minmax(0, .8fr) minmax(0, 1fr);
+  gap: 12px;
+  margin: 0 0 14px;
+}
+.subdivision-map-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: rgb(var(--text-muted));
+  font-size: 13px;
+}
+.subdivision-map-controls select {
+  width: 100%;
+  min-width: 0;
+  color: rgb(var(--text-strong));
+}
+.subdivision-map-workspace .subdivision-map-range {
+  gap: 10px 12px;
+  align-items: flex-end;
+}
+.subdivision-map-range label {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+.subdivision-map-range input,
+.subdivision-map-range select {
+  min-width: 0;
+  color: rgb(var(--text-strong));
+}
+.subdivision-map-range select {
+  max-width: 100%;
+}
+.subdivision-map-views {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-bottom: 10px;
+}
+.subdivision-map-views .surveillance-tabs {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+.subdivision-map-views .chart-measure {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  margin-left: auto;
+  color: rgb(var(--text-muted));
+  font-size: 13px;
+}
+.subdivision-map-views .chart-measure select {
+  min-width: 0;
+  max-width: min(320px, 100%);
+  color: rgb(var(--text-strong));
+}
+.subdivision-map-views > button {
+  font-size: 12px;
+}
+.subdivision-map-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin: 10px 0 14px;
+  color: rgb(var(--text-muted));
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.subdivision-map-status p {
+  margin: 0;
+}
+.subdivision-map-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  align-items: start;
+  gap: 20px;
+}
+.subdivision-map-plot,
+.subdivision-map-trend {
+  min-width: 0;
+}
+.subdivision-map-canvas {
+  width: 100%;
+  height: clamp(340px, 42vw, 520px);
+  min-height: 340px;
+}
+.subdivision-map-detail {
+  min-width: 0;
+  padding: 4px 0 4px 16px;
+  border-left: 1px solid var(--sv-border);
+  line-height: 1.6;
+}
+.subdivision-map-detail h3,
+.subdivision-map-trend h3 {
+  margin: 0 0 14px;
+  color: rgb(var(--text-strong));
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.subdivision-map-detail dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  margin: 0 0 16px;
+}
+.subdivision-map-detail dl > div {
+  min-width: 0;
+}
+.subdivision-map-detail dt {
+  color: rgb(var(--text-muted));
+  font-size: 12px;
+}
+.subdivision-map-detail dd {
+  margin: 3px 0 0;
+  color: rgb(var(--text-strong));
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.subdivision-map-value {
+  margin: 6px 0 18px;
+  color: rgb(var(--text-strong));
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.subdivision-map-value span {
+  display: block;
+  margin-top: 4px;
+  color: rgb(var(--text-muted));
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.subdivision-map-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 0 10px 8px;
+  border: 1px solid var(--sv-border);
+  color: rgb(var(--text-muted));
+  font-size: 12px;
+  font-weight: 400;
+}
+.subdivision-map-source {
+  margin: 10px 0 0;
+  color: rgb(var(--text-muted));
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.subdivision-map-source a,
+.subdivision-map-methods a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.subdivision-map-trend {
+  margin: 4px 0 12px;
+}
+.subdivision-map-trend + .subdivision-map-detail {
+  padding: 14px 0 0;
+  border-left: 0;
+  border-top: 1px solid var(--sv-border);
+}
+.subdivision-map-trend + .subdivision-map-detail dl {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.subdivision-map-missing {
+  display: block;
+  margin: 6px 0 0;
+  color: rgb(var(--text-muted));
+  font-size: 12px;
+}
+.subdivision-map-table {
+  max-width: 100%;
+  max-height: min(65vh, 600px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.subdivision-map-table table,
+.subdivision-map-populations table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.subdivision-map-table table {
+  min-width: 560px;
+}
+.subdivision-map-table th,
+.subdivision-map-table td,
+.subdivision-map-populations th,
+.subdivision-map-populations td {
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--sv-border);
+  vertical-align: top;
+}
+.subdivision-map-table th,
+.subdivision-map-populations th {
+  font-weight: 500;
+  text-align: left;
+}
+.subdivision-map-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgb(var(--surface));
+}
+.subdivision-map-table td,
+.subdivision-map-table thead th:not(:first-child) {
+  text-align: right;
+}
+.subdivision-map-table tbody th {
+  min-width: 150px;
+}
+.subdivision-map-table th button {
+  width: 100%;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.subdivision-map-table [data-selected] {
+  background: rgb(var(--color-brand) / .09);
+}
+.subdivision-map-unavailable {
+  color: rgb(var(--text-muted));
+  font-size: 12px;
+}
+.subdivision-map-workspace .subdivision-map-methods {
+  margin-top: 14px;
+  border-top: 1px solid var(--sv-border);
+  font-size: 12px;
+}
+.subdivision-map-methods summary {
+  cursor: pointer;
+  color: rgb(var(--text-strong));
+  font-size: 13px;
+  font-weight: 600;
+}
+.subdivision-map-methods p {
+  margin: 10px 0;
+  color: rgb(var(--text-muted));
+  overflow-wrap: anywhere;
+}
+.subdivision-map-populations {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 12px 0;
+  overscroll-behavior: contain;
+}
+.subdivision-map-populations h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.subdivision-map-populations table {
+  min-width: 700px;
+  font-size: 12px;
+}
+.subdivision-map-populations td {
+  overflow-wrap: anywhere;
+}
+.subdivision-map-workspace:is(.is-fullscreen, :fullscreen) {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  overflow: auto;
+  padding: clamp(16px, 2vw, 32px);
+  background: rgb(var(--bg));
+}
+.subdivision-map-workspace:is(.is-fullscreen, :fullscreen) .subdivision-map-canvas {
+  height: max(420px, calc(100vh - 290px));
+  height: max(420px, calc(100dvh - 290px));
+  min-height: 420px;
+}
+@media (max-width: 900px) {
+  .subdivision-map-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .subdivision-map-detail {
+    padding: 14px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--sv-border);
+  }
+  .subdivision-map-detail dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+@media (max-width: 760px) {
+  .subdivision-map-views .chart-measure {
+    flex: 1 1 220px;
+    margin-left: 0;
+  }
+  .subdivision-map-views .chart-measure select {
+    flex: 1;
+    width: 100%;
+    max-width: 100%;
+  }
+  .subdivision-map-workspace .subdivision-map-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .subdivision-map-range label {
+    flex: 1 1 160px;
+  }
+  .subdivision-map-range label input,
+  .subdivision-map-range label select {
+    flex: 1 1 auto;
+    max-width: 100%;
+  }
+  .subdivision-map-canvas {
+    height: clamp(300px, 70vw, 420px);
+    min-height: 300px;
+  }
+  .subdivision-map-workspace:is(.is-fullscreen, :fullscreen) {
+    padding: 16px;
+  }
+}
+@media (max-width: 420px) {
+  .subdivision-map-workspace .subdivision-map-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .subdivision-map-controls label:nth-child(-n+2) {
+    grid-column: 1 / -1;
+  }
+  .subdivision-map-workspace .subdivision-map-range {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+  }
+  .subdivision-map-range > span {
+    display: none;
+  }
+  .subdivision-map-range label {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .subdivision-map-range label input,
+  .subdivision-map-range label select {
+    width: 100%;
+  }
+  .subdivision-map-detail dl {
+    gap: 10px;
+  }
+}
+@media (pointer: coarse), (max-width: 760px) {
+  .subdivision-map-workspace button,
+  .subdivision-map-workspace select,
+  .subdivision-map-workspace input:not([type="checkbox"]) {
+    min-height: 44px;
+  }
+}

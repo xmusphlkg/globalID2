@@ -1,0 +1,328 @@
+"""Versioned province maps with explicit, exact-year official denominators.
+
+The reviewed import profiles below admit complete all-population notification
+periods. They do not admit sentinel rates, cumulative counts or stratified series.
+Population is always read from population_records, never inferred from a rate.
+"""
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+from datetime import date, timedelta
+import hashlib
+import json
+import math
+from pathlib import Path
+from urllib.parse import urlparse
+
+from sqlalchemy import text
+
+from src.core.country_library import get_country_bootstrap_config
+from src.generation.site_data_writer import write_compact_json, remove_stale_json_files
+
+ROOT = Path(__file__).resolve().parents[2]
+BOUNDARIES = ROOT / "external-data/subdivision-boundaries"
+PROFILES = {
+    "AU": {"population_source": "ABS", "basis": {
+        "en": "NINDSS notifications; laboratory-confirmed influenza where specified by the source.",
+        "zh": "NINDSS 通知病例；流感为来源指定的实验室确诊病例。",
+        "fr": "Notifications NINDSS ; grippe confirmée en laboratoire selon la source.",
+    }},
+    "BR": {"population_source": "IBGE", "basis": {
+        "en": "SINAN notifications by residence state and notification month; not necessarily confirmed infections.",
+        "zh": "SINAN 按居住州、通知月份统计的通知病例，不等同于确诊感染。",
+        "fr": "Notifications SINAN par État de résidence et mois de notification, pas nécessairement des infections confirmées.",
+    }},
+    "CN": {"population_source": "NBS", "basis": {
+        "en": "Provincial statutory infectious-disease reports; reporting definitions can differ by disease.",
+        "zh": "省级法定传染病报告病例；病例定义依病种而异。",
+        "fr": "Déclarations provinciales des maladies à déclaration obligatoire ; définitions propres à chaque maladie.",
+    }},
+    "US": {"population_source": "Census", "source_system": "SRC_US_NNDSS", "basis": {
+        "en": "CDC NNDSS weekly notifications by reporting jurisdiction; provisional source reports, not cumulative YTD counts.",
+        "zh": "CDC NNDSS 按报告辖区统计的周度通知病例；暂定报告数，不是年内累计数。",
+        "fr": "Notifications hebdomadaires provisoires du CDC NNDSS par juridiction, sans cumul annuel.",
+    }},
+    "JP": {"population_source": "StatisticsJapan", "source_system": "SRC_JP_NIID", "basis": {
+        "en": "IDWR all-case weekly notifications by prefecture. Sentinel and hospital-surveillance series are excluded.",
+        "zh": "IDWR 都道府县周度全数报告病例；不纳入定点哨点及医院监测序列。",
+        "fr": "Déclarations exhaustives hebdomadaires IDWR par préfecture, hors surveillance sentinelle ou hospitalière.",
+    }},
+    "SE": {"population_source": "SCB", "source_system": "SRC_SE_FOHM_SMINET", "basis": {
+        "en": "FHM SmiNet monthly notifications by county; revised registry counts.",
+        "zh": "FHM SmiNet 各地区月度通知病例，保留登记修订。",
+        "fr": "Notifications mensuelles révisées du registre FHM SmiNet par comté.",
+    }},
+}
+
+
+def parent_code(country: dict) -> str | None:
+    metadata = country.get("metadata") or {}
+    explicit = country.get("parent_code") or (metadata.get("parent_country_code") if isinstance(metadata, dict) else None)
+    # Bootstrap is the authoritative crosswalk, not a guess based on a hyphen.
+    return explicit or get_country_bootstrap_config(str(country.get("code") or country.get("country_code") or "")).get("parent_country_code")
+
+
+def finite(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def normalise_population(row: dict) -> dict | None:
+    code, year = str(row.get("country_code") or ""), int(row.get("year") or 0)
+    profile = PROFILES.get(parent_code({"code": code}))
+    metadata = row.get("metadata") or {}
+    if isinstance(metadata, str):
+        metadata = json.loads(metadata)
+    if not profile or row.get("source") != profile["population_source"]:
+        return None  # In particular, national WPP never supplies a subdivision.
+    population = row.get("population")
+    reference = str(metadata.get("reference_date") or "")
+    source_url = str(metadata.get("source_url") or "")
+    basis = metadata.get("population_basis")
+    try:
+        same_year = date.fromisoformat(reference).year == year
+    except ValueError:
+        same_year = False
+    if not finite(population) or population <= 0 or not same_year or not basis or not source_url.startswith("https://"):
+        return None
+    official_domains = {"ABS": ("abs.gov.au",), "NBS": ("stats.gov.cn",), "IBGE": ("ibge.gov.br",), "Census": ("census.gov",), "StatisticsJapan": ("stat.go.jp", "e-stat.go.jp"), "SCB": ("scb.se",)}[row["source"]]
+    hostname = urlparse(source_url).hostname or ""
+    if not any(hostname == domain or hostname.endswith("." + domain) for domain in official_domains):
+        return None
+    allowed_basis = {
+        "NBS": {"year_end_resident_population"},
+        "ABS": {"june_estimated_resident_population", "latest_observed_quarter_same_year"},
+        "IBGE": {"july_estimated_resident_population", "census_resident_population"},
+        "Census": {"july_estimated_resident_population"},
+        "StatisticsJapan": {"october_estimated_resident_population", "october_official_census_rebased_resident_population"},
+        "SCB": {"year_end_resident_population", "year_end_resident_population_ckm"},
+    }
+    if basis not in allowed_basis[row["source"]]:
+        return None
+    if metadata.get("location_code", code) != code:
+        return None
+    result = {
+        "location_code": code, "year": year, "value": population, "source": row["source"],
+        "reference_date": reference, "basis": basis, "source_url": source_url,
+        "method": "same_calendar_year_no_interpolation",
+    }
+    result["version"] = hashlib.sha256(json.dumps(result, sort_keys=True).encode()).hexdigest()
+    return result
+
+
+async def fetch_map_populations(session) -> list[dict]:
+    result = await session.execute(text("""
+        SELECT c.code AS country_code, p.year, p.population, p.source, p.metadata
+        FROM population_records p JOIN countries c ON c.id = p.country_id
+        WHERE c.is_active = true ORDER BY c.code, p.year
+    """))
+    return [dict(row._mapping) for row in result]
+
+
+def source_period(day: date, cadence: str, country_code: str) -> dict | None:
+    """Resolve source dates using the reviewed adapters' original calendars.
+
+    US processor dates are MMWR Saturday ends; JP dates are IDWR ISO Sunday
+    ends. Other weekly series need an explicit calendar review before admission.
+    The reporting year is the source week year, including boundary-spanning weeks.
+    """
+    if cadence == "weekly":
+        if country_code == "US" and day.weekday() == 5:
+            def week_one_end(year):
+                jan4 = date(year, 1, 4)
+                return jan4 - timedelta(days=(jan4.weekday() + 1) % 7) + timedelta(days=6)
+            year = next((year for year in range(day.year - 1, day.year + 2)
+                         if week_one_end(year) <= day < week_one_end(year + 1)), None)
+        elif country_code == "JP" and day.weekday() == 6:
+            year = day.isocalendar().year  # The JP adapter explicitly uses IDWR ISO weeks.
+        else:
+            return None
+        start, end = day - timedelta(days=6), day + timedelta(days=1)
+    elif cadence in {"monthly", "quarterly", "annual"}:
+        step = {"monthly": 1, "quarterly": 3, "annual": 12}[cadence]
+        if day.day != 1 or (day.month - 1) % step:
+            return None
+        month = day.month + step
+        start, end, year = day, date(day.year + (month - 1) // 12, (month - 1) % 12 + 1, 1), day.year
+    else:
+        return None
+    return {"start": start.isoformat(), "end_exclusive": end.isoformat(), "reporting_year": year}
+
+
+def reported_series(entry: dict, country_code: str, *, as_of: date | None = None, location_code: str | None = None) -> dict | None:
+    """Export one reviewed count series without combining source definitions."""
+    cadence = entry.get("period_granularity")
+    if cadence not in {"weekly", "monthly", "quarterly", "annual"}:
+        return None
+    metric = entry.get("metric_type")
+    allowed_metrics = {"cases", "case_notifications", "case_count", "case_count_reported", "confirmed_cases", "reported_cases"}
+    if metric and metric not in allowed_metrics:
+        return None
+    if entry.get("comparability") in {"non_comparable", "incomparable", "not_comparable"}:
+        return None
+    sources = entry.get("source_series") or []
+    selected = set(entry.get("selected_series_codes") or [])
+    selected_sources = [source for source in sources if source.get("series_code") in selected]
+    profile = PROFILES.get(country_code, {})
+    reviewed_direct = country_code in {"US", "JP", "SE"}
+    if reviewed_direct:
+        # A single explicitly selected source can be used independently even if
+        # other definitions are non-additive. Never sum the alternative series.
+        if len(selected) != 1 or len(selected_sources) != 1:
+            return None
+    elif entry.get("loss_risk") == "non_additive_series_not_rolled_up":
+        return None
+    for source in selected_sources:
+        if source.get("dimension_key") not in {None, "all"} or source.get("dimensions"):
+            return None
+        if source.get("reporting_basis") in {"sentinel_surveillance", "hospital_surveillance"}:
+            return None
+        if any(word in str(source.get("source_label") or "").lower() for word in ("in adults", "in children", "under 5", "pregnan")):
+            return None
+        if reviewed_direct:
+            if (source.get("source_system") != profile.get("source_system")
+                    or source.get("metric_type") not in allowed_metrics
+                    or source.get("unit") not in {"count", "cases", "persons"}
+                    or source.get("temporal_granularity") != cadence
+                    or source.get("mapping_relation") != "exact"
+                    or source.get("comparability") in {"non_comparable", "incomparable", "not_comparable"}
+                    or source.get("comparability_break")):
+                return None
+            if location_code and source.get("geography_key") != f"country:{location_code}:national":
+                return None
+        elif source.get("aggregation_policy") == "non_additive":
+            return None
+    dates, values = entry.get("dates") or [], entry.get("cases") or []
+    if not dates or len(dates) != len(values):
+        return None
+    quality = entry.get("quality_statuses") or []
+    granularities = entry.get("point_granularities") or []
+    points, periods, seen = [], [], set()
+    for index, (raw_date, value) in enumerate(zip(dates, values)):
+        try:
+            day = date.fromisoformat(str(raw_date)[:10])
+        except ValueError:
+            return None
+        period = source_period(day, cadence, country_code)
+        if not period or day in seen:
+            return None
+        if granularities and index < len(granularities) and granularities[index] not in {None, cadence}:
+            return None
+        seen.add(day)
+        status = str(quality[index] or "observed") if index < len(quality) else "observed"
+        if status in {"suppressed", "source_value_suppressed"}:
+            value, status = None, "suppressed"
+        elif value is None:
+            status = "missing_or_suppressed" if country_code == "AU" else "missing"
+        elif not finite(value) or value < 0 or int(value) != value:
+            return None
+        elif status in {"partial", "partial_report_window", "period_scope_mismatch", "missing", "invalid", "excluded"}:
+            value, status = None, "incomplete"
+        elif status not in {"observed", "provisional", "revised", "verified", "good", "complete", "confirmed", "high"}:
+            value, status = None, "incomplete"
+        else:
+            status = "provisional" if status == "provisional" or (entry.get("provisional_from") and str(raw_date) >= entry["provisional_from"]) else "observed"
+        if as_of and date.fromisoformat(period["end_exclusive"]) > as_of:
+            value, status = None, "incomplete"
+        points.append([day.isoformat(), value, status])
+        periods.append(period)
+    if not any(point[1] is not None for point in points):
+        return None
+    ordered = sorted(zip(points, periods), key=lambda item: item[0][0])
+    points, periods = [item[0] for item in ordered], [item[1] for item in ordered]
+    semantics = {
+        "metric": metric or "reviewed_monthly_notifications",
+        "definition": entry.get("definition_version") or "reviewed-import-profile-v1",
+        "reporting_basis": entry.get("reporting_basis") or "notification",
+        "time_basis": entry.get("time_basis") or ("reporting_week" if cadence == "weekly" else "reporting_period"),
+        "source_series": sorted(selected),
+        "source_labels": sorted({str(source.get("source_label") or source.get("source_series_code") or source["series_code"]) for source in selected_sources}),
+        "cadence": cadence,
+        "calendar": "MMWR" if country_code == "US" and cadence == "weekly" else "IDWR_ISO" if country_code == "JP" and cadence == "weekly" else "gregorian",
+    }
+    key = hashlib.sha256(json.dumps(semantics, sort_keys=True).encode()).hexdigest()[:16]
+    case_version = hashlib.sha256(json.dumps({"points": points, "periods": periods, "semantics": semantics}, sort_keys=True).encode()).hexdigest()
+    return {"points": points, "periods": periods, "cadence": cadence, "comparison_key": key, "semantics": semantics, "data_layer": entry.get("data_layer"), "case_version": case_version}
+
+
+def monthly_series(entry: dict, country_code: str, *, as_of: date | None = None) -> dict | None:
+    """Compatibility entry point for callers explicitly requiring monthly data."""
+    return reported_series(entry, country_code, as_of=as_of) if entry.get("period_granularity") == "monthly" else None
+
+
+def build_map_payloads(code: str, snapshots: dict[str, dict], population_rows: list[dict], boundary: dict) -> tuple[dict, dict, dict[str, dict]]:
+    regions, by_disease = [], defaultdict(dict)
+    for region_code, snapshot in sorted(snapshots.items()):
+        if region_code not in boundary["codes"] or parent_code({"code": region_code, "parent_code": snapshot.get("parent_code")}) != code:
+            continue
+        regions.append({"code": region_code, "name_en": snapshot.get("country_name_en") or snapshot.get("country_name") or region_code, "name_zh": snapshot.get("country_name_zh") or region_code})
+        try:
+            as_of = date.fromisoformat(str(snapshot.get("generated_at") or "")[:10])
+        except ValueError:
+            as_of = None
+        for disease_id, entry in (snapshot.get("disease_series") or {}).items():
+            result = reported_series(entry, code, as_of=as_of, location_code=region_code)
+            if result:
+                by_disease[disease_id][region_code] = {**result, "source_url": (snapshot.get("source_info") or {}).get("primary_url"), "labels": {"en": entry.get("name_en") or disease_id, "zh": entry.get("name_zh") or entry.get("name_en") or disease_id}, "slug": entry.get("slug")}
+    populations: dict[str, dict] = defaultdict(dict)
+    for row in population_rows:
+        region_code = str(row.get("country_code"))
+        if region_code not in {region["code"] for region in regions}:
+            continue
+        value = normalise_population(row)
+        if value:
+            year = str(value["year"])
+            if year in populations[region_code]:
+                raise ValueError(f"Duplicate population {region_code}/{year}")
+            populations[region_code][year] = value
+    disease_payloads, catalogue = {}, []
+    for disease_id, entries in sorted(by_disease.items()):
+        # Keep incompatible groups visible as excluded regions. Never merge them.
+        counts = Counter(entry["comparison_key"] for entry in entries.values())
+        comparison_key = sorted(counts, key=lambda key: (-counts[key], key))[0]
+        years = sorted({period["reporting_year"] for entry in entries.values() if entry["comparison_key"] == comparison_key for period in entry["periods"]})
+        first = next(entry for entry in entries.values() if entry["comparison_key"] == comparison_key)
+        payload = {"schema_version": 1, "country_code": code, "disease_id": disease_id, "labels": first["labels"], "years": years, "cadence": first["cadence"], "comparison_key": comparison_key, "case_basis": PROFILES[code]["basis"], "regions": entries}
+        disease_payloads[disease_id] = payload
+        catalogue.append({"id": disease_id, "labels": first["labels"], "years": years, "cadence": first["cadence"], "path": f"/site-data/subdivision-maps/{code.lower()}/{disease_id.lower()}.json"})
+    catalogue_payload = {"schema_version": 1, "country_code": code, "cadence": "mixed" if len({item["cadence"] for item in catalogue}) > 1 else (catalogue[0]["cadence"] if catalogue else "monthly"), "regions": regions, "diseases": catalogue, "expected_regions": boundary["expected_regions"], "boundary": {**boundary, "path": f"/site-data/subdivision-maps/{code.lower()}/boundary.json"}, "population_path": f"/site-data/subdivision-maps/{code.lower()}/population.json"}
+    population_payload = {"schema_version": 1, "country_code": code, "regions": dict(populations)}
+    return catalogue_payload, population_payload, disease_payloads
+
+
+def write_subdivision_maps(output_dir: Path, public_dir: Path, population_rows: list[dict], *, recorded_at_as_of: str | None = None, active_codes: set[str] | None = None) -> dict:
+    manifest = json.loads((BOUNDARIES / "manifest.json").read_text())
+    root = public_dir / "subdivision-maps"
+    countries = []
+    for code, boundary in sorted(manifest["countries"].items()):
+        snapshots = {}
+        for path in (output_dir / "countries").glob(f"{code.lower()}-*.json"):
+            snapshot = json.loads(path.read_text())
+            region_code = str(snapshot["country_code"]).upper()
+            if active_codes is None or region_code in active_codes:
+                snapshots[region_code] = snapshot
+        if not snapshots:
+            remove_stale_json_files(root / code.lower(), set())
+            continue
+        catalogue, population, diseases = build_map_payloads(code, snapshots, population_rows, boundary)
+        directory = root / code.lower()
+        directory.mkdir(parents=True, exist_ok=True)
+        geometry_path = BOUNDARIES / boundary["file"]
+        if hashlib.sha256(geometry_path.read_bytes()).hexdigest() != boundary["sha256"]:
+            raise ValueError(f"Boundary checksum mismatch: {code}")
+        write_compact_json(directory / "boundary.json", json.loads(geometry_path.read_text()))
+        # Historical observation replay has no corresponding historical population
+        # ledger. Fail closed for rates rather than mix revised populations in.
+        if recorded_at_as_of:
+            population["regions"] = {}
+            population["unavailable_reason"] = "historical_population_version_unavailable"
+        write_compact_json(directory / "population.json", population)
+        write_compact_json(directory / "index.json", catalogue)
+        for disease_id, payload in diseases.items():
+            write_compact_json(directory / f"{disease_id.lower()}.json", payload)
+        remove_stale_json_files(directory, {"index.json", "population.json", "boundary.json", *(f"{key.lower()}.json" for key in diseases)})
+        if diseases:
+            countries.append({"code": code, "path": f"/site-data/subdivision-maps/{code.lower()}/index.json"})
+    index = {"schema_version": 1, "countries": countries}
+    root.mkdir(parents=True, exist_ok=True)
+    write_compact_json(root / "index.json", index)
+    return index

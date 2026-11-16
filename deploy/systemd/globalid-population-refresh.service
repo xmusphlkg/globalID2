@@ -1,5 +1,5 @@
 [Unit]
-Description=Refresh GlobalID official population denominators and website exports
+Description=Discover and refresh official annual population independently by source
 After=globalid-docker.service
 Wants=globalid-docker.service
 OnFailure=globalid-notify-failure@%n.service
@@ -10,5 +10,5 @@ User=__RUN_AS_USER__
 Group=__RUN_AS_GROUP__
 WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=-__PROJECT_DIR__/.env
-ExecStart=/usr/bin/flock __PROJECT_DIR__/data/official-subdivision-refresh.lock __PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/refresh_official_population.py --apply --export
-TimeoutStartSec=10800
+ExecStart=/usr/bin/flock __PROJECT_DIR__/data/official-subdivision-refresh.lock __PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/update_population_automatically.py --apply --queue-release
+TimeoutStartSec=14400
