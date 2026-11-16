@@ -1,0 +1,56 @@
+[32m2026-11-16 12:33:07[0m | [1mINFO    [0m | [36msrc.core.logging[0m:[36msetup_logging[0m:[36m64[0m - [1mLogging initialized - Level: INFO[0m
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+___ test_first_apply_refuses_incomplete_ledger_before_delete_or_backup[all] ____
+
+capture = (namespace(observations=[<DiseaseSeriesObservation(id=1001)>, <DiseaseSeriesObservation(id=1002)>, <DiseaseSeriesObser...), receipt=PosixPath('/tmp/pytest-of-likangguo/pytest-1330/test_first_apply_refuses_incom0/receipt.json'), apply=True))
+missing = 'all'
+
+    @pytest.mark.parametrize('missing', ['all', 'one'])
+    async def test_first_apply_refuses_incomplete_ledger_before_delete_or_backup(capture, missing):
+        state, args = capture
+        state.revisions = [] if missing == 'all' else state.revisions[:-1]
+>       with pytest.raises(ValueError, match='missing from the preserved revision ledger'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_cr_initial_identity_migration.py:166: Failed
+----------------------------- Captured stdout call -----------------------------
+{"migration": "cr_initial_identity_normalization_v1", "apply": true, "canonical_observations": 150, "observations_to_remove": 64, "idempotent_noop_confirmed": null, "backup_path": "/tmp/pytest-of-likangguo/pytest-1330/test_first_apply_refuses_incom0/cr_initial_identities_backup_20261116T043309532310Z.json", "pass": true}
+___ test_first_apply_refuses_incomplete_ledger_before_delete_or_backup[one] ____
+
+capture = (namespace(observations=[<DiseaseSeriesObservation(id=1001)>, <DiseaseSeriesObservation(id=1002)>, <DiseaseSeriesObser...), receipt=PosixPath('/tmp/pytest-of-likangguo/pytest-1330/test_first_apply_refuses_incom1/receipt.json'), apply=True))
+missing = 'one'
+
+    @pytest.mark.parametrize('missing', ['all', 'one'])
+    async def test_first_apply_refuses_incomplete_ledger_before_delete_or_backup(capture, missing):
+        state, args = capture
+        state.revisions = [] if missing == 'all' else state.revisions[:-1]
+>       with pytest.raises(ValueError, match='missing from the preserved revision ledger'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_cr_initial_identity_migration.py:166: Failed
+----------------------------- Captured stdout call -----------------------------
+{"migration": "cr_initial_identity_normalization_v1", "apply": true, "canonical_observations": 150, "observations_to_remove": 64, "idempotent_noop_confirmed": null, "backup_path": "/tmp/pytest-of-likangguo/pytest-1330/test_first_apply_refuses_incom1/cr_initial_identities_backup_20261116T043309701707Z.json", "pass": true}
+__________ test_absent_old_rows_without_original_receipt_fail_closed ___________
+
+capture = (namespace(observations=[<DiseaseSeriesObservation(id=1001)>, <DiseaseSeriesObservation(id=1002)>, <DiseaseSeriesObser...), receipt=PosixPath('/tmp/pytest-of-likangguo/pytest-1330/test_absent_old_rows_without_o0/receipt.json'), apply=True))
+
+    async def test_absent_old_rows_without_original_receipt_fail_closed(capture):
+        state, args = capture
+        state.observations = [row for row in state.observations if row.id > 1000]
+        for row in state.obsolete_series + state.categories:
+            row.is_active = False
+>       with pytest.raises(ValueError, match='original migration receipt is missing'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_cr_initial_identity_migration.py:190: Failed
+----------------------------- Captured stdout call -----------------------------
+{"migration": "cr_initial_identity_normalization_v1", "apply": true, "canonical_observations": 150, "observations_to_remove": 0, "idempotent_noop_confirmed": null, "backup_path": null, "pass": true}
+=========================== short test summary info ============================
+FAILED tests/unit/test_cr_initial_identity_migration.py::test_first_apply_refuses_incomplete_ledger_before_delete_or_backup[all]
+FAILED tests/unit/test_cr_initial_identity_migration.py::test_first_apply_refuses_incomplete_ledger_before_delete_or_backup[one]
+FAILED tests/unit/test_cr_initial_identity_migration.py::test_absent_old_rows_without_original_receipt_fail_closed
+3 failed, 16 deselected in 0.55s

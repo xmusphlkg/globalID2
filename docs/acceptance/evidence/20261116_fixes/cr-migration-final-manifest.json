@@ -1,0 +1,25 @@
+{
+  "captured_at": "2026-11-16T04:33:37.572289+00:00",
+  "before": {
+    "captured_at": "2026-11-16T04:29:40.330302+00:00",
+    "path": "scripts/maintenance/migrate_cr_initial_identities.py",
+    "sha256": "c71deb2db6cba81f42d7f1eb2db0f5b64b06309d5ec80eed4ddf9d33259f1530",
+    "mtime_ns": 1794803181686029924
+  },
+  "after": {
+    "scripts/maintenance/migrate_cr_initial_identities.py": {
+      "sha256": "d4121a8d478e85acf58daaa2810cca6f3a02bc0fcc95b457295ed79c2e7f661e",
+      "mtime_ns": 1794803525886328804
+    },
+    "tests/unit/test_cr_initial_identity_migration.py": {
+      "sha256": "85ee53d9574ea6fecda790b12e754270d019812236b8864ded2c02511a1f5b0f",
+      "mtime_ns": 1794803576371066164
+    }
+  },
+  "verification": {
+    "old_script_counterexamples": "3 failed (all failed to reject unsafe states), 16 deselected",
+    "fixed_final": "36 passed, 2 SQLite dialect warnings, 11.99s",
+    "production_migration_executed": false,
+    "test_database": "Controlled in-memory ORM objects and fake session; existing CR store tests use isolated SQLite"
+  }
+}

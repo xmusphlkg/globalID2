@@ -1,0 +1,104 @@
+--- a/scripts/maintenance/migrate_cr_initial_identities.py
++++ b/scripts/maintenance/migrate_cr_initial_identities.py
+@@ -71,6 +71,43 @@
+         Series.country_code == 'CR', Series.source_system == SOURCE).order_by(Revision.id))).scalars())
+     payload = json.dumps([snapshot(row) for row in rows], sort_keys=True, default=encode).encode()
+     return rows, {'count': len(rows), 'ids': [row.id for row in rows], 'sha256': hashlib.sha256(payload).hexdigest()}
++
++
++def deleted_fact_revision_evidence(observations, revision_rows):
++    """Prove each complete deleted state survives in the immutable ledger."""
++    fields = ('series_code', 'geography_key', 'dimension_key', 'dimensions',
++              'value', 'unit', 'suppressed', 'suppression_reason',
++              'quality_status', 'raw_data', 'metadata_')
++    evidence = []
++    for old in observations:
++        old_time = old['time'].isoformat() if isinstance(old['time'], datetime) else old['time']
++        matches = [revision.id for revision in revision_rows
++                   if revision.time.isoformat() == old_time
++                   and all(getattr(revision, field) == old[field] for field in fields)]
++        if not matches:
++            raise ValueError(f"Deleted fact {old['id']} is missing from the preserved revision ledger")
++        evidence.append({'deleted_observation_id': old['id'], 'revision_ids': matches})
++    return evidence
++
++
++def prior_backup(receipt_path, *, old_ids, audit_sha256):
++    """An absent row is not proof that this migration previously succeeded."""
++    if not receipt_path.is_file():
++        raise ValueError('Old rows are absent but the original migration receipt is missing')
++    previous = json.loads(receipt_path.read_text())
++    if (previous.get('migration') != 'cr_initial_identity_normalization_v1'
++            or previous.get('old_task_uuid') != OLD_TASK
++            or previous.get('new_task_uuid') != NEW_TASK
++            or previous.get('audit_sha256') != audit_sha256
++            or previous.get('apply') is not True or previous.get('pass') is not True):
++        raise ValueError('Original migration receipt differs from this authorized audit')
++    backup_bytes = Path(previous['backup_path']).read_bytes()
++    if hashlib.sha256(backup_bytes).hexdigest() != previous['backup_sha256']:
++        raise ValueError('Original backup integrity check failed')
++    rows = json.loads(backup_bytes)['observations']
++    if len(rows) != len(old_ids) or {row['id'] for row in rows} != old_ids:
++        raise ValueError('Original backup does not preserve the exact authorized old observations')
++    return previous, rows
+ 
+ 
+ async def migrate(args):
+@@ -123,12 +160,20 @@
+         if args.apply:
+             statement = statement.with_for_update(of=Observation)
+         rows = list((await db.execute(statement)).scalars())
+-        _, revisions_before = await revision_state(db)
++        revision_rows, revisions_before = await revision_state(db)
+         by_id = {row.id: row for row in rows}
+         old_ids = {item['old_observation_id'] for item in evidence}
+         present = old_ids & set(by_id)
+         if present and present != old_ids:
+             raise ValueError('Partial deletion detected; refuse to infer remaining migration scope')
++        if present:
++            deleted_rows = [snapshot(by_id[identity]) for identity in sorted(old_ids)]
++        else:
++            _, deleted_rows = prior_backup(args.receipt, old_ids=old_ids,
++                                          audit_sha256=receipt['audit_sha256'])
++        # A stable ledger hash alone cannot prove it contains the facts being
++        # removed. Check every state before any deletion, including first apply.
++        receipt['deleted_fact_revision_evidence'] = deleted_fact_revision_evidence(deleted_rows, revision_rows)
+         canonical = [row for row in rows if row.id not in old_ids]
+         actual = {row_key(row.raw_data): row for row in canonical}
+         if len(actual) != len(canonical) or set(actual) != set(expected):
+@@ -206,7 +251,7 @@
+             backup = args.receipt.parent / f'cr_initial_identities_backup_{datetime.now(timezone.utc):%Y%m%dT%H%M%S%fZ}.json'
+             affected_series = {item['old_series_code'] for item in evidence}
+             all_series = list((await db.execute(select(Series).where(Series.series_code.in_(affected_series)))).scalars())
+-            backup_document = {**receipt, 'observations': [snapshot(by_id[identity]) for identity in sorted(old_ids)],
++            backup_document = {**receipt, 'observations': deleted_rows,
+                                'series': [snapshot(row) for row in all_series],
+                                'categories': [snapshot(row) for row in obsolete_categories],
+                                'equivalence_evidence': evidence}
+@@ -241,25 +286,7 @@
+         if revisions_before != revisions_after:
+             raise ValueError('Revision ledger IDs or contents changed during reconciliation')
+         receipt['revision_ledger_check'] = {'before': revisions_before, 'after': revisions_after, 'pass': True}
+-        # On repeat runs, independently prove every deleted fact from the
+-        # original durable backup still exists in the immutable audit ledger.
+-        if not present and args.receipt.exists():
+-            previous_receipt = json.loads(args.receipt.read_text())
+-            backup_bytes = Path(previous_receipt['backup_path']).read_bytes()
+-            if hashlib.sha256(backup_bytes).hexdigest() != previous_receipt['backup_sha256']:
+-                raise ValueError('Original backup integrity check failed')
+-            backup_rows = json.loads(backup_bytes)['observations']
+-            backed_up_revisions = []
+-            for old in backup_rows:
+-                matches = [revision.id for revision in revision_rows
+-                           if revision.series_code == old['series_code']
+-                           and revision.dimension_key == old['dimension_key']
+-                           and revision.time.isoformat() == old['time']
+-                           and revision.value == old['value'] and revision.raw_data == old['raw_data']]
+-                if not matches:
+-                    raise ValueError(f"Deleted fact {old['id']} is missing from the preserved revision ledger")
+-                backed_up_revisions.append({'deleted_observation_id': old['id'], 'revision_ids': matches})
+-            receipt['deleted_fact_revision_evidence'] = backed_up_revisions
++        receipt['deleted_fact_revision_evidence'] = deleted_fact_revision_evidence(deleted_rows, revision_rows)
+         receipt['pass'] = True
+     # The transaction commits before the applied receipt is published.
+     if args.apply:
