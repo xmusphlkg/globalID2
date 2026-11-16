@@ -20,11 +20,12 @@ import xml.etree.ElementTree as ET
 import zipfile
 from collections.abc import Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from functools import lru_cache
 from pathlib import Path
-from urllib.parse import unquote, urljoin
+from urllib.parse import parse_qs, unquote, urljoin, urlsplit
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import requests
@@ -37,6 +38,8 @@ from src.data.crawlers.cn_province_adapters import (
 
 from src.data.crawlers.cn_province_adapters.parsing import normalization as _province_normalization
 from src.data.crawlers.cn_province_adapters.parsing import phsm_history as _phsm_history
+from src.data.crawlers.cn_province_adapters.inner_mongolia import parse_named_monthly_deaths
+from src.services.exceptions import TaskCancelledError
 from src.data.crawlers.cn_province_adapters.parsing.normalization import (
     _norm, _is_cases_header, _is_report_total_label, _has_report_header,
     _normalize_count, _normalize_report_table,
@@ -46,12 +49,14 @@ ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG = ROOT / "configs" / "cn_province_sources.json"
 DATACENTER_SOURCE_ID = "SRC_CN_PROV_DATACENTER"
 MONTHLY_REPORT_SOURCE_ID = "SRC_CN_PROV_MONTHLY_REPORT"
+MAX_REPORT_IMAGES = 12
+MAX_REPORT_IMAGE_BYTES = 20 * 1024 * 1024
 SPREADSHEET_NS = "{urn:schemas-microsoft-com:office:spreadsheet}"
 MONTH_PATTERN = re.compile(
     r"(?P<year>20\d{2})\s*年\s*(?P<month>1[0-2]|0?[1-9])\s*月"
 )
 ATTACHMENT_PATTERN = re.compile(
-    r"\.(?P<suffix>docx?|xlsx?|pdf)(?![a-z0-9])",
+    r"\.(?P<suffix>docx?|xlsx?|pdf|wps)(?![a-z0-9])",
     re.IGNORECASE,
 )
 DEFAULT_HEADERS = {
@@ -78,6 +83,10 @@ class ParsedMonthlyReport:
     artifact_sha256: str
     content_type: str
     retrieved_at: str
+    # Raw originals are transient; the ingestion recorder archives their HTTP
+    # responses. Candidates are never formal source rows before visual review.
+    image_documents: list[dict] = field(default_factory=list)
+    article_text: str = ""
 
 
 @dataclass(frozen=True)
@@ -203,17 +212,25 @@ def _resolve_report_disease(
     normalized = re.sub(r"^其中[:：]?", "", normalized)
     normalized = re.sub(r"^[（(]?\d+[）)、.]?", "", normalized)
     normalized = re.sub(r"^[\d*＊]+|[\d*＊]+$", "", normalized)
+    # Audited legacy Word revision artifacts, including Hunan July 2026
+    # (SHA256 c2d0353da61690e80479c597a60324aac6c7c5b5ed77d977c6b473574e489407).
+    # Both antiword and LibreOffice retain these duplicated fragments. Keep
+    # exact exceptions: suffix/fuzzy rules could swallow case definitions.
+    normalized = {
+        "其他感染性腹泻病他染": "其他感染性腹泻病",
+        "流行性出血热出血热": "流行性出血热",
+        "伤寒和副伤寒和副寒": "伤寒和副伤寒",
+        # Jiangsu's September 2023 table uses # for its printed note that
+        # mpox became a class B notifiable disease on September 20.
+        "猴痘#": "猴痘",
+    }.get(normalized, normalized)
     direct = _disease_index(path).get(normalized)
     if direct is not None:
         return direct
-    candidates = {
-        str(disease["code"]): disease
-        for label, disease in _disease_index(path).items()
-        if len(label) >= 4
-        and normalized.startswith(label)
-        and len(normalized) - len(label) <= 6
-    }
-    return next(iter(candidates.values())) if len(candidates) == 1 else None
+    # Only strip explicit footnote syntax. Arbitrary trailing characters can
+    # change a measure/definition (死亡、疑似、累计), even after a known name.
+    footnote = re.sub(r"(?:[①-⑳†‡※]+|[（(][\d*＊①-⑳]+[）)])$", "", normalized)
+    return _disease_index(path).get(footnote)
 
 
 def _attachment_suffix(url: str) -> str | None:
@@ -231,12 +248,13 @@ def _source_row(
     province_code: str,
     disease: Mapping[str, object],
     raw_label: str,
-    cases: int,
+    cases: int | None,
     source_id: str,
     source_url: str,
     source_name: str,
     quality_status: str,
     raw: Mapping[str, object],
+    deaths: int | None = None,
 ) -> dict[str, object]:
     province = province_configs()[province_code]
     definition = (
@@ -245,7 +263,7 @@ def _source_row(
         else "CN_PROVINCE_MONTHLY_REPORT_V1"
     )
     definition = str(disease.get("definition_version") or definition)
-    return {
+    result = {
         "Date": report_date.isoformat(),
         "RawDiseaseLabel": raw_label,
         "SourceDiseaseCode": str(disease["code"]),
@@ -268,6 +286,9 @@ def _source_row(
         "RetrievedAt": datetime.now(timezone.utc).isoformat(),
         "Raw": dict(raw),
     }
+    if deaths is not None:
+        result["Deaths"] = deaths
+    return result
 
 
 def load_phsm_history(
@@ -328,6 +349,7 @@ class ProvinceDataCenterCrawler:
         self.request_interval = request_interval
         self.max_workers = max_workers
         self.max_retries = max_retries
+        self.response_diagnostics: list[dict[str, object]] = []
 
     def available_years(self) -> list[int]:
         """Return catalogued years plus safely parseable unpublished years.
@@ -407,18 +429,22 @@ class ProvinceDataCenterCrawler:
         response = self._get_with_retry(url, session=self._request_session())
         if self.request_interval:
             time.sleep(self.request_interval)
-        if len(response.content) < 6 * 1024:
-            return []
         fallback_label = self.config.get("disease_id_labels", {}).get(
             str(disease_id)
         )
-        return parse_datacenter_spreadsheet(
-            response.content,
-            report_date=date(year, month, 1),
-            source_url=url,
-            config_path=self.config_path,
-            fallback_disease_label=fallback_label,
-        )
+        diagnostic = {"year": year, "month": month, "disease_id": disease_id,
+                      "url": response.url, "bytes": len(response.content)}
+        try:
+            rows = parse_datacenter_spreadsheet(
+                response.content, report_date=date(year, month, 1),
+                source_url=response.url, config_path=self.config_path,
+                fallback_disease_label=fallback_label,
+            )
+        except (ValueError, ET.ParseError) as exc:
+            self.response_diagnostics.append({**diagnostic, "status": "invalid_response", "error": str(exc)})
+            raise ValueError(f"Data Center invalid response for {year}-{month:02d}, diseaseId={disease_id}: {exc}") from exc
+        self.response_diagnostics.append({**diagnostic, "status": "parsed" if rows else "empty_or_unlabelled", "rows": len(rows)})
+        return rows
 
     def _get_with_retry(
         self,
@@ -496,6 +522,15 @@ def parse_datacenter_spreadsheet(
                 f"{fallback_disease_label!r}"
             )
         disease_headers = {case_columns[0]: fallback_disease_label}
+    if not disease_headers and any(
+        resolve_province_code(raw.get(2), config_path) is not None
+        and any(_normalize_count(value) is not None for column, value in raw.items() if column >= 3)
+        for raw in table[3:]
+    ):
+        raise ValueError(f"Data Center numeric province rows have no disease label or registered fallback ({source_url})")
+    unknown = sorted({label for label in disease_headers.values() if resolve_disease(label, config_path) is None})
+    if unknown:
+        raise ValueError(f"Data Center contains unmapped disease labels: {unknown!r} ({source_url})")
     rows: list[dict[str, object]] = []
     for raw in table[3:]:
         province_code = resolve_province_code(raw.get(2), config_path)
@@ -539,6 +574,8 @@ class ProvinceMonthlyReportCrawler:
         self.session.headers.update(DEFAULT_HEADERS)
         self.config_path = Path(config_path)
         self.timeout = timeout
+        self.discovery_diagnostics: list[dict[str, object]] = []
+        self.report_diagnostics: list[dict[str, object]] = []
 
     def _get(
         self,
@@ -569,36 +606,181 @@ class ProvinceMonthlyReportCrawler:
 
     def discover(self, jurisdiction_code: str) -> list[MonthlyReportLink]:
         config = province_configs(self.config_path)[jurisdiction_code]
+        self.discovery_diagnostics = []
         if not config.index_url:
             return []
+        if config.index_json_article_url_template:
+            return self._discover_json_index(config)
         links: dict[tuple[date, str], MonthlyReportLink] = {}
-        index_urls = (config.index_url, *config.archive_index_urls)
-        for index_url in index_urls:
-            response = self._get(index_url, data=dict(config.index_post_data)) if config.index_post_data else self._get(index_url)
-            soup = BeautifulSoup(response.content, "lxml")
+        budget = max(1, min(24, config.max_index_pages))
+        index_urls = list(dict.fromkeys((config.index_url, *config.archive_index_urls)))
+        if config.pagination_url_template:
+            for page in range(1, budget):
+                candidate = config.pagination_url_template.format(page=page)
+                if self._is_column_page(candidate, config.index_url) and candidate not in index_urls:
+                    index_urls.append(candidate)
+        visited: set[str] = set()
+        failures: list[Exception] = []
+        current_month = datetime.now(ZoneInfo(config.timezone)).date().replace(day=1)
+        while index_urls and len(visited) < budget:
+            index_url = index_urls.pop(0)
+            if index_url in visited:
+                continue
+            visited.add(index_url)
+            try:
+                response = self._get(index_url, data=dict(config.index_post_data)) if config.index_post_data else self._get(index_url)
+            except (requests.RequestException, ValueError) as exc:
+                failures.append(exc)
+                self.discovery_diagnostics.append({"url": index_url, "status": "failed", "error": str(exc)})
+                continue
+            self.discovery_diagnostics.append({"url": response.url, "status": "fetched"})
+            index_content: bytes | str = response.content
+            if config.index_json_html_path:
+                fragment = response.json()
+                for key in config.index_json_html_path:
+                    fragment = fragment.get(key) if isinstance(fragment, dict) else None
+                if not isinstance(fragment, str):
+                    raise ValueError(f"Province index JSON has no configured HTML fragment ({response.url})")
+                index_content = fragment
+            soup = BeautifulSoup(index_content, "lxml")
             base = soup.find("base", href=True)
             base_url = urljoin(response.url, str(base["href"])) if base else response.url
-            for anchor in soup.select("a[href], [data-link]"):
+            anchors = list(soup.select("a[href], [data-link]"))
+            if config.index_xml_records:
+                embedded = soup.select_one('script[type="text/xml"]')
+                if embedded is None:
+                    raise ValueError(f"Province index has no configured XML records ({response.url})")
+                try:
+                    records = ET.fromstring(embedded.get_text()).findall("./recordset/record")
+                except ET.ParseError as exc:
+                    raise ValueError(f"Invalid province index XML records ({response.url})") from exc
+                if not records:
+                    raise ValueError(f"Province index XML records are empty ({response.url})")
+                for record in records:
+                    anchors.extend(BeautifulSoup(record.text or "", "lxml").select("a[href]"))
+            for anchor in anchors:
                 heading = anchor.select_one(".article__title")
                 title = " ".join((heading or anchor).get_text(" ", strip=True).split())
                 title = str(anchor.get("title") or title)
+                href = anchor.get("data-link") or anchor.get("href")
+                if not href or str(href).startswith(("javascript:", "#")):
+                    continue
+                url = urljoin(base_url, str(href))
+                if urlsplit(url).scheme not in {"http", "https"}:
+                    continue
+                # Only documented index filenames, or a same-file next-page
+                # query, are eligible. Article links never expand the crawl.
+                if self._is_column_page(url, response.url) and (
+                    re.search(r"(?:下一页|下页|next)", title, re.I)
+                    or re.fullmatch(r"(?:index|list|nav_list)_\d+\.(?:s?html?)", urlsplit(url).path.rsplit("/", 1)[-1], re.I)
+                ) and url not in visited and url not in index_urls:
+                    index_urls.append(url)
                 match = MONTH_PATTERN.search(title)
                 if not match or "传染病" not in title or "全国" in title:
                     continue
                 if jurisdiction_code == "CN-SD" and "山东省" not in title:
                     continue  # The official city mirror also lists city-only reports.
-                report_date = date(int(match["year"]), int(match["month"]), 1)
-                href = anchor.get("data-link") or anchor.get("href")
-                if not href or str(href).startswith(("javascript:", "#")):
+                if config.report_title_contains and not any(token in title for token in config.report_title_contains):
                     continue
-                url = urljoin(base_url, str(href))
+                report_date = date(int(match["year"]), int(match["month"]), 1)
+                if report_date > current_month:
+                    self.discovery_diagnostics.append({"url": url, "status": "future_month_rejected", "month": report_date.isoformat()})
+                    continue
                 links[(report_date, url)] = MonthlyReportLink(
                     jurisdiction_code, report_date, title, url
                 )
+        if index_urls:
+            self.discovery_diagnostics.append({"status": "page_budget_reached", "budget": budget})
+        if not links and failures and len(failures) == len(visited):
+            raise failures[0]
         return sorted(links.values(), key=lambda item: (item.report_date, item.url))
+
+    def _discover_json_index(self, config: ProvinceSourceConfig) -> list[MonthlyReportLink]:
+        """Read a bounded official JSON article listing with a fixed category."""
+        links: dict[tuple[date, str], MonthlyReportLink] = {}
+        current_month = datetime.now(ZoneInfo(config.timezone)).date().replace(day=1)
+        seen = 0
+        budget = max(1, min(24, config.max_index_pages))
+        for page in range(1, budget + 1):
+            data = {**dict(config.index_post_data), config.index_page_parameter: str(page)}
+            response = self._get(config.index_url, data=data)
+            payload = response.json()
+            items = payload.get("list") if isinstance(payload, dict) else None
+            if not isinstance(items, list):
+                raise ValueError(f"Province JSON listing has no article list ({response.url})")
+            self.discovery_diagnostics.append({"url": response.url, "status": "fetched", "page": page, "articles": len(items)})
+            if not items:
+                break
+            seen += len(items)
+            for item in items:
+                if not isinstance(item, dict) or "title" not in item or "id" not in item:
+                    raise ValueError(f"Province JSON listing has an invalid article ({response.url})")
+                title = str(item["title"])
+                match = MONTH_PATTERN.search(title)
+                if not match or "传染病" not in title or "全国" in title:
+                    continue
+                if config.report_title_contains and not any(token in title for token in config.report_title_contains):
+                    continue
+                report_date = date(int(match["year"]), int(match["month"]), 1)
+                article_id = str(item["id"])
+                if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", article_id):
+                    raise ValueError("Province JSON listing has an unsafe article identifier")
+                url = config.index_json_article_url_template.format(id=article_id)
+                if urlsplit(url).netloc != urlsplit(config.index_url).netloc:
+                    raise ValueError("Province JSON listing article URL must retain the configured origin")
+                if report_date > current_month:
+                    self.discovery_diagnostics.append({"url": url, "status": "future_month_rejected", "month": report_date.isoformat()})
+                    continue
+                links[(report_date, url)] = MonthlyReportLink(config.code, report_date, title, url)
+            total = payload.get("count")
+            if isinstance(total, int) and seen >= total:
+                break
+        else:
+            self.discovery_diagnostics.append({"status": "page_budget_reached", "budget": budget})
+        return sorted(links.values(), key=lambda item: (item.report_date, item.url))
+
+    @staticmethod
+    def _is_column_page(candidate: str, index_url: str) -> bool:
+        target, index = urlsplit(candidate), urlsplit(index_url)
+        if target.scheme not in {"http", "https"} or target.netloc != index.netloc:
+            return False
+        column = index.path if index.path.endswith("/") else index.path.rsplit("/", 1)[0] + "/"
+        target_dir, _, filename = target.path.rpartition("/")
+        if target_dir + "/" != column:
+            return False
+        page_keys = {"page", "pageno", "pagenum", "pageindex", "currentpage", "currpage"}
+        target_query, index_query = parse_qs(target.query), parse_qs(index.query)
+        def query_scope(query):
+            scope = {key: value for key, value in query.items() if key.casefold() not in page_keys}
+            if "paramJson" in scope and len(scope["paramJson"]) == 1:
+                try:
+                    params = json.loads(scope["paramJson"][0])
+                except (TypeError, ValueError):
+                    return scope
+                if isinstance(params, dict):
+                    scope["paramJson"] = {key: value for key, value in params.items() if key.casefold() not in page_keys}
+            return scope
+        target_scope, index_scope = query_scope(target_query), query_scope(index_query)
+        if target_scope != index_scope:
+            return False
+        index_name = index.path.rsplit("/", 1)[-1]
+        extensionless_page = bool(
+            index_name and "." not in index_name
+            and re.fullmatch(re.escape(re.sub(r"_\d+$", "", index_name)) + r"_\d+", filename)
+        )
+        return bool(
+            re.fullmatch(r"(?:index|list|nav_list)(?:_\d+)?\.(?:s?html?)", filename, re.I)
+            or target.path == index.path and target.query != index.query
+            or extensionless_page
+        )
 
     def fetch(self, link: MonthlyReportLink) -> ParsedMonthlyReport:
         config = province_configs(self.config_path)[link.jurisdiction_code]
+        self.report_diagnostics = []
+        image_documents = []
+        structured_rows = []
+        if link.report_date > datetime.now(ZoneInfo(config.timezone)).date().replace(day=1):
+            raise ValueError(f"Cannot fetch future province report month: {link.report_date}")
         response = self._get(
             link.url,
             headers={"Referer": config.index_url} if config.index_url else None,
@@ -644,19 +826,61 @@ class ProvinceMonthlyReportCrawler:
                 if "No registered disease rows parsed" not in str(exc):
                     raise
             else:
-                return ParsedMonthlyReport(
-                    rows, response.url, page_hash,
-                    response.headers.get("Content-Type", "text/html"), retrieved_at,
-                )
+                structured_rows.extend(rows)
 
-        narrative_text = " ".join(soup.stripped_strings)
-        artifact_url = response.url
-        artifact_hash = page_hash
+        # Capture article images, including publishers which do not use W020
+        # filenames. Exclude navigation images by selecting the article body
+        # when available; the visual reviewers later reject non-report layouts.
+        body = soup.select_one(".TRS_Editor, .TRS_UEDITOR, #zoom, #zoomcon, .article-content, .article_content, .content-detail")
+        image_urls = []
+        image_locations = []
+        for picture in (body or soup).select("img[src], img[data-src], img[data-original], img[data-lazy-src]"):
+            raw_url = str(picture.get("data-original") or picture.get("data-src") or picture.get("data-lazy-src") or picture.get("src") or "")
+            anchor = picture.find_parent("a", href=True)
+            if anchor and re.search(r"\.(?:png|jpe?g|tiff?|webp|gif|bmp)$", urlsplit(str(anchor["href"])).path, re.I):
+                raw_url = str(anchor["href"])  # linked original over thumbnail
+            image_locations.append(raw_url)
+        image_locations.extend(str(anchor["href"]) for anchor in (body or soup).select("a[href]")
+                               if re.search(r"\.(?:png|jpe?g|tiff?|webp|gif|bmp)$", urlsplit(str(anchor["href"])).path, re.I))
+        for raw_url in image_locations:
+            image_url = urljoin(base_url, raw_url)
+            if (urlsplit(image_url).scheme in {"http", "https"}
+                    and (body is not None or re.search(r"(?:W020\d+|/ueditor/image/|/contentmanage/article/image/)", image_url, re.I))
+                    and image_url not in image_urls):
+                image_urls.append(image_url)
+        if len(image_urls) > MAX_REPORT_IMAGES:
+            self.report_diagnostics.append({"url": response.url, "status": "image_document_limit", "images": len(image_urls)})
+            image_urls = []  # never review a silently truncated report
+        for image_url in image_urls:
+            try:
+                image = self._get(image_url, headers={"Referer": response.url})
+                image_type = image.headers.get("Content-Type", "").split(";", 1)[0].lower()
+                if not image_type.startswith("image/"):
+                    # A number of government servers return octet-stream.
+                    from PIL import Image
+                    with Image.open(io.BytesIO(image.content)) as decoded:
+                        image_type = Image.MIME.get(decoded.format, "")
+                if not image_type.startswith("image/") or len(image.content) > MAX_REPORT_IMAGE_BYTES:
+                    raise ValueError("Unsupported or oversized report image")
+                image_documents.append({"data": image.content, "media_type": image_type,
+                                      "source_url": image.url, "sha256": hashlib.sha256(image.content).hexdigest()})
+                self.report_diagnostics.append({"url": image.url, "status": "image_pending_review", "article_url": response.url})
+            except Exception as exc:
+                self.report_diagnostics.append({"url": image_url, "status": "image_capture_failed", "error": str(exc)})
         content_type = response.headers.get("Content-Type", "text/html")
+        # Keep evidence separately per artifact. A page count must never be
+        # attributed to an unrelated last attachment's URL/hash.
+        narratives = [(" ".join(soup.stripped_strings), response.url, page_hash, content_type)]
         for attachment_url, suffix_hint in candidates:
-            attachment = self._get(
-                attachment_url, headers={"Referer": response.url}
-            )
+            try:
+                attachment = self._get(attachment_url, headers={"Referer": response.url})
+            except TaskCancelledError:
+                raise
+            except (requests.RequestException, RuntimeError) as exc:
+                # A failed supplemental carrier must not erase explicit HTML
+                # facts. Replay may also lack bytes for a failed download.
+                self.report_diagnostics.append({"url": attachment_url, "status": "attachment_fetch_failed", "error": str(exc)})
+                continue
             candidate_hash = hashlib.sha256(attachment.content).hexdigest()
             content_type = attachment.headers.get(
                 "Content-Type", "application/octet-stream"
@@ -667,48 +891,79 @@ class ProvinceMonthlyReportCrawler:
                     attachment_url,
                     suffix_hint=suffix_hint,
                 )
-            except Exception:
+            except Exception as exc:
                 # Keep the article text as evidence when a PDF has no
                 # machine-readable table; unsupported/invalid tables still
                 # fail closed below if disease rows were actually found.
                 attachment_tables = []
-            if suffix_hint == ".pdf" and not attachment_tables:
+                self.report_diagnostics.append({"url": attachment.url, "status": "attachment_parse_failed", "error": str(exc)})
+            if suffix_hint == ".pdf":
+                needs_visual = not attachment_tables
                 try:
                     import pdfplumber
 
                     with pdfplumber.open(io.BytesIO(attachment.content)) as pdf:
-                        narrative_text += " " + " ".join(
-                            page.extract_text() or "" for page in pdf.pages
-                        )
+                        narratives.append((" ".join(page.extract_text() or "" for page in pdf.pages), attachment.url, candidate_hash, content_type))
+                        # A text table on page1 must not hide a scanned page2.
+                        # Large page images also catch scans carrying a small
+                        # native header or an unreliable hidden text layer.
+                        needs_visual |= any(
+                            any(float(image.get("width", 0)) * float(image.get("height", 0))
+                                >= float(page.width) * float(page.height) * .25
+                                for image in page.images)
+                            for page in pdf.pages)
                 except Exception:
-                    pass
+                    needs_visual = True
+                if needs_visual:
+                    image_documents.append({"data": attachment.content, "media_type": "application/pdf",
+                                          "source_url": attachment.url, "sha256": candidate_hash})
+                    self.report_diagnostics.append({"url": attachment.url, "status": "image_pending_review"})
+                    attachment_tables = []
             if attachment_tables:
                 try:
                     rows = self._normalize_tables(
-                        attachment_tables, link=link, source_url=attachment_url,
+                        attachment_tables, link=link, source_url=attachment.url,
                         artifact_sha256=candidate_hash,
                     )
                 except ValueError as exc:
                     if "No registered disease rows parsed" not in str(exc):
                         raise
                 else:
-                    return ParsedMonthlyReport(
-                        rows, attachment_url, candidate_hash, content_type,
-                        retrieved_at,
-                    )
-            artifact_url, artifact_hash = attachment_url, candidate_hash
-
-        rows = _normalize_narrative_report(
-            narrative_text,
-            link=link,
-            source_url=artifact_url,
-            artifact_sha256=artifact_hash,
-            config_path=self.config_path,
+                    structured_rows.extend(rows)
+        rows = _deduplicate_source_rows(
+            [*structured_rows, *(row
+            for narrative_text, artifact_url, artifact_hash, _ in narratives
+            for row in _normalize_narrative_report(
+                narrative_text, link=link, source_url=artifact_url,
+                artifact_sha256=artifact_hash, config_path=self.config_path,
+            )), *(row
+            for narrative_text, artifact_url, artifact_hash, _ in narratives
+            for row in (parse_named_monthly_deaths(
+                narrative_text, report_date=link.report_date, title=link.title,
+                source_url=artifact_url, artifact_sha256=artifact_hash,
+                config_path=self.config_path, resolve_disease=resolve_disease,
+                source_row=_source_row, source_id=MONTHLY_REPORT_SOURCE_ID,
+            ) if link.jurisdiction_code == "CN-NM" else []))]
         )
-        if not rows:
-            raise ValueError(f"No explicit disease values found in {artifact_url}")
+        if not rows and not image_documents:
+            article_text = narratives[0][0]
+            summary_only = (not tables and not candidates and not image_urls
+                            and "传染病" in article_text
+                            and re.search(r"(?:发病总数|报告发病|报告病例|共报告|总病例数|病种名单|位居前)", article_text))
+            self.report_diagnostics.append({
+                "url": response.url,
+                "report_month": link.report_date.strftime("%Y-%m"),
+                "status": "summary_only" if summary_only else "no_disease_values",
+                "html_table_count": len(tables),
+                "attachment_count": len(candidates),
+                "image_link_count": len(image_urls),
+            })
+            raise ValueError(f"No explicit disease values found in {response.url}")
+        if rows and not structured_rows:
+            self.report_diagnostics.append({"url": response.url, "status": "partial_narrative", "rows": len(rows)})
         return ParsedMonthlyReport(
-            rows, artifact_url, artifact_hash, content_type, retrieved_at
+            rows, response.url, page_hash, response.headers.get("Content-Type", "text/html"), retrieved_at,
+            image_documents=image_documents, article_text=" ".join(soup.stripped_strings),
         )
 
     def _normalize_tables(
@@ -722,27 +977,46 @@ class ProvinceMonthlyReportCrawler:
         rows: list[dict[str, object]] = []
         unmapped_labels: list[str] = []
         for table in tables:
-            normalized = _normalize_report_table(table)
+            normalized = _normalize_report_table(table, include_deaths=True)
             for item in normalized:
                 disease = _resolve_report_disease(item["label"], self.config_path)
                 if disease is None:
                     if not _is_report_total_label(item["label"]):
                         unmapped_labels.append(str(item["label"]))
                     continue
-                rows.append(
-                    _source_row(
-                        report_date=link.report_date,
-                        province_code=link.jurisdiction_code,
-                        disease=disease,
-                        raw_label=item["label"],
-                        cases=item["cases"],
-                        source_id=MONTHLY_REPORT_SOURCE_ID,
-                        source_url=source_url,
-                        source_name="Chinese provincial statutory infectious disease monthly report",
-                        quality_status="raw",
-                        raw={**item, "artifact_sha256": artifact_sha256, "title": link.title},
-                    )
+                valid_from = disease.get("valid_from")
+                if valid_from and link.report_date < date.fromisoformat(str(valid_from)):
+                    self.report_diagnostics.append({"url": source_url, "status": "before_definition_start", "disease": disease["code"], "month": link.report_date.isoformat(), "valid_from": valid_from})
+                    continue
+                row = _source_row(
+                    report_date=link.report_date,
+                    province_code=link.jurisdiction_code,
+                    disease=disease,
+                    raw_label=item["label"],
+                    cases=item["cases"],
+                    deaths=item.get("deaths"),
+                    source_id=MONTHLY_REPORT_SOURCE_ID,
+                    source_url=source_url,
+                    source_name="Chinese provincial statutory infectious disease monthly report",
+                    quality_status="raw",
+                    raw={**item, "artifact_sha256": artifact_sha256, "title": link.title},
                 )
+                if item["cases"] is not None:
+                    rows.append(row)
+                    continue
+                # Keep the metrics separate before reconciliation: a missing
+                # case cell must not hide its death count or conflict with a
+                # known case value in another carrier of this same report.
+                row.pop("Deaths", None)
+                if item["case_column_present"]:
+                    rows.append({**row, "MissingValueStatus": "source_missing"})
+                code = str(disease["code"])
+                rows.append({
+                    **row, "SourceDiseaseCode": code + "__deaths", "Diseases": code + "__deaths",
+                    "RawDiseaseLabel": item["label"] + " [deaths]", "Measure": "deaths",
+                    "Cases": item["deaths"],
+                    "Raw": {**row["Raw"], "metric": "deaths", "paired_source_disease_code": code},
+                })
         if unmapped_labels:
             raise ValueError(
                 "Official province report contains unmapped disease labels: "
@@ -769,6 +1043,17 @@ def parse_attachment_tables(
     suffix_hint: str | None = None,
 ) -> list[pd.DataFrame]:
     suffix = suffix_hint or _attachment_suffix(url)
+    if suffix == ".wps":
+        if content.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
+            return _legacy_doc_tables(content)
+        if content.startswith(b"PK\x03\x04"):
+            try:
+                with zipfile.ZipFile(io.BytesIO(content)) as archive:
+                    if "word/document.xml" in archive.namelist():
+                        return _docx_tables(content)
+            except zipfile.BadZipFile as exc:
+                raise ValueError("Invalid WPS ZIP signature/document") from exc
+        raise ValueError("Unsupported WPS attachment signature; expected an OLE Word or DOCX document")
     if suffix == ".docx":
         return _docx_tables(content)
     if suffix in {".xlsx", ".xls"}:
@@ -913,9 +1198,18 @@ def _deduplicate_source_rows(rows: Iterable[dict[str, object]]) -> list[dict[str
             str(row["JurisdictionCode"]), str(row["SourceID"]),
         )
         previous = result.get(identity)
-        if previous is not None and previous["Cases"] != row["Cases"]:
+        if previous is not None and (
+            (previous["Cases"] is not None and row["Cases"] is not None and previous["Cases"] != row["Cases"])
+            or (
+                previous.get("Deaths") is not None
+                and row.get("Deaths") is not None
+                and previous["Deaths"] != row["Deaths"]
+            )
+        ):
             raise ValueError(f"Conflicting province source rows: {identity}")
-        result.setdefault(identity, row)
+        if (previous is None or previous["Cases"] is None and row["Cases"] is not None
+                or previous.get("Deaths") is None and row.get("Deaths") is not None):
+            result[identity] = row
     return [result[key] for key in sorted(result)]
 
 

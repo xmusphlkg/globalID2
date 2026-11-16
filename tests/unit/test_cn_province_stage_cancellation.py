@@ -13,9 +13,9 @@ from src.services.ingestion.countries import cn_province
 
 
 @pytest.mark.parametrize("today,force,start_year,expected", [
-    (date(2026, 10, 30), False, None, [(2026, 7), (2026, 8), (2026, 9)]),
+    (date(2026, 10, 30), False, None, [(2026, m) for m in range(1, 10)]),
     (date(2026, 10, 30), True, None, [(2026, m) for m in range(1, 10)]),
-    (date(2026, 1, 10), False, None, [(2025, m) for m in (10, 11, 12)]),
+    (date(2026, 1, 10), False, None, [(2025, m) for m in range(1, 13)]),
     (date(2026, 10, 30), True, 2025, [(2025, m) for m in range(1, 13)] + [(2026, m) for m in range(1, 10)]),
 ])
 def test_datacenter_never_requests_future_or_open_month(monkeypatch, today, force, start_year, expected):

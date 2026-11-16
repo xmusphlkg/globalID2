@@ -69,7 +69,7 @@
   "diseases": [
     {"code":"hepatitis_a","concept_id":"D007","labels":["甲型肝炎","甲肝","Hepatitis A"]},
     {"code":"hepatitis_e","concept_id":"D011","labels":["戊型肝炎","戊肝","Hepatitis E"]},
-    {"code":"typhoid_paratyphoid","concept_id":"D026","labels":["伤寒和副伤寒","伤寒与副伤寒","伤寒副伤寒","伤寒+副伤寒","Typhoid fever and paratyphoid fever","Enteric fever"]},
+    {"code":"typhoid_paratyphoid","concept_id":"D026","labels":["伤寒和副伤寒","伤寒与副伤寒","伤寒副伤寒","伤寒+副伤寒","伤寒、副伤寒","Typhoid fever and paratyphoid fever","Enteric fever"]},
     {"code":"acute_hemorrhagic_conjunctivitis","concept_id":"D041","labels":["急性出血性结膜炎","Acute hemorrhagic conjunctivitis"]},
     {"code":"dysentery","concept_id":"D024","labels":["细菌性和阿米巴性痢疾","细菌性和阿米巴痢疾","痢疾","Dysentery"]},
     {"code":"hfmd","concept_id":"D048","labels":["手足口病","HFMD","Hand foot and mouth disease"]},
@@ -77,7 +77,7 @@
     {"code":"brucellosis","concept_id":"D032","labels":["布鲁氏菌病","布病","Brucellosis"]},
     {"code":"dengue","concept_id":"D021","labels":["登革热","Dengue"]},
     {"code":"hfrs","concept_id":"D163","labels":["流行性出血热","肾综合征出血热","出血热","HFRS","Hemorrhagic Fever"]},
-    {"code":"novel_influenza","concept_id":"D016","definition_version":"CN_PROVINCE_MONTHLY_NOVEL_INFLUENZA_2025_09","labels":["人感染新亚型流感","Novel influenza A"]},
+    {"code":"novel_influenza","concept_id":"D016","definition_version":"CN_PROVINCE_MONTHLY_NOVEL_INFLUENZA_2025_09","valid_from":"2025-09-01","labels":["人感染新亚型流感","Novel influenza A"]},
     {"code":"sfts","concept_id":"D057","definition_version":"CN_PROVINCE_MONTHLY_SFTS_2026_04","valid_from":"2026-04-01","labels":["发热伴血小板减少综合征","Severe fever with thrombocytopenia syndrome","SFTS"]},
     {"code":"chikungunya","concept_id":"D052","definition_version":"CN_PROVINCE_MONTHLY_CHIKUNGUNYA_2026_04","valid_from":"2026-04-01","labels":["基孔肯雅热","Chikungunya"]},
     {"code":"mers","concept_id":"D049","labels":["中东呼吸综合征","中东呼吸综合征（MERS）","MERS"]},
