@@ -251,7 +251,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
       </div>
     </section>
 
-    {!country.includes('-') && <SubdivisionIncidenceMap client:visible countryCode={country} language={locale} />}
+    {childJurisdictions.length > 0 && <SubdivisionIncidenceMap client:visible countryCode={country} language={locale} />}
 
     <section class="figure-panel">
         <h2 class="figure-title">

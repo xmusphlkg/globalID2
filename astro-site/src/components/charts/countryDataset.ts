@@ -69,7 +69,7 @@ export interface CountryDatasetSeriesEntry {
   period_starts?: (string | null)[];
   period_ends_exclusive?: (string | null)[];
   calendar?: string | null;
-  total_cases: number;
+  total_cases: number | null;
   total_deaths?: number | null;
   latest_cases?: number | null;
   latest_deaths?: number | null;
@@ -136,10 +136,10 @@ interface CompactCountryDatasetSeriesEntry {
   fr?: string;
   cat?: string;
   slug?: string;
-  tc?: number;
-  td?: number;
-  lc?: number;
-  ld?: number;
+  tc?: number | null;
+  td?: number | null;
+  lc?: number | null;
+  ld?: number | null;
   x: number[];
   c: (number | null)[];
   w: (number | null)[];
@@ -197,6 +197,13 @@ function isCompactCountryDataset(
   );
 }
 
+// An empty canonical projection can retain narrower, non-additive source
+// observations. Its empty-sum placeholder is not a reported national zero.
+export function canonicalTotal(values: (number | null)[] | undefined, total: number | null | undefined): number | null {
+  return values?.some(value => value != null && Number.isFinite(value))
+    && total != null && Number.isFinite(total) ? total : null;
+}
+
 function normalizeCountryDataset(
   raw: CountryDataset | CompactCountryDataset,
 ): CountryDataset {
@@ -209,6 +216,8 @@ function normalizeCountryDataset(
           id,
           {
             ...entry,
+            total_cases: canonicalTotal(entry.cases, entry.total_cases),
+            total_deaths: canonicalTotal(entry.deaths, entry.total_deaths),
             recorded_at_as_of: entry.recorded_at_as_of ?? null,
             recorded_history_complete: entry.recorded_history_complete ?? null,
             name_fr: localizedDiseaseName(
@@ -255,10 +264,10 @@ function normalizeCountryDataset(
           point_granularities: entry.point_granularities ?? [],
           point_series_codes: entry.point_series_codes ?? [],
           point_data_layers: entry.point_data_layers ?? [],
-          total_cases: entry.tc ?? 0,
-          total_deaths: entry.td ?? 0,
-          latest_cases: entry.lc ?? 0,
-          latest_deaths: entry.ld ?? 0,
+          total_cases: canonicalTotal(entry.c, entry.tc),
+          total_deaths: canonicalTotal(entry.d, entry.td),
+          latest_cases: entry.lc ?? null,
+          latest_deaths: entry.ld ?? null,
           provisional_from: entry.pf,
           metric_type: entry.mt,
           reporting_basis: entry.rb,

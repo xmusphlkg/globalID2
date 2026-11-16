@@ -1,8 +1,8 @@
-import { toSeoSlug } from '../../../lib/seo';
-import { localizedDiseaseName } from '../../../utils/diseaseNames';
-import { localizedRegionName } from '../../../utils/i18n';
-import { formatFileSize, downloadPartRecordCount } from '../../../lib/download-presentation';
-import { diseaseSearchAliases } from '../../../lib/disease-search';
+import { toSeoSlug } from '../../../lib/seo.ts';
+import { localizedDiseaseName } from '../../../utils/diseaseNames.ts';
+import { localizedRegionName } from '../../../utils/i18n.ts';
+import { formatFileSize, downloadPartRecordCount } from '../../../lib/download-presentation.ts';
+import { diseaseSearchAliases } from '../../../lib/disease-search.ts';
 
 export function downloadCatalogue(downloads: any, metaRaw: any, locale: 'en' | 'zh' | 'fr') {
 const zh = locale === 'zh';
@@ -31,7 +31,7 @@ const countries = downloadableCountries
   })
   .map((entry: any) => {
     const part = entry.parts?.find((item: any) => item.is_current) ?? entry.parts?.at(-1);
-    const partsCount = entry.parts?.length ?? 0;
+    const partsCount = entry.parts_count ?? entry.parts?.length ?? 0;
     const recordCount = Number(entry.record_count ?? 0);
     const currentCount = downloadPartRecordCount(entry).current;
     return {

@@ -2,7 +2,7 @@
 // Sortable, filterable disease comparison table with optional deaths/CFR columns.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CountryDatasetSeriesEntry } from './countryDataset';
+import { canonicalTotal, type CountryDatasetSeriesEntry } from './countryDataset';
 import { useChartLanguage } from './chartPreferences';
 import { useCountryDataset } from './useCountryDataset';
 import { toSeoSlug } from '../../lib/seo';
@@ -15,10 +15,10 @@ interface DiseaseRow {
   name_fr?: string;
   category: string;
   slug: string;
-  total_cases: number;
-  total_deaths: number;
-  latest_cases: number;
-  latest_deaths: number;
+  total_cases: number | null;
+  total_deaths: number | null;
+  latest_cases: number | null;
+  latest_deaths: number | null;
   incidence_rate?: number | null;
   mortality_rate?: number | null;
 }
@@ -181,8 +181,8 @@ export default function ComparisonTable({ rows: initialRows, countryCode, series
   const rows = useMemo<DiseaseRow[]>(() => series ? Object.values(series).map(entry => ({
     disease_id: entry.disease_id, name_en: entry.name_en, name_zh: entry.name_zh ?? entry.name_en,
     name_fr: entry.name_fr, category: entry.category ?? 'Other', slug: entry.slug ?? entry.disease_id.toLowerCase(),
-    total_cases: entry.total_cases ?? 0, total_deaths: entry.total_deaths ?? 0,
-    latest_cases: entry.latest_cases ?? 0, latest_deaths: entry.latest_deaths ?? 0,
+    total_cases: canonicalTotal(entry.cases, entry.total_cases), total_deaths: canonicalTotal(entry.deaths, entry.total_deaths),
+    latest_cases: entry.latest_cases ?? null, latest_deaths: entry.latest_deaths ?? null,
     incidence_rate: entry.incidence_rate, mortality_rate: entry.mortality_rate,
   })) : (initialRows ?? []), [series, initialRows]);
   const [sortKey, setSortKey] = useState<SortKey>('total_cases');
@@ -195,7 +195,7 @@ export default function ComparisonTable({ rows: initialRows, countryCode, series
   const shellRef = useRef<HTMLDivElement>(null);
 
   const hasDeathsData = useMemo(
-    () => rows.some((row) => row.total_deaths > 0 || row.latest_deaths > 0),
+    () => rows.some((row) => (row.total_deaths ?? 0) > 0 || (row.latest_deaths ?? 0) > 0),
     [rows]
   );
   const [showDeaths, setShowDeaths] = useState(hasDeathsData);
@@ -245,6 +245,9 @@ export default function ComparisonTable({ rows: initialRows, countryCode, series
       );
     }
     return [...filtered].sort((a, b) => {
+      // Unknown counts stay below reported counts in either sort direction.
+      if (a[sortKey] == null) return b[sortKey] == null ? 0 : 1;
+      if (b[sortKey] == null) return -1;
       let av: number | string = a[sortKey] as number | string;
       let bv: number | string = b[sortKey] as number | string;
       if (sortKey === 'category') {
@@ -420,7 +423,7 @@ export default function ComparisonTable({ rows: initialRows, countryCode, series
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {visibleRows.map(row => {
-              const cfr = row.total_cases > 0 ? (row.total_deaths / row.total_cases) * 100 : null;
+              const cfr = row.total_cases != null && row.total_cases > 0 && row.total_deaths != null ? (row.total_deaths / row.total_cases) * 100 : null;
               const diseasePath = `${lang === 'zh' ? '/zh' : lang === 'fr' ? '/fr' : ''}/diseases/${toSeoSlug(row.slug)}/`;
               return (
                 <tr key={row.disease_id} className="site-table-row-hover transition-colors group">
@@ -455,7 +458,7 @@ export default function ComparisonTable({ rows: initialRows, countryCode, series
                       const detail = [context?.period, frequency].filter(Boolean).join(' · ');
                       return (
                         <span className="block">
-                          <span className={row.latest_cases > 0 ? 'comparison-cell-accent' : 'comparison-empty'}>{fmtNum(row.latest_cases)}</span>
+                          <span className={(row.latest_cases ?? 0) > 0 ? 'comparison-cell-accent' : 'comparison-empty'}>{fmtNum(row.latest_cases)}</span>
                           {detail && <span className="comparison-cell-secondary mt-0.5 block whitespace-nowrap text-[10px]" aria-label={lang === 'zh' ? `报告期 ${detail}` : lang === 'fr' ? `Période de rapport : ${detail}` : `Reporting period: ${detail}`}>{detail}</span>}
                         </span>
                       );
@@ -492,14 +495,16 @@ export default function ComparisonTable({ rows: initialRows, countryCode, series
           {displayed.length > 0 && (() => {
             const tot = displayed.reduce(
               (acc, r) => ({
-                total_cases: acc.total_cases + r.total_cases,
-                total_deaths: acc.total_deaths + r.total_deaths,
-                latest_cases: acc.latest_cases + r.latest_cases,
-                latest_deaths: acc.latest_deaths + r.latest_deaths,
+                total_cases: acc.total_cases + (r.total_cases ?? 0),
+                total_deaths: acc.total_deaths + (r.total_deaths ?? 0),
+                latest_cases: acc.latest_cases + (r.latest_cases ?? 0),
+                latest_deaths: acc.latest_deaths + (r.latest_deaths ?? 0),
               }),
               { total_cases: 0, total_deaths: 0, latest_cases: 0, latest_deaths: 0 }
             );
-            const totCfr = tot.total_cases > 0 ? (tot.total_deaths / tot.total_cases) * 100 : null;
+            const totalCases = displayed.some(row => row.total_cases != null) ? tot.total_cases : null;
+            const totalDeaths = displayed.some(row => row.total_deaths != null) ? tot.total_deaths : null;
+            const totCfr = totalCases != null && totalCases > 0 && totalDeaths != null ? (totalDeaths / totalCases) * 100 : null;
             return (
               <tfoot>
                 <tr className="site-table-total-row border-t-2 font-semibold">
@@ -507,14 +512,14 @@ export default function ComparisonTable({ rows: initialRows, countryCode, series
                     {lang === 'zh' ? '合计' : 'Total'}
                     <span className="comparison-cell-secondary ml-2 text-xs font-normal">({displayed.length} {lang === 'zh' ? '种疾病' : 'diseases'})</span>
                   </td>
-                  <td className="comparison-cell-primary px-4 py-3 text-right tabular-nums">{fmtNum(tot.total_cases)}</td>
+                  <td className="comparison-cell-primary px-4 py-3 text-right tabular-nums">{fmtNum(totalCases)}</td>
                   <td className="px-4 py-3 text-right tabular-nums">
                     <span className={tot.latest_cases > 0 ? 'comparison-cell-accent' : 'comparison-empty'}>
-                      {fmtNum(tot.latest_cases)}
+                      {fmtNum(displayed.some(row => row.latest_cases != null) ? tot.latest_cases : null)}
                     </span>
                   </td>
                   {showDeaths && (
-                    <td className="comparison-cell-number px-4 py-3 text-right tabular-nums">{fmtNum(tot.total_deaths)}</td>
+                    <td className="comparison-cell-number px-4 py-3 text-right tabular-nums">{fmtNum(totalDeaths)}</td>
                   )}
                   {showCfr && (
                     <td className="px-4 py-3 text-right tabular-nums">

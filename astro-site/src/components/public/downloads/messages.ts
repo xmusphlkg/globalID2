@@ -42,7 +42,7 @@ const copy = zh
         '比较地区或合并时间序列前，请保留每个数据集的来源、口径和修订背景。',
       methods: '阅读方法与局限',
       terms: '阅读数据使用说明',
-      download: '下载',
+      download: '下载', loading: '正在加载下载目录…', unavailable: '下载目录暂不可用。', retry: '重试',
     }
   : {
       kicker: 'Open surveillance data',
@@ -85,7 +85,7 @@ const copy = zh
         'Before comparing places or combining time series, keep each dataset source, definition, and revision context attached.',
       methods: 'Read methods and limitations',
       terms: 'Read data-use guidance',
-      download: 'Download',
+      download: 'Download', loading: 'Loading the download directory…', unavailable: 'Download directory unavailable.', retry: 'Retry',
     };
 
 if (fr) Object.assign(copy, {
@@ -95,7 +95,7 @@ if (fr) Object.assign(copy, {
   recordsNote: 'Somme des lignes historiques des jeux par zone et par maladie. Une même observation peut être comptée plusieurs fois.',
   catalogue: 'Catalogue des données', choose: 'Choisir un jeu de données', intro: 'Le tableau renvoie vers la période la plus récente. Les pages de détail présentent les périodes historiques et les sources.',
   subdivisionTitle: 'Les données des subdivisions sont regroupées par zone parente', subdivisionNote: `${subdivisionCount} jeux de données régionaux sont disponibles depuis la page de leur zone parente.`, subdivisionLink: 'Parcourir les zones géographiques →',
-  search: 'Rechercher des jeux de données', placeholder: 'Zone, maladie ou code', type: 'Type de jeu de données', all: 'Tous', countries: 'Zones géographiques', diseases: 'Maladies', sort: 'Trier', featured: 'Ordre recommandé', nameAsc: 'Nom A-Z', recordsDesc: 'Plus d’enregistrements', kindSort: 'Type et nom', showing: 'Affichage', of: 'sur', dataset: 'jeux de données', range: 'Période actuelle', formats: 'Formats', details: 'Toutes les périodes et sources', empty: 'Aucun jeu de données ne correspond à cette recherche.', more: 'Afficher davantage', before: 'Avant d’utiliser les données', context: 'Conserver le contexte de la source', guidance: 'Avant de comparer des lieux ou de combiner des séries temporelles, conservez la source, la définition et le contexte de révision de chaque jeu de données.', methods: 'Lire les méthodes et limites', terms: 'Lire les règles d’utilisation des données', download: 'Télécharger',
+  search: 'Rechercher des jeux de données', placeholder: 'Zone, maladie ou code', type: 'Type de jeu de données', all: 'Tous', countries: 'Zones géographiques', diseases: 'Maladies', sort: 'Trier', featured: 'Ordre recommandé', nameAsc: 'Nom A-Z', recordsDesc: 'Plus d’enregistrements', kindSort: 'Type et nom', showing: 'Affichage', of: 'sur', dataset: 'jeux de données', range: 'Période actuelle', formats: 'Formats', details: 'Toutes les périodes et sources', empty: 'Aucun jeu de données ne correspond à cette recherche.', more: 'Afficher davantage', before: 'Avant d’utiliser les données', context: 'Conserver le contexte de la source', guidance: 'Avant de comparer des lieux ou de combiner des séries temporelles, conservez la source, la définition et le contexte de révision de chaque jeu de données.', methods: 'Lire les méthodes et limites', terms: 'Lire les règles d’utilisation des données', download: 'Télécharger', loading: 'Chargement du catalogue…', unavailable: 'Catalogue de téléchargement indisponible.', retry: 'Réessayer',
 });
 
 return copy;
