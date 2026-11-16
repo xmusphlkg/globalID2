@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from src.core import get_config, get_database, get_logger
 from src.core.source_scopes import canonicalize_task_source
@@ -69,6 +69,22 @@ def _as_aware_utc(value: Optional[datetime]) -> Optional[datetime]:
     return value.astimezone(ZoneInfo("UTC"))
 
 
+PROVINCE_SOURCE_STALE_MONTHS = 3
+
+
+def _province_source_lag_months(audit: dict[str, Any], now: datetime) -> Optional[int]:
+    month = audit.get("latest_report_month")
+    if not isinstance(month, str):
+        return None
+    try:
+        reported = datetime.strptime(month, "%Y-%m")
+    except ValueError:
+        return None
+    local = now.astimezone(ZoneInfo("Asia/Shanghai"))
+    closed_month = local.year * 12 + local.month - 1
+    return max(0, closed_month - (reported.year * 12 + reported.month))
+
+
 def _ingestion_job_health(
     job: "AutomationJobConfig",
     latest_task: Optional[Task],
@@ -96,12 +112,37 @@ def _ingestion_job_health(
         status, reason = "never_run", "no scheduler-created task has been observed"
     else:
         task_status = _enum_value(latest_task.status)
+        province_audit = (getattr(latest_task, "metadata_", None) or {}).get("province_ingestion") or {}
+        province_status = province_audit.get("status")
+        source_audit = province_audit.get("source_audit") or {}
+        source_lag = (_province_source_lag_months(source_audit, current)
+                      if job.source == "cn_province_monthly_report" else None)
         if task_status == TaskStatus.RETRYING.value:
             status, reason = "recovering", "a bounded automatic retry is scheduled"
         elif task_status in {TaskStatus.PENDING.value, TaskStatus.QUEUED.value, TaskStatus.RUNNING.value}:
             status, reason = "active", f"latest task is {task_status}"
         elif task_status in {TaskStatus.FAILED.value, TaskStatus.CANCELLED.value}:
             status, reason = "failed", f"latest task is {task_status}"
+        elif province_status == "needs_review":
+            count = len(province_audit.get("revision_candidates") or [])
+            image_count = sum(item.get("status") != "validated"
+                              for item in source_audit.get("image_reviews") or []
+                              if isinstance(item, dict))
+            if count:
+                reason = f"{count} province revision candidates require review; protected facts were preserved"
+            elif image_count:
+                reason = f"{image_count} province image reports require review; inspect the task source audit"
+            else:
+                reason = "province source evidence requires review; inspect the task source audit"
+            status = "needs_review"
+        elif source_lag is not None and source_lag > PROVINCE_SOURCE_STALE_MONTHS:
+            discovered = source_audit.get("latest_discovered_month")
+            detail = f"; latest discovered report {discovered}" if discovered else ""
+            status, reason = ("stale_source",
+                              f"latest explicit case month {source_audit['latest_report_month']} is {source_lag} closed months behind"
+                              f"{detail}; {PROVINCE_SOURCE_STALE_MONTHS}-month monitoring budget, not an official publication deadline")
+        elif province_status in {"partial", "narrative_sparse", "death_only"}:
+            status, reason = "partial", f"province source coverage is {province_status}; inspect the task source audit"
         elif success_at is None:
             status, reason = "unknown", "latest task has no completed success timestamp"
         elif age_minutes is not None and age_minutes > stale_after_minutes:
@@ -322,17 +363,40 @@ class AutomationService:
         if reset or state.next_run_at is None:
             tz_name = job.timezone or self._config().timezone
             now = datetime.now(ZoneInfo(tz_name))
-            state.next_run_at = self._compute_next_run(job, now=now)
+            if (job.source == "cn_province_monthly_report"
+                    and state.last_task_uuid is None and state.last_started_at is None):
+                from src.data.crawlers.cn_province_adapters import province_adapter_registry
+
+                codes = sorted(province_adapter_registry())
+                offset = codes.index(job.country_code) if job.country_code in codes else len(codes)
+                state.next_run_at = now + timedelta(minutes=2 + 10 * offset)
+            else:
+                state.next_run_at = self._compute_next_run(job, now=now)
 
     async def reschedule_job(self, job_id: str) -> None:
         async with self._lock:
+            await self._refresh_persisted_states()
             job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
             if job is None:
                 self._states.pop(job_id, None)
                 return
             state = self._states.setdefault(job.job_id, AutomationJobState())
             self._sync_state_schedule(job, state, reset=True)
-            await schedule_state_repository.save("ingestion", job.job_id, state)
+            await schedule_state_repository.reschedule(
+                "ingestion", job.job_id, state.next_run_at
+            )
+
+    async def _refresh_persisted_states(self) -> None:
+        """Observe control-panel changes made by another process.
+
+        Merge into existing objects because run/skipped counters are local and
+        are not part of the persisted schedule-state projection.
+        """
+        persisted = await schedule_state_repository.load("ingestion")
+        for job_id, fields in persisted.items():
+            state = self._states.setdefault(job_id, AutomationJobState())
+            for field, value in fields.items():
+                setattr(state, field, value)
 
     async def remove_job_state(self, job_id: str) -> None:
         async with self._lock:
@@ -348,13 +412,14 @@ class AutomationService:
         if self._task and not self._task.done():
             return
         self._stop_event = asyncio.Event()
-        persisted = await schedule_state_repository.load("ingestion")
+        await self._refresh_persisted_states()
         for job in await self.load_jobs():
             state = self._states.setdefault(job.job_id, AutomationJobState())
-            for field, value in persisted.get(job.job_id, {}).items():
-                setattr(state, field, value)
             self._sync_state_schedule(job, state, reset=state.next_run_at is None)
-            await schedule_state_repository.save("ingestion", job.job_id, state)
+            await schedule_state_repository.reschedule(
+                "ingestion", job.job_id, state.next_run_at, only_if_missing=True
+            )
+        await self._refresh_persisted_states()
         loaded_jobs = await self.load_jobs()
         self._task = asyncio.create_task(self._run_loop(), name="globalid-automation-scheduler")
         logger.info("Automation scheduler started with {} configured job(s)", len(loaded_jobs))
@@ -376,15 +441,7 @@ class AutomationService:
         while not self._stop_event.is_set():
             self._last_tick_at = datetime.now(ZoneInfo("UTC"))
             try:
-                await self.requeue_due_automatic_retries()
-                for job in await self.load_jobs():
-                    if not job.enabled:
-                        continue
-                    state = self._states.setdefault(job.job_id, AutomationJobState())
-                    now = datetime.now(ZoneInfo(job.timezone or cfg.timezone))
-                    self._sync_state_schedule(job, state, reset=state.next_run_at is None)
-                    if state.next_run_at and now >= state.next_run_at:
-                        await self.trigger_job(job.job_id, manual=False)
+                await self._run_tick()
             except Exception as exc:
                 logger.exception("Automation scheduler tick failed: {}", exc)
             try:
@@ -393,6 +450,23 @@ class AutomationService:
                 )
             except asyncio.TimeoutError:
                 pass
+
+    async def _run_tick(self) -> None:
+        await self.requeue_due_automatic_retries()
+        async with self._lock:
+            jobs = await self.load_jobs()
+            if not jobs:
+                return
+            await self._refresh_persisted_states()
+            due_jobs = []
+            for job in jobs:
+                state = self._states.setdefault(job.job_id, AutomationJobState())
+                self._sync_state_schedule(job, state, reset=False)
+                now = datetime.now(ZoneInfo(job.timezone or self._config().timezone))
+                if job.enabled and state.next_run_at and now >= state.next_run_at:
+                    due_jobs.append(job.job_id)
+        for job_id in due_jobs:
+            await self.trigger_job(job_id, manual=False)
 
     def _automatic_retry_delays(self) -> tuple[int, int]:
         cfg = self._config()
@@ -687,6 +761,7 @@ class AutomationService:
 
     async def trigger_job(self, job_id: str, *, manual: bool) -> dict[str, Any]:
         async with self._lock:
+            await self._refresh_persisted_states()
             job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
             if job is None:
                 raise ValueError(f"Automation job not found: {job_id}")
@@ -694,6 +769,18 @@ class AutomationService:
             tz_name = job.timezone or self._config().timezone
             now = datetime.now(ZoneInfo(tz_name))
             state = self._states.setdefault(job.job_id, AutomationJobState())
+            await schedule_state_repository.reschedule(
+                "ingestion", job.job_id, state.next_run_at, only_if_missing=True
+            )
+            await self._refresh_persisted_states()
+            expected_next_run_at = state.next_run_at
+            # The panel may have paused or rescheduled the job after the tick
+            # selected it. Recheck persisted state immediately before enqueue.
+            if not manual:
+                if not job.enabled:
+                    return {"job_id": job.job_id, "status": "disabled"}
+                if state.next_run_at is None or now < state.next_run_at:
+                    return {"job_id": job.job_id, "status": "not_due"}
             state.last_started_at = now
             state.last_error = None
             state.last_status = "running"
@@ -747,7 +834,14 @@ class AutomationService:
                 logger.error("Automation job {} failed: {}", job.job_id, exc)
                 raise
             finally:
-                await schedule_state_repository.save("ingestion", job.job_id, state)
+                # A manual run executes once; it must not activate a paused
+                # schedule, including a pause observed after reading the job.
+                if manual and expected_next_run_at is None:
+                    state.next_run_at = None
+                state.next_run_at = await schedule_state_repository.save_result(
+                    "ingestion", job.job_id, state,
+                    expected_next_run_at=expected_next_run_at,
+                )
 
     def snapshot(self) -> dict[str, Any]:
         raise RuntimeError("Use snapshot_async() for automation config snapshots")
@@ -757,29 +851,41 @@ class AutomationService:
         smtp_state = system_settings_service.build_smtp_status()
         await self.ensure_storage()
         jobs = await self.load_jobs()
+        async with self._lock:
+            await self._refresh_persisted_states()
         job_ids = {job.job_id for job in jobs}
         latest_task_by_job_id: dict[str, Task] = {}
         latest_success_by_job_id: dict[str, Task] = {}
         if job_ids:
+            job_key = Task.input_data["automation_job_id"].as_string()
+
+            async def latest_per_job(db, *, completed_only: bool) -> list[Task]:
+                filters = [Task.task_type == TaskType.CRAWL_DATA, job_key.in_(job_ids)]
+                if completed_only:
+                    filters.append(Task.status == TaskStatus.COMPLETED)
+                ranked = select(
+                    Task.id.label("task_id"),
+                    func.row_number().over(
+                        partition_by=job_key,
+                        order_by=(Task.created_at.desc(), Task.id.desc()),
+                    ).label("position"),
+                ).where(*filters).subquery()
+                return (await db.execute(select(Task).join(
+                    ranked, Task.id == ranked.c.task_id,
+                ).where(ranked.c.position == 1))).scalars().all()
+
             async with get_database() as db:
-                recent_tasks = (
-                    await db.execute(
-                        select(Task)
-                        .where(Task.task_type == TaskType.CRAWL_DATA)
-                        .order_by(Task.created_at.desc())
-                        .limit(max(200, len(job_ids) * 20))
-                    )
-                ).scalars().all()
-            for task in recent_tasks:
+                latest_tasks = await latest_per_job(db, completed_only=False)
+                latest_successes = await latest_per_job(db, completed_only=True)
+            for task in latest_tasks:
                 inp = task.input_data if isinstance(task.input_data, dict) else {}
                 job_id = str(inp.get("automation_job_id") or "").strip()
-                if job_id in job_ids and job_id not in latest_task_by_job_id:
+                if job_id in job_ids:
                     latest_task_by_job_id[job_id] = task
-                if (
-                    job_id in job_ids
-                    and job_id not in latest_success_by_job_id
-                    and _enum_value(task.status) == TaskStatus.COMPLETED.value
-                ):
+            for task in latest_successes:
+                inp = task.input_data if isinstance(task.input_data, dict) else {}
+                job_id = str(inp.get("automation_job_id") or "").strip()
+                if job_id in job_ids:
                     latest_success_by_job_id[job_id] = task
 
         jobs_payload: list[dict[str, Any]] = []
@@ -1003,6 +1109,8 @@ class AutomationService:
         *,
         now: Optional[datetime] = None,
     ) -> Optional[datetime]:
+        if not job.enabled:
+            return None
         timezone_name = job.timezone or self._config().timezone
         zone = ZoneInfo(timezone_name)
         current = now.astimezone(zone) if now else datetime.now(zone)

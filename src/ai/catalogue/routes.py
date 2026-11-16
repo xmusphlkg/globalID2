@@ -152,6 +152,14 @@ def build_runtime_routes(
             **rate_limit_state,
             **runtime_health_state,
         }
+        # Use the same capability decision as transport, including persisted
+        # probes and temporary file rejections. Native-only jobs must never
+        # occupy a route which can only read extracted text.
+        from src.ai.attachments import route_accepts_native_files
+
+        route["capabilities"] = ["text"]
+        if route_accepts_native_files(route):
+            route["capabilities"].append("native_file")
         routes.append(route)
 
     # Aggregate enabled model limits for provider telemetry. This number

@@ -258,6 +258,7 @@ def build_disease_ontology_sync_payload(
                             "comparability_set",
                             "projection_policy",
                             "projection_priority",
+                            "paired_case_series_code",
                         )
                         if key in series
                     },

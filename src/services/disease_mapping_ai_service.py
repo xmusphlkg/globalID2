@@ -230,6 +230,8 @@ class DiseaseMappingAIService:
             outcome = await self._publish_reviewed(db, category, reviewed, candidate_ids)
             provenance = reviewed.provenance(MAPPING_REVIEW_PROMPT_VERSION)
             provenance["outcome"] = outcome
+            # Respect notification policy changed while the model was running.
+            await db.refresh(category, ["metadata_"])
             category.metadata_ = {**(category.metadata_ or {}), "peer_review": provenance}
             category.ai_status = "completed"
             category.ai_last_model = "+".join(
@@ -698,6 +700,8 @@ class DiseaseMappingAIService:
         *,
         outcome: str,
     ) -> None:
+        if (category.metadata_ or {}).get("notifications_enabled", True) is False:
+            return
         recipients = [
             item.strip()
             for item in system_settings_service.smtp_runtime().get("admin_emails_raw", "").split(",")

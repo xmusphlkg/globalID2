@@ -326,7 +326,31 @@ class MappingNotificationService:
                     .limit(effective_limit)
                 )
             ).scalars().all()
+            category_ids = {
+                int(row.metadata_["category_id"]) for row in rows
+                if str((row.metadata_ or {}).get("category_id", "")).isdigit()
+            }
+            if category_ids:
+                opted_out = set((await db.execute(
+                    select(SourceDiseaseCategory.id).where(
+                        SourceDiseaseCategory.id.in_(category_ids),
+                        SourceDiseaseCategory.metadata_["notifications_enabled"].as_boolean().is_(False),
+                    )
+                )).scalars().all())
+                retained = []
+                for row in rows:
+                    category_id = str((row.metadata_ or {}).get("category_id", ""))
+                    if category_id.isdigit() and int(category_id) in opted_out:
+                        row.status = "skipped"
+                        row.last_error = "Source notification opt-out"
+                    else:
+                        retained.append(row)
+                rows = retained
             if not rows:
+                # Persist opt-outs without releasing the claim locks of any
+                # retained pending events before they become sending below.
+                if category_ids:
+                    await db.commit()
                 return {
                     "claimed": 0,
                     "sent": 0,

@@ -2,6 +2,8 @@
 
 import { Pencil, Plus, RotateCcw, Sparkles } from "lucide-react";
 
+import { SourceChannelLinks } from "@/features/operations/sources/source-channel-links";
+
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
 
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -34,6 +36,7 @@ export function ScheduleForm({ controller }: { controller: AutomationController 
       >
         <form className="space-y-5" onSubmit={submitForm}>
           <FormSection title={lang === "zh" ? "基础信息" : "Basic Info"}>
+            <SourceChannelLinks channel={selectedSourceOption?.source_channel} lang={lang} />
             {!editingJobId ? (
               <div>
                 <p className="text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
@@ -152,7 +155,9 @@ export function ScheduleForm({ controller }: { controller: AutomationController 
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <StatusBadge tone={selectedSupportsCurrentMonth ? "info" : "neutral"}>
-                    {selectedSupportsCurrentMonth
+                    {selectedSourceOption?.source_channel
+                      ? (lang === "zh" ? "官方已发布报告期" : "Published source reporting periods")
+                      : selectedSupportsCurrentMonth
                       ? `${lang === "zh" ? "当前月可接入" : "Current month supported"} · ${selectedSourcePolicy.current_month_status}`
                       : (lang === "zh" ? "仅闭合月份" : "Closed months only")}
                   </StatusBadge>

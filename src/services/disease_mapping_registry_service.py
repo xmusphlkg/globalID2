@@ -359,6 +359,7 @@ class DiseaseMappingRegistryService:
         rows: Iterable[Mapping[str, Any]],
         notify: bool = True,
         increment_occurrence: bool = True,
+        notifications_enabled: bool | None = None,
     ) -> dict[str, Any]:
         """Register every source category seen in a fact batch.
 
@@ -440,6 +441,8 @@ class DiseaseMappingRegistryService:
                 if not existing.canonical_source_label:
                     existing.canonical_source_label = label
                     existing.normalized_label = normalize_source_text(label)
+            if notifications_enabled is not None:
+                existing.metadata_ = {**(existing.metadata_ or {}), "notifications_enabled": bool(notifications_enabled)}
             touched_ids.append(existing.id)
 
             for alias in sorted(item["label_counts"]):
@@ -457,7 +460,7 @@ class DiseaseMappingRegistryService:
                 )
                 await db.execute(statement)
 
-            if notify and existing in new_categories:
+            if notify and (existing.metadata_ or {}).get("notifications_enabled", True) and existing in new_categories:
                 await self._queue_new_category_notification(db, existing)
 
         return {

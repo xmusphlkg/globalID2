@@ -3,7 +3,8 @@
 
 NNDSS and NHSS have different publication cadences and failure domains. This
 script deliberately leaves the existing US NNDSS daily job unchanged and adds
-an independent weekly check for the annual NHSS release.
+an independent half-hour check for the annual NHSS release. The historical
+job ID is retained so existing execution history stays attached.
 """
 
 from __future__ import annotations
@@ -25,22 +26,22 @@ from src.services.automation_service import automation_service  # noqa: E402
 
 JOB_ID = "us-nhss-hiv-weekly"
 JOB_VALUES = {
-    "name": "US NHSS HIV Weekly Check",
+    "name": "US NHSS HIV 30-Minute Publication Check",
     "country_code": "US",
     "source": "nhss_hiv",
     "enabled": True,
     "priority": "normal",
     "process": True,
     "save_raw": True,
-    "fill_missing": True,
+    "fill_missing": False,
     "force": False,
     "retry_threshold": 3,
-    "interval_minutes": 7 * 24 * 60,
+    "interval_minutes": 30,
     "daily_time": None,
     "timezone": "America/New_York",
     "notes": (
-        "Independent weekly discovery of the annual CDC NHSS HIV release; "
-        "kept separate from the NNDSS daily job to isolate source failures."
+        "Independent half-hour discovery of the annual CDC NHSS HIV release; "
+        "kept separate from NNDSS to isolate source failures."
     ),
 }
 
@@ -97,6 +98,7 @@ async def configure(*, apply: bool, trigger: bool) -> None:
         await db.commit()
 
     print(f"Applied automation job {JOB_ID} ({action})")
+    await automation_service.reschedule_job(JOB_ID)
     if trigger:
         result = await automation_service.trigger_job(JOB_ID, manual=True)
         print(

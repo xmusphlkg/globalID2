@@ -52,3 +52,27 @@ async def test_single_model_is_reported_from_actual_results():
 async def test_default_review_requires_an_independent_model():
     complete = await ModelCenterCompleter.from_model_center()
     assert complete.allow_single_model is False
+
+
+async def test_native_review_expresses_capability_without_pinning_a_route():
+    complete = ModelCenterCompleter(capability='native_file')
+    author = complete.agents['author']
+    author.complete = AsyncMock(return_value='draft')
+    author.conversation_history = [{'model': 'visual-a'}]
+    author._last_input_mode = 'native_file'
+    reply = await complete('author', 'system', 'read original', attachments=[object()])
+    assert reply.input_mode == 'native_file'
+    assert author.complete.await_args.kwargs['routing'].capability == 'native_file'
+    assert '_scheduled_route' not in author.complete.await_args.kwargs
+
+
+async def test_expert_avoidance_is_strict_even_for_an_author_role():
+    complete = ModelCenterCompleter(capability='native_file', require_distinct_model=True,
+                                    avoid_models=('provider:already-voted', 'already-voted'))
+    author = complete.agents['author']
+    author.complete = AsyncMock(return_value='reading')
+    author.conversation_history = [{'model': 'another-expert'}]
+    await complete('author', 'system', 'read independently')
+    routing = author.complete.await_args.kwargs['routing']
+    assert routing.require_distinct_model is True
+    assert routing.avoid_models == ('provider:already-voted', 'already-voted')

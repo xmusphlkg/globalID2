@@ -157,6 +157,88 @@ async def test_revision_capture_seeds_existing_state_and_appends_only_changes() 
 
 
 @pytest.mark.asyncio
+async def test_revision_capture_reuses_accepted_rows_without_current_lookup() -> None:
+    point_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    base = {
+        "time": point_time,
+        "series_code": "HOLD_CO_TEST",
+        "geography_key": "country:CO:source-municipality:11001",
+        "dimension_key": "all",
+        "value": 10,
+        "unit": "count",
+        "suppressed": False,
+        "suppression_reason": None,
+        "quality_status": "raw",
+        "dimensions": {},
+        "raw_data": {"SourceURL": "https://example.test/co.csv"},
+        "metadata": {"frequency": "weekly"},
+        "created_at": point_time,
+        "updated_at": point_time,
+    }
+    revisions = []
+
+    class Result:
+        def __init__(self, rows=()):
+            self.rows = rows
+
+        def mappings(self):
+            return self
+
+        def scalars(self):
+            return self
+
+        def all(self):
+            return self.rows
+
+    class FakeDB:
+        def __init__(self):
+            self.current_selects = 0
+
+        async def execute(self, statement, *params):
+            if getattr(statement, "is_select", False):
+                if "disease_series_observation_revisions" not in str(statement):
+                    self.current_selects += 1
+                    raise AssertionError("Accepted upsert rows must replace the current lookup")
+                return Result(sorted(revisions, key=lambda row: row["recorded_at"], reverse=True))
+            batch = params[0] if params else statement._multi_values[0]
+            inserted = []
+            for row in batch:
+                key = tuple(row[column] for column in (
+                    "time", "series_code", "geography_key", "dimension_key", "recorded_at",
+                ))
+                if not any(tuple(old[column] for column in (
+                    "time", "series_code", "geography_key", "dimension_key", "recorded_at",
+                )) == key for old in revisions):
+                    revisions.append(dict(row))
+                    inserted.append(row["time"])
+            return Result(inserted)
+
+    db = FakeDB()
+    first_seen = datetime(2025, 2, 1, tzinfo=timezone.utc)
+    changed_at = datetime(2025, 3, 1, tzinfo=timezone.utc)
+    assert await _persist_observation_revisions(
+        db, [base], recorded_at=first_seen,
+        seed_current_state=False, current_rows=[base],
+    ) == 1
+    assert await _persist_observation_revisions(
+        db, [base], recorded_at=changed_at,
+        seed_current_state=False, current_rows=[base],
+    ) == 0
+    changed = {**base, "value": 12, "updated_at": changed_at}
+    assert await _persist_observation_revisions(
+        db, [changed], recorded_at=changed_at,
+        seed_current_state=False, current_rows=[changed],
+    ) == 1
+    # A quality-ranked upsert that returns no accepted row creates no revision.
+    assert await _persist_observation_revisions(
+        db, [], recorded_at=changed_at,
+        seed_current_state=False, current_rows=[],
+    ) == 0
+    assert [row["value"] for row in revisions] == [10, 12]
+    assert db.current_selects == 0
+
+
+@pytest.mark.asyncio
 async def test_revision_capture_batches_large_source_refresh() -> None:
     point_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
     observations = [
@@ -269,6 +351,22 @@ def test_registry_selection_forwards_nonblank_unknown_rows_to_holding() -> None:
     assert result.unregistered_rows == (row,)
 
 
+@pytest.mark.parametrize("status", ["source_missing", "not_applicable"])
+def test_unmapped_source_missing_observation_survives_selection_without_creating_blank_facts(status) -> None:
+    explicit = {
+        "Date": "2026-08-01", "SourceDiseaseCode": "NEW-001",
+        "RawDiseaseLabel": "Newly reported condition", "Cases": "",
+        "MissingValueStatus": status,
+    }
+    blank = {**explicit, "SourceDiseaseCode": "NEW-002", "MissingValueStatus": ""}
+    result = SeriesObservationStore().select_registry_rows(
+        [explicit, blank], "ZZ", source_id="SRC_ZZ_TEST",
+    )
+    assert result.rows == []
+    assert result.unregistered_rows == (explicit,)
+    assert result.skipped_unregistered == 2
+
+
 def test_registry_identity_enrichment_uses_reviewed_code_and_version() -> None:
     row = {
         "Date": "2026-07-01",
@@ -322,7 +420,8 @@ def test_registry_identity_enrichment_leaves_unknown_category_unversioned() -> N
 
 
 @pytest.mark.asyncio
-async def test_unknown_category_builds_nonprojectable_holding_observation() -> None:
+@pytest.mark.parametrize("value,status,expected", [("7", "", 7), ("0", "", 0), ("", "source_missing", None), ("", "not_applicable", None)])
+async def test_unknown_category_builds_nonprojectable_holding_observation(value, status, expected) -> None:
     now = datetime.now(timezone.utc)
     category = SourceDiseaseCategory(
         id=41,
@@ -369,7 +468,8 @@ async def test_unknown_category_builds_nonprojectable_holding_observation() -> N
             "Date": "2026-08-01",
             "SourceDiseaseCode": "NEW-001",
             "RawDiseaseLabel": "Newly reported condition",
-            "Cases": "7",
+            "Cases": value,
+            "MissingValueStatus": status,
             "Frequency": "monthly",
         }
     ]
@@ -385,7 +485,8 @@ async def test_unknown_category_builds_nonprojectable_holding_observation() -> N
 
     assert handled == 2
     assert len(observations) == 2
-    assert observations[0]["value"] == 7
+    assert observations[0]["value"] == expected
+    assert observations[0]["metadata"]["missing_value_status"] == (status or None)
     assert observations[0]["metadata"]["dynamic_holding"] is True
     assert observations[0]["metadata"]["local_code"] == "NEW-001"
     holding_series = next(
@@ -1443,7 +1544,70 @@ async def test_save_rows_builds_metadata_safe_postgresql_upsert(
 
 
 @pytest.mark.asyncio
-async def test_save_rows_reports_only_rows_postgres_actually_affected() -> None:
+async def test_save_rows_reuses_accepted_upsert_snapshot_for_revision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    revision_calls = []
+    upserts = []
+
+    async def capture_revisions(_db, observations, **options):
+        revision_calls.append((list(observations), options))
+        return 0
+
+    monkeypatch.setattr(
+        "src.data.storage.series_observation_store._persist_observation_revisions",
+        capture_revisions,
+    )
+
+    class Result:
+        def __init__(self, values=()):
+            self.values = values
+
+        def __iter__(self):
+            return iter(self.values)
+
+        def scalars(self):
+            return self
+
+        def mappings(self):
+            return self
+
+        def all(self):
+            return self.values
+
+    class FakeDB:
+        async def execute(self, statement, *params):
+            if getattr(statement, "is_select", False):
+                return Result(["SER_US_NHSS_HIV_ANNUAL"])
+            upserts.append(statement)
+            accepted = dict(params[0][0])
+            return Result([accepted])
+
+    result = await SeriesObservationStore().save_rows(
+        FakeDB(),
+        [{
+            "Date": "2024-12-31",
+            "RawDiseaseLabel": "HIV diagnoses among persons aged 13 years and older",
+            "Cases": "38434",
+        }],
+        "US", source_id="SRC_US_NHSS",
+        quality_policy=SeriesObservationQualityPolicy(mode="off"),
+        reuse_upsert_rows_for_revisions=True,
+    )
+
+    assert result.upserted == 1
+    assert len(upserts[0]._returning) > 1
+    assert len(revision_calls) == 2
+    assert revision_calls[0][1]["seed_current_state"] is True
+    post_rows, post_options = revision_calls[1]
+    assert post_options["seed_current_state"] is False
+    assert post_rows == post_options["current_rows"]
+    assert post_rows[0]["value"] == 38434
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reuse_upsert_rows", [False, True])
+async def test_save_rows_reports_only_rows_postgres_actually_affected(reuse_upsert_rows) -> None:
     class Result:
         def __init__(self, values):
             self.values = values
@@ -1482,6 +1646,22 @@ async def test_save_rows_reports_only_rows_postgres_actually_affected() -> None:
         "US",
         source_id="SRC_US_NHSS",
         quality_policy=SeriesObservationQualityPolicy(mode="off"),
+        reuse_upsert_rows_for_revisions=reuse_upsert_rows,
     )
 
     assert result.upserted == 0
+
+
+@pytest.mark.parametrize("value,status,expected", [("0", "", 0), ("", "source_missing", None), ("", "not_applicable", None)])
+def test_registered_explicit_null_status_survives_without_creating_blank_facts(value, status, expected):
+    row = {"Date": "2026-07-01", "DiseaseCode": "2801", "Cases": value,
+           "RawDiseaseLabel": "Coronavirus SARS-CoV-2", "MissingValueStatus": status}
+    store = SeriesObservationStore()
+    selected = store.select_registry_rows([row, {**row, "Cases": "", "MissingValueStatus": ""}],
+                                           "FI", source_id="SRC_FI_THL_TTR")
+    assert selected.rows == [row]
+    assert selected.skipped_missing == 1
+    built = store.build_observations(selected.rows, "FI", source_id="SRC_FI_THL_TTR")
+    assert len(built.observations) == 1
+    assert built.observations[0]["value"] == expected
+    assert built.observations[0]["metadata"]["missing_value_status"] == (status or None)

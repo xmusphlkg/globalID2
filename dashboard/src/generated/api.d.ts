@@ -3602,7 +3602,7 @@ export interface components {
              * @default unknown
              * @enum {string}
              */
-            health_status: "healthy" | "active" | "recovering" | "failed" | "stale" | "never_run" | "disabled" | "unknown";
+            health_status: "healthy" | "needs_review" | "partial" | "active" | "recovering" | "failed" | "stale" | "stale_source" | "never_run" | "disabled" | "unknown";
             /** Include Current Month */
             include_current_month: boolean;
             /** Interval Minutes */
@@ -4601,6 +4601,7 @@ export interface components {
             source_availability?: {
                 [key: string]: number;
             };
+            source_channel?: components["schemas"]["SourceChannelOut"] | null;
             /**
              * Source Observation Count
              * @default 0
@@ -7548,6 +7549,42 @@ export interface components {
             /** Smtp Username */
             smtp_username?: string | null;
         };
+        /** SourceChannelOut */
+        SourceChannelOut: {
+            /** Archive Url */
+            archive_url: string;
+            /** Cadence */
+            cadence: string;
+            /** Country Code */
+            country_code: string;
+            /** Daily Time */
+            daily_time: string;
+            /** Discovery Form */
+            discovery_form?: {
+                [key: string]: string;
+            };
+            /**
+             * Discovery Method
+             * @default GET
+             */
+            discovery_method: string;
+            /** Discovery Urls */
+            discovery_urls: string[];
+            /** Official Url */
+            official_url: string;
+            /** Publisher */
+            publisher: string;
+            /** Refresh Strategy */
+            refresh_strategy: string;
+            /** Refresh Years */
+            refresh_years: number;
+            /** Scope */
+            scope: string;
+            /** Source Id */
+            source_id: string;
+            /** Timezone */
+            timezone: string;
+        };
         /** SourceOptionOut */
         SourceOptionOut: {
             /**
@@ -7565,6 +7602,7 @@ export interface components {
             label_en: string;
             /** Label Zh */
             label_zh: string;
+            source_channel?: components["schemas"]["SourceChannelOut"] | null;
             /**
              * Source Kind
              * @default current

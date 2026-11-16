@@ -29,6 +29,8 @@ class ModelCenterCompleter:
         self, *, line: str = "situation_notice", max_tokens: int = 2400,
         allow_single_model: bool = False, author_model: str | None = None,
         avoid_models: Iterable[str] = (),
+        capability: str = "text",
+        require_distinct_model: bool = False,
     ) -> None:
         self.agents = {
             role: PeerReviewAgent(f"{line}_{role}", max_tokens=max_tokens)
@@ -38,6 +40,8 @@ class ModelCenterCompleter:
         self.avoid_models = tuple(name for name in avoid_models if name)
         self.allow_single_model = allow_single_model
         self.single_model = False
+        self.capability = capability
+        self.require_distinct_model = require_distinct_model
 
     @property
     def review_mode(self) -> str:
@@ -66,7 +70,8 @@ class ModelCenterCompleter:
         routing = RoutingRequirements(
             avoid_models=tuple(dict.fromkeys(avoid)),
             preferred_models=(self.author_model,) if role == "author" and self.author_model else (),
-            require_distinct_model=role == "reviewer" and not self.allow_single_model,
+            require_distinct_model=self.require_distinct_model or (role == "reviewer" and not self.allow_single_model),
+            capability=self.capability,
         )
         extra = {"attachments": list(attachments)} if attachments else {}
         text = await agent.complete(prompt=prompt, system=system, use_cache=False, routing=routing, **extra)

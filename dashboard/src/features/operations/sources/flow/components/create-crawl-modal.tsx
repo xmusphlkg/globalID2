@@ -10,6 +10,8 @@ import { type CountrySourceConfig } from "@/features/operations/sources/api";
 
 import { getConfiguredSourceOptions } from "@/lib/source-labels";
 
+import { SourceChannelLinks } from "@/features/operations/sources/source-channel-links";
+
 import { X, CheckCircle2, Loader2 } from "lucide-react";
 
 export function CreateCrawlModal({
@@ -189,6 +191,8 @@ export function CreateCrawlModal({
               </select>
             </div>
 
+            <SourceChannelLinks channel={selectedSourceOption?.source_channel} lang={lang} />
+
             {isReviewedHistorySource ? (
               <div className="rounded-tremor-default border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-800 dark:border-violet-900/50 dark:bg-violet-950/25 dark:text-violet-200">
                 {lang === "zh"
@@ -205,7 +209,9 @@ export function CreateCrawlModal({
               <div className="rounded-tremor-default border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/25 dark:text-sky-200">
                 <p className="font-semibold">{lang === "zh" ? "来源策略" : "Source policy"}</p>
                 <p className="mt-1">
-                  {supportsCurrentMonth
+                  {selectedSourceOption?.source_channel
+                    ? (lang === "zh" ? "按官方已发布报告期接入" : "Ingest published source reporting periods")
+                    : supportsCurrentMonth
                     ? `${lang === "zh" ? "当前月可按临时数据接入" : "Current month can be ingested as provisional"} (${sourcePolicy.current_month_status})`
                     : (lang === "zh" ? "仅接入已闭合月份" : "Closed months only")}
                   {usesDynamicRevisions

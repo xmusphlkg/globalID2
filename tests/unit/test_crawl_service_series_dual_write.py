@@ -475,6 +475,8 @@ async def test_australia_subdivision_reuses_parent_series_registry(monkeypatch) 
                 "source_id": "SRC_AU_NINDSS",
                 "geography_key": "country:AU-NSW:national",
                 "quality_policy": CrawlService._series_quality_policy(updater),
+                "history_relevant_periods_only": False,
+                "reuse_upsert_rows_for_revisions": False,
             },
         ),
     ]

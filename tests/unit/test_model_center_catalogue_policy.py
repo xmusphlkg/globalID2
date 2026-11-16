@@ -354,3 +354,13 @@ async def test_probe_client_pool_closes_on_success_failure_and_cancellation(erro
         with pytest.raises(type(error)):
             await operation()
     assert closed == [True]
+
+
+def test_native_file_work_only_projects_to_file_capable_routes():
+    now = datetime(2026, 11, 10, 12, tzinfo=timezone.utc)
+    records = _models(now)
+    records[0].extra_params = {'runtime_native_files': False}
+    records[1].extra_params = {'runtime_native_files': True}
+    routes = build_runtime_routes(records, now=now)
+    assert routes[0]['capabilities'] == ['text']
+    assert routes[1]['capabilities'] == ['text', 'native_file']

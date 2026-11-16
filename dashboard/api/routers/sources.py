@@ -5,6 +5,9 @@ import time
 from types import SimpleNamespace
 from typing import Dict, List, Optional
 
+from src.core.source_channels import source_channel
+from src.core.remaining_country_sources import REMAINING_COUNTRIES, EXTRA_SOURCE_CONTRACTS, source_contract
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,6 +62,27 @@ _ICELAND_HISTORY_SCOPES = frozenset(
 )
 
 _SERIES_SOURCE_SCOPE_OVERRIDES = {
+    'SRC_CL_ENO': 'cl_eno_historical',
+    'SRC_CO_INS_SIVIGILA': 'co_ins_sivigila_historical',
+    'SRC_MW_PHIM_IDSR': 'mw_phim_idsr_weekly',
+    'SRC_ZA_NICD_NMC': 'za_nicd_nmc',
+    'SRC_ID_KEMKES_PROFILE': 'id_kemkes_profile',
+    'SRC_MX_DGE_ANNUAL': 'mx_dge_annual',
+    'SRC_NG_NCDC': 'ncdc_surveillance',
+    'SRC_KH_CAMEWARN': 'kh_camewarn_weekly',
+    'SRC_AR_BEN': 'ar_ben_weekly',
+    'SRC_PE_CDC': 'pe_cdc_weekly',
+    "SRC_TH_DOE506": "th_doe506_monthly",
+    "SRC_TH_DDS_WEEKLY": "th_dds_weekly",
+    "SRC_TH_ID_TH_ARCHIVE": "th_id_th_history",
+    "SRC_TH_DDS_TABLEAU": "th_dds_tableau",
+    "SRC_MY_MOH_STD": "moh_std_annual",
+    "SRC_MY_IDENGUE_DAILY": "my_idengue_daily",
+    "SRC_MY_WHO_FLUNET": "who_flunet_weekly",
+    "SRC_MY_WHO_GHO": "who_gho_annual",
+    "SRC_NL_RIVM_NOTIFIABLE": "rivm_notifiable_annual",
+    "SRC_NL_RIVM_VIROLOGICAL": "rivm_virological_weekly",
+    "SRC_NL_RIVM_RESPIRATORY": "rivm_respiratory_weekly",
     "SRC_AU_NINDSS": "all",
     "SRC_BR_SINAN": "sinan_datasus",
     "SRC_CA_ON_PHO_IDTO": "pho_idto_monthly",
@@ -89,8 +113,17 @@ _SERIES_SOURCE_SCOPE_OVERRIDES = {
     "SRC_US_NNDSS": "nndss_api",
 }
 
+for _code in REMAINING_COUNTRIES:
+    _contract = source_contract(_code)
+    _SERIES_SOURCE_SCOPE_OVERRIDES[_contract["source_id"]] = _contract["scope"]
+
+for (_code, _scope), _extra in EXTRA_SOURCE_CONTRACTS.items():
+    _SERIES_SOURCE_SCOPE_OVERRIDES[_extra["source_id"]] = _scope
+
 _OBSERVATION_GEOGRAPHY_SERIES_SOURCES = frozenset(
     {
+        "SRC_NL_RIVM_NOTIFIABLE",
+        "SRC_MY_IDENGUE_DAILY",
         "SRC_AU_NINDSS",
         "SRC_CN_PROV_DATACENTER",
         "SRC_CN_PROV_MONTHLY_REPORT",
@@ -180,6 +213,8 @@ def _source_kind(country_code: str, scope: str) -> str:
 
     if country_code == "IS" and scope in _ICELAND_HISTORY_SCOPES:
         return "history"
+    if country_code == "TH" and scope in {"th_doe506_monthly", "th_id_th_history"}:
+        return "history"
     return "current"
 
 
@@ -197,6 +232,10 @@ def _source_supports_start_year(
     all *current* dashboards for Iceland).
     """
 
+    if country_code == "TH" and scope in {"th_dds_weekly", "th_dds_tableau"}:
+        return False
+    if scope in {"my_idengue_daily", "rivm_virological_weekly", "rivm_respiratory_weekly"}:
+        return False
     if configured_start_year is None:
         return False
     return not (
@@ -409,6 +448,7 @@ def _country_source_config(country: Country, *, lang: str = "en") -> CountrySour
         )
         options.append(SourceOptionOut(
             value=option["value"],
+            source_channel=source_channel(code, option["value"]),
             label_en=(
                 "Iceland Directorate of Health — All Current Dashboards"
                 if code == "IS" and option["value"] == "all"
@@ -1143,6 +1183,7 @@ async def get_sources_flow(
                 ),
                 history_start_year=src.get("history_start_year"),
                 source_scope=row_scope,
+                source_channel=source_channel(src.get("country_code"), row_scope),
                 latest_task_uuid=task.task_uuid if task else None,
                 latest_task_source=_source_from_task(task) if task else None,
                 latest_task_status=_task_status(task),
