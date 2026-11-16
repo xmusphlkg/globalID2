@@ -1,0 +1,12 @@
+[Unit]
+Description=Check Colombia INS BES hourly, including missed checks after reboot
+
+[Timer]
+OnCalendar=*-*-* *:45:00 America/Bogota
+RandomizedDelaySec=60
+Persistent=true
+Unit=globalid-co-bes-refresh.service
+
+[Install]
+WantedBy=timers.target
+

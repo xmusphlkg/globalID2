@@ -84,8 +84,14 @@ review; the current contract performs upserts, not authoritative deletion.
 
 Country jobs use the shared scheduler, country concurrency guard, retry handling
 and collect/organize/store runner. Source observation cadence remains annual
-regardless of how often publication checks run. Public release remains disabled
-pending source-terms review, disease mappings and verified generated snapshots.
+regardless of how often publication checks run. The 2026-11-16 admission review
+permits only the reviewed WHO GHO source system for each country under the WHO
+dataset public-health use terms. Legacy publication stays disabled. Original
+indicator titles, years, values and missing states are retained; visible source
+metadata includes WHO attribution, reporting country, access date, restrictions
+and the independent-presentation disclaimer. Independent CR MOH and LA/VN WPRO
+feeds remain closed. Snapshot and publication receipts are validated separately;
+see [the annual mapping review](ANNUAL_SOURCE_MAPPING_REVIEW.md).
 
 ## Reproducible capture and validation
 

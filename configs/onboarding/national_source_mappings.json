@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-11-16",
+  "review_scope": [
+    "AR",
+    "CL",
+    "CO",
+    "ID",
+    "KH",
+    "MW",
+    "MX",
+    "MY",
+    "NG",
+    "PE",
+    "TH",
+    "ZA",
+    "BQ"
+  ],
+  "application": "Use configs/mapping/reviewed CSVs through existing reviewed-category import and immutable release services. Existing approved decisions require conflict review; never overwrite automatically.",
+  "source_category_snapshot_sha256": "f60abe035a508ed8a9e83c237ce94fe38c8d0f45b4cba75497f4be4138d91923",
+  "summary": {
+    "AR": {
+      "reviewed_categories": 300,
+      "canonical_categories": 0,
+      "mapped_no_projection": 77,
+      "unmapped_held": 223,
+      "sha256": "47230ef253b9bababface7f8ca52184f3c68c7b9c14ccc23ef0cfb8a9b104d62"
+    },
+    "CL": {
+      "reviewed_categories": 66,
+      "canonical_categories": 62,
+      "mapped_no_projection": 0,
+      "unmapped_held": 4,
+      "sha256": "407215675f5fe0ef951391cb884d5859e40c80e9d9d8d8e86b0e1313aa5fc0d9"
+    },
+    "CO": {
+      "reviewed_categories": 77,
+      "canonical_categories": 0,
+      "mapped_no_projection": 31,
+      "unmapped_held": 46,
+      "sha256": "93a6a6da8f4218d4aa1f72f31ad6d9f9e5e8bbf5ebfe5b24f6304872206e010b"
+    },
+    "ID": {
+      "reviewed_categories": 634,
+      "canonical_categories": 13,
+      "mapped_no_projection": 603,
+      "unmapped_held": 18,
+      "sha256": "560a8d0d1bf71942d9bf373cd8d900a231c92098cded763f78430236c28f4f99"
+    },
+    "KH": {
+      "reviewed_categories": 11,
+      "canonical_categories": 4,
+      "mapped_no_projection": 0,
+      "unmapped_held": 7,
+      "sha256": "85b3c5fffd32c643e1c4ab003d7a909cd1d51a1c091c7008922f915f76bcc48b"
+    },
+    "MW": {
+      "reviewed_categories": 28,
+      "canonical_categories": 20,
+      "mapped_no_projection": 0,
+      "unmapped_held": 8,
+      "sha256": "8a9a85775cace05490da2fdd864889126f4775391f793247e77c851219910f73"
+    },
+    "MX": {
+      "reviewed_categories": 1006,
+      "canonical_categories": 151,
+      "mapped_no_projection": 0,
+      "unmapped_held": 855,
+      "sha256": "eff315f6174f6cb913d65a643ee534e4306f089a177696ad76f392a95afdc58d"
+    },
+    "MY": {
+      "reviewed_categories": 42,
+      "canonical_categories": 21,
+      "mapped_no_projection": 0,
+      "unmapped_held": 21,
+      "sha256": "bdf23914b1f4623f0ca5d91ecbd7582dcf27c93d1ab61aec288dd6d1d0452c46"
+    },
+    "NG": {
+      "reviewed_categories": 177,
+      "canonical_categories": 63,
+      "mapped_no_projection": 103,
+      "unmapped_held": 11,
+      "sha256": "46cd8979e8130f32d79656c4211bdf12472858f90dcce182ea113c414445b9e3"
+    },
+    "NL": {
+      "reviewed_categories": 59,
+      "canonical_categories": 49,
+      "mapped_no_projection": 0,
+      "unmapped_held": 10,
+      "sha256": "523fcce9ccf37995e52b8a8334bbcccba5a0264a1a037de27c6f2634b10a7d11"
+    },
+    "PE": {
+      "reviewed_categories": 273,
+      "canonical_categories": 52,
+      "mapped_no_projection": 99,
+      "unmapped_held": 122,
+      "sha256": "44e6fe42e8db63a681babe8aca9532b808f25752de0b826741e94ae559ab4f83"
+    },
+    "TH": {
+      "reviewed_categories": 310,
+      "canonical_categories": 128,
+      "mapped_no_projection": 68,
+      "unmapped_held": 114,
+      "sha256": "6db76d016b06119678dc8229a762500d109a499d648f993ca1fccd3ae7746394"
+    },
+    "ZA": {
+      "reviewed_categories": 1329,
+      "canonical_categories": 145,
+      "mapped_no_projection": 806,
+      "unmapped_held": 378,
+      "sha256": "b1546db358b755c18707349bbd2115f17dba5724b4b855ff350861cdb2bac253"
+    }
+  },
+  "filters": {
+    "MX": "Only source_code suffix __all__all__cases reviewed in this batch; subgroup and rate categories remain unchanged.",
+    "NL": "Only SRC_NL_RIVM_NOTIFIABLE reviewed; BQ observations remain under NL source at country:BQ:national.",
+    "AR": "SRC_AR_BEN cumulative measures retain no_projection. Separate SRC_AR_MOH_HIV_ANNUAL directly reported national annual notifications are admitted under configs/mapping/ar.csv.",
+    "CO": "Concept mapping only; municipality totals and synthetic epiweek dates cannot form national weekly curves.",
+    "TH": "SRC_TH_ID_TH_ARCHIVE kept no_projection; official DOE monthly and verified DDS current sources distinct.",
+    "ID": "Appendix column source identities no_projection; explicitly national nonappendix metrics eligible.",
+    "NG": "Only weekly period source identities eligible.",
+    "PE": "Only weekly_cases source identities eligible.",
+    "ZA": "Only all_notified current named windows eligible; cohort comparisons and patient status subsets excluded.",
+    "MY": "FluNet detections retained no_projection; STD notifications, WHO annual and daily dengue kept distinct."
+  },
+  "unverified_country_primary_reuse_terms": [
+    "ID",
+    "KH",
+    "MW",
+    "MX",
+    "NG",
+    "PE",
+    "TH",
+    "ZA",
+    "BQ/NL_RIVM"
+  ],
+  "known_source_rights": {
+    "CL": "Official CKAN package CC0; source publication inventory/privacy discrepancy must remain explicitly disclosed.",
+    "CO": "Official data portal CC BY-SA 4.0; national projection blocked by source geography/calendar.",
+    "MY/SRC_MY_MOH_STD": "CC BY 4.0; Ministry of Health Malaysia attribution.",
+    "AR": "Argentina government-owned contents default CC BY 4.0, except declared third-party content: https://www.argentina.gob.ar/terminos-y-condiciones",
+    "AR/SRC_AR_MOH_HIV_ANNUAL": "Official resource metadata declares CC-BY-4.0; attribution to Ministerio de Salud de la Nación Argentina. Source catalogue ed365e37-bac7-580f-911e-17c90ef73324, CSV resource 747d2078-9d51-40d4-ae59-ced43225459f."
+  },
+  "publication_review_annotations": {
+    "purpose": "Documentation only; records the operator publication decision and source evidence status without altering reviewed CSVs or immutable evidence. Actual admission is enforced by runtime source gates and statistical projection rules.",
+    "guide": "docs/data-sources/SOURCE_REUSE_PUBLICATION_REQUIREMENTS.md",
+    "reuse_permission": {
+      "meaning": "Verifiable permission to reuse and publicly redistribute the actual source data; not account access, download credentials, or an API key.",
+      "acceptable_evidence": "An applicable official open license for the exact resource, or a verifiable rights-holder grant covering the ingested data and intended uses. Separate written consent is not required when an applicable open license already supplies permission.",
+      "scope_to_verify": "Source/resource identity, versions, years and geography; extraction, charts, downloads and applicable API/mirror distribution; attribution, license links, change notices, share-alike conditions and third-party exceptions.",
+      "evidence_to_record": "Publisher/rights holder, source and license URLs, license version, capture date, archived response or grant and SHA-256, required attribution and applicable conditions.",
+      "pending_is_not_prohibited": "Missing evidence is pending review, not a finding that reuse is forbidden. Public accessibility or a license for another dataset does not establish a grant for this source.",
+      "after_evidence": "Continue source evidence work without blocking this operator-authorized release; update attribution and actual applicable terms when evidence is established, and retain publication acceptance for data correctness."
+    },
+    "statistical_blockers": {
+      "AR": {
+        "source_id": "SRC_AR_BEN",
+        "reason": "Weekly BEN cumulative snapshots are not single-week incident counts. Notification, clinical and laboratory definitions remain separate.",
+        "required_to_clear": "Review source-reported weekly counts or an explicit cumulative differencing contract covering compatible definitions, geography, cutoff calendar, year resets, missing weeks and retrospective revisions. Any native cumulative display requires separate acceptance.",
+        "rights_note": "Government-owned content defaults to CC BY 4.0 subject to declared and third-party exceptions; this does not resolve the statistical blocker.",
+        "current_decision": "Retain reviewed concept mappings with no_projection.",
+        "country_publication_status": "Only the independent Ministry HIV annual source is now ingested and admitted; this statistical blocker applies to SRC_AR_BEN, whose existing no_projection mappings remain unchanged."
+      },
+      "CO": {
+        "source_id": "SRC_CO_INS_SIVIGILA",
+        "reason": "Municipality-of-occurrence event/week records have no verified national aggregation contract or official dated week boundaries. Synthetic storage dates are sorting anchors only.",
+        "required_to_clear": "Verify geography and coverage, non-overlap and deduplication, unknown/foreign/missing-location treatment, revisions and official source-year week boundaries; independently validate any national aggregation.",
+        "rights_note": "Historical dataset 4hyg-wa9d declares CC BY-SA 4.0; separate successor wns8-p38i declares CC BY 4.0. Neither license resolves geography or calendar semantics.",
+        "current_decision": "Retain source municipality facts and reviewed concept mappings with no_projection."
+      }
+    },
+    "public_release_enabled_field": "The false value below means this documentation manifest itself cannot enable publication; runtime per-source gates implement the recorded operator decision. It does not mean all reviewed countries remain closed.",
+    "operator_publication_decision": {
+      "recorded_on": "2026-11-16",
+      "status": "operator_authorized_public_release",
+      "country_codes": [
+        "BQ",
+        "ID",
+        "KH",
+        "MW",
+        "MX",
+        "NG",
+        "PE",
+        "TH",
+        "ZA"
+      ],
+      "instruction": "Do not wait for additional source reuse permission; open already reviewed eligible data with source disclosures.",
+      "source_license_verified": false,
+      "rights_interpretation": "This is the project operator decision, not evidence of a source rights-holder grant or an open license.",
+      "statistical_rules": "Preserve exact source identity, geography, period, metric and definition; no_projection and missing-value rules remain in force.",
+      "public_disclosure": "Describe source scope and disclose unverified source reuse terms with original source links; do not display internal decision history.",
+      "acceptance_status": "All nine new snapshots and normal public-export admissions passed locally; isolated build of 481 pages and all 27 localized country page checks passed. No deployment or public pointer switch.",
+      "AR": "Independent SRC_AR_MOH_HIV_ANNUAL ingested and mapped to D162: 2014-2023 national both-sexes source totals, 10 observations. Source/database reconciliation, normal public admission, generated snapshot, 118-page isolated build and 3 localized AR pages passed; BEN remains no_projection. No deployment.",
+      "CO": "Leave existing behavior unchanged.",
+      "AR_evidence": "docs/data-sources/AR_ALTERNATIVE_SOURCES_20261116.md",
+      "acceptance_evidence": {
+        "snapshots": "docs/acceptance/evidence/20261116_onboarding/national-open/acceptance.json",
+        "public_country_admission": "docs/acceptance/evidence/20261116_onboarding/national-open/public-country-admission.json",
+        "unchanged_data_comparison": "docs/acceptance/evidence/20261116_onboarding/national-open/unchanged-data-comparison.json",
+        "pages": "docs/acceptance/evidence/20261116_onboarding/national-open/page-acceptance.json"
+      },
+      "published": false
+    },
+    "additional_source_admissions": {
+      "AR/SRC_AR_MOH_HIV_ANNUAL": {
+        "reviewed_on": "2026-11-16",
+        "scope": "ar_moh_hiv_annual",
+        "source_code": "hiv",
+        "definition_version": "ar_moh_hiv_annual_notifications_v1",
+        "target_concept": "D162",
+        "metric_type": "case_notifications",
+        "reporting_basis": "annual_hiv_notifications",
+        "frequency": "annual",
+        "geography_key": "country:AR:national",
+        "source_years": [
+          2014,
+          2023
+        ],
+        "observations": 10,
+        "source_values_aggregated": false,
+        "mapping_manifest": "configs/mapping/ar.csv",
+        "mapping_manifest_sha256": "a97e5fd3036e1645fa61f859595ac04fcfd43e93357353c6d827a1d2b83e1d62",
+        "source_license": "CC BY 4.0 (official resource metadata)",
+        "preserved_source": "SRC_AR_BEN retains no_projection; 7326 stored BEN observations have unchanged content fingerprints.",
+        "source_contract": "docs/data-sources/AR_HIV_ANNUAL_INTEGRATION.md",
+        "acceptance_evidence": "docs/acceptance/evidence/20261116_onboarding/ar-hiv/page-acceptance.json",
+        "published": false
+      }
+    }
+  },
+  "public_release_enabled": false
+}

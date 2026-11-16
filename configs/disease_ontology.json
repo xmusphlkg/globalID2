@@ -6733,6 +6733,17 @@
       ]
     },
     {
+      "id": "SRC_AR_MOH_HIV_ANNUAL",
+      "country_code": "AR",
+      "labels": {
+        "en": "Argentina Ministry of Health Annual HIV Notifications",
+        "zh": "阿根廷卫生部 HIV 年度通知数"
+      },
+      "legacy_data_sources": [
+        "Argentina Ministry of Health Annual HIV Notifications"
+      ]
+    },
+    {
       "id": "SRC_PE_CDC",
       "country_code": "PE",
       "labels": {
@@ -7629,6 +7640,28 @@
       },
       "legacy_data_sources": [
         "Colombia INS SIVIGILA Historical Public Health Surveillance"
+      ]
+    },
+    {
+      "id": "SRC_CO_INS_SIVIGILA_CURRENT",
+      "country_code": "CO",
+      "labels": {
+        "en": "Colombia INS SIVIGILA Successor Dataset (2023 onward)",
+        "zh": "哥伦比亚 INS SIVIGILA 后续数据集（2023 年起）"
+      },
+      "legacy_data_sources": [
+        "Colombia INS SIVIGILA Current Public Health Surveillance"
+      ]
+    },
+    {
+      "id": "SRC_CO_INS_BES",
+      "country_code": "CO",
+      "labels": {
+        "en": "Colombia INS BES Epidemiological Bulletins",
+        "zh": "哥伦比亚 INS BES 流行病学周报"
+      },
+      "legacy_data_sources": [
+        "Colombia INS BES Epidemiological Bulletins"
       ]
     },
     {

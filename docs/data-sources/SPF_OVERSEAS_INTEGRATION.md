@@ -49,9 +49,14 @@ continuity and integrity-checked artifact bytes and makes no network calls.
 
 `SPFOverseasUpdater(country_code)` exposes ontology ID
 `SRC_<GP|MQ|GF>_SPF_ODISSE`. Source-native facts use the existing shared holding
-series path; no legacy disease-record projection is implied. Public release is
-pending disease mapping and generated snapshot validation. All five datasets
-state Licence ouverte 2.0, with attribution to Santé publique France.
+series path; no legacy disease-record projection is implied. The 2026-11-16
+admission review permits only the reviewed SPF source system in each territory;
+legacy publication remains disabled. All five datasets state Licence ouverte
+2.0, with visible attribution to Santé publique France, original dataset titles,
+years and extraction date. The source description explicitly discloses the TB
+notification-location/residence-location break; the representative curve may
+select only the recent residence series while retaining older facts in source
+details. Snapshot and publication receipts are validated separately.
 
 Refresh rereads all available source history, even for a small scheduler window,
 so revised old counts can upsert existing facts. An absent future source cell

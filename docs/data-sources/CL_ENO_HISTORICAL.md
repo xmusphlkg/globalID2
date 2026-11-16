@@ -4,8 +4,10 @@ Source: [MINSAL's official datos.gob.cl CKAN package](https://datos.gob.cl/datas
 `cl_eno_historical` / `SRC_CL_ENO`. The collector captures the complete CSV,
 variable dictionary and methodology PDF before offline aggregation. The CKAN
 package identifies the publisher as Ministerio de Salud and the license as CC0.
-Public release remains disabled pending a verified site snapshot and review of
-the source's changed publication scope.
+The 2026-11-16 admission review permits only reviewed national confirmed annual
+aggregates from `SRC_CL_ENO`. Legacy publication remains disabled; individual
+case rows are not part of the public output. Snapshot and publication receipts
+are validated separately.
 
 ## Actual source extent and contract
 
@@ -21,8 +23,10 @@ The CKAN description and 2024 methodology PDF still describe 2007–2022 and an
 older disease inventory. The current CSV additionally contains 2023/2024 and
 categories such as cholera and leishmaniasis that the old PDF described as
 excluded for privacy. This is a material upstream contract difference, retained
-in the audit and requiring review before any public release. No patient-level
-rows are written to source-series observations or the review CSV.
+in the audit. Admission is restricted to confirmed national annual aggregates,
+with this discrepancy disclosed in public source metadata; the older PDF is
+not asserted to describe the current CSV. No patient-level rows are written to
+source-series observations, the review CSV or the public output.
 
 `anho_notificacion` is the notification year, not symptom onset or infection
 date. Each row is one MINSAL-validated notification; the methodology says

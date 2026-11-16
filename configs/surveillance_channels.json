@@ -53,6 +53,22 @@
       "timezone": "America/Argentina/Buenos_Aires"
     },
     {
+      "country_code": "AR",
+      "scope": "ar_moh_hiv_annual",
+      "source_id": "SRC_AR_MOH_HIV_ANNUAL",
+      "publisher": "Ministerio de Salud de la Nación Argentina",
+      "official_url": "https://datos.gob.ar/api/3/action/package_show?id=ed365e37-bac7-580f-911e-17c90ef73324",
+      "archive_url": "https://datos.salud.gob.ar/dataset/1f70534d-f5f0-41f7-bc9a-b9809c39a505",
+      "discovery_urls": [
+        "https://datos.gob.ar/api/3/action/package_show?id=ed365e37-bac7-580f-911e-17c90ef73324"
+      ],
+      "cadence": "annual",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 24,
+      "daily_time": "09:45",
+      "timezone": "America/Argentina/Buenos_Aires"
+    },
+    {
       "country_code": "PE",
       "scope": "pe_cdc_weekly",
       "source_id": "SRC_PE_CDC",
@@ -139,6 +155,56 @@
       "daily_time": "11:15",
       "timezone": "America/Bogota",
       "enabled_by_default": true
+    },
+    {
+      "country_code": "CO",
+      "scope": "co_ins_sivigila_current",
+      "source_id": "SRC_CO_INS_SIVIGILA_CURRENT",
+      "publisher": "Instituto Nacional de Salud Colombia",
+      "official_url": "https://www.datos.gov.co/d/wns8-p38i",
+      "archive_url": "https://www.datos.gov.co/d/wns8-p38i",
+      "discovery_urls": [
+        "https://www.datos.gov.co/api/views/wns8-p38i.json"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 4,
+      "daily_time": "11:30",
+      "timezone": "America/Bogota",
+      "enabled_by_default": true
+    },
+    {
+      "country_code": "CO",
+      "scope": "co_ins_bes_weekly",
+      "source_id": "SRC_CO_INS_BES",
+      "publisher": "Instituto Nacional de Salud Colombia",
+      "official_url": "https://www.ins.gov.co/buscador-eventos/Paginas/Vista-Boletin-Epidemilogico.aspx",
+      "archive_url": "https://www.ins.gov.co/buscador-eventos/Paginas/Vista-Boletin-Epidemilogico.aspx",
+      "discovery_urls": [
+        "https://www.ins.gov.co/buscador-eventos/Paginas/Vista-Boletin-Epidemilogico.aspx"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "live_official_directory_with_recent_year_replay",
+      "refresh_years": 2,
+      "daily_time": "11:45",
+      "timezone": "America/Bogota",
+      "enabled_by_default": false,
+      "integration_status": "automated_managed_runtime",
+      "automation_backend": "systemd",
+      "automation_timer": "globalid-co-bes-refresh.timer",
+      "automation_schedule": "hourly at :45 America/Bogota",
+      "coverage_verified": false,
+      "backfill_summary": {
+        "as_of": "2026-11-16",
+        "source_epi_weeks": {
+          "2025": [1, 53],
+          "2026": [1, 44]
+        },
+        "report_count": 97,
+        "record_count": 159393,
+        "source_unreadable_cells": 8,
+        "measure": "source_reported_ytd_event_count"
+      }
     },
     {
       "country_code": "MW",

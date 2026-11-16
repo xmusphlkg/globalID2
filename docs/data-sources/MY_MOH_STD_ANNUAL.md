@@ -52,8 +52,12 @@ The default commit policy performs upserts. It does not claim authoritative
 deletion for a disease/year removed entirely from a future source release.
 Source-null observations are retained in the normalized row with explicit
 missingness; unknown-category missing rows may require registry support before
-they can supersede an existing holding observation. Public release remains
-disabled until a successful import and verified country snapshot exist.
+they can supersede an existing holding observation. The 2026-11-16 admission
+review permits this MOH annual STD source and the separately reviewed WHO GHO
+annual source only. Source metadata exposes CC BY 4.0, Ministry of Health
+Malaysia attribution, the national-row selection and access date. The independent
+iDengue daily and WHO FluNet feeds remain closed; legacy publication remains
+disabled. Snapshot and publication receipts are validated separately.
 
 ## Remaining national coverage gap
 

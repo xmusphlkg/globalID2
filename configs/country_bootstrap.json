@@ -1276,7 +1276,7 @@
     "notes": "Iceland Directorate of Health annual, monthly STI, weekly respiratory and historical Excel surveillance. Source series retain reporting basis and temporal grain separately."
   },
   "TH": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "data_source_url": "https://doe.moph.go.th/dds-report/",
     "data_source_type": "official_reports",
     "crawler_config": {
@@ -1296,13 +1296,18 @@
       "dynamic_revision_enabled": true,
       "reporting_area": "national",
       "geography_key": "country:TH:national",
-      "reuse_status": "license_review_pending",
+      "reuse_status": "operator_authorized_public_release",
       "source_policies": {
         "th_dds_weekly": {
           "source_kind": "national_primary",
           "cadence": "weekly",
           "supports_start_year": false,
-          "public_release_enabled": false
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Thailand Ministry of Public Health, Department of Disease Control",
+          "required_attribution": "Thailand Ministry of Public Health, Department of Disease Control, Thailand DDS Weekly Onset Notifications. Original source: https://doe.moph.go.th/dds-report/. Source definitions and reporting periods retained."
         },
         "th_doe506_monthly": {
           "source_kind": "history",
@@ -1310,7 +1315,12 @@
           "full_history_start_year": 2003,
           "supports_start_year": true,
           "recent_years": 3,
-          "public_release_enabled": false
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Thailand Ministry of Public Health, Department of Disease Control",
+          "required_attribution": "Thailand Ministry of Public Health, Department of Disease Control, Thailand DOE Report 506 Monthly History. Original source: https://doe.moph.go.th/surdata/. Source definitions and reporting periods retained."
         },
         "th_id_th_history": {
           "source_kind": "history",
@@ -1323,14 +1333,22 @@
           "source_kind": "national_primary",
           "cadence": "weekly",
           "supports_start_year": false,
-          "public_release_enabled": false
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Thailand Ministry of Public Health, Department of Disease Control",
+          "required_attribution": "Thailand Ministry of Public Health, Department of Disease Control, Thailand DDS Tableau Weekly Report Notifications. Original source: https://doe.moph.go.th/dds-report/. Source definitions and reporting periods retained."
         }
       },
       "series_quality_guard": {
         "mode": "fail_closed",
         "registry_coverage": "required",
         "history_lookback_days": 9000
-      }
+      },
+      "operator_authorized_public_release": true,
+      "public_release_authorized_on": "2026-11-16",
+      "source_license_verified": false
     },
     "parser_config": {
       "primary": "th_dds_weekly_pdf",
@@ -1344,10 +1362,72 @@
       "default_type": "WEEKLY",
       "lang": "th-TH"
     },
-    "notes": "DDS national closed-week onset reports and independent Report 506 monthly history from advertised 2003 onward. Retain every source disease category and reporting basis; never difference cumulative reports or sum overlapping categories. Discover live year links and refresh recent closed-year revisions; missing reports remain explicit gaps. ID_TH user-curated weekly archive is a separate provenance and reporting-basis contract. The live DDS Tableau national report is independently identified; merged source labels remain merged and report/onset bases stay separate."
+    "notes": "DDS national closed-week onset reports and independent Report 506 monthly history from advertised 2003 onward. Retain every source disease category and reporting basis; never difference cumulative reports or sum overlapping categories. Discover live year links and refresh recent closed-year revisions; missing reports remain explicit gaps. ID_TH user-curated weekly archive is a separate provenance and reporting-basis contract. The live DDS Tableau national report is independently identified; merged source labels remain merged and report/onset bases stay separate.",
+    "public_legacy_enabled": false,
+    "public_source_systems": [
+      "SRC_TH_DOE506",
+      "SRC_TH_DDS_WEEKLY",
+      "SRC_TH_DDS_TABLEAU"
+    ],
+    "public_source_scopes": [
+      "th_doe506_monthly",
+      "th_dds_weekly",
+      "th_dds_tableau"
+    ],
+    "public_source_details": {
+      "th_doe506_monthly": {
+        "source_id": "SRC_TH_DOE506",
+        "label": "Thailand DOE Report 506 Monthly History",
+        "publisher": "Thailand Ministry of Public Health, Department of Disease Control",
+        "url": "https://doe.moph.go.th/surdata/",
+        "type": "official_reports",
+        "cadence": "monthly",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Thailand Ministry of Public Health, Department of Disease Control, Thailand DOE Report 506 Monthly History. Original source: https://doe.moph.go.th/surdata/. Source definitions and reporting periods retained.",
+        "description": "Report 506 national monthly notifications retain the source's mostly suspected case definition. Monthly reporting counts stay separate from DDS onset-week and report-week data; missing source periods remain unknown. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "Report 506 全国月度报告数保留来源以疑似病例为主的定义；月度报告数与 DDS 发病周、报告周数据分别保留，缺失期间保持未知。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Les notifications nationales mensuelles du rapport 506 conservent la définition source, principalement des cas suspects. Elles restent distinctes des semaines de début et de notification DDS ; les périodes absentes restent inconnues. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      },
+      "th_dds_weekly": {
+        "source_id": "SRC_TH_DDS_WEEKLY",
+        "label": "Thailand DDS Weekly Onset Notifications",
+        "publisher": "Thailand Ministry of Public Health, Department of Disease Control",
+        "url": "https://doe.moph.go.th/dds-report/",
+        "type": "official_reports",
+        "cadence": "weekly",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Thailand Ministry of Public Health, Department of Disease Control, Thailand DDS Weekly Onset Notifications. Original source: https://doe.moph.go.th/dds-report/. Source definitions and reporting periods retained.",
+        "description": "Reviewed national DDS weekly counts use onset date and place. They remain separate from report-date DDS Tableau and Report 506 monthly counts; only the reviewed onset definition is eligible. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "已审核全国 DDS 周度计数按发病日期及地点统计，与按报告日期统计的 DDS Tableau 及 Report 506 月度计数分别保留；仅采用已审核的发病口径。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Les nombres hebdomadaires nationaux DDS examinés suivent la date et le lieu de début. Ils restent distincts du Tableau DDS par notification et des comptes mensuels du rapport 506 ; seule la définition examinée est retenue. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      },
+      "th_dds_tableau": {
+        "source_id": "SRC_TH_DDS_TABLEAU",
+        "label": "Thailand DDS Tableau Weekly Report Notifications",
+        "publisher": "Thailand Ministry of Public Health, Department of Disease Control",
+        "url": "https://doe.moph.go.th/dds-report/",
+        "type": "official_reports",
+        "cadence": "weekly",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Thailand Ministry of Public Health, Department of Disease Control, Thailand DDS Tableau Weekly Report Notifications. Original source: https://doe.moph.go.th/dds-report/. Source definitions and reporting periods retained.",
+        "description": "Reviewed national DDS Tableau weekly counts use report date and place. They are a distinct source definition from onset-week DDS and monthly Report 506; the series are not combined into an additive total. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "已审核全国 DDS Tableau 周度计数按报告日期及地点统计；与按发病周统计的 DDS 和 Report 506 月度数据具有不同来源定义，不合并相加。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Les comptes hebdomadaires nationaux examinés du Tableau DDS suivent la date et le lieu de notification. Leur définition est distincte des semaines de début DDS et du rapport 506 mensuel ; les séries ne sont pas additionnées. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      }
+    },
+    "public_source_notes": "Report 506 national monthly notifications retain the source's mostly suspected case definition. Monthly reporting counts stay separate from DDS onset-week and report-week data; missing source periods remain unknown. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms. Reviewed national DDS weekly counts use onset date and place. They remain separate from report-date DDS Tableau and Report 506 monthly counts; only the reviewed onset definition is eligible. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms. Reviewed national DDS Tableau weekly counts use report date and place. They are a distinct source definition from onset-week DDS and monthly Report 506; the series are not combined into an additive total. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms."
   },
   "MY": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "data_source_url": "https://data.gov.my/data-catalogue/std_state",
     "data_source_type": "official_parquet",
     "crawler_config": {
@@ -1374,10 +1454,14 @@
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
           "license": "CC BY 4.0",
-          "public_release_enabled": false,
+          "public_release_enabled": true,
           "supports_start_year": true,
           "supports_fill_missing": false,
-          "default_fill_missing": false
+          "default_fill_missing": false,
+          "license_url": "https://creativecommons.org/licenses/by/4.0/",
+          "publisher": "Ministry of Health Malaysia",
+          "required_attribution": "Ministry of Health Malaysia, Annual STD Notifications (std_state), 2017–2024, accessed 2026-11-16. CC BY 4.0. National rows selected; source values preserved.",
+          "review_status": "cc_by_4_0_and_national_annual_semantics_reviewed"
         },
         "my_idengue_daily": {
           "source_kind": "national_primary",
@@ -1404,12 +1488,16 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "review_required",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1954,
           "supports_fill_missing": false,
-          "default_fill_missing": false
+          "default_fill_missing": false,
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Malaysia WHO GHO Annual Reported Infections; underlying data reported by Malaysia. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       }
     },
@@ -1424,7 +1512,17 @@
       "default_type": "ANNUAL",
       "lang": "ms-MY"
     },
-    "notes": "Independent daily iDengue observations, WHO FluNet laboratory weekly returns, WHO GHO annual reported indicators and annual STD notifications. Preserve source-native metrics, reporting origins, denominators and geography; never difference ambiguous cumulative dengue totals or merge laboratory detections with notification counts. Broader Malaysian disease coverage remains incomplete. Public snapshot validation is pending."
+    "notes": "Independent daily iDengue observations, WHO FluNet laboratory weekly returns, WHO GHO annual reported indicators and annual STD notifications. Preserve source-native metrics, reporting origins, denominators and geography; never difference ambiguous cumulative dengue totals or merge laboratory detections with notification counts. Broader Malaysian disease coverage remains incomplete. Public snapshot validation is pending.",
+    "public_legacy_enabled": false,
+    "public_source_systems": [
+      "SRC_MY_MOH_STD",
+      "SRC_MY_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "moh_std_annual",
+      "who_gho_annual"
+    ],
+    "public_source_notes": "Ministry of Health Malaysia, Annual STD Notifications (std_state), accessed 2026-11-16. CC BY 4.0. National annual report-date counts for AIDS, chancroid, gonorrhea, HIV and syphilis, 2017–2024. Only explicit Malaysia rows are selected; state rows are not added. HIV and AIDS stay separate, rates do not replace counts, and missing values are unknown. Broader national disease coverage remains incomplete. WHO, Malaysia WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "NL": {
     "public_release_enabled": false,
@@ -1497,7 +1595,7 @@
   "BQ": {
     "parent_country_code": "NL",
     "location_type": "territory",
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen",
     "data_source_type": "parent_country_feed",
@@ -1510,7 +1608,21 @@
       "cadence": "annual",
       "supports_fill_missing": false,
       "default_fill_missing": false,
-      "public_release_enabled": false
+      "public_release_enabled": true,
+      "reuse_status": "operator_authorized_public_release",
+      "operator_authorized_public_release": true,
+      "public_release_authorized_on": "2026-11-16",
+      "source_license_verified": false,
+      "source_policies": {
+        "rivm_notifiable_annual": {
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Rijksinstituut voor Volksgezondheid en Milieu (RIVM)",
+          "required_attribution": "Rijksinstituut voor Volksgezondheid en Milieu (RIVM), RIVM Caribbean Netherlands Annual Notifications. Original source: https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen. Source definitions and reporting periods retained."
+        }
+      }
     },
     "parser_config": {
       "primary": "nl_rivm_notifiable_annual"
@@ -1523,10 +1635,35 @@
       "default_type": "ANNUAL",
       "lang": "nl-BQ"
     },
-    "notes": "Caribbean Netherlands geography retained from the Netherlands RIVM annual notification table. Collected and refreshed by the NL rivm_notifiable_annual job; no independent BQ collection task. Source-native series retain NL ownership and BQ geography. Public release remains disabled pending validated mappings and snapshots."
+    "notes": "Caribbean Netherlands geography retained from the Netherlands RIVM annual notification table. Collected and refreshed by the NL rivm_notifiable_annual job; no independent BQ collection task. Source-native series retain NL ownership and BQ geography. Public release remains disabled pending validated mappings and snapshots.",
+    "public_source_systems": [
+      "SRC_NL_RIVM_NOTIFIABLE"
+    ],
+    "public_source_scopes": [
+      "rivm_notifiable_annual"
+    ],
+    "public_source_details": {
+      "rivm_notifiable_annual": {
+        "source_id": "SRC_NL_RIVM_NOTIFIABLE",
+        "label": "RIVM Caribbean Netherlands Annual Notifications",
+        "publisher": "Rijksinstituut voor Volksgezondheid en Milieu (RIVM)",
+        "url": "https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen",
+        "type": "official_reports",
+        "cadence": "annual",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Rijksinstituut voor Volksgezondheid en Milieu (RIVM), RIVM Caribbean Netherlands Annual Notifications. Original source: https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen. Source definitions and reporting periods retained.",
+        "description": "Annual mandatory notifications for the Caribbean Netherlands only; source geography BQ is retained separately from the Netherlands national series. Dates follow first onset, otherwise diagnosis or notification, as specified by the source. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "荷属加勒比地区年度法定传染病报告数；仅使用来源明确标识的 BQ 地域，与荷兰全国序列分别保留。日期按来源规定优先采用首次发病日期，其次为诊断或报告日期。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Notifications annuelles obligatoires pour les Pays-Bas caribéens uniquement ; la géographie BQ reste distincte de la série nationale néerlandaise. La date suit le début des symptômes, à défaut le diagnostic ou la notification selon la source. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      }
+    },
+    "public_source_notes": "Annual mandatory notifications for the Caribbean Netherlands only; source geography BQ is retained separately from the Netherlands national series. Dates follow first onset, otherwise diagnosis or notification, as specified by the source. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms."
   },
   "NG": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://ncdc.gov.ng/reports/weekly",
     "data_source_type": "official_reports",
@@ -1543,7 +1680,7 @@
       "default_fill_missing": false,
       "dynamic_revision_enabled": true,
       "reporting_area": "source_geographies",
-      "reuse_status": "license_review_pending",
+      "reuse_status": "operator_authorized_public_release",
       "series_quality_guard": {
         "mode": "fail_closed",
         "registry_coverage": "required",
@@ -1558,7 +1695,20 @@
       "discovery_urls": [
         "https://ncdc.gov.ng/reports/weekly",
         "https://ncdc.gov.ng/diseases/sitreps"
-      ]
+      ],
+      "operator_authorized_public_release": true,
+      "public_release_authorized_on": "2026-11-16",
+      "source_license_verified": false,
+      "source_policies": {
+        "ncdc_surveillance": {
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Nigeria Centre for Disease Control and Prevention (NCDC)",
+          "required_attribution": "Nigeria Centre for Disease Control and Prevention (NCDC), Nigeria NCDC Weekly Epidemiological Reports. Original source: https://ncdc.gov.ng/reports/weekly. Source definitions and reporting periods retained."
+        }
+      }
     },
     "parser_config": {
       "primary": "ncdc_surveillance"
@@ -1571,10 +1721,35 @@
       "default_type": "WEEKLY",
       "lang": "en-NG"
     },
-    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+    "public_source_systems": [
+      "SRC_NG_NCDC"
+    ],
+    "public_source_scopes": [
+      "ncdc_surveillance"
+    ],
+    "public_source_details": {
+      "ncdc_surveillance": {
+        "source_id": "SRC_NG_NCDC",
+        "label": "Nigeria NCDC Weekly Epidemiological Reports",
+        "publisher": "Nigeria Centre for Disease Control and Prevention (NCDC)",
+        "url": "https://ncdc.gov.ng/reports/weekly",
+        "type": "official_reports",
+        "cadence": "weekly",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Nigeria Centre for Disease Control and Prevention (NCDC), Nigeria NCDC Weekly Epidemiological Reports. Original source: https://ncdc.gov.ng/reports/weekly. Source definitions and reporting periods retained.",
+        "description": "Only WER single-week suspected case notifications are presented. Situation reports, confirmed counts and cumulative snapshots retain separate identities and are not added to this curve; missing reports remain gaps. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "仅展示 WER 单周疑似病例报告数；情况报告、确诊数和累计快照保持独立身份，不与该曲线相加。缺失报告保留为覆盖缺口。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Seules les notifications hebdomadaires de cas suspects du WER sont présentées. Rapports de situation, cas confirmés et cumuls restent distincts et ne sont pas additionnés à cette courbe ; les rapports absents restent des lacunes. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      }
+    },
+    "public_source_notes": "Only WER single-week suspected case notifications are presented. Situation reports, confirmed counts and cumulative snapshots retain separate identities and are not added to this curve; missing reports remain gaps. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms."
   },
   "KH": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://cdcmoh.gov.kh/surveillance/camewarn",
     "data_source_type": "official_reports",
@@ -1591,7 +1766,7 @@
       "default_fill_missing": false,
       "dynamic_revision_enabled": true,
       "reporting_area": "source_geographies",
-      "reuse_status": "license_review_pending",
+      "reuse_status": "operator_authorized_public_release",
       "series_quality_guard": {
         "mode": "fail_closed",
         "registry_coverage": "required",
@@ -1605,7 +1780,20 @@
       "archive_url": "https://cdcmoh.gov.kh/surveillance/camewarn",
       "discovery_urls": [
         "https://cdcmoh.gov.kh/surveillance/camewarn"
-      ]
+      ],
+      "operator_authorized_public_release": true,
+      "public_release_authorized_on": "2026-11-16",
+      "source_license_verified": false,
+      "source_policies": {
+        "kh_camewarn_weekly": {
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Cambodia Ministry of Health, CDC Department",
+          "required_attribution": "Cambodia Ministry of Health, CDC Department, Cambodia CDC CamEWARN Weekly Surveillance. Original source: https://cdcmoh.gov.kh/surveillance/camewarn. Source definitions and reporting periods retained."
+        }
+      }
     },
     "parser_config": {
       "primary": "kh_camewarn_weekly"
@@ -1618,27 +1806,53 @@
       "default_type": "WEEKLY",
       "lang": "km-KH"
     },
-    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+    "public_source_systems": [
+      "SRC_KH_CAMEWARN"
+    ],
+    "public_source_scopes": [
+      "kh_camewarn_weekly"
+    ],
+    "public_source_details": {
+      "kh_camewarn_weekly": {
+        "source_id": "SRC_KH_CAMEWARN",
+        "label": "Cambodia CDC CamEWARN Weekly Surveillance",
+        "publisher": "Cambodia Ministry of Health, CDC Department",
+        "url": "https://cdcmoh.gov.kh/surveillance/camewarn",
+        "type": "official_reports",
+        "cadence": "weekly",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Cambodia Ministry of Health, CDC Department, Cambodia CDC CamEWARN Weekly Surveillance. Original source: https://cdcmoh.gov.kh/surveillance/camewarn. Source definitions and reporting periods retained.",
+        "description": "CamEWARN disease and syndrome notifications cover reporting health facilities. Only reviewed national weekly numeric matrices with explicit report intervals are presented; chart-only values and absent weeks remain unknown. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "CamEWARN 疾病与综合征报告覆盖参与报告的医疗机构；仅展示具有明确报告区间且已审核的全国周度数值矩阵。仅有图表的数值和缺失周保持未知。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Les notifications de maladies et syndromes CamEWARN couvrent les établissements déclarants. Seules les matrices nationales hebdomadaires chiffrées et examinées, avec intervalles explicites, sont présentées ; graphiques seuls et semaines absentes restent inconnus. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      }
+    },
+    "public_source_notes": "CamEWARN disease and syndrome notifications cover reporting health facilities. Only reviewed national weekly numeric matrices with explicit report intervals are presented; chart-only values and absent weeks remain unknown. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms."
   },
   "AR": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
-    "data_source_url": "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional",
-    "data_source_type": "official_reports",
+    "data_source_url": "https://datos.gob.ar/api/3/action/package_show?id=ed365e37-bac7-580f-911e-17c90ef73324",
+    "data_source_type": "official_csv",
     "crawler_config": {
       "sources": [
+        "ar_moh_hiv_annual",
         "ar_ben_weekly"
       ],
-      "cadence": "weekly",
+      "cadence": "mixed",
       "source_kind": "national_primary",
-      "source_update_cadence": "weekly_revisable",
+      "source_update_cadence": "source_specific_revisable",
       "full_history_start_year": 2009,
       "supports_start_year": true,
       "supports_fill_missing": false,
       "default_fill_missing": false,
       "dynamic_revision_enabled": true,
       "reporting_area": "source_geographies",
-      "reuse_status": "license_review_pending",
+      "reuse_status": "source_specific_terms",
       "series_quality_guard": {
         "mode": "fail_closed",
         "registry_coverage": "required",
@@ -1653,10 +1867,31 @@
       "discovery_urls": [
         "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional",
         "https://www.argentina.gob.ar/salud/epidemiologia/boletines"
-      ]
+      ],
+      "source_policies": {
+        "ar_moh_hiv_annual": {
+          "source_id": "SRC_AR_MOH_HIV_ANNUAL",
+          "cadence": "annual",
+          "source_update_cadence": "annual_revisable",
+          "public_release_enabled": true,
+          "reuse_status": "cc_by_4_0",
+          "source_license_verified": true,
+          "full_history_start_year": 2014,
+          "supports_start_year": true,
+          "supports_fill_missing": false,
+          "definition_version": "ar_moh_hiv_annual_notifications_v1",
+          "official_channel_url": "https://datos.gob.ar/api/3/action/package_show?id=ed365e37-bac7-580f-911e-17c90ef73324"
+        },
+        "ar_ben_weekly": {
+          "source_id": "SRC_AR_BEN",
+          "cadence": "weekly",
+          "public_release_enabled": false,
+          "public_release_hold_reason": "Cumulative source snapshots are not single-week incident counts."
+        }
+      }
     },
     "parser_config": {
-      "primary": "ar_ben_weekly"
+      "primary": "ar_moh_hiv_annual"
     },
     "disease_mapping_rules": {
       "strategy": "source_registry_v3",
@@ -1666,10 +1901,36 @@
       "default_type": "WEEKLY",
       "lang": "es-AR"
     },
-    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+    "notes": "Argentina Ministry of Health annual HIV notifications, 2014–2023. Each value is the source's explicit national ARG / 200 total for Ambos sexos; province and sex rows are not added. Notifications are not estimates of incident infections, prevalence or AIDS cases. Annual dates denote calendar years, not individual event dates; unknown values stay unknown. CC BY 4.0 is declared by the official resource metadata. The catalogue's older package description differs from the selected 2014–2023 resource. No 2024–2026 observations are supplied by this resource. BEN cumulative notifications remain a separate source and do not enter this curve.",
+    "public_source_systems": [
+      "SRC_AR_MOH_HIV_ANNUAL"
+    ],
+    "public_source_scopes": [
+      "ar_moh_hiv_annual"
+    ],
+    "public_source_details": {
+      "ar_moh_hiv_annual": {
+        "source_id": "SRC_AR_MOH_HIV_ANNUAL",
+        "label": "Argentina Ministry of Health Annual HIV Notifications",
+        "url": "https://datos.gob.ar/api/3/action/package_show?id=ed365e37-bac7-580f-911e-17c90ef73324",
+        "machine_url": "https://datos.salud.gob.ar/dataset/1f70534d-f5f0-41f7-bc9a-b9809c39a505/resource/747d2078-9d51-40d4-ae59-ced43225459f/download/casos_prov_vih_2014-2023_1.csv",
+        "type": "official_csv",
+        "cadence": "annual",
+        "publisher": "Ministerio de Salud de la Nación Argentina",
+        "license": "CC BY 4.0 (official resource metadata)",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "attribution_required": true,
+        "required_attribution": "Ministerio de Salud de la Nación Argentina, Casos notificados de VIH por año y jurisdicción, 2014–2023, national ARG / 200, Ambos sexos. CC BY 4.0. Original resource: https://datos.salud.gob.ar/dataset/1f70534d-f5f0-41f7-bc9a-b9809c39a505/resource/747d2078-9d51-40d4-ae59-ced43225459f/download/casos_prov_vih_2014-2023_1.csv. Accessed 2026-11-16. National source totals selected without summing provincial or sex strata.",
+        "description": "Argentina Ministry of Health annual HIV notifications, 2014–2023. Each value is the source's explicit national ARG / 200 total for Ambos sexos; province and sex rows are not added. Notifications are not estimates of incident infections, prevalence or AIDS cases. Annual dates denote calendar years, not individual event dates; unknown values stay unknown. CC BY 4.0 is declared by the official resource metadata. The catalogue's older package description differs from the selected 2014–2023 resource. No 2024–2026 observations are supplied by this resource. BEN cumulative notifications remain a separate source and do not enter this curve.",
+        "description_zh": "来源：阿根廷国家卫生部，2014–2023 年 HIV 年度通知数。每个数值直接取自来源明确给出的 ARG／200 全国、Ambos sexos 双性别合计行，不累加省份或性别分项。通知数不等于新感染估计、患病存量或 AIDS 病例；年度日期表示自然年，不是个案发生日期，未知值保持未知。官方资源元数据声明 CC BY 4.0；目录包较早的描述与所选 2014–2023 年原件范围不同。该资源尚无 2024–2026 年观测。BEN 累计通知保持独立来源，不混入本曲线。",
+        "description_fr": "Notifications annuelles de VIH du ministère argentin de la Santé, 2014–2023. Chaque valeur est le total national explicite ARG / 200 pour Ambos sexos ; les provinces et les sexes ne sont pas additionnés. Ces notifications ne mesurent ni les nouvelles infections estimées, ni la prévalence, ni les cas de sida. Les dates désignent des années civiles, pas des dates individuelles ; les valeurs inconnues restent inconnues. Les métadonnées officielles de la ressource déclarent CC BY 4.0. L'ancienne description du catalogue diffère de la ressource 2014–2023 sélectionnée, qui ne fournit aucune observation pour 2024–2026. Les cumuls BEN restent une source séparée, exclue de cette courbe.",
+        "review_status": "cc_by_4_0_and_national_annual_semantics_reviewed"
+      }
+    },
+    "public_source_notes": "Argentina Ministry of Health annual HIV notifications, 2014–2023. Each value is the source's explicit national ARG / 200 total for Ambos sexos; province and sex rows are not added. Notifications are not estimates of incident infections, prevalence or AIDS cases. Annual dates denote calendar years, not individual event dates; unknown values stay unknown. CC BY 4.0 is declared by the official resource metadata. The catalogue's older package description differs from the selected 2014–2023 resource. No 2024–2026 observations are supplied by this resource. BEN cumulative notifications remain a separate source and do not enter this curve."
   },
   "PE": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
     "data_source_type": "official_reports",
@@ -1686,7 +1947,7 @@
       "default_fill_missing": false,
       "dynamic_revision_enabled": true,
       "reporting_area": "source_geographies",
-      "reuse_status": "license_review_pending",
+      "reuse_status": "operator_authorized_public_release",
       "series_quality_guard": {
         "mode": "fail_closed",
         "registry_coverage": "required",
@@ -1700,7 +1961,20 @@
       "archive_url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
       "discovery_urls": [
         "https://epipublic.dge.gob.pe/publico/listado_ajax"
-      ]
+      ],
+      "operator_authorized_public_release": true,
+      "public_release_authorized_on": "2026-11-16",
+      "source_license_verified": false,
+      "source_policies": {
+        "pe_cdc_weekly": {
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Ministerio de Salud del Perú, CDC Perú / DGE",
+          "required_attribution": "Ministerio de Salud del Perú, CDC Perú / DGE, Peru CDC Epidemiological Bulletin. Original source: https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/. Source definitions and reporting periods retained."
+        }
+      }
     },
     "parser_config": {
       "primary": "pe_cdc_weekly"
@@ -1713,10 +1987,35 @@
       "default_type": "WEEKLY",
       "lang": "es-PE"
     },
-    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+    "public_source_systems": [
+      "SRC_PE_CDC"
+    ],
+    "public_source_scopes": [
+      "pe_cdc_weekly"
+    ],
+    "public_source_details": {
+      "pe_cdc_weekly": {
+        "source_id": "SRC_PE_CDC",
+        "label": "Peru CDC Epidemiological Bulletin",
+        "publisher": "Ministerio de Salud del Perú, CDC Perú / DGE",
+        "url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
+        "type": "official_reports",
+        "cadence": "weekly",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Ministerio de Salud del Perú, CDC Perú / DGE, Peru CDC Epidemiological Bulletin. Original source: https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/. Source definitions and reporting periods retained.",
+        "description": "Only directly reported national single-week case totals from reviewed summary tables and explicit bulletin dates are presented. Classification components, cumulative and comparison columns are not summed; unreadable or missing source values stay unknown. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "仅展示已审核汇总表直接列出的全国单周病例总数，采用周报明确日期；分类分项、累计列和对比列不相加，无法读取或缺失的来源数值保持未知。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Seuls les totaux nationaux hebdomadaires directement publiés dans les tableaux récapitulatifs examinés, avec dates explicites, sont présentés. Composantes, cumuls et comparaisons ne sont pas additionnés ; valeurs illisibles ou absentes restent inconnues. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      }
+    },
+    "public_source_notes": "Only directly reported national single-week case totals from reviewed summary tables and explicit bulletin dates are presented. Classification components, cumulative and comparison columns are not summed; unreadable or missing source values stay unknown. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms."
   },
   "ZA": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
     "data_source_type": "official_reports",
@@ -1733,7 +2032,7 @@
       "default_fill_missing": false,
       "dynamic_revision_enabled": true,
       "reporting_area": "source_geographies",
-      "reuse_status": "license_review_pending",
+      "reuse_status": "operator_authorized_public_release",
       "series_quality_guard": {
         "mode": "fail_closed",
         "registry_coverage": "required",
@@ -1749,7 +2048,20 @@
         "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
         "https://www.nicd.ac.za/wp-json/wp/v2/media?search=NMCSS&per_page=100",
         "https://www.nicd.ac.za/wp-json/wp/v2/media?search=Notifiable-Medical-Conditions&per_page=100"
-      ]
+      ],
+      "operator_authorized_public_release": true,
+      "public_release_authorized_on": "2026-11-16",
+      "source_license_verified": false,
+      "source_policies": {
+        "za_nicd_nmc": {
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "National Institute for Communicable Diseases (NICD), South Africa",
+          "required_attribution": "National Institute for Communicable Diseases (NICD), South Africa, South Africa NICD NMC. Original source: https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/. Source definitions and reporting periods retained."
+        }
+      }
     },
     "parser_config": {
       "primary": "za_nicd_nmc"
@@ -1762,10 +2074,35 @@
       "default_type": "MONTHLY",
       "lang": "en-ZA"
     },
-    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+    "public_source_systems": [
+      "SRC_ZA_NICD_NMC"
+    ],
+    "public_source_scopes": [
+      "za_nicd_nmc"
+    ],
+    "public_source_details": {
+      "za_nicd_nmc": {
+        "source_id": "SRC_ZA_NICD_NMC",
+        "label": "South Africa NICD NMC",
+        "publisher": "National Institute for Communicable Diseases (NICD), South Africa",
+        "url": "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
+        "type": "official_reports",
+        "cadence": "monthly",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "National Institute for Communicable Diseases (NICD), South Africa, South Africa NICD NMC. Original source: https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/. Source definitions and reporting periods retained.",
+        "description": "Only reviewed current monthly all-notified national NMC counts are presented, retaining the source notification window. Cohort comparisons and patient-status subsets are excluded; patient death status is not treated as deaths occurring in that month. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "仅展示已审核 NMC 当前报告月全国全部通知计数，保留来源通知窗口；排除队列比较和患者状态分项，不将患者死亡状态视作当月发生的死亡。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Seuls les comptes nationaux NMC examinés de toutes les notifications du mois courant sont présentés, avec leur fenêtre source. Comparaisons de cohortes et sous-groupes par statut sont exclus ; le statut de décès ne devient pas un décès survenu ce mois-là. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      }
+    },
+    "public_source_notes": "Only reviewed current monthly all-notified national NMC counts are presented, retaining the source notification window. Cohort comparisons and patient-status subsets are excluded; patient death status is not treated as deaths occurring in that month. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms."
   },
   "ID": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://kemkes.go.id/id/category-download/profil-kesehatan",
     "data_source_type": "official_reports",
@@ -1782,7 +2119,7 @@
       "default_fill_missing": false,
       "dynamic_revision_enabled": true,
       "reporting_area": "source_geographies",
-      "reuse_status": "license_review_pending",
+      "reuse_status": "operator_authorized_public_release",
       "series_quality_guard": {
         "mode": "fail_closed",
         "registry_coverage": "required",
@@ -1796,7 +2133,20 @@
       "archive_url": "https://kemkes.go.id/id/category-download/profil-kesehatan",
       "discovery_urls": [
         "https://kemkes.go.id/id/category-download/profil-kesehatan"
-      ]
+      ],
+      "operator_authorized_public_release": true,
+      "public_release_authorized_on": "2026-11-16",
+      "source_license_verified": false,
+      "source_policies": {
+        "id_kemkes_profile": {
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Ministry of Health of the Republic of Indonesia",
+          "required_attribution": "Ministry of Health of the Republic of Indonesia, Indonesia Ministry of Health Annual Health Profile. Original source: https://kemkes.go.id/id/profil-kesehatan-indonesia-2024. Source definitions and reporting periods retained."
+        }
+      }
     },
     "parser_config": {
       "primary": "id_kemkes_profile"
@@ -1809,10 +2159,35 @@
       "default_type": "YEARLY",
       "lang": "id-ID"
     },
-    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+    "public_source_systems": [
+      "SRC_ID_KEMKES_PROFILE"
+    ],
+    "public_source_scopes": [
+      "id_kemkes_profile"
+    ],
+    "public_source_details": {
+      "id_kemkes_profile": {
+        "source_id": "SRC_ID_KEMKES_PROFILE",
+        "label": "Indonesia Ministry of Health Annual Health Profile",
+        "publisher": "Ministry of Health of the Republic of Indonesia",
+        "url": "https://kemkes.go.id/id/profil-kesehatan-indonesia-2024",
+        "type": "official_reports",
+        "cadence": "annual",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Ministry of Health of the Republic of Indonesia, Indonesia Ministry of Health Annual Health Profile. Original source: https://kemkes.go.id/id/profil-kesehatan-indonesia-2024. Source definitions and reporting periods retained.",
+        "description": "Only explicitly national annual case totals in reviewed health-profile narrative tables are presented. Appendix column identities, rates, registered stock and classification subsets are not substituted for national case totals. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "仅展示已审核健康概况正文中明确标为全国的年度病例总数；附表列、率、登记存量及分类分项不替代全国病例总数。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Seuls les totaux annuels nationaux explicites des tableaux narratifs examinés du profil sanitaire sont présentés. Les annexes, taux, stocks enregistrés et sous-catégories ne remplacent pas les totaux nationaux. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      }
+    },
+    "public_source_notes": "Only explicitly national annual case totals in reviewed health-profile narrative tables are presented. Appendix column identities, rates, registered stock and classification subsets are not substituted for national case totals. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms."
   },
   "CL": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://datos.gob.cl/api/3/action/package_show?id=notificaciones-eno",
     "data_source_type": "official_csv",
@@ -1829,7 +2204,7 @@
       "default_fill_missing": false,
       "dynamic_revision_enabled": true,
       "reporting_area": "source_geographies",
-      "reuse_status": "source_terms_review_pending",
+      "reuse_status": "cc0_catalogue_confirmed_national_aggregates_reviewed",
       "revision_window_unit": "years",
       "default_revision_window": 3,
       "refresh_recent_years": 3,
@@ -1837,6 +2212,16 @@
         "mode": "fail_closed",
         "registry_coverage": "required",
         "history_lookback_days": 20000
+      },
+      "source_policies": {
+        "cl_eno_historical": {
+          "public_release_enabled": true,
+          "license": "CC0 (official CKAN catalogue declaration)",
+          "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "publisher": "Ministerio de Salud de Chile",
+          "required_attribution": "Ministerio de Salud de Chile, Notificaciones ENO, accessed 2026-11-16; national confirmed annual aggregates derived from the captured CSV, 2007–2024.",
+          "review_status": "cc0_catalogue_and_confirmed_national_aggregate_reviewed"
+        }
       }
     },
     "parser_config": {
@@ -1850,7 +2235,14 @@
       "default_type": "YEARLY",
       "lang": "es-CL"
     },
-    "notes": "Historical ENO notifications; preserve source geography, diagnosis and reporting period. Public release awaits source and snapshot review."
+    "notes": "Historical ENO notifications; preserve source geography, diagnosis and reporting period. Public release awaits source and snapshot review.",
+    "public_source_systems": [
+      "SRC_CL_ENO"
+    ],
+    "public_source_scopes": [
+      "cl_eno_historical"
+    ],
+    "public_source_notes": "Ministerio de Salud de Chile, Notificaciones ENO, accessed 2026-11-16. The official CKAN catalogue declares CC0. Only reviewed confirmed national annual notification aggregates are presented; individual case rows are not released. The current CSV covers 2007–2024 and a changed disease inventory, while the catalogue text and methodology PDF still describe 2007–2022 and older exclusions. This upstream discrepancy is retained in the source audit; the older PDF is not asserted to describe the current CSV. Notification year is not onset year. Source-system periods and classifications remain separate; absent disease-years are unknown."
   },
   "CO": {
     "public_release_enabled": false,
@@ -1859,7 +2251,9 @@
     "data_source_type": "official_api",
     "crawler_config": {
       "sources": [
-        "co_ins_sivigila_historical"
+        "co_ins_sivigila_historical",
+        "co_ins_sivigila_current",
+        "co_ins_bes_weekly"
       ],
       "cadence": "weekly",
       "source_kind": "national_primary",
@@ -1878,6 +2272,30 @@
         "mode": "fail_closed",
         "registry_coverage": "required",
         "history_lookback_days": 20000
+      },
+      "source_policies": {
+        "co_ins_sivigila_current": {
+          "full_history_start_year": 2023,
+          "supports_start_year": true,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "temporal_granularity": "weekly",
+          "revision_window_unit": "years",
+          "default_revision_window": 4,
+          "public_release_enabled": false
+        },
+        "co_ins_bes_weekly": {
+          "full_history_start_year": 2025,
+          "supports_start_year": true,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "temporal_granularity": "weekly",
+          "revision_window_unit": "years",
+          "default_revision_window": 2,
+          "public_release_enabled": false
+        }
       }
     },
     "parser_config": {
@@ -1894,7 +2312,7 @@
     "notes": "Historical municipality-level SIVIGILA aggregate; no national rollup before completeness audit."
   },
   "MW": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://phim.health.gov.mw/",
     "data_source_type": "official_reports",
@@ -1911,7 +2329,7 @@
       "default_fill_missing": false,
       "dynamic_revision_enabled": true,
       "reporting_area": "source_geographies",
-      "reuse_status": "source_terms_review_pending",
+      "reuse_status": "operator_authorized_public_release",
       "revision_window_unit": "years",
       "default_revision_window": 2,
       "refresh_recent_years": 2,
@@ -1919,6 +2337,19 @@
         "mode": "fail_closed",
         "registry_coverage": "required",
         "history_lookback_days": 20000
+      },
+      "operator_authorized_public_release": true,
+      "public_release_authorized_on": "2026-11-16",
+      "source_license_verified": false,
+      "source_policies": {
+        "mw_phim_idsr_weekly": {
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Public Health Institute of Malawi (PHIM)",
+          "required_attribution": "Public Health Institute of Malawi (PHIM), Malawi PHIM IDSR Weekly Bulletin. Original source: https://phim.health.gov.mw/. Source definitions and reporting periods retained."
+        }
       }
     },
     "parser_config": {
@@ -1932,10 +2363,35 @@
       "default_type": "WEEKLY",
       "lang": "en-MW"
     },
-    "notes": "Published IDSR weeks only; preserve suspected and confirmed counts and audit missing weeks."
+    "notes": "Published IDSR weeks only; preserve suspected and confirmed counts and audit missing weeks.",
+    "public_source_systems": [
+      "SRC_MW_PHIM_IDSR"
+    ],
+    "public_source_scopes": [
+      "mw_phim_idsr_weekly"
+    ],
+    "public_source_details": {
+      "mw_phim_idsr_weekly": {
+        "source_id": "SRC_MW_PHIM_IDSR",
+        "label": "Malawi PHIM IDSR Weekly Bulletin",
+        "publisher": "Public Health Institute of Malawi (PHIM)",
+        "url": "https://phim.health.gov.mw/",
+        "type": "official_reports",
+        "cadence": "weekly",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Public Health Institute of Malawi (PHIM), Malawi PHIM IDSR Weekly Bulletin. Original source: https://phim.health.gov.mw/. Source definitions and reporting periods retained.",
+        "description": "Only reviewed Table 1 single-week suspected disease notification counts are presented. Confirmed classifications, cumulative columns and overlapping report sections are not added to these weekly totals. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "仅展示已审核 IDSR 周报表 1 的单周疑似病例报告数；确诊分类、累计列及重叠章节不与这些周总数相加。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Seuls les nombres hebdomadaires de notifications de cas suspects du tableau 1 examiné sont présentés. Les cas confirmés, colonnes cumulées et sections qui se recoupent ne sont pas ajoutés à ces totaux. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      }
+    },
+    "public_source_notes": "Only reviewed Table 1 single-week suspected disease notification counts are presented. Confirmed classifications, cumulative columns and overlapping report sections are not added to these weekly totals. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms."
   },
   "MX": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://epidemiologia.salud.gob.mx/anuario/html/index.html",
     "data_source_type": "official_reports",
@@ -1952,7 +2408,7 @@
       "default_fill_missing": false,
       "dynamic_revision_enabled": true,
       "reporting_area": "source_geographies",
-      "reuse_status": "license_review_pending",
+      "reuse_status": "operator_authorized_public_release",
       "series_quality_guard": {
         "mode": "fail_closed",
         "registry_coverage": "required",
@@ -1967,7 +2423,20 @@
       "discovery_urls": [
         "https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html",
         "https://epidemiologia.salud.gob.mx/anuario/html/incidencia_casos.html"
-      ]
+      ],
+      "operator_authorized_public_release": true,
+      "public_release_authorized_on": "2026-11-16",
+      "source_license_verified": false,
+      "source_policies": {
+        "mx_dge_annual": {
+          "public_release_enabled": true,
+          "reuse_status": "operator_authorized_public_release",
+          "source_license_verified": false,
+          "operator_authorized_public_release": true,
+          "publisher": "Secretaría de Salud, Dirección General de Epidemiología (DGE)",
+          "required_attribution": "Secretaría de Salud, Dirección General de Epidemiología (DGE), Mexico DGE Annual Morbidity. Original source: https://epidemiologia.salud.gob.mx/anuario/html/index.html. Source definitions and reporting periods retained."
+        }
+      }
     },
     "parser_config": {
       "primary": "mx_dge_annual"
@@ -1980,10 +2449,35 @@
       "default_type": "YEARLY",
       "lang": "es-MX"
     },
-    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+    "public_source_systems": [
+      "SRC_MX_DGE_ANNUAL"
+    ],
+    "public_source_scopes": [
+      "mx_dge_annual"
+    ],
+    "public_source_details": {
+      "mx_dge_annual": {
+        "source_id": "SRC_MX_DGE_ANNUAL",
+        "label": "Mexico DGE Annual Morbidity",
+        "publisher": "Secretaría de Salud, Dirección General de Epidemiología (DGE)",
+        "url": "https://epidemiologia.salud.gob.mx/anuario/html/index.html",
+        "type": "official_reports",
+        "cadence": "annual",
+        "license": "Source-specific reuse terms unverified",
+        "license_url": null,
+        "required_attribution": "Secretaría de Salud, Dirección General de Epidemiología (DGE), Mexico DGE Annual Morbidity. Original source: https://epidemiologia.salud.gob.mx/anuario/html/index.html. Source definitions and reporting periods retained.",
+        "description": "Reviewed national annual new-case totals include all ages and sexes. ICD revisions and source definitions are retained; rates, age/sex strata and subnational rows do not replace or add to national totals. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms.",
+        "description_zh": "展示已审核的全国、全年龄、全性别年度新报告病例总数，保留 ICD 版本及来源定义；率、年龄／性别分层和地方行不替代或累加到全国总数。 缺失值保持未知，来源明确的零值予以保留。尚未核实覆盖此数据的开放许可；第三方复用请查阅原始来源条款。",
+        "description_fr": "Les totaux annuels nationaux examinés couvrent tous les âges et sexes. Les versions de la CIM et définitions sources sont conservées ; taux, strates et lignes infranationales ne remplacent ni ne complètent les totaux nationaux. Les valeurs manquantes restent inconnues et les zéros explicites sont conservés. Aucune licence ouverte couvrant ces données n’a été vérifiée ; consulter les conditions de la source avant toute réutilisation par des tiers.",
+        "review_status": "source_terms_unverified_semantics_reviewed",
+        "source_license_verified": false
+      }
+    },
+    "public_source_notes": "Reviewed national annual new-case totals include all ages and sexes. ICD revisions and source definitions are retained; rates, age/sex strata and subnational rows do not replace or add to national totals. Missing values remain unknown and explicit source zeros are preserved. An open license covering these data has not been verified; third-party reuse should consult the original source terms."
   },
   "ET": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2005,8 +2499,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2018,7 +2512,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Ethiopia WHO GHO Annual Reported Infections; underlying data reported by Ethiopia. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2034,10 +2532,17 @@
       "default_type": "ANNUAL",
       "lang": "am-ET"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_ET_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Ethiopia WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "KE": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2059,8 +2564,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2072,7 +2577,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Kenya WHO GHO Annual Reported Infections; underlying data reported by Kenya. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2088,10 +2597,17 @@
       "default_type": "ANNUAL",
       "lang": "en-KE"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_KE_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Kenya WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "UG": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2113,8 +2629,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2126,7 +2642,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Uganda WHO GHO Annual Reported Infections; underlying data reported by Uganda. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2142,10 +2662,17 @@
       "default_type": "ANNUAL",
       "lang": "en-UG"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_UG_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Uganda WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "GH": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2167,8 +2694,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2180,7 +2707,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Ghana WHO GHO Annual Reported Infections; underlying data reported by Ghana. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2196,10 +2727,17 @@
       "default_type": "ANNUAL",
       "lang": "en-GH"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_GH_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Ghana WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "TZ": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2221,8 +2759,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2234,7 +2772,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Tanzania WHO GHO Annual Reported Infections; underlying data reported by Tanzania. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2250,10 +2792,17 @@
       "default_type": "ANNUAL",
       "lang": "sw-TZ"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_TZ_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Tanzania WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "PH": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2275,8 +2824,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2288,7 +2837,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Philippines WHO GHO Annual Reported Infections; underlying data reported by Philippines. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2304,10 +2857,17 @@
       "default_type": "ANNUAL",
       "lang": "en-PH"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_PH_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Philippines WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "VN": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2330,8 +2890,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2343,7 +2903,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Viet Nam WHO GHO Annual Reported Infections; underlying data reported by Viet Nam. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         },
         "who_wpro_dengue": {
           "source_kind": "international_surveillance",
@@ -2377,10 +2941,17 @@
       "default_type": "ANNUAL",
       "lang": "vi-VN"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_VN_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Viet Nam WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "LA": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2403,8 +2974,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2416,7 +2987,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Lao PDR WHO GHO Annual Reported Infections; underlying data reported by Lao PDR. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         },
         "who_wpro_dengue": {
           "source_kind": "international_surveillance",
@@ -2450,10 +3025,17 @@
       "default_type": "ANNUAL",
       "lang": "lo-LA"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_LA_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Lao PDR WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "MM": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2475,8 +3057,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2488,7 +3070,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Myanmar WHO GHO Annual Reported Infections; underlying data reported by Myanmar. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2504,10 +3090,17 @@
       "default_type": "ANNUAL",
       "lang": "my-MM"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_MM_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Myanmar WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "BN": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2529,8 +3122,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2542,7 +3135,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Brunei Darussalam WHO GHO Annual Reported Infections; underlying data reported by Brunei Darussalam. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2558,10 +3155,17 @@
       "default_type": "ANNUAL",
       "lang": "ms-BN"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_BN_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Brunei Darussalam WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "TL": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2583,8 +3187,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2596,7 +3200,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Timor-Leste WHO GHO Annual Reported Infections; underlying data reported by Timor-Leste. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2612,10 +3220,17 @@
       "default_type": "ANNUAL",
       "lang": "pt-TL"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_TL_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Timor-Leste WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "PY": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2637,8 +3252,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2650,7 +3265,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Paraguay WHO GHO Annual Reported Infections; underlying data reported by Paraguay. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2666,10 +3285,17 @@
       "default_type": "ANNUAL",
       "lang": "es-PY"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_PY_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Paraguay WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "EC": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2691,8 +3317,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2704,7 +3330,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Ecuador WHO GHO Annual Reported Infections; underlying data reported by Ecuador. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2720,10 +3350,17 @@
       "default_type": "ANNUAL",
       "lang": "es-EC"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_EC_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Ecuador WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "CR": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2746,8 +3383,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2759,7 +3396,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Costa Rica WHO GHO Annual Reported Infections; underlying data reported by Costa Rica. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         },
         "cr_moh_notifications": {
           "source_kind": "national_primary",
@@ -2793,10 +3434,17 @@
       "default_type": "ANNUAL",
       "lang": "es-CR"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_CR_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Costa Rica WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "PA": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.who.int/data/gho",
     "data_source_type": "official_odata",
@@ -2818,8 +3466,8 @@
           "source_kind": "international_surveillance",
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
-          "license": "WHO terms review pending",
-          "public_release_enabled": false,
+          "license": "WHO dataset terms for public health use",
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1900,
           "supports_fill_missing": false,
@@ -2831,7 +3479,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions",
+          "publisher": "World Health Organization",
+          "required_attribution": "World Health Organization (WHO), Panama WHO GHO Annual Reported Infections; underlying data reported by Panama. Original indicator titles and observed years accompany each source series. Accessed 2026-11-16.",
+          "review_status": "public_health_use_terms_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2847,10 +3499,17 @@
       "default_type": "ANNUAL",
       "lang": "es-PA"
     },
-    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate.",
+    "public_source_systems": [
+      "SRC_PA_WHO_GHO"
+    ],
+    "public_source_scopes": [
+      "who_gho_annual"
+    ],
+    "public_source_notes": "WHO, Panama WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "GP": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://odisse.santepubliquefrance.fr/",
     "data_source_type": "official_json",
@@ -2873,7 +3532,7 @@
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
           "license": "Licence ouverte 2.0",
-          "public_release_enabled": false,
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1995,
           "supports_fill_missing": false,
@@ -2885,7 +3544,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+          "publisher": "Santé publique France",
+          "required_attribution": "Santé publique France, Guadeloupe SPF ODISSE Annual Notifications; original dataset titles and observed years accompany each source series. Extracted 2026-11-16. Licence ouverte 2.0.",
+          "review_status": "open_licence_metadata_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2901,10 +3564,17 @@
       "default_type": "ANNUAL",
       "lang": "fr-GP"
     },
-    "notes": "SPF department observations retained as explicit overseas territory facts. Preserve age and serogroup strata; missing territory-years are unknown. Refresh all published history."
+    "notes": "SPF department observations retained as explicit overseas territory facts. Preserve age and serogroup strata; missing territory-years are unknown. Refresh all published history.",
+    "public_source_systems": [
+      "SRC_GP_SPF_ODISSE"
+    ],
+    "public_source_scopes": [
+      "spf_odisse_annual"
+    ],
+    "public_source_notes": "Santé publique France, Guadeloupe SPF ODISSE Annual Notifications, extracted 2026-11-16. Licence ouverte 2.0, declared by the five source dataset metadata records. Original dataset titles, observed years and URLs accompany source series. Only source-reported all-age/all-type totals enter territory curves; age and serogroup components remain separate. TB notification-location observations through 2018 and residence-location observations from 2019 have separate definitions: the representative curve may use only the residence series, with older data retained in source details. Missing territory-years are unknown. Territory observations are not added to France national totals. No publisher endorsement is implied."
   },
   "MQ": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://odisse.santepubliquefrance.fr/",
     "data_source_type": "official_json",
@@ -2927,7 +3597,7 @@
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
           "license": "Licence ouverte 2.0",
-          "public_release_enabled": false,
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1995,
           "supports_fill_missing": false,
@@ -2939,7 +3609,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+          "publisher": "Santé publique France",
+          "required_attribution": "Santé publique France, Martinique SPF ODISSE Annual Notifications; original dataset titles and observed years accompany each source series. Extracted 2026-11-16. Licence ouverte 2.0.",
+          "review_status": "open_licence_metadata_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -2955,10 +3629,17 @@
       "default_type": "ANNUAL",
       "lang": "fr-MQ"
     },
-    "notes": "SPF department observations retained as explicit overseas territory facts. Preserve age and serogroup strata; missing territory-years are unknown. Refresh all published history."
+    "notes": "SPF department observations retained as explicit overseas territory facts. Preserve age and serogroup strata; missing territory-years are unknown. Refresh all published history.",
+    "public_source_systems": [
+      "SRC_MQ_SPF_ODISSE"
+    ],
+    "public_source_scopes": [
+      "spf_odisse_annual"
+    ],
+    "public_source_notes": "Santé publique France, Martinique SPF ODISSE Annual Notifications, extracted 2026-11-16. Licence ouverte 2.0, declared by the five source dataset metadata records. Original dataset titles, observed years and URLs accompany source series. Only source-reported all-age/all-type totals enter territory curves; age and serogroup components remain separate. TB notification-location observations through 2018 and residence-location observations from 2019 have separate definitions: the representative curve may use only the residence series, with older data retained in source details. Missing territory-years are unknown. Territory observations are not added to France national totals. No publisher endorsement is implied."
   },
   "GF": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://odisse.santepubliquefrance.fr/",
     "data_source_type": "official_json",
@@ -2981,7 +3662,7 @@
           "temporal_granularity": "annual",
           "source_update_cadence": "annual_revisable",
           "license": "Licence ouverte 2.0",
-          "public_release_enabled": false,
+          "public_release_enabled": true,
           "supports_start_year": true,
           "full_history_start_year": 1995,
           "supports_fill_missing": false,
@@ -2993,7 +3674,11 @@
             "registry_coverage": "required",
             "history_lookback_days": 50000
           },
-          "revision_window_unit": "years"
+          "revision_window_unit": "years",
+          "license_url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+          "publisher": "Santé publique France",
+          "required_attribution": "Santé publique France, French Guiana SPF ODISSE Annual Notifications; original dataset titles and observed years accompany each source series. Extracted 2026-11-16. Licence ouverte 2.0.",
+          "review_status": "open_licence_metadata_and_semantics_reviewed"
         }
       },
       "revision_window_unit": "years"
@@ -3009,6 +3694,13 @@
       "default_type": "ANNUAL",
       "lang": "fr-GF"
     },
-    "notes": "SPF department observations retained as explicit overseas territory facts. Preserve age and serogroup strata; missing territory-years are unknown. Refresh all published history."
+    "notes": "SPF department observations retained as explicit overseas territory facts. Preserve age and serogroup strata; missing territory-years are unknown. Refresh all published history.",
+    "public_source_systems": [
+      "SRC_GF_SPF_ODISSE"
+    ],
+    "public_source_scopes": [
+      "spf_odisse_annual"
+    ],
+    "public_source_notes": "Santé publique France, French Guiana SPF ODISSE Annual Notifications, extracted 2026-11-16. Licence ouverte 2.0, declared by the five source dataset metadata records. Original dataset titles, observed years and URLs accompany source series. Only source-reported all-age/all-type totals enter territory curves; age and serogroup components remain separate. TB notification-location observations through 2018 and residence-location observations from 2019 have separate definitions: the representative curve may use only the residence series, with older data retained in source details. Missing territory-years are unknown. Territory observations are not added to France national totals. No publisher endorsement is implied."
   }
 }

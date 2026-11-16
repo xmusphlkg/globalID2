@@ -1,0 +1,25 @@
+[Unit]
+Description=Discover and import Colombia INS BES updates
+Wants=network-online.target globalid-co-ins-proxy.service globalid-co-bes-model-dispatch.service
+After=network-online.target globalid-co-ins-proxy.service globalid-co-bes-model-dispatch.service
+StartLimitIntervalSec=7200
+StartLimitBurst=4
+
+[Service]
+Type=oneshot
+User=likangguo
+Group=likangguo
+WorkingDirectory=/home/likangguo/globalID/globalID2/data/runtime/co-bes/current
+EnvironmentFile=-/home/likangguo/globalID/globalID2/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=CO_INS_HTTP_PROXY=http://169.254.231.2:18088
+ExecStart=/home/likangguo/globalID/globalID2/venv/bin/python scripts/refresh_co_bes.py --apply --parse-workers 24 --download-workers 8
+Restart=on-failure
+RestartSec=900
+TimeoutStartSec=10800
+TimeoutStopSec=120
+KillMode=mixed
+MemoryHigh=8G
+MemoryMax=16G
+UMask=0077
+

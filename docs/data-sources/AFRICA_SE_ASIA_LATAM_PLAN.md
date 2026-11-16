@@ -45,7 +45,7 @@
 | 国家 | 官方历史范围 | 当前进度 | 待核验 |
 | --- | --- | --- | --- |
 | 智利 CL | MINSAL ENO CSV，2007–2024，333,300 病例行 | 5 份原档；442 条年度原生观测已入库并逐条复核，计数与原 CSV 一致；[接入记录](CL_ENO_HISTORICAL.md) | 官方目录说明与当前 CSV 范围不一致；疾病映射、权利与公开快照待审核 |
-| 哥伦比亚 CO | INS SIVIGILA 官方 SODA 数据集，2007–2022，共 2,465,826 条市级事件／周记录 | 254 个批次、2,465,826 行全部入库；16 个年份逐行对账零差异，每日元数据检查已启用；[接入记录](CO_SIVIGILA_INTEGRATION.md) | 官方周界与全国分母未确认，不能发布为全国周病例 |
+| 哥伦比亚 CO | INS SIVIGILA 两个官方 SODA 数据集，2007–2024，共 2,922,383 条市级事件／周记录 | 历史 2,465,826 行及新版 2023–2024 年 456,557 行全部入库，逐行对账零差异；新版每日检查、版本变化后完整导入已接入；[接入记录](CO_SIVIGILA_INTEGRATION.md) | 2025/26 未覆盖；官方周界与全国分母未确认，不能发布为全国周病例 |
 | 马拉维 MW | PHIM IDSR 官方帖子及媒体目录，2025–2026 存在缺周 | 91 份原档含 57 份 PDF；56 份范围内报告形成 1,241 条全国周观测、28 个原生 holding 序列，逐字段数据库对账零差异；[接入记录](MW_PHIM_IDSR_INTEGRATION.md) | 2025 年 W7–W50 间缺 22 周、2026 年 W2–W43 间缺 9 周；疟疾、地区附录和累计叙述未纳入本合同，疾病映射与公开快照待完成 |
 
 ## 第四批执行（2026-11-16）
@@ -80,7 +80,7 @@
 | MX | 墨西哥 | 已解析事实全部入库并逐条核验；官方渠道和每日计划已接入 | [DGE Anuario de Morbilidad](https://epidemiologia.salud.gob.mx/anuario/html/index.html) |
 | AR | 阿根廷 | 首批事实已入库，剩余解析缺口见接入记录 | [Ministerio de Salud Boletín Epidemiológico Nacional](https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional) |
 | PE | 秘鲁 | 持久全量回填执行中 | [CDC Perú Boletines Epidemiológicos](https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/) |
-| CO | 哥伦比亚 | 2,465,826 行历史数据已入库并逐行验收；每日元数据检查已启用 | [INS SIVIGILA government open data](https://www.datos.gov.co/d/4hyg-wa9d) |
+| CO | 哥伦比亚 | 2007–2024 年共 2,922,383 行已入库并逐行验收；历史与新版两个独立每日渠道已配置 | [INS SIVIGILA successor data](https://www.datos.gov.co/d/wns8-p38i) |
 | CL | 智利 | 442 条历史观测已入库并逐条验收；每日检查已配置 | [MINSAL ENO open data](https://datos.gob.cl/dataset/notificaciones-eno) |
 | MW | 马拉维 | 1,241 条全国周观测已入库并逐条验收；每日检查已配置 | [PHIM IDSR bulletin archive](https://phim.health.gov.mw/wp-json/wp/v2/search?search=IDSR&per_page=100&page=1) |
 | PY | 巴拉圭 | WHO 年度基线已入库、每日全历史刷新；国家原始周报仍有覆盖缺口 | [DGVS Boletín Epidemiológico Semanal](https://dgvs.mspbs.gov.py/boletin-epidemiologico-semanal/) |

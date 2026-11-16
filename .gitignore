@@ -1,7 +1,6 @@
 # Python / FastAPI
 __pycache__/
 *.py[cod]
-*.pyd
 *.so
 .Python
 build/
@@ -12,8 +11,8 @@ pip-wheel-metadata/
 
 # Virtual environments
 env/
-venv
-.venv
+venv/
+.venv/
 ENV/
 
 # Environment and secrets (backend + frontend)
@@ -47,11 +46,10 @@ coverage.xml
 .ipynb_checkpoints/
 
 # Node.js dependencies (dashboard, Astro and subscription worker)
-node_modules
+node_modules/
 .next/
 
 # Next.js control plane (including isolated GLOBALID_NEXT_DIST_DIR builds)
-/dashboard/.next/
 /dashboard/.next-*/
 /dashboard/out/
 /dashboard/.turbo/
@@ -65,7 +63,7 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
-**/.wrangler/
+.wrangler/
 *.tsbuildinfo
 *.log
 !/docs/acceptance/evidence/20261116_review/*.log

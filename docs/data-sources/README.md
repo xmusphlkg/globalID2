@@ -12,6 +12,14 @@ pipelines from source-onboarding candidates. A country must not be presented as
 active until its crawler, normalization, disease mapping, quality checks, and
 database import have produced a verified site-data snapshot.
 
+The [reuse and publication guide](SOURCE_REUSE_PUBLICATION_REQUIREMENTS.md)
+records the 2026-11-16 operator decision to open nine jurisdictions while
+retaining their unverified source reuse status, plus the source-specific BEN
+cumulative blocker and Colombia geography/calendar blockers. Argentina's
+[Ministry HIV annual notifications](AR_HIV_ANNUAL_INTEGRATION.md) are separately
+ingested and locally accepted for 2014–2023; BEN remains excluded. It includes the
+source disclosures, ongoing evidence checklist and statistical review conditions.
+
 ## Status definitions
 
 - **Supported**: a working pipeline has imported records into GIDS and the
@@ -138,6 +146,11 @@ three calendar years according to the source contract; older history uses an
 explicit replay. Colombia’s 2,465,826-row historical release has passed full-row database
 verification. Its daily job checks metadata and year counts; a changed source
 version requires a new resumable full backfill and verification.
+The separate INS successor release `wns8-p38i` supplies 2023–2024: all 456,557
+rows are imported and independently reconciled, excluding its overlapping
+2022 rows. Its enabled `co_ins_sivigila_current` channel automatically
+imports and verifies the complete release when the version changes. A source
+metadata timestamp in 2026 does not establish observation coverage in 2026.
 Raw capture, numerical extraction, internal holding and public snapshots have
 separate acceptance states.
 
@@ -152,6 +165,8 @@ separate acceptance states.
 | MX | [DGE annual morbidity and incidence](MX_DGE_ANNUAL_INTEGRATION.md) | `mx_dge_annual` |
 | CL | [MINSAL ENO historical notifications](CL_ENO_HISTORICAL.md) | `cl_eno_historical` |
 | CO | [INS SIVIGILA municipality/week history](CO_SIVIGILA_INTEGRATION.md) | `co_ins_sivigila_historical` |
+| CO | [INS SIVIGILA successor release, 2023 onward](CO_SIVIGILA_INTEGRATION.md) | `co_ins_sivigila_current` |
+| CO | [INS BES capture; awaiting exit and report contract](CO_BES_INTEGRATION.md) | `co_ins_bes_weekly` (disabled) |
 | MW | [PHIM IDSR weekly bulletins](MW_PHIM_IDSR_INTEGRATION.md) | `mw_phim_idsr_weekly` |
 
 See [daily update operations and verification](../acceptance/SEVEN_COUNTRY_DYNAMIC_UPDATES_20261116.md)

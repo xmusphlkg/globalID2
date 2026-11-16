@@ -1,5 +1,13 @@
 # Argentina national epidemiological bulletin archive
 
+Alternative official machine-readable sources were separately investigated on
+2026-11-16. The [alternative-source review](AR_ALTERNATIVE_SOURCES_20261116.md)
+verifies direct national HIV annual-notification values for 2014–2023 and
+downloadable dengue/respiratory records with explicit caveats. The independent
+[Ministry HIV annual source](AR_HIV_ANNUAL_INTEGRATION.md) is now ingested and
+locally accepted for public export; dengue/respiratory remain candidates.
+The BEN cumulative source described here retains its own publication hold.
+
 Verified against the official website on 2026-11-15. This is a source-native,
 partially normalized historical import, not a claim that every number in every
 bulletin is a comparable national infection count.
@@ -127,9 +135,20 @@ CSV export and a manifest alone do not prove database import. The separate
 `database_import_receipt.json`, task/run state and stored observation counts
 provide that evidence after the operator runs it.
 
-Public release remains disabled until source terms and a generated snapshot
-are validated. The national website's CC BY 4.0 footer does not by itself prove
-that all third-party content reproduced inside every PDF has the same terms.
+Public release for the BEN source remains disabled. In the 2026-11-16 mapping review, the immediate
+statistical blocker is that these ENO observations are cumulative snapshots,
+not single-week incident counts. Concept mapping retains `no_projection`.
+Any weekly derivation requires a separately reviewed contract for compatible
+definitions, cutoff periods, missing weeks, year resets and retrospective
+revisions; weekly publication frequency alone does not supply that contract.
+
+The [government terms](https://www.argentina.gob.ar/terminos-y-condiciones)
+establish default CC BY 4.0 for government-owned content, subject to declared
+and third-party exceptions. Applicability to the actual tables still needs
+recorded provenance; this does not authorize every third-party item in a PDF.
+Rights evidence and a generated snapshot must also pass acceptance. See the
+[reuse and publication guide](SOURCE_REUSE_PUBLICATION_REQUIREMENTS.md)
+for the permission checklist, cumulative example and unblock conditions.
 
 ## Verification
 

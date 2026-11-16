@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-11-16",
+  "scope": "Read-only discovery and full downloaded-file inspection of alternative Argentina national ministry sources; no ingestion, mapping release, publication gate or deployment changes.",
+  "catalogue_probes": [
+    {
+      "query": "dengue",
+      "url": "https://datos.gob.ar/api/3/action/package_search?q=dengue&rows=100",
+      "status": 200,
+      "sha256": "6e884574437306a6b3fa177e373dd440d46994c6b01209e4a9096deae75e041e",
+      "source_file": "data/current/ar/alternative_source_discovery/dengue.json"
+    },
+    {
+      "query": "respiratorias",
+      "url": "https://datos.gob.ar/api/3/action/package_search?q=respiratorias&rows=100",
+      "status": 200,
+      "sha256": "e6f476a678eee2738e419ff51125fe656710b3b3f5a75d972000e474f5ad3562",
+      "source_file": "data/current/ar/alternative_source_discovery/respiratorias.json"
+    },
+    {
+      "query": "vih",
+      "url": "https://datos.gob.ar/api/3/action/package_search?q=vih&rows=100",
+      "status": 200,
+      "sha256": "d7d5b117ea025e31a2557049f9f712fd1a0aad59e3acdab750262a6a8babe9c6",
+      "source_file": "data/current/ar/alternative_source_discovery/vih.json"
+    }
+  ],
+  "downloads": [
+    {
+      "name": "dengue2025",
+      "url": "https://datos.salud.gob.ar/dataset/ceaa8e87-297e-4348-84b8-5c643e172500/resource/937f34bc-dc3d-4fa1-bb0b-09a749a69d23/download/informacion-publica-dengue-zika-nacional-se-1-a-38-de-2025-2025-09-29.csv",
+      "final_url": "https://datos.salud.gob.ar/dataset/ceaa8e87-297e-4348-84b8-5c643e172500/resource/937f34bc-dc3d-4fa1-bb0b-09a749a69d23/download/informacion-publica-dengue-zika-nacional-se-1-a-38-de-2025-2025-09-29.csv",
+      "status": 200,
+      "bytes": 196727,
+      "sha256": "21c4a554a6b420fa61940a5ec28ac5417cd3ece833245bc9fc831a56b1f34fce",
+      "tls_verification": "enabled_with_missing_intermediates_added"
+    },
+    {
+      "name": "respiratory2025",
+      "url": "https://datos.salud.gob.ar/dataset/c553d917-36f4-4063-ac02-1686a9120e1c/resource/1dc6b4f6-35bc-4e83-aade-d5d1c98b153b/download/informacion-publica-respiratorias-nacional-hasta-20250904.xlsx",
+      "final_url": "https://datos.salud.gob.ar/dataset/c553d917-36f4-4063-ac02-1686a9120e1c/resource/1dc6b4f6-35bc-4e83-aade-d5d1c98b153b/download/informacion-publica-respiratorias-nacional-hasta-20250904.xlsx",
+      "status": 200,
+      "bytes": 16820426,
+      "sha256": "e4c2665da29605162cc72d6056381a2103d108aea8448bd364fb9f913e48f33b",
+      "tls_verification": "enabled_with_missing_intermediates_added"
+    },
+    {
+      "name": "hiv2023",
+      "url": "https://datos.salud.gob.ar/dataset/1f70534d-f5f0-41f7-bc9a-b9809c39a505/resource/747d2078-9d51-40d4-ae59-ced43225459f/download/casos_prov_vih_2014-2023_1.csv",
+      "final_url": "https://datos.salud.gob.ar/dataset/1f70534d-f5f0-41f7-bc9a-b9809c39a505/resource/747d2078-9d51-40d4-ae59-ced43225459f/download/casos_prov_vih_2014-2023_1.csv",
+      "status": 200,
+      "bytes": 24779,
+      "sha256": "b16a6341c22f6c6583d0e3440a2e9d521e7efa405017d82da5cda0c15a665be3",
+      "tls_verification": "enabled_with_missing_intermediates_added"
+    },
+    {
+      "name": "hiv2023_xlsx",
+      "url": "https://datos.salud.gob.ar/dataset/1f70534d-f5f0-41f7-bc9a-b9809c39a505/resource/cdc2fdf3-9637-4fbc-9cf0-d05bdaa00e3f/download/casos_prov_vih_2014-2023_3.xlsx",
+      "status": 200,
+      "bytes": 28971,
+      "sha256": "ea24bf663b734549664a1d5a54d64c8bf0f6368a4308cbd5f8bf3823ebf1e96e",
+      "tls_verification": "enabled_with_missing_intermediates_added"
+    }
+  ],
+  "tls": {
+    "initial_failure": "Default HTTPS failed unable to get local issuer certificate for datos.salud.gob.ar; server omitted intermediate.",
+    "intermediate_aia_url": "http://crt.sectigo.com/SectigoPublicServerAuthenticationCADVR36.crt",
+    "intermediate_subject": "Sectigo Public Server Authentication CA DV R36",
+    "trust": "Existing requests/certifi roots plus missing intermediate; no new root trusted. openssl verify with default CA file and intermediate as untrusted chain passed including hostname.",
+    "leaf_subject": "*.salud.gob.ar",
+    "leaf_validity_utc": [
+      "2026-08-10",
+      "2027-02-24"
+    ],
+    "verification_archive": "data/current/ar/alternative_source_discovery/tls/verification.txt",
+    "normal_verified_https_recheck": {
+      "url": "https://datos.salud.gob.ar/dataset/1f70534d-f5f0-41f7-bc9a-b9809c39a505/resource/747d2078-9d51-40d4-ae59-ced43225459f/download/casos_prov_vih_2014-2023_1.csv",
+      "status": 200,
+      "sha256": "b16a6341c22f6c6583d0e3440a2e9d521e7efa405017d82da5cda0c15a665be3",
+      "verification": "normal certifi roots plus the missing intermediate only; no new root trust; hostname verified"
+    }
+  },
+  "findings": {
+    "hiv": {
+      "rows": 750,
+      "national_annual_all_sexes": [
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2014",
+          "casos_vih": "6654"
+        },
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2015",
+          "casos_vih": "6747"
+        },
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2016",
+          "casos_vih": "6375"
+        },
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2017",
+          "casos_vih": "5218"
+        },
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2018",
+          "casos_vih": "6027"
+        },
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2019",
+          "casos_vih": "6311"
+        },
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2020",
+          "casos_vih": "3991"
+        },
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2021",
+          "casos_vih": "5772"
+        },
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2022",
+          "casos_vih": "6168"
+        },
+        {
+          "id_sexo": "3",
+          "sexo": "Ambos sexos",
+          "id_jurisdiccion": "ARG",
+          "jurisdiccion": "200",
+          "anio": "2023",
+          "casos_vih": "6588"
+        }
+      ]
+    },
+    "dengue": {
+      "rows": 3076,
+      "fields": [
+        "id_depto_indec_residencia",
+        "departamento_residencia",
+        "id_prov_indec_residencia",
+        "provincia_residencia",
+        "anio_min",
+        "evento",
+        "id_grupo_etario",
+        "grupo_etario",
+        "sepi_min",
+        "cantidad"
+      ],
+      "events": {
+        "Dengue": 2996,
+        "Dengue durante la gestación": 80
+      },
+      "week_range": [
+        1,
+        51
+      ],
+      "province_count": 23
+    },
+    "respiratory": {
+      "rows": 423743,
+      "events": {
+        "Bronquiolitis en menores de 2 años (sin especificar)": 20922,
+        "Neumonía (sin especificar)": 62469,
+        "Enfermedad tipo influenza (ETI)": 249102,
+        "Neumonía en pacientes ambulatorios": 58357,
+        "Bronquiolitis en menores de 2 años ambulatorios": 30014,
+        "Bronquiolitis en menores de 2 años internados": 672,
+        "Neumonía en pacientes internados": 2207
+      },
+      "years": {
+        "2024": 264263,
+        "2025": 159480
+      },
+      "week_ranges": {
+        "2024": [
+          1,
+          52
+        ],
+        "2025": [
+          1,
+          35
+        ]
+      },
+      "province_count": 24,
+      "duplicate_identities": 0
+    }
+  },
+  "hiv_crosscheck": {
+    "csv_encoding": "cp850",
+    "delimiter": ";",
+    "xlsx_rows_excluding_header": 750,
+    "all_750_rows_match_csv": true,
+    "national_selection": {
+      "id_sexo": "3",
+      "sexo": "Ambos sexos",
+      "id_jurisdiccion": "ARG",
+      "jurisdiccion": "200"
+    },
+    "meaning": "Annual source-reported HIV notifications, not HIV prevalence, AIDS, infection incidence, or a weekly feed.",
+    "national_rows_derived_by_aggregation": false,
+    "periods": "2014–2023",
+    "production_admitted": false
+  },
+  "dengue_cautions": {
+    "title": "Vigilancia de Dengue y Zika 1 al 38 - 2025",
+    "observed_week_range": [
+      1,
+      51
+    ],
+    "events_actually_present": [
+      "Dengue",
+      "Dengue durante la gestación"
+    ],
+    "zika_rows_in_this_file": 0,
+    "conflicting_duplicate": {
+      "id_depto_indec_residencia": "999",
+      "id_prov_indec_residencia": "99",
+      "anio_min": "2025",
+      "evento": "Dengue",
+      "id_grupo_etario": "9",
+      "sepi_min": "9",
+      "cantidad_values": [
+        "5",
+        "1"
+      ]
+    },
+    "semantic_status": "Week-labelled grouped residence/age records; no verified cumulative/period or national aggregation contract. Do not derive a national curve by summing this file."
+  },
+  "recommended_next_step": "Prioritize independent Ministry HIV annual-notification source contract with direct ARG all-sex rows; keep BEN cumulative source separate. Validate source-specific identity, dates, attribution and generated snapshot before publication.",
+  "local_archive": "data/current/ar/alternative_source_discovery"
+}
