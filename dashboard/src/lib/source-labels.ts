@@ -195,8 +195,14 @@ export function getSourceDisplayLabel(
   if (s === "cl_eno_historical" || (s === "all" && cc === "CL")) {
     return lang === "zh" ? "智利 MINSAL 法定报告疾病历史数据" : "Chile MINSAL ENO Historical Notifications";
   }
-  if (s === "co_ins_sivigila_historical" || (s === "all" && cc === "CO")) {
+  if (s === "co_ins_sivigila_historical") {
     return lang === "zh" ? "哥伦比亚 INS SIVIGILA 历史监测数据" : "Colombia INS SIVIGILA Historical Public Health Surveillance";
+  }
+  if (s === "co_ins_sivigila_current") {
+    return lang === "zh" ? "哥伦比亚 INS SIVIGILA 后续数据集（2023 年起）" : "Colombia INS SIVIGILA Successor Dataset (2023 onward)";
+  }
+  if (s === "co_ins_bes_weekly") {
+    return lang === "zh" ? "哥伦比亚 INS BES 流行病学周报" : "Colombia INS BES Epidemiological Bulletins";
   }
   if (s === "mw_phim_idsr_weekly" || (s === "all" && cc === "MW")) {
     return lang === "zh" ? "马拉维 PHIM IDSR 疾病监测周报" : "Malawi PHIM IDSR Weekly Bulletin";
@@ -415,7 +421,7 @@ export function getSourceOptionsForCountry(
   const remaining = REMAINING_SOURCE_LABELS[code];
   if (remaining) return [remaining.scope, ...Object.keys(ADDITIONAL_SOURCE_LABELS[code] || {})].map(value => ({ value, label: getSourceDisplayLabel(value, lang, code) }));
   if (code === "CL") return [{ value: "cl_eno_historical", label: getSourceDisplayLabel("cl_eno_historical", lang, code) }];
-  if (code === "CO") return [{ value: "co_ins_sivigila_historical", label: getSourceDisplayLabel("co_ins_sivigila_historical", lang, code) }];
+  if (code === "CO") return ["co_ins_sivigila_historical", "co_ins_sivigila_current", "co_ins_bes_weekly"].map(value => ({ value, label: getSourceDisplayLabel(value, lang, code) }));
   if (code === "MW") return [{ value: "mw_phim_idsr_weekly", label: getSourceDisplayLabel("mw_phim_idsr_weekly", lang, code) }];
   if (code === "ZA") return [{ value: "za_nicd_nmc", label: getSourceDisplayLabel("za_nicd_nmc", lang, code) }];
   if (code === "ID") return [{ value: "id_kemkes_profile", label: getSourceDisplayLabel("id_kemkes_profile", lang, code) }];

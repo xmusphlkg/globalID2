@@ -7557,6 +7557,8 @@ export interface components {
             cadence: string;
             /** Country Code */
             country_code: string;
+            /** Coverage Verified */
+            coverage_verified?: boolean | null;
             /** Daily Time */
             daily_time: string;
             /** Discovery Form */
@@ -7570,6 +7572,8 @@ export interface components {
             discovery_method: string;
             /** Discovery Urls */
             discovery_urls: string[];
+            /** Integration Status */
+            integration_status?: string | null;
             /** Official Url */
             official_url: string;
             /** Publisher */
@@ -7584,6 +7588,7 @@ export interface components {
             source_id: string;
             /** Timezone */
             timezone: string;
+            transport_readiness?: components["schemas"]["SourceTransportReadinessOut"] | null;
         };
         /** SourceOptionOut */
         SourceOptionOut: {
@@ -7738,6 +7743,15 @@ export interface components {
             source_file?: string | null;
             /** Start Year */
             start_year?: number | null;
+        };
+        /** SourceTransportReadinessOut */
+        SourceTransportReadinessOut: {
+            /** Configured */
+            configured: boolean;
+            /** Dependency Ready */
+            dependency_ready: boolean;
+            /** Proxy Kind */
+            proxy_kind: string;
         };
         /**
          * StageInfo

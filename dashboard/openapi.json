@@ -13472,6 +13472,17 @@
             "title": "Country Code",
             "type": "string"
           },
+          "coverage_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Verified"
+          },
           "daily_time": {
             "title": "Daily Time",
             "type": "string"
@@ -13494,6 +13505,17 @@
             },
             "title": "Discovery Urls",
             "type": "array"
+          },
+          "integration_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration Status"
           },
           "official_url": {
             "title": "Official Url",
@@ -13522,6 +13544,16 @@
           "timezone": {
             "title": "Timezone",
             "type": "string"
+          },
+          "transport_readiness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceTransportReadinessOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -13851,6 +13883,29 @@
           }
         },
         "title": "SourceRunCreate",
+        "type": "object"
+      },
+      "SourceTransportReadinessOut": {
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "dependency_ready": {
+            "title": "Dependency Ready",
+            "type": "boolean"
+          },
+          "proxy_kind": {
+            "title": "Proxy Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "configured",
+          "proxy_kind",
+          "dependency_ready"
+        ],
+        "title": "SourceTransportReadinessOut",
         "type": "object"
       },
       "StageInfo": {

@@ -18,6 +18,12 @@ class StageInfo(BaseModel):
     last_run: Optional[str] = None  # ISO datetime string
 
 
+class SourceTransportReadinessOut(BaseModel):
+    configured: bool
+    proxy_kind: str
+    dependency_ready: bool
+
+
 class SourceChannelOut(BaseModel):
     country_code: str
     scope: str
@@ -33,6 +39,9 @@ class SourceChannelOut(BaseModel):
     refresh_years: int
     daily_time: str
     timezone: str
+    integration_status: Optional[str] = None
+    coverage_verified: Optional[bool] = None
+    transport_readiness: Optional[SourceTransportReadinessOut] = None
 
 
 class DataSourceFlow(BaseModel):

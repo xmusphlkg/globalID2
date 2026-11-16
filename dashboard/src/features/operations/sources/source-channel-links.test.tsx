@@ -27,4 +27,33 @@ describe("official update channels", () => {
     const result = render(<SourceChannelLinks lang="en" />);
     expect(result.container).toBeEmptyDOMElement();
   });
+  it("marks the BES channel as pending and shows only transport readiness", () => {
+    render(<SourceChannelLinks channel={{ ...channel,
+      country_code: "CO", scope: "co_ins_bes_weekly", integration_status: "awaiting_egress_and_source_contract",
+      coverage_verified: false,
+      transport_readiness: { configured: false, proxy_kind: "direct", dependency_ready: true },
+    }} lang="zh" />);
+    expect(screen.getByText(/等待哥伦比亚网络出口与报告格式确认/)).toBeInTheDocument();
+    expect(screen.getByText(/传输配置：未配置/)).toBeInTheDocument();
+    expect(screen.queryByText(/定时检查最新目录/)).not.toBeInTheDocument();
+  });
+  it("distinguishes imported BES history from scheduled runtime activation", () => {
+    render(<SourceChannelLinks channel={{ ...channel,
+      country_code: "CO", scope: "co_ins_bes_weekly", integration_status: "backfilled_pending_runtime_rollout",
+      coverage_verified: false,
+    }} lang="zh" />);
+    expect(screen.getByText(/历史数据已接入/)).toBeInTheDocument();
+    expect(screen.getByText(/运行服务更新后启用/)).toBeInTheDocument();
+    expect(screen.queryByText(/等待哥伦比亚网络出口/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/定时检查最新目录/)).not.toBeInTheDocument();
+  });
+  it("describes active managed automation without claiming complete numerical coverage", () => {
+    render(<SourceChannelLinks channel={{ ...channel,
+      country_code: "CO", scope: "co_ins_bes_weekly", integration_status: "automated_managed_runtime",
+      coverage_verified: false,
+    }} lang="zh" />);
+    expect(screen.getByText(/每小时检查新报告与修订/)).toBeInTheDocument();
+    expect(screen.getByText(/失败自动重试/)).toBeInTheDocument();
+    expect(screen.queryByText(/运行服务更新后启用/)).not.toBeInTheDocument();
+  });
 });

@@ -64,6 +64,8 @@ _ICELAND_HISTORY_SCOPES = frozenset(
 _SERIES_SOURCE_SCOPE_OVERRIDES = {
     'SRC_CL_ENO': 'cl_eno_historical',
     'SRC_CO_INS_SIVIGILA': 'co_ins_sivigila_historical',
+    'SRC_CO_INS_SIVIGILA_CURRENT': 'co_ins_sivigila_current',
+    'SRC_CO_INS_BES': 'co_ins_bes_weekly',
     'SRC_MW_PHIM_IDSR': 'mw_phim_idsr_weekly',
     'SRC_ZA_NICD_NMC': 'za_nicd_nmc',
     'SRC_ID_KEMKES_PROFILE': 'id_kemkes_profile',
@@ -112,6 +114,14 @@ _SERIES_SOURCE_SCOPE_OVERRIDES = {
     "SRC_US_NHSS": "nhss_hiv",
     "SRC_US_NNDSS": "nndss_api",
 }
+
+
+def _source_channel_for_panel(country_code: str | None, scope: str | None) -> dict | None:
+    channel = source_channel(country_code, scope)
+    if channel and (channel["country_code"], channel["scope"]) == ("CO", "co_ins_bes_weekly"):
+        from src.data.crawlers.co_ins_transport import ins_transport_readiness
+        channel["transport_readiness"] = ins_transport_readiness()
+    return channel
 
 for _code in REMAINING_COUNTRIES:
     _contract = source_contract(_code)
@@ -448,7 +458,7 @@ def _country_source_config(country: Country, *, lang: str = "en") -> CountrySour
         )
         options.append(SourceOptionOut(
             value=option["value"],
-            source_channel=source_channel(code, option["value"]),
+            source_channel=_source_channel_for_panel(code, option["value"]),
             label_en=(
                 "Iceland Directorate of Health — All Current Dashboards"
                 if code == "IS" and option["value"] == "all"
@@ -1183,7 +1193,7 @@ async def get_sources_flow(
                 ),
                 history_start_year=src.get("history_start_year"),
                 source_scope=row_scope,
-                source_channel=source_channel(src.get("country_code"), row_scope),
+                source_channel=_source_channel_for_panel(src.get("country_code"), row_scope),
                 latest_task_uuid=task.task_uuid if task else None,
                 latest_task_source=_source_from_task(task) if task else None,
                 latest_task_status=_task_status(task),

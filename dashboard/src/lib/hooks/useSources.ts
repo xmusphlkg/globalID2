@@ -24,6 +24,13 @@ export interface SourceChannel {
   refresh_years: number;
   daily_time: string;
   timezone: string;
+  integration_status?: string | null;
+  coverage_verified?: boolean | null;
+  transport_readiness?: {
+    configured: boolean;
+    proxy_kind: string;
+    dependency_ready: boolean;
+  } | null;
 }
 
 export interface DataSourceFlow {
