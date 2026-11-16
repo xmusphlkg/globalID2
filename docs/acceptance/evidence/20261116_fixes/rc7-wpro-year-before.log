@@ -1,0 +1,286 @@
+FFFF.....FFFF.                                                           [100%]
+=================================== FAILURES ===================================
+_ test_source_week_can_precede_publication_year_without_iso_inference[From 25 to 31 December 2025-start0-end0] _
+
+period = 'From 25 to 31 December 2025', start = datetime.date(2025, 12, 25)
+end = datetime.date(2025, 12, 31)
+
+    @pytest.mark.parametrize('period,start,end', [
+        ('From 25 to 31 December 2025', date(2025, 12, 25), date(2025, 12, 31)),
+        ('From 29 December to 4 January 2026', date(2025, 12, 29), date(2026, 1, 4)),
+        ('From 29 December 2025 to 4 January 2026', date(2025, 12, 29), date(2026, 1, 4)),
+        ('From 26 November to 2 December 2025', date(2025, 11, 26), date(2025, 12, 2)),
+    ])
+    def test_source_week_can_precede_publication_year_without_iso_inference(period, start, end):
+>       actual_start, actual_end, label = source.parse_period(period, 2026)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_wpro_dengue_acceptance.py:16: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+text = 'From 25 to 31 December 2025', year = 2026
+
+    def parse_period(text, year):
+        # Both endpoints are source-stated; no national week-to-ISO conversion.
+        m = re.search(r'(?:From|from|\()\s*(\d{1,2})(?:\s+([A-Z][a-z]+))?\s+to\s+(\d{1,2})\s+([A-Z][a-z]+)\s+(20\d{2})', text)
+        if not m:
+            raise ValueError('Country narrative has no explicit seven-day interval')
+        begin = datetime.strptime(f'{m[1]} {m[2] or m[4]} {m[5]}', '%d %B %Y').date()
+        end = datetime.strptime(f'{m[3]} {m[4]} {m[5]}', '%d %B %Y').date()
+        if (end - begin).days != 6 or end.year != year:
+>           raise ValueError('Dengue source interval is not a seven-day report-year period')
+E           ValueError: Dengue source interval is not a seven-day report-year period
+
+src/data/crawlers/wpro_dengue.py:91: ValueError
+_ test_source_week_can_precede_publication_year_without_iso_inference[From 29 December to 4 January 2026-start1-end1] _
+
+period = 'From 29 December to 4 January 2026'
+start = datetime.date(2025, 12, 29), end = datetime.date(2026, 1, 4)
+
+    @pytest.mark.parametrize('period,start,end', [
+        ('From 25 to 31 December 2025', date(2025, 12, 25), date(2025, 12, 31)),
+        ('From 29 December to 4 January 2026', date(2025, 12, 29), date(2026, 1, 4)),
+        ('From 29 December 2025 to 4 January 2026', date(2025, 12, 29), date(2026, 1, 4)),
+        ('From 26 November to 2 December 2025', date(2025, 11, 26), date(2025, 12, 2)),
+    ])
+    def test_source_week_can_precede_publication_year_without_iso_inference(period, start, end):
+>       actual_start, actual_end, label = source.parse_period(period, 2026)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_wpro_dengue_acceptance.py:16: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+text = 'From 29 December to 4 January 2026', year = 2026
+
+    def parse_period(text, year):
+        # Both endpoints are source-stated; no national week-to-ISO conversion.
+        m = re.search(r'(?:From|from|\()\s*(\d{1,2})(?:\s+([A-Z][a-z]+))?\s+to\s+(\d{1,2})\s+([A-Z][a-z]+)\s+(20\d{2})', text)
+        if not m:
+            raise ValueError('Country narrative has no explicit seven-day interval')
+        begin = datetime.strptime(f'{m[1]} {m[2] or m[4]} {m[5]}', '%d %B %Y').date()
+        end = datetime.strptime(f'{m[3]} {m[4]} {m[5]}', '%d %B %Y').date()
+        if (end - begin).days != 6 or end.year != year:
+>           raise ValueError('Dengue source interval is not a seven-day report-year period')
+E           ValueError: Dengue source interval is not a seven-day report-year period
+
+src/data/crawlers/wpro_dengue.py:91: ValueError
+_ test_source_week_can_precede_publication_year_without_iso_inference[From 29 December 2025 to 4 January 2026-start2-end2] _
+
+period = 'From 29 December 2025 to 4 January 2026'
+start = datetime.date(2025, 12, 29), end = datetime.date(2026, 1, 4)
+
+    @pytest.mark.parametrize('period,start,end', [
+        ('From 25 to 31 December 2025', date(2025, 12, 25), date(2025, 12, 31)),
+        ('From 29 December to 4 January 2026', date(2025, 12, 29), date(2026, 1, 4)),
+        ('From 29 December 2025 to 4 January 2026', date(2025, 12, 29), date(2026, 1, 4)),
+        ('From 26 November to 2 December 2025', date(2025, 11, 26), date(2025, 12, 2)),
+    ])
+    def test_source_week_can_precede_publication_year_without_iso_inference(period, start, end):
+>       actual_start, actual_end, label = source.parse_period(period, 2026)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_wpro_dengue_acceptance.py:16: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+text = 'From 29 December 2025 to 4 January 2026', year = 2026
+
+    def parse_period(text, year):
+        # Both endpoints are source-stated; no national week-to-ISO conversion.
+        m = re.search(r'(?:From|from|\()\s*(\d{1,2})(?:\s+([A-Z][a-z]+))?\s+to\s+(\d{1,2})\s+([A-Z][a-z]+)\s+(20\d{2})', text)
+        if not m:
+>           raise ValueError('Country narrative has no explicit seven-day interval')
+E           ValueError: Country narrative has no explicit seven-day interval
+
+src/data/crawlers/wpro_dengue.py:87: ValueError
+_ test_source_week_can_precede_publication_year_without_iso_inference[From 26 November to 2 December 2025-start3-end3] _
+
+period = 'From 26 November to 2 December 2025'
+start = datetime.date(2025, 11, 26), end = datetime.date(2025, 12, 2)
+
+    @pytest.mark.parametrize('period,start,end', [
+        ('From 25 to 31 December 2025', date(2025, 12, 25), date(2025, 12, 31)),
+        ('From 29 December to 4 January 2026', date(2025, 12, 29), date(2026, 1, 4)),
+        ('From 29 December 2025 to 4 January 2026', date(2025, 12, 29), date(2026, 1, 4)),
+        ('From 26 November to 2 December 2025', date(2025, 11, 26), date(2025, 12, 2)),
+    ])
+    def test_source_week_can_precede_publication_year_without_iso_inference(period, start, end):
+>       actual_start, actual_end, label = source.parse_period(period, 2026)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_wpro_dengue_acceptance.py:16: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+text = 'From 26 November to 2 December 2025', year = 2026
+
+    def parse_period(text, year):
+        # Both endpoints are source-stated; no national week-to-ISO conversion.
+        m = re.search(r'(?:From|from|\()\s*(\d{1,2})(?:\s+([A-Z][a-z]+))?\s+to\s+(\d{1,2})\s+([A-Z][a-z]+)\s+(20\d{2})', text)
+        if not m:
+            raise ValueError('Country narrative has no explicit seven-day interval')
+        begin = datetime.strptime(f'{m[1]} {m[2] or m[4]} {m[5]}', '%d %B %Y').date()
+        end = datetime.strptime(f'{m[3]} {m[4]} {m[5]}', '%d %B %Y').date()
+        if (end - begin).days != 6 or end.year != year:
+>           raise ValueError('Dengue source interval is not a seven-day report-year period')
+E           ValueError: Dengue source interval is not a seven-day report-year period
+
+src/data/crawlers/wpro_dengue.py:91: ValueError
+_ test_january_publication_retains_actual_previous_year_or_cross_year_observation[From 25 to 31 December 2025-2025-12-31-LA] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f82d5ac35c0>
+country = 'LA', period = 'From 25 to 31 December 2025', end = '2025-12-31'
+
+    @pytest.mark.parametrize('country', ['LA', 'VN'])
+    @pytest.mark.parametrize('period,end', [
+        ('From 25 to 31 December 2025', '2025-12-31'),
+        ('From 29 December to 4 January 2026', '2026-01-04'),
+    ])
+    def test_january_publication_retains_actual_previous_year_or_cross_year_observation(monkeypatch, country, period, end):
+        monkeypatch.setattr(source, 'extract_text', lambda _: narrative(country, period))
+>       rows, audit = source.parse_report(b'%PDF offline narrative', country_code=country,
+            provenance={'RawSHA256': 'source-hash'}, as_of=date(2026, 1, 8))
+
+tests/unit/test_wpro_dengue_acceptance.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/data/crawlers/wpro_dengue.py:112: in parse_report
+    begin, end, original_period = parse_period(narrative, published.year)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+text = 'From 25 to 31 December 2025, 123 dengue cases were reported.'
+year = 2026
+
+    def parse_period(text, year):
+        # Both endpoints are source-stated; no national week-to-ISO conversion.
+        m = re.search(r'(?:From|from|\()\s*(\d{1,2})(?:\s+([A-Z][a-z]+))?\s+to\s+(\d{1,2})\s+([A-Z][a-z]+)\s+(20\d{2})', text)
+        if not m:
+            raise ValueError('Country narrative has no explicit seven-day interval')
+        begin = datetime.strptime(f'{m[1]} {m[2] or m[4]} {m[5]}', '%d %B %Y').date()
+        end = datetime.strptime(f'{m[3]} {m[4]} {m[5]}', '%d %B %Y').date()
+        if (end - begin).days != 6 or end.year != year:
+>           raise ValueError('Dengue source interval is not a seven-day report-year period')
+E           ValueError: Dengue source interval is not a seven-day report-year period
+
+src/data/crawlers/wpro_dengue.py:91: ValueError
+_ test_january_publication_retains_actual_previous_year_or_cross_year_observation[From 25 to 31 December 2025-2025-12-31-VN] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f82d5ac3e10>
+country = 'VN', period = 'From 25 to 31 December 2025', end = '2025-12-31'
+
+    @pytest.mark.parametrize('country', ['LA', 'VN'])
+    @pytest.mark.parametrize('period,end', [
+        ('From 25 to 31 December 2025', '2025-12-31'),
+        ('From 29 December to 4 January 2026', '2026-01-04'),
+    ])
+    def test_january_publication_retains_actual_previous_year_or_cross_year_observation(monkeypatch, country, period, end):
+        monkeypatch.setattr(source, 'extract_text', lambda _: narrative(country, period))
+>       rows, audit = source.parse_report(b'%PDF offline narrative', country_code=country,
+            provenance={'RawSHA256': 'source-hash'}, as_of=date(2026, 1, 8))
+
+tests/unit/test_wpro_dengue_acceptance.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/data/crawlers/wpro_dengue.py:112: in parse_report
+    begin, end, original_period = parse_period(narrative, published.year)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+text = 'From 25 to 31 December 2025, 123 dengue cases were reported.'
+year = 2026
+
+    def parse_period(text, year):
+        # Both endpoints are source-stated; no national week-to-ISO conversion.
+        m = re.search(r'(?:From|from|\()\s*(\d{1,2})(?:\s+([A-Z][a-z]+))?\s+to\s+(\d{1,2})\s+([A-Z][a-z]+)\s+(20\d{2})', text)
+        if not m:
+            raise ValueError('Country narrative has no explicit seven-day interval')
+        begin = datetime.strptime(f'{m[1]} {m[2] or m[4]} {m[5]}', '%d %B %Y').date()
+        end = datetime.strptime(f'{m[3]} {m[4]} {m[5]}', '%d %B %Y').date()
+        if (end - begin).days != 6 or end.year != year:
+>           raise ValueError('Dengue source interval is not a seven-day report-year period')
+E           ValueError: Dengue source interval is not a seven-day report-year period
+
+src/data/crawlers/wpro_dengue.py:91: ValueError
+_ test_january_publication_retains_actual_previous_year_or_cross_year_observation[From 29 December to 4 January 2026-2026-01-04-LA] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f82d59e71d0>
+country = 'LA', period = 'From 29 December to 4 January 2026'
+end = '2026-01-04'
+
+    @pytest.mark.parametrize('country', ['LA', 'VN'])
+    @pytest.mark.parametrize('period,end', [
+        ('From 25 to 31 December 2025', '2025-12-31'),
+        ('From 29 December to 4 January 2026', '2026-01-04'),
+    ])
+    def test_january_publication_retains_actual_previous_year_or_cross_year_observation(monkeypatch, country, period, end):
+        monkeypatch.setattr(source, 'extract_text', lambda _: narrative(country, period))
+>       rows, audit = source.parse_report(b'%PDF offline narrative', country_code=country,
+            provenance={'RawSHA256': 'source-hash'}, as_of=date(2026, 1, 8))
+
+tests/unit/test_wpro_dengue_acceptance.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/data/crawlers/wpro_dengue.py:112: in parse_report
+    begin, end, original_period = parse_period(narrative, published.year)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+text = 'From 29 December to 4 January 2026, 123 dengue cases were reported.'
+year = 2026
+
+    def parse_period(text, year):
+        # Both endpoints are source-stated; no national week-to-ISO conversion.
+        m = re.search(r'(?:From|from|\()\s*(\d{1,2})(?:\s+([A-Z][a-z]+))?\s+to\s+(\d{1,2})\s+([A-Z][a-z]+)\s+(20\d{2})', text)
+        if not m:
+            raise ValueError('Country narrative has no explicit seven-day interval')
+        begin = datetime.strptime(f'{m[1]} {m[2] or m[4]} {m[5]}', '%d %B %Y').date()
+        end = datetime.strptime(f'{m[3]} {m[4]} {m[5]}', '%d %B %Y').date()
+        if (end - begin).days != 6 or end.year != year:
+>           raise ValueError('Dengue source interval is not a seven-day report-year period')
+E           ValueError: Dengue source interval is not a seven-day report-year period
+
+src/data/crawlers/wpro_dengue.py:91: ValueError
+_ test_january_publication_retains_actual_previous_year_or_cross_year_observation[From 29 December to 4 January 2026-2026-01-04-VN] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f82d59d3020>
+country = 'VN', period = 'From 29 December to 4 January 2026'
+end = '2026-01-04'
+
+    @pytest.mark.parametrize('country', ['LA', 'VN'])
+    @pytest.mark.parametrize('period,end', [
+        ('From 25 to 31 December 2025', '2025-12-31'),
+        ('From 29 December to 4 January 2026', '2026-01-04'),
+    ])
+    def test_january_publication_retains_actual_previous_year_or_cross_year_observation(monkeypatch, country, period, end):
+        monkeypatch.setattr(source, 'extract_text', lambda _: narrative(country, period))
+>       rows, audit = source.parse_report(b'%PDF offline narrative', country_code=country,
+            provenance={'RawSHA256': 'source-hash'}, as_of=date(2026, 1, 8))
+
+tests/unit/test_wpro_dengue_acceptance.py:45: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/data/crawlers/wpro_dengue.py:112: in parse_report
+    begin, end, original_period = parse_period(narrative, published.year)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+text = 'From 29 December to 4 January 2026, 123 dengue cases were reported.'
+year = 2026
+
+    def parse_period(text, year):
+        # Both endpoints are source-stated; no national week-to-ISO conversion.
+        m = re.search(r'(?:From|from|\()\s*(\d{1,2})(?:\s+([A-Z][a-z]+))?\s+to\s+(\d{1,2})\s+([A-Z][a-z]+)\s+(20\d{2})', text)
+        if not m:
+            raise ValueError('Country narrative has no explicit seven-day interval')
+        begin = datetime.strptime(f'{m[1]} {m[2] or m[4]} {m[5]}', '%d %B %Y').date()
+        end = datetime.strptime(f'{m[3]} {m[4]} {m[5]}', '%d %B %Y').date()
+        if (end - begin).days != 6 or end.year != year:
+>           raise ValueError('Dengue source interval is not a seven-day report-year period')
+E           ValueError: Dengue source interval is not a seven-day report-year period
+
+src/data/crawlers/wpro_dengue.py:91: ValueError
+=========================== short test summary info ============================
+FAILED tests/unit/test_wpro_dengue_acceptance.py::test_source_week_can_precede_publication_year_without_iso_inference[From 25 to 31 December 2025-start0-end0]
+FAILED tests/unit/test_wpro_dengue_acceptance.py::test_source_week_can_precede_publication_year_without_iso_inference[From 29 December to 4 January 2026-start1-end1]
+FAILED tests/unit/test_wpro_dengue_acceptance.py::test_source_week_can_precede_publication_year_without_iso_inference[From 29 December 2025 to 4 January 2026-start2-end2]
+FAILED tests/unit/test_wpro_dengue_acceptance.py::test_source_week_can_precede_publication_year_without_iso_inference[From 26 November to 2 December 2025-start3-end3]
+FAILED tests/unit/test_wpro_dengue_acceptance.py::test_january_publication_retains_actual_previous_year_or_cross_year_observation[From 25 to 31 December 2025-2025-12-31-LA]
+FAILED tests/unit/test_wpro_dengue_acceptance.py::test_january_publication_retains_actual_previous_year_or_cross_year_observation[From 25 to 31 December 2025-2025-12-31-VN]
+FAILED tests/unit/test_wpro_dengue_acceptance.py::test_january_publication_retains_actual_previous_year_or_cross_year_observation[From 29 December to 4 January 2026-2026-01-04-LA]
+FAILED tests/unit/test_wpro_dengue_acceptance.py::test_january_publication_retains_actual_previous_year_or_cross_year_observation[From 29 December to 4 January 2026-2026-01-04-VN]
+8 failed, 6 passed in 3.58s

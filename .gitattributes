@@ -1,2 +1,7 @@
 # Preserve captured command output exactly, including tool-emitted spaces.
 docs/acceptance/evidence/**/*.log -whitespace
+docs/acceptance/evidence/**/*.patch -whitespace
+docs/acceptance/evidence/**/*.diff -whitespace
+# Keep captured upstream bytes and their provenance hashes intact.
+tests/fixtures/ingestion/** -whitespace
+tests/fixtures/ingestion/**/*.pdf binary

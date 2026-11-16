@@ -1,0 +1,36 @@
+--- a/tests/unit/test_remaining_surveillance_onboarding.py
++++ b/tests/unit/test_remaining_surveillance_onboarding.py
+@@ -145,3 +145,33 @@
+     assert len(jobs) == 31
+     assert {(job['country_code'], job['source']) for job in jobs.values()} == {(code, scope) for code, scope, _ in expected}
+     assert set(jobs) == {f"{code.lower()}-{scope.replace('_', '-')}-daily" for code, scope, _ in expected}
++
++
++async def test_refresh_acceptance_preserves_old_history_but_rejects_changed_current_facts(monkeypatch, tmp_path):
++    from contextlib import asynccontextmanager
++    from datetime import datetime, timezone
++    from scripts import onboard_remaining_surveillance as onboarding
++
++    def row(when, count):
++        return {"Date": when, "SourceDiseaseCode": "dengue__weekly_cases",
++                "GeographyKey": "country:LA:national", "Cases": str(count)}
++
++    current, previous = row("2026-10-18", 232), row("2026-08-09", 100)
++    stored = [(raw, float(raw["Cases"]), datetime.fromisoformat(raw["Date"]).replace(tzinfo=timezone.utc),
++               raw["GeographyKey"]) for raw in [current, previous]]
++    db = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(fetchall=lambda: stored)))
++
++    @asynccontextmanager
++    async def database():
++        yield db
++
++    monkeypatch.setattr(onboarding, "get_db", database)
++    monkeypatch.setattr(onboarding, "ROOT", tmp_path)
++    (tmp_path / "data/current/la").mkdir(parents=True)
++    updater = SimpleNamespace(ontology_source_id="SRC_LA_WHO_WPRO_DENGUE", source_scope="who_wpro_dengue")
++    with pytest.raises(ValueError, match="database acceptance differs"):
++        await onboarding.verify_rows("LA", updater, [current])
++    accepted = await onboarding.verify_rows("LA", updater, [current], allow_retained_history=True)
++    assert accepted["pass"] and accepted["retained_history_observations"] == 1
++    with pytest.raises(ValueError, match="database acceptance differs"):
++        await onboarding.verify_rows("LA", updater, [row("2026-10-18", 233)], allow_retained_history=True)

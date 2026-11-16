@@ -1,0 +1,1846 @@
+<html>
+<head>
+<link href="https://framework-gb.cdn.gob.mx/assets/styles/main.css" rel="stylesheet">
+<base target="_self">
+<style>
+h3 {font-family: verdana; font-size:14px; letter-spacing:0.3em;}
+select{font:verdana; font-size:12px; color:black;}
+strong{font-family: verdana; font-size:12px;}
+
+.cuadro{
+	position:absolute;
+	top:158px;
+	visibility:hidden;
+	width:450px;
+	left: 357px;
+}
+input{font-family:verdana; font-size:12px}
+</style>
+<script language="JavaScript1.2">
+<!--
+	
+	var width = screen.width;		//Asi se sabe la cantidad de pixeles an el horizontal
+	var cadena, anchoCapa=230;
+	
+	function fnControl(){	
+		A_2025.style.left=cadena;
+		A_20250.style.left=cadena;
+		A_20251.style.left=cadena;
+		A_2024.style.left=cadena;
+		A_20240.style.left=cadena;
+		A_20241.style.left=cadena;
+		A_2023.style.left=cadena;
+		A_20230.style.left=cadena;
+		A_20231.style.left=cadena;
+		A_2022.style.left=cadena;
+		A_20220.style.left=cadena;
+		A_20221.style.left=cadena;
+		A_2021.style.left=cadena;
+		A_20210.style.left=cadena;
+		A_20211.style.left=cadena;
+		A_2020.style.left=cadena;
+		A_20200.style.left=cadena;
+		A_20201.style.left=cadena;
+		A_2019.style.left=cadena;
+		A_20190.style.left=cadena;
+		A_20191.style.left=cadena;
+		A_2018.style.left=cadena;
+		A_20180.style.left=cadena;
+		A_20181.style.left=cadena;
+		A_2017.style.left=cadena;
+		A_20170.style.left=cadena;
+		A_20171.style.left=cadena;
+		A_2016.style.left=cadena;
+		A_20160.style.left=cadena;
+		A_20161.style.left=cadena;
+		A_2015.style.left=cadena;
+		A_20150.style.left=cadena;
+		A_20151.style.left=cadena;
+		A_2014.style.left=cadena;
+		A_20140.style.left=cadena;
+		A_20141.style.left=cadena;
+		A_2013.style.left=cadena;
+		A_20130.style.left=cadena;
+		A_20131.style.left=cadena;
+		A_2012.style.left=cadena;
+		A_1400.style.left=cadena;
+		A_1401.style.left=cadena;
+		A_2011.style.left=cadena;
+		A_1300.style.left=cadena;
+		A_1301.style.left=cadena;
+		A_2010.style.left=cadena;
+		A_1200.style.left=cadena;
+		A_1201.style.left=cadena;
+		A_2009.style.left=cadena;
+		A_1100.style.left=cadena;
+		A_1101.style.left=cadena;
+		A_2008.style.left=cadena;
+		A_1000.style.left=cadena;
+		A_1001.style.left=cadena;
+		A_2007.style.left=cadena;
+		A_9000.style.left=cadena;
+		A_9001.style.left=cadena;
+		A_2006.style.left=cadena;
+		A_8000.style.left=cadena;
+		A_8001.style.left=cadena;
+		A_2005.style.left=cadena;
+		A_7000.style.left=cadena;
+		A_7001.style.left=cadena;
+		A_2004.style.left=cadena;
+		A_6000.style.left=cadena;
+		A_6001.style.left=cadena;
+		A_2003.style.left=cadena;
+		A_5000.style.left=cadena;
+		A_5001.style.left=cadena;
+		A_2002.style.left=cadena;		
+		A_2001.style.left=cadena;
+		A_2000.style.left=cadena;
+		A_1999.style.left=cadena;
+		A_1998.style.left=cadena;
+		A_1997.style.left=cadena;
+		A_1996.style.left=cadena;
+		A_1995.style.left=cadena;
+		A_1994.style.left=cadena;
+		A_1993.style.left=cadena;
+		A_1992.style.left=cadena;
+		A_1991.style.left=cadena;		
+		A_1990.style.left=cadena;
+		A_1989.style.left=cadena;
+		A_1988.style.left=cadena;
+		A_1987.style.left=cadena;
+		A_1986.style.left=cadena;
+		A_1985.style.left=cadena;
+		A_1984.style.left=cadena;
+		//NECESITAMOS SABER EL ANCHO DE LA VENTANA Y ASÍ DIVIDIR POR PORCENTAJE LA POSICION DE LA CAPA
+	}		
+	var anio_elec;
+	function fnAnio(anio){
+		var ancho;		
+		ancho=(top.window.document.body.clientWidth)*0.85; //asi document.body.clientWidth se sabe el ancho del documento
+		cadena=String(Math.ceil((ancho-anchoCapa)/2)-4);	//Math.ceil es para redondear al proximo menor entero	
+		 				
+		anio_elec=anio;
+		form_anio.anio.disabled=true;
+		form_anio.BotonAceptar.disabled=true;		
+		fnControl();
+		switch(anio){
+			case "2025": A_2025.style.visibility="visible";	break;
+			case "20250": A_20250.style.visibility="visible"; break;
+			case "20251": A_20251.style.visibility="visible"; break;
+			case "2024": A_2024.style.visibility="visible";	break;
+			case "20240": A_20240.style.visibility="visible"; break;
+			case "20241": A_20241.style.visibility="visible"; break;
+			case "2023": A_2023.style.visibility="visible";	break;
+			case "20230": A_20230.style.visibility="visible"; break;
+			case "20231": A_20231.style.visibility="visible"; break;
+			case "2022": A_2022.style.visibility="visible";	break;
+			case "20220": A_20220.style.visibility="visible"; break;
+			case "20221": A_20221.style.visibility="visible"; break;
+			case "2021": A_2021.style.visibility="visible";	break;
+			case "20210": A_20210.style.visibility="visible"; break;
+			case "20211": A_20211.style.visibility="visible"; break;
+			case "2020": A_2020.style.visibility="visible";	break;
+			case "20200": A_20200.style.visibility="visible"; break;
+			case "20201": A_20201.style.visibility="visible"; break;
+			case "2019": A_2019.style.visibility="visible";	break;
+			case "20190": A_20190.style.visibility="visible"; break;
+			case "20191": A_20191.style.visibility="visible"; break;
+			case "2018": A_2018.style.visibility="visible";	break;
+			case "20180": A_20180.style.visibility="visible"; break;
+			case "20181": A_20181.style.visibility="visible"; break;
+			case "2017": A_2017.style.visibility="visible";	break;
+			case "20170": A_20170.style.visibility="visible"; break;
+			case "20171": A_20171.style.visibility="visible"; break;
+			case "2016": A_2016.style.visibility="visible";	break;
+			case "20160": A_20160.style.visibility="visible"; break;
+			case "20161": A_20161.style.visibility="visible"; break;
+			case "2015": A_2015.style.visibility="visible";	break;
+			case "20150": A_20150.style.visibility="visible"; break;
+			case "20151": A_20151.style.visibility="visible"; break;
+			case "2014": A_2014.style.visibility="visible";	break;
+			case "20140": A_20140.style.visibility="visible"; break;
+			case "20141": A_20141.style.visibility="visible"; break;
+			case "2013": A_2013.style.visibility="visible";	break;
+			case "20130": A_20130.style.visibility="visible"; break;
+			case "20131": A_20131.style.visibility="visible"; break;
+			case "2012": A_2012.style.visibility="visible";	break;
+			case "1400": A_1400.style.visibility="visible";	break;
+			case "1401": A_1401.style.visibility="visible";	break;
+			case "2011": A_2011.style.visibility="visible";	break;
+			case "1300": A_1300.style.visibility="visible";	break;
+			case "1301": A_1301.style.visibility="visible";	break;
+			case "2010": A_2010.style.visibility="visible";	break;
+			case "1200": A_1200.style.visibility="visible";	break;
+			case "1201": A_1201.style.visibility="visible";	break;
+			case "2009": A_2009.style.visibility="visible";	break;
+			case "1100": A_1100.style.visibility="visible";	break;
+			case "1101": A_1101.style.visibility="visible";	break;
+			case "2008": A_2008.style.visibility="visible";	break;
+			case "1000": A_1000.style.visibility="visible";	break;
+			case "1001": A_1001.style.visibility="visible";	break;
+			case "2007": A_2007.style.visibility="visible";	break;
+			case "9000": A_9000.style.visibility="visible";	break;
+			case "9001": A_9001.style.visibility="visible";	break;
+			case "2006": A_2006.style.visibility="visible";	break;
+			case "8000": A_8000.style.visibility="visible";	break;
+			case "8001": A_8001.style.visibility="visible";	break;
+			case "2005": A_2005.style.visibility="visible";	break;
+			case "7000": A_7000.style.visibility="visible";	break;
+			case "7001": A_7001.style.visibility="visible";	break;
+			case "2004": A_2004.style.visibility="visible";	break;
+			case "6000": A_6000.style.visibility="visible";	break;
+			case "6001": A_6001.style.visibility="visible";	break;
+			case "2003": A_2003.style.visibility="visible";	break;
+			case "5000": A_5000.style.visibility="visible";	break;
+			case "5001": A_5001.style.visibility="visible";	break;
+			case "2002": A_2002.style.visibility="visible";	break;	
+			case "2001": A_2001.style.visibility="visible";	break;			
+			case "2000": A_2000.style.visibility="visible";	break;			
+			case "1999": A_1999.style.visibility="visible";	break;			
+			case "1998": A_1998.style.visibility="visible";	break;			
+			case "1997": A_1997.style.visibility="visible";	break;			
+			case "1996": A_1996.style.visibility="visible"; break;			
+			case "1995": A_1995.style.visibility="visible"; break;			
+			case "1994": A_1994.style.visibility="visible"; break;
+			case "1993": A_1993.style.visibility="visible"; break;			
+			case "1992": A_1992.style.visibility="visible";	break;			
+			case "1991": A_1991.style.visibility="visible";	break;		
+			case "1990": A_1990.style.visibility="visible";	break;		
+			case "1989": A_1989.style.visibility="visible";	break;			
+			case "1988": A_1988.style.visibility="visible";	break;			
+			case "1987": A_1987.style.visibility="visible";	break;			
+			case "1986": A_1986.style.visibility="visible";	break;			
+			case "1985": A_1985.style.visibility="visible";	break;			
+			case "1984": A_1984.style.visibility="visible";	break;	
+		}
+	}
+	
+	function fnconsulta(opcion){	
+		var cadena;
+		cadena="../"+anio_elec+"/morbilidad/nacional/";
+		cadena+=opcion;
+		cadena+=".pdf";		
+		window.open(cadena);		
+	}		
+-->
+</script>
+<title>Morbilidad Nacional</title>
+</head>
+<body bgcolor="#F2F2F2" text="#333">
+<script src="http://framework-gb.cdn.gob.mx/gobmx.js"></script>
+<font face="verdana,tahoma,arial,helvetica">
+<center>
+<h3>Anuario de Morbilidad 1984 - 2025</h3>
+<h3>MORBILIDAD NACIONAL</h3>
+<form name="form_anio" action="javascript:fnAnio(form_anio.anio.options[form_anio.anio.selectedIndex].value)">
+<strong>Elija el año que desea consultar</strong><br>
+<select name="anio">
+		<option value="2025" selected>2025 General
+		<option value="20250">2025 Femenino
+		<option value="20251">2025 Masculino
+        <option value="2024">2024 General
+		<option value="20240">2024 Femenino
+		<option value="20241">2024 Masculino
+        <option value="2023">2023 General
+		<option value="20230">2023 Femenino
+		<option value="20231">2023 Masculino
+        <option value="2022" >2022 General
+		<option value="20220">2022 Femenino
+		<option value="20221">2022 Masculino
+        <option value="2021" >2021 General
+		<option value="20210">2021 Femenino
+		<option value="20211">2021 Masculino
+        <option value="2020" >2020 General
+		<option value="20200">2020 Femenino
+		<option value="20201">2020 Masculino
+        <option value="2019" >2019 General
+		<option value="20190">2019 Femenino
+		<option value="20191">2019 Masculino
+        <option value="2018">2018 General
+		<option value="20180">2018 Femenino
+		<option value="20181">2018 Masculino
+        <option value="2017">2017 General
+		<option value="20170">2017 Femenino
+		<option value="20171">2017 Masculino
+        <option value="2016">2016 General
+		<option value="20160">2016 Femenino
+		<option value="20161">2016 Masculino
+        <option value="2015">2015 General
+		<option value="20150">2015 Femenino
+		<option value="20151">2015 Masculino
+        <option value="2014" >2014 General
+		<option value="20140">2014 Femenino
+		<option value="20141">2014 Masculino
+        <option value="2013">2013 General
+		<option value="20130">2013 Femenino
+		<option value="20131">2013 Masculino
+        <option value="2012">2012 General
+		<option value="1400">2012 Femenino
+		<option value="1401">2012 Masculino
+        <option value="2011">2011 General
+		<option value="1300">2011 Femenino
+		<option value="1301">2011 Masculino
+        <option value="2010">2010 General
+		<option value="1200">2010 Femenino
+		<option value="1201">2010 Masculino
+        <option value="2009">2009 General
+		<option value="1100">2009 Femenino
+		<option value="1101">2009 Masculino
+        <option value="2008">2008 General
+		<option value="1000">2008 Femenino
+		<option value="1001">2008 Masculino
+		<option value="2007">2007 General
+		<option value="9000">2007 Femenino
+		<option value="9001">2007 Masculino
+		<option value="2006">2006 General
+		<option value="8000">2006 Femenino
+		<option value="8001">2006 Masculino
+		<option value="2005">2005 General
+		<option value="7000">2005 Femenino
+		<option value="7001">2005 Masculino
+		<option value="2004">2004 General
+		<option value="6000">2004 Femenino
+		<option value="6001">2004 Masculino
+		<option value="2003">2003 General
+		<option value="5000">2003 Femenino
+		<option value="5001">2003 Masculino
+		<option value="2002">2002
+		<option value="2001">2001
+		<option value="2000">2000
+		<option value="1999">1999
+		<option value="1998">1998		
+		<option value="1997">1997		
+		<option value="1996">1996
+		<option value="1995">1995
+		<option value="1994">1994
+		<option value="1993">1993
+		<option value="1992">1992
+		<option value="1991">1991
+		<option value="1990">1990
+		<option value="1989">1989
+		<option value="1988">1988
+		<option value="1987">1987
+		<option value="1986">1986
+		<option value="1985">1985
+		<option value="1984">1984
+</select>
+<p>
+<input type="submit" name="BotonAceptar" value="Aceptar">
+</form>
+</center>
+<center>
+
+<div id="A_2025" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 721px; align: center; Z-INDEX: 21" >
+	<form name="form_2025" action="javascript:fnconsulta(form_2025.Nacional.options[form_2025.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20250" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20250" action="javascript:fnconsulta(form_20250.Nacional.options[form_20250.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20251" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20251" action="javascript:fnconsulta(form_20251.Nacional.options[form_20251.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2024" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 721px; align: center; Z-INDEX: 21" >
+	<form name="form_2024" action="javascript:fnconsulta(form_2024.Nacional.options[form_2024.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20240" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20240" action="javascript:fnconsulta(form_20240.Nacional.options[form_20240.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20241" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20241" action="javascript:fnconsulta(form_20241.Nacional.options[form_20241.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2023" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 721px; align: center; Z-INDEX: 21" >
+	<form name="form_2023" action="javascript:fnconsulta(form_2023.Nacional.options[form_2023.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20230" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20230" action="javascript:fnconsulta(form_20230.Nacional.options[form_20230.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20231" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20231" action="javascript:fnconsulta(form_20231.Nacional.options[form_20231.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+
+<div id="A_2022" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 721px; align: center; Z-INDEX: 21" >
+	<form name="form_2022" action="javascript:fnconsulta(form_2022.Nacional.options[form_2022.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20220" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20220" action="javascript:fnconsulta(form_20220.Nacional.options[form_20220.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20221" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20221" action="javascript:fnconsulta(form_20221.Nacional.options[form_20221.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+
+<div id="A_2021" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 721px; align: center; Z-INDEX: 21" >
+	<form name="form_2021" action="javascript:fnconsulta(form_2021.Nacional.options[form_2021.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20210" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20210" action="javascript:fnconsulta(form_20210.Nacional.options[form_20210.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20211" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20211" action="javascript:fnconsulta(form_20211.Nacional.options[form_20211.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+
+<div id="A_2020" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 721px; align: center; Z-INDEX: 21" >
+	<form name="form_2020" action="javascript:fnconsulta(form_2020.Nacional.options[form_2020.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20200" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20200" action="javascript:fnconsulta(form_20200.Nacional.options[form_20200.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20201" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20201" action="javascript:fnconsulta(form_20201.Nacional.options[form_20201.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2019" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 721px; align: center; Z-INDEX: 21" >
+	<form name="form_2019" action="javascript:fnconsulta(form_2019.Nacional.options[form_2019.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20190" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20190" action="javascript:fnconsulta(form_20190.Nacional.options[form_20190.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20191" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20191" action="javascript:fnconsulta(form_20191.Nacional.options[form_20191.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2018" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 721px; align: center; Z-INDEX: 21" >
+	<form name="form_2018" action="javascript:fnconsulta(form_2018.Nacional.options[form_2018.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20180" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20180" action="javascript:fnconsulta(form_20180.Nacional.options[form_20180.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20181" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20181" action="javascript:fnconsulta(form_20181.Nacional.options[form_20181.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+
+<div id="A_2017" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 721px; align: center; Z-INDEX: 21" >
+	<form name="form_2017" action="javascript:fnconsulta(form_2017.Nacional.options[form_2017.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20170" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20170" action="javascript:fnconsulta(form_20170.Nacional.options[form_20170.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20171" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20171" action="javascript:fnconsulta(form_20171.Nacional.options[form_20171.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+
+<div id="A_2016" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2016" action="javascript:fnconsulta(form_2016.Nacional.options[form_2016.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20160" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20160" action="javascript:fnconsulta(form_20160.Nacional.options[form_20160.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+		  <option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+		  <option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+		  <option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+		  <option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+		  <option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+		  <option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+	      <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20161" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20161" action="javascript:fnconsulta(form_20161.Nacional.options[form_20161.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2015" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2015" action="javascript:fnconsulta(form_2015.Nacional.options[form_2015.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20150" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20150" action="javascript:fnconsulta(form_20150.Nacional.options[form_20150.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20151" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20151" action="javascript:fnconsulta(form_20151.Nacional.options[form_20151.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2014" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2014" action="javascript:fnconsulta(form_2014.Nacional.options[form_2014.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20140" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20140" action="javascript:fnconsulta(form_20140.Nacional.options[form_20140.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20141" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20141" action="javascript:fnconsulta(form_20141.Nacional.options[form_20141.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2013" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2013" action="javascript:fnconsulta(form_2013.Nacional.options[form_2013.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20130" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20130" action="javascript:fnconsulta(form_20130.Nacional.options[form_20130.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_20131" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_20131" action="javascript:fnconsulta(form_20131.Nacional.options[form_20131.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2012" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2012" action="javascript:fnconsulta(form_2012.Nacional.options[form_2012.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1400" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1400" action="javascript:fnconsulta(form_1400.Nacional.options[form_1400.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1401" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1401" action="javascript:fnconsulta(form_1401.Nacional.options[form_1401.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2011" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2011" action="javascript:fnconsulta(form_2011.Nacional.options[form_2011.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1300" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1300" action="javascript:fnconsulta(form_1300.Nacional.options[form_1300.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1301" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1301" action="javascript:fnconsulta(form_1301.Nacional.options[form_1301.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2010" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2010" action="javascript:fnconsulta(form_2010.Nacional.options[form_2010.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1200" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1200" action="javascript:fnconsulta(form_1200.Nacional.options[form_1200.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1201" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1201" action="javascript:fnconsulta(form_1201.Nacional.options[form_1201.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2009" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2009" action="javascript:fnconsulta(form_2009.Nacional.options[form_2009.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1100" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1100" action="javascript:fnconsulta(form_1100.Nacional.options[form_1100.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1101" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1101" action="javascript:fnconsulta(form_1101.Nacional.options[form_1101.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+
+<div id="A_2008" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2008" action="javascript:fnconsulta(form_2008.Nacional.options[form_2008.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1000" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1000" action="javascript:fnconsulta(form_1000.Nacional.options[form_1000.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1001" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1001" action="javascript:fnconsulta(form_1001.Nacional.options[form_1001.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2007" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2007" action="javascript:fnconsulta(form_2007.Nacional.options[form_2007.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_9000" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_9000" action="javascript:fnconsulta(form_9000.Nacional.options[form_9000.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_9001" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_9001" action="javascript:fnconsulta(form_9001.Nacional.options[form_9001.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2006" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2006" action="javascript:fnconsulta(form_2006.Nacional.options[form_2006.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_8000" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_8000" action="javascript:fnconsulta(form_8000.Nacional.options[form_8000.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_8001" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_8001" action="javascript:fnconsulta(form_8001.Nacional.options[form_8001.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2005" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2005" action="javascript:fnconsulta(form_2005.Nacional.options[form_2005.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_7000" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_7000" action="javascript:fnconsulta(form_7000.Nacional.options[form_7000.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_7001" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_7001" action="javascript:fnconsulta(form_7001.Nacional.options[form_7001.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+
+<div id="A_2004" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2004" action="javascript:fnconsulta(form_2004.Nacional.options[form_2004.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_6000" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_6000" action="javascript:fnconsulta(form_6000.Nacional.options[form_6000.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_6001" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_6001" action="javascript:fnconsulta(form_6001.Nacional.options[form_6001.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2003" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2003" action="javascript:fnconsulta(form_2003.Nacional.options[form_2003.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_5000" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_5000" action="javascript:fnconsulta(form_5000.Nacional.options[form_5000.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+		<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_5001" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_5001" action="javascript:fnconsulta(form_5001.Nacional.options[form_5001.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_mes">Distribución de casos nuevos de enfermedad por mes
+			<option value="distribucion_porcentual_casos_enfermedad_fuente_notificacion">Distribución porcentual de casos por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		    <option value="veinte_principales_causas_enfermedad_nacional_mes">20 principales causas de enfermedad por mes  		
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2002" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2002" action="javascript:fnconsulta(form_2002.Nacional.options[form_2002.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		</select>
+		<p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_2001" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+<form name="form_2001" action="javascript:fnconsulta(form_2001.Nacional.options[form_2001.Nacional.selectedIndex].value)">
+<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+<select name="Nacional">
+<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+<option value="incidencia_casos_nuevos_enfermedad_grupo_edad">Incidencia de casos nuevos de enfermedad por grupo de edad
+<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+</select>
+<script language="JavaScript">
+//document.write(document.body.scrollWidth);   //este escript es para pruebas del ancho del documento
+//document.write(top.window.document.body.clientWidth); ancho del documento de la ventana superior
+</script>
+<p>
+<input type="submit" name="BotonAceptar" value="Aceptar">
+</form>
+</div>
+
+<div id="A_2000" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_2000" action="javascript:fnconsulta(form_2000.Nacional.options[form_2000.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por fuente de notificación
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_nacional_institucion">20 principales causas de enfermedad por institución
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1999" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1999" action="javascript:fnconsulta(form_1999.Nacional.options[form_1999.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad" selected>Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedad_fuente_notificacion">Distribución de casos nuevos de enfermedad por instituci&oacute;n
+			<option value="incidencia_casos_nuevos_enfermedad_grupo_edad">Incidencia de casos nuevos por grupo de edad
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_grupo_edad">20 principales causas de enfermedad por grupo de edad
+			<option value="veinte_principales_causas_enfermedad_institucion">20 principales causas de enfermedad por institución
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1998" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1998" action="javascript:fnconsulta(form_1998.Nacional.options[form_1998.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedades_grupo_edad" selected>Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedades_institucion">Distribución de casos nuevos de enfermedad por instituci&oacute;n
+			<option value="incidencia_casos_nuevos_enfermedades_grupo_edad">Incidencia de casos nuevos por grupo de edad
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_institucion">20 principales causas de enfermedad por institución
+			<option value="veinte_principales_causas_enfermedad">20 principales causas de enfermedad
+			<option value="veinte_principales_causas_enfermedad_grupo_edad">20 principales causas de enfermedad por grupo de edad			
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+
+<div id="A_1997" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1997" action="javascript:fnconsulta(form_1997.Nacional.options[form_1997.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedades_grupo_edad" selected>Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedades_fuente_notificacion">Distribución de casos nuevos de enfermedad por instituci&oacute;n
+			<option value="incidencia_casos_nuevos_enfermedades_grupo_edad">Incidencia de casos nuevos por grupo de edad
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional">20 principales causas de enfermedad nacional
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1996" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1996" action="javascript:fnconsulta(form_1996.Nacional.options[form_1996.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedades_grupo_edad" selected>Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedades_fuente_notificacion">Distribución de casos nuevos de enfermedad por instituci&oacute;n
+			<option value="incidencia_casos_nuevos_enfermedades_grupo_edad">Incidencia de casos nuevos por grupo de edad
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional">20 principales causas de enfermedad nacional
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1995" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1995" action="javascript:fnconsulta(form_1995.Nacional.options[form_1995.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedades_fuente_notificacion" selected>Distribución de casos nuevos de enfermedad por instituci&oacute;n
+			<option value="distribucion_casos_nuevos_enfermedades_grupo_edad">Distribución de casos nuevos de enfermedad por grupo de edad			
+			<option value="incidencia_enfermedades_grupo_edad">Incidencia de casos nuevos por grupo de edad
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional">20 principales causas de enfermedad nacional
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1994" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1994" action="javascript:fnconsulta(form_1994.Nacional.options[form_1994.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedades_grupo_edad" selected>Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedades_fuente_notificacion">Distribución de casos nuevos de enfermedad por instituci&oacute;n
+			<option value="incidencia_enfermedades_grupo_edad">Incidencia de casos nuevos por grupo de edad
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional">20 principales causas de enfermedad nacional
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1993" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1993" action="javascript:fnconsulta(form_1993.Nacional.options[form_1993.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedades_grupo_edad" selected>Distribución de casos nuevos de enfermedad por grupo de edad
+			<option value="distribucion_casos_nuevos_enfermedades_fuente_notificacion">Distribución de casos nuevos de enfermedad por instituci&oacute;n
+			<option value="incidencia_casos_nuevos_enfermedades_grupo_edad">Incidencia de casos nuevos por grupo de edad
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional">20 principales causas de enfermedad nacional
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1992" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1992" action="javascript:fnconsulta(form_1992.Nacional.options[form_1992.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_grupo_edad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedades
+			<option value="incidencia_grupo_edad_porcentaje_fuente_notificacion">Incidencia de las enfermedades
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad">20 principales causas de enfermedad nacional
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1991" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1991" action="javascript:fnconsulta(form_1991.Nacional.options[form_1991.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_grupo_edad_fuente_notificacion" selected>Distribución de casos nuevos de enfermedades
+			<option value="incidencia_grupo_edad_porcentaje_fuente_notificacion">Incidencia de las enfermedades
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional">20 principales causas de enfermedad nacional
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1990" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1990" action="javascript:fnconsulta(form_1990.Nacional.options[form_1990.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad" selected>Distribución de casos nuevos por grupo de edad
+			<option value="incidencia_casos_nuevos_enfermedad_grupo_edad">Incidencia de casos nuevos por grupo de edad
+			<option value="poblacion_grupo_edad_entidad_federativa">Población por grupo de edad y entidad federativa
+			<option value="veinte_principales_causas_enfermedad_nacional">20 principales causas de enfermedad
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1989" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1989" action="javascript:fnconsulta(form_1989.Nacional.options[form_1989.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="casos_nuevos_enfermedad_grupo_edad_fuente_notificacion" selected>Casos nuevos de enfermedades por grupo de edad y fuente de notificación
+			<option value="poblacion_se">Población por grupo de edad y sexo
+			<option value="poblacion_estatal">Población por entidad federativa
+			<option value="veinte_principales_causas_enfermedad_grupo_edad_nacional">20 principales causas de enfermedad por grupo de edad
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1988" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1988" action="javascript:fnconsulta(form_1988.Nacional.options[form_1988.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad_fuente_notificacion" selected>Casos nuevos de enfermedad por grupo de edad y fuente de notificación
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1987" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1987" action="javascript:fnconsulta(form_1987.Nacional.options[form_1987.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="casos_nuevos_enfermedad_grupo_edad_fuente" selected>Casos nuevos de enfermedad por grupo de edad y fuente de notificación
+			<option value="veinte_principales_causas_grupo_edad">20 principales causas de enfermedad por grupo de edad
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1986" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1986" action="javascript:fnconsulta(form_1986.Nacional.options[form_1986.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="distribucion_casos_nuevos_enfermedad_grupo_edad_fuente" selected>Casos nuevos de enfermedad por grupo de edad y fuente de notificación
+			<option value="veinte_principales_causas_enfermedad_nacional_grupo_edad">20 principales causas de enfermedad por grupo de edad y fuente de notificación
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1985" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1985" action="javascript:fnconsulta(form_1985.Nacional.options[form_1985.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="casos_nuevos_enfermedad_grupo_edad_fuente_notificacion" selected>Casos nuevos de enfermedad por grupo de edad y fuente de notificación
+			<option value="veinte_principales_causas_enfermedad_grupo_edad">20 principales causas de enfermedad por grupo de edad
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+
+<div id="A_1984" style="visibility: hidden; top: 230px; position: absolute; width: 530px; left: 577px; align: center; Z-INDEX: 21" >
+	<form name="form_1984" action="javascript:fnconsulta(form_1984.Nacional.options[form_1984.Nacional.selectedIndex].value)">
+		<strong>Elija la opci&oacute;n de MORBILIDAD NACIONAL que desea consultar</strong><br>
+		<select name="Nacional">
+			<option value="casos_nuevos_enfermedades_grupo_edad_fuente_notificacion" selected>Casos nuevos de enfermedad por grupo de edad y fuente de notificación
+			<option value="veinte_principales_causas_enfermedad_grupo_edad">20 principales causas de enfermedad por grupo de edad
+		</select><p>
+		<input type="submit" name="BotonAceptar" value="Aceptar">
+	</form>
+</div>
+<br><br><br><br><br><br><br>
+<input type=button value=Atrás onClick="history.go(-1)">
+<p>
+
+<!-- JS -->
+    	<script src="https://framework-gb.cdn.gob.mx/gobmx.js"></script>
+</body>
+</html>
+

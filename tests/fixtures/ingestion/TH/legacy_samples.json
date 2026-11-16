@@ -1,0 +1,26 @@
+[
+  {
+    "code": "15",
+    "year": 2003,
+    "url": "http://doe1.moph.go.th/surdata/y46/mcd_Influenza_46.rtf",
+    "cases": 29918,
+    "published": "2005-09-13",
+    "raw_sha256": "17bf4b143cf47b578448177a529a3cf7fbbaa5958b6afe213765d1ef01edfd2d"
+  },
+  {
+    "code": "15",
+    "year": 2019,
+    "url": "http://doe1.moph.go.th/surdata/y62/mcd_Influenza_62.rtf",
+    "cases": 396363,
+    "published": "2020-08-06",
+    "raw_sha256": "5274a11e0522f841a43b7f9dbd533c3f9d431a2301926bcf3bec92538b76a5f1"
+  },
+  {
+    "code": "15",
+    "year": 2020,
+    "url": "http://doe1.moph.go.th/surdata/y63/mcd_Influenza_63.rtf",
+    "cases": 123995,
+    "published": "2021-09-22",
+    "raw_sha256": "1e7d214d19c3181ac658a652ef5b106141a6fbd40a65fe331baac9fe40b3c362"
+  }
+]

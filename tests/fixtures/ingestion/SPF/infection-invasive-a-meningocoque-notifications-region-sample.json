@@ -1,0 +1,25 @@
+{
+  "total_count": 2,
+  "results": [
+    {
+      "annee": "2023",
+      "reglib": "Guadeloupe",
+      "classe_age": "0 an",
+      "meningocoque": "Y",
+      "nombre_de_cas": 0,
+      "tx": 0.0,
+      "population": 3462,
+      "reg": "01"
+    },
+    {
+      "annee": "2023",
+      "reglib": "Guadeloupe",
+      "classe_age": "15-24 ans",
+      "meningocoque": "C",
+      "nombre_de_cas": 0,
+      "tx": 0.0,
+      "population": 43464,
+      "reg": "01"
+    }
+  ]
+}

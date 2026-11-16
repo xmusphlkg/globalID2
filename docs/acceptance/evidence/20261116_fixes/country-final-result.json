@@ -1,0 +1,11 @@
+{
+  "exit_code": 0,
+  "elapsed_seconds": 226.38,
+  "changed_paths": [
+    "tests/unit/test_remaining_surveillance_onboarding.py"
+  ],
+  "head_before": "9d4d52bacb56081b6e061baad40d8884f8742a56",
+  "head_after": "9d4d52bacb56081b6e061baad40d8884f8742a56",
+  "test_file_count": 33,
+  "fingerprinted_file_count": 436
+}

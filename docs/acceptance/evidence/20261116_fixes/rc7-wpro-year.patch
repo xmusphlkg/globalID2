@@ -1,0 +1,33 @@
+--- a/src/data/crawlers/wpro_dengue.py
++++ b/src/data/crawlers/wpro_dengue.py
+@@ -77,14 +77,24 @@
+ 
+ 
+ def parse_period(text, year):
+-    # Both endpoints are source-stated; no national week-to-ISO conversion.
+-    m = re.search(r'(?:From|from|\()\s*(\d{1,2})(?:\s+([A-Z][a-z]+))?\s+to\s+(\d{1,2})\s+([A-Z][a-z]+)\s+(20\d{2})', text)
++    # The publication year is an upper bound, not the observation year. A
++    # January publication can explicitly report the previous December week.
++    # Only source-stated endpoints are used; no epidemiological/ISO calendar
++    # conversion is involved.
++    m = re.search(
++        r'(?:[Ff]rom|\()\s*(?P<start_day>\d{1,2})'
++        r'(?:\s+(?P<start_month>[A-Z][a-z]+))?'
++        r'(?:\s+(?P<start_year>20\d{2}))?\s+to\s+'
++        r'(?P<end_day>\d{1,2})\s+(?P<end_month>[A-Z][a-z]+)\s+(?P<end_year>20\d{2})', text)
+     if not m:
+         raise ValueError('Country narrative has no explicit seven-day interval')
+-    begin = datetime.strptime(f'{m[1]} {m[2] or m[4]} {m[5]}', '%d %B %Y').date()
+-    end = datetime.strptime(f'{m[3]} {m[4]} {m[5]}', '%d %B %Y').date()
+-    if (end - begin).days != 6 or end.year != year:
+-        raise ValueError('Dengue source interval is not a seven-day report-year period')
++    end = datetime.strptime(f'{m["end_day"]} {m["end_month"]} {m["end_year"]}', '%d %B %Y').date()
++    start_year = int(m['start_year'] or m['end_year'])
++    begin = datetime.strptime(f'{m["start_day"]} {m["start_month"] or m["end_month"]} {start_year}', '%d %B %Y').date()
++    if not m['start_year'] and m['start_month'] and begin > end:
++        begin = begin.replace(year=begin.year - 1)
++    if (end - begin).days != 6 or begin.year < HISTORY_START_YEAR or end.year > year:
++        raise ValueError('Dengue source interval is not a reviewed seven-day period before publication')
+     return begin, end, m[0]
+ 
+ 

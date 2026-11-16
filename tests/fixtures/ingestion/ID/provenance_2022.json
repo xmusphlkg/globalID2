@@ -1,0 +1,18 @@
+{
+  "source_url": "https://kemkes.go.id/id/profil-kesehatan-indonesia-2022",
+  "source_sha256": "34a0dfd28986f3e1f37cf090f2eac36f629b911426114c5e231a76cdf36806c2",
+  "fixture_to_source_physical_page": {
+    "1": 1,
+    "2": 476,
+    "3": 479,
+    "4": 480,
+    "5": 482,
+    "6": 487,
+    "7": 499,
+    "8": 505,
+    "9": 511,
+    "10": 531,
+    "11": 533
+  },
+  "note": "Selected exact physical source pages; contents-page LAMPIRAN lines are not actual appendix dividers."
+}

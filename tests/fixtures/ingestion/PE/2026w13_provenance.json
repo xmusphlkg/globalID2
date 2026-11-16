@@ -1,0 +1,21 @@
+{
+  "source_url": "https://epipublic.dge.gob.pe/uploads/boletin/boletin_202613_27_095759.pdf",
+  "source_sha256": "bb725e0c862b016afede462a65f087ed4565ae777c20ec565d502d5cf6e49a53",
+  "original_pages": [
+    1,
+    23
+  ],
+  "reference": {
+    "url": "https://epipublic.dge.gob.pe/uploads/boletin/boletin_202613_27_095759.pdf",
+    "year": 2026,
+    "week": 13,
+    "title": "Boletín epidemiológico SE 13 - 2026",
+    "published_date": "2026-05-27",
+    "published_date_raw": "27-05-2026",
+    "directory_copies": 1,
+    "catalog_issues": []
+  },
+  "fixture_sha256": "2b902886019f12f723d2dad37e65ed136e46427ce22946a90abee53ff0ae9146",
+  "fixture_transformation": "Raster images removed; cover and original page 23 vector text/tables retained unchanged.",
+  "original_fixture_sha256": "7649ed3324b07ac3ebef7e4e6ddf93fd82d35dacc2a368a3eb6780ed87fbeddd"
+}

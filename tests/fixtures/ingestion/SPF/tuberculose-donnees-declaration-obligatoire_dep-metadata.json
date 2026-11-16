@@ -1,0 +1,159 @@
+{
+  "visibility": "domain",
+  "fields": [
+    {
+      "name": "annee",
+      "description": null,
+      "annotations": {
+        "timeserie_precision": "year"
+      },
+      "label": "Année",
+      "type": "date"
+    },
+    {
+      "name": "libgeo",
+      "description": null,
+      "annotations": {
+        "facet": true,
+        "facetsort": "alphanum"
+      },
+      "label": "Département",
+      "type": "text"
+    },
+    {
+      "name": "reglib",
+      "description": "Libellé",
+      "annotations": {
+        "facet": true,
+        "disjunctive": true,
+        "hierarchical": "Département",
+        "facetsort": "alphanum"
+      },
+      "label": "Région",
+      "type": "text"
+    },
+    {
+      "name": "nombre_de_cas_notifies_de_tuberculose",
+      "description": null,
+      "annotations": {},
+      "label": "Nombre de cas notifiés de tuberculose",
+      "type": "double"
+    },
+    {
+      "name": "taux_brut_de_cas_notifies_de_tuberculose",
+      "description": null,
+      "annotations": {},
+      "label": "Taux brut de cas notifiés de tuberculose",
+      "type": "double"
+    },
+    {
+      "name": "departement",
+      "description": null,
+      "annotations": {},
+      "label": "departement",
+      "type": "text"
+    },
+    {
+      "name": "reg",
+      "description": null,
+      "annotations": {},
+      "label": "Région code",
+      "type": "text"
+    }
+  ],
+  "dataset_id": "tuberculose-donnees-declaration-obligatoire_dep",
+  "dataset_uid": "da_gi8i1a",
+  "has_records": true,
+  "features": [
+    "analyze",
+    "timeserie"
+  ],
+  "attachments": [],
+  "alternative_exports": [],
+  "data_visible": true,
+  "metas": {
+    "default": {
+      "title": "Tuberculose : Données du signalement obligatoire (Département)",
+      "description": "<p class=\"\" style=\"font-family: sans-serif;\">La surveillance de la tuberculose repose sur le dispositif du signalement obligatoire (SO) qui couvre cette pathologie. Les données portant sur les cas de tuberculose maladie et des issues de traitement sont recueillies dans le cadre du SO, par un réseau d’acteurs incluant les médecins et biologistes déclarants, ainsi que les Centres de Lutte Antituberculeuse (CLAT), et validées par les Agences régionales de santé et Santé publique France via l'outil \"e-DO tuberculose\".</p><p style=\"font-family: sans-serif;\">Les indicateurs sont disponibles pour chaque année, à partir de l'année 2004.</p><p class=\"\" style=\"font-family: sans-serif;\">Les cas de tuberculose maladie comprennent les cas probables (présentant un tableau clinique et/ou radiologique compatible et qui ont été considérés et traités comme des tuberculoses par le médecin) et les cas confirmés biologiquement. Les issues de traitement sont estimées à 12 mois après le début du traitement et concernent les tuberculoses non-multirésistantes (non-MDR). Pour cet indicateur, un département sans données correspond à un département soit qui n’a notifié aucun cas de tuberculose, soit qu’il en a notifié mais dont l’issue de traitement n’est connue pour aucun d’entre eux.</p><p style=\"font-family: sans-serif;\"><span style=\"font-weight: bolder;\">Précisions :</span> <br>- Le département correspond au département de déclaration de la tuberculose jusqu'en 2018 et au département de domicile du patient à partir de 2019. Mayotte, devenu département français d'outre-mer en 2011, est intégré aux données depuis cette année.<br>- Le SO de la tuberculose maladie date de 1964, celle des issues de traitement de 2007. Les indicateurs sont présentés à partir de 2009.</p><p style=\"font-family: sans-serif;\"><span style=\"font-weight: bolder;\">Dénominateurs :</span> Pour les calculs des taux de déclaration, le dénominateur correspond aux données d’estimations localisées de population (Insee) actualisées au 1er janvier de chaque année. A Mayotte, pour les années 2011-2013, les dénominateurs proviennent du recensement 2012.</p><p style=\"font-family: sans-serif; margin-bottom: 0px;\"><span style=\"font-weight: bolder;\">Pour en savoir plus :</span> Les tendances épidémiologiques détaillées (classe d’âge, territoire, tuberculoses multi-résistantes, etc.) sont accessibles sur le site de Santé publique France : <span style='font-size:11.0pt;font-family:\"Calibri\",sans-serif;\nmso-fareast-font-family:Calibri;mso-fareast-theme-font:minor-latin;mso-ansi-language:\nFR;mso-fareast-language:EN-US;mso-bidi-language:AR-SA'><a href=\"https://www.santepubliquefrance.fr/tuberculose\">https://www.santepubliquefrance.fr/tuberculose</a></span></p><p class=\"MsoNormal\" style=\"font-family: sans-serif;\"></p>",
+      "theme": [
+        "Maladies Infectieuses"
+      ],
+      "keyword": [
+        "tuberculose",
+        "incidence",
+        "taux de déclaration",
+        "déclaration obligatoire",
+        "France",
+        "maladie à signalement obligatoire (MSO)"
+      ],
+      "license": "Licence ouverte 2.0",
+      "license_url": "https://www.etalab.gouv.fr/wp-content/uploads/2017/04/ETALAB-Licence-Ouverte-v2.0.pdf",
+      "language": "fr",
+      "modified": "2026-05-18T08:38:59+00:00",
+      "publisher": "Santé publique France",
+      "references": null,
+      "attributions": null,
+      "update_frequency": "ANNUAL",
+      "bbox": null,
+      "data_processed": "2026-05-18T08:38:59+00:00",
+      "federated": false,
+      "geographic_reference": null,
+      "geographic_reference_auto": false,
+      "geometry_types": null,
+      "metadata_languages": [
+        "fr"
+      ],
+      "metadata_processed": "2026-10-23T08:25:04.295000+00:00",
+      "modified_updates_on_data_change": true,
+      "modified_updates_on_metadata_change": false,
+      "parent_domain": null,
+      "records_count": 2121,
+      "shared_catalog": null,
+      "source_dataset": null,
+      "source_domain": null,
+      "source_domain_address": null,
+      "source_domain_title": null,
+      "territory": null,
+      "timezone": null
+    },
+    "dcat": {
+      "created": null,
+      "issued": null,
+      "creator": null,
+      "contributor": null,
+      "contact_name": null,
+      "contact_email": null,
+      "accrualperiodicity": null,
+      "spatial": null,
+      "temporal": "2004-2024",
+      "granularity": null,
+      "dataquality": null,
+      "publisher_type": null,
+      "conforms_to": null,
+      "temporal_coverage_start": null,
+      "temporal_coverage_end": null,
+      "accessRights": null,
+      "relation": null
+    },
+    "standard-insee": {
+      "sous-titre": null,
+      "source": [
+        "Maladie à déclaration obligatoire"
+      ],
+      "avertissement": "Les cas de tuberculose maladie comprennent les cas probables (présentant un tableau clinique et/ou radiologique compatible et qui ont été considérés et traités comme des tuberculoses par le médecin) et les cas confirmés biologiquement. Le département correspond au département de déclaration de la tuberculose jusqu'en 2018 et au département de domicile du patient à partir de 2019. Mayotte, devenu département français d'outre-mer en 2011, est intégré aux données depuis cette année. Les issues de traitement sont estimées à 12 mois après le début du traitement et concernent les tuberculoses non-multirésistantes (non-MDR). Le pourcentage de cas avec information renseignée sur l'issue de traitement n'est pas indiqué par région, mais uniquement pour la France entière et par département.",
+      "documentation": "https://www.santepubliquefrance.fr/tuberculoserespiratoires/tuberculose",
+      "unite-statistique": "Unité statistique de recueil de l'information: les données sont recueillies individuellement pour chaque personne affectée par la tuberculose. Les données individuelles servent au calcul des indicateurs qui sont montrés pour le pays,  la région et le département.",
+      "couverture-geographique": "France",
+      "mailles-geographiques": "Département",
+      "mailles-geographiques-multi": null,
+      "millesime-de-la-geographie": "2024",
+      "population-s-de-reference": null,
+      "standardisation": null,
+      "nature-indicateur": [
+        "Effectifs",
+        "Taux bruts"
+      ],
+      "non-disponible-sur-data-gouv-fr": null
+    }
+  }
+}

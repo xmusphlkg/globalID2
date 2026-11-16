@@ -1,0 +1,31 @@
+{
+  "source_url": "https://drive.google.com/file/d/1-lNRA3k9o9jM5vGacbnKY4OZorUQ-_Sc/view?usp=sharing",
+  "source_landing_url": "https://kemkes.go.id/id/profil-kesehatan-indonesia-2024",
+  "source_sha256": "8157f6d47b4b7534af282923342193869e9f339535560606a131b359cb2fcbaf",
+  "derived_pdf_sha256": "11c719f0a3e6eaa106df09f42aeec873c948b79b33fbee5e24bdc51a7fd7b36b",
+  "fixture_to_source_physical_page": {
+    "1": 1,
+    "2": 200,
+    "3": 205,
+    "4": 221,
+    "5": 224,
+    "6": 225,
+    "7": 229,
+    "8": 235,
+    "9": 249,
+    "10": 255,
+    "11": 333,
+    "12": 472,
+    "13": 477,
+    "14": 479,
+    "15": 480,
+    "16": 482,
+    "17": 483,
+    "18": 484,
+    "19": 486,
+    "20": 490,
+    "21": 492,
+    "22": 497
+  },
+  "note": "Exact selected physical pages; no OCR or count edits. Full original archived in data/raw/id."
+}

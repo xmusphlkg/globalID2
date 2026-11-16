@@ -1,0 +1,26 @@
+--- a/src/data/crawlers/cr_notifications.py
++++ b/src/data/crawlers/cr_notifications.py
+@@ -5,7 +5,8 @@
+ """
+ from __future__ import annotations
+ 
+-from datetime import date
++from datetime import date, datetime
++from zoneinfo import ZoneInfo
+ import hashlib
+ import io
+ import json
+@@ -130,10 +131,12 @@
+             continue
+         labels.add(label)
+         provisional = "*" in label
++        category_label = " ".join(label.replace("*", "").split())
+         rows.append(_row(label, int(count), when=date(year, 1, 1), year=year,
+                          period_type="annual", report=report, page=page,
++                         source_code="annual_" + hashlib.sha256(category_label.encode()).hexdigest()[:20],
+                          SourceReportedRate=rate, IsProvisional=str(provisional).lower(),
+-                         Dimensions=json.dumps({"source_label": label, "source_report_kind": "individual_annual", "source_preliminary": provisional}, ensure_ascii=False, sort_keys=True)))
++                         Dimensions=json.dumps({"source_label": category_label, "source_report_kind": "individual_annual"}, ensure_ascii=False, sort_keys=True)))
+     if len(rows) < 25:
+         raise CostaRicaContractError("National annual Table 1 is truncated or schema changed")
+     return rows, rejected

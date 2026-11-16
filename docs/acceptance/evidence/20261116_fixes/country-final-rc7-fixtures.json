@@ -1,0 +1,120 @@
+{
+  "captured_at": "2026-11-16T04:23:11.603353+00:00",
+  "note": "These rc7 fixture directories were not in the 436-file pre-run hash list; supplementary current hashes and filesystem times are reported separately, not represented as pre-run hashes.",
+  "files": {
+    "tests/fixtures/ingestion/WHO/gho_metadata.json": {
+      "sha256": "bc6076aeeb6542cacef57fa9ea5485d640a746effd208f5ecbe56e1d062f6e4d",
+      "mtime_ns": 1794801207652791669,
+      "ctime_ns": 1794801207652791669,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/WHO/ke_gho_sample.json": {
+      "sha256": "8fb19e493689aef1fe00f021d0e2aebee06aea0e3b37528ad6c2b15cbd5eae7b",
+      "mtime_ns": 1794801207652791669,
+      "ctime_ns": 1794801207652791669,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/WHO/et_gho_sample.json": {
+      "sha256": "1debed5a77e860a8c10ec495342a6b09a2bd4f0258684eac515100469c8d9b12",
+      "mtime_ns": 1794801207656792044,
+      "ctime_ns": 1794801207656792044,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/README.md": {
+      "sha256": "319872a9d43d016eed5d75356c8b232f69db055df9134bdf48a84955d1012f2e",
+      "mtime_ns": 1794801336716902717,
+      "ctime_ns": 1794801336716902717,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/tuberculose-donnees-declaration-obligatoire_dep-metadata.json": {
+      "sha256": "78993e64de635d60b2c8e9dcf45673ed1c04c33fcce3676e6952d64d12018fc2",
+      "mtime_ns": 1794801279915572624,
+      "ctime_ns": 1794801279915572624,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/legionellose-donnees-declaration-obligatoire-sample.json": {
+      "sha256": "fb773891646f265de5a9f83c57a36a0bf46119efa1e1f748e0de516ba5c4584f",
+      "mtime_ns": 1794801279915572624,
+      "ctime_ns": 1794801279915572624,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/infection-invasive-a-meningocoque-notifications-region-metadata.json": {
+      "sha256": "26f648fce14efda7dee935c67ab402f35a9dc47ad665892810a7b589cb79291b",
+      "mtime_ns": 1794801279915572624,
+      "ctime_ns": 1794801279915572624,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/rougeole-donnees-declaration-obligatoire-sample.json": {
+      "sha256": "1cd6bdeceac45b5125d4f44bafbdc73e2d945aef519f961ec07c7a6f92663700",
+      "mtime_ns": 1794801305505973963,
+      "ctime_ns": 1794801305505973963,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/rougeole-donnees-declaration-obligatoire-metadata.json": {
+      "sha256": "b670b4128e4d110b527d60fc5ffc5805924fe98650b31bf209529bf94a938570",
+      "mtime_ns": 1794801279915572624,
+      "ctime_ns": 1794801279915572624,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/legionellose-donnees-declaration-obligatoire-metadata.json": {
+      "sha256": "de4c4c15b5f5bd473dd486dce27cac794516446b6b3b0515e986061e050864a7",
+      "mtime_ns": 1794801279915572624,
+      "ctime_ns": 1794801279915572624,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/hepatite-a-donnees-declaration-obligatoire-sample.json": {
+      "sha256": "4d9f73c1e69860addc4e061c2ffe5eb378c4c143bb16fba4a658c73acc98aec3",
+      "mtime_ns": 1794801279915572624,
+      "ctime_ns": 1794801279915572624,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/infection-invasive-a-meningocoque-notifications-region-sample.json": {
+      "sha256": "c185cb6f304eaa765b4c034173b1c1863500df12b28160e84112965664b73ecf",
+      "mtime_ns": 1794801279915572624,
+      "ctime_ns": 1794801279915572624,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/hepatite-a-donnees-declaration-obligatoire-metadata.json": {
+      "sha256": "a8181eb5be56265199b5bb8c393aec6de04865f95e6c9231b1a792e473bacaf2",
+      "mtime_ns": 1794801279915572624,
+      "ctime_ns": 1794801279915572624,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/SPF/tuberculose-donnees-declaration-obligatoire_dep-sample.json": {
+      "sha256": "d5fe581da031f8094c43b5c907af9156f02d53ed92fd8760e9c516b39e66baab",
+      "mtime_ns": 1794801279915572624,
+      "ctime_ns": 1794801279915572624,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/CR/bulletin_28_2026.pdf": {
+      "sha256": "da7f582b27bbacc4152fcb899a85051b5bde81674932fdfcc7c1d2e2f29a6c3b",
+      "mtime_ns": 1794801262121902912,
+      "ctime_ns": 1794801262121902912,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/CR/README.md": {
+      "sha256": "d969062e17c37765c7485cbdbd8ca3b27055e26e9e064ac277b320b787a3457a",
+      "mtime_ns": 1794802261243657955,
+      "ctime_ns": 1794802261243657955,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/CR/morbidity_2015.pdf": {
+      "sha256": "e9742e32e4f8245586b0054a07aa2210ee1e0371f5514fd28c6fe404115435c9",
+      "mtime_ns": 1794801262113902161,
+      "ctime_ns": 1794801262113902161,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/WPRO/README.md": {
+      "sha256": "6fa4dc5654c450ed8d1610a1db9a598edd5cbc95c10fcaeaf67e5db815fa0eeb",
+      "mtime_ns": 1794801941477651926,
+      "ctime_ns": 1794801941477651926,
+      "mtime_and_ctime_before_test_start": true
+    },
+    "tests/fixtures/ingestion/WPRO/dengue_20261029.pdf": {
+      "sha256": "67175858edf5134bc8fd255032ed70788818711362fd601e5aff439f9e1b425e",
+      "mtime_ns": 1794801819686223329,
+      "ctime_ns": 1794801819686223329,
+      "mtime_and_ctime_before_test_start": true
+    }
+  }
+}

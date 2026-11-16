@@ -21,6 +21,7 @@ from src.core import get_database, get_logger
 from src.core.country_library import get_country_bootstrap_config
 from src.core.country_library import SUBDIVISION_REGISTRY
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
+from src.core.remaining_country_sources import WHO_COUNTRIES, SPF_TERRITORIES, EXTRA_SOURCE_CONTRACTS, source_contract
 from src.core.disease_mutation_lock import acquire_country_data_mutation_lock
 from src.core.task_manager import task_manager
 from src.data.crawlers.au import AU_STATE_SUBDIVISIONS
@@ -54,6 +55,19 @@ class CrawlService:
     """Orchestrates the three-phase crawl → parse → store pipeline."""
 
     _PIPELINES: Dict[str, _PipelineSpec] = {
+        'CL': _PipelineSpec('_execute_cl_surveillance', 'ChileENOHistoricalUpdater'),
+        'CO': _PipelineSpec('_execute_co_surveillance', 'ColombiaINSSivigilaUpdater'),
+        'MW': _PipelineSpec('_execute_mw_surveillance', 'MalawiPHIMIDSRUpdater'),
+        'ZA': _PipelineSpec('_execute_za_surveillance', 'SouthAfricaNICDNMCUpdater'),
+        'ID': _PipelineSpec('_execute_id_surveillance', 'IndonesiaKemkesProfileUpdater'),
+        'MX': _PipelineSpec('_execute_mx_surveillance', 'MexicoDGEAnnualUpdater'),
+        'NG': _PipelineSpec("_execute_ng_surveillance", 'NigeriaNCDCUpdater'),
+        'KH': _PipelineSpec("_execute_kh_surveillance", 'CambodiaCamEWARNWeeklyUpdater'),
+        'AR': _PipelineSpec("_execute_ar_surveillance", 'ArgentinaBENUpdater'),
+        'PE': _PipelineSpec("_execute_pe_surveillance", 'PeruCDCWeeklyUpdater'),
+        "TH": _PipelineSpec("_execute_th_dds_weekly", "ThailandDDSWeeklyUpdater"),
+        "MY": _PipelineSpec("_execute_my_annual", "MYAnnualUpdater"),
+        "NL": _PipelineSpec("_execute_nl_annual", "NLNotifiableAnnualUpdater"),
         "CN": _PipelineSpec("_execute_cn_cdc"),
         "US": _PipelineSpec("_execute_us_weekly", "USWeeklyUpdater"),
         "JP": _PipelineSpec("_execute_jp_weekly", "JPWeeklyUpdater"),
@@ -85,6 +99,10 @@ class CrawlService:
         "CH": _PipelineSpec("_execute_ch_monthly", "CHMonthlyUpdater"),
         "IS": _PipelineSpec("_execute_is_mixed", "ISMultiFrequencyUpdater"),
     }
+    for _code in WHO_COUNTRIES:
+        _PIPELINES[_code] = _PipelineSpec("_execute_who_country_annual", "WHOAnnualUpdater")
+    for _code in SPF_TERRITORIES:
+        _PIPELINES[_code] = _PipelineSpec("_execute_spf_overseas_annual", "SPFOverseasUpdater")
     for _ecdc_country_code in ECDC_BASELINE_COUNTRY_CODES:
         _PIPELINES.setdefault(
             _ecdc_country_code,
@@ -113,6 +131,19 @@ class CrawlService:
     for _state in _br_states.values():
         _PIPELINES[f"BR-{_state}"] = _PipelineSpec("_execute_br_monthly", "BRMonthlyUpdater")
     _SERIES_SOURCE_IDS: Dict[str, str | Dict[str, str]] = {
+        'CL': 'SRC_CL_ENO',
+        'CO': 'SRC_CO_INS_SIVIGILA',
+        'MW': 'SRC_MW_PHIM_IDSR',
+        'ZA': 'SRC_ZA_NICD_NMC',
+        'ID': 'SRC_ID_KEMKES_PROFILE',
+        'MX': 'SRC_MX_DGE_ANNUAL',
+        'NG': 'SRC_NG_NCDC',
+        'KH': 'SRC_KH_CAMEWARN',
+        'AR': 'SRC_AR_BEN',
+        'PE': 'SRC_PE_CDC',
+        "TH": "SRC_TH_DOE506",
+        "MY": "SRC_MY_MOH_STD",
+        "NL": "SRC_NL_RIVM_NOTIFIABLE",
         "US": {
             "US CDC NNDSS": "SRC_US_NNDSS",
             "US CDC NHSS": "SRC_US_NHSS",
@@ -162,6 +193,9 @@ class CrawlService:
             f"SRC_{_ecdc_country_code}_ECDC_ATLAS",
         )
 
+    for _code in (*WHO_COUNTRIES, *SPF_TERRITORIES):
+        _SERIES_SOURCE_IDS[_code] = source_contract(_code)["source_id"]
+
     @classmethod
     def supported_country_codes(cls) -> List[str]:
         """Return country codes with implemented crawl pipelines."""
@@ -174,6 +208,48 @@ class CrawlService:
 
     @staticmethod
     def _make_updater(updater_name: str, country_code: Optional[str] = None):
+        if updater_name == "CostaRicaNotificationsUpdater":
+            from src.data.processors.cr_notifications import CostaRicaNotificationsUpdater
+            return CostaRicaNotificationsUpdater()
+        if updater_name == "WPRODengueUpdater":
+            from src.data.processors.wpro_dengue import WPRODengueUpdater
+            return WPRODengueUpdater(country_code)
+        if updater_name == "WHOAnnualUpdater":
+            from src.data.processors.who_annual import WHOAnnualUpdater
+            return WHOAnnualUpdater(country_code)
+        if updater_name == "SPFOverseasUpdater":
+            from src.data.processors.spf_overseas import SPFOverseasUpdater
+            return SPFOverseasUpdater(country_code)
+        if updater_name in {"MYWHOFluNetUpdater", "MYWHOAnnualUpdater"}:
+            from importlib import import_module
+            module = "my_who_flunet" if updater_name == "MYWHOFluNetUpdater" else "my_who_annual"
+            return getattr(import_module(f"src.data.processors.{module}"), updater_name)()
+        if updater_name == "MalaysiaIDengueDailyUpdater":
+            from src.data.processors.my_dengue import MalaysiaIDengueDailyUpdater
+            return MalaysiaIDengueDailyUpdater()
+        if updater_name in {"NLVirologicalWeeklyUpdater", "NLRespiratoryWeeklyUpdater"}:
+            from importlib import import_module
+            return getattr(import_module("src.data.processors.nl_weekly"), updater_name)()
+        if updater_name == "ThailandDDSTableauUpdater":
+            from src.data.processors.th_tableau import ThailandDDSTableauUpdater
+            return ThailandDDSTableauUpdater()
+        if updater_name == "ThailandIDTHHistoryUpdater":
+            from src.data.processors.th_id_th import ThailandIDTHHistoryUpdater
+            return ThailandIDTHHistoryUpdater()
+        if updater_name == "ThailandDDSWeeklyUpdater":
+            from src.data.processors.th_dds import ThailandDDSWeeklyUpdater
+            return ThailandDDSWeeklyUpdater()
+        priority_modules = {'SouthAfricaNICDNMCUpdater': 'za', 'IndonesiaKemkesProfileUpdater': 'id', 'MexicoDGEAnnualUpdater': 'mx', 'NigeriaNCDCUpdater': 'ng', 'CambodiaCamEWARNWeeklyUpdater': 'kh', 'ArgentinaBENUpdater': 'ar', 'PeruCDCWeeklyUpdater': 'pe', 'ChileENOHistoricalUpdater': 'cl', 'ColombiaINSSivigilaUpdater': 'co', 'MalawiPHIMIDSRUpdater': 'mw'}
+        if updater_name in priority_modules:
+            from importlib import import_module
+            return getattr(import_module(f"src.data.processors.{priority_modules[updater_name]}"), updater_name)()
+        if updater_name == "ThailandDOE506MonthlyUpdater":
+            from src.data.processors.th import ThailandDOE506MonthlyUpdater
+            return ThailandDOE506MonthlyUpdater()
+        if updater_name in {"MYAnnualUpdater", "NLNotifiableAnnualUpdater"}:
+            from importlib import import_module
+            module = "my_notifiable" if updater_name == "MYAnnualUpdater" else "nl_notifiable"
+            return getattr(import_module(f"src.data.processors.{module}"), updater_name)()
         if updater_name == "CNProvinceUpdater":
             from src.data.processors.cn_provinces import CNProvinceUpdater
             return CNProvinceUpdater(country_code=str(country_code).upper())
@@ -349,7 +425,30 @@ class CrawlService:
         """
         normalized_country = (country_code or "").strip().upper()
         normalized_source = str(source or "all").strip().casefold()
-        if (
+        if normalized_country == "TH":
+            from src.core.source_scopes import canonicalize_task_source
+            source = canonicalize_task_source(source, country_code="TH")
+            normalized_source = source
+        if (normalized_country, normalized_source) in EXTRA_SOURCE_CONTRACTS:
+            extra = EXTRA_SOURCE_CONTRACTS[(normalized_country, normalized_source)]
+            pipeline = _PipelineSpec("_execute_remaining_extra", extra["updater"])
+        elif normalized_country == "MY" and normalized_source == "who_flunet_weekly":
+            pipeline = _PipelineSpec("_execute_my_who_flunet", "MYWHOFluNetUpdater")
+        elif normalized_country == "MY" and normalized_source == "who_gho_annual":
+            pipeline = _PipelineSpec("_execute_my_who_annual", "MYWHOAnnualUpdater")
+        elif normalized_country == "MY" and normalized_source == "my_idengue_daily":
+            pipeline = _PipelineSpec("_execute_my_dengue", "MalaysiaIDengueDailyUpdater")
+        elif normalized_country == "NL" and normalized_source == "rivm_virological_weekly":
+            pipeline = _PipelineSpec("_execute_nl_weekly", "NLVirologicalWeeklyUpdater")
+        elif normalized_country == "NL" and normalized_source == "rivm_respiratory_weekly":
+            pipeline = _PipelineSpec("_execute_nl_weekly", "NLRespiratoryWeeklyUpdater")
+        elif normalized_country == "TH" and normalized_source == "th_dds_tableau":
+            pipeline = _PipelineSpec("_execute_th_tableau", "ThailandDDSTableauUpdater")
+        elif normalized_country == "TH" and normalized_source == "th_id_th_history":
+            pipeline = _PipelineSpec("_execute_th_id_th_history", "ThailandIDTHHistoryUpdater")
+        elif normalized_country == "TH" and normalized_source in {"th_doe506_monthly", "doe506", "th_506"}:
+            pipeline = _PipelineSpec("_execute_th_monthly", "ThailandDOE506MonthlyUpdater")
+        elif (
             normalized_country in ECDC_BASELINE_COUNTRY_CODES
             and normalized_source in {"ecdc", "atlas", "ecdc_atlas_annual"}
         ):
@@ -541,17 +640,69 @@ class CrawlService:
     async def _execute_cn_province(self, *, task, source, force, process, save_raw, fill_missing, updater):
         from src.services.ingestion.countries import cn_province
         from src.services.ingestion.runner import run_surveillance
+        known_case_months, recently_attempted_months = (set(), set())
+        bounded_backfill = bool(fill_missing and source == "cn_province_monthly_report"
+                                and not force and (task.input_data or {}).get("start_year") is None)
+        if bounded_backfill:
+            known_case_months, recently_attempted_months = await self._cn_province_backfill_state(task, updater.country_code)
         options = {
             "country_code": updater.country_code,
-            "force": bool(force or fill_missing),
+            "force": bool(force),
+            "fill_missing": bounded_backfill,
             "start_year": (task.input_data or {}).get("start_year"),
             "recent_months": updater.refresh_recent_months,
+            "known_case_months": sorted(known_case_months),
+            "recently_attempted_months": sorted(recently_attempted_months),
         }
         return await run_surveillance(
             self, task=task, updater=updater, connector=cn_province,
             source=source, force=force, process=process,
             strategy=cn_province.ProvinceCommitStrategy(), connector_options=options,
         )
+
+    @staticmethod
+    async def _cn_province_backfill_state(task, country_code):
+        """Read covered months and recent attempted gaps before opening source HTTP."""
+        from datetime import timedelta
+        from sqlalchemy import text
+        from src.core.database import get_db
+        from src.domain import SourceArtifact
+
+        known, attempted = set(), set()
+        cutoff = datetime.now(timezone.utc) - timedelta(days=180)
+        async with get_db() as db:
+            result = await db.execute(text("""
+                SELECT DISTINCT to_char(o.time AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM')
+                FROM disease_series_observations o
+                JOIN disease_surveillance_series s USING (series_code)
+                WHERE o.geography_key = :geography_key AND o.value IS NOT NULL
+                  AND s.source_system = 'SRC_CN_PROV_MONTHLY_REPORT'
+                  AND s.metric_type = 'case_notifications'
+                  AND o.time >= '2022-01-01'
+            """), {"geography_key": f"country:{country_code}:national"})
+            known.update(str(value) for value in result.scalars())
+            tasks = (await db.execute(select(Task).where(
+                Task.country_id == task.country_id,
+                Task.created_at >= cutoff,
+            ).order_by(Task.created_at.desc()))).scalars().all()
+            monthly_tasks = [previous for previous in tasks
+                             if isinstance(previous.input_data, dict)
+                             and previous.input_data.get("source") == "cn_province_monthly_report"]
+            artifacts = (await db.execute(select(SourceArtifact).join(
+                Task, Task.task_uuid == SourceArtifact.task_uuid,
+            ).where(
+                Task.country_id == task.country_id,
+                SourceArtifact.created_at >= cutoff,
+                SourceArtifact.kind == "province_plan",
+            ))).scalars().all()
+        for previous in monthly_tasks:
+            audit = (previous.metadata_ or {}).get("province_ingestion") or {}
+            backfill = (audit.get("source_audit") or {}).get("history_backfill") or {}
+            attempted.update(str(month) for month in backfill.get("selected_months") or [])
+        for artifact in artifacts:
+            backfill = (artifact.metadata_ or {}).get("history_backfill") or {}
+            attempted.update(str(month) for month in backfill.get("selected_months") or [])
+        return known, attempted
 
     async def _execute_cn_cdc(
         self,
@@ -584,13 +735,20 @@ class CrawlService:
         """Run the source through durable collection stages."""
         from src.services.ingestion.countries import us
         from src.services.ingestion.runner import run_surveillance
+        task_input = task.input_data or {}
+        scheduled = bool(task_input.get("scheduled_trigger")) and not bool(task_input.get("manual_trigger"))
+        # Old queued tasks may still carry fill_missing=True after a schedule
+        # edit. Routine checks must not silently turn into historical replays.
+        effective_fill_missing = fill_missing and not (scheduled and not force)
         async with get_database() as db:
             options = await us.plan_collection(
                 db, country_code=updater.country_code, source=source,
-                force=force, fill_missing=fill_missing,
+                force=force, fill_missing=effective_fill_missing,
             )
+        logger.info("US collection plan | country={} source={} scheduled={} force={} fill_missing={} plan={}",
+                    updater.country_code, source, scheduled, force, effective_fill_missing, options)
         return await run_surveillance(self, task=task, updater=updater, connector=us, source=source, force=force, process=process, connector_options={
-            **options, "subdivision": updater.country_code != "US", "task_uuid": task.task_uuid,
+            **options, "subdivision": updater.country_code != "US", "task_uuid": task.task_uuid, "force": force,
         })
 
 
@@ -958,6 +1116,262 @@ class CrawlService:
             force=force, process=process,
             connector_options={"force": force, "fill_missing": fill_missing, "start_year": start_year, "history_csv": updater.output_csv},
         )
+
+    async def _execute_th_tableau(
+        self, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.countries import th_tableau
+        from src.services.ingestion.countries.th_refresh import runtime_options
+        if fill_missing:
+            raise ValueError("TH Tableau imports explicit closed source periods; fill_missing is not supported")
+        options = task.input_data or {}
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=th_tableau, source=source,
+            force=force, process=process,
+            connector_options=await runtime_options(updater, options, default_basis="report"),
+        )
+
+    async def _execute_th_id_th_history(
+        self, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.countries import th_id_th
+        if fill_missing:
+            raise ValueError("ID_TH source gaps remain unknown; fill_missing is not supported")
+        options = task.input_data or {}
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=th_id_th, source=source,
+            force=force, process=process,
+            connector_options={key: options[key] for key in
+                ("start_year", "end_year", "archive_root") if options.get(key) is not None},
+        )
+
+    async def _execute_th_dds_weekly(
+        self, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.countries import th_dds
+        from src.services.ingestion.countries.th_refresh import runtime_options
+        if fill_missing:
+            raise ValueError("TH DDS exposes source-selected closed weeks; fill_missing is not supported")
+        options = task.input_data or {}
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=th_dds, source=source,
+            force=force, process=process,
+            connector_options=await runtime_options(updater, options, default_basis="onset"),
+        )
+
+    async def _execute_th_monthly(
+        self, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.countries import th
+        from src.data.crawlers.th import DEFAULT_START_YEAR, DEFAULT_END_YEAR, DEFAULT_MAX_REPORTS
+        if fill_missing:
+            raise ValueError("TH refreshes validated annual reports; fill_missing is not supported")
+        options = task.input_data or {}
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=th, source=source,
+            force=force, process=process,
+            connector_options={
+                "start_year": options.get("start_year") or DEFAULT_START_YEAR,
+                "end_year": options.get("end_year") or DEFAULT_END_YEAR,
+                "disease_codes": options.get("disease_codes"),
+                "mode": options.get("mode"),
+                "backfill_history": bool(options.get("backfill_history", False)),
+                "report_offset": options.get("report_offset", 0),
+                "max_reports": options.get("max_reports", DEFAULT_MAX_REPORTS),
+                "resume_plan_hash": options.get("resume_plan_hash"),
+                "recent_years": options.get("recent_years", 3),
+            },
+        )
+
+    async def _execute_priority_surveillance(
+        self, module: str, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        """Capture full discovered historical archives before source-native storage."""
+        from importlib import import_module
+        from src.services.ingestion.runner import run_surveillance
+        if fill_missing:
+            raise ValueError("Official report archives require full refresh; fill_missing is unsupported")
+        supplied = task.input_data or {}
+        start_year = supplied.get("start_year") or updater.full_history_start_year
+        # Automation checks live catalogues over a bounded revision window;
+        # explicit historical requests and forced full replays retain their scope.
+        from src.core.source_channels import source_channel
+        channel = source_channel(updater.country_code, source)
+        managed_update = supplied.get("scheduled_trigger") or supplied.get("automation_job_id")
+        if channel and managed_update and not supplied.get("start_year") and not force:
+            years = max(1, min(24, int(supplied.get("revision_window_months") or channel["refresh_years"])))
+            start_year = max(updater.full_history_start_year, datetime.now(timezone.utc).year - years + 1)
+        if not updater.full_history_start_year <= int(start_year) <= datetime.now(timezone.utc).year:
+            raise ValueError("start_year is outside the official historical archive range")
+        options = {"start_year": int(start_year), "force": force}
+        if module in {"kh", "pe", "id"}:
+            from pathlib import Path
+            cache_name = {"kh": "camewarn-parses", "pe": "bulletin-parses", "id": "kemkes-parses"}[module]
+            options["parse_cache_directory"] = Path("data/cache") / module / cache_name
+            if module == "pe":
+                # The resumable historical supervisor has its own active .part
+                # files. Routine updates must never append to those transfers
+                # or race its parser cache's temporary-file replacement.
+                options["download_cache_directory"] = Path("data/cache/pe/routine-downloads")
+                options["parse_cache_directory"] = Path("data/cache/pe/routine-parses")
+        if supplied.get("end_year") is not None:
+            options["end_year"] = int(supplied["end_year"])
+        return await run_surveillance(
+            self, task=task, updater=updater,
+            connector=import_module(f"src.services.ingestion.countries.{module}"),
+            source=source, force=force, process=process, connector_options=options,
+        )
+
+    async def _execute_ng_surveillance(self, **kwargs) -> CrawlResult:
+        return await self._execute_priority_surveillance("ng", **kwargs)
+
+    async def _execute_cl_surveillance(self, **kwargs) -> CrawlResult:
+        return await self._execute_priority_surveillance('cl', **kwargs)
+
+    async def _execute_co_surveillance(self, **kwargs) -> CrawlResult:
+        from src.services.ingestion import co_update_gate
+        from src.services.ingestion.runner import run_surveillance
+
+        if kwargs.get('fill_missing'):
+            raise ValueError('CO SIVIGILA requires the complete version-bound historical controller')
+        try:
+            return await run_surveillance(
+                self, task=kwargs['task'], updater=kwargs['updater'], connector=co_update_gate,
+                source=kwargs['source'], force=kwargs['force'], process=False,
+                connector_options={'force': kwargs['force']},
+            )
+        except BaseException as exc:
+            # The shared runner records the failed stage, but only completes its
+            # CrawlRun on success. Keep a failed metadata gate out of "running".
+            try:
+                prefix = f"data/raw/co/{kwargs['task'].task_uuid}/%"
+                async with get_database() as db:
+                    run_id = (await db.execute(select(CrawlRun.id).where(
+                        CrawlRun.raw_dir.like(prefix), CrawlRun.status == 'running'
+                    ).order_by(CrawlRun.id.desc()).limit(1))).scalar_one_or_none()
+                if run_id is not None:
+                    await self._finish_crawl_run(run_id, 0, 0, 0, status='failed', error=str(exc))
+            except Exception as cleanup_error:
+                logger.warning('Could not mark failed CO metadata gate CrawlRun: {}', cleanup_error)
+            raise
+
+    async def _execute_mw_surveillance(self, **kwargs) -> CrawlResult:
+        return await self._execute_priority_surveillance('mw', **kwargs)
+
+    async def _execute_za_surveillance(self, **kwargs) -> CrawlResult:
+        return await self._execute_priority_surveillance('za', **kwargs)
+
+    async def _execute_id_surveillance(self, **kwargs) -> CrawlResult:
+        return await self._execute_priority_surveillance('id', **kwargs)
+
+    async def _execute_mx_surveillance(self, **kwargs) -> CrawlResult:
+        return await self._execute_priority_surveillance('mx', **kwargs)
+
+    async def _execute_kh_surveillance(self, **kwargs) -> CrawlResult:
+        return await self._execute_priority_surveillance("kh", **kwargs)
+
+    async def _execute_ar_surveillance(self, **kwargs) -> CrawlResult:
+        return await self._execute_priority_surveillance("ar", **kwargs)
+
+    async def _execute_pe_surveillance(self, **kwargs) -> CrawlResult:
+        return await self._execute_priority_surveillance("pe", **kwargs)
+
+    async def _execute_notifiable_annual(
+        self, module: str, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        """Refresh complete official annual notification tables."""
+        from importlib import import_module
+        from src.services.ingestion.runner import run_surveillance
+        if fill_missing:
+            raise ValueError(f"{updater.country_code} refreshes the complete annual table; fill_missing is not supported")
+        raw_start = (task.input_data or {}).get("start_year")
+        try:
+            start_year = int(raw_start) if raw_start is not None else updater.full_history_start_year
+        except (TypeError, ValueError) as exc:
+            raise ValueError("start_year must be a valid year") from exc
+        if not updater.full_history_start_year <= start_year <= datetime.now(timezone.utc).year:
+            raise ValueError("start_year is outside the supported historical range")
+        return await run_surveillance(
+            self, task=task, updater=updater,
+            connector=import_module(f"src.services.ingestion.countries.{module}"),
+            source=source, force=force, process=process,
+            connector_options={"output_csv": updater.output_csv, "start_year": start_year, "force": force},
+        )
+
+    async def _execute_my_annual(self, **kwargs) -> CrawlResult:
+        return await self._execute_notifiable_annual("my_notifiable", **kwargs)
+
+    async def _execute_nl_annual(self, **kwargs) -> CrawlResult:
+        return await self._execute_notifiable_annual("nl_notifiable", **kwargs)
+
+    async def _execute_current_surveillance(
+        self, module: str, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        """Refresh explicit daily/weekly source facts without synthesizing gaps."""
+        from importlib import import_module
+        from src.services.ingestion.runner import run_surveillance
+        if fill_missing:
+            raise ValueError("Current surveillance sources do not support fill_missing")
+        inputs = task.input_data or {}
+        return await run_surveillance(
+            self, task=task, updater=updater,
+            connector=import_module(f"src.services.ingestion.countries.{module}"),
+            source=source, force=force, process=process,
+            connector_options={key: inputs[key] for key in ("start_year",)
+                               if inputs.get(key) is not None},
+        )
+
+    async def _execute_my_dengue(self, **kwargs) -> CrawlResult:
+        return await self._execute_current_surveillance("my_dengue", **kwargs)
+
+    async def _execute_nl_weekly(self, **kwargs) -> CrawlResult:
+        return await self._execute_current_surveillance("nl_weekly", **kwargs)
+
+    async def _execute_my_who_flunet(self, **kwargs) -> CrawlResult:
+        return await self._execute_current_surveillance("my_who_flunet", **kwargs)
+
+    async def _execute_my_who_annual(self, **kwargs) -> CrawlResult:
+        return await self._execute_current_surveillance("my_who_annual", **kwargs)
+
+    async def _execute_remaining_annual(self, module, *, task, source, force, process,
+                                        save_raw, fill_missing, updater):
+        from importlib import import_module
+        from src.core.source_scopes import canonicalize_task_source
+        from src.services.ingestion.runner import run_surveillance
+        if fill_missing:
+            raise ValueError("Annual reported sources do not support fill_missing")
+        options = {"country_code": updater.country_code}
+        if (updater.country_code, source) in EXTRA_SOURCE_CONTRACTS:
+            options["force"] = force
+        if (task.input_data or {}).get("start_year") is not None:
+            options["start_year"] = int(task.input_data["start_year"])
+        return await run_surveillance(
+            self, task=task, updater=updater,
+            connector=import_module(f"src.services.ingestion.countries.{module}"),
+            source=canonicalize_task_source(source, country_code=updater.country_code),
+            force=force, process=process, connector_options=options,
+        )
+
+    async def _execute_remaining_extra(self, **kwargs):
+        contract = EXTRA_SOURCE_CONTRACTS[(kwargs["updater"].country_code, kwargs["source"])]
+        return await self._execute_remaining_annual(contract["module"], **kwargs)
+
+    async def _execute_who_country_annual(self, **kwargs):
+        return await self._execute_remaining_annual("who_annual", **kwargs)
+
+    async def _execute_spf_overseas_annual(self, **kwargs):
+        return await self._execute_remaining_annual("spf_overseas", **kwargs)
 
     async def _execute_ecdc_annual(
         self, *, task: Task, source: str, force: bool, process: bool,

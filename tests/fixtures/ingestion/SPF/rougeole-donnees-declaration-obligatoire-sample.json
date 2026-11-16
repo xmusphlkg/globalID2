@@ -1,0 +1,27 @@
+{
+  "total_count": 2,
+  "results": [
+    {
+      "annee": "2005",
+      "libgeo": "Guadeloupe",
+      "reglib": "Guadeloupe",
+      "mdo_cl_age_rougeole": "0 an",
+      "rou": 0,
+      "population": 6047,
+      "tx": 0.0,
+      "dep": "971",
+      "reg": "01"
+    },
+    {
+      "annee": "2005",
+      "libgeo": "Guadeloupe",
+      "reglib": "Guadeloupe",
+      "mdo_cl_age_rougeole": "01 à 04 ans",
+      "rou": 1,
+      "population": 23929,
+      "tx": 4.179029629320072,
+      "dep": "971",
+      "reg": "01"
+    }
+  ]
+}

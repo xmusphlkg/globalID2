@@ -1,0 +1,130 @@
+{
+  "@odata.context": "https://ghoapi.azureedge.net/api/$metadata#Indicator",
+  "value": [
+    {
+      "IndicatorCode": "CHOLERA_0000000001",
+      "IndicatorName": "Number of reported cases of cholera",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "CHOLERA_0000000003",
+      "IndicatorName": "Cholera case fatality rate",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "CHOLERA_0000000002",
+      "IndicatorName": "Number of reported deaths from cholera",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "TB_c_newinc",
+      "IndicatorName": "Tuberculosis - new and relapse cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_47",
+      "IndicatorName": "Meningitis - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_51",
+      "IndicatorName": "H5N1 influenza - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_41",
+      "IndicatorName": "Diphtheria - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_48",
+      "IndicatorName": "Malaria - number of reported confirmed cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_50",
+      "IndicatorName": "Yellow fever - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_54",
+      "IndicatorName": "Number of reported cases of tuberculosis (DOTS)",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_56",
+      "IndicatorName": "Neonatal tetanus - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_57",
+      "IndicatorName": "Rubella - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_62",
+      "IndicatorName": "Measles - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_55",
+      "IndicatorName": "Congenital Rubella Syndrome - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_42",
+      "IndicatorName": "Japanese encephalitis - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_45",
+      "IndicatorName": "Number of new leprosy cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_49",
+      "IndicatorName": "Poliomyelitis - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_522",
+      "IndicatorName": "Number of reported cases of tuberculosis",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_53",
+      "IndicatorName": "Mumps - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_40",
+      "IndicatorName": "Cholera - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_43",
+      "IndicatorName": "Pertussis - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_46",
+      "IndicatorName": "Total tetanus - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "WHS3_52",
+      "IndicatorName": "Plague - number of reported cases",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "MALARIA001",
+      "IndicatorName": "Malaria - number of reported deaths",
+      "Language": "EN"
+    },
+    {
+      "IndicatorCode": "MALARIA_CONF_CASES",
+      "IndicatorName": "Number of confirmed malaria cases",
+      "Language": "EN"
+    }
+  ]
+}

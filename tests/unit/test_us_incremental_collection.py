@@ -14,6 +14,7 @@ from src.domain import Base, Country, DiseaseSeriesObservation, DiseaseSurveilla
 from src.services.ingestion.countries import us
 from src.data.crawlers.us import DEFAULT_CSV_API_URL, NNDSS_ARCHIVE_YEARS
 from src.services.exceptions import TaskCancelledError
+from src.domain.collection import RunStage, SourceArtifact
 
 
 @pytest.fixture
@@ -26,6 +27,7 @@ async def database():
     async with engine.begin() as connection:
         await connection.run_sync(lambda sync: Base.metadata.create_all(sync, tables=[
             Country.__table__, DiseaseSurveillanceSeries.__table__, DiseaseSeriesObservation.__table__,
+            RunStage.__table__, SourceArtifact.__table__,
         ]))
     maker = async_sessionmaker(engine, expire_on_commit=False)
     async with maker() as db:
@@ -39,6 +41,18 @@ async def database():
 
 def fact(day, *, series="nndss-holding", geography="country:US:national", year=None):
     return DiseaseSeriesObservation(time=datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc), series_code=series, geography_key=geography, dimension_key="all", value=1, unit="count", suppressed=False, quality_status="raw", raw_data={"MMWRYear": str(year or day.year)})
+
+
+def archive_receipt(year, *, scope="us", status="completed", process=True, artifact_attempt=1, stage_attempt=1):
+    identity = str(uuid4())
+    now = datetime.now(timezone.utc)
+    return [
+        SourceArtifact(task_uuid=identity, attempt=artifact_attempt, relative_path=f"data/raw/{scope}/{identity}/1/archive.json",
+                       sha256="a" * 64, byte_size=1, source_url="https://data.cdc.gov/resource/fixture.json",
+                       kind="archive_json", metadata_={"year": year, "resource": {"id": "fixture"}}, created_at=now),
+        RunStage(task_uuid=identity, attempt=stage_attempt, stage="store", status=status,
+                 metrics={"process": process}, started_at=now, finished_at=now),
+    ]
 
 
 @pytest.mark.parametrize("latest,expected", [
@@ -85,16 +99,45 @@ async def test_default_does_not_repair_absent_archive_years(database):
     assert result["archive_years"] == ()
 
 
-async def test_fill_missing_uses_source_mmwr_year_instead_of_calendar_end_date(database):
+async def test_fill_missing_recognizes_successful_archives_without_national_archive_facts(database):
     database.add_all([
         fact(date(2026, 1, 10)),
-        fact(date(2015, 1, 3), year=2014),
-        fact(date(2021, 1, 2), year=2020),
+        fact(date(2015, 1, 3), year=2014, geography="country:US-CA:national"),
+        fact(date(2021, 1, 2), year=2020, geography="country:US-CA:national"),
+        *archive_receipt(2014), *archive_receipt(2020),
     ])
     await database.commit()
     result = await us.plan_collection(database, country_code="US", source="nndss_api", fill_missing=True)
     assert result["nndss_start"] is None
     assert result["archive_years"] == tuple(year for year in NNDSS_ARCHIVE_YEARS if year not in {2014, 2020})
+
+
+@pytest.mark.parametrize("overrides", [
+    {"status": "failed"}, {"status": "running"}, {"process": False},
+    {"artifact_attempt": 1, "stage_attempt": 2}, {"scope": "us-ca"},
+])
+async def test_incomplete_or_other_scope_receipts_do_not_hide_missing_national_archives(database, overrides):
+    database.add_all([fact(date(2026, 1, 10)), *archive_receipt(2020, **overrides)])
+    await database.commit()
+    plan = await us.plan_collection(database, country_code="US", source="nndss_api", fill_missing=True)
+    assert 2020 in plan["archive_years"]
+
+
+async def test_subdivision_accepts_own_and_national_receipts_but_not_another_state(database):
+    database.add_all([fact(date(2026, 1, 10), geography="country:US-CA:national"),
+                      *archive_receipt(2014), *archive_receipt(2015, scope="us-ca"),
+                      *archive_receipt(2016, scope="us-ny")])
+    await database.commit()
+    plan = await us.plan_collection(database, country_code="US-CA", source="nndss_api", fill_missing=True)
+    assert plan["archive_years"] == tuple(year for year in NNDSS_ARCHIVE_YEARS if year not in {2014, 2015})
+
+
+async def test_all_completed_archives_are_not_repeated_during_explicit_fill(database):
+    database.add(fact(date(2026, 1, 10)))
+    for year in NNDSS_ARCHIVE_YEARS:
+        database.add_all(archive_receipt(year))
+    await database.commit()
+    assert (await us.plan_collection(database, country_code="US", source="nndss_api", fill_missing=True))["archive_years"] == ()
 
 
 async def test_old_checkpoint_collects_revision_archive_and_newer_years(database):
@@ -208,14 +251,38 @@ async def test_dispatch_passes_database_plan_and_cancel_uuid_to_shared_runner(mo
     monkeypatch.setattr(crawl_service, "get_database", database)
     monkeypatch.setattr(us, "plan_collection", planner)
     monkeypatch.setattr(runner, "run_surveillance", execute)
-    task, updater = SimpleNamespace(task_uuid=str(uuid4())), SimpleNamespace(country_code="US")
+    task, updater = SimpleNamespace(task_uuid=str(uuid4()), input_data={}), SimpleNamespace(country_code="US")
     result = await crawl_service.CrawlService()._execute_us_weekly(task=task, updater=updater, source="all", force=False, fill_missing=False, process=True, save_raw=True)
     assert result == "done"
     assert planner.await_args.args == (db,)
     assert planner.await_args.kwargs == {"country_code":"US", "source":"all", "force":False, "fill_missing":False}
     assert execute.await_args.kwargs["connector_options"] == {
-        "nndss_start": (2025, 46), "archive_years": (), "subdivision": False, "task_uuid": task.task_uuid,
+        "nndss_start": (2025, 46), "archive_years": (), "subdivision": False, "task_uuid": task.task_uuid, "force": False,
     }
+
+
+@pytest.mark.parametrize("flags,force,expected_fill", [
+    ({"scheduled_trigger": True}, False, False),
+    ({"scheduled_trigger": True, "manual_trigger": True}, False, True),
+    ({"scheduled_trigger": True}, True, True),
+    ({}, False, True),
+])
+async def test_scheduled_tasks_bound_old_fill_missing_inputs_but_preserve_explicit_replays(monkeypatch, flags, force, expected_fill):
+    from src.services import crawl_service
+    from src.services.ingestion import runner
+    @asynccontextmanager
+    async def database():
+        yield object()
+    planner = AsyncMock(return_value={"nndss_start": None, "archive_years": ()})
+    monkeypatch.setattr(crawl_service, "get_database", database)
+    monkeypatch.setattr(us, "plan_collection", planner)
+    monkeypatch.setattr(runner, "run_surveillance", AsyncMock())
+    await crawl_service.CrawlService()._execute_us_weekly(
+        task=SimpleNamespace(task_uuid=str(uuid4()), input_data=flags),
+        updater=SimpleNamespace(country_code="US"), source="nndss_api",
+        force=force, fill_missing=True, process=True, save_raw=True,
+    )
+    assert planner.await_args.kwargs["fill_missing"] is expected_fill
 
 
 async def test_cancel_after_archive_catalog_stops_before_any_table_request(monkeypatch):

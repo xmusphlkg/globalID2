@@ -33,7 +33,19 @@
         "nhss_hiv"
       ],
       "cadence": "mixed_weekly_annual",
-      "reporting_area": "TOTAL"
+      "reporting_area": "US RESIDENTS",
+      "supports_fill_missing": true,
+      "default_fill_missing": false,
+      "source_policies": {
+        "nndss_api": {
+          "supports_fill_missing": true,
+          "default_fill_missing": false
+        },
+        "nhss_hiv": {
+          "supports_fill_missing": false,
+          "default_fill_missing": false
+        }
+      }
     },
     "parser_config": {
       "primary": "us_cdc_multi_source"
@@ -615,13 +627,28 @@
     "data_source_url": "https://www.ages.at/en/human/disease/ages-radar-for-infectious-diseases",
     "data_source_type": "official_monthly_csv",
     "crawler_config": {
-      "sources": ["ages_radar"], "cadence": "monthly",
-      "source_update_cadence": "monthly_revisable", "refresh_recent_months": 3, "dynamic_revision_enabled": true,
-      "reporting_area": "national", "geography_key": "country:AT:national", "reuse_status": "license_review_pending"
+      "sources": [
+        "ages_radar"
+      ],
+      "cadence": "monthly",
+      "source_update_cadence": "monthly_revisable",
+      "refresh_recent_months": 3,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:AT:national",
+      "reuse_status": "license_review_pending"
     },
-    "parser_config": {"primary": "at_ages_radar_monthly"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "MONTHLY", "lang": "de-AT"},
+    "parser_config": {
+      "primary": "at_ages_radar_monthly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "de-AT"
+    },
     "notes": "AGES Radar monthly national source. Internal ingestion retains native categories; public release is disabled pending licence review."
   },
   "DE": {
@@ -629,13 +656,29 @@
     "data_source_url": "https://survstat.rki.de/Content/Query/Create.aspx",
     "data_source_type": "official_webforms_csv_export",
     "crawler_config": {
-      "sources": ["rki_survstat"], "cadence": "weekly", "source_update_cadence": "weekly_revisable", "full_history_start_year": 2001,
-      "refresh_recent_weeks": 12, "dynamic_revision_enabled": true,
-      "reporting_area": "national", "geography_key": "country:DE:national", "export_format": "zip_csv"
+      "sources": [
+        "rki_survstat"
+      ],
+      "cadence": "weekly",
+      "source_update_cadence": "weekly_revisable",
+      "full_history_start_year": 2001,
+      "refresh_recent_weeks": 12,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:DE:national",
+      "export_format": "zip_csv"
     },
-    "parser_config": {"primary": "de_rki_survstat_weekly"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "WEEKLY", "lang": "de-DE"},
+    "parser_config": {
+      "primary": "de_rki_survstat_weekly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "de-DE"
+    },
     "notes": "RKI SurvStat national weekly notification export; raw ZIP exports are retained and recent weeks are overwritten for revisions."
   },
   "FI": {
@@ -858,12 +901,16 @@
     "data_source_url": "https://www.cda.gov.sg/resources/weekly-infectious-diseases-bulletin-2026/",
     "data_source_type": "official_csv_xlsx_pdf",
     "crawler_config": {
-      "sources": ["cda_weekly_bulletin"],
+      "sources": [
+        "cda_weekly_bulletin"
+      ],
       "cadence": "weekly",
       "full_history_start_year": 2012,
       "historical_csv_end_year": 2022,
       "cda_workbook_start_year": 2023,
-      "cda_pdf_fallback_years": [2023],
+      "cda_pdf_fallback_years": [
+        2023
+      ],
       "cda_xlsx_start_year": 2024,
       "refresh_recent_weeks": 12,
       "reporting_area": "national",
@@ -877,12 +924,17 @@
         "history_lookback_days": 730
       }
     },
-    "parser_config": {"primary": "sg_cda_weekly_notifications"},
+    "parser_config": {
+      "primary": "sg_cda_weekly_notifications"
+    },
     "disease_mapping_rules": {
       "strategy": "db_first",
       "fallback": "quarantine_unmapped"
     },
-    "report_config": {"default_type": "WEEKLY", "lang": "en-SG"},
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "en-SG"
+    },
     "notes": "Singapore weekly case notifications: 2012-2022 official data.gov.sg CSV history and 2023+ CDA annual workbooks, with 2023 weekly PDFs as fallback. Public release is enabled by explicit operator authorization; CDA source terms remain recorded as requiring written permission."
   },
   "FR": {
@@ -890,7 +942,9 @@
     "data_source_url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
     "data_source_type": "official_ecdc_rest_aggregate",
     "crawler_config": {
-      "sources": ["ecdc_atlas_annual"],
+      "sources": [
+        "ecdc_atlas_annual"
+      ],
       "cadence": "annual_revisable",
       "source_update_cadence": "daily_availability_check",
       "full_history_start_year": 1990,
@@ -907,79 +961,276 @@
         "history_lookback_days": 7300
       }
     },
-    "parser_config": {"primary": "ecdc_atlas_annual_reported_cases"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "ANNUAL", "lang": "fr-FR"},
+    "parser_config": {
+      "primary": "ecdc_atlas_annual_reported_cases"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "fr-FR"
+    },
     "notes": "France annual reported-case baseline from the ECDC Surveillance Atlas. ECDC and the reporting Member State are attributed; absent year/topic cells remain unknown and explicit zeroes are preserved."
   },
   "ES": {
     "public_release_enabled": true,
     "data_source_url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
     "data_source_type": "official_ecdc_rest_aggregate",
-    "crawler_config": {"sources": ["ecdc_atlas_annual"], "cadence": "annual_revisable", "source_update_cadence": "daily_availability_check", "full_history_start_year": 1990, "dataset_id": 27, "dataset_code": "CURRENT.GENERAL", "reporting_area": "national", "geography_key": "country:ES:national", "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution", "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.", "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties", "series_quality_guard": {"mode": "fail_closed", "registry_coverage": "required", "history_lookback_days": 7300}},
-    "parser_config": {"primary": "ecdc_atlas_annual_reported_cases"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "ANNUAL", "lang": "es-ES"},
+    "crawler_config": {
+      "sources": [
+        "ecdc_atlas_annual"
+      ],
+      "cadence": "annual_revisable",
+      "source_update_cadence": "daily_availability_check",
+      "full_history_start_year": 1990,
+      "dataset_id": 27,
+      "dataset_code": "CURRENT.GENERAL",
+      "reporting_area": "national",
+      "geography_key": "country:ES:national",
+      "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution",
+      "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.",
+      "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 7300
+      }
+    },
+    "parser_config": {
+      "primary": "ecdc_atlas_annual_reported_cases"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "es-ES"
+    },
     "notes": "Spain annual reported-case baseline from the ECDC Surveillance Atlas; absent cells remain unknown and explicit zeroes are preserved."
   },
   "IT": {
     "public_release_enabled": true,
     "data_source_url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
     "data_source_type": "official_ecdc_rest_aggregate",
-    "crawler_config": {"sources": ["ecdc_atlas_annual"], "cadence": "annual_revisable", "source_update_cadence": "daily_availability_check", "full_history_start_year": 1990, "dataset_id": 27, "dataset_code": "CURRENT.GENERAL", "reporting_area": "national", "geography_key": "country:IT:national", "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution", "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.", "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties", "series_quality_guard": {"mode": "fail_closed", "registry_coverage": "required", "history_lookback_days": 7300}},
-    "parser_config": {"primary": "ecdc_atlas_annual_reported_cases"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "ANNUAL", "lang": "it-IT"},
+    "crawler_config": {
+      "sources": [
+        "ecdc_atlas_annual"
+      ],
+      "cadence": "annual_revisable",
+      "source_update_cadence": "daily_availability_check",
+      "full_history_start_year": 1990,
+      "dataset_id": 27,
+      "dataset_code": "CURRENT.GENERAL",
+      "reporting_area": "national",
+      "geography_key": "country:IT:national",
+      "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution",
+      "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.",
+      "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 7300
+      }
+    },
+    "parser_config": {
+      "primary": "ecdc_atlas_annual_reported_cases"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "it-IT"
+    },
     "notes": "Italy annual reported-case baseline from the ECDC Surveillance Atlas; absent cells remain unknown and explicit zeroes are preserved."
   },
   "PT": {
     "public_release_enabled": true,
     "data_source_url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
     "data_source_type": "official_ecdc_rest_aggregate",
-    "crawler_config": {"sources": ["ecdc_atlas_annual"], "cadence": "annual_revisable", "source_update_cadence": "daily_availability_check", "full_history_start_year": 1990, "dataset_id": 27, "dataset_code": "CURRENT.GENERAL", "reporting_area": "national", "geography_key": "country:PT:national", "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution", "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.", "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties", "series_quality_guard": {"mode": "fail_closed", "registry_coverage": "required", "history_lookback_days": 7300}},
-    "parser_config": {"primary": "ecdc_atlas_annual_reported_cases"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "ANNUAL", "lang": "pt-PT"},
+    "crawler_config": {
+      "sources": [
+        "ecdc_atlas_annual"
+      ],
+      "cadence": "annual_revisable",
+      "source_update_cadence": "daily_availability_check",
+      "full_history_start_year": 1990,
+      "dataset_id": 27,
+      "dataset_code": "CURRENT.GENERAL",
+      "reporting_area": "national",
+      "geography_key": "country:PT:national",
+      "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution",
+      "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.",
+      "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 7300
+      }
+    },
+    "parser_config": {
+      "primary": "ecdc_atlas_annual_reported_cases"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "pt-PT"
+    },
     "notes": "Portugal annual reported-case baseline from the ECDC Surveillance Atlas; absent cells remain unknown and explicit zeroes are preserved."
   },
   "PL": {
     "public_release_enabled": true,
     "data_source_url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
     "data_source_type": "official_ecdc_rest_aggregate",
-    "crawler_config": {"sources": ["ecdc_atlas_annual"], "cadence": "annual_revisable", "source_update_cadence": "daily_availability_check", "full_history_start_year": 1990, "dataset_id": 27, "dataset_code": "CURRENT.GENERAL", "reporting_area": "national", "geography_key": "country:PL:national", "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution", "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.", "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties", "series_quality_guard": {"mode": "fail_closed", "registry_coverage": "required", "history_lookback_days": 7300}},
-    "parser_config": {"primary": "ecdc_atlas_annual_reported_cases"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "ANNUAL", "lang": "pl-PL"},
+    "crawler_config": {
+      "sources": [
+        "ecdc_atlas_annual"
+      ],
+      "cadence": "annual_revisable",
+      "source_update_cadence": "daily_availability_check",
+      "full_history_start_year": 1990,
+      "dataset_id": 27,
+      "dataset_code": "CURRENT.GENERAL",
+      "reporting_area": "national",
+      "geography_key": "country:PL:national",
+      "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution",
+      "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.",
+      "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 7300
+      }
+    },
+    "parser_config": {
+      "primary": "ecdc_atlas_annual_reported_cases"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "pl-PL"
+    },
     "notes": "Poland annual reported-case baseline from the ECDC Surveillance Atlas; absent cells remain unknown and explicit zeroes are preserved."
   },
   "CZ": {
     "public_release_enabled": true,
     "data_source_url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
     "data_source_type": "official_ecdc_rest_aggregate",
-    "crawler_config": {"sources": ["ecdc_atlas_annual"], "cadence": "annual_revisable", "source_update_cadence": "daily_availability_check", "full_history_start_year": 1990, "dataset_id": 27, "dataset_code": "CURRENT.GENERAL", "reporting_area": "national", "geography_key": "country:CZ:national", "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution", "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.", "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties", "series_quality_guard": {"mode": "fail_closed", "registry_coverage": "required", "history_lookback_days": 7300}},
-    "parser_config": {"primary": "ecdc_atlas_annual_reported_cases"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "ANNUAL", "lang": "cs-CZ"},
+    "crawler_config": {
+      "sources": [
+        "ecdc_atlas_annual"
+      ],
+      "cadence": "annual_revisable",
+      "source_update_cadence": "daily_availability_check",
+      "full_history_start_year": 1990,
+      "dataset_id": 27,
+      "dataset_code": "CURRENT.GENERAL",
+      "reporting_area": "national",
+      "geography_key": "country:CZ:national",
+      "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution",
+      "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.",
+      "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 7300
+      }
+    },
+    "parser_config": {
+      "primary": "ecdc_atlas_annual_reported_cases"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "cs-CZ"
+    },
     "notes": "Czechia annual reported-case baseline from the ECDC Surveillance Atlas; absent cells remain unknown and explicit zeroes are preserved."
   },
   "GR": {
     "public_release_enabled": true,
     "data_source_url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
     "data_source_type": "official_ecdc_rest_aggregate",
-    "crawler_config": {"sources": ["ecdc_atlas_annual"], "cadence": "annual_revisable", "source_update_cadence": "daily_availability_check", "full_history_start_year": 1990, "dataset_id": 27, "dataset_code": "CURRENT.GENERAL", "reporting_area": "national", "geography_key": "country:GR:national", "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution", "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.", "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties", "series_quality_guard": {"mode": "fail_closed", "registry_coverage": "required", "history_lookback_days": 7300}},
-    "parser_config": {"primary": "ecdc_atlas_annual_reported_cases"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "ANNUAL", "lang": "el-GR"},
+    "crawler_config": {
+      "sources": [
+        "ecdc_atlas_annual"
+      ],
+      "cadence": "annual_revisable",
+      "source_update_cadence": "daily_availability_check",
+      "full_history_start_year": 1990,
+      "dataset_id": 27,
+      "dataset_code": "CURRENT.GENERAL",
+      "reporting_area": "national",
+      "geography_key": "country:GR:national",
+      "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution",
+      "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.",
+      "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 7300
+      }
+    },
+    "parser_config": {
+      "primary": "ecdc_atlas_annual_reported_cases"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "el-GR"
+    },
     "notes": "Greece annual reported-case baseline from the ECDC Surveillance Atlas; absent cells remain unknown and explicit zeroes are preserved."
   },
   "RO": {
     "public_release_enabled": true,
     "data_source_url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
     "data_source_type": "official_ecdc_rest_aggregate",
-    "crawler_config": {"sources": ["ecdc_atlas_annual"], "cadence": "annual_revisable", "source_update_cadence": "daily_availability_check", "full_history_start_year": 1990, "dataset_id": 27, "dataset_code": "CURRENT.GENERAL", "reporting_area": "national", "geography_key": "country:RO:national", "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution", "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.", "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties", "series_quality_guard": {"mode": "fail_closed", "registry_coverage": "required", "history_lookback_days": 7300}},
-    "parser_config": {"primary": "ecdc_atlas_annual_reported_cases"},
-    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
-    "report_config": {"default_type": "ANNUAL", "lang": "ro-RO"},
+    "crawler_config": {
+      "sources": [
+        "ecdc_atlas_annual"
+      ],
+      "cadence": "annual_revisable",
+      "source_update_cadence": "daily_availability_check",
+      "full_history_start_year": 1990,
+      "dataset_id": 27,
+      "dataset_code": "CURRENT.GENERAL",
+      "reporting_area": "national",
+      "geography_key": "country:RO:national",
+      "reuse_status": "ecdc_publication_and_reproduction_authorized_with_attribution",
+      "required_attribution": "Data provided by ECDC based on data reported by EU/EEA Member States.",
+      "reuse_terms_url": "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 7300
+      }
+    },
+    "parser_config": {
+      "primary": "ecdc_atlas_annual_reported_cases"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "ro-RO"
+    },
     "notes": "Romania annual reported-case baseline from the ECDC Surveillance Atlas; absent cells remain unknown and explicit zeroes are preserved."
   },
   "IS": {
@@ -1023,5 +1274,1741 @@
       "lang": "is-IS"
     },
     "notes": "Iceland Directorate of Health annual, monthly STI, weekly respiratory and historical Excel surveillance. Source series retain reporting basis and temporal grain separately."
+  },
+  "TH": {
+    "public_release_enabled": false,
+    "data_source_url": "https://doe.moph.go.th/dds-report/",
+    "data_source_type": "official_reports",
+    "crawler_config": {
+      "sources": [
+        "th_dds_weekly",
+        "th_dds_tableau",
+        "th_doe506_monthly",
+        "th_id_th_history"
+      ],
+      "cadence": "mixed_weekly_monthly",
+      "source_kind": "national_primary",
+      "source_update_cadence": "weekly_revisable",
+      "full_history_start_year": 2003,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:TH:national",
+      "reuse_status": "license_review_pending",
+      "source_policies": {
+        "th_dds_weekly": {
+          "source_kind": "national_primary",
+          "cadence": "weekly",
+          "supports_start_year": false,
+          "public_release_enabled": false
+        },
+        "th_doe506_monthly": {
+          "source_kind": "history",
+          "cadence": "monthly",
+          "full_history_start_year": 2003,
+          "supports_start_year": true,
+          "recent_years": 3,
+          "public_release_enabled": false
+        },
+        "th_id_th_history": {
+          "source_kind": "history",
+          "cadence": "weekly",
+          "full_history_start_year": 2020,
+          "supports_start_year": true,
+          "public_release_enabled": false
+        },
+        "th_dds_tableau": {
+          "source_kind": "national_primary",
+          "cadence": "weekly",
+          "supports_start_year": false,
+          "public_release_enabled": false
+        }
+      },
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 9000
+      }
+    },
+    "parser_config": {
+      "primary": "th_dds_weekly_pdf",
+      "history": "th_doe506_monthly_rtf"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "th-TH"
+    },
+    "notes": "DDS national closed-week onset reports and independent Report 506 monthly history from advertised 2003 onward. Retain every source disease category and reporting basis; never difference cumulative reports or sum overlapping categories. Discover live year links and refresh recent closed-year revisions; missing reports remain explicit gaps. ID_TH user-curated weekly archive is a separate provenance and reporting-basis contract. The live DDS Tableau national report is independently identified; merged source labels remain merged and report/onset bases stay separate."
+  },
+  "MY": {
+    "public_release_enabled": false,
+    "data_source_url": "https://data.gov.my/data-catalogue/std_state",
+    "data_source_type": "official_parquet",
+    "crawler_config": {
+      "sources": [
+        "moh_std_annual",
+        "my_idengue_daily",
+        "who_flunet_weekly",
+        "who_gho_annual"
+      ],
+      "cadence": "mixed",
+      "source_kind": "national_primary",
+      "source_update_cadence": "source_specific",
+      "full_history_start_year": 2017,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": false,
+      "reporting_area": "national",
+      "geography_key": "country:MY:national",
+      "license": "source_specific",
+      "source_policies": {
+        "moh_std_annual": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "CC BY 4.0",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "supports_fill_missing": false,
+          "default_fill_missing": false
+        },
+        "my_idengue_daily": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "daily",
+          "source_update_cadence": "daily",
+          "license": "review_required",
+          "public_release_enabled": false,
+          "supports_start_year": false,
+          "supports_fill_missing": false,
+          "default_fill_missing": false
+        },
+        "who_flunet_weekly": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "weekly",
+          "source_update_cadence": "weekly",
+          "license": "review_required",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1996,
+          "supports_fill_missing": false,
+          "default_fill_missing": false
+        },
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "review_required",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1954,
+          "supports_fill_missing": false,
+          "default_fill_missing": false
+        }
+      }
+    },
+    "parser_config": {
+      "primary": "my_moh_std_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "ms-MY"
+    },
+    "notes": "Independent daily iDengue observations, WHO FluNet laboratory weekly returns, WHO GHO annual reported indicators and annual STD notifications. Preserve source-native metrics, reporting origins, denominators and geography; never difference ambiguous cumulative dengue totals or merge laboratory detections with notification counts. Broader Malaysian disease coverage remains incomplete. Public snapshot validation is pending."
+  },
+  "NL": {
+    "public_release_enabled": false,
+    "public_source_systems": [
+      "SRC_NL_ECDC_ATLAS"
+    ],
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen",
+    "data_source_type": "official_html_table",
+    "crawler_config": {
+      "sources": [
+        "rivm_notifiable_annual",
+        "rivm_virological_weekly",
+        "rivm_respiratory_weekly"
+      ],
+      "cadence": "mixed",
+      "source_kind": "national_primary",
+      "source_update_cadence": "source_specific",
+      "full_history_start_year": 2016,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": false,
+      "reporting_area": "national",
+      "geography_key": "country:NL:national",
+      "source_policies": {
+        "rivm_notifiable_annual": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "annual",
+          "public_release_enabled": false,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": false
+        },
+        "rivm_virological_weekly": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "weekly",
+          "source_update_cadence": "weekly",
+          "public_release_enabled": false,
+          "supports_start_year": false,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": false
+        },
+        "rivm_respiratory_weekly": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "weekly",
+          "source_update_cadence": "weekly",
+          "public_release_enabled": false,
+          "supports_start_year": false,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": false
+        }
+      }
+    },
+    "parser_config": {
+      "primary": "nl_rivm_notifiable_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "nl-NL"
+    },
+    "notes": "Separate RIVM annual notifications, virological weekly laboratory returns and respiratory weekly surveillance. Keep laboratory detections, positivity, incidence and admissions in their own source-native series with original denominators and time evidence. Annual Caribbean-only observations retain separate geography. Independent of the ECDC annual baseline; native public snapshot validation is pending."
+  },
+  "BQ": {
+    "parent_country_code": "NL",
+    "location_type": "territory",
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen",
+    "data_source_type": "parent_country_feed",
+    "crawler_config": {
+      "sources": [],
+      "collection_country_code": "NL",
+      "collection_source": "rivm_notifiable_annual",
+      "source_system": "SRC_NL_RIVM_NOTIFIABLE",
+      "geography_key": "country:BQ:national",
+      "cadence": "annual",
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "public_release_enabled": false
+    },
+    "parser_config": {
+      "primary": "nl_rivm_notifiable_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "nl-BQ"
+    },
+    "notes": "Caribbean Netherlands geography retained from the Netherlands RIVM annual notification table. Collected and refreshed by the NL rivm_notifiable_annual job; no independent BQ collection task. Source-native series retain NL ownership and BQ geography. Public release remains disabled pending validated mappings and snapshots."
+  },
+  "NG": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://ncdc.gov.ng/reports/weekly",
+    "data_source_type": "official_reports",
+    "crawler_config": {
+      "sources": [
+        "ncdc_surveillance"
+      ],
+      "cadence": "weekly",
+      "source_kind": "national_primary",
+      "source_update_cadence": "weekly_revisable",
+      "full_history_start_year": 2016,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "license_review_pending",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      },
+      "revision_window_unit": "years",
+      "default_revision_window": 2,
+      "refresh_recent_years": 2,
+      "current_month_status": "source_published_periods_only",
+      "official_channel_url": "https://ncdc.gov.ng/reports/weekly",
+      "archive_url": "https://ncdc.gov.ng/diseases/sitreps",
+      "discovery_urls": [
+        "https://ncdc.gov.ng/reports/weekly",
+        "https://ncdc.gov.ng/diseases/sitreps"
+      ]
+    },
+    "parser_config": {
+      "primary": "ncdc_surveillance"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "en-NG"
+    },
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+  },
+  "KH": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://cdcmoh.gov.kh/surveillance/camewarn",
+    "data_source_type": "official_reports",
+    "crawler_config": {
+      "sources": [
+        "kh_camewarn_weekly"
+      ],
+      "cadence": "weekly",
+      "source_kind": "national_primary",
+      "source_update_cadence": "weekly_revisable",
+      "full_history_start_year": 2015,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "license_review_pending",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      },
+      "revision_window_unit": "years",
+      "default_revision_window": 2,
+      "refresh_recent_years": 2,
+      "current_month_status": "source_published_periods_only",
+      "official_channel_url": "https://cdcmoh.gov.kh/surveillance/camewarn",
+      "archive_url": "https://cdcmoh.gov.kh/surveillance/camewarn",
+      "discovery_urls": [
+        "https://cdcmoh.gov.kh/surveillance/camewarn"
+      ]
+    },
+    "parser_config": {
+      "primary": "kh_camewarn_weekly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "km-KH"
+    },
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+  },
+  "AR": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional",
+    "data_source_type": "official_reports",
+    "crawler_config": {
+      "sources": [
+        "ar_ben_weekly"
+      ],
+      "cadence": "weekly",
+      "source_kind": "national_primary",
+      "source_update_cadence": "weekly_revisable",
+      "full_history_start_year": 2009,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "license_review_pending",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      },
+      "revision_window_unit": "years",
+      "default_revision_window": 2,
+      "refresh_recent_years": 2,
+      "current_month_status": "source_published_periods_only",
+      "official_channel_url": "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional",
+      "archive_url": "https://www.argentina.gob.ar/salud/epidemiologia/boletines",
+      "discovery_urls": [
+        "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional",
+        "https://www.argentina.gob.ar/salud/epidemiologia/boletines"
+      ]
+    },
+    "parser_config": {
+      "primary": "ar_ben_weekly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "es-AR"
+    },
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+  },
+  "PE": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
+    "data_source_type": "official_reports",
+    "crawler_config": {
+      "sources": [
+        "pe_cdc_weekly"
+      ],
+      "cadence": "weekly",
+      "source_kind": "national_primary",
+      "source_update_cadence": "weekly_revisable",
+      "full_history_start_year": 1993,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "license_review_pending",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      },
+      "revision_window_unit": "years",
+      "default_revision_window": 2,
+      "refresh_recent_years": 2,
+      "current_month_status": "source_published_periods_only",
+      "official_channel_url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
+      "archive_url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
+      "discovery_urls": [
+        "https://epipublic.dge.gob.pe/publico/listado_ajax"
+      ]
+    },
+    "parser_config": {
+      "primary": "pe_cdc_weekly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "es-PE"
+    },
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+  },
+  "ZA": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
+    "data_source_type": "official_reports",
+    "crawler_config": {
+      "sources": [
+        "za_nicd_nmc"
+      ],
+      "cadence": "monthly",
+      "source_kind": "national_primary",
+      "source_update_cadence": "monthly_and_quarterly_revisable",
+      "full_history_start_year": 2023,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "license_review_pending",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      },
+      "revision_window_unit": "years",
+      "default_revision_window": 2,
+      "refresh_recent_years": 2,
+      "current_month_status": "source_published_periods_only",
+      "official_channel_url": "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
+      "archive_url": "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
+      "discovery_urls": [
+        "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
+        "https://www.nicd.ac.za/wp-json/wp/v2/media?search=NMCSS&per_page=100",
+        "https://www.nicd.ac.za/wp-json/wp/v2/media?search=Notifiable-Medical-Conditions&per_page=100"
+      ]
+    },
+    "parser_config": {
+      "primary": "za_nicd_nmc"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-ZA"
+    },
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+  },
+  "ID": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://kemkes.go.id/id/category-download/profil-kesehatan",
+    "data_source_type": "official_reports",
+    "crawler_config": {
+      "sources": [
+        "id_kemkes_profile"
+      ],
+      "cadence": "annual",
+      "source_kind": "national_primary",
+      "source_update_cadence": "annual_revisable",
+      "full_history_start_year": 2017,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "license_review_pending",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      },
+      "revision_window_unit": "years",
+      "default_revision_window": 3,
+      "refresh_recent_years": 3,
+      "current_month_status": "source_published_periods_only",
+      "official_channel_url": "https://kemkes.go.id/id/category-download/profil-kesehatan",
+      "archive_url": "https://kemkes.go.id/id/category-download/profil-kesehatan",
+      "discovery_urls": [
+        "https://kemkes.go.id/id/category-download/profil-kesehatan"
+      ]
+    },
+    "parser_config": {
+      "primary": "id_kemkes_profile"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "YEARLY",
+      "lang": "id-ID"
+    },
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+  },
+  "CL": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://datos.gob.cl/api/3/action/package_show?id=notificaciones-eno",
+    "data_source_type": "official_csv",
+    "crawler_config": {
+      "sources": [
+        "cl_eno_historical"
+      ],
+      "cadence": "annual",
+      "source_kind": "national_primary",
+      "source_update_cadence": "historical_revisable",
+      "full_history_start_year": 2007,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "source_terms_review_pending",
+      "revision_window_unit": "years",
+      "default_revision_window": 3,
+      "refresh_recent_years": 3,
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      }
+    },
+    "parser_config": {
+      "primary": "cl_eno_historical"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "YEARLY",
+      "lang": "es-CL"
+    },
+    "notes": "Historical ENO notifications; preserve source geography, diagnosis and reporting period. Public release awaits source and snapshot review."
+  },
+  "CO": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.datos.gov.co/d/4hyg-wa9d",
+    "data_source_type": "official_api",
+    "crawler_config": {
+      "sources": [
+        "co_ins_sivigila_historical"
+      ],
+      "cadence": "weekly",
+      "source_kind": "national_primary",
+      "source_update_cadence": "historical_revisable",
+      "full_history_start_year": 2007,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "cc_by_sa_4_0",
+      "revision_window_unit": "years",
+      "default_revision_window": 3,
+      "refresh_recent_years": 3,
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      }
+    },
+    "parser_config": {
+      "primary": "co_ins_sivigila_historical"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "es-CO"
+    },
+    "notes": "Historical municipality-level SIVIGILA aggregate; no national rollup before completeness audit."
+  },
+  "MW": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://phim.health.gov.mw/",
+    "data_source_type": "official_reports",
+    "crawler_config": {
+      "sources": [
+        "mw_phim_idsr_weekly"
+      ],
+      "cadence": "weekly",
+      "source_kind": "national_primary",
+      "source_update_cadence": "weekly_revisable",
+      "full_history_start_year": 2025,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "source_terms_review_pending",
+      "revision_window_unit": "years",
+      "default_revision_window": 2,
+      "refresh_recent_years": 2,
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      }
+    },
+    "parser_config": {
+      "primary": "mw_phim_idsr_weekly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "en-MW"
+    },
+    "notes": "Published IDSR weeks only; preserve suspected and confirmed counts and audit missing weeks."
+  },
+  "MX": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://epidemiologia.salud.gob.mx/anuario/html/index.html",
+    "data_source_type": "official_reports",
+    "crawler_config": {
+      "sources": [
+        "mx_dge_annual"
+      ],
+      "cadence": "annual",
+      "source_kind": "national_primary",
+      "source_update_cadence": "annual_revisable",
+      "full_history_start_year": 1984,
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "source_geographies",
+      "reuse_status": "license_review_pending",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 20000
+      },
+      "revision_window_unit": "years",
+      "default_revision_window": 3,
+      "refresh_recent_years": 3,
+      "current_month_status": "source_published_periods_only",
+      "official_channel_url": "https://epidemiologia.salud.gob.mx/anuario/html/index.html",
+      "archive_url": "https://epidemiologia.salud.gob.mx/anuario/html/index.html",
+      "discovery_urls": [
+        "https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html",
+        "https://epidemiologia.salud.gob.mx/anuario/html/incidencia_casos.html"
+      ]
+    },
+    "parser_config": {
+      "primary": "mx_dge_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "YEARLY",
+      "lang": "es-MX"
+    },
+    "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots."
+  },
+  "ET": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:ET:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "am-ET"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "KE": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:KE:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "en-KE"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "UG": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:UG:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "en-UG"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "GH": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:GH:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "en-GH"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "TZ": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:TZ:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "sw-TZ"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "PH": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:PH:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "en-PH"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "VN": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual",
+        "who_wpro_dengue"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:VN:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        },
+        "who_wpro_dengue": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "weekly",
+          "source_update_cadence": "weekly_revisable",
+          "license": "source_terms_review_pending",
+          "public_release_enabled": false,
+          "full_history_start_year": 2015,
+          "supports_start_year": false,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_live_directory_and_verified_reports",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required"
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "vi-VN"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "LA": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual",
+        "who_wpro_dengue"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:LA:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        },
+        "who_wpro_dengue": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "weekly",
+          "source_update_cadence": "weekly_revisable",
+          "license": "source_terms_review_pending",
+          "public_release_enabled": false,
+          "full_history_start_year": 2015,
+          "supports_start_year": false,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_live_directory_and_verified_reports",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required"
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "lo-LA"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "MM": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:MM:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "my-MM"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "BN": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:BN:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "ms-BN"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "TL": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:TL:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "pt-TL"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "PY": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:PY:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "es-PY"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "EC": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:EC:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "es-EC"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "CR": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual",
+        "cr_moh_notifications"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:CR:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        },
+        "cr_moh_notifications": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "mixed",
+          "source_update_cadence": "weekly_revisable",
+          "license": "source_terms_review_pending",
+          "public_release_enabled": false,
+          "full_history_start_year": 2014,
+          "supports_start_year": true,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_live_directory_and_verified_reports",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required"
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "es-CR"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "PA": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://www.who.int/data/gho",
+    "data_source_type": "official_odata",
+    "crawler_config": {
+      "sources": [
+        "who_gho_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1900,
+      "source_kind": "international_surveillance",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:PA:national",
+      "source_policies": {
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "WHO terms review pending",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1900,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "who_gho_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "es-PA"
+    },
+    "notes": "Country-reported WHO annual indicators only; national primary surveillance coverage remains to be verified. All published years are refreshed; counts/deaths and indicator definitions remain separate."
+  },
+  "GP": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://odisse.santepubliquefrance.fr/",
+    "data_source_type": "official_json",
+    "crawler_config": {
+      "sources": [
+        "spf_odisse_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1995,
+      "source_kind": "national_primary",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "territory",
+      "geography_key": "country:GP:national",
+      "source_policies": {
+        "spf_odisse_annual": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "Licence ouverte 2.0",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1995,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "spf_odisse_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "fr-GP"
+    },
+    "notes": "SPF department observations retained as explicit overseas territory facts. Preserve age and serogroup strata; missing territory-years are unknown. Refresh all published history."
+  },
+  "MQ": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://odisse.santepubliquefrance.fr/",
+    "data_source_type": "official_json",
+    "crawler_config": {
+      "sources": [
+        "spf_odisse_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1995,
+      "source_kind": "national_primary",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "territory",
+      "geography_key": "country:MQ:national",
+      "source_policies": {
+        "spf_odisse_annual": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "Licence ouverte 2.0",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1995,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "spf_odisse_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "fr-MQ"
+    },
+    "notes": "SPF department observations retained as explicit overseas territory facts. Preserve age and serogroup strata; missing territory-years are unknown. Refresh all published history."
+  },
+  "GF": {
+    "public_release_enabled": false,
+    "public_legacy_enabled": false,
+    "data_source_url": "https://odisse.santepubliquefrance.fr/",
+    "data_source_type": "official_json",
+    "crawler_config": {
+      "sources": [
+        "spf_odisse_annual"
+      ],
+      "cadence": "annual",
+      "full_history_start_year": 1995,
+      "source_kind": "national_primary",
+      "supports_start_year": true,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "territory",
+      "geography_key": "country:GF:national",
+      "source_policies": {
+        "spf_odisse_annual": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "Licence ouverte 2.0",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1995,
+          "supports_fill_missing": false,
+          "default_fill_missing": false,
+          "dynamic_revision_enabled": true,
+          "refresh_strategy": "full_published_history_upsert",
+          "series_quality_guard": {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 50000
+          },
+          "revision_window_unit": "years"
+        }
+      },
+      "revision_window_unit": "years"
+    },
+    "parser_config": {
+      "primary": "spf_odisse_annual"
+    },
+    "disease_mapping_rules": {
+      "strategy": "source_registry_v3",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "ANNUAL",
+      "lang": "fr-GF"
+    },
+    "notes": "SPF department observations retained as explicit overseas territory facts. Preserve age and serogroup strata; missing territory-years are unknown. Refresh all published history."
   }
 }
