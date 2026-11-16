@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import os
-import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
+
+from scripts.automation.isolated_site_build_fixture import copy_clean_site, fixture_build_environment
+from scripts.automation.prepare_site_build_fixture import prepare_fixture
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,52 +25,23 @@ _validator = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_validator)
 validate = _validator.validate
 ASTRO = ROOT / "astro-site"
-EXPORT_DIR = ASTRO / "src" / "data" / "situation" / "international"
 SCHEMA = "gids.situation_alerts.v1"
-RESEARCH_SNAPSHOT_DRIFT = "Research Radar source data changed during the Astro build"
-PRERENDER_MODULE_DRIFT = "dist/.prerender/chunks/"
 PERIOD = "2026-W43"
 OUTBREAK_ID = "OB-e2efixture01"
 
 
-def _retryable_astro_build_drift(completed: subprocess.CompletedProcess[str]) -> bool:
-    output = completed.stdout + completed.stderr
-    return (
-        completed.returncode == 3 and RESEARCH_SNAPSHOT_DRIFT in output
-    ) or (
-        completed.returncode != 0
-        and "Cannot find module" in output
-        and PRERENDER_MODULE_DRIFT in output
+def _run_astro_build(site: Path) -> subprocess.CompletedProcess[str]:
+    # A bounded clean fixture exercises the complete build and its default
+    # performance/SEO gates without reading the developer's multi-GB corpus.
+    return subprocess.run(
+        ["npm", "run", "build:astro"],
+        cwd=site,
+        check=False,
+        capture_output=True,
+        text=True,
+        env=fixture_build_environment(),
+        timeout=180,
     )
-
-
-def _run_astro_build() -> subprocess.CompletedProcess[str]:
-    def invoke() -> subprocess.CompletedProcess[str]:
-        shutil.rmtree(ASTRO / "dist", ignore_errors=True)
-        shutil.rmtree(ASTRO / ".astro", ignore_errors=True)
-        return subprocess.run(
-            ["npm", "run", "build:astro"],
-            cwd=ASTRO,
-            check=False,
-            capture_output=True,
-            text=True,
-            # The production control plane enables the independent Papers
-            # publication channel before invoking Astro.  This test exercises
-            # the Situation export and should use the same main-site scope;
-            # rendering the retired long-tail research pages would read the
-            # multi-gigabyte local catalogue and exceed the fixed test budget.
-            env={**os.environ,
-                 "GIDS_RESEARCH_PUBLICATION_ENABLED": "1",
-                 "GIDS_PERFORMANCE_BUDGET_PROFILE": "large-local-fixture"},
-            # The French locale doubles the static route surface; keep this
-            # deterministic build budget above production-sized render time.
-            timeout=300,
-        )
-
-    completed = invoke()
-    if _retryable_astro_build_drift(completed):
-        completed = invoke()
-    return completed
 
 
 def _alert(alert_id: str, country: str, name_en: str, name_zh: str, cases: int, deaths: int) -> dict:
@@ -95,6 +69,8 @@ def _alert(alert_id: str, country: str, name_en: str, name_zh: str, cases: int, 
         "cases": cases,
         "deaths": deaths,
         "count_basis": "confirmed",
+        "host_type": "human",
+        "count_unit": "people",
         "as_of": "2026-10-20",
         "published_date": "2026-10-21",
         "quote": f"{cases} confirmed cases were reported in {name_en}.",
@@ -105,7 +81,7 @@ def _alert(alert_id: str, country: str, name_en: str, name_zh: str, cases: int, 
     }
 
 
-def _payloads() -> dict[Path, dict]:
+def _payloads(export_dir: Path) -> dict[Path, dict]:
     alerts = [_alert("a1", "CN", "China", "中国", 12, 1), _alert("a2", "JP", "Japan", "日本", 3, 0)]
     outbreak = {
         "outbreak_id": OUTBREAK_ID,
@@ -132,7 +108,7 @@ def _payloads() -> dict[Path, dict]:
     }
     week = {"new_outbreaks": [OUTBREAK_ID], "updated_outbreaks": [], "new_places": 2, "alerts": 2}
     return {
-        EXPORT_DIR / "map.json": {
+        export_dir / "map.json": {
             "schema_version": SCHEMA,
             "generated_at": "2026-10-26T00:00:00+00:00",
             "as_of": "2026-10-26",
@@ -164,13 +140,13 @@ def _payloads() -> dict[Path, dict]:
             "facets": facets,
             "outbreaks": [outbreak],
         },
-        EXPORT_DIR / "outbreaks" / f"{OUTBREAK_ID}.json": {"schema_version": SCHEMA, "as_of": "2026-10-26", **outbreak, "alerts": alerts},
-        EXPORT_DIR / "by-country" / "CN.json": {"schema_version": SCHEMA, "as_of": "2026-10-26", "country": {"code": "CN", "name_en": "China", "name_zh": "中国"}, "alert_count": 1, "alerts": alerts[:1]},
-        EXPORT_DIR / "by-disease" / "D038.json": {"schema_version": SCHEMA, "as_of": "2026-10-26", "disease": {"disease_id": "D038", "name_en": "Influenza", "name_zh": "流感", "slug": "influenza"}, "alert_count": 2, "alerts": alerts},
-        EXPORT_DIR / "weekly" / f"{PERIOD}.json": {"schema_version": SCHEMA, "period_key": PERIOD, **week},
-        EXPORT_DIR / "weekly" / "index.json": {"schema_version": SCHEMA, "periods": [{"period_key": PERIOD, **week}]},
-        EXPORT_DIR / "monitoring.json": {"schema_version": SCHEMA, "as_of": "2026-10-26", "products": []},
-        EXPORT_DIR / "sources.json": {
+        export_dir / "outbreaks" / f"{OUTBREAK_ID}.json": {"schema_version": SCHEMA, "as_of": "2026-10-26", **outbreak, "alerts": alerts},
+        export_dir / "by-country" / "CN.json": {"schema_version": SCHEMA, "as_of": "2026-10-26", "country": {"code": "CN", "name_en": "China", "name_zh": "中国"}, "alert_count": 1, "alerts": alerts[:1]},
+        export_dir / "by-disease" / "D038.json": {"schema_version": SCHEMA, "as_of": "2026-10-26", "disease": {"disease_id": "D038", "name_en": "Influenza", "name_zh": "流感", "slug": "influenza"}, "alert_count": 2, "alerts": alerts},
+        export_dir / "weekly" / f"{PERIOD}.json": {"schema_version": SCHEMA, "period_key": PERIOD, **week},
+        export_dir / "weekly" / "index.json": {"schema_version": SCHEMA, "periods": [{"period_key": PERIOD, **week}]},
+        export_dir / "monitoring.json": {"schema_version": SCHEMA, "as_of": "2026-10-26", "products": []},
+        export_dir / "sources.json": {
             "schema_version": SCHEMA,
             "generated_at": "2026-10-26T00:00:00+00:00",
             "sources": [{"source_id": "who_don", "redistribution": "metadata_and_extract", "status": "ok", "fetched_count": 1, "error": None}],
@@ -178,39 +154,42 @@ def _payloads() -> dict[Path, dict]:
     }
 
 
+@pytest.mark.skipif(
+    not (ASTRO / "node_modules" / ".bin" / "astro").exists(),
+    reason="Astro dependencies are not installed",
+)
 def test_alert_export_builds_situation_pages_and_passes_the_release_gate(tmp_path: Path) -> None:
-    backup = tmp_path / "international-backup"
-    had_export = EXPORT_DIR.exists()
-    if had_export:
-        shutil.copytree(EXPORT_DIR, backup)
-        shutil.rmtree(EXPORT_DIR)
-    try:
-        for path, payload in _payloads().items():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-        completed = _run_astro_build()
-        assert completed.returncode == 0, completed.stdout + completed.stderr
+    site = copy_clean_site(ASTRO, tmp_path / "astro-site")
+    export_dir = site / "src" / "data" / "situation" / "international"
+    # Write the actual alert contract before filling only missing build inputs.
+    # This retains two human alerts, two countries, one outbreak and one week.
+    for path, payload in _payloads(export_dir).items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    prepare_fixture(site, environment={"CI": "1"})
+    completed = _run_astro_build(site)
+    (tmp_path / "astro-build.log").write_text(completed.stdout + completed.stderr, encoding="utf-8")
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "[performance-budget] PASS" in completed.stdout
+    assert "[seo-output] PASS" in completed.stdout
 
-        dist = ASTRO / "dist"
-        # Frontend contract: these paths exist in en/zh/fr after the rewrite.
-        latest = (dist / "situation" / "index.html").read_text(encoding="utf-8")
-        assert 'rel="canonical" href="https://globalinfectiousdisease.com/situation/"' in latest
-        assert "/situation/map-data.json" in latest
-        map_data = json.loads((dist / "situation" / "map-data.json").read_text(encoding="utf-8"))
-        assert any(point.get("disease_name_en") == "Influenza" for point in map_data.get("points") or [])
-        assert any(point.get("country_name_en") == "China" for point in map_data.get("points") or [])
-        for prefix in ("zh/", "fr/"):
-            assert (dist / prefix / "situation" / "index.html").is_file()
-        assert (dist / "situation" / "methodology" / "index.html").is_file()
-        week = (dist / "situation" / "weekly" / PERIOD / "index.html").read_text(encoding="utf-8")
-        assert PERIOD in week
-        assert (dist / "zh" / "situation" / "weekly" / PERIOD / "index.html").is_file()
-        sitemap = (dist / "sitemaps" / "situation.xml").read_text(encoding="utf-8")
-        assert f"https://globalinfectiousdisease.com/situation/weekly/{PERIOD}/" in sitemap
+    dist = site / "dist"
+    # Frontend contract: these paths exist in en/zh/fr after the rewrite.
+    latest = (dist / "situation" / "index.html").read_text(encoding="utf-8")
+    assert 'rel="canonical" href="https://globalinfectiousdisease.com/situation/"' in latest
+    assert "/situation/map-data.json" in latest
+    map_data = json.loads((dist / "situation" / "map-data.json").read_text(encoding="utf-8"))
+    assert any(point.get("disease_name_en") == "Influenza" for point in map_data.get("points") or [])
+    assert any(point.get("country_name_en") == "China" for point in map_data.get("points") or [])
+    for prefix in ("zh/", "fr/"):
+        assert (dist / prefix / "situation" / "index.html").is_file()
+    assert (dist / "situation" / "methodology" / "index.html").is_file()
+    week = (dist / "situation" / "weekly" / PERIOD / "index.html").read_text(encoding="utf-8")
+    assert PERIOD in week
+    for prefix in ("zh/", "fr/"):
+        assert (dist / prefix / "situation" / "weekly" / PERIOD / "index.html").is_file()
+    sitemap = (dist / "sitemaps" / "situation.xml").read_text(encoding="utf-8")
+    assert f"https://globalinfectiousdisease.com/situation/weekly/{PERIOD}/" in sitemap
 
-        result = validate(EXPORT_DIR, dist)
-        assert result["passed"], result["checks"]
-    finally:
-        shutil.rmtree(EXPORT_DIR, ignore_errors=True)
-        if had_export:
-            shutil.copytree(backup, EXPORT_DIR)
+    result = validate(export_dir, dist)
+    assert result["passed"], result["checks"]

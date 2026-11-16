@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: catalogue uniqueness checks do not retain entire HTML documents
+ok 1 - catalogue uniqueness checks do not retain entire HTML documents
+  ---
+  duration_ms: 1231.136966
+  type: 'test'
+  ...
+# Subtest: parses greater-than signs inside quoted meta content
+ok 2 - parses greater-than signs inside quoted meta content
+  ---
+  duration_ms: 0.990056
+  type: 'test'
+  ...
+# Subtest: wildcard redirect rules match by prefix and exact rules still win
+ok 3 - wildcard redirect rules match by prefix and exact rules still win
+  ---
+  duration_ms: 0.287572
+  type: 'test'
+  ...
+# Subtest: sitemap URLs on the papers host are not looked up in dist
+ok 4 - sitemap URLs on the papers host are not looked up in dist
+  ---
+  duration_ms: 2.979935
+  type: 'test'
+  ...
+# Subtest: reports directory is on the reports R2 host, outside the main Pages bundle
+ok 5 - reports directory is on the reports R2 host, outside the main Pages bundle
+  ---
+  duration_ms: 0.893152
+  type: 'test'
+  ...
+# Subtest: main-origin sitemap URLs that redirect to the papers host are reported
+ok 6 - main-origin sitemap URLs that redirect to the papers host are reported
+  ---
+  duration_ms: 1.141516
+  type: 'test'
+  ...
+# Subtest: only the declared Worker RSS endpoint bypasses static link lookup in serial and parallel audits
+ok 7 - only the declared Worker RSS endpoint bypasses static link lookup in serial and parallel audits
+  ---
+  duration_ms: 101.24604
+  type: 'test'
+  ...
+# Subtest: independent research routes are excluded while main-site links remain valid
+ok 8 - independent research routes are excluded while main-site links remain valid
+  ---
+  duration_ms: 2.474886
+  type: 'test'
+  ...
+# Subtest: links between papers pages share one host and are not flagged as redirects
+ok 9 - links between papers pages share one host and are not flagged as redirects
+  ---
+  duration_ms: 2.242547
+  type: 'test'
+  ...
+# Subtest: main-site pages linking to a papers path through the redirect are reported
+ok 10 - main-site pages linking to a papers path through the redirect are reported
+  ---
+  duration_ms: 2.392012
+  type: 'test'
+  ...
+# Subtest: main-site pages linking to the absolute papers URL are accepted
+ok 11 - main-site pages linking to the absolute papers URL are accepted
+  ---
+  duration_ms: 1.779226
+  type: 'test'
+  ...
+# Subtest: link lookup cache does not survive another audit
+ok 12 - link lookup cache does not survive another audit
+  ---
+  duration_ms: 2.202958
+  type: 'test'
+  ...
+# Subtest: parallel audit preserves global uniqueness, sitemap membership and cross-worker links
+ok 13 - parallel audit preserves global uniqueness, sitemap membership and cross-worker links
+  ---
+  duration_ms: 435.719377
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1927.467203
