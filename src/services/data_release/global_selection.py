@@ -29,7 +29,15 @@ def selected_id_predicate(db, batch: list[int]):
     5,000-element array for every row when channel/pending predicates are in
     SQL. Callers must validate those fields on locked rows before updating.
     """
-    if db.get_bind().dialect.name == "postgresql":
+    # Unit tests and lightweight callers may provide a database double that
+    # only implements ``execute``.  Real SQLAlchemy sessions expose
+    # ``get_bind``; keep the portable ``IN`` predicate when that capability is
+    # unavailable rather than requiring every test double to model the whole
+    # session API.
+    get_bind = getattr(db, "get_bind", None)
+    bind = get_bind() if callable(get_bind) else None
+    dialect = getattr(getattr(bind, "dialect", None), "name", None)
+    if dialect == "postgresql":
         return PublishDirty.id == any_(bindparam(
             "selected_dirty_ids", value=batch, type_=ARRAY(BigInteger), unique=True))
     return PublishDirty.id.in_(batch)
@@ -40,7 +48,9 @@ async def read_selected_batch(db, batch: list[int], *, lock: bool = False):
     if lock:
         statement = statement.with_for_update()
     # An identity-map entry may predate a competing publisher's commit.
-    return list((await db.execute(statement.execution_options(populate_existing=True))).scalars())
+    # ``ScalarResult.all`` works for SQLAlchemy sessions and keeps lightweight
+    # test doubles compatible with the result API they expose.
+    return (await db.execute(statement.execution_options(populate_existing=True))).scalars().all()
 
 
 async def acknowledge_locked_batch(db, ids: list[int], *, published_at, task_uuid: str):
