@@ -331,7 +331,7 @@ for _ecdc_code, _ecdc_meta in ECDC_BASELINE_COUNTRIES.items():
 
 
 COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
-    'CL': {'public_release_enabled': False, 'public_legacy_enabled': False,
+    'CL': {'public_release_enabled': True, 'public_legacy_enabled': False,
            'data_source_url': 'https://datos.gob.cl/dataset/notificaciones-eno',
            'data_source_type': 'official_csv',
            'crawler_config': {'sources': ['cl_eno_historical'], 'cadence': 'annual',
@@ -343,7 +343,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
            'parser_config': {'primary': 'cl_eno_historical'},
            'disease_mapping_rules': {'strategy': 'source_registry_v3', 'fallback': 'quarantine_unmapped'},
            'report_config': {'default_type': 'YEARLY', 'lang': 'es-CL'}},
-    'CO': {'public_release_enabled': False, 'public_legacy_enabled': False,
+    'CO': {'public_release_enabled': True, 'public_legacy_enabled': False,
            'data_source_url': 'https://www.datos.gov.co/d/4hyg-wa9d',
            'data_source_type': 'official_api',
            'crawler_config': {'sources': ['co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly'], 'cadence': 'weekly',
@@ -367,7 +367,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
            'parser_config': {'primary': 'co_ins_sivigila_historical'},
            'disease_mapping_rules': {'strategy': 'source_registry_v3', 'fallback': 'quarantine_unmapped'},
            'report_config': {'default_type': 'WEEKLY', 'lang': 'es-CO'}},
-    'MW': {'public_release_enabled': False, 'public_legacy_enabled': False,
+    'MW': {'public_release_enabled': True, 'public_legacy_enabled': False,
            'data_source_url': 'https://phim.health.gov.mw/',
            'data_source_type': 'official_reports',
            'crawler_config': {'sources': ['mw_phim_idsr_weekly'], 'cadence': 'weekly',
@@ -379,7 +379,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
            'parser_config': {'primary': 'mw_phim_idsr_weekly'},
            'disease_mapping_rules': {'strategy': 'source_registry_v3', 'fallback': 'quarantine_unmapped'},
            'report_config': {'default_type': 'WEEKLY', 'lang': 'en-MW'}},
-    'ZA': {'public_release_enabled': False,
+    'ZA': {'public_release_enabled': True,
  'public_legacy_enabled': False,
  'data_source_url': 'https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/',
  'data_source_type': 'official_reports',
@@ -413,7 +413,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
           'categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography '
           'semantics. Unreadable charts and unavailable files remain audited coverage gaps; no '
           'fabricated zeroes. Public release awaits verified mapped snapshots.'},
-    'ID': {'public_release_enabled': False,
+    'ID': {'public_release_enabled': True,
  'public_legacy_enabled': False,
  'data_source_url': 'https://kemkes.go.id/id/category-download/profil-kesehatan',
  'data_source_type': 'official_reports',
@@ -445,7 +445,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
           'categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography '
           'semantics. Unreadable charts and unavailable files remain audited coverage gaps; no '
           'fabricated zeroes. Public release awaits verified mapped snapshots.'},
-    'MX': {'public_release_enabled': False,
+    'MX': {'public_release_enabled': True,
  'public_legacy_enabled': False,
  'data_source_url': 'https://epidemiologia.salud.gob.mx/anuario/html/index.html',
  'data_source_type': 'official_reports',
@@ -478,7 +478,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
           'categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography '
           'semantics. Unreadable charts and unavailable files remain audited coverage gaps; no '
           'fabricated zeroes. Public release awaits verified mapped snapshots.'},
-    'NG': {'public_release_enabled': False,
+    'NG': {'public_release_enabled': True,
  'public_legacy_enabled': False,
  'data_source_url': 'https://ncdc.gov.ng/reports/weekly',
  'data_source_type': 'official_reports',
@@ -511,7 +511,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
           'categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography '
           'semantics. Unreadable charts and unavailable files remain audited coverage gaps; no '
           'fabricated zeroes. Public release awaits verified mapped snapshots.'},
-    'KH': {'public_release_enabled': False,
+    'KH': {'public_release_enabled': True,
  'public_legacy_enabled': False,
  'data_source_url': 'https://cdcmoh.gov.kh/surveillance/camewarn',
  'data_source_type': 'official_reports',
@@ -543,7 +543,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
           'categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography '
           'semantics. Unreadable charts and unavailable files remain audited coverage gaps; no '
           'fabricated zeroes. Public release awaits verified mapped snapshots.'},
-    'AR': {'public_release_enabled': False,
+    'AR': {'public_release_enabled': True,
  'public_legacy_enabled': False,
  'data_source_url': 'https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional',
  'data_source_type': 'official_reports',
@@ -576,7 +576,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
           'categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography '
           'semantics. Unreadable charts and unavailable files remain audited coverage gaps; no '
           'fabricated zeroes. Public release awaits verified mapped snapshots.'},
-    'PE': {'public_release_enabled': False,
+    'PE': {'public_release_enabled': True,
  'public_legacy_enabled': False,
  'data_source_url': 'https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/',
  'data_source_type': 'official_reports',
@@ -608,7 +608,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
           'categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography '
           'semantics. Unreadable charts and unavailable files remain audited coverage gaps; no '
           'fabricated zeroes. Public release awaits verified mapped snapshots.'},
-    "TH": {'public_release_enabled': False,
+    "TH": {'public_release_enabled': True,
      'data_source_url': 'https://doe.moph.go.th/dds-report/',
      'data_source_type': 'official_reports',
      'crawler_config': {'sources': ['th_dds_weekly',

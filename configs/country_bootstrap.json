@@ -623,7 +623,7 @@
     "notes": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed."
   },
   "AT": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "data_source_url": "https://www.ages.at/en/human/disease/ages-radar-for-infectious-diseases",
     "data_source_type": "official_monthly_csv",
     "crawler_config": {
@@ -1525,7 +1525,7 @@
     "public_source_notes": "Ministry of Health Malaysia, Annual STD Notifications (std_state), accessed 2026-11-16. CC BY 4.0. National annual report-date counts for AIDS, chancroid, gonorrhea, HIV and syphilis, 2017–2024. Only explicit Malaysia rows are selected; state rows are not added. HIV and AIDS stay separate, rates do not replace counts, and missing values are unknown. Broader national disease coverage remains incomplete. WHO, Malaysia WHO GHO Annual Reported Infections; country-reported annual indicators, accessed 2026-11-16. Original indicator titles, observed years, values and missing states are retained with each source series. Only the 18 reviewed count indicators are eligible; actual categories and available years vary by country. Annual data may lag and do not establish complete national surveillance coverage. WHO dataset terms permit public-health use with attribution; restrictions include commercial promotion, misrepresentation and implied endorsement. This independent presentation does not imply WHO endorsement. Terms: https://www.who.int/about/policies/publishing/data-policy/terms-and-conditions"
   },
   "NL": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_source_systems": [
       "SRC_NL_ECDC_ATLAS"
     ],
@@ -2245,7 +2245,7 @@
     "public_source_notes": "Ministerio de Salud de Chile, Notificaciones ENO, accessed 2026-11-16. The official CKAN catalogue declares CC0. Only reviewed confirmed national annual notification aggregates are presented; individual case rows are not released. The current CSV covers 2007–2024 and a changed disease inventory, while the catalogue text and methodology PDF still describe 2007–2022 and older exclusions. This upstream discrepancy is retained in the source audit; the older PDF is not asserted to describe the current CSV. Notification year is not onset year. Source-system periods and classifications remain separate; absent disease-years are unknown."
   },
   "CO": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "public_legacy_enabled": false,
     "data_source_url": "https://www.datos.gov.co/d/4hyg-wa9d",
     "data_source_type": "official_api",
