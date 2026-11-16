@@ -12,6 +12,7 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import event, func, insert, select, text, update
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.domain import Base, Country, DataReleaseJob, Task
@@ -21,12 +22,13 @@ from src.services import data_release_service as release
 from src.services.data_release import data_selection, projection
 from src.services.data_release.global_selection import (
     acknowledge_content_selection, acknowledge_global_selection, selection_batches,
+    selected_id_predicate,
 )
 from src.services.data_release.publication_execution import PublicationPlanError
 
 
-@pytest.fixture
-async def publication_database(monkeypatch):
+@pytest.fixture(params=["force_generic_plan", "force_custom_plan"])
+async def publication_database(monkeypatch, request):
     url = os.environ.get("TEST_SNAPSHOT_DATABASE_URL")
     if not url:
         pytest.skip("TEST_SNAPSHOT_DATABASE_URL must point to a disposable PostgreSQL database")
@@ -34,7 +36,9 @@ async def publication_database(monkeypatch):
     control = create_async_engine(url)
     async with control.begin() as connection:
         await connection.execute(text(f'CREATE SCHEMA "{schema}"'))
-    engine = create_async_engine(url, connect_args={"server_settings": {"search_path": schema}})
+    engine = create_async_engine(url, connect_args={"server_settings": {
+        "search_path": schema, "plan_cache_mode": request.param, "statement_timeout": "10000",
+    }})
     maker = async_sessionmaker(engine, expire_on_commit=False)
     try:
         async with engine.begin() as connection:
@@ -102,6 +106,10 @@ async def test_reviewed_selection_and_projection_above_asyncpg_parameter_limit(p
     def record(_connection, _cursor, statement, parameters, _context, _executemany):
         if "publish_dirty" in statement and statement.lstrip().startswith(("SELECT", "UPDATE")):
             bind_counts.append(len(parameters))
+            if 'ANY (' in statement:
+                predicate = statement.split('WHERE', 1)[1].split('RETURNING', 1)[0]
+                assert 'publish_dirty.line' not in predicate
+                assert 'publish_dirty.published_at' not in predicate
 
     event.listen(engine.sync_engine, "before_cursor_execute", record)
     task_uuid = str(uuid4())
@@ -258,3 +266,100 @@ async def test_empty_selection_never_becomes_full_or_acknowledges_pending(public
         await projection.commit_release_projection(db, task_uuid="publisher", country_codes=[], full=False, dirty_ids=[])
         await db.commit()
         assert (await db.get(PublishDirty, ids[0])).published_at is None
+
+
+@pytest.mark.parametrize('kind', ['projection', 'content'])
+@pytest.mark.parametrize('invalid', ['missing', 'rival'])
+async def test_acknowledgement_rechecks_last_batch_and_rolls_back_earlier_batches(publication_database, kind, invalid):
+    maker, _, _ = publication_database
+    ids = await seed(maker, 5001, line='knowledge')
+    async with maker() as rival:
+        if invalid == 'missing':
+            from sqlalchemy import delete
+            await rival.execute(delete(PublishDirty).where(PublishDirty.id == ids[-1]))
+        else:
+            await rival.execute(update(PublishDirty).where(PublishDirty.id == ids[-1]).values(
+                published_at=datetime.now(timezone.utc), published_task_uuid='rival'))
+        await rival.commit()
+    async with maker() as db:
+        with pytest.raises(ValueError, match='missing|already consumed'):
+            if kind == 'projection':
+                await projection.commit_release_projection(db, task_uuid='publisher', country_codes=[],
+                                                          full=False, dirty_ids=ids)
+            else:
+                await acknowledge_content_selection(db, ids, task_uuid='publisher',
+                                                    situation_detached=True, literature_detached=True)
+        await db.rollback()
+    async with maker() as db:
+        assert (await db.execute(select(func.count()).select_from(PublishDirty).where(
+            PublishDirty.published_task_uuid == 'publisher'))).scalar_one() == 0
+
+
+async def test_locked_id_read_refreshes_identity_map_and_holds_lock_until_transaction_end(publication_database):
+    maker, _, _ = publication_database
+    ids = await seed(maker, 1, line='literature')
+    async with maker() as db:
+        stale = await db.get(PublishDirty, ids[0])
+        async with maker() as rival:
+            await rival.execute(update(PublishDirty).where(PublishDirty.id == ids[0]).values(
+                published_at=datetime.now(timezone.utc), published_task_uuid='rival'))
+            await rival.commit()
+        assert stale.published_at is None
+        with pytest.raises(ValueError, match='already consumed'):
+            await acknowledge_global_selection(db, ids, line='literature', task_uuid='publisher')
+        assert stale.published_task_uuid == 'rival'
+        async with maker() as contender:
+            await contender.execute(text("SET LOCAL lock_timeout='100ms'"))
+            with pytest.raises(DBAPIError, match='lock timeout'):
+                await contender.execute(update(PublishDirty).where(PublishDirty.id == ids[0]).values(
+                    published_task_uuid='contender'))
+            await contender.rollback()
+        await db.rollback()
+
+
+@pytest.mark.parametrize('count', [32768, 100000])
+async def test_global_acknowledgement_above_bind_limit_keeps_own_timestamp_and_later_marker(publication_database, count):
+    maker, _, _ = publication_database
+    ids = await seed(maker, count, line='literature')
+    later = (await seed(maker, 1, line='literature', first_id=count + 1))[0]
+    async with maker() as db:
+        await acknowledge_global_selection(db, ids, line='literature', task_uuid='global-publisher')
+        await db.commit()
+        original = (await db.get(PublishDirty, ids[0])).published_at
+        await acknowledge_global_selection(db, ids, line='literature', task_uuid='global-publisher')
+        await db.commit()
+        assert (await db.get(PublishDirty, ids[0])).published_at == original
+        assert (await db.get(PublishDirty, later)).published_at is None
+        assert (await db.execute(select(func.count(), func.count(func.distinct(PublishDirty.published_at)))
+            .select_from(PublishDirty).where(PublishDirty.published_task_uuid == 'global-publisher'))).one() == (count, 1)
+
+
+async def test_large_id_only_select_and_update_use_pk_without_statistics(publication_database):
+    maker, _, _ = publication_database
+    ids = await seed(maker, 100000)
+    async with maker() as db:
+        # PREPARE explicitly exercises the server's cached-plan choice with
+        # the same typed single array emitted by the production helper.
+        stats = (await db.execute(text("SELECT reltuples FROM pg_class WHERE oid='publish_dirty'::regclass"))).scalar_one()
+        assert stats == -1  # Do not hide the regression with ANALYZE.
+        await db.execute(text('PREPARE marker_select(bigint[]) AS SELECT id,line,published_at FROM publish_dirty WHERE id=ANY($1) ORDER BY id FOR UPDATE'))
+        await db.execute(text("PREPARE marker_ack(bigint[]) AS UPDATE publish_dirty SET published_task_uuid='probe',published_at=now() WHERE id=ANY($1)"))
+        arguments = ','.join(str(value) for value in ids[:5000])
+        import json
+        for command in ['marker_select', 'marker_ack']:
+            raw = (await db.execute(text(f'EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) EXECUTE {command}(ARRAY[{arguments}]::bigint[])'))).scalar_one()
+            plan = json.loads(raw) if isinstance(raw, str) else raw
+            def walk(node):
+                yield node
+                for child in node.get('Plans', []):
+                    yield from walk(child)
+            mode = (await db.execute(text('SHOW plan_cache_mode'))).scalar_one()
+            if mode == 'force_generic_plan':
+                assert any(node.get('Index Name') == 'publish_dirty_pkey' for node in walk(plan[0]['Plan']))
+            assert not any(node.get('Index Name') == 'ix_publish_dirty_pending' for node in walk(plan[0]['Plan']))
+            assert plan[0]['Execution Time'] < 5000
+        await db.rollback()
+        predicate = selected_id_predicate(db, ids[:5000])
+        from sqlalchemy.dialects.postgresql.asyncpg import dialect
+        compiled = select(PublishDirty.id).where(predicate).compile(dialect=dialect())
+        assert len(compiled.params) == 1 and 'ANY' in str(compiled)

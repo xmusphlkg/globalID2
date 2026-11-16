@@ -10,6 +10,9 @@ from pathlib import Path
 import re
 
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRIES
+from src.core.reviewed_annual_admissions import reviewed_annual_admission_config
+from src.core.reviewed_national_admissions import reviewed_national_admission_config
+from src.core.reviewed_ar_hiv_admission import reviewed_ar_hiv_admission_config
 
 try:
     import pycountry
@@ -343,12 +346,24 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
     'CO': {'public_release_enabled': False, 'public_legacy_enabled': False,
            'data_source_url': 'https://www.datos.gov.co/d/4hyg-wa9d',
            'data_source_type': 'official_api',
-           'crawler_config': {'sources': ['co_ins_sivigila_historical'], 'cadence': 'weekly',
+           'crawler_config': {'sources': ['co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly'], 'cadence': 'weekly',
                               'full_history_start_year': 2007, 'supports_start_year': True,
                               'supports_fill_missing': False, 'default_fill_missing': False,
                               'dynamic_revision_enabled': True, 'reporting_area': 'source_geographies',
                               'reuse_status': 'cc_by_sa_4_0',
-                              'revision_window_unit': 'years', 'default_revision_window': 3},
+                              'revision_window_unit': 'years', 'default_revision_window': 3,
+                              'source_policies': {'co_ins_sivigila_current': {
+                                  'full_history_start_year': 2023, 'supports_start_year': True,
+                                  'supports_fill_missing': False, 'default_fill_missing': False,
+                                  'dynamic_revision_enabled': True, 'temporal_granularity': 'weekly',
+                                  'revision_window_unit': 'years', 'default_revision_window': 4,
+                                  'public_release_enabled': False},
+                                  'co_ins_bes_weekly': {
+                                  'full_history_start_year': 2025, 'supports_start_year': True,
+                                  'supports_fill_missing': False, 'default_fill_missing': False,
+                                  'dynamic_revision_enabled': True, 'temporal_granularity': 'weekly',
+                                  'revision_window_unit': 'years', 'default_revision_window': 2,
+                                  'public_release_enabled': False}}},
            'parser_config': {'primary': 'co_ins_sivigila_historical'},
            'disease_mapping_rules': {'strategy': 'source_registry_v3', 'fallback': 'quarantine_unmapped'},
            'report_config': {'default_type': 'WEEKLY', 'lang': 'es-CO'}},
@@ -1605,12 +1620,15 @@ def get_country_bootstrap_config(code: str) -> dict:
     """Return optional bootstrap config for known countries.
 
     Merge priority (low -> high):
-    1) hardcoded fallback in source code
+    1) hardcoded fallback and source-scoped publication admissions in source code
     2) registry-level default from bootstrap.json key "_DEFAULT"
     3) country-specific override from bootstrap.json key like "CN"
     """
     normalized = (code or "").strip().upper()
     fallback = COUNTRY_BOOTSTRAP_CONFIGS.get(normalized, {})
+    fallback = _deep_merge_dict(fallback, reviewed_annual_admission_config(normalized))
+    fallback = _deep_merge_dict(fallback, reviewed_national_admission_config(normalized))
+    fallback = _deep_merge_dict(fallback, reviewed_ar_hiv_admission_config(normalized))
     if normalized.startswith(("CN-", "BR-")):
         _ensure_code_subdivisions_registered()
         fallback = COUNTRY_BOOTSTRAP_CONFIGS.get(normalized, fallback)

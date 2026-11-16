@@ -25,12 +25,35 @@ from src.services.automation_service import automation_service
 
 def refresh_note(channel):
     strategy = channel['refresh_strategy']
+    if channel.get('integration_status') == 'automated_managed_runtime':
+        return ('Automatic updates are active via globalid-co-bes-refresh.timer: '
+                'hourly at :45 America/Bogota; new/revised report hashes only, '
+                'bounded model-center retries and deferred-report retries. '
+                'PDF revisions are rechecked after the 24-hour cache TTL. '
+                'The legacy daily scheduler entry stays disabled to prevent duplicate runs. '
+                'Pause with systemctl stop globalid-co-bes-refresh.timer and '
+                'globalid-co-bes-refresh.service. Original blanks and malformed printed '
+                'values remain explicit nulls; source coverage is not asserted complete. '
+                'Public release remains off. ')
+    if channel.get('integration_status') == 'backfilled_pending_runtime_rollout':
+        backfill = channel['backfill_summary']
+        periods = '; '.join(f"{year} W{weeks[0]}–W{weeks[1]}"
+                            for year, weeks in backfill['source_epi_weeks'].items())
+        return (f"Original cumulative annex backfilled as of {backfill['as_of']}: {periods}; "
+                f"{backfill['report_count']} official reports, {backfill['record_count']} rows. "
+                f"{backfill['source_unreadable_cells']} source-unreadable printed cells remain explicit nulls; "
+                'numerical coverage is incomplete. Disabled pending runtime rollout: '
+                'the accepted release does not include this BES connector. Public release remains off. ')
     if strategy == 'metadata_version_check_requires_verified_full_history':
         return ('Daily metadata and year-count check against independently verified full history. '
                 'A changed version requires the resumable full backfill and verification; '
                 'the check reports requires_full_backfill without importing a partial page. ')
-    if strategy == 'full_published_history_upsert':
+    if strategy in {'full_published_history_upsert', 'versioned_official_resource_full_replay'}:
         return 'Full published history is reread for revisions. '
+    if strategy == 'live_official_directory_with_recent_year_replay':
+        return ('Disabled pending a verified full PDF archive route and table contract. '
+                'A directory check or one bulletin cannot establish 2025 onward coverage. '
+                'When enabled, replay complete discovered reports in the bounded source window. ')
     if strategy == 'full_live_directory_and_verified_reports':
         return 'Discover the live directory and reread all reports in its verified source window; audit archive gaps. '
     return (f"Daily discovery with {channel['refresh_years']} calendar years of revision replay. "
@@ -40,7 +63,9 @@ def refresh_note(channel):
 def desired_jobs():
     return {
         f"{channel['country_code'].lower()}-{channel['scope'].replace('_', '-')}-daily": {
-            'name': f"{channel['country_code']} Official Surveillance Publication Check",
+            'name': (f"{channel['country_code']} INS BES Automatic Updates (managed hourly)"
+                     if channel.get('integration_status') == 'automated_managed_runtime'
+                     else f"{channel['country_code']} Official Surveillance Publication Check"),
             'country_code': channel['country_code'], 'source': channel['scope'],
             'enabled': channel.get('enabled_by_default', True), 'priority': 'normal', 'process': True, 'save_raw': True,
             'fill_missing': False, 'force': False, 'include_current_month': False,
@@ -66,11 +91,14 @@ class JobChange:
     changed_fields: tuple[str, ...]
 
 
-async def configure(*, apply=False, enable=False, countries=None):
+async def configure(*, apply=False, enable=False, countries=None, sources=None):
     desired = desired_jobs()
     if countries is not None:
         codes = {str(code).upper() for code in countries}
         desired = {key: value for key, value in desired.items() if value["country_code"] in codes}
+    if sources is not None:
+        scopes = {str(scope) for scope in sources}
+        desired = {key: value for key, value in desired.items() if value["source"] in scopes}
     async with get_db() as db:
         existing = {row.job_id: row for row in (await db.execute(select(AutomationJob).where(
             AutomationJob.job_id.in_(tuple(desired))))).scalars().all()}
@@ -101,7 +129,8 @@ async def configure(*, apply=False, enable=False, countries=None):
 
 async def main_async(args):
     try:
-        changes = await configure(apply=args.apply, enable=args.enable, countries=args.countries)
+        changes = await configure(apply=args.apply, enable=args.enable, countries=args.countries,
+                                  sources=args.sources)
         receipt = {'mode': 'applied' if args.apply else 'preview', 'jobs': [asdict(x) for x in changes]}
         if args.receipt:
             args.receipt.parent.mkdir(parents=True, exist_ok=True)
@@ -117,6 +146,7 @@ def main():
     parser.add_argument('--enable', action='store_true', help='Resume paused managed jobs explicitly')
     parser.add_argument('--receipt', type=Path)
     parser.add_argument('--countries', nargs='+', help='Only configure these countries; preserve other jobs')
+    parser.add_argument('--sources', nargs='+', help='Only configure these source scopes; preserve other jobs')
     asyncio.run(main_async(parser.parse_args()))
 
 

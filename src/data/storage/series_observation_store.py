@@ -557,7 +557,7 @@ class SeriesObservationStore:
         skipped_missing = 0
         for row in rows:
             missing_value_status = str(row.get("MissingValueStatus") or "").strip().lower()
-            explicit_missing = missing_value_status in {"source_missing", "not_applicable"}
+            explicit_missing = missing_value_status in {"source_missing", "source_unreadable", "not_applicable"}
             label = _first_text(
                 row,
                 "RawDiseaseLabel",
@@ -619,7 +619,7 @@ class SeriesObservationStore:
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
             missing_value_status = str(row.get("MissingValueStatus") or "").strip().lower()
-            explicit_missing = missing_value_status in {"source_missing", "not_applicable"}
+            explicit_missing = missing_value_status in {"source_missing", "source_unreadable", "not_applicable"}
             if report_time is None or (
                 value is None and not suppressed and not explicit_missing
             ):
@@ -710,13 +710,16 @@ class SeriesObservationStore:
                     ),
                     "authoritative_revision": _allows_authoritative_revision(row),
                     "missing_value_status": (
-                        missing_value_status if explicit_missing else None
+                        "source_missing" if missing_value_status == "source_unreadable"
+                        else missing_value_status if explicit_missing else None
                     ),
                     "allow_equal_quality_overwrite": (
                         _allows_equal_quality_overwrite(row)
                     ),
                 },
             }
+            if missing_value_status == "source_unreadable":
+                observation["metadata"]["missing_value_reason"] = "source_unreadable"
             identity = (
                 observation["time"],
                 observation["series_code"],
@@ -1186,7 +1189,7 @@ class SeriesObservationStore:
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
             missing_value_status = str(row.get("MissingValueStatus") or "").strip().lower()
-            explicit_missing = missing_value_status in {"source_missing", "not_applicable"}
+            explicit_missing = missing_value_status in {"source_missing", "source_unreadable", "not_applicable"}
             if (
                 report_time is None
                 or (value is None and not suppressed and not explicit_missing)
@@ -1440,7 +1443,7 @@ class SeriesObservationStore:
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
             missing_value_status = str(row.get("MissingValueStatus") or "").strip().lower()
-            explicit_missing = missing_value_status in {"source_missing", "not_applicable"}
+            explicit_missing = missing_value_status in {"source_missing", "source_unreadable", "not_applicable"}
             if (
                 report_time is None
                 or (value is None and not suppressed and not explicit_missing)
@@ -1568,10 +1571,13 @@ class SeriesObservationStore:
                     "authoritative_revision": _allows_authoritative_revision(row),
                     "allow_equal_quality_overwrite": _allows_equal_quality_overwrite(row),
                     "missing_value_status": (
-                        missing_value_status if explicit_missing else None
+                        "source_missing" if missing_value_status == "source_unreadable"
+                        else missing_value_status if explicit_missing else None
                     ),
                 },
             }
+            if missing_value_status == "source_unreadable":
+                observation["metadata"]["missing_value_reason"] = "source_unreadable"
             identity = (
                 observation["time"],
                 observation["series_code"],

@@ -24,6 +24,7 @@ from .site_data_dependencies import RECEIPT_NAME, dependency_version, file_ident
 from .site_data_views import build_country_source_series_data
 from .site_data_writer import remove_stale_json_files, write_compact_json, write_pretty_json
 from .site_subdivision_maps import write_subdivision_maps
+from .surveillance_download_index import build_download_index, refresh_summary_download
 
 
 def _read(path: Path) -> dict:
@@ -35,7 +36,8 @@ COMPLETED_GENERATION = "completed-generation.json"
 
 def _generation_version() -> str:
     return hashlib.sha256(dependency_version().encode() + Path(__file__).read_bytes()
-                          + Path(__file__).with_name('home_summary.py').read_bytes()).hexdigest()
+                          + Path(__file__).with_name('home_summary.py').read_bytes()
+                          + Path(__file__).with_name('surveillance_download_index.py').read_bytes()).hexdigest()
 
 
 def completed_generation(state_dir: Path, public_dir: Path) -> dict | None:
@@ -213,6 +215,11 @@ def write_surveillance_artifacts(context: dict, state_dir: Path, public_dir: Pat
         elif not (public_dir / paths[2]).is_file():
             data = _read(state_dir / paths[0])
             write_compact_json(public_dir / paths[2], country_summary(data, generated_at=context["generated_at"], download=country_downloads.get(item["code"])))
+        elif downloads is not None:
+            summary = _read(public_dir / paths[2])
+            updated = refresh_summary_download(summary, country_downloads.get(item["code"]))
+            if updated != summary:
+                write_compact_json(public_dir / paths[2], updated)
     for item in context["disease_exports"]:
         did = item["disease_id"].lower()
         paths = (f"diseases/{did}.json", f"diseases/{did}-summary.json")
@@ -225,6 +232,11 @@ def write_surveillance_artifacts(context: dict, state_dir: Path, public_dir: Pat
         elif not (public_dir / paths[1]).is_file():
             data = _read(state_dir / paths[0])
             write_compact_json(public_dir / paths[1], disease_summary(data, generated_at=context["generated_at"], countries=countries, download=disease_downloads.get(item["disease_id"])))
+        elif downloads is not None:
+            summary = _read(public_dir / paths[1])
+            updated = refresh_summary_download(summary, disease_downloads.get(item["disease_id"]))
+            if updated != summary:
+                write_compact_json(public_dir / paths[1], updated)
     # Other country updates reuse this small immutable object without reading
     # Japan/China histories again. The hero never downloads full country bundles.
     hero_path = public_dir / "home-influenza.json"
@@ -269,6 +281,8 @@ def write_surveillance_artifacts(context: dict, state_dir: Path, public_dir: Pat
     write_compact_json(public_dir / "home-summary.json", surveillance_home_summary(meta))
     write_compact_json(public_dir / "site-status.json", {"generated_at": context["generated_at"]})
     logical.extend(("meta.json", "site-status.json", "home-summary.json"))
+    write_compact_json(public_dir / "downloads/index.json", build_download_index(downloads, countries=countries.values()))
+    logical.append("downloads/index.json")
     for group in ("countries", "diseases"):
         expected = {Path(name).name for name in logical if name.startswith(group + "/")}
         remove_stale_json_files(public_dir / group, expected)

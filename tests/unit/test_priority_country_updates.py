@@ -25,13 +25,33 @@ BASE_CHANNEL_CONTRACTS = {
     'CO': ('co_ins_sivigila_historical', 'SRC_CO_INS_SIVIGILA'),
     'MW': ('mw_phim_idsr_weekly', 'SRC_MW_PHIM_IDSR'),
 }
+ADDITIONAL_CHANNEL_CONTRACTS = {
+    ('AR', 'ar_moh_hiv_annual'): 'SRC_AR_MOH_HIV_ANNUAL',
+    ('CO', 'co_ins_sivigila_current'): 'SRC_CO_INS_SIVIGILA_CURRENT',
+    ('CO', 'co_ins_bes_weekly'): 'SRC_CO_INS_BES',
+}
+EXPECTED_CHANNEL_CONTRACTS = {
+    **{(country, scope): source_id for country, (scope, source_id) in BASE_CHANNEL_CONTRACTS.items()},
+    **ADDITIONAL_CHANNEL_CONTRACTS,
+}
+EXPECTED_PUBLIC_CHANNELS = {
+    ('NG', 'ncdc_surveillance'),
+    ('KH', 'kh_camewarn_weekly'),
+    ('AR', 'ar_moh_hiv_annual'),
+    ('PE', 'pe_cdc_weekly'),
+    ('ZA', 'za_nicd_nmc'),
+    ('ID', 'id_kemkes_profile'),
+    ('MX', 'mx_dge_annual'),
+    ('CL', 'cl_eno_historical'),
+    ('MW', 'mw_phim_idsr_weekly'),
+}
 
 
 def test_official_channels_match_source_registration():
     channels = load_source_channels()
     base_channels = [c for c in channels if c['country_code'] in BASE_CHANNEL_CONTRACTS]
-    assert len(base_channels) == 10
-    assert {c['country_code']: (c['scope'], c['source_id']) for c in base_channels} == BASE_CHANNEL_CONTRACTS
+    assert len(base_channels) == len(EXPECTED_CHANNEL_CONTRACTS)
+    assert {(c['country_code'], c['scope']): c['source_id'] for c in base_channels} == EXPECTED_CHANNEL_CONTRACTS
     for channel in channels:
         assert source_channel(channel['country_code'], channel['scope']) == channel
         assert scope_from_data_source(channel['source_id']) == channel['scope']
@@ -78,16 +98,46 @@ def test_jobs_keep_native_cadence_and_raw_evidence():
     assert {key: (job['country_code'], job['source']) for key, job in jobs.items()
         if job['country_code'] in BASE_CHANNEL_CONTRACTS} == {
             f"{code.lower()}-{scope.replace('_', '-')}-daily": (code, scope)
-            for code, (scope, _) in BASE_CHANNEL_CONTRACTS.items()}
-    co_job = next(value for value in jobs.values() if value['country_code'] == 'CO')
-    assert co_job['enabled']
-    assert 'Daily metadata and year-count check' in co_job['notes']
-    assert 'requires_full_backfill' in co_job['notes']
+        for code, scope in EXPECTED_CHANNEL_CONTRACTS}
+    historical_job = jobs['co-co-ins-sivigila-historical-daily']
+    current_job = jobs['co-co-ins-sivigila-current-daily']
+    bes_job = jobs['co-co-ins-bes-weekly-daily']
+    assert historical_job['enabled']
+    assert 'Daily metadata and year-count check' in historical_job['notes']
+    assert 'requires_full_backfill' in historical_job['notes']
+    assert 'Full published history is reread for revisions' in current_job['notes']
+    assert current_job['revision_window_months'] == 4
+    assert not bes_job['enabled']
+    assert 'hourly at :45 America/Bogota' in bes_job['notes']
+    assert '24-hour cache TTL' in bes_job['notes']
+    assert 'legacy daily scheduler entry stays disabled' in bes_job['notes']
+    assert source_channel('CO', 'co_ins_bes_weekly')['integration_status'] == 'automated_managed_runtime'
+    assert source_channel('CO', 'co_ins_bes_weekly')['coverage_verified'] is False
     for job in jobs.values():
         assert canonicalize_task_source(job['source'], country_code=job['country_code']) == job['source']
         assert job['process'] and job['save_raw'] and not job['force'] and not job['fill_missing']
-        assert job['revision_window_months'] in {1, 2, 3}
+        if job['country_code'] == 'AR' and job['source'] == 'ar_moh_hiv_annual':
+            assert job['revision_window_months'] == 24
+        else:
+            assert job['revision_window_months'] in {1, 2, 3, 4}
         assert job['daily_time'] and job['interval_minutes'] is None
+
+
+def test_managed_colombia_bes_panel_shows_transport_status_without_credentials(monkeypatch):
+    from dashboard.api.routers.sources import _source_channel_for_panel
+    from dashboard.api.schemas.sources import SourceChannelOut
+    from src.data.crawlers import co_ins_transport
+    monkeypatch.setattr(co_ins_transport, 'ins_transport_readiness', lambda: {
+        'configured': True, 'proxy_kind': 'http', 'dependency_ready': True,
+    })
+    channel = SourceChannelOut.model_validate(_source_channel_for_panel('CO', 'co_ins_bes_weekly'))
+    payload = channel.model_dump()
+    assert payload['integration_status'] == 'automated_managed_runtime'
+    assert payload['coverage_verified'] is False
+    assert payload['transport_readiness'] == {
+        'configured': True, 'proxy_kind': 'http', 'dependency_ready': True,
+    }
+    assert 'proxy_url' not in str(payload) and 'credentials' not in str(payload)
 
 
 async def test_preview_does_not_change_jobs(monkeypatch):
@@ -115,6 +165,22 @@ async def test_apply_preserves_pauses_and_is_idempotent(monkeypatch):
     assert {call.args[0] for call in setup.automation_service.reschedule_job.await_args_list} == set(jobs)
 
 
+async def test_targeted_bes_update_changes_only_its_paused_job(monkeypatch):
+    jobs = setup.desired_jobs()
+    rows = [SimpleNamespace(job_id=key, **value) for key, value in jobs.items()]
+    bes = next(row for row in rows if row.source == 'co_ins_bes_weekly')
+    bes.notes = 'Old transport and source contract status'
+    before = {row.job_id: vars(row).copy() for row in rows if row is not bes}
+    database(monkeypatch, rows)
+    changes = await setup.configure(apply=True, countries=['CO'], sources=['co_ins_bes_weekly'])
+    assert len(changes) == 1
+    assert changes[0].job_id == bes.job_id and changes[0].action == 'update'
+    assert not bes.enabled
+    assert 'Automatic updates are active via globalid-co-bes-refresh.timer' in bes.notes
+    assert {row.job_id: vars(row) for row in rows if row is not bes} == before
+    setup.automation_service.reschedule_job.assert_awaited_once_with(bes.job_id)
+
+
 @pytest.mark.parametrize('country', ['NG', 'KH', 'AR', 'PE', 'ZA', 'ID', 'MX', 'CL', 'CO', 'MW'])
 def test_control_panel_has_saved_channel_and_annual_revision_units(country):
     from dashboard.api.routers.sources import _country_source_config
@@ -128,7 +194,11 @@ def test_control_panel_has_saved_channel_and_annual_revision_units(country):
     assert option.source_policy.revision_window_unit == 'years'
     assert option.source_policy.dynamic_revision_enabled
     assert not option.default_fill_missing
-    assert not option.source_policy.public_release_enabled
+    assert option.source_policy.public_release_enabled is ((country, channel['scope']) in EXPECTED_PUBLIC_CHANNELS)
+    if country == 'AR':
+        ben = next(x for x in config.source_options if x.value == 'ar_ben_weekly')
+        assert ben.source_channel.source_id == 'SRC_AR_BEN'
+        assert ben.source_policy.public_release_enabled is False
 
 
 async def test_large_stratified_archive_history_stays_under_database_bind_limit():

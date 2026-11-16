@@ -13,6 +13,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -239,7 +240,7 @@ class CrawlService:
         if updater_name == "ThailandDDSWeeklyUpdater":
             from src.data.processors.th_dds import ThailandDDSWeeklyUpdater
             return ThailandDDSWeeklyUpdater()
-        priority_modules = {'SouthAfricaNICDNMCUpdater': 'za', 'IndonesiaKemkesProfileUpdater': 'id', 'MexicoDGEAnnualUpdater': 'mx', 'NigeriaNCDCUpdater': 'ng', 'CambodiaCamEWARNWeeklyUpdater': 'kh', 'ArgentinaBENUpdater': 'ar', 'PeruCDCWeeklyUpdater': 'pe', 'ChileENOHistoricalUpdater': 'cl', 'ColombiaINSSivigilaUpdater': 'co', 'MalawiPHIMIDSRUpdater': 'mw'}
+        priority_modules = {'SouthAfricaNICDNMCUpdater': 'za', 'IndonesiaKemkesProfileUpdater': 'id', 'MexicoDGEAnnualUpdater': 'mx', 'NigeriaNCDCUpdater': 'ng', 'CambodiaCamEWARNWeeklyUpdater': 'kh', 'ArgentinaBENUpdater': 'ar', 'ArgentinaHIVAnnualUpdater': 'ar_hiv', 'PeruCDCWeeklyUpdater': 'pe', 'ChileENOHistoricalUpdater': 'cl', 'ColombiaINSSivigilaUpdater': 'co', 'ColombiaINSSivigilaCurrentUpdater': 'co_current', 'ColombiaINSBESUpdater': 'co_bes', 'MalawiPHIMIDSRUpdater': 'mw'}
         if updater_name in priority_modules:
             from importlib import import_module
             return getattr(import_module(f"src.data.processors.{priority_modules[updater_name]}"), updater_name)()
@@ -425,13 +426,19 @@ class CrawlService:
         """
         normalized_country = (country_code or "").strip().upper()
         normalized_source = str(source or "all").strip().casefold()
-        if normalized_country == "TH":
+        if normalized_country in {"AR", "TH"}:
             from src.core.source_scopes import canonicalize_task_source
-            source = canonicalize_task_source(source, country_code="TH")
+            source = canonicalize_task_source(source, country_code=normalized_country)
             normalized_source = source
         if (normalized_country, normalized_source) in EXTRA_SOURCE_CONTRACTS:
             extra = EXTRA_SOURCE_CONTRACTS[(normalized_country, normalized_source)]
             pipeline = _PipelineSpec("_execute_remaining_extra", extra["updater"])
+        elif normalized_country == "AR" and normalized_source == "ar_moh_hiv_annual":
+            pipeline = _PipelineSpec("_execute_ar_hiv_annual", "ArgentinaHIVAnnualUpdater")
+        elif normalized_country == "CO" and normalized_source == "co_ins_sivigila_current":
+            pipeline = _PipelineSpec("_execute_co_current_surveillance", "ColombiaINSSivigilaCurrentUpdater")
+        elif normalized_country == "CO" and normalized_source == "co_ins_bes_weekly":
+            pipeline = _PipelineSpec("_execute_co_bes_surveillance", "ColombiaINSBESUpdater")
         elif normalized_country == "MY" and normalized_source == "who_flunet_weekly":
             pipeline = _PipelineSpec("_execute_my_who_flunet", "MYWHOFluNetUpdater")
         elif normalized_country == "MY" and normalized_source == "who_gho_annual":
@@ -1239,15 +1246,37 @@ class CrawlService:
 
     async def _execute_co_surveillance(self, **kwargs) -> CrawlResult:
         from src.services.ingestion import co_update_gate
+        return await self._execute_co_bounded_surveillance(co_update_gate, **kwargs)
+
+    async def _execute_co_current_surveillance(self, **kwargs) -> CrawlResult:
+        from src.services.ingestion import co_current_refresh
+        return await self._execute_co_bounded_surveillance(co_current_refresh, **kwargs)
+
+    async def _execute_co_bes_surveillance(self, **kwargs) -> CrawlResult:
+        from src.services.ingestion import co_bes_refresh
+        supplied = kwargs['task'].input_data or {}
+        current_year = datetime.now(ZoneInfo('America/Bogota')).year
+        options = {'start_year': int(supplied['start_year']) if supplied.get('start_year') is not None
+                   else max(2025, current_year - 1),
+                   'end_year': int(supplied['end_year']) if supplied.get('end_year') is not None
+                   else current_year,
+                   'download_workers': 8, 'parse_workers': 4}
+        return await self._execute_co_bounded_surveillance(
+            co_bes_refresh, store_rows=True, connector_options=options, **kwargs)
+
+    async def _execute_co_bounded_surveillance(
+        self, connector, *, store_rows=False, connector_options=None, **kwargs
+    ) -> CrawlResult:
         from src.services.ingestion.runner import run_surveillance
 
         if kwargs.get('fill_missing'):
-            raise ValueError('CO SIVIGILA requires the complete version-bound historical controller')
+            raise ValueError('CO SIVIGILA requires a complete version-bound source controller')
         try:
             return await run_surveillance(
-                self, task=kwargs['task'], updater=kwargs['updater'], connector=co_update_gate,
-                source=kwargs['source'], force=kwargs['force'], process=False,
-                connector_options={'force': kwargs['force']},
+                self, task=kwargs['task'], updater=kwargs['updater'], connector=connector,
+                source=kwargs['source'], force=kwargs['force'],
+                process=kwargs['process'] if store_rows else False,
+                connector_options={**(connector_options or {}), 'force': kwargs['force']},
             )
         except BaseException as exc:
             # The shared runner records the failed stage, but only completes its
@@ -1281,6 +1310,11 @@ class CrawlService:
 
     async def _execute_ar_surveillance(self, **kwargs) -> CrawlResult:
         return await self._execute_priority_surveillance("ar", **kwargs)
+
+    async def _execute_ar_hiv_annual(self, **kwargs) -> CrawlResult:
+        # Replay the full published table for revisions, including years older
+        # than a routine recent-year window. BEN keeps its separate pipeline.
+        return await self._execute_notifiable_annual("ar_hiv", **kwargs)
 
     async def _execute_pe_surveillance(self, **kwargs) -> CrawlResult:
         return await self._execute_priority_surveillance("pe", **kwargs)

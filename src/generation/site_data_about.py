@@ -518,6 +518,7 @@ def build_country_source_info(
         if metadata.get(field):
             cfg[field] = metadata[field]
     crawler_cfg = cfg.get("crawler_config", {})
+    public_details = cfg.get("public_source_details") or {}
     source_scopes = list(crawler_cfg.get("sources") or ["all"])
     public_scopes = cfg.get("public_source_scopes")
     if public_scopes is not None:
@@ -537,6 +538,9 @@ def build_country_source_info(
             (normalized_code, scope),
             SOURCE_DETAILS_BY_SCOPE.get(("*", scope), {}),
         )
+        # Reviewed publication provenance comes from the runtime registry, even
+        # when an older database record replaces the ingestion crawler config.
+        details = {**details, **public_details.get(scope, {})}
         url = details.get("url") or cfg.get("data_source_url")
         machine_url = details.get("machine_url")
         if not machine_url:
@@ -559,6 +563,16 @@ def build_country_source_info(
                 or fallback_cadence,
                 "description": details.get("description") or cfg.get("notes"),
                 **{key: details[key] for key in ("description_zh", "description_fr") if details.get(key)},
+                **{
+                    key: details[key]
+                    for key in (
+                        "source_id", "publisher", "license", "license_url",
+                        "attribution_required", "required_attribution",
+                        "attribution_template", "review_status",
+                        "original_dataset_modification_authorized",
+                    )
+                    if key in details
+                },
             }
         )
 

@@ -30,7 +30,7 @@ def test_json_generation_pins_immutable_objects_and_keeps_old_snapshot(tmp_path)
     context = _context()
     logical = dynamic.write_surveillance_artifacts(context, state, public)
     first = dynamic.freeze_public_generation(public, state, logical, release_id="first", generated_at=context["generated_at"])
-    assert set(first["files"]) == {"meta.json", "site-status.json", "home-influenza.json", "home-summary.json", "countries/ca.json", "countries/ca-source-series.json", "countries/ca-summary.json", "diseases/d001.json", "diseases/d001-summary.json", "subdivision-maps/index.json"}
+    assert set(first["files"]) == {"meta.json", "site-status.json", "home-influenza.json", "home-summary.json", "countries/ca.json", "countries/ca-source-series.json", "countries/ca-summary.json", "diseases/d001.json", "diseases/d001-summary.json", "subdivision-maps/index.json", "downloads/index.json"}
     previous = {entry["url"]: (public / entry["url"]).read_bytes() for entry in first["files"].values()}
     summary = json.loads(previous[first["files"]["countries/ca-summary.json"]["url"]])
     assert summary["total_cases"] == 7
@@ -64,9 +64,60 @@ def test_freeze_failure_does_not_replace_current_pointer(tmp_path, monkeypatch):
     assert (public / "current.json").read_bytes() == before
 
 
+def test_unchanged_curves_refresh_downloads_and_freeze_the_compact_directory(tmp_path, monkeypatch):
+    state, public = tmp_path / "private", tmp_path / "public"
+    context = _context()
+    old_downloads = {"generated_at": "2025-old-downloads", "surveillance_release_id": "data-old",
+                     "countries": [{"code": "CA", "id": "ca", "record_count": 10, "generated_at": "2025-old-downloads", "parts": []}],
+                     "diseases": [{"disease_id": "D001", "id": "d001", "record_count": 10, "generated_at": "2025-old-downloads", "parts": []}]}
+    logical = dynamic.write_surveillance_artifacts(context, state, public, downloads=old_downloads)
+    dynamic.freeze_public_generation(public, state, logical, release_id="old", generated_at=context["generated_at"])
+    curve_paths = [state / "countries/ca.json", state / "diseases/d001.json",
+                   public / "countries/ca.json", public / "diseases/d001.json", public / "countries/ca-source-series.json"]
+    original_curves = {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in curve_paths}
+    old_summaries = {kind: json.loads((public / f"{kind}/{identifier}-summary.json").read_text())
+                     for kind, identifier in (("countries", "ca"), ("diseases", "d001"))}
+    updated = copy.deepcopy(context)
+    updated["generated_at"] = "2026-new-curves"
+    for group in ("country_exports", "disease_exports"):
+        for item in updated[group]:
+            item["unchanged_curve"] = True
+    downloads = copy.deepcopy(old_downloads)
+    downloads.update(generated_at="2026-new-downloads", surveillance_release_id="data-new")
+    current = {"id": "now", "label": "Current", "is_current": True, "record_count": 6,
+               "files": {"csv": {"url": "https://raw.githubusercontent.com/owner/repo/main/current.csv", "bytes": 20}}}
+    for group in ("countries", "diseases"):
+        downloads[group][0].update(generated_at="2026-new-downloads", record_count=100,
+                                   parts=[{"id": "old", "record_count": 94, "files": {}}, current])
+    original_read = dynamic._read
+    def read_small_only(path):
+        assert path not in (state / "countries/ca.json", state / "diseases/d001.json")
+        return original_read(path)
+    monkeypatch.setattr(dynamic, "_read", read_small_only)
+    logical = dynamic.write_surveillance_artifacts(updated, state, public, downloads=downloads)
+    manifest = dynamic.freeze_public_generation(public, state, logical, release_id="new", generated_at=updated["generated_at"])
+    entry = manifest["files"]["downloads/index.json"]
+    frozen = (public / entry["url"]).read_bytes()
+    assert hashlib.sha256(frozen).hexdigest() == entry["sha256"]
+    assert len(frozen) == entry["bytes"]
+    index = json.loads(frozen)
+    assert index["generated_at"] == "2026-new-downloads"
+    assert index["surveillance_release_id"] == "data-new"
+    for kind, identifier in (("countries", "ca"), ("diseases", "d001")):
+        summary = json.loads((public / f"{kind}/{identifier}-summary.json").read_text())
+        assert {k: v for k, v in summary.items() if k != "download"} == {k: v for k, v in old_summaries[kind].items() if k != "download"}
+        assert summary["generated_at"] == context["generated_at"]
+        assert summary["download"] == downloads[kind][0]
+        assert index[kind][0]["parts_count"] == 2
+        assert index[kind][0]["record_count"] == 100
+        assert index[kind][0]["parts"] == [current]
+    assert all((path.read_bytes(), path.stat().st_mtime_ns) == original_curves[path] for path in curve_paths)
+
+
 @pytest.mark.parametrize("relative", [
     "generation/site_series_projection.py", "services/disease_series_policy.py",
     "core/reporting_period.py", "core/disease_cutover.py",
+    "generation/surveillance_download_index.py",
 ])
 def test_projection_rule_change_invalidates_completed_baseline(tmp_path, monkeypatch, relative):
     state, public = tmp_path / "private", tmp_path / "public"

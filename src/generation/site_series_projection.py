@@ -101,8 +101,9 @@ def _source_series_details(records: list[dict]) -> list[dict]:
     for record in records:
         series_code = str(record.get("series_code") or "").strip()
         if series_code:
-            dimension_key = str(record.get("dimension_key") or "all").strip() or "all"
-            dimensions = record.get("dimensions") or {}
+            reviewed_total = record.get("projection_dimension_key") == "all"
+            dimension_key = "all" if reviewed_total else (str(record.get("dimension_key") or "all").strip() or "all")
+            dimensions = {} if reviewed_total else (record.get("dimensions") or {})
             if isinstance(dimensions, str):
                 try:
                     dimensions = json.loads(dimensions)
@@ -132,7 +133,8 @@ def _source_series_details(records: list[dict]) -> list[dict]:
             key=lambda item: str(item.get("date") or ""),
         )
         first = series_records[0]
-        dimensions = first.get("dimensions") or {}
+        reviewed_total = first.get("projection_dimension_key") == "all"
+        dimensions = {} if reviewed_total else (first.get("dimensions") or {})
         if isinstance(dimensions, str):
             try:
                 dimensions = json.loads(dimensions)
@@ -165,8 +167,13 @@ def _source_series_details(records: list[dict]) -> list[dict]:
                 **{field: first.get(field) for field in metadata_fields},
                 "unit": first.get("series_unit") or first.get("unit"),
                 "geography_key": first.get("geography_key"),
-                "dimension_key": first.get("dimension_key"),
+                "dimension_key": "all" if reviewed_total else first.get("dimension_key"),
                 "dimensions": dimensions if isinstance(dimensions, dict) else {},
+                **({
+                    "point_source_dimensions": [item.get("dimensions") or {} for item in dated_records],
+                    "point_source_dimension_keys": [item.get("dimension_key") for item in dated_records],
+                    "dimension_review": "source_metadata_retained_separately_from_population_strata",
+                } if reviewed_total else {}),
                 "dates": dates,
                 "values": values,
                 "incidence_rates": incidence_rates,
@@ -685,10 +692,10 @@ def apply_series_first_projection(
             all_series[disease_id].append(record)
             if is_case_count_metric(record):
                 case_count_series[disease_id].append(record)
-                if str(record.get("dimension_key") or "all").strip().lower() == "all":
+                if str(record.get("projection_dimension_key") or record.get("dimension_key") or "all").strip().lower() == "all":
                     public_case_count_series[disease_id].append(record)
             if (
-                str(record.get("dimension_key") or "all").strip().lower() == "all"
+                str(record.get("projection_dimension_key") or record.get("dimension_key") or "all").strip().lower() == "all"
                 and _series_is_case_count(record)
             ):
                 eligible_series[disease_id].append(record)

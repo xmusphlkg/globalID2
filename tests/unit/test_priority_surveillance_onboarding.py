@@ -1,5 +1,6 @@
 """Task dispatch and archive integrity for the new national surveillance sources."""
 from importlib.util import module_from_spec, spec_from_file_location
+import asyncio
 import hashlib
 import json
 from pathlib import Path
@@ -31,13 +32,16 @@ async def test_country_task_roundtrip_uses_canonical_archive_connector(monkeypat
     from src.services.ingestion import runner
     run = AsyncMock(return_value=object())
     monkeypatch.setattr(runner, 'run_surveillance', run)
-    assert canonicalize_task_source('all', country_code=country) == scope
+    assert canonicalize_task_source('all', country_code=country) == ('ar_moh_hiv_annual' if country == 'AR' else scope)
     assert scope_from_data_source(label) == scope
     assert scope_from_data_source(scope) == scope
     assert canonical_data_source_label(scope, country_code=country) == label
-    assert {option['value'] for option in source_options_for_country(country)} == {scope}
+    expected_options = {scope, 'co_ins_sivigila_current', 'co_ins_bes_weekly'} if country == 'CO' else {scope}
+    if country == 'AR':
+        expected_options.add('ar_moh_hiv_annual')
+    assert {option['value'] for option in source_options_for_country(country)} == expected_options
     config = get_country_bootstrap_config(country)
-    assert config['public_release_enabled'] is False
+    assert config['public_release_enabled'] is (country != 'CO')
     updater = CrawlService._make_updater(updater_name, country)
     value = await CrawlService().execute(
         task=SimpleNamespace(input_data={'start_year': max(2020, updater.full_history_start_year)}), country_code=country,
@@ -61,6 +65,29 @@ async def test_country_task_roundtrip_uses_canonical_archive_connector(monkeypat
     assert legacy_result.inserted_or_updated == 0
 
 
+async def test_colombia_current_source_has_independent_daily_dispatch(monkeypatch):
+    from src.services.ingestion import runner
+    from src.core.source_channels import source_channel
+    run = AsyncMock(return_value=object())
+    monkeypatch.setattr(runner, 'run_surveillance', run)
+    scope = 'co_ins_sivigila_current'
+    assert canonicalize_task_source(scope, country_code='CO') == scope
+    assert scope_from_data_source('SRC_CO_INS_SIVIGILA_CURRENT') == scope
+    assert scope_from_data_source('Colombia INS SIVIGILA Current Public Health Surveillance') == scope
+    assert source_channel('CO', scope)['source_id'] == 'SRC_CO_INS_SIVIGILA_CURRENT'
+    assert scope in get_country_bootstrap_config('CO')['crawler_config']['sources']
+    result = await CrawlService().execute(
+        task=SimpleNamespace(input_data={}), country_code='CO', source=scope,
+        force=False, process=True, save_raw=True, fill_missing=False,
+    )
+    assert result is run.return_value
+    args = run.call_args.kwargs
+    assert args['updater'].ontology_source_id == 'SRC_CO_INS_SIVIGILA_CURRENT'
+    assert args['connector'].__name__ == 'src.services.ingestion.co_current_refresh'
+    assert args['process'] is False
+    assert args['source'] == scope
+
+
 async def test_archive_refresh_rejects_unsupported_gap_fill_before_network(monkeypatch):
     from src.services.ingestion import runner
     run = AsyncMock()
@@ -79,6 +106,25 @@ def archive_script():
     module = module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_colombia_current_archive_replay_selects_current_connector(tmp_path, monkeypatch):
+    from src.core import database
+    from src.services.ingestion.countries import co_current
+    module = archive_script()
+    monkeypatch.setattr(module, 'load_archive_manifest', lambda path, country: [])
+    monkeypatch.setattr(database, 'dispose_database', AsyncMock())
+    seen = {}
+    def organize(artifacts, *, updater, source, start_year):
+        seen.update(updater=updater, source=source, start_year=start_year)
+        return SimpleNamespace(rows=[], source_audit={'source': source})
+    monkeypatch.setattr(co_current, 'organize', organize)
+    result = asyncio.run(module.import_archive(
+        'CO', tmp_path / 'manifest.json', source='co_ins_sivigila_current'))
+    assert seen['updater'].ontology_source_id == 'SRC_CO_INS_SIVIGILA_CURRENT'
+    assert seen['source'] == 'co_ins_sivigila_current'
+    assert seen['start_year'] == 2023
+    assert result['source_audit']['source'] == 'co_ins_sivigila_current'
 
 
 def test_archive_manifest_checks_every_original_before_mutation(tmp_path, monkeypatch):

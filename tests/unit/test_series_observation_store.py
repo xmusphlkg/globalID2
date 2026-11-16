@@ -351,7 +351,7 @@ def test_registry_selection_forwards_nonblank_unknown_rows_to_holding() -> None:
     assert result.unregistered_rows == (row,)
 
 
-@pytest.mark.parametrize("status", ["source_missing", "not_applicable"])
+@pytest.mark.parametrize("status", ["source_missing", "source_unreadable", "not_applicable"])
 def test_unmapped_source_missing_observation_survives_selection_without_creating_blank_facts(status) -> None:
     explicit = {
         "Date": "2026-08-01", "SourceDiseaseCode": "NEW-001",
@@ -420,7 +420,7 @@ def test_registry_identity_enrichment_leaves_unknown_category_unversioned() -> N
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("value,status,expected", [("7", "", 7), ("0", "", 0), ("", "source_missing", None), ("", "not_applicable", None)])
+@pytest.mark.parametrize("value,status,expected", [("7", "", 7), ("0", "", 0), ("", "source_missing", None), ("", "source_unreadable", None), ("", "not_applicable", None)])
 async def test_unknown_category_builds_nonprojectable_holding_observation(value, status, expected) -> None:
     now = datetime.now(timezone.utc)
     category = SourceDiseaseCategory(
@@ -486,7 +486,11 @@ async def test_unknown_category_builds_nonprojectable_holding_observation(value,
     assert handled == 2
     assert len(observations) == 2
     assert observations[0]["value"] == expected
-    assert observations[0]["metadata"]["missing_value_status"] == (status or None)
+    assert observations[0]["metadata"]["missing_value_status"] == (
+        "source_missing" if status == "source_unreadable" else status or None)
+    assert observations[0]["metadata"].get("missing_value_reason") == (
+        "source_unreadable" if status == "source_unreadable" else None)
+    assert observations[0]["raw_data"]["MissingValueStatus"] == status
     assert observations[0]["metadata"]["dynamic_holding"] is True
     assert observations[0]["metadata"]["local_code"] == "NEW-001"
     holding_series = next(
@@ -1652,7 +1656,7 @@ async def test_save_rows_reports_only_rows_postgres_actually_affected(reuse_upse
     assert result.upserted == 0
 
 
-@pytest.mark.parametrize("value,status,expected", [("0", "", 0), ("", "source_missing", None), ("", "not_applicable", None)])
+@pytest.mark.parametrize("value,status,expected", [("0", "", 0), ("", "source_missing", None), ("", "source_unreadable", None), ("", "not_applicable", None)])
 def test_registered_explicit_null_status_survives_without_creating_blank_facts(value, status, expected):
     row = {"Date": "2026-07-01", "DiseaseCode": "2801", "Cases": value,
            "RawDiseaseLabel": "Coronavirus SARS-CoV-2", "MissingValueStatus": status}
@@ -1664,4 +1668,8 @@ def test_registered_explicit_null_status_survives_without_creating_blank_facts(v
     built = store.build_observations(selected.rows, "FI", source_id="SRC_FI_THL_TTR")
     assert len(built.observations) == 1
     assert built.observations[0]["value"] == expected
-    assert built.observations[0]["metadata"]["missing_value_status"] == (status or None)
+    assert built.observations[0]["metadata"]["missing_value_status"] == (
+        "source_missing" if status == "source_unreadable" else status or None)
+    assert built.observations[0]["metadata"].get("missing_value_reason") == (
+        "source_unreadable" if status == "source_unreadable" else None)
+    assert built.observations[0]["raw_data"]["MissingValueStatus"] == status

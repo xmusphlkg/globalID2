@@ -58,7 +58,7 @@ def is_case_count_metric(record: Mapping[str, Any]) -> bool:
     return (
         series_unit == "count"
         and observation_unit == "count"
-        and str(record.get("metric_type") or "").lower() in SERIES_CASE_COUNT_METRICS
+        and str(record.get("projection_metric_type") or record.get("metric_type") or "").lower() in SERIES_CASE_COUNT_METRICS
     )
 
 

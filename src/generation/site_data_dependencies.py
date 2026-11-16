@@ -40,7 +40,12 @@ def dependency_version() -> str:
         "generation/site_subdivision_maps.py",
         "generation/country_projection_workers.py", "core/reporting_period.py",
         "core/disease_cutover.py", "core/country_library.py",
+        "core/reviewed_annual_admissions.py", "core/reviewed_national_admissions.py",
+        "core/ar_hiv_source.py", "core/reviewed_ar_hiv_admission.py",
+        "core/remaining_country_sources.py",
         "services/disease_series_policy.py",
+        "services/surveillance_onboarding_review.py", "services/annual_source_mapping_review.py",
+        "services/national_source_mapping_review.py", "services/disease_mapping_config.py",
     ):
         digest.update((root / "src" / name).read_bytes())
     for name in ("standard_diseases.csv", "disease_ontology.json", "disease_cutover.json", "country_bootstrap.json"):
@@ -48,6 +53,9 @@ def dependency_version() -> str:
         if path.is_file():
             digest.update(path.read_bytes())
     for path in sorted((root / "external-data/subdivision-boundaries").glob("*.json")):
+        digest.update(path.read_bytes())
+    for path in sorted((root / "configs/mapping").rglob("*.csv")):
+        digest.update(str(path.relative_to(root)).encode())
         digest.update(path.read_bytes())
     return digest.hexdigest()
 

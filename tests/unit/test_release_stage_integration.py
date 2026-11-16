@@ -115,17 +115,26 @@ def release(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_static_content_release_never_acknowledges_or_reprojects_surveillance(release):
+async def test_static_content_release_never_acknowledges_or_reprojects_surveillance(release, monkeypatch):
+    from src.services.data_release import global_selection
+
     r = release
     r.task.input_data.update({"content_only": True, "full": True, "publish_dirty_ids": [7, 8]})
+    read = AsyncMock(return_value=[
+        SimpleNamespace(id=7, line="knowledge", published_at=None),
+        SimpleNamespace(id=8, line="surveillance", published_at=None),
+    ])
+    acknowledge = AsyncMock()
+    monkeypatch.setattr(global_selection, "read_selected_batch", read)
+    monkeypatch.setattr(global_selection, "acknowledge_locked_batch", acknowledge)
     result = await execute_release_task(r.service, r.task, runtime=r.runtime)
     assert result["content_only"]
     assert "Publish Partitioned Data Downloads" not in r.service.commands
     r.commit.assert_not_awaited()
-    statement = r.database.execute.await_args.args[0]
-    sql = str(statement.compile(compile_kwargs={"literal_binds": True}))
-    assert "publish_dirty.line NOT IN ('surveillance'" in sql
-    assert "publish_dirty.id IN (7, 8)" in sql
+    read.assert_awaited_once_with(r.database, [7, 8], lock=True)
+    acknowledge.assert_awaited_once()
+    assert acknowledge.await_args.args == (r.database, [7])
+    assert acknowledge.await_args.kwargs["task_uuid"] == r.task.task_uuid
 
 
 async def test_source_edit_during_export_is_rejected_before_expensive_build(release):
@@ -165,14 +174,25 @@ async def test_old_static_contract_cannot_acknowledge_situation_after_cutover(re
     release.commit.assert_not_awaited()
 
 
-async def test_detached_static_acknowledgement_excludes_both_data_channels(release):
+async def test_detached_static_acknowledgement_excludes_both_data_channels(release, monkeypatch):
+    from src.services.data_release import global_selection
+
     release.service._config = lambda: SimpleNamespace(timezone="UTC", surveillance_json_enabled=True, situation_json_enabled=True)
-    release.task.input_data.update({"content_only": True, "situation_detached": True, "publish_dirty_ids": [7, 8]})
+    release.task.input_data.update({"content_only": True, "situation_detached": True, "publish_dirty_ids": [7, 8, 9]})
+    read = AsyncMock(return_value=[
+        SimpleNamespace(id=7, line="surveillance", published_at=None),
+        SimpleNamespace(id=8, line="situation", published_at=None),
+        SimpleNamespace(id=9, line="knowledge", published_at=None),
+    ])
+    acknowledge = AsyncMock()
+    monkeypatch.setattr(global_selection, "read_selected_batch", read)
+    monkeypatch.setattr(global_selection, "acknowledge_locked_batch", acknowledge)
     await execute_release_task(release.service, release.task, runtime=release.runtime)
     release.commit.assert_not_awaited()
-    statement = release.database.execute.await_args.args[0]
-    sql = str(statement.compile(compile_kwargs={"literal_binds": True}))
-    assert "'surveillance'" in sql and "'situation'" in sql and "NOT IN" in sql
+    read.assert_awaited_once_with(release.database, [7, 8, 9], lock=True)
+    acknowledge.assert_awaited_once()
+    assert acknowledge.await_args.args == (release.database, [9])
+    assert acknowledge.await_args.kwargs["task_uuid"] == release.task.task_uuid
 
 
 @pytest.mark.asyncio

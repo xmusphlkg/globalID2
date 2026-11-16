@@ -46,7 +46,7 @@ def test_scope_labels_registry_and_refresh_contract(code):
     assert source["country_code"] == code
     policy = get_country_bootstrap_config(code)["crawler_config"]["source_policies"][contract["scope"]]
     assert policy["refresh_strategy"] == "full_published_history_upsert"
-    assert policy["public_release_enabled"] is False
+    assert policy["public_release_enabled"] is True
     channel = next(row for row in load_source_channels() if row["country_code"] == code and row["scope"] == contract["scope"])
     assert channel["refresh_strategy"] == policy["refresh_strategy"]
 
@@ -123,11 +123,11 @@ def test_job_plan_describes_all_history_and_preserves_other_jobs():
 
 def test_complete_catalogue_has_original_ten_eighteen_countries_and_three_extra_sources():
     from scripts.configure_priority_country_updates import desired_jobs
-    from tests.unit.test_priority_country_updates import BASE_CHANNEL_CONTRACTS
+    from tests.unit.test_priority_country_updates import EXPECTED_CHANNEL_CONTRACTS
     who = {'ET', 'KE', 'UG', 'GH', 'TZ', 'PH', 'VN', 'LA', 'MM', 'BN', 'TL', 'PY', 'EC', 'CR', 'PA'}
     spf = {'GP', 'MQ', 'GF'}
     assert set(REMAINING_COUNTRIES) == who | spf
-    expected = {(code, scope, source) for code, (scope, source) in BASE_CHANNEL_CONTRACTS.items()}
+    expected = {(code, scope, source) for (code, scope), source in EXPECTED_CHANNEL_CONTRACTS.items()}
     expected.update((code, 'who_gho_annual', f'SRC_{code}_WHO_GHO') for code in who)
     expected.update((code, 'spf_odisse_annual', f'SRC_{code}_SPF_ODISSE') for code in spf)
     extras = {
@@ -139,10 +139,10 @@ def test_complete_catalogue_has_original_ten_eighteen_countries_and_three_extra_
     assert {key: contract['source_id'] for key, contract in EXTRA_SOURCE_CONTRACTS.items()} == extras
     expected.update((code, scope, source_id) for (code, scope), source_id in extras.items())
     channels = load_source_channels()
-    assert len(channels) == 31
+    assert len(channels) == len(expected)
     assert {(c['country_code'], c['scope'], c['source_id']) for c in channels} == expected
     jobs = desired_jobs()
-    assert len(jobs) == 31
+    assert len(jobs) == len(expected)
     assert {(job['country_code'], job['source']) for job in jobs.values()} == {(code, scope) for code, scope, _ in expected}
     assert set(jobs) == {f"{code.lower()}-{scope.replace('_', '-')}-daily" for code, scope, _ in expected}
 

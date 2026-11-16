@@ -16,7 +16,7 @@ from src.core.country_library import expand_country_scopes, get_country_bootstra
 from src.domain import Country, CountryPublishState, PublicDiseaseSeries
 from src.domain.collection import PublishDirty
 from src.generation.public_series_store import _load_publish_context, _publish_country
-from .global_selection import selection_batches
+from .global_selection import acknowledge_locked_batch, read_selected_batch, selection_batches
 
 
 async def _retire_disabled_publications(db) -> set[str]:
@@ -61,6 +61,8 @@ async def commit_release_projection(
     country_scopes_exact: bool = False,
     require_prepared: bool = False,
 ) -> dict[str, dict[str, int]]:
+    if not task_uuid:
+        raise ValueError("Publication acknowledgement requires a task identity")
     if require_prepared and (full or country_codes) and prepared_dir is None:
         raise ValueError("Concurrent release requires a frozen publication projection")
     if require_prepared and marked_before:
@@ -119,16 +121,13 @@ async def commit_release_projection(
     # site-only release, without scanning facts or touching active timestamps.
     retired = await _retire_disabled_publications(db)
     published_codes = [code for code in published_codes if code not in retired]
-    if full and marked_before:
-        predicates = [PublishDirty.marked_at <= datetime.fromisoformat(marked_before)]
-    else:
-        predicates = (PublishDirty.id.in_(batch) for batch in selection_batches(dirty_ids))
     published_at = datetime.now(timezone.utc)
-    for predicate in predicates:
+    if full and marked_before:
+        # Legacy timestamp publications retain their original scope contract.
         await db.execute(
             update(PublishDirty)
             .where(
-                predicate,
+                PublishDirty.marked_at <= datetime.fromisoformat(marked_before),
                 PublishDirty.published_at.is_(None),
                 or_(
                     PublishDirty.line != "surveillance",
@@ -139,4 +138,14 @@ async def commit_release_projection(
                 published_at=published_at, published_task_uuid=task_uuid
             )
         )
+    else:
+        for batch in selection_batches(dirty_ids):
+            rows = await read_selected_batch(db, batch, lock=True)
+            if {row.id for row in rows} != set(batch):
+                raise ValueError("Projection publication selection has missing dirty rows")
+            selected = [row for row in rows if row.line != "surveillance" or row.scope_key in published_codes]
+            if any(row.published_at is not None and row.published_task_uuid != task_uuid for row in selected):
+                raise ValueError("Another publication already consumed this projection selection")
+            await acknowledge_locked_batch(db, [row.id for row in selected if row.published_at is None],
+                                           published_at=published_at, task_uuid=task_uuid)
     return write_counts

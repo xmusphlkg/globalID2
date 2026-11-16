@@ -45,7 +45,9 @@ def test_netherlands_ecdc_release_remains_independent():
     policies = config["crawler_config"]["source_policies"]
     assert policies["rivm_notifiable_annual"]["public_release_enabled"] is False
     assert policies["ecdc_atlas_annual"]["public_release_enabled"] is True
-    assert get_country_bootstrap_config("MY")["public_release_enabled"] is False
+    malaysia = get_country_bootstrap_config("MY")
+    assert malaysia["public_release_enabled"] is True
+    assert malaysia["public_source_systems"] == ["SRC_MY_MOH_STD", "SRC_MY_WHO_GHO"]
 
 
 @pytest.mark.parametrize("scope,source_id,updater_name,module", [
