@@ -1,0 +1,474 @@
+........................................................................ [  1%]
+........................................................................ [  2%]
+........................................................................ [  3%]
+........................................................................ [  5%]
+........................................................................ [  6%]
+........................................................................ [  7%]
+........................................................................ [  9%]
+........................................................................ [ 10%]
+........................................................................ [ 11%]
+........................................................................ [ 13%]
+........................................................................ [ 14%]
+........................................................................ [ 15%]
+........................................................................ [ 17%]
+s..................................................................s.... [ 18%]
+..............................................................F......... [ 19%]
+........................................................................ [ 21%]
+........................................................................ [ 22%]
+........................................................................ [ 23%]
+........................................................................ [ 25%]
+........................................................................ [ 26%]
+........................................................................ [ 27%]
+........................................................................ [ 29%]
+........................................................................ [ 30%]
+........................................................................ [ 31%]
+........................................................................ [ 32%]
+........................................................................ [ 34%]
+........................................................................ [ 35%]
+........................................................................ [ 36%]
+........F............................................................... [ 38%]
+........................................................................ [ 39%]
+........................................................................ [ 40%]
+........................................................................ [ 42%]
+........................................................................ [ 43%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+........................................................................ [ 47%]
+........................................................................ [ 48%]
+........................................................................ [ 50%]
+........................................................................ [ 51%]
+........................................................................ [ 52%]
+........................................................................ [ 54%]
+........................................................................ [ 55%]
+........................................................................ [ 56%]
+........................................................................ [ 58%]
+........................................................................ [ 59%]
+...........................................................F............ [ 60%]
+..................FFF................................................... [ 62%]
+..............................................................s........F [ 63%]
+........................................................................ [ 64%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 68%]
+........................................................................ [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 72%]
+........................................................................ [ 73%]
+......s................................................................. [ 75%]
+........................................................................ [ 76%]
+........................................................................ [ 77%]
+........................................................................ [ 79%]
+........................................................................ [ 80%]
+.........................................sssssssssssssss................ [ 81%]
+........................................................................ [ 83%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+........................................................................ [ 87%]
+........................................................................ [ 88%]
+........................................................................ [ 89%]
+........................................................................ [ 91%]
+........................................................................ [ 92%]
+........................................................................ [ 93%]
+........................................................................ [ 95%]
+........................................................................ [ 96%]
+........................................................................ [ 97%]
+........................................................................ [ 98%]
+..............................s........................                  [100%]
+=================================== FAILURES ===================================
+___________ test_australia_subdivision_reuses_parent_series_registry ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fe9dd83c590>
+
+    @pytest.mark.asyncio
+    async def test_australia_subdivision_reuses_parent_series_registry(monkeypatch) -> None:
+        rows = [
+            {
+                "Date": "2026-03-01",
+                "RawDiseaseLabel": "Anthrax",
+                "Cases": "4",
+                "GeographyKey": "country:AU-NSW:national",
+            }
+        ]
+        calls = []
+    
+        class Store:
+            def enrich_registry_identities(self, source_rows, country_code, **kwargs):
+                calls.append(("enrich", country_code, kwargs))
+                return source_rows
+    
+            def select_registry_rows(self, source_rows, country_code, **kwargs):
+                calls.append(("select", country_code, kwargs))
+                return SimpleNamespace(
+                    rows=source_rows,
+                    skipped_unregistered=0,
+                    skipped_missing=0,
+                    unregistered_rows=(),
+                )
+    
+            async def save_rows(self, _db, source_rows, country_code, **kwargs):
+                calls.append(("save", country_code, kwargs))
+                return SimpleNamespace(
+                    upserted=1,
+                    skipped_unmatched=0,
+                    skipped_ambiguous=0,
+                    skipped_invalid=0,
+                    skipped_registry_not_synced=0,
+                    quality_report=SimpleNamespace(
+                        issues=(), highest_severity=None, to_dict=lambda: {"issues": []}
+                    ),
+                )
+    
+        monkeypatch.setattr(
+            "src.services.crawl_service.SeriesObservationStore", lambda: Store()
+        )
+    
+        updater = SimpleNamespace(
+            country_code="AU-NSW",
+            series_country_code="AU",
+            ontology_source_id="SRC_AU_NINDSS",
+            series_geography_key="country:AU-NSW:national",
+            series_registered_rows_only=True,
+        )
+    
+        result = await CrawlService._save_series_rows(object(), updater, rows)
+    
+        assert result.upserted == 1
+>       assert calls == [
+            ("select", "AU", {"source_id": "SRC_AU_NINDSS"}),
+            (
+                "save",
+                "AU",
+                {
+                    "source_id": "SRC_AU_NINDSS",
+                    "geography_key": "country:AU-NSW:national",
+                    "quality_policy": CrawlService._series_quality_policy(updater),
+                },
+            ),
+        ]
+E       AssertionError: assert [('select', '... False, ...})] == [('select', '..._ratio=0.8)})]
+E         
+E         At index 1 diff: ('save', 'AU', {'source_id': 'SRC_AU_NINDSS', 'geography_key': 'country:AU-NSW:national', 'quality_policy': SeriesObservationQualityPolicy(mode='quarantine', minimum_cross_series=5, critical_zero_tail_periods=3, coverage_drop_ratio=0.5, low_mapping_coverage_ratio=0.5, history_lookback_days=740, max_examples=20, registry_coverage='required', material_revision_drop_ratio=0.8), 'history_relevant_periods_only': False, 'reuse_upsert_rows_for_revisions': False}) != ('save', 'AU', {'source_id': 'SRC_AU_NINDSS', 'geography_key': 'country:AU-NSW:national', 'quality_policy': SeriesObservationQualityPolicy(mode='quarantine', minimum_cross_series=5, critical_zero_tail_periods=3, coverage_drop_ratio=0.5, low_mapping_coverage_ratio=0.5, history_lookback_days=740, max_examples=20, registry_coverage='required', material_revision_drop_ratio=0.8)})
+E         
+E         Full diff:
+E           [
+E               (
+E                   'select',
+E                   'AU',
+E                   {
+E                       'source_id': 'SRC_AU_NINDSS',
+E                   },
+E               ),
+E               (
+E                   'save',
+E                   'AU',
+E                   {
+E                       'source_id': 'SRC_AU_NINDSS',
+E                       'geography_key': 'country:AU-NSW:national',
+E                       'quality_policy': SeriesObservationQualityPolicy(
+E                           mode='quarantine',
+E                           minimum_cross_series=5,
+E                           critical_zero_tail_periods=3,
+E                           coverage_drop_ratio=0.5,
+E                           low_mapping_coverage_ratio=0.5,
+E                           history_lookback_days=740,
+E                           max_examples=20,
+E                           registry_coverage='required',
+E                           material_revision_drop_ratio=0.8,
+E                       ),
+E         +             'history_relevant_periods_only': False,
+E         +             'reuse_upsert_rows_for_revisions': False,
+E                   },
+E               ),
+E           ]
+
+tests/unit/test_crawl_service_series_dual_write.py:469: AssertionError
+----------------------------- Captured stderr call -----------------------------
+[32m2026-11-16 11:49:53[0m | [1mINFO    [0m | [36msrc.services.ingestion.series_rows[0m:[36msave_series_rows[0m:[36m212[0m - [1mDisease source-series Registry selection | country=AU selected=1 retained_unmapped=0 omitted_unregistered=0 omitted_missing=0[0m
+[32m2026-11-16 11:49:53[0m | [1mINFO    [0m | [36msrc.services.ingestion.series_rows[0m:[36msave_series_rows[0m:[36m306[0m - [1mDisease source-series dual write complete | country=AU upserted=1 unregistered=0 missing=0 unmatched=0 ambiguous=0 invalid=0 registry_not_synced=0 holding=0 quality_mode=quarantine quality_issues=0 quality_highest=none[0m
+__ test_checked_in_baseline_is_valid_json_and_current_tree_does_not_exceed_it __
+
+    def test_checked_in_baseline_is_valid_json_and_current_tree_does_not_exceed_it() -> (
+        None
+    ):
+        baseline_path = ROOT / "configs" / "legacy_disease_access_baseline.json"
+        # Keep a direct JSON parse assertion so syntax errors are diagnosed before
+        # the more descriptive structural validation performed by load_baseline.
+        assert isinstance(json.loads(baseline_path.read_text(encoding="utf-8")), dict)
+    
+        baseline = load_baseline(baseline_path)
+        current = scan_repository(ROOT)
+        violations = check_against_baseline(current, baseline)
+    
+>       assert not violations, "\n".join(str(item) for item in violations)
+E       AssertionError: scripts/verify_za_nicd_nmc.py: new direct legacy disease access is not present in the reviewed baseline (current={'DiseaseRecord': 0, 'disease_records': 1})
+E       assert not [Violation(path='scripts/verify_za_nicd_nmc.py', message="new direct legacy disease access is not present in the reviewed baseline (current={'DiseaseRecord': 0, 'disease_records': 1})")]
+
+tests/unit/test_legacy_disease_access_guard.py:143: AssertionError
+_______________ test_official_channels_match_source_registration _______________
+
+    def test_official_channels_match_source_registration():
+        channels = load_source_channels()
+>       assert {c['country_code'] for c in channels} == {'NG', 'KH', 'AR', 'PE', 'ZA', 'ID', 'MX', 'CL', 'CO', 'MW'}
+E       AssertionError: assert {'AR', 'BN', ...R', 'EC', ...} == {'AR', 'CL', ...H', 'MW', ...}
+E         
+E         Extra items in the left set:
+E         'PY'
+E         'UG'
+E         'MM'
+E         'MQ'
+E         'ET'
+E         'TL'
+E         'TZ'
+E         'KE'
+E         'LA'
+E         'GP'
+E         'PA'
+E         'BN'
+E         'CR'
+E         'EC'
+E         'PH'
+E         'GF'
+E         'GH'
+E         'VN'
+E         
+E         Full diff:
+E           {
+E               'AR',
+E         +     'BN',
+E               'CL',
+E               'CO',
+E         +     'CR',
+E         +     'EC',
+E         +     'ET',
+E         +     'GF',
+E         +     'GH',
+E         +     'GP',
+E               'ID',
+E         +     'KE',
+E               'KH',
+E         +     'LA',
+E         +     'MM',
+E         +     'MQ',
+E               'MW',
+E               'MX',
+E               'NG',
+E         +     'PA',
+E               'PE',
+E         +     'PH',
+E         +     'PY',
+E         +     'TL',
+E         +     'TZ',
+E         +     'UG',
+E         +     'VN',
+E               'ZA',
+E           }
+
+tests/unit/test_priority_country_updates.py:18: AssertionError
+________________ test_jobs_keep_native_cadence_and_raw_evidence ________________
+
+    def test_jobs_keep_native_cadence_and_raw_evidence():
+        jobs = setup.desired_jobs()
+>       assert len(jobs) == 10
+E       AssertionError: assert 28 == 10
+E        +  where 28 = len({'ng-ncdc-surveillance-daily': {'name': 'NG Official Surveillance Publication Check', 'country_code': 'NG', 'source': ... Official Surveillance Publication Check', 'country_code': 'PE', 'source': 'pe_cdc_weekly', 'enabled': True, ...}, ...})
+
+tests/unit/test_priority_country_updates.py:61: AssertionError
+______________________ test_preview_does_not_change_jobs _______________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fe952d543d0>
+
+    async def test_preview_does_not_change_jobs(monkeypatch):
+        db = database(monkeypatch, [])
+        changes = await setup.configure()
+>       assert len(changes) == 10
+E       AssertionError: assert 28 == 10
+E        +  where 28 = len([JobChange(job_id='ng-ncdc-surveillance-daily', action='create', enabled=True, changed_fields=('name', 'country_code',...rent_month', 'revision_window_months', 'retry_threshold', 'interval_minutes', 'daily_time', 'timezone', 'notes')), ...])
+
+tests/unit/test_priority_country_updates.py:73: AssertionError
+________________ test_apply_preserves_pauses_and_is_idempotent _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fe952d54d00>
+
+    async def test_apply_preserves_pauses_and_is_idempotent(monkeypatch):
+        jobs = setup.desired_jobs()
+        rows = [SimpleNamespace(job_id=key, **{**value, 'enabled': False}) for key, value in jobs.items()]
+        db = database(monkeypatch, rows)
+        changes = await setup.configure(apply=True)
+        assert all(x.action == 'unchanged' and not x.enabled for x in changes)
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+        setup.automation_service.reschedule_job.assert_not_awaited()
+        await setup.configure(apply=True, enable=True)
+        assert all(x.enabled for x in rows)
+>       assert setup.automation_service.reschedule_job.await_count == 10
+E       AssertionError: assert 28 == 10
+E        +  where 28 = <AsyncMock id='140639594666976'>.await_count
+E        +    where <AsyncMock id='140639594666976'> = namespace(reschedule_job=<AsyncMock id='140639594666976'>).reschedule_job
+E        +      where namespace(reschedule_job=<AsyncMock id='140639594666976'>) = setup.automation_service
+
+tests/unit/test_priority_country_updates.py:90: AssertionError
+____ test_theme_preview_freezes_source_without_claiming_available_fast_path ____
+
+repository = PosixPath('/tmp/pytest-of-likangguo/pytest-1273/test_theme_preview_freezes_sou0')
+
+    def test_theme_preview_freezes_source_without_claiming_available_fast_path(repository):
+        token = repository / "shared/site-theme-v1.json"
+        token.write_text('{"color":"red"}')
+        result = plan(repository)
+        PublicationPlanOut.model_validate(result)
+>       assert result["kind"] == "theme"
+E       AssertionError: assert 'full' == 'theme'
+E         
+E         - theme
+E         + full
+
+tests/unit/test_publication_planning.py:69: AssertionError
+=============================== warnings summary ===============================
+venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/likangguo/globalID/globalID2/venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/unit/test_knowledge_briefs.py::test_ai_generator_repairs_invalid_section_citations_once
+  /home/likangguo/globalID/globalID2/venv/lib/python3.13/site-packages/sqlalchemy/sql/visitors.py:126: RuntimeWarning: coroutine 'Connection._cancel' was never awaited
+    def _compiler_dispatch(
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_knowledge_briefs.py::test_superseded_automatic_model_repair_skips_the_model_call
+tests/unit/test_literature_radar.py::test_literature_artifacts_keep_the_build_index_while_sharding_the_browser_copy
+  /usr/lib/python3.13/json/decoder.py:361: RuntimeWarning: coroutine 'Connection._cancel' was never awaited
+    obj, end = self.scan_once(s, idx)
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[holding-nl_virological]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[holding-nl_respiratory]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[holding-my_flunet]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[mapped-nl_virological]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[mapped-nl_respiratory]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[mapped-my_flunet]
+  <sys>:0: SADeprecationWarning: DISTINCT ON is currently supported only by the PostgreSQL dialect.  Use of DISTINCT ON for other backends is currently silently ignored, however this usage is deprecated, and will raise CompileError in a future release for all backends that do not support this syntax.
+
+tests/unit/test_series_observation_store.py::test_revision_capture_seeds_existing_state_and_appends_only_changes
+tests/unit/test_series_observation_store.py::test_revision_capture_seeds_existing_state_and_appends_only_changes
+tests/unit/test_series_observation_store.py::test_revision_capture_seeds_existing_state_and_appends_only_changes
+  /home/likangguo/globalID/globalID2/tests/unit/test_series_observation_store.py:114: SADeprecationWarning: DISTINCT ON is currently supported only by the PostgreSQL dialect.  Use of DISTINCT ON for other backends is currently silently ignored, however this usage is deprecated, and will raise CompileError in a future release for all backends that do not support this syntax.
+    sql = str(statement)
+
+tests/unit/test_series_observation_store.py::test_revision_capture_reuses_accepted_rows_without_current_lookup
+tests/unit/test_series_observation_store.py::test_revision_capture_reuses_accepted_rows_without_current_lookup
+tests/unit/test_series_observation_store.py::test_revision_capture_reuses_accepted_rows_without_current_lookup
+  /home/likangguo/globalID/globalID2/tests/unit/test_series_observation_store.py:199: SADeprecationWarning: DISTINCT ON is currently supported only by the PostgreSQL dialect.  Use of DISTINCT ON for other backends is currently silently ignored, however this usage is deprecated, and will raise CompileError in a future release for all backends that do not support this syntax.
+    if "disease_series_observation_revisions" not in str(statement):
+
+tests/unit/test_series_observation_store.py::test_revision_capture_batches_large_source_refresh
+tests/unit/test_series_observation_store.py::test_revision_capture_batches_large_source_refresh
+tests/unit/test_series_observation_store.py::test_revision_capture_batches_large_source_refresh
+  /home/likangguo/globalID/globalID2/tests/unit/test_series_observation_store.py:277: SADeprecationWarning: DISTINCT ON is currently supported only by the PostgreSQL dialect.  Use of DISTINCT ON for other backends is currently silently ignored, however this usage is deprecated, and will raise CompileError in a future release for all backends that do not support this syntax.
+    if "disease_series_observation_revisions" in str(statement):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_crawl_service_series_dual_write.py::test_australia_subdivision_reuses_parent_series_registry - AssertionError: assert [('select', '... False, ...})] == [('select', '..._ratio=0.8)})]
+  
+  At index 1 diff: ('save', 'AU', {'source_id': 'SRC_AU_NINDSS', 'geography_key': 'country:AU-NSW:national', 'quality_policy': SeriesObservationQualityPolicy(mode='quarantine', minimum_cross_series=5, critical_zero_tail_periods=3, coverage_drop_ratio=0.5, low_mapping_coverage_ratio=0.5, history_lookback_days=740, max_examples=20, registry_coverage='required', material_revision_drop_ratio=0.8), 'history_relevant_periods_only': False, 'reuse_upsert_rows_for_revisions': False}) != ('save', 'AU', {'source_id': 'SRC_AU_NINDSS', 'geography_key': 'country:AU-NSW:national', 'quality_policy': SeriesObservationQualityPolicy(mode='quarantine', minimum_cross_series=5, critical_zero_tail_periods=3, coverage_drop_ratio=0.5, low_mapping_coverage_ratio=0.5, history_lookback_days=740, max_examples=20, registry_coverage='required', material_revision_drop_ratio=0.8)})
+  
+  Full diff:
+    [
+        (
+            'select',
+            'AU',
+            {
+                'source_id': 'SRC_AU_NINDSS',
+            },
+        ),
+        (
+            'save',
+            'AU',
+            {
+                'source_id': 'SRC_AU_NINDSS',
+                'geography_key': 'country:AU-NSW:national',
+                'quality_policy': SeriesObservationQualityPolicy(
+                    mode='quarantine',
+                    minimum_cross_series=5,
+                    critical_zero_tail_periods=3,
+                    coverage_drop_ratio=0.5,
+                    low_mapping_coverage_ratio=0.5,
+                    history_lookback_days=740,
+                    max_examples=20,
+                    registry_coverage='required',
+                    material_revision_drop_ratio=0.8,
+                ),
+  +             'history_relevant_periods_only': False,
+  +             'reuse_upsert_rows_for_revisions': False,
+            },
+        ),
+    ]
+FAILED tests/unit/test_legacy_disease_access_guard.py::test_checked_in_baseline_is_valid_json_and_current_tree_does_not_exceed_it - AssertionError: scripts/verify_za_nicd_nmc.py: new direct legacy disease access is not present in the reviewed baseline (current={'DiseaseRecord': 0, 'disease_records': 1})
+assert not [Violation(path='scripts/verify_za_nicd_nmc.py', message="new direct legacy disease access is not present in the reviewed baseline (current={'DiseaseRecord': 0, 'disease_records': 1})")]
+FAILED tests/unit/test_priority_country_updates.py::test_official_channels_match_source_registration - AssertionError: assert {'AR', 'BN', ...R', 'EC', ...} == {'AR', 'CL', ...H', 'MW', ...}
+  
+  Extra items in the left set:
+  'PY'
+  'UG'
+  'MM'
+  'MQ'
+  'ET'
+  'TL'
+  'TZ'
+  'KE'
+  'LA'
+  'GP'
+  'PA'
+  'BN'
+  'CR'
+  'EC'
+  'PH'
+  'GF'
+  'GH'
+  'VN'
+  
+  Full diff:
+    {
+        'AR',
+  +     'BN',
+        'CL',
+        'CO',
+  +     'CR',
+  +     'EC',
+  +     'ET',
+  +     'GF',
+  +     'GH',
+  +     'GP',
+        'ID',
+  +     'KE',
+        'KH',
+  +     'LA',
+  +     'MM',
+  +     'MQ',
+        'MW',
+        'MX',
+        'NG',
+  +     'PA',
+        'PE',
+  +     'PH',
+  +     'PY',
+  +     'TL',
+  +     'TZ',
+  +     'UG',
+  +     'VN',
+        'ZA',
+    }
+FAILED tests/unit/test_priority_country_updates.py::test_jobs_keep_native_cadence_and_raw_evidence - AssertionError: assert 28 == 10
+ +  where 28 = len({'ng-ncdc-surveillance-daily': {'name': 'NG Official Surveillance Publication Check', 'country_code': 'NG', 'source': ... Official Surveillance Publication Check', 'country_code': 'PE', 'source': 'pe_cdc_weekly', 'enabled': True, ...}, ...})
+FAILED tests/unit/test_priority_country_updates.py::test_preview_does_not_change_jobs - AssertionError: assert 28 == 10
+ +  where 28 = len([JobChange(job_id='ng-ncdc-surveillance-daily', action='create', enabled=True, changed_fields=('name', 'country_code',...rent_month', 'revision_window_months', 'retry_threshold', 'interval_minutes', 'daily_time', 'timezone', 'notes')), ...])
+FAILED tests/unit/test_priority_country_updates.py::test_apply_preserves_pauses_and_is_idempotent - AssertionError: assert 28 == 10
+ +  where 28 = <AsyncMock id='140639594666976'>.await_count
+ +    where <AsyncMock id='140639594666976'> = namespace(reschedule_job=<AsyncMock id='140639594666976'>).reschedule_job
+ +      where namespace(reschedule_job=<AsyncMock id='140639594666976'>) = setup.automation_service
+FAILED tests/unit/test_publication_planning.py::test_theme_preview_freezes_source_without_claiming_available_fast_path - AssertionError: assert 'full' == 'theme'
+  
+  - theme
+  + full
+7 failed, 5428 passed, 20 skipped, 19 warnings in 768.29s (0:12:48)

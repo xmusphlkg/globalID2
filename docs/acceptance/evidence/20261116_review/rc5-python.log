@@ -1,0 +1,18 @@
+........................................................................ [ 41%]
+........................................................................ [ 83%]
+............................                                             [100%]
+=============================== warnings summary ===============================
+tests/unit/test_series_observation_store.py::test_revision_capture_seeds_existing_state_and_appends_only_changes
+tests/unit/test_series_observation_store.py::test_revision_capture_seeds_existing_state_and_appends_only_changes
+tests/unit/test_series_observation_store.py::test_revision_capture_seeds_existing_state_and_appends_only_changes
+  /home/likangguo/globalID/globalID2/tests/unit/test_series_observation_store.py:114: SADeprecationWarning: DISTINCT ON is currently supported only by the PostgreSQL dialect.  Use of DISTINCT ON for other backends is currently silently ignored, however this usage is deprecated, and will raise CompileError in a future release for all backends that do not support this syntax.
+    sql = str(statement)
+
+tests/unit/test_series_observation_store.py::test_revision_capture_batches_large_source_refresh
+tests/unit/test_series_observation_store.py::test_revision_capture_batches_large_source_refresh
+tests/unit/test_series_observation_store.py::test_revision_capture_batches_large_source_refresh
+  /home/likangguo/globalID/globalID2/tests/unit/test_series_observation_store.py:195: SADeprecationWarning: DISTINCT ON is currently supported only by the PostgreSQL dialect.  Use of DISTINCT ON for other backends is currently silently ignored, however this usage is deprecated, and will raise CompileError in a future release for all backends that do not support this syntax.
+    if "disease_series_observation_revisions" in str(statement):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+172 passed, 6 warnings in 28.58s

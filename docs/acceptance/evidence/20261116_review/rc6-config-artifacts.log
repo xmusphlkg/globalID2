@@ -1,0 +1,28 @@
+{"ontology_valid": true, "concepts": 216, "groups": 23, "raw_series": 2690, "expanded_series": 2821}
+{
+  "candidate_blob_limit": 5242880,
+  "violations": [
+    {
+      "path": "output/us-population-live/raw/census_2000_2010_intercensal.csv",
+      "bytes": 5481291,
+      "reasons": [
+        "blob exceeds 5242880 bytes"
+      ]
+    },
+    {
+      "path": "tests/fixtures/ingestion/PE/2026w13_cover_summary.pdf",
+      "bytes": 5812723,
+      "reasons": [
+        "blob exceeds 5242880 bytes"
+      ]
+    },
+    {
+      "path": "tests/fixtures/ingestion/PE/official_bulletins.zip",
+      "bytes": 8557778,
+      "reasons": [
+        "blob exceeds 5242880 bytes"
+      ]
+    }
+  ]
+}
+All still-present initial candidate JSON documents parse successfully

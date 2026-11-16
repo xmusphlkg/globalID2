@@ -1,0 +1,16 @@
+
+> globalid-web@0.1.0 openapi:check
+> cd .. && PYTHONPATH=. venv/bin/python scripts/check_dashboard_openapi.py
+
+{
+  "schema_version": 1,
+  "openapi_json": {
+    "status": "ok",
+    "path": "dashboard/openapi.json"
+  },
+  "typescript": {
+    "status": "ok",
+    "path": "dashboard/src/generated/api.d.ts"
+  },
+  "ready": true
+}

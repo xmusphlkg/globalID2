@@ -1,0 +1,344 @@
+
+> globalid-report-site@0.19.4 test:public
+> node --experimental-strip-types --test src/lib/site-search.test.ts src/lib/download-presentation.test.ts src/lib/pathogen-resources.test.ts src/lib/situation-rss.test.ts src/components/situation/model.test.ts src/components/situation/noticeLabels.test.ts src/components/situation/monitoring.test.ts src/components/situation/overview-data.test.ts
+
+TAP version 13
+# Subtest: homepage and map default counts use the same 30-day window and deduplication
+ok 1 - homepage and map default counts use the same 30-day window and deduplication
+  ---
+  duration_ms: 26.881975
+  type: 'test'
+  ...
+# Subtest: recency buckets follow the age of the report, not any severity
+ok 2 - recency buckets follow the age of the report, not any severity
+  ---
+  duration_ms: 2.607925
+  type: 'test'
+  ...
+# Subtest: points updated in the last 7 days sort first, then newest first
+ok 3 - points updated in the last 7 days sort first, then newest first
+  ---
+  duration_ms: 0.492786
+  type: 'test'
+  ...
+# Subtest: filters combine and the window drops older points
+ok 4 - filters combine and the window drops older points
+  ---
+  duration_ms: 0.715397
+  type: 'test'
+  ...
+# Subtest: host filters treat legacy records as unknown and never collapse different hosts
+ok 5 - host filters treat legacy records as unknown and never collapse different hosts
+  ---
+  duration_ms: 4.927473
+  type: 'test'
+  ...
+# Subtest: time windows include the boundary but exclude future and invalid dates
+ok 6 - time windows include the boundary but exclude future and invalid dates
+  ---
+  duration_ms: 0.369409
+  type: 'test'
+  ...
+# Subtest: repeated facts from different feeds form one event and retain both sources
+ok 7 - repeated facts from different feeds form one event and retain both sources
+  ---
+  duration_ms: 0.559845
+  type: 'test'
+  ...
+# Subtest: distinct updates, places, outbreaks and count bases never collapse
+ok 8 - distinct updates, places, outbreaks and count bases never collapse
+  ---
+  duration_ms: 0.475025
+  type: 'test'
+  ...
+# Subtest: publication dates do not split reports of the same dated figures
+ok 9 - publication dates do not split reports of the same dated figures
+  ---
+  duration_ms: 0.660639
+  type: 'test'
+  ...
+# Subtest: MERS Saudi Arabia annual totals form two cards with all six source reports
+ok 10 - MERS Saudi Arabia annual totals form two cards with all six source reports
+  ---
+  duration_ms: 1.773981
+  type: 'test'
+  ...
+# Subtest: annual grouping separates years, suspected counts and different reporting periods
+ok 11 - annual grouping separates years, suspected counts and different reporting periods
+  ---
+  duration_ms: 0.600161
+  type: 'test'
+  ...
+# Subtest: New Zealand is a place name, while new laboratory-confirmed cases remain incident evidence
+ok 12 - New Zealand is a place name, while new laboratory-confirmed cases remain incident evidence
+  ---
+  duration_ms: 4.245027
+  type: 'test'
+  ...
+# Subtest: reports without figures need matching evidence, not just matching empty fields
+ok 13 - reports without figures need matching evidence, not just matching empty fields
+  ---
+  duration_ms: 0.261246
+  type: 'test'
+  ...
+# Subtest: map points collapse repeated place reports after source filtering
+ok 14 - map points collapse repeated place reports after source filtering
+  ---
+  duration_ms: 0.261685
+  type: 'test'
+  ...
+# Subtest: full history filtering keeps old channels and reduces each outbreak place to its newest matching marker
+ok 15 - full history filtering keeps old channels and reduces each outbreak place to its newest matching marker
+  ---
+  duration_ms: 0.587263
+  type: 'test'
+  ...
+# Subtest: structured cumulative data merge only across the same start, figures and literal count basis
+ok 16 - structured cumulative data merge only across the same start, figures and literal count basis
+  ---
+  duration_ms: 0.385749
+  type: 'test'
+  ...
+# Subtest: structured incident data require the same complete interval and take precedence over annual prose
+ok 17 - structured incident data require the same complete interval and take precedence over annual prose
+  ---
+  duration_ms: 0.395905
+  type: 'test'
+  ...
+# Subtest: invalid structured dates and missing incident ends cannot silently use annual fallback
+ok 18 - invalid structured dates and missing incident ends cannot silently use annual fallback
+  ---
+  duration_ms: 1.660009
+  type: 'test'
+  ...
+# Subtest: a quoted incident interval blocks a conflicting annual summary
+ok 19 - a quoted incident interval blocks a conflicting annual summary
+  ---
+  duration_ms: 0.49478
+  type: 'test'
+  ...
+# Subtest: ambiguous periods and conflicting quoted years do not combine with annual totals
+ok 20 - ambiguous periods and conflicting quoted years do not combine with annual totals
+  ---
+  duration_ms: 0.263506
+  type: 'test'
+  ...
+# Subtest: explicit annual start alone does not equate total, confirmed, suspected or probable bases
+ok 21 - explicit annual start alone does not equate total, confirmed, suspected or probable bases
+  ---
+  duration_ms: 0.564678
+  type: 'test'
+  ...
+# Subtest: period dates beyond publication or inconsistent with the count cutoff stay individual
+ok 22 - period dates beyond publication or inconsistent with the count cutoff stay individual
+  ---
+  duration_ms: 0.338531
+  type: 'test'
+  ...
+# Subtest: multiple incident intervals and undated month evidence cannot use an annual summary
+ok 23 - multiple incident intervals and undated month evidence cannot use an annual summary
+  ---
+  duration_ms: 0.26567
+  type: 'test'
+  ...
+# Subtest: anchors use the largest landmass and points in one country fan out
+ok 24 - anchors use the largest landmass and points in one country fan out
+  ---
+  duration_ms: 0.889254
+  type: 'test'
+  ...
+# Subtest: exported coordinates win over the country anchor and do not use its fan-out
+ok 25 - exported coordinates win over the country anchor and do not use its fan-out
+  ---
+  duration_ms: 0.373935
+  type: 'test'
+  ...
+# Subtest: timeline graph packs columns: a country holds one only while it is active, and lines bend left when one ends
+ok 26 - timeline graph packs columns: a country holds one only while it is active, and lines bend left when one ends
+  ---
+  duration_ms: 0.94302
+  type: 'test'
+  ...
+# Subtest: timeline graph stays one column wide when countries never overlap
+ok 27 - timeline graph stays one column wide when countries never overlap
+  ---
+  duration_ms: 0.387917
+  type: 'test'
+  ...
+# Subtest: timeline graph folds the quietest countries into one shared grey lane
+ok 28 - timeline graph folds the quietest countries into one shared grey lane
+  ---
+  duration_ms: 0.413357
+  type: 'test'
+  ...
+# Subtest: fitView falls back to the world with no points or no size
+ok 29 - fitView falls back to the world with no points or no size
+  ---
+  duration_ms: 0.283461
+  type: 'test'
+  ...
+# Subtest: fitView centres a single place and caps the zoom
+ok 30 - fitView centres a single place and caps the zoom
+  ---
+  duration_ms: 0.170028
+  type: 'test'
+  ...
+# Subtest: fitView zooms out further for a wider spread and frames its middle
+ok 31 - fitView zooms out further for a wider spread and frames its middle
+  ---
+  duration_ms: 0.156735
+  type: 'test'
+  ...
+# Subtest: fitView returns the world view for global spreads, including across the dateline
+ok 32 - fitView returns the world view for global spreads, including across the dateline
+  ---
+  duration_ms: 0.1428
+  type: 'test'
+  ...
+# Subtest: a report without per-event host metadata cannot match an explicit host filter
+ok 33 - a report without per-event host metadata cannot match an explicit host filter
+  ---
+  duration_ms: 2.185122
+  type: 'test'
+  ...
+# Subtest: monitoring combines source and time filters, rejects future/invalid dates and deduplicates notices
+ok 34 - monitoring combines source and time filters, rejects future/invalid dates and deduplicates notices
+  ---
+  duration_ms: 12.90681
+  type: 'test'
+  ...
+# Subtest: legacy title coverage combines disease and area without substring false positives
+ok 35 - legacy title coverage combines disease and area without substring false positives
+  ---
+  duration_ms: 5.419204
+  type: 'test'
+  ...
+# Subtest: legacy title matching accepts aliases from points, slug separators and Chinese names
+ok 36 - legacy title matching accepts aliases from points, slug separators and Chinese names
+  ---
+  duration_ms: 7.375067
+  type: 'test'
+  ...
+# Subtest: explicit coverage takes precedence over title and supports reports with generic titles
+ok 37 - explicit coverage takes precedence over title and supports reports with generic titles
+  ---
+  duration_ms: 0.593662
+  type: 'test'
+  ...
+# Subtest: unknown disease or area metadata never exposes unrelated reports
+ok 38 - unknown disease or area metadata never exposes unrelated reports
+  ---
+  duration_ms: 0.442486
+  type: 'test'
+  ...
+# Subtest: monitoring window includes its boundary and orders newest reports first
+ok 39 - monitoring window includes its boundary and orders newest reports first
+  ---
+  duration_ms: 0.289335
+  type: 'test'
+  ...
+# Subtest: all locales distinguish people, animals and records without a confirmed unit
+ok 40 - all locales distinguish people, animals and records without a confirmed unit
+  ---
+  duration_ms: 34.077185
+  type: 'test'
+  ...
+# Subtest: overview chooses a complete entity shard or only matching outbreaks
+ok 41 - overview chooses a complete entity shard or only matching outbreaks
+  ---
+  duration_ms: 2.687417
+  type: 'test'
+  ...
+# Subtest: legacy overview uses matching outbreak routes even with entity filters
+ok 42 - legacy overview uses matching outbreak routes even with entity filters
+  ---
+  duration_ms: 0.44448
+  type: 'test'
+  ...
+# Subtest: overview limits concurrent reads, preserves partial results and deduplicates report identities
+ok 43 - overview limits concurrent reads, preserves partial results and deduplicates report identities
+  ---
+  duration_ms: 9.418923
+  type: 'test'
+  ...
+# Subtest: abandoned overview reads never publish results or start another batch
+ok 44 - abandoned overview reads never publish results or start another batch
+  ---
+  duration_ms: 0.561618
+  type: 'test'
+  ...
+# Subtest: current download records stay separate from the full historical dataset
+ok 45 - current download records stay separate from the full historical dataset
+  ---
+  duration_ms: 2.02238
+  type: 'test'
+  ...
+# Subtest: all download surfaces use the same decimal unit
+ok 46 - all download surfaces use the same decimal unit
+  ---
+  duration_ms: 0.297164
+  type: 'test'
+  ...
+# Subtest: catalogue row total explains repeated observations beside the metric in every language
+ok 47 - catalogue row total explains repeated observations beside the metric in every language
+  ---
+  duration_ms: 1.518257
+  type: 'test'
+  ...
+# Subtest: uses the pathogen taxonomy rather than a clinical disease name as the sequence search
+ok 48 - uses the pathogen taxonomy rather than a clinical disease name as the sequence search
+  ---
+  duration_ms: 2.417253
+  type: 'test'
+  ...
+# Subtest: does not guess mappings for syndromes, broad influenza or unknown disease identifiers
+ok 49 - does not guess mappings for syndromes, broad influenza or unknown disease identifiers
+  ---
+  duration_ms: 0.429763
+  type: 'test'
+  ...
+# Subtest: public searches and account-based resources remain distinct and on official hosts
+ok 50 - public searches and account-based resources remain distinct and on official hosts
+  ---
+  duration_ms: 1.294286
+  type: 'test'
+  ...
+# Subtest: all three locales explain sequence-count limits and GISAID account access
+ok 51 - all three locales explain sequence-count limits and GISAID account access
+  ---
+  duration_ms: 0.825941
+  type: 'test'
+  ...
+# Subtest: ordinary disease aliases rank seasonal influenza above H. influenzae
+ok 52 - ordinary disease aliases rank seasonal influenza above H. influenzae
+  ---
+  duration_ms: 2.048867
+  type: 'test'
+  ...
+# Subtest: combined country and disease query opens focused research and monitoring
+ok 53 - combined country and disease query opens focused research and monitoring
+  ---
+  duration_ms: 1.393935
+  type: 'test'
+  ...
+# Subtest: the full count is retained when a result preview is capped
+ok 54 - the full count is retained when a result preview is capped
+  ---
+  duration_ms: 0.248041
+  type: 'test'
+  ...
+# Subtest: RSS selectors offer only Situation entities with published events, using localized names
+ok 55 - RSS selectors offer only Situation entities with published events, using localized names
+  ---
+  duration_ms: 25.011049
+  type: 'test'
+  ...
+1..55
+# tests 55
+# suites 0
+# pass 55
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 333.78516

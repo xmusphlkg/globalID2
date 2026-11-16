@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: aggregates numerator once, links the exact year population, and never annualizes
+ok 1 - aggregates numerator once, links the exact year population, and never annualizes
+  ---
+  duration_ms: 6.445796
+  type: 'test'
+  ...
+# Subtest: missing same-year population does not borrow a previous year or WPP; cases remain available
+ok 2 - missing same-year population does not borrow a previous year or WPP; cases remain available
+  ---
+  duration_ms: 2.593345
+  type: 'test'
+  ...
+# Subtest: true zero differs from suppression and a missing report period
+ok 3 - true zero differs from suppression and a missing report period
+  ---
+  duration_ms: 2.157351
+  type: 'test'
+  ...
+# Subtest: duplicates and incompatible definitions cannot produce a complete value
+ok 4 - duplicates and incompatible definitions cannot produce a complete value
+  ---
+  duration_ms: 4.122764
+  type: 'test'
+  ...
+# Subtest: same range shares scale between years and downloads denominator and comparison provenance
+ok 5 - same range shares scale between years and downloads denominator and comparison provenance
+  ---
+  duration_ms: 3.670228
+  type: 'test'
+  ...
+# Subtest: date URL restoration validates dates, chronology and years, and keeps legacy links
+ok 6 - date URL restoration validates dates, chronology and years, and keeps legacy links
+  ---
+  duration_ms: 3.539704
+  type: 'test'
+  ...
+# Subtest: cross-year cumulative rates use each year population and expose every contribution
+ok 7 - cross-year cumulative rates use each year population and expose every contribution
+  ---
+  duration_ms: 1.44782
+  type: 'test'
+  ...
+# Subtest: month, quarter, year and previous-period presets respect calendar boundaries including leap years
+ok 8 - month, quarter, year and previous-period presets respect calendar boundaries including leap years
+  ---
+  duration_ms: 1.081235
+  type: 'test'
+  ...
+# Subtest: monthly counts aggregate to quarters and years without manufacturing missing periods
+ok 9 - monthly counts aggregate to quarters and years without manufacturing missing periods
+  ---
+  duration_ms: 38.881708
+  type: 'test'
+  ...
+# Subtest: weekly reports select full source weeks only and expose the actual date range
+ok 10 - weekly reports select full source weeks only and expose the actual date range
+  ---
+  duration_ms: 1.222737
+  type: 'test'
+  ...
+# Subtest: a week crossing New Year uses the verified reporting year, not its start-date year
+ok 11 - a week crossing New Year uses the verified reporting year, not its start-date year
+  ---
+  duration_ms: 0.473918
+  type: 'test'
+  ...
+# Subtest: missing weekly observations cannot be replaced with zero or removed from expected coverage
+ok 12 - missing weekly observations cannot be replaced with zero or removed from expected coverage
+  ---
+  duration_ms: 1.551821
+  type: 'test'
+  ...
+# Subtest: quarterly and annual source observations remain indivisible
+ok 13 - quarterly and annual source observations remain indivisible
+  ---
+  duration_ms: 0.380615
+  type: 'test'
+  ...
+# Subtest: unverified weekly intervals cannot silently acquire a calendar or population denominator
+ok 14 - unverified weekly intervals cannot silently acquire a calendar or population denominator
+  ---
+  duration_ms: 0.252916
+  type: 'test'
+  ...
+# Subtest: source weeks at reporting-year boundaries survive date bounds and share URL restoration
+ok 15 - source weeks at reporting-year boundaries survive date bounds and share URL restoration
+  ---
+  duration_ms: 0.472816
+  type: 'test'
+  ...
+# Subtest: an entirely absent boundary week never guesses its reporting year from its start date
+ok 16 - an entirely absent boundary week never guesses its reporting year from its start date
+  ---
+  duration_ms: 0.385765
+  type: 'test'
+  ...
+# Subtest: an entirely missing week also invalidates annual trend aggregation instead of being discarded
+ok 17 - an entirely missing week also invalidates annual trend aggregation instead of being discarded
+  ---
+  duration_ms: 0.305926
+  type: 'test'
+  ...
+# Subtest: a sparse source defaults to a complete recent quarter or month instead of inventing a full year
+ok 18 - a sparse source defaults to a complete recent quarter or month instead of inventing a full year
+  ---
+  duration_ms: 2.282082
+  type: 'test'
+  ...
+# Subtest: US, Brazil and Japan coordinate catalogues cover published subdivisions
+ok 19 - US, Brazil and Japan coordinate catalogues cover published subdivisions
+  ---
+  duration_ms: 1.852024
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 351.819799

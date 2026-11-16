@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: the complete multilingual catalogue can be published independently of templates
+ok 1 - the complete multilingual catalogue can be published independently of templates
+  ---
+  duration_ms: 9.415072
+  type: 'test'
+  ...
+# Subtest: rejects invalid feed versions, duplicate releases, impossible dates and missing translations
+ok 2 - rejects invalid feed versions, duplicate releases, impossible dates and missing translations
+  ---
+  duration_ms: 0.718625
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 229.376919

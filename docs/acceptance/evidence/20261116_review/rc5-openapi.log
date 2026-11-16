@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "openapi_json": {
+    "status": "ok",
+    "path": "dashboard/openapi.json"
+  },
+  "typescript": {
+    "status": "ok",
+    "path": "dashboard/src/generated/api.d.ts"
+  },
+  "ready": true
+}

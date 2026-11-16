@@ -1,0 +1,179 @@
+
+> globalid-report-site@0.20.0 test:e2e
+> playwright test e2e/changelog.spec.ts e2e/data-updates.spec.ts e2e/situation-publication.spec.ts e2e/situation.spec.ts e2e/public-restoration.spec.ts e2e/download-dialog.spec.ts e2e/disease-literature.spec.ts --project=chromium-390 --project=chromium-1280 --workers=1 --output=/tmp/globalid-fixes-20261116/focused-fixed-e2e-results --reporter=line
+
+
+Running 78 tests using 1 worker
+
+(node:1009304) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/78] [chromium-390] › e2e/changelog.spec.ts:10:1 › new version records appear without rebuilding or reloading the page
+[2/78] [chromium-390] › e2e/changelog.spec.ts:32:1 › the same runtime history supplies all three languages and update counts
+[3/78] [chromium-390] › e2e/data-updates.spec.ts:8:1 › footer links to the localized updates page and header stays clear
+[4/78] [chromium-390] › e2e/data-updates.spec.ts:40:1 › shows real published events, filters channels, and loads monthly archives
+[5/78] [chromium-390] › e2e/data-updates.spec.ts:84:1 › unavailable feed does not show invented data
+[6/78] [chromium-390] › e2e/data-updates.spec.ts:96:1 › changing month hides old events until the selected archive arrives
+[7/78] [chromium-390] › e2e/data-updates.spec.ts:118:1 › index errors survive a successful archive read and recover on the next poll
+[8/78] [chromium-390] › e2e/data-updates.spec.ts:143:1 › monthly failures retain known events and malformed records cannot crash the page
+[9/78] [chromium-390] › e2e/data-updates.spec.ts:170:1 › UTC range filtering and daily counts include offset timestamps on the correct day
+[10/78] [chromium-390] › e2e/data-updates.spec.ts:193:1 › incomplete, reversed and oversized date ranges explain how to recover
+[11/78] [chromium-390] › e2e/data-updates.spec.ts:215:1 › a missing month never becomes a zero-count daily chart
+[12/78] [chromium-390] › e2e/disease-literature.spec.ts:30:1 › disease links open a dedicated literature page with transparent database queries
+[13/78] [chromium-390] › e2e/disease-literature.spec.ts:48:1 › complete disease records, filters and yearly chart stay in sync and validate year bounds
+[14/78] [chromium-390] › e2e/disease-literature.spec.ts:87:1 › page failures hide old cards and can be retried without downloading the whole library
+[15/78] [chromium-390] › e2e/disease-literature.spec.ts:102:1 › focused Ask loads only catalogue chunks matching its scope
+[16/78] [chromium-390] › e2e/disease-literature.spec.ts:124:1 › generic Ask shows complete-catalogue progress, bounds requests and ignores an older search finishing late
+[17/78] [chromium-390] › e2e/download-dialog.spec.ts:10:1 › downloads stay compact and lazy, refresh without HTML changes, and save the selected file
+[18/78] [chromium-390] › e2e/download-dialog.spec.ts:52:1 › a failed catalogue can be retried inside the French disease dialog
+[19/78] [chromium-390] › e2e/public-restoration.spec.ts:66:1 › home restores real curves and clear national coverage without fetching country histories
+[20/78] [chromium-390] › e2e/public-restoration.spec.ts:88:1 › country restores contextual links, source cadence and separately dated download formats
+[21/78] [chromium-390] › e2e/public-restoration.spec.ts:111:1 › disease page keeps the selected disease when opening a country
+[22/78] [chromium-390] › e2e/public-restoration.spec.ts:117:1 › chart data action opens the lazy download dialog directly
+[23/78] [chromium-390] › e2e/public-restoration.spec.ts:128:1 › French country facts and disease names retain localization
+[24/78] [chromium-390] › e2e/public-restoration.spec.ts:138:1 › directory restores subdivision entry and reset without losing filters
+[25/78] [chromium-390] › e2e/public-restoration.spec.ts:147:1 › archives show named groups and adjacent periods while timelines stay lazy
+[26/78] [chromium-390] › e2e/public-restoration.spec.ts:163:1 › seasonality retains upper and lower-level area sources and current data version
+[27/78] [chromium-390] › e2e/situation-publication.spec.ts:44:1 › Situation JSON updates map and lazy timeline without rebuilding HTML; one page pins its release
+[28/78] [chromium-390] › e2e/situation-publication.spec.ts:60:1 › country notices, homepage metrics and previously unbuilt weekly periods follow independent JSON
+[29/78] [chromium-390] › e2e/situation-publication.spec.ts:80:1 › Situation integrity errors close reads instead of showing an older static snapshot
+[30/78] [chromium-390] › e2e/situation-publication.spec.ts:87:1 › overview entity reads stay pinned when the publication changes
+[31/78] [chromium-390] › e2e/situation-publication.spec.ts:101:1 › an invalid overview entity never falls back to unpinned static data
+[32/78] [chromium-390] › e2e/situation.spec.ts:64:1 › situation filters remove old map series, including an empty result
+[33/78] [chromium-390] › e2e/situation.spec.ts:81:1 › timeline shares filters, merges duplicates and keeps all report links
+[34/78] [chromium-390] › e2e/situation.spec.ts:118:1 › explicit time and source deep links survive reload with a selected place
+  1) [chromium-390] › e2e/situation.spec.ts:118:1 › explicit time and source deep links survive reload with a selected place 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator: locator('.sit-list').getByRole('combobox', { name: 'Source', exact: true })
+    Expected: "Feed two"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveValue" with timeout 5000ms
+      - waiting for locator('.sit-list').getByRole('combobox', { name: 'Source', exact: true })
+
+
+      121 |   await expect(page.locator('.sit-item')).toHaveCount(1);
+      122 |   await expect(page.locator('.sit-alert')).toHaveCount(1);
+    > 123 |   await expect(page.locator('.sit-list').getByRole('combobox', { name: 'Source', exact: true })).toHaveValue('Feed two');
+          |                                                                                                  ^
+      124 |   await page.reload();
+      125 |   await expect(page.locator('.sit-alert')).toHaveCount(1);
+      126 |   await expect(page.locator('.sit-list').getByRole('combobox', { name: 'Time window', exact: true })).toHaveValue('Last 7 days');
+        at /home/likangguo/globalID/globalID2/astro-site/e2e/situation.spec.ts:123:98
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/globalid-fixes-20261116/focused-fixed-e2e-results/situation-explicit-time-an-0786e-eload-with-a-selected-place-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/globalid-fixes-20261116/focused-fixed-e2e-results/situation-explicit-time-an-0786e-eload-with-a-selected-place-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/globalid-fixes-20261116/focused-fixed-e2e-results/situation-explicit-time-an-0786e-eload-with-a-selected-place-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/globalid-fixes-20261116/focused-fixed-e2e-results/situation-explicit-time-an-0786e-eload-with-a-selected-place-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:1027692) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[35/78] [chromium-390] › e2e/situation.spec.ts:129:1 › lower-level area deep links wait for the current catalogue and retain its own series
+[36/78] [chromium-390] › e2e/situation.spec.ts:149:1 › situation page: select a place, expand timeline cards, graph stays attached
+[37/78] [chromium-390] › e2e/situation.spec.ts:185:1 › situation page: filtering recentres the map without errors
+[38/78] [chromium-390] › e2e/situation.spec.ts:200:1 › typing filters opens a timeline, scopes monitoring cards and restores cancelled searches
+[39/78] [chromium-390] › e2e/situation.spec.ts:243:1 › MERS shared link groups identical cumulative figures across channels and dates
+  2) [chromium-390] › e2e/situation.spec.ts:243:1 › MERS shared link groups identical cumulative figures across channels and dates 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('.sit-alert').first().locator('.sit-alert-counts')
+    Expected: "8 cases · 1 deaths"
+    Received: "8 reported cases (unit unspecified) · 1 reported deaths (unit unspecified)"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for locator('.sit-alert').first().locator('.sit-alert-counts')
+        14 × locator resolved to <span class="sit-alert-counts">8 reported cases (unit unspecified) · 1 reported …</span>
+           - unexpected value "8 reported cases (unit unspecified) · 1 reported deaths (unit unspecified)"
+
+
+      253 |   await expect(rows.first().locator('.sit-source-link')).toHaveCount(3);
+      254 |   await expect(rows.last().locator('.sit-source-link')).toHaveCount(3);
+    > 255 |   await expect(rows.first().locator('.sit-alert-counts')).toHaveText('8 cases · 1 deaths');
+          |                                                           ^
+      256 |   await expect(rows.last().locator('.sit-alert-counts')).toHaveText('2 cases · 1 deaths');
+      257 |   await expect(page.getByText('Shading: latest GIDS value for the selected disease.')).toHaveCount(0);
+      258 |   const legend = page.locator('.sit-legend-float');
+        at /home/likangguo/globalID/globalID2/astro-site/e2e/situation.spec.ts:255:59
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../tmp/globalid-fixes-20261116/focused-fixed-e2e-results/situation-MERS-shared-link-03f13-s-across-channels-and-dates-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../tmp/globalid-fixes-20261116/focused-fixed-e2e-results/situation-MERS-shared-link-03f13-s-across-channels-and-dates-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../tmp/globalid-fixes-20261116/focused-fixed-e2e-results/situation-MERS-shared-link-03f13-s-across-channels-and-dates-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../tmp/globalid-fixes-20261116/focused-fixed-e2e-results/situation-MERS-shared-link-03f13-s-across-channels-and-dates-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:1030496) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[40/78] [chromium-1280] › e2e/changelog.spec.ts:10:1 › new version records appear without rebuilding or reloading the page
+[41/78] [chromium-1280] › e2e/changelog.spec.ts:32:1 › the same runtime history supplies all three languages and update counts
+[42/78] [chromium-1280] › e2e/data-updates.spec.ts:8:1 › footer links to the localized updates page and header stays clear
+[43/78] [chromium-1280] › e2e/data-updates.spec.ts:40:1 › shows real published events, filters channels, and loads monthly archives
+[44/78] [chromium-1280] › e2e/data-updates.spec.ts:84:1 › unavailable feed does not show invented data
+[45/78] [chromium-1280] › e2e/data-updates.spec.ts:96:1 › changing month hides old events until the selected archive arrives
+[46/78] [chromium-1280] › e2e/data-updates.spec.ts:118:1 › index errors survive a successful archive read and recover on the next poll
+[47/78] [chromium-1280] › e2e/data-updates.spec.ts:143:1 › monthly failures retain known events and malformed records cannot crash the page
+[48/78] [chromium-1280] › e2e/data-updates.spec.ts:170:1 › UTC range filtering and daily counts include offset timestamps on the correct day
+[49/78] [chromium-1280] › e2e/data-updates.spec.ts:193:1 › incomplete, reversed and oversized date ranges explain how to recover
+[50/78] [chromium-1280] › e2e/data-updates.spec.ts:215:1 › a missing month never becomes a zero-count daily chart
+[51/78] [chromium-1280] › e2e/disease-literature.spec.ts:30:1 › disease links open a dedicated literature page with transparent database queries
+[52/78] [chromium-1280] › e2e/disease-literature.spec.ts:48:1 › complete disease records, filters and yearly chart stay in sync and validate year bounds
+[53/78] [chromium-1280] › e2e/disease-literature.spec.ts:87:1 › page failures hide old cards and can be retried without downloading the whole library
+[54/78] [chromium-1280] › e2e/disease-literature.spec.ts:102:1 › focused Ask loads only catalogue chunks matching its scope
+[55/78] [chromium-1280] › e2e/disease-literature.spec.ts:124:1 › generic Ask shows complete-catalogue progress, bounds requests and ignores an older search finishing late
+[56/78] [chromium-1280] › e2e/download-dialog.spec.ts:10:1 › downloads stay compact and lazy, refresh without HTML changes, and save the selected file
+[57/78] [chromium-1280] › e2e/download-dialog.spec.ts:52:1 › a failed catalogue can be retried inside the French disease dialog
+[58/78] [chromium-1280] › e2e/public-restoration.spec.ts:66:1 › home restores real curves and clear national coverage without fetching country histories
+[59/78] [chromium-1280] › e2e/public-restoration.spec.ts:88:1 › country restores contextual links, source cadence and separately dated download formats
+[60/78] [chromium-1280] › e2e/public-restoration.spec.ts:111:1 › disease page keeps the selected disease when opening a country
+[61/78] [chromium-1280] › e2e/public-restoration.spec.ts:117:1 › chart data action opens the lazy download dialog directly
+[62/78] [chromium-1280] › e2e/public-restoration.spec.ts:128:1 › French country facts and disease names retain localization
+[63/78] [chromium-1280] › e2e/public-restoration.spec.ts:138:1 › directory restores subdivision entry and reset without losing filters
+[64/78] [chromium-1280] › e2e/public-restoration.spec.ts:147:1 › archives show named groups and adjacent periods while timelines stay lazy
+[65/78] [chromium-1280] › e2e/public-restoration.spec.ts:163:1 › seasonality retains upper and lower-level area sources and current data version
+[66/78] [chromium-1280] › e2e/situation-publication.spec.ts:44:1 › Situation JSON updates map and lazy timeline without rebuilding HTML; one page pins its release
+[67/78] [chromium-1280] › e2e/situation-publication.spec.ts:60:1 › country notices, homepage metrics and previously unbuilt weekly periods follow independent JSON
+[68/78] [chromium-1280] › e2e/situation-publication.spec.ts:80:1 › Situation integrity errors close reads instead of showing an older static snapshot
+[69/78] [chromium-1280] › e2e/situation-publication.spec.ts:87:1 › overview entity reads stay pinned when the publication changes
+[70/78] [chromium-1280] › e2e/situation-publication.spec.ts:101:1 › an invalid overview entity never falls back to unpinned static data
+[71/78] [chromium-1280] › e2e/situation.spec.ts:64:1 › situation filters remove old map series, including an empty result
+[72/78] [chromium-1280] › e2e/situation.spec.ts:81:1 › timeline shares filters, merges duplicates and keeps all report links
+[73/78] [chromium-1280] › e2e/situation.spec.ts:118:1 › explicit time and source deep links survive reload with a selected place
+[74/78] [chromium-1280] › e2e/situation.spec.ts:129:1 › lower-level area deep links wait for the current catalogue and retain its own series
+[75/78] [chromium-1280] › e2e/situation.spec.ts:149:1 › situation page: select a place, expand timeline cards, graph stays attached
+[76/78] [chromium-1280] › e2e/situation.spec.ts:185:1 › situation page: filtering recentres the map without errors
+[77/78] [chromium-1280] › e2e/situation.spec.ts:200:1 › typing filters opens a timeline, scopes monitoring cards and restores cancelled searches
+[78/78] [chromium-1280] › e2e/situation.spec.ts:243:1 › MERS shared link groups identical cumulative figures across channels and dates
+  2 failed
+    [chromium-390] › e2e/situation.spec.ts:118:1 › explicit time and source deep links survive reload with a selected place 
+    [chromium-390] › e2e/situation.spec.ts:243:1 › MERS shared link groups identical cumulative figures across channels and dates 
+  76 passed (10.7m)

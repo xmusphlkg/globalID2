@@ -1,0 +1,2513 @@
+TAP version 13
+# Subtest: queues GA configuration and defers the remote analytics script
+ok 1 - queues GA configuration and defers the remote analytics script
+  ---
+  duration_ms: 6.436061
+  type: 'test'
+  ...
+# Subtest: ignores invalid measurement identifiers
+ok 2 - ignores invalid measurement identifiers
+  ---
+  duration_ms: 2.532476
+  type: 'test'
+  ...
+# Subtest: accepts only unique asset URLs while retaining published HTML and resources
+ok 3 - accepts only unique asset URLs while retaining published HTML and resources
+  ---
+  duration_ms: 23.732052
+  type: 'test'
+  ...
+# Subtest: rejects duplicate logical entries, immutable collisions and corrupted baselines
+ok 4 - rejects duplicate logical entries, immutable collisions and corrupted baselines
+  ---
+  duration_ms: 15.929842
+  type: 'test'
+  ...
+# Subtest: country scope expands exactly three locales and rejects missing or unsafe identities
+ok 5 - country scope expands exactly three locales and rejects missing or unsafe identities
+  ---
+  duration_ms: 22.084508
+  type: 'test'
+  ...
+# Subtest: isolated country output preserves unrelated HTML and retained assets byte for byte
+ok 6 - isolated country output preserves unrelated HTML and retained assets byte for byte
+  ---
+  duration_ms: 36.840269
+  type: 'test'
+  ...
+# Subtest: unexpected routes, new routes, asset collisions and broken references cannot produce a valid candidate
+ok 7 - unexpected routes, new routes, asset collisions and broken references cannot produce a valid candidate
+  ---
+  duration_ms: 15.06193
+  type: 'test'
+  ...
+# Subtest: baseline digest binds unchanged release IDs to all artifact bytes
+ok 8 - baseline digest binds unchanged release IDs to all artifact bytes
+  ---
+  duration_ms: 2.793689
+  type: 'test'
+  ...
+# Subtest: baseline digest matches Python release pipeline path-component ordering
+ok 9 - baseline digest matches Python release pipeline path-component ordering
+  ---
+  duration_ms: 5.698667
+  type: 'test'
+  ...
+# Subtest: managed template releases require initialized runtime data before any stage runs
+ok 10 - managed template releases require initialized runtime data before any stage runs
+  ---
+  duration_ms: 7.926862
+  type: 'test'
+  ...
+# Subtest: Pages data Worker packaging survives every enabled template build
+ok 11 - Pages data Worker packaging survives every enabled template build
+  ---
+  duration_ms: 1.743429
+  type: 'test'
+  ...
+# Subtest: independent template publication rebuilds collections before all output gates
+ok 12 - independent template publication rebuilds collections before all output gates
+  ---
+  duration_ms: 1.625935
+  type: 'test'
+  ...
+# Subtest: independent validators execute concurrently in separate processes
+ok 13 - independent validators execute concurrently in separate processes
+  ---
+  duration_ms: 249.210964
+  type: 'test'
+  ...
+# Subtest: failed checks cancel peers, skip queued work, and never promote caches
+ok 14 - failed checks cancel peers, skip queued work, and never promote caches
+  ---
+  duration_ms: 383.427344
+  type: 'test'
+  ...
+# Subtest: render overlaps source checks, writers stay ordered and check workers are bounded
+ok 15 - render overlaps source checks, writers stay ordered and check workers are bounded
+  ---
+  duration_ms: 1.745458
+  type: 'test'
+  ...
+# Subtest: builds 301 rules for every published weekly digest and its month
+ok 16 - builds 301 rules for every published weekly digest and its month
+  ---
+  duration_ms: 8.366693
+  type: 'test'
+  ...
+# Subtest: no digest index means no generated redirects
+ok 17 - no digest index means no generated redirects
+  ---
+  duration_ms: 1.947034
+  type: 'test'
+  ...
+# Subtest: main-origin research drops papers-host article redirects and keeps the rest
+ok 18 - main-origin research drops papers-host article redirects and keeps the rest
+  ---
+  duration_ms: 1.389089
+  type: 'test'
+  ...
+# Subtest: appends generated redirects without changing hand-authored rules
+ok 19 - appends generated redirects without changing hand-authored rules
+  ---
+  duration_ms: 0.419542
+  type: 'test'
+  ...
+# {"event":"research_build_completed","elapsed_seconds":0.008724938999999722,"destination":"/tmp/gids-research-build-UToBpd/output","snapshot":"/tmp/gids-research-build-UToBpd/snapshot","scope":"full"}
+# {"event":"research_build_completed","elapsed_seconds":0.006420707000000221,"destination":"/tmp/gids-research-build-UToBpd/static-output","snapshot":"/tmp/gids-research-build-UToBpd/snapshot","scope":"full"}
+# {"event":"research_build_completed","elapsed_seconds":0.006356913999999961,"destination":"/tmp/gids-research-collections-XHxSFD/output","snapshot":"/tmp/gids-research-collections-XHxSFD/snapshot","scope":"collections"}
+# {"event":"research_build_completed","elapsed_seconds":0.004461628000000019,"destination":"/tmp/gids-research-collections-XHxSFD/workers-collections-undefined","snapshot":"/tmp/gids-research-collections-XHxSFD/snapshot","scope":"collections"}
+# {"event":"research_build_completed","elapsed_seconds":0.004802928000000066,"destination":"/tmp/gids-research-collections-XHxSFD/workers-collections-","snapshot":"/tmp/gids-research-collections-XHxSFD/snapshot","scope":"collections"}
+# {"event":"research_build_completed","elapsed_seconds":0.0061544169999997395,"destination":"/tmp/gids-research-collections-XHxSFD/workers-collections-0","snapshot":"/tmp/gids-research-collections-XHxSFD/snapshot","scope":"collections"}
+# {"event":"research_build_completed","elapsed_seconds":0.02945937600000025,"destination":"/tmp/gids-research-collections-XHxSFD/workers-shell-2","snapshot":"/tmp/gids-research-collections-XHxSFD/snapshot","scope":"shell"}
+# {"event":"research_build_completed","elapsed_seconds":0.040412349000000174,"destination":"/tmp/gids-research-collections-XHxSFD/workers-full-2","snapshot":"/tmp/gids-research-collections-XHxSFD/snapshot","scope":"full"}
+# {"event":"research_build_completed","elapsed_seconds":0.00833379100000002,"destination":"/tmp/gids-research-collections-XHxSFD/workers-full-invalid-collection-only-setting","snapshot":"/tmp/gids-research-collections-XHxSFD/snapshot","scope":"full"}
+# {"event":"research_build_completed","elapsed_seconds":0.002167199999999866,"destination":"/tmp/gids-research-auto-PHSAx8/output-0","snapshot":"/tmp/gids-research-auto-PHSAx8/snapshot","scope":"collections"}
+# {"event":"research_build_completed","elapsed_seconds":0.0027504879999996775,"destination":"/tmp/gids-research-auto-PHSAx8/output-1","snapshot":"/tmp/gids-research-auto-PHSAx8/snapshot","scope":"shell"}
+# {"event":"research_build_completed","elapsed_seconds":0.008134328000000095,"destination":"/tmp/gids-research-auto-PHSAx8/output-2","snapshot":"/tmp/gids-research-auto-PHSAx8/snapshot","scope":"full"}
+# {"event":"research_build_completed","elapsed_seconds":0.007072537999999895,"destination":"/tmp/gids-research-auto-PHSAx8/output-3","snapshot":"/tmp/gids-research-auto-PHSAx8/snapshot","scope":"full"}
+# Subtest: isolated research build reads its own snapshot without writing main site data
+ok 20 - isolated research build reads its own snapshot without writing main site data
+  ---
+  duration_ms: 38.78989
+  type: 'test'
+  ...
+# Subtest: collection rebuild skips articles without reading or replacing the complete article cache
+ok 21 - collection rebuild skips articles without reading or replacing the complete article cache
+  ---
+  duration_ms: 157.13209
+  type: 'test'
+  ...
+# Subtest: auto build reuses only an explicitly frozen compatible template baseline
+ok 22 - auto build reuses only an explicitly frozen compatible template baseline
+  ---
+  duration_ms: 47.926106
+  type: 'test'
+  ...
+# {"event":"site_research_collections_built","routes":12,"article_pages_rendered":0,"research_index_sha256":"8e40641d0ce68e6e624bfb21c5b5877929a9204e8a79609b1305a80fabcb65d6"}
+# Subtest: template research collections use current shards and validate before merging (missing=false)
+ok 23 - template research collections use current shards and validate before merging (missing=false)
+  ---
+  duration_ms: 34.126596
+  type: 'test'
+  ...
+# Subtest: template research collections use current shards and validate before merging (missing=true)
+ok 24 - template research collections use current shards and validate before merging (missing=true)
+  ---
+  duration_ms: 6.592531
+  type: 'test'
+  ...
+# Subtest: theme candidate is deterministic and its compatibility entry resolves to the verified immutable CSS
+ok 25 - theme candidate is deterministic and its compatibility entry resolves to the verified immutable CSS
+  ---
+  duration_ms: 4.913057
+  type: 'test'
+  ...
+# Subtest: a color update changes only the prepared theme artifacts and retains old immutable assets
+ok 26 - a color update changes only the prepared theme artifacts and retains old immutable assets
+  ---
+  duration_ms: 5.403636
+  type: 'test'
+  ...
+# Subtest: the compatibility compiler rejects structural changes, CSS injection and schema drift
+ok 27 - the compatibility compiler rejects structural changes, CSS injection and schema drift
+  ---
+  duration_ms: 1.43445
+  type: 'test'
+  ...
+# Subtest: every independently changeable theme variable has a bundled fallback
+ok 28 - every independently changeable theme variable has a bundled fallback
+  ---
+  duration_ms: 5.155332
+  type: 'test'
+  ...
+# Subtest: large local fixture profile is explicit and leaves production budgets unchanged
+ok 29 - large local fixture profile is explicit and leaves production budgets unchanged
+  ---
+  duration_ms: 2.556133
+  type: 'test'
+  ...
+# Subtest: persisted asset facts do not retain the complete HTML catalogue
+ok 30 - persisted asset facts do not retain the complete HTML catalogue
+  ---
+  duration_ms: 5034.989338
+  type: 'test'
+  ...
+# Subtest: cached page facts still enforce current budgets and changed asset dependencies
+ok 31 - cached page facts still enforce current budgets and changed asset dependencies
+  ---
+  duration_ms: 21.219627
+  type: 'test'
+  ...
+# Subtest: audits the complete dependency graph referenced by an Astro island
+ok 32 - audits the complete dependency graph referenced by an Astro island
+  ---
+  duration_ms: 6.433835
+  type: 'test'
+  ...
+# Subtest: fails closed for oversized chunks and legacy font artifacts
+ok 33 - fails closed for oversized chunks and legacy font artifacts
+  ---
+  duration_ms: 5.232332
+  type: 'test'
+  ...
+# Subtest: fails closed when generated HTML exceeds average and compressed all-site budgets
+ok 34 - fails closed when generated HTML exceeds average and compressed all-site budgets
+  ---
+  duration_ms: 4.744902
+  type: 'test'
+  ...
+# Subtest: treats compare workspaces as chart routes in every locale
+ok 35 - treats compare workspaces as chart routes in every locale
+  ---
+  duration_ms: 6.562584
+  type: 'test'
+  ...
+# Subtest: keeps a heavy brochure page on the ordinary route cap
+ok 36 - keeps a heavy brochure page on the ordinary route cap
+  ---
+  duration_ms: 4.77152
+  type: 'test'
+  ...
+# Subtest: scales the all-site gzip allowance while preserving a per-page ceiling
+ok 37 - scales the all-site gzip allowance while preserving a per-page ceiling
+  ---
+  duration_ms: 3.913968
+  type: 'test'
+  ...
+# Subtest: independent research pages stay out of the main-site performance gate
+ok 38 - independent research pages stay out of the main-site performance gate
+  ---
+  duration_ms: 12.104409
+  type: 'test'
+  ...
+# Subtest: cached compression sizes still enforce changed budgets
+ok 39 - cached compression sizes still enforce changed budgets
+  ---
+  duration_ms: 6.159734
+  type: 'test'
+  ...
+# Subtest: different weeks in the same month produce distinct report titles in all locales
+ok 40 - different weeks in the same month produce distinct report titles in all locales
+  ---
+  duration_ms: 2.96699
+  type: 'test'
+  ...
+# Subtest: preflight rejects duplicate and overlong rendered titles before expensive generation
+ok 41 - preflight rejects duplicate and overlong rendered titles before expensive generation
+  ---
+  duration_ms: 0.757263
+  type: 'test'
+  ...
+# Subtest: catalogue uniqueness checks do not retain entire HTML documents
+ok 42 - catalogue uniqueness checks do not retain entire HTML documents
+  ---
+  duration_ms: 3691.291419
+  type: 'test'
+  ...
+# Subtest: parses greater-than signs inside quoted meta content
+ok 43 - parses greater-than signs inside quoted meta content
+  ---
+  duration_ms: 0.889863
+  type: 'test'
+  ...
+# Subtest: wildcard redirect rules match by prefix and exact rules still win
+ok 44 - wildcard redirect rules match by prefix and exact rules still win
+  ---
+  duration_ms: 0.305231
+  type: 'test'
+  ...
+# Subtest: sitemap URLs on the papers host are not looked up in dist
+ok 45 - sitemap URLs on the papers host are not looked up in dist
+  ---
+  duration_ms: 2.932828
+  type: 'test'
+  ...
+# Subtest: reports directory is on the reports R2 host, outside the main Pages bundle
+ok 46 - reports directory is on the reports R2 host, outside the main Pages bundle
+  ---
+  duration_ms: 0.964914
+  type: 'test'
+  ...
+# Subtest: main-origin sitemap URLs that redirect to the papers host are reported
+ok 47 - main-origin sitemap URLs that redirect to the papers host are reported
+  ---
+  duration_ms: 1.085335
+  type: 'test'
+  ...
+# Subtest: independent research routes are excluded while main-site links remain valid
+ok 48 - independent research routes are excluded while main-site links remain valid
+  ---
+  duration_ms: 8.820555
+  type: 'test'
+  ...
+# Subtest: links between papers pages share one host and are not flagged as redirects
+ok 49 - links between papers pages share one host and are not flagged as redirects
+  ---
+  duration_ms: 14.140395
+  type: 'test'
+  ...
+# Subtest: main-site pages linking to a papers path through the redirect are reported
+ok 50 - main-site pages linking to a papers path through the redirect are reported
+  ---
+  duration_ms: 14.876931
+  type: 'test'
+  ...
+# Subtest: main-site pages linking to the absolute papers URL are accepted
+ok 51 - main-site pages linking to the absolute papers URL are accepted
+  ---
+  duration_ms: 6.856124
+  type: 'test'
+  ...
+# Subtest: link lookup cache does not survive another audit
+ok 52 - link lookup cache does not survive another audit
+  ---
+  duration_ms: 8.547542
+  type: 'test'
+  ...
+# Subtest: parallel audit preserves global uniqueness, sitemap membership and cross-worker links
+ok 53 - parallel audit preserves global uniqueness, sitemap membership and cross-worker links
+  ---
+  duration_ms: 1316.402614
+  type: 'test'
+  ...
+# Subtest: template workspace keeps Astro and Vite caches out of linked dependencies
+ok 54 - template workspace keeps Astro and Vite caches out of linked dependencies
+  ---
+  duration_ms: 3616.46653
+  type: 'test'
+  ...
+# Subtest: persistent facts avoid JSON reads; edits, deletion, code versions and damaged values invalidate
+ok 55 - persistent facts avoid JSON reads; edits, deletion, code versions and damaged values invalidate
+  ---
+  duration_ms: 21.843818
+  type: 'test'
+  ...
+# Subtest: render receipts reject changed files, wrong roots/versions and malformed entries; racing reads fail
+ok 56 - render receipts reject changed files, wrong roots/versions and malformed entries; racing reads fail
+  ---
+  duration_ms: 4.961221
+  type: 'test'
+  ...
+# Subtest: compact ranking matches full records and metadata consumers never load histories
+ok 57 - compact ranking matches full records and metadata consumers never load histories
+  ---
+  duration_ms: 27.531348
+  type: 'test'
+  ...
+# Subtest: unchanged copies preserve the cache inode and rewritten outputs cannot alter it
+ok 58 - unchanged copies preserve the cache inode and rewritten outputs cannot alter it
+  ---
+  duration_ms: 4.939324
+  type: 'test'
+  ...
+# Subtest: persistent cache skips unchanged bodies and catches same-size edits
+ok 59 - persistent cache skips unchanged bodies and catches same-size edits
+  ---
+  duration_ms: 1015.382574
+  type: 'test'
+  ...
+# Subtest: copies revalidate once after the timestamp window then reuse output
+ok 60 - copies revalidate once after the timestamp window then reuse output
+  ---
+  duration_ms: 1013.236674
+  type: 'test'
+  ...
+# Subtest: Git identities include staged edits and fall back for unstaged/untracked files
+ok 61 - Git identities include staged edits and fall back for unstaged/untracked files
+  ---
+  duration_ms: 314.379386
+  type: 'test'
+  ...
+# Subtest: damaged cache and missing Git use content hashing
+ok 62 - damaged cache and missing Git use content hashing
+  ---
+  duration_ms: 13.940611
+  type: 'test'
+  ...
+# Subtest: Git sha1 identities stay stable across dirty/staged/committed states and track modes
+ok 63 - Git sha1 identities stay stable across dirty/staged/committed states and track modes
+  ---
+  duration_ms: 239.87228
+  type: 'test'
+  ...
+# Subtest: Git sha256 identities stay stable across dirty/staged/committed states and track modes
+ok 64 - Git sha256 identities stay stable across dirty/staged/committed states and track modes
+  ---
+  duration_ms: 257.003741
+  type: 'test'
+  ...
+# Subtest: reuses exact bytes across runs and recalculates changed content
+ok 65 - reuses exact bytes across runs and recalculates changed content
+  ---
+  duration_ms: 25.410186
+  type: 'test'
+  ...
+# Subtest: invalid cache or a different compression algorithm falls back to computation
+ok 66 - invalid cache or a different compression algorithm falls back to computation
+  ---
+  duration_ms: 2.731497
+  type: 'test'
+  ...
+# Subtest: fast placeholder scan agrees with full visible-text extraction
+ok 67 - fast placeholder scan agrees with full visible-text extraction
+  ---
+  duration_ms: 16.105081
+  type: 'test'
+  ...
+# Subtest: rounds display coordinates without changing feature metadata or topology shape
+ok 68 - rounds display coordinates without changing feature metadata or topology shape
+  ---
+  duration_ms: 11.08968
+  type: 'test'
+  ...
+# Subtest: rejects data that is not a GeoJSON feature collection
+ok 69 - rejects data that is not a GeoJSON feature collection
+  ---
+  duration_ms: 1.078254
+  type: 'test'
+  ...
+# Subtest: page facts skip parsing unchanged bytes and reject edits, version changes and damaged cache
+ok 70 - page facts skip parsing unchanged bytes and reject edits, version changes and damaged cache
+  ---
+  duration_ms: 18.613649
+  type: 'test'
+  ...
+# Subtest: large research sources use bounded public shards for cache planning
+ok 71 - large research sources use bounded public shards for cache planning
+  ---
+  duration_ms: 8.205375
+  type: 'test'
+  ...
+# Subtest: tracks report archive, overview, and disease page bundles independently
+ok 72 - tracks report archive, overview, and disease page bundles independently
+  ---
+  duration_ms: 4520.62012
+  type: 'test'
+  ...
+# Subtest: country changes invalidate only consumed data, alerts, reports and ranking memberships
+ok 73 - country changes invalidate only consumed data, alerts, reports and ranking memberships
+  ---
+  duration_ms: 2825.200382
+  type: 'test'
+  ...
+# Subtest: libraries fingerprint all public literature per disease, including bibliography-only membership
+ok 74 - libraries fingerprint all public literature per disease, including bibliography-only membership
+  ---
+  duration_ms: 3452.32115
+  type: 'test'
+  ...
+# Subtest: external public staging excludes surveillance while preserving source files and independent content
+ok 75 - external public staging excludes surveillance while preserving source files and independent content
+  ---
+  duration_ms: 58.597469
+  type: 'test'
+  ...
+# Subtest: isolated report cache shares dependencies without including unrelated page bundles
+ok 76 - isolated report cache shares dependencies without including unrelated page bundles
+  ---
+  duration_ms: 7.804604
+  type: 'test'
+  ...
+# [research-cache] recorded 1 complete page bundles
+# [research-cache] recorded 1 complete page bundles
+# [research-cache] recorded 1 complete page bundles
+# [research-cache] recorded 1 complete page bundles
+# [research-cache] recorded 1 complete page bundles
+# [research-cache] recorded 1 complete page bundles
+# [research-cache] recorded 0 complete page bundles
+# Subtest: explicit full rendering overrides a release identity and warm site/report HTML caches
+ok 77 - explicit full rendering overrides a release identity and warm site/report HTML caches
+  ---
+  duration_ms: 12.477985
+  type: 'test'
+  ...
+# Subtest: disabled article cards are absent from generated and restored bundles
+ok 78 - disabled article cards are absent from generated and restored bundles
+  ---
+  duration_ms: 0.42
+  type: 'test'
+  ...
+# Subtest: incremental finalization preserves unchanged cache files and repairs missing or changed bundles
+ok 79 - incremental finalization preserves unchanged cache files and repairs missing or changed bundles
+  ---
+  duration_ms: 13.285344
+  type: 'test'
+  ...
+# Subtest: selects only changed article bundles and rebuilds when shared inputs change
+ok 80 - selects only changed article bundles and rebuilds when shared inputs change
+  ---
+  duration_ms: 3.884979
+  type: 'test'
+  ...
+# Subtest: finalizes the exact rendered snapshot after source data advances
+ok 81 - finalizes the exact rendered snapshot after source data advances
+  ---
+  duration_ms: 4.983313
+  type: 'test'
+  ...
+# Subtest: restores only missing shared assets and refreshes the fingerprinted asset cache
+ok 82 - restores only missing shared assets and refreshes the fingerprinted asset cache
+  ---
+  duration_ms: 1.788532
+  type: 'test'
+  ...
+# Subtest: reused HTML is rejected when a referenced client asset is missing
+ok 83 - reused HTML is rejected when a referenced client asset is missing
+  ---
+  duration_ms: 1.348277
+  type: 'test'
+  ...
+# Subtest: finalized asset references survive reuse and still reject missing assets
+ok 84 - finalized asset references survive reuse and still reject missing assets
+  ---
+  duration_ms: 2.915158
+  type: 'test'
+  ...
+# Subtest: loads only requested catalogue chunks and narrows collection requests
+ok 85 - loads only requested catalogue chunks and narrows collection requests
+  ---
+  duration_ms: 23.253063
+  type: 'test'
+  ...
+# Subtest: focused Ask uses catalogue facets and exact membership
+ok 86 - focused Ask uses catalogue facets and exact membership
+  ---
+  duration_ms: 31.929451
+  type: 'test'
+  ...
+# Subtest: generic Ask scans the complete catalogue with four requests at a time, monotonic progress and shared concurrent work
+ok 87 - generic Ask scans the complete catalogue with four requests at a time, monotonic progress and shared concurrent work
+  ---
+  duration_ms: 86.142862
+  type: 'test'
+  ...
+# Subtest: multiple safe facet prefilters combine without losing legacy or unknown-metadata chunks
+ok 88 - multiple safe facet prefilters combine without losing legacy or unknown-metadata chunks
+  ---
+  duration_ms: 23.62838
+  type: 'test'
+  ...
+# Subtest: different overlapping facet requests share a global four-request cap and complete all selected pages
+ok 89 - different overlapping facet requests share a global four-request cap and complete all selected pages
+  ---
+  duration_ms: 50.635665
+  type: 'test'
+  ...
+# Subtest: failed filtered chunks can be retried without poisoning the global request queue
+ok 90 - failed filtered chunks can be retried without poisoning the global request queue
+  ---
+  duration_ms: 11.461295
+  type: 'test'
+  ...
+# Subtest: Ask skips bibliography-only chunks while the full catalogue and legacy chunks remain available
+ok 91 - Ask skips bibliography-only chunks while the full catalogue and legacy chunks remain available
+  ---
+  duration_ms: 33.215042
+  type: 'test'
+  ...
+# Subtest: only changed articles render again and old assets remain available
+ok 92 - only changed articles render again and old assets remain available
+  ---
+  duration_ms: 9.939413
+  type: 'test'
+  ...
+# [research-cache] recorded 4 complete page bundles
+# [research-cache] recorded 2 complete page bundles
+# Subtest: history depends on its alerts, labels and neighbors, not unrelated events or export time
+ok 93 - history depends on its alerts, labels and neighbors, not unrelated events or export time
+  ---
+  duration_ms: 120.003042
+  type: 'test'
+  ...
+# Subtest: Pages runtime mode finalizes without outbreak JSON and never restores legacy JSON bundles
+ok 94 - Pages runtime mode finalizes without outbreak JSON and never restores legacy JSON bundles
+  ---
+  duration_ms: 1494.552958
+  type: 'test'
+  ...
+# Subtest: route import closure follows layouts, localized wrappers, lazy islands, CSS, and aliases
+ok 95 - route import closure follows layouts, localized wrappers, lazy islands, CSS, and aliases
+  ---
+  duration_ms: 174.799213
+  type: 'test'
+  ...
+# Subtest: unknown dynamic imports conservatively include all sources; newly resolved imports invalidate
+ok 96 - unknown dynamic imports conservatively include all sources; newly resolved imports invalidate
+  ---
+  duration_ms: 144.689908
+  type: 'test'
+  ...
+# Subtest: generated JSON is tracked by data snapshots and source JSON remains in the closure
+ok 97 - generated JSON is tracked by data snapshots and source JSON remains in the closure
+  ---
+  duration_ms: 72.935134
+  type: 'test'
+  ...
+# Subtest: actual research route closure excludes report and Situation templates without a conservative fallback
+ok 98 - actual research route closure excludes report and Situation templates without a conservative fallback
+  ---
+  duration_ms: 531.467277
+  type: 'test'
+  ...
+# Subtest: version and update pages compile without embedding the authored release catalogue
+ok 99 - version and update pages compile without embedding the authored release catalogue
+  ---
+  duration_ms: 175.853798
+  type: 'test'
+  ...
+# Subtest: CSS dependency tracks unquoted relative font content
+ok 100 - CSS dependency tracks unquoted relative font content
+  ---
+  duration_ms: 38.074766
+  type: 'test'
+  ...
+# Subtest: CSS dependency tracks unquoted bare font content
+ok 101 - CSS dependency tracks unquoted bare font content
+  ---
+  duration_ms: 29.567823
+  type: 'test'
+  ...
+# Subtest: CSS dependency tracks public absolute font content
+ok 102 - CSS dependency tracks public absolute font content
+  ---
+  duration_ms: 27.537208
+  type: 'test'
+  ...
+# Subtest: CSS dependency tracks quoted public image content
+ok 103 - CSS dependency tracks quoted public image content
+  ---
+  duration_ms: 47.467304
+  type: 'test'
+  ...
+# Subtest: CSS dependency tracks escaped CSS filename content
+ok 104 - CSS dependency tracks escaped CSS filename content
+  ---
+  duration_ms: 29.649917
+  type: 'test'
+  ...
+# Subtest: CSS dependency tracks encoded CSS filename content
+ok 105 - CSS dependency tracks encoded CSS filename content
+  ---
+  duration_ms: 23.832812
+  type: 'test'
+  ...
+# Subtest: CSS dependency tracks hex-escaped filename content
+ok 106 - CSS dependency tracks hex-escaped filename content
+  ---
+  duration_ms: 28.898298
+  type: 'test'
+  ...
+# Subtest: CSS import url and quoted bare imports follow nested stylesheets and their assets
+ok 107 - CSS import url and quoted bare imports follow nested stylesheets and their assets
+  ---
+  duration_ms: 53.861143
+  type: 'test'
+  ...
+# Subtest: CSS skips external, data, fragment, commented and quoted non-resource URLs
+ok 108 - CSS skips external, data, fragment, commented and quoted non-resource URLs
+  ---
+  duration_ms: 35.519022
+  type: 'test'
+  ...
+# Subtest: unresolved dynamic CSS conservatively tracks source and public assets
+ok 109 - unresolved dynamic CSS conservatively tracks source and public assets
+  ---
+  duration_ms: 30.669148
+  type: 'test'
+  ...
+# Subtest: comparison coverage follows live data instead of older download coverage
+ok 110 - comparison coverage follows live data instead of older download coverage
+  ---
+  duration_ms: 35.612984
+  type: 'test'
+  ...
+# Subtest: switching disease removes countries that have no current series
+ok 111 - switching disease removes countries that have no current series
+  ---
+  duration_ms: 9.007486
+  type: 'test'
+  ...
+# Subtest: missing observations remain explicit gaps rather than connecting adjacent dates
+ok 112 - missing observations remain explicit gaps rather than connecting adjacent dates
+  ---
+  duration_ms: 0.499808
+  type: 'test'
+  ...
+# Subtest: comparison URL retains real subdivision keys, deduplicates and caps selections
+ok 113 - comparison URL retains real subdivision keys, deduplicates and caps selections
+  ---
+  duration_ms: 0.434105
+  type: 'test'
+  ...
+# Subtest: comparison groups use published hierarchy and geography names without inventing parent series
+ok 114 - comparison groups use published hierarchy and geography names without inventing parent series
+  ---
+  duration_ms: 29.037895
+  type: 'test'
+  ...
+# Subtest: collectYears returns chronological unique years
+ok 115 - collectYears returns chronological unique years
+  ---
+  duration_ms: 2.289238
+  type: 'test'
+  ...
+# Subtest: monthly summaries aggregate duplicate months and preserve missing months
+ok 116 - monthly summaries aggregate duplicate months and preserve missing months
+  ---
+  duration_ms: 25.032015
+  type: 'test'
+  ...
+# Subtest: metric changes use the same year structure
+ok 117 - metric changes use the same year structure
+  ---
+  duration_ms: 0.536582
+  type: 'test'
+  ...
+# Subtest: recent year selection keeps the latest chronological years
+ok 118 - recent year selection keeps the latest chronological years
+  ---
+  duration_ms: 0.234473
+  type: 'test'
+  ...
+# Subtest: annual subtotals are withheld unless all twelve months and coverage are complete
+ok 119 - annual subtotals are withheld unless all twelve months and coverage are complete
+  ---
+  duration_ms: 0.489394
+  type: 'test'
+  ...
+# Subtest: incompatible source definitions stay missing in the monthly view
+ok 120 - incompatible source definitions stay missing in the monthly view
+  ---
+  duration_ms: 0.305317
+  type: 'test'
+  ...
+# Subtest: monthly chart option and update contract are accepted by ECharts
+ok 121 - monthly chart option and update contract are accepted by ECharts
+  ---
+  duration_ms: 326.576442
+  type: 'test'
+  ...
+# Subtest: monthly tooltip distinguishes incompatible missing values from zero
+ok 122 - monthly tooltip distinguishes incompatible missing values from zero
+  ---
+  duration_ms: 8.879505
+  type: 'test'
+  ...
+# Subtest: shared preview/public options preserve gaps and real zero, ignore arbitrary options, and render in ECharts
+ok 123 - shared preview/public options preserve gaps and real zero, ignore arbitrary options, and render in ECharts
+  ---
+  duration_ms: 203.934591
+  type: 'test'
+  ...
+# Subtest: wrong placement, missing dataset and unrecognized types do not render
+ok 124 - wrong placement, missing dataset and unrecognized types do not render
+  ---
+  duration_ms: 0.305001
+  type: 'test'
+  ...
+# Subtest: attention chart has a fixed score scale and localized disease labels
+ok 125 - attention chart has a fixed score scale and localized disease labels
+  ---
+  duration_ms: 0.721078
+  type: 'test'
+  ...
+# Subtest: expanded library renders real ECharts and exposes statistical tables
+ok 126 - expanded library renders real ECharts and exposes statistical tables
+  ---
+  duration_ms: 173.907103
+  type: 'test'
+  ...
+# Subtest: rejects corrupt statistical inputs and wrong quality placement
+ok 127 - rejects corrupt statistical inputs and wrong quality placement
+  ---
+  duration_ms: 0.539094
+  type: 'test'
+  ...
+# Subtest: history never joins different source/scope cohorts
+ok 128 - history never joins different source/scope cohorts
+  ---
+  duration_ms: 1.04453
+  type: 'test'
+  ...
+# Subtest: aggregates numerator once, links the exact year population, and never annualizes
+ok 129 - aggregates numerator once, links the exact year population, and never annualizes
+  ---
+  duration_ms: 16.209846
+  type: 'test'
+  ...
+# Subtest: missing same-year population does not borrow a previous year or WPP; cases remain available
+ok 130 - missing same-year population does not borrow a previous year or WPP; cases remain available
+  ---
+  duration_ms: 1.446006
+  type: 'test'
+  ...
+# Subtest: true zero differs from suppression and a missing report period
+ok 131 - true zero differs from suppression and a missing report period
+  ---
+  duration_ms: 11.401235
+  type: 'test'
+  ...
+# Subtest: duplicates and incompatible definitions cannot produce a complete value
+ok 132 - duplicates and incompatible definitions cannot produce a complete value
+  ---
+  duration_ms: 0.778722
+  type: 'test'
+  ...
+# Subtest: same range shares scale between years and downloads denominator and comparison provenance
+ok 133 - same range shares scale between years and downloads denominator and comparison provenance
+  ---
+  duration_ms: 14.249004
+  type: 'test'
+  ...
+# Subtest: date URL restoration validates dates, chronology and years, and keeps legacy links
+ok 134 - date URL restoration validates dates, chronology and years, and keeps legacy links
+  ---
+  duration_ms: 2.112774
+  type: 'test'
+  ...
+# Subtest: cross-year cumulative rates use each year population and expose every contribution
+ok 135 - cross-year cumulative rates use each year population and expose every contribution
+  ---
+  duration_ms: 0.865518
+  type: 'test'
+  ...
+# Subtest: month, quarter, year and previous-period presets respect calendar boundaries including leap years
+ok 136 - month, quarter, year and previous-period presets respect calendar boundaries including leap years
+  ---
+  duration_ms: 9.033658
+  type: 'test'
+  ...
+# Subtest: monthly counts aggregate to quarters and years without manufacturing missing periods
+ok 137 - monthly counts aggregate to quarters and years without manufacturing missing periods
+  ---
+  duration_ms: 52.680665
+  type: 'test'
+  ...
+# Subtest: weekly reports select full source weeks only and expose the actual date range
+ok 138 - weekly reports select full source weeks only and expose the actual date range
+  ---
+  duration_ms: 19.382447
+  type: 'test'
+  ...
+# Subtest: a week crossing New Year uses the verified reporting year, not its start-date year
+ok 139 - a week crossing New Year uses the verified reporting year, not its start-date year
+  ---
+  duration_ms: 0.562167
+  type: 'test'
+  ...
+# Subtest: missing weekly observations cannot be replaced with zero or removed from expected coverage
+ok 140 - missing weekly observations cannot be replaced with zero or removed from expected coverage
+  ---
+  duration_ms: 0.386109
+  type: 'test'
+  ...
+# Subtest: quarterly and annual source observations remain indivisible
+ok 141 - quarterly and annual source observations remain indivisible
+  ---
+  duration_ms: 0.38057
+  type: 'test'
+  ...
+# Subtest: unverified weekly intervals cannot silently acquire a calendar or population denominator
+ok 142 - unverified weekly intervals cannot silently acquire a calendar or population denominator
+  ---
+  duration_ms: 0.280302
+  type: 'test'
+  ...
+# Subtest: source weeks at reporting-year boundaries survive date bounds and share URL restoration
+ok 143 - source weeks at reporting-year boundaries survive date bounds and share URL restoration
+  ---
+  duration_ms: 0.573729
+  type: 'test'
+  ...
+# Subtest: an entirely absent boundary week never guesses its reporting year from its start date
+ok 144 - an entirely absent boundary week never guesses its reporting year from its start date
+  ---
+  duration_ms: 10.191635
+  type: 'test'
+  ...
+# Subtest: an entirely missing week also invalidates annual trend aggregation instead of being discarded
+ok 145 - an entirely missing week also invalidates annual trend aggregation instead of being discarded
+  ---
+  duration_ms: 0.558165
+  type: 'test'
+  ...
+# Subtest: a sparse source defaults to a complete recent quarter or month instead of inventing a full year
+ok 146 - a sparse source defaults to a complete recent quarter or month instead of inventing a full year
+  ---
+  duration_ms: 11.068895
+  type: 'test'
+  ...
+# Subtest: prepared publications preserve monthly, weekly, missing, suppressed and overlapping results
+ok 147 - prepared publications preserve monthly, weekly, missing, suppressed and overlapping results
+  ---
+  duration_ms: 70.144849
+  type: 'test'
+  ...
+# Subtest: new disease and population publication objects invalidate cached rates and shared scales
+ok 148 - new disease and population publication objects invalidate cached rates and shared scales
+  ---
+  duration_ms: 1.68937
+  type: 'test'
+  ...
+# Subtest: changing dates, years and trend grouping never rescans a prepared source history
+ok 149 - changing dates, years and trend grouping never rescans a prepared source history
+  ---
+  duration_ms: 35.687915
+  type: 'test'
+  ...
+# Subtest: adapter separates disease, geography, source and measure identities and retains zeroes
+ok 150 - adapter separates disease, geography, source and measure identities and retains zeroes
+  ---
+  duration_ms: 31.601055
+  type: 'test'
+  ...
+# Subtest: recorded-time snapshot metadata is retained and included in the data fingerprint
+ok 151 - recorded-time snapshot metadata is retained and included in the data fingerprint
+  ---
+  duration_ms: 7.683082
+  type: 'test'
+  ...
+# Subtest: source-only entries stay separate from the public projection
+ok 152 - source-only entries stay separate from the public projection
+  ---
+  duration_ms: 1.11968
+  type: 'test'
+  ...
+# Subtest: same-source demographic strata retain distinct selectable identities
+ok 153 - same-source demographic strata retain distinct selectable identities
+  ---
+  duration_ms: 8.258549
+  type: 'test'
+  ...
+# Subtest: point quality overrides stale provisional boundaries and nulls stay null
+ok 154 - point quality overrides stale provisional boundaries and nulls stay null
+  ---
+  duration_ms: 0.978091
+  type: 'test'
+  ...
+# Subtest: report snapshot adapter accepts complete frozen series and rejects incomplete archives
+ok 155 - report snapshot adapter accepts complete frozen series and rejects incomplete archives
+  ---
+  duration_ms: 1.081839
+  type: 'test'
+  ...
+# Subtest: frozen report periods retain annual bins that start before the report window
+ok 156 - frozen report periods retain annual bins that start before the report window
+  ---
+  duration_ms: 0.943774
+  type: 'test'
+  ...
+# Subtest: default weekly series retains exact source calendar boundaries
+ok 157 - default weekly series retains exact source calendar boundaries
+  ---
+  duration_ms: 0.842332
+  type: 'test'
+  ...
+# Subtest: exact ISO weeks expose missing weeks and only total complete windows
+ok 158 - exact ISO weeks expose missing weeks and only total complete windows
+  ---
+  duration_ms: 4.324025
+  type: 'test'
+  ...
+# Subtest: inferred frequency is a display hint and does not certify complete periods
+ok 159 - inferred frequency is a display hint and does not certify complete periods
+  ---
+  duration_ms: 3.318152
+  type: 'test'
+  ...
+# Subtest: report-window fragments cannot be presented as complete annual burden
+ok 160 - report-window fragments cannot be presented as complete annual burden
+  ---
+  duration_ms: 5.098242
+  type: 'test'
+  ...
+# Subtest: report revision comparison aligns current periods and marks scope mismatches
+ok 161 - report revision comparison aligns current periods and marks scope mismatches
+  ---
+  duration_ms: 12.113783
+  type: 'test'
+  ...
+# Subtest: period change uses matched periods and does not fabricate gaps or zero baselines
+ok 162 - period change uses matched periods and does not fabricate gaps or zero baselines
+  ---
+  duration_ms: 21.619768
+  type: 'test'
+  ...
+# Subtest: old shared configurations restore with a previous-period change default
+ok 163 - old shared configurations restore with a previous-period change default
+  ---
+  duration_ms: 6.480355
+  type: 'test'
+  ...
+# Subtest: geographic aggregation sums aligned sibling regions and leaves incomplete periods blank
+ok 164 - geographic aggregation sums aligned sibling regions and leaves incomplete periods blank
+  ---
+  duration_ms: 7.092825
+  type: 'test'
+  ...
+# Subtest: geographic aggregation refuses a parent and its child
+ok 165 - geographic aggregation refuses a parent and its child
+  ---
+  duration_ms: 9.809648
+  type: 'test'
+  ...
+# Subtest: allowed entities cannot be restored through shared configuration
+ok 166 - allowed entities cannot be restored through shared configuration
+  ---
+  duration_ms: 6.602636
+  type: 'test'
+  ...
+# Subtest: default query chooses recent data and an explicit comparison uses a common window
+ok 167 - default query chooses recent data and an explicit comparison uses a common window
+  ---
+  duration_ms: 5.76812
+  type: 'test'
+  ...
+# Subtest: default query selects the first populated metric when cases are unavailable
+ok 168 - default query selects the first populated metric when cases are unavailable
+  ---
+  duration_ms: 2.197571
+  type: 'test'
+  ...
+# Subtest: specific sources retain their own identity and non-case metric semantics
+ok 169 - specific sources retain their own identity and non-case metric semantics
+  ---
+  duration_ms: 4.654445
+  type: 'test'
+  ...
+# Subtest: unloaded sources are represented explicitly rather than mistaken for no observations
+ok 170 - unloaded sources are represented explicitly rather than mistaken for no observations
+  ---
+  duration_ms: 5.199279
+  type: 'test'
+  ...
+# Subtest: annual aggregation rejects duplicate periods even with twelve values
+ok 171 - annual aggregation rejects duplicate periods even with twelve values
+  ---
+  duration_ms: 9.052775
+  type: 'test'
+  ...
+# Subtest: annual aggregation sums complete calendar coverage and preserves incomplete diagnostics
+ok 172 - annual aggregation sums complete calendar coverage and preserves incomplete diagnostics
+  ---
+  duration_ms: 8.250562
+  type: 'test'
+  ...
+# Subtest: registered non-additive series cannot produce annual or window totals
+ok 173 - registered non-additive series cannot produce annual or window totals
+  ---
+  duration_ms: 5.087002
+  type: 'test'
+  ...
+# Subtest: weekly dates without period boundaries do not invent complete calendar years
+ok 174 - weekly dates without period boundaries do not invent complete calendar years
+  ---
+  duration_ms: 7.896189
+  type: 'test'
+  ...
+# Subtest: rates cannot be summed as annual counts
+ok 175 - rates cannot be summed as annual counts
+  ---
+  duration_ms: 3.066595
+  type: 'test'
+  ...
+# Subtest: no common interval keeps independent series available
+ok 176 - no common interval keeps independent series available
+  ---
+  duration_ms: 5.005251
+  type: 'test'
+  ...
+# Subtest: explicitly noncomparable sources remain available only as independent panels
+ok 177 - explicitly noncomparable sources remain available only as independent panels
+  ---
+  duration_ms: 3.032571
+  type: 'test'
+  ...
+# Subtest: automatic facets give large same-definition selections separate pages
+ok 178 - automatic facets give large same-definition selections separate pages
+  ---
+  duration_ms: 4.746951
+  type: 'test'
+  ...
+# Subtest: out-of-domain windows remain empty instead of clamping to a point
+ok 179 - out-of-domain windows remain empty instead of clamping to a point
+  ---
+  duration_ms: 0.71334
+  type: 'test'
+  ...
+# Subtest: table input and summaries use the display window while peak normalization stays fixed
+ok 180 - table input and summaries use the display window while peak normalization stays fixed
+  ---
+  duration_ms: 0.703228
+  type: 'test'
+  ...
+# Subtest: historical references use only prior years and exclude provisional baseline values
+ok 181 - historical references use only prior years and exclude provisional baseline values
+  ---
+  duration_ms: 1.030194
+  type: 'test'
+  ...
+# Subtest: nonpositive observations disable log rendering with an explicit diagnostic
+ok 182 - nonpositive observations disable log rendering with an explicit diagnostic
+  ---
+  duration_ms: 1.055157
+  type: 'test'
+  ...
+# Subtest: seasonality retains actual source dates in periods while using a common phase axis
+ok 183 - seasonality retains actual source dates in periods while using a common phase axis
+  ---
+  duration_ms: 1.238998
+  type: 'test'
+  ...
+# Subtest: seasonality aligns exact ISO weeks by ISO year, including week 53
+ok 184 - seasonality aligns exact ISO weeks by ISO year, including week 53
+  ---
+  duration_ms: 1.036185
+  type: 'test'
+  ...
+# Subtest: weekly seasonality stays unavailable without an exact declared ISO calendar
+ok 185 - weekly seasonality stays unavailable without an exact declared ISO calendar
+  ---
+  duration_ms: 0.644661
+  type: 'test'
+  ...
+# Subtest: situation surveillance context uses the current summary and never falls back to baked observations
+ok 186 - situation surveillance context uses the current summary and never falls back to baked observations
+  ---
+  duration_ms: 7.077104
+  type: 'test'
+  ...
+# Subtest: published lower-level areas keep their own summary without creating a parent aggregate
+ok 187 - published lower-level areas keep their own summary without creating a parent aggregate
+  ---
+  duration_ms: 0.391132
+  type: 'test'
+  ...
+# Subtest: homepage and map default counts use the same 30-day window and deduplication
+ok 188 - homepage and map default counts use the same 30-day window and deduplication
+  ---
+  duration_ms: 23.393637
+  type: 'test'
+  ...
+# Subtest: recency buckets follow the age of the report, not any severity
+ok 189 - recency buckets follow the age of the report, not any severity
+  ---
+  duration_ms: 0.407977
+  type: 'test'
+  ...
+# Subtest: points updated in the last 7 days sort first, then newest first
+ok 190 - points updated in the last 7 days sort first, then newest first
+  ---
+  duration_ms: 0.280752
+  type: 'test'
+  ...
+# Subtest: filters combine and the window drops older points
+ok 191 - filters combine and the window drops older points
+  ---
+  duration_ms: 0.637464
+  type: 'test'
+  ...
+# Subtest: host filters treat legacy records as unknown and never collapse different hosts
+ok 192 - host filters treat legacy records as unknown and never collapse different hosts
+  ---
+  duration_ms: 6.203368
+  type: 'test'
+  ...
+# Subtest: time windows include the boundary but exclude future and invalid dates
+ok 193 - time windows include the boundary but exclude future and invalid dates
+  ---
+  duration_ms: 0.569805
+  type: 'test'
+  ...
+# Subtest: repeated facts from different feeds form one event and retain both sources
+ok 194 - repeated facts from different feeds form one event and retain both sources
+  ---
+  duration_ms: 0.798001
+  type: 'test'
+  ...
+# Subtest: distinct updates, places, outbreaks and count bases never collapse
+ok 195 - distinct updates, places, outbreaks and count bases never collapse
+  ---
+  duration_ms: 0.476085
+  type: 'test'
+  ...
+# Subtest: publication dates do not split reports of the same dated figures
+ok 196 - publication dates do not split reports of the same dated figures
+  ---
+  duration_ms: 0.962528
+  type: 'test'
+  ...
+# Subtest: MERS Saudi Arabia annual totals form two cards with all six source reports
+ok 197 - MERS Saudi Arabia annual totals form two cards with all six source reports
+  ---
+  duration_ms: 1.933686
+  type: 'test'
+  ...
+# Subtest: annual grouping separates years, suspected counts and different reporting periods
+ok 198 - annual grouping separates years, suspected counts and different reporting periods
+  ---
+  duration_ms: 0.502151
+  type: 'test'
+  ...
+# Subtest: New Zealand is a place name, while new laboratory-confirmed cases remain incident evidence
+ok 199 - New Zealand is a place name, while new laboratory-confirmed cases remain incident evidence
+  ---
+  duration_ms: 4.033622
+  type: 'test'
+  ...
+# Subtest: reports without figures need matching evidence, not just matching empty fields
+ok 200 - reports without figures need matching evidence, not just matching empty fields
+  ---
+  duration_ms: 0.39589
+  type: 'test'
+  ...
+# Subtest: map points collapse repeated place reports after source filtering
+ok 201 - map points collapse repeated place reports after source filtering
+  ---
+  duration_ms: 0.348251
+  type: 'test'
+  ...
+# Subtest: full history filtering keeps old channels and reduces each outbreak place to its newest matching marker
+ok 202 - full history filtering keeps old channels and reduces each outbreak place to its newest matching marker
+  ---
+  duration_ms: 0.590484
+  type: 'test'
+  ...
+# Subtest: structured cumulative data merge only across the same start, figures and literal count basis
+ok 203 - structured cumulative data merge only across the same start, figures and literal count basis
+  ---
+  duration_ms: 0.402072
+  type: 'test'
+  ...
+# Subtest: structured incident data require the same complete interval and take precedence over annual prose
+ok 204 - structured incident data require the same complete interval and take precedence over annual prose
+  ---
+  duration_ms: 4.708862
+  type: 'test'
+  ...
+# Subtest: invalid structured dates and missing incident ends cannot silently use annual fallback
+ok 205 - invalid structured dates and missing incident ends cannot silently use annual fallback
+  ---
+  duration_ms: 2.815357
+  type: 'test'
+  ...
+# Subtest: a quoted incident interval blocks a conflicting annual summary
+ok 206 - a quoted incident interval blocks a conflicting annual summary
+  ---
+  duration_ms: 4.796854
+  type: 'test'
+  ...
+# Subtest: ambiguous periods and conflicting quoted years do not combine with annual totals
+ok 207 - ambiguous periods and conflicting quoted years do not combine with annual totals
+  ---
+  duration_ms: 0.460535
+  type: 'test'
+  ...
+# Subtest: explicit annual start alone does not equate total, confirmed, suspected or probable bases
+ok 208 - explicit annual start alone does not equate total, confirmed, suspected or probable bases
+  ---
+  duration_ms: 0.704546
+  type: 'test'
+  ...
+# Subtest: period dates beyond publication or inconsistent with the count cutoff stay individual
+ok 209 - period dates beyond publication or inconsistent with the count cutoff stay individual
+  ---
+  duration_ms: 0.534011
+  type: 'test'
+  ...
+# Subtest: multiple incident intervals and undated month evidence cannot use an annual summary
+ok 210 - multiple incident intervals and undated month evidence cannot use an annual summary
+  ---
+  duration_ms: 0.320808
+  type: 'test'
+  ...
+# Subtest: anchors use the largest landmass and points in one country fan out
+ok 211 - anchors use the largest landmass and points in one country fan out
+  ---
+  duration_ms: 0.935561
+  type: 'test'
+  ...
+# Subtest: exported coordinates win over the country anchor and do not use its fan-out
+ok 212 - exported coordinates win over the country anchor and do not use its fan-out
+  ---
+  duration_ms: 0.423107
+  type: 'test'
+  ...
+# Subtest: timeline graph packs columns: a country holds one only while it is active, and lines bend left when one ends
+ok 213 - timeline graph packs columns: a country holds one only while it is active, and lines bend left when one ends
+  ---
+  duration_ms: 5.445256
+  type: 'test'
+  ...
+# Subtest: timeline graph stays one column wide when countries never overlap
+ok 214 - timeline graph stays one column wide when countries never overlap
+  ---
+  duration_ms: 0.492271
+  type: 'test'
+  ...
+# Subtest: timeline graph folds the quietest countries into one shared grey lane
+ok 215 - timeline graph folds the quietest countries into one shared grey lane
+  ---
+  duration_ms: 0.472292
+  type: 'test'
+  ...
+# Subtest: fitView falls back to the world with no points or no size
+ok 216 - fitView falls back to the world with no points or no size
+  ---
+  duration_ms: 0.323342
+  type: 'test'
+  ...
+# Subtest: fitView centres a single place and caps the zoom
+ok 217 - fitView centres a single place and caps the zoom
+  ---
+  duration_ms: 0.172854
+  type: 'test'
+  ...
+# Subtest: fitView zooms out further for a wider spread and frames its middle
+ok 218 - fitView zooms out further for a wider spread and frames its middle
+  ---
+  duration_ms: 0.161249
+  type: 'test'
+  ...
+# Subtest: fitView returns the world view for global spreads, including across the dateline
+ok 219 - fitView returns the world view for global spreads, including across the dateline
+  ---
+  duration_ms: 0.166765
+  type: 'test'
+  ...
+# Subtest: a report without per-event host metadata cannot match an explicit host filter
+ok 220 - a report without per-event host metadata cannot match an explicit host filter
+  ---
+  duration_ms: 4.400068
+  type: 'test'
+  ...
+# Subtest: monitoring combines source and time filters, rejects future/invalid dates and deduplicates notices
+ok 221 - monitoring combines source and time filters, rejects future/invalid dates and deduplicates notices
+  ---
+  duration_ms: 27.306389
+  type: 'test'
+  ...
+# Subtest: legacy title coverage combines disease and area without substring false positives
+ok 222 - legacy title coverage combines disease and area without substring false positives
+  ---
+  duration_ms: 7.925435
+  type: 'test'
+  ...
+# Subtest: legacy title matching accepts aliases from points, slug separators and Chinese names
+ok 223 - legacy title matching accepts aliases from points, slug separators and Chinese names
+  ---
+  duration_ms: 13.09513
+  type: 'test'
+  ...
+# Subtest: explicit coverage takes precedence over title and supports reports with generic titles
+ok 224 - explicit coverage takes precedence over title and supports reports with generic titles
+  ---
+  duration_ms: 1.113688
+  type: 'test'
+  ...
+# Subtest: unknown disease or area metadata never exposes unrelated reports
+ok 225 - unknown disease or area metadata never exposes unrelated reports
+  ---
+  duration_ms: 0.85042
+  type: 'test'
+  ...
+# Subtest: monitoring window includes its boundary and orders newest reports first
+ok 226 - monitoring window includes its boundary and orders newest reports first
+  ---
+  duration_ms: 0.481147
+  type: 'test'
+  ...
+# Subtest: all locales distinguish people, animals and records without a confirmed unit
+ok 227 - all locales distinguish people, animals and records without a confirmed unit
+  ---
+  duration_ms: 129.855749
+  type: 'test'
+  ...
+# Subtest: overview chooses a complete entity shard or only matching outbreaks
+ok 228 - overview chooses a complete entity shard or only matching outbreaks
+  ---
+  duration_ms: 6.985219
+  type: 'test'
+  ...
+# Subtest: legacy overview uses matching outbreak routes even with entity filters
+ok 229 - legacy overview uses matching outbreak routes even with entity filters
+  ---
+  duration_ms: 0.496164
+  type: 'test'
+  ...
+# Subtest: overview limits concurrent reads, preserves partial results and deduplicates report identities
+ok 230 - overview limits concurrent reads, preserves partial results and deduplicates report identities
+  ---
+  duration_ms: 33.928349
+  type: 'test'
+  ...
+# Subtest: abandoned overview reads never publish results or start another batch
+ok 231 - abandoned overview reads never publish results or start another batch
+  ---
+  duration_ms: 0.603218
+  type: 'test'
+  ...
+# Subtest: a glance uses the newest non-zero point and keeps the tail for the sparkline
+ok 232 - a glance uses the newest non-zero point and keeps the tail for the sparkline
+  ---
+  duration_ms: 2.38861
+  type: 'test'
+  ...
+# Subtest: an all-zero series still reports the latest zero, and empty input is absent
+ok 233 - an all-zero series still reports the latest zero, and empty input is absent
+  ---
+  duration_ms: 0.329905
+  type: 'test'
+  ...
+# Subtest: the site index prefixes catalogue links and sparks only the requested pairs
+ok 234 - the site index prefixes catalogue links and sparks only the requested pairs
+  ---
+  duration_ms: 18.248009
+  type: 'test'
+  ...
+# Subtest: a series that is not on the map omits the spark and an unpublished curve
+ok 235 - a series that is not on the map omits the spark and an unpublished curve
+  ---
+  duration_ms: 0.446687
+  type: 'test'
+  ...
+# Subtest: one static snapshot is shared, dev reads stay fresh, and errors are never cached
+ok 236 - one static snapshot is shared, dev reads stay fresh, and errors are never cached
+  ---
+  duration_ms: 7.931113
+  type: 'test'
+  ...
+# Subtest: the complete multilingual catalogue can be published independently of templates
+ok 237 - the complete multilingual catalogue can be published independently of templates
+  ---
+  duration_ms: 36.478058
+  type: 'test'
+  ...
+# Subtest: rejects invalid feed versions, duplicate releases, impossible dates and missing translations
+ok 238 - rejects invalid feed versions, duplicate releases, impossible dates and missing translations
+  ---
+  duration_ms: 0.799351
+  type: 'test'
+  ...
+# Subtest: selected Japanese curves never inherit the first Australian source in worldwide metadata
+ok 239 - selected Japanese curves never inherit the first Australian source in worldwide metadata
+  ---
+  duration_ms: 4.765156
+  type: 'test'
+  ...
+# Subtest: multiple selected countries retain their own authorities and deduplicate provenance
+ok 240 - multiple selected countries retain their own authorities and deduplicate provenance
+  ---
+  duration_ms: 0.668344
+  type: 'test'
+  ...
+# Subtest: scope follows the selected entity and visible nonmissing observations rather than global coverage
+ok 241 - scope follows the selected entity and visible nonmissing observations rather than global coverage
+  ---
+  duration_ms: 18.898341
+  type: 'test'
+  ...
+# Subtest: every country coverage entry has geographic and income classifications
+ok 242 - every country coverage entry has geographic and income classifications
+  ---
+  duration_ms: 2.558668
+  type: 'test'
+  ...
+# Subtest: subnational coverage inherits its parent country classification
+ok 243 - subnational coverage inherits its parent country classification
+  ---
+  duration_ms: 0.347624
+  type: 'test'
+  ...
+# Subtest: classification snapshot records its official source vintage
+ok 244 - classification snapshot records its official source vintage
+  ---
+  duration_ms: 0.757606
+  type: 'test'
+  ...
+# Subtest: an empty seeded metadata row does not activate a scheduled country
+ok 245 - an empty seeded metadata row does not activate a scheduled country
+  ---
+  duration_ms: 5.106347
+  type: 'test'
+  ...
+# Subtest: a snapshot requires records or a disease-bearing coverage window
+ok 246 - a snapshot requires records or a disease-bearing coverage window
+  ---
+  duration_ms: 0.295822
+  type: 'test'
+  ...
+# Subtest: existing active pipelines remain supported without a generated snapshot
+ok 247 - existing active pipelines remain supported without a generated snapshot
+  ---
+  duration_ms: 0.213122
+  type: 'test'
+  ...
+# Subtest: Ontario is a first-class region that activates when its snapshot exists
+ok 248 - Ontario is a first-class region that activates when its snapshot exists
+  ---
+  duration_ms: 0.253418
+  type: 'test'
+  ...
+# Subtest: Sweden remains supported after its verified baseline import
+ok 249 - Sweden remains supported after its verified baseline import
+  ---
+  duration_ms: 0.241897
+  type: 'test'
+  ...
+# Subtest: ISO subdivision locations use their parent country flag
+ok 250 - ISO subdivision locations use their parent country flag
+  ---
+  duration_ms: 0.398355
+  type: 'test'
+  ...
+# Subtest: every country coverage marker has a bundled flag asset
+ok 251 - every country coverage marker has a bundled flag asset
+  ---
+  duration_ms: 1.959064
+  type: 'test'
+  ...
+# Subtest: the local flag library contains every ISO country flag
+ok 252 - the local flag library contains every ISO country flag
+  ---
+  duration_ms: 3.878698
+  type: 'test'
+  ...
+# Subtest: month end and covering months use UTC calendar boundaries
+ok 253 - month end and covering months use UTC calendar boundaries
+  ---
+  duration_ms: 2.927452
+  type: 'test'
+  ...
+# Subtest: daily counts keep zero days inside the selected range
+ok 254 - daily counts keep zero days inside the selected range
+  ---
+  duration_ms: 0.559138
+  type: 'test'
+  ...
+# Subtest: range problems reject a reversed or very long selection
+ok 255 - range problems reject a reversed or very long selection
+  ---
+  duration_ms: 0.451507
+  type: 'test'
+  ...
+# Subtest: UTC days and counts agree across midnight and month boundaries
+ok 256 - UTC days and counts agree across midnight and month boundaries
+  ---
+  duration_ms: 0.549268
+  type: 'test'
+  ...
+# Subtest: incomplete and impossible calendar dates do not create a false empty range
+ok 257 - incomplete and impossible calendar dates do not create a false empty range
+  ---
+  duration_ms: 2.827159
+  type: 'test'
+  ...
+# Subtest: current download records stay separate from the full historical dataset
+ok 258 - current download records stay separate from the full historical dataset
+  ---
+  duration_ms: 2.313878
+  type: 'test'
+  ...
+# Subtest: all download surfaces use the same decimal unit
+ok 259 - all download surfaces use the same decimal unit
+  ---
+  duration_ms: 0.328409
+  type: 'test'
+  ...
+# Subtest: catalogue row total explains repeated observations beside the metric in every language
+ok 260 - catalogue row total explains repeated observations beside the metric in every language
+  ---
+  duration_ms: 2.045417
+  type: 'test'
+  ...
+# Subtest: the ECharts React compatibility entry resolves to a component
+ok 261 - the ECharts React compatibility entry resolves to a component
+  ---
+  duration_ms: 2.07892
+  type: 'test'
+  ...
+# Subtest: lean surveillance and heatmap registries render their actual option features in SVG SSR
+ok 262 - lean surveillance and heatmap registries render their actual option features in SVG SSR
+  ---
+  duration_ms: 4499.009396
+  type: 'test'
+  ...
+# Subtest: development observes new generated data; static render retains its frozen snapshot
+ok 263 - development observes new generated data; static render retains its frozen snapshot
+  ---
+  duration_ms: 29.064504
+  type: 'test'
+  ...
+# Subtest: parsed JSON is reused, same-size edits with restored mtime and deletion are detected
+ok 264 - parsed JSON is reused, same-size edits with restored mtime and deletion are detected
+  ---
+  duration_ms: 17.001889
+  type: 'test'
+  ...
+# Subtest: input-byte budget bounds retention, oversize files bypass it, and racing reads fail
+ok 265 - input-byte budget bounds retention, oversize files bypass it, and racing reads fail
+  ---
+  duration_ms: 22.546482
+  type: 'test'
+  ...
+# Subtest: only main-site builds skip independently published research pages
+ok 266 - only main-site builds skip independently published research pages
+  ---
+  duration_ms: 23.702662
+  type: 'test'
+  ...
+# Subtest: disease literature and study collections belong to Papers
+ok 267 - disease literature and study collections belong to Papers
+  ---
+  duration_ms: 2.165799
+  type: 'test'
+  ...
+# Subtest: uses the pathogen taxonomy rather than a clinical disease name as the sequence search
+ok 268 - uses the pathogen taxonomy rather than a clinical disease name as the sequence search
+  ---
+  duration_ms: 3.045099
+  type: 'test'
+  ...
+# Subtest: does not guess mappings for syndromes, broad influenza or unknown disease identifiers
+ok 269 - does not guess mappings for syndromes, broad influenza or unknown disease identifiers
+  ---
+  duration_ms: 0.467407
+  type: 'test'
+  ...
+# Subtest: public searches and account-based resources remain distinct and on official hosts
+ok 270 - public searches and account-based resources remain distinct and on official hosts
+  ---
+  duration_ms: 1.116784
+  type: 'test'
+  ...
+# Subtest: all three locales explain sequence-count limits and GISAID account access
+ok 271 - all three locales explain sequence-count limits and GISAID account access
+  ---
+  duration_ms: 0.666228
+  type: 'test'
+  ...
+# Subtest: recognizes every report_v4 marker used by report detail routes
+ok 272 - recognizes every report_v4 marker used by report detail routes
+  ---
+  duration_ms: 26.062758
+  type: 'test'
+  ...
+# Subtest: normalizes valid route segments and rejects path-breaking values
+ok 273 - normalizes valid route segments and rejects path-breaking values
+  ---
+  duration_ms: 0.971681
+  type: 'test'
+  ...
+# Subtest: takes unique, valid disease slugs only from the v4 detail document
+ok 274 - takes unique, valid disease slugs only from the v4 detail document
+  ---
+  duration_ms: 14.287063
+  type: 'test'
+  ...
+# Subtest: builds the single publishable set used by archives and report routes
+ok 275 - builds the single publishable set used by archives and report routes
+  ---
+  duration_ms: 1.499904
+  type: 'test'
+  ...
+# Subtest: versions the exact published article input bytes across languages and corrections
+ok 276 - versions the exact published article input bytes across languages and corrections
+  ---
+  duration_ms: 6.055577
+  type: 'test'
+  ...
+# Subtest: query terms remove generic question language and retain disease terms
+ok 277 - query terms remove generic question language and retain disease terms
+  ---
+  duration_ms: 15.446041
+  type: 'test'
+  ...
+# Subtest: ranking prioritizes disease, geography, and title matches over recency alone
+ok 278 - ranking prioritizes disease, geography, and title matches over recency alone
+  ---
+  duration_ms: 9.452828
+  type: 'test'
+  ...
+# Subtest: question prepositions do not activate a colliding two-letter country code
+ok 279 - question prepositions do not activate a colliding two-letter country code
+  ---
+  duration_ms: 11.891063
+  type: 'test'
+  ...
+# Subtest: English aliases expand into structured disease, country, and topic matches
+ok 280 - English aliases expand into structured disease, country, and topic matches
+  ---
+  duration_ms: 18.68771
+  type: 'test'
+  ...
+# Subtest: Chinese aliases use bilingual summaries and expose numbered source citations
+ok 281 - Chinese aliases use bilingual summaries and expose numbered source citations
+  ---
+  duration_ms: 18.42577
+  type: 'test'
+  ...
+# Subtest: French aliases rank French structured findings and return a French answer
+ok 282 - French aliases rank French structured findings and return a French answer
+  ---
+  duration_ms: 1.28271
+  type: 'test'
+  ...
+# Subtest: title, tags, and bilingual summaries are searchable with deterministic field weights
+ok 283 - title, tags, and bilingual summaries are searchable with deterministic field weights
+  ---
+  duration_ms: 2.221694
+  type: 'test'
+  ...
+# Subtest: answers expose only public surveillance links and auditable themes
+ok 284 - answers expose only public surveillance links and auditable themes
+  ---
+  duration_ms: 2.937491
+  type: 'test'
+  ...
+# Subtest: unmatched questions return an explicit empty answer
+ok 285 - unmatched questions return an explicit empty answer
+  ---
+  duration_ms: 1.76168
+  type: 'test'
+  ...
+# Subtest: same-name ambiguity requires the requested entity type for exact evidence
+ok 286 - same-name ambiguity requires the requested entity type for exact evidence
+  ---
+  duration_ms: 1.700387
+  type: 'test'
+  ...
+# Subtest: ranking is stable, field-weighted, and de-duplicates normalized DOI variants
+ok 287 - ranking is stable, field-weighted, and de-duplicates normalized DOI variants
+  ---
+  duration_ms: 9.610402
+  type: 'test'
+  ...
+# Subtest: Hib names do not become an exact influenza concept through Latin or Chinese substrings
+ok 288 - Hib names do not become an exact influenza concept through Latin or Chinese substrings
+  ---
+  duration_ms: 2.897001
+  type: 'test'
+  ...
+# Subtest: source-reviewed bacterial-genomics DOI stays background for influenza while genuine coinfection remains exact
+ok 289 - source-reviewed bacterial-genomics DOI stays background for influenza while genuine coinfection remains exact
+  ---
+  duration_ms: 16.216839
+  type: 'test'
+  ...
+# Subtest: study partitions preserve every record once and avoid unrelated network reads
+ok 290 - study partitions preserve every record once and avoid unrelated network reads
+  ---
+  duration_ms: 33.71006
+  type: 'test'
+  ...
+# Subtest: reviewed and bibliographic records never share a chunk or lose records
+ok 291 - reviewed and bibliographic records never share a chunk or lose records
+  ---
+  duration_ms: 8.108337
+  type: 'test'
+  ...
+# Subtest: compact catalogue retains every field used by client-side research filters
+ok 292 - compact catalogue retains every field used by client-side research filters
+  ---
+  duration_ms: 20.210704
+  type: 'test'
+  ...
+# Subtest: bibliographic records retain source identifiers and do not claim an evidence page
+ok 293 - bibliographic records retain source identifiers and do not claim an evidence page
+  ---
+  duration_ms: 0.448098
+  type: 'test'
+  ...
+# Subtest: exports public state and stable summary hashes without copying evidence text or provenance
+ok 294 - exports public state and stable summary hashes without copying evidence text or provenance
+  ---
+  duration_ms: 3.238787
+  type: 'test'
+  ...
+# Subtest: represents missing or bibliographic evidence conservatively and rejects ambiguous identities
+ok 295 - represents missing or bibliographic evidence conservatively and rejects ambiguous identities
+  ---
+  duration_ms: 15.029516
+  type: 'test'
+  ...
+# Subtest: exposes a current correction as public revision evidence
+ok 296 - exposes a current correction as public revision evidence
+  ---
+  duration_ms: 1.240491
+  type: 'test'
+  ...
+# Subtest: weekly inventory binds every listed public brief and cannot infer an empty scan from a missing list
+ok 297 - weekly inventory binds every listed public brief and cannot infer an empty scan from a missing list
+  ---
+  duration_ms: 1.541212
+  type: 'test'
+  ...
+# Subtest: builds stable feed definitions for every supported filter family
+ok 298 - builds stable feed definitions for every supported filter family
+  ---
+  duration_ms: 42.589424
+  type: 'test'
+  ...
+# Subtest: filters diseases, countries, topics, study types, reviews, and peer-review status
+ok 299 - filters diseases, countries, topics, study types, reviews, and peer-review status
+  ---
+  duration_ms: 1.694318
+  type: 'test'
+  ...
+# Subtest: renders a self-identifying, escaped, newest-first filtered RSS document
+ok 300 - renders a self-identifying, escaped, newest-first filtered RSS document
+  ---
+  duration_ms: 11.67663
+  type: 'test'
+  ...
+# Subtest: renders French feeds with localized metadata and links
+ok 301 - renders French feeds with localized metadata and links
+  ---
+  duration_ms: 7.627557
+  type: 'test'
+  ...
+# Subtest: indexed feed memberships, counts and localized XML preserve the filtering contract
+ok 302 - indexed feed memberships, counts and localized XML preserve the filtering contract
+  ---
+  duration_ms: 23.629986
+  type: 'test'
+  ...
+# Subtest: normalizes only public integrity alert types and strips private fields
+ok 303 - normalizes only public integrity alert types and strips private fields
+  ---
+  duration_ms: 18.955243
+  type: 'test'
+  ...
+# Subtest: provides bilingual labels for every integrity status
+ok 304 - provides bilingual labels for every integrity status
+  ---
+  duration_ms: 0.296887
+  type: 'test'
+  ...
+# Subtest: a page loads only referenced immutable shards, preserves record order, and reuses successful bodies
+ok 305 - a page loads only referenced immutable shards, preserves record order, and reuses successful bodies
+  ---
+  duration_ms: 21.424186
+  type: 'test'
+  ...
+# Subtest: failed page bodies can be retried and transfer concurrency is bounded
+ok 306 - failed page bodies can be retried and transfer concurrency is bounded
+  ---
+  duration_ms: 87.94707
+  type: 'test'
+  ...
+# Subtest: complete catalogue filters and trend apply the same combined criteria
+ok 307 - complete catalogue filters and trend apply the same combined criteria
+  ---
+  duration_ms: 63.20891
+  type: 'test'
+  ...
+# Subtest: bibliographic projection preserves source IDs without full summaries
+ok 308 - bibliographic projection preserves source IDs without full summaries
+  ---
+  duration_ms: 0.547214
+  type: 'test'
+  ...
+# Subtest: year filters reject partial, invalid and reversed bounds rather than silently comparing strings
+ok 309 - year filters reject partial, invalid and reversed bounds rather than silently comparing strings
+  ---
+  duration_ms: 0.472035
+  type: 'test'
+  ...
+# Subtest: slim index preserves filtering and trends while pagination only slices matching record IDs
+ok 310 - slim index preserves filtering and trends while pagination only slices matching record IDs
+  ---
+  duration_ms: 9.770446
+  type: 'test'
+  ...
+# Subtest: external search strategies encode disease-specific title/abstract phrases
+ok 311 - external search strategies encode disease-specific title/abstract phrases
+  ---
+  duration_ms: 1.313909
+  type: 'test'
+  ...
+# Subtest: Ask resolves CJK questions to scopes and rejects substring entity collisions
+ok 312 - Ask resolves CJK questions to scopes and rejects substring entity collisions
+  ---
+  duration_ms: 12.825202
+  type: 'test'
+  ...
+# Subtest: monthly immutable shards isolate additions, backfills and undated records
+ok 313 - monthly immutable shards isolate additions, backfills and undated records
+  ---
+  duration_ms: 223.743823
+  type: 'test'
+  ...
+# Subtest: adding one current-month paper changes only its disease index and monthly card pages
+ok 314 - adding one current-month paper changes only its disease index and monthly card pages
+  ---
+  duration_ms: 10.46324
+  type: 'test'
+  ...
+# Subtest: reads only requested fields and reconstructs list, object and value shards
+ok 315 - reads only requested fields and reconstructs list, object and value shards
+  ---
+  duration_ms: 22.06561
+  type: 'test'
+  ...
+# Subtest: article-specific cards are disabled and share the main-site default image
+ok 316 - article-specific cards are disabled and share the main-site default image
+  ---
+  duration_ms: 1.308326
+  type: 'test'
+  ...
+# Subtest: relationships expose distinct translated target entities and useful links
+ok 317 - relationships expose distinct translated target entities and useful links
+  ---
+  duration_ms: 189.55707
+  type: 'test'
+  ...
+# Subtest: research search includes current indexable articles and excludes hidden records
+ok 318 - research search includes current indexable articles and excludes hidden records
+  ---
+  duration_ms: 21.869173
+  type: 'test'
+  ...
+# Subtest: repeated countries and duplicate source events collapse without losing distinct events
+ok 319 - repeated countries and duplicate source events collapse without losing distinct events
+  ---
+  duration_ms: 22.382126
+  type: 'test'
+  ...
+# Subtest: exact, historical and disease-only relationships and different diseases stay separate
+ok 320 - exact, historical and disease-only relationships and different diseases stay separate
+  ---
+  duration_ms: 0.692476
+  type: 'test'
+  ...
+# Subtest: research sitemap and language alternates match the public article canonical
+ok 321 - research sitemap and language alternates match the public article canonical
+  ---
+  duration_ms: 53.44301
+  type: 'test'
+  ...
+# Subtest: research sitemaps paginate without dropping records at the boundary
+ok 322 - research sitemaps paginate without dropping records at the boundary
+  ---
+  duration_ms: 83.705606
+  type: 'test'
+  ...
+# Subtest: wraps social-card copy deterministically and caps the line count
+ok 323 - wraps social-card copy deterministically and caps the line count
+  ---
+  duration_ms: 10.612476
+  type: 'test'
+  ...
+# Subtest: renders a safe, evidence-labelled share card without raw markup injection
+ok 324 - renders a safe, evidence-labelled share card without raw markup injection
+  ---
+  duration_ms: 0.771851
+  type: 'test'
+  ...
+# Subtest: current Research Radar data can populate every homepage intelligence section
+ok 325 - current Research Radar data can populate every homepage intelligence section
+  ---
+  duration_ms: 24.292423
+  type: 'test'
+  ...
+# Subtest: Research homepage renders collections, seven-day metrics, and the trend interpretation
+ok 326 - Research homepage renders collections, seven-day metrics, and the trend interpretation
+  ---
+  duration_ms: 1.23525
+  type: 'test'
+  ...
+# Subtest: static and dynamically rendered research cards expose the same discovery actions
+ok 327 - static and dynamically rendered research cards expose the same discovery actions
+  ---
+  duration_ms: 1.011581
+  type: 'test'
+  ...
+# Subtest: article evidence pages disclose publication metadata and plain-language summary transparency
+ok 328 - article evidence pages disclose publication metadata and plain-language summary transparency
+  ---
+  duration_ms: 0.638845
+  type: 'test'
+  ...
+# Subtest: weekly briefs render a human reviewer only for an explicit reviewed status
+ok 329 - weekly briefs render a human reviewer only for an explicit reviewed status
+  ---
+  duration_ms: 0.39094
+  type: 'test'
+  ...
+# Subtest: evidence graph ships a compact payload and renders only visible nodes
+ok 330 - evidence graph ships a compact payload and renders only visible nodes
+  ---
+  duration_ms: 0.399939
+  type: 'test'
+  ...
+# Subtest: stable navigation and pinned data from globalinfectiousdisease.com
+ok 331 - stable navigation and pinned data from globalinfectiousdisease.com
+  ---
+  duration_ms: 73.374961
+  type: 'test'
+  ...
+# Subtest: stable navigation and pinned data from papers.globalinfectiousdisease.com
+ok 332 - stable navigation and pinned data from papers.globalinfectiousdisease.com
+  ---
+  duration_ms: 1.204815
+  type: 'test'
+  ...
+# Subtest: a removed snapshot URL cannot supply the browser generation
+ok 333 - a removed snapshot URL cannot supply the browser generation
+  ---
+  duration_ms: 1.025841
+  type: 'test'
+  ...
+# Subtest: a queued upstream progressive paint exits after the painter is disposed
+ok 334 - a queued upstream progressive paint exits after the painter is disposed
+  ---
+  duration_ms: 1.455912
+  type: 'test'
+  ...
+# Subtest: the public null refresh option delegates as the canvas default
+ok 335 - the public null refresh option delegates as the canvas default
+  ---
+  duration_ms: 1.267266
+  type: 'test'
+  ...
+# Subtest: French country disease titles retain real country suffixes within the production title limit
+ok 336 - French country disease titles retain real country suffixes within the production title limit
+  ---
+  duration_ms: 30.143889
+  type: 'test'
+  ...
+# Subtest: shortened titles for the same disease remain distinct across countries
+ok 337 - shortened titles for the same disease remain distinct across countries
+  ---
+  duration_ms: 0.707956
+  type: 'test'
+  ...
+# Subtest: normalizes legacy disease slugs in research links and leaves other hrefs alone
+ok 338 - normalizes legacy disease slugs in research links and leaves other hrefs alone
+  ---
+  duration_ms: 0.535409
+  type: 'test'
+  ...
+# Subtest: builds unique, descriptive country and disease snippets
+ok 339 - builds unique, descriptive country and disease snippets
+  ---
+  duration_ms: 0.590074
+  type: 'test'
+  ...
+# Subtest: builds absolute breadcrumb URLs including the current page
+ok 340 - builds absolute breadcrumb URLs including the current page
+  ---
+  duration_ms: 5.314467
+  type: 'test'
+  ...
+# Subtest: exposes page JSON and only the current download part
+ok 341 - exposes page JSON and only the current download part
+  ---
+  duration_ms: 1.411697
+  type: 'test'
+  ...
+# Subtest: normalizes SEO slugs, titles, descriptions, and language alternates
+ok 342 - normalizes SEO slugs, titles, descriptions, and language alternates
+  ---
+  duration_ms: 1.177898
+  type: 'test'
+  ...
+# Subtest: requires an observation or sourced published profile before indexing a disease
+ok 343 - requires an observation or sourced published profile before indexing a disease
+  ---
+  duration_ms: 0.42186
+  type: 'test'
+  ...
+# Subtest: compact directories preserve all sitemap entries and avoid retaining series
+ok 344 - compact directories preserve all sitemap entries and avoid retaining series
+  ---
+  duration_ms: 97.753579
+  type: 'test'
+  ...
+# Subtest: streaming candidate selection preserves ranking, ties, and limit semantics
+ok 345 - streaming candidate selection preserves ranking, ties, and limit semantics
+  ---
+  duration_ms: 303.452616
+  type: 'test'
+  ...
+# Subtest: ordinary disease aliases rank seasonal influenza above H. influenzae
+ok 346 - ordinary disease aliases rank seasonal influenza above H. influenzae
+  ---
+  duration_ms: 2.25273
+  type: 'test'
+  ...
+# Subtest: combined country and disease query opens focused research and monitoring
+ok 347 - combined country and disease query opens focused research and monitoring
+  ---
+  duration_ms: 17.075881
+  type: 'test'
+  ...
+# Subtest: the full count is retained when a result preview is capped
+ok 348 - the full count is retained when a result preview is capped
+  ---
+  duration_ms: 0.381014
+  type: 'test'
+  ...
+# Subtest: renders a descriptive 1200 by 630 default social card
+ok 349 - renders a descriptive 1200 by 630 default social card
+  ---
+  duration_ms: 18.838886
+  type: 'test'
+  ...
+# Subtest: theme covers localized home, country and comparison pages and is opt-in
+ok 350 - theme covers localized home, country and comparison pages and is opt-in
+  ---
+  duration_ms: 16.964985
+  type: 'test'
+  ...
+# Subtest: preview can pin immutable theme while unsupported URLs fail the build
+ok 351 - preview can pin immutable theme while unsupported URLs fail the build
+  ---
+  duration_ms: 0.71622
+  type: 'test'
+  ...
+# Subtest: disease literature belongs to the Papers sitemap in all supported languages
+ok 352 - disease literature belongs to the Papers sitemap in all supported languages
+  ---
+  duration_ms: 8.446433
+  type: 'test'
+  ...
+# Subtest: isolated reports sitemap matches the full sitemap without reading country data
+ok 353 - isolated reports sitemap matches the full sitemap without reading country data
+  ---
+  duration_ms: 3.311472
+  type: 'test'
+  ...
+# Subtest: builds only publishable static, country, disease, and report URLs
+ok 354 - builds only publishable static, country, disease, and report URLs
+  ---
+  duration_ms: 1.351375
+  type: 'test'
+  ...
+# Subtest: renders absolute XML URLs and escapes XML-sensitive characters
+ok 355 - renders absolute XML URLs and escapes XML-sensitive characters
+  ---
+  duration_ms: 0.499414
+  type: 'test'
+  ...
+# Subtest: publishes latest, methodology, weekly and monthly situation URLs only after the switch
+ok 356 - publishes latest, methodology, weekly and monthly situation URLs only after the switch
+  ---
+  duration_ms: 1.862701
+  type: 'test'
+  ...
+# Subtest: publishes indexable Research Radar articles, collections, and weekly briefs
+ok 357 - publishes indexable Research Radar articles, collections, and weekly briefs
+  ---
+  duration_ms: 1.187053
+  type: 'test'
+  ...
+# Subtest: current generated data matches the Astro static-route intent
+ok 358 - current generated data matches the Astro static-route intent
+  ---
+  duration_ms: 1490.131456
+  type: 'test'
+  ...
+# Subtest: RSS selectors offer only Situation entities with published events, using localized names
+ok 359 - RSS selectors offer only Situation entities with published events, using localized names
+  ---
+  duration_ms: 99.902442
+  type: 'test'
+  ...
+# Subtest: US, Brazil and Japan coordinate catalogues cover published subdivisions
+ok 360 - US, Brazil and Japan coordinate catalogues cover published subdivisions
+  ---
+  duration_ms: 6.162796
+  type: 'test'
+  ...
+# (node:957323) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: one page pins summary, curves and lazy source details to one publication
+ok 361 - one page pins summary, curves and lazy source details to one publication
+  ---
+  duration_ms: 237.664391
+  type: 'test'
+  ...
+# Subtest: manifest 404 migrates through legacy paths; existing manifest never mixes missing or corrupt files
+ok 362 - manifest 404 migrates through legacy paths; existing manifest never mixes missing or corrupt files
+  ---
+  duration_ms: 13.237121
+  type: 'test'
+  ...
+# Subtest: failed manifest requests can retry and invalid manifests or object sizes fail closed
+ok 363 - failed manifest requests can retry and invalid manifests or object sizes fail closed
+  ---
+  duration_ms: 22.258732
+  type: 'test'
+  ...
+# Subtest: large curve readers can release raw JSON while keeping the publication pinned
+ok 364 - large curve readers can release raw JSON while keeping the publication pinned
+  ---
+  duration_ms: 2.730552
+  type: 'test'
+  ...
+# Subtest: HTTP gzip representations verify decoded JSON bytes rather than Content-Length
+ok 365 - HTTP gzip representations verify decoded JSON bytes rather than Content-Length
+  ---
+  duration_ms: 9.690611
+  type: 'test'
+  ...
+# Subtest: independent Situation namespace pins its map and late outbreak without using surveillance
+ok 366 - independent Situation namespace pins its map and late outbreak without using surveillance
+  ---
+  duration_ms: 2.078121
+  type: 'test'
+  ...
+# Subtest: small bootstrap renders a summary before loading the complete pinned manifest
+ok 367 - small bootstrap renders a summary before loading the complete pinned manifest
+  ---
+  duration_ms: 19.292246
+  type: 'test'
+  ...
+# Subtest: a missing bootstrap supports legacy servers; corrupt lazy manifests never fall back to current data
+ok 368 - a missing bootstrap supports legacy servers; corrupt lazy manifests never fall back to current data
+  ---
+  duration_ms: 22.698719
+  type: 'test'
+  ...
+# Subtest: bootstrap.json has a bounded fetch wait and can retry
+ok 369 - bootstrap.json has a bounded fetch wait and can retry
+  ---
+  duration_ms: 3.813717
+  type: 'test'
+  ...
+# Subtest: bootstrap.json has a bounded body wait and can retry
+ok 370 - bootstrap.json has a bounded body wait and can retry
+  ---
+  duration_ms: 6.179389
+  type: 'test'
+  ...
+# Subtest: current.json has a bounded fetch wait and can retry
+ok 371 - current.json has a bounded fetch wait and can retry
+  ---
+  duration_ms: 2.453786
+  type: 'test'
+  ...
+# Subtest: current.json has a bounded body wait and can retry
+ok 372 - current.json has a bounded body wait and can retry
+  ---
+  duration_ms: 6.237517
+  type: 'test'
+  ...
+# Subtest: manifests/one.json has a bounded fetch wait and can retry
+ok 373 - manifests/one.json has a bounded fetch wait and can retry
+  ---
+  duration_ms: 7.338196
+  type: 'test'
+  ...
+# Subtest: manifests/one.json has a bounded body wait and can retry
+ok 374 - manifests/one.json has a bounded body wait and can retry
+  ---
+  duration_ms: 2.646607
+  type: 'test'
+  ...
+# Subtest: objects/one.json has a bounded fetch wait and can retry
+ok 375 - objects/one.json has a bounded fetch wait and can retry
+  ---
+  duration_ms: 10.579248
+  type: 'test'
+  ...
+# Subtest: objects/one.json has a bounded body wait and can retry
+ok 376 - objects/one.json has a bounded body wait and can retry
+  ---
+  duration_ms: 11.940428
+  type: 'test'
+  ...
+# Subtest: body waits on /other/dataset.json also time out
+ok 377 - body waits on /other/dataset.json also time out
+  ---
+  duration_ms: 5.745336
+  type: 'test'
+  ...
+# Subtest: body waits on /site-data/legacy.json also time out
+ok 378 - body waits on /site-data/legacy.json also time out
+  ---
+  duration_ms: 1.442598
+  type: 'test'
+  ...
+# Subtest: canceling a consumer during bootstrap.json leaves other consumers and the in-flight cache intact
+ok 379 - canceling a consumer during bootstrap.json leaves other consumers and the in-flight cache intact
+  ---
+  duration_ms: 6.146632
+  type: 'test'
+  ...
+# Subtest: canceling a consumer during current.json leaves other consumers and the in-flight cache intact
+ok 380 - canceling a consumer during current.json leaves other consumers and the in-flight cache intact
+  ---
+  duration_ms: 15.945018
+  type: 'test'
+  ...
+# Subtest: canceling a consumer during manifests/one.json leaves other consumers and the in-flight cache intact
+ok 381 - canceling a consumer during manifests/one.json leaves other consumers and the in-flight cache intact
+  ---
+  duration_ms: 9.093722
+  type: 'test'
+  ...
+# Subtest: canceling a consumer during objects/one.json leaves other consumers and the in-flight cache intact
+ok 382 - canceling a consumer during objects/one.json leaves other consumers and the in-flight cache intact
+  ---
+  duration_ms: 2.018951
+  type: 'test'
+  ...
+# Subtest: successful retain:true consumers keep the cache even when retain:false consumers finish later
+ok 383 - successful retain:true consumers keep the cache even when retain:false consumers finish later
+  ---
+  duration_ms: 2.117355
+  type: 'test'
+  ...
+# Subtest: all canceled consumers release unretained results while preserving the pinned manifest
+ok 384 - all canceled consumers release unretained results while preserving the pinned manifest
+  ---
+  duration_ms: 78.195769
+  type: 'test'
+  ...
+# Subtest: abandoned requests abort at their deadline, and a late failure cannot evict the retry
+ok 385 - abandoned requests abort at their deadline, and a late failure cannot evict the retry
+  ---
+  duration_ms: 3.080576
+  type: 'test'
+  ...
+# Subtest: already canceled callers start no requests, and manifest subscribers cancel independently
+ok 386 - already canceled callers start no requests, and manifest subscribers cancel independently
+  ---
+  duration_ms: 0.871377
+  type: 'test'
+  ...
+# Subtest: successful requests clear their deadlines after completing the response body
+ok 387 - successful requests clear their deadlines after completing the response body
+  ---
+  duration_ms: 0.904755
+  type: 'test'
+  ...
+# Subtest: national coverage excludes subdivisions and unavailable datasets
+ok 388 - national coverage excludes subdivisions and unavailable datasets
+  ---
+  duration_ms: 2.843872
+  type: 'test'
+  ...
+# Subtest: source deduplication retains jurisdiction context and distinct definitions
+ok 389 - source deduplication retains jurisdiction context and distinct definitions
+  ---
+  duration_ms: 1.104223
+  type: 'test'
+  ...
+# Subtest: French labels and reporting cadence use the existing translations
+ok 390 - French labels and reporting cadence use the existing translations
+  ---
+  duration_ms: 107.669336
+  type: 'test'
+  ...
+# Subtest: hero curves preserve missing gaps, real zeros, and relative peaks
+ok 391 - hero curves preserve missing gaps, real zeros, and relative peaks
+  ---
+  duration_ms: 0.523675
+  type: 'test'
+  ...
+# Subtest: snapshot comparison requires consecutive reported periods and preserves a latest zero
+ok 392 - snapshot comparison requires consecutive reported periods and preserves a latest zero
+  ---
+  duration_ms: 0.418609
+  type: 'test'
+  ...
+# Subtest: archive boundaries use ISO weeks and monthly totals count distinct outbreaks
+ok 393 - archive boundaries use ISO weeks and monthly totals count distinct outbreaks
+  ---
+  duration_ms: 5.60234
+  type: 'test'
+  ...
+# Subtest: chart metadata contains source and coverage without stale download links
+ok 394 - chart metadata contains source and coverage without stale download links
+  ---
+  duration_ms: 32.654217
+  type: 'test'
+  ...
+# Subtest: locale registry exposes stable BCP 47 tags
+ok 395 - locale registry exposes stable BCP 47 tags
+  ---
+  duration_ms: 11.949468
+  type: 'test'
+  ...
+# Subtest: locale number formatting follows the selected language
+ok 396 - locale number formatting follows the selected language
+  ---
+  duration_ms: 134.798275
+  type: 'test'
+  ...
+# Subtest: locale date formatting is UTC and returns a safe missing value
+ok 397 - locale date formatting is UTC and returns a safe missing value
+  ---
+  duration_ms: 38.369829
+  type: 'test'
+  ...
+# Subtest: French region labels fall back to the translated parent country
+ok 398 - French region labels fall back to the translated parent country
+  ---
+  duration_ms: 35.64946
+  type: 'test'
+  ...
+# Subtest: a country page slug resolves to the ISO-keyed shard
+ok 399 - a country page slug resolves to the ISO-keyed shard
+  ---
+  duration_ms: 10.39061
+  type: 'test'
+  ...
+# Subtest: sub-national pages never inherit their parent country alerts
+ok 400 - sub-national pages never inherit their parent country alerts
+  ---
+  duration_ms: 689.090867
+  type: 'test'
+  ...
+# Subtest: unknown slugs and traversal attempts resolve to nothing
+ok 401 - unknown slugs and traversal attempts resolve to nothing
+  ---
+  duration_ms: 0.544798
+  type: 'test'
+  ...
+# Subtest: a foreign schema version reads as absent
+ok 402 - a foreign schema version reads as absent
+  ---
+  duration_ms: 0.557215
+  type: 'test'
+  ...
+# Subtest: recentAlerts caps the list and keeps newest first
+ok 403 - recentAlerts caps the list and keeps newest first
+  ---
+  duration_ms: 29.454636
+  type: 'test'
+  ...
+# Subtest: ISO week helpers agree with the export keys
+ok 404 - ISO week helpers agree with the export keys
+  ---
+  duration_ms: 1.04318
+  type: 'test'
+  ...
+# Subtest: a snapshot carries the newest point, its date and the period delta
+ok 405 - a snapshot carries the newest point, its date and the period delta
+  ---
+  duration_ms: 730.486098
+  type: 'test'
+  ...
+# Subtest: unknown country / disease / hostile key resolves to null
+ok 406 - unknown country / disease / hostile key resolves to null
+  ---
+  duration_ms: 13.04787
+  type: 'test'
+  ...
+# Subtest: page context jurisdictions still produce badges when the notice names others
+ok 407 - page context jurisdictions still produce badges when the notice names others
+  ---
+  duration_ms: 0.746463
+  type: 'test'
+  ...
+# Subtest: badges are localized and only appear when a local series exists
+ok 408 - badges are localized and only appear when a local series exists
+  ---
+  duration_ms: 132.305558
+  type: 'test'
+  ...
+# Subtest: metadata and absence prose is not treated as public disease knowledge
+ok 409 - metadata and absence prose is not treated as public disease knowledge
+  ---
+  duration_ms: 13.326478
+  type: 'test'
+  ...
+# Subtest: dominant limitation prose is removed while a supported sentence survives
+ok 410 - dominant limitation prose is removed while a supported sentence survives
+  ---
+  duration_ms: 8.59969
+  type: 'test'
+  ...
+# Subtest: localized field resolution never falls back across languages
+ok 411 - localized field resolution never falls back across languages
+  ---
+  duration_ms: 0.632028
+  type: 'test'
+  ...
+# Subtest: explicit field status prevents stale text from leaking into the page
+ok 412 - explicit field status prevents stale text from leaking into the page
+  ---
+  duration_ms: 0.232525
+  type: 'test'
+  ...
+# Subtest: Chinese evidence-boundary prose is not counted as epidemiology
+ok 413 - Chinese evidence-boundary prose is not counted as epidemiology
+  ---
+  duration_ms: 0.744333
+  type: 'test'
+  ...
+1..413
+# tests 413
+# suites 0
+# pass 413
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 17731.94511

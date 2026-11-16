@@ -1,0 +1,433 @@
+
+> globalid-report-site@0.19.4 test:charts
+> npm run sync:flags && node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/safeCanvasPainter.test.ts src/lib/chart-source-scope.test.ts src/lib/country-coverage.test.ts src/lib/country-classifications.test.ts src/lib/subdivision-map-points.test.ts src/components/charts/surveillance/__tests__/*.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts src/components/charts/reportFigureOptions.test.ts
+
+
+> globalid-report-site@0.19.4 sync:flags
+> node scripts/sync-flags.mjs
+
+[flags] synced 271 local SVG flags from flag-icons
+TAP version 13
+# Subtest: collectYears returns chronological unique years
+ok 1 - collectYears returns chronological unique years
+  ---
+  duration_ms: 2.082086
+  type: 'test'
+  ...
+# Subtest: monthly summaries aggregate duplicate months and preserve missing months
+ok 2 - monthly summaries aggregate duplicate months and preserve missing months
+  ---
+  duration_ms: 0.679542
+  type: 'test'
+  ...
+# Subtest: metric changes use the same year structure
+ok 3 - metric changes use the same year structure
+  ---
+  duration_ms: 0.466061
+  type: 'test'
+  ...
+# Subtest: recent year selection keeps the latest chronological years
+ok 4 - recent year selection keeps the latest chronological years
+  ---
+  duration_ms: 0.221465
+  type: 'test'
+  ...
+# Subtest: annual subtotals are withheld unless all twelve months and coverage are complete
+ok 5 - annual subtotals are withheld unless all twelve months and coverage are complete
+  ---
+  duration_ms: 0.478435
+  type: 'test'
+  ...
+# Subtest: incompatible source definitions stay missing in the monthly view
+ok 6 - incompatible source definitions stay missing in the monthly view
+  ---
+  duration_ms: 0.269366
+  type: 'test'
+  ...
+# Subtest: monthly chart option and update contract are accepted by ECharts
+ok 7 - monthly chart option and update contract are accepted by ECharts
+  ---
+  duration_ms: 107.434338
+  type: 'test'
+  ...
+# Subtest: monthly tooltip distinguishes incompatible missing values from zero
+ok 8 - monthly tooltip distinguishes incompatible missing values from zero
+  ---
+  duration_ms: 0.694216
+  type: 'test'
+  ...
+# Subtest: shared preview/public options preserve gaps and real zero, ignore arbitrary options, and render in ECharts
+ok 9 - shared preview/public options preserve gaps and real zero, ignore arbitrary options, and render in ECharts
+  ---
+  duration_ms: 100.404291
+  type: 'test'
+  ...
+# Subtest: wrong placement, missing dataset and unrecognized types do not render
+ok 10 - wrong placement, missing dataset and unrecognized types do not render
+  ---
+  duration_ms: 0.273709
+  type: 'test'
+  ...
+# Subtest: attention chart has a fixed score scale and localized disease labels
+ok 11 - attention chart has a fixed score scale and localized disease labels
+  ---
+  duration_ms: 0.695338
+  type: 'test'
+  ...
+# Subtest: expanded library renders real ECharts and exposes statistical tables
+ok 12 - expanded library renders real ECharts and exposes statistical tables
+  ---
+  duration_ms: 155.23738
+  type: 'test'
+  ...
+# Subtest: rejects corrupt statistical inputs and wrong quality placement
+ok 13 - rejects corrupt statistical inputs and wrong quality placement
+  ---
+  duration_ms: 0.570291
+  type: 'test'
+  ...
+# Subtest: history never joins different source/scope cohorts
+ok 14 - history never joins different source/scope cohorts
+  ---
+  duration_ms: 1.193662
+  type: 'test'
+  ...
+# Subtest: adapter separates disease, geography, source and measure identities and retains zeroes
+ok 15 - adapter separates disease, geography, source and measure identities and retains zeroes
+  ---
+  duration_ms: 20.012453
+  type: 'test'
+  ...
+# Subtest: recorded-time snapshot metadata is retained and included in the data fingerprint
+ok 16 - recorded-time snapshot metadata is retained and included in the data fingerprint
+  ---
+  duration_ms: 1.860765
+  type: 'test'
+  ...
+# Subtest: source-only entries stay separate from the public projection
+ok 17 - source-only entries stay separate from the public projection
+  ---
+  duration_ms: 0.915206
+  type: 'test'
+  ...
+# Subtest: same-source demographic strata retain distinct selectable identities
+ok 18 - same-source demographic strata retain distinct selectable identities
+  ---
+  duration_ms: 4.976771
+  type: 'test'
+  ...
+# Subtest: point quality overrides stale provisional boundaries and nulls stay null
+ok 19 - point quality overrides stale provisional boundaries and nulls stay null
+  ---
+  duration_ms: 0.82342
+  type: 'test'
+  ...
+# Subtest: report snapshot adapter accepts complete frozen series and rejects incomplete archives
+ok 20 - report snapshot adapter accepts complete frozen series and rejects incomplete archives
+  ---
+  duration_ms: 1.073496
+  type: 'test'
+  ...
+# Subtest: frozen report periods retain annual bins that start before the report window
+ok 21 - frozen report periods retain annual bins that start before the report window
+  ---
+  duration_ms: 0.516372
+  type: 'test'
+  ...
+# Subtest: default weekly series retains exact source calendar boundaries
+ok 22 - default weekly series retains exact source calendar boundaries
+  ---
+  duration_ms: 0.71577
+  type: 'test'
+  ...
+# Subtest: exact ISO weeks expose missing weeks and only total complete windows
+ok 23 - exact ISO weeks expose missing weeks and only total complete windows
+  ---
+  duration_ms: 2.135561
+  type: 'test'
+  ...
+# Subtest: inferred frequency is a display hint and does not certify complete periods
+ok 24 - inferred frequency is a display hint and does not certify complete periods
+  ---
+  duration_ms: 1.038039
+  type: 'test'
+  ...
+# Subtest: report-window fragments cannot be presented as complete annual burden
+ok 25 - report-window fragments cannot be presented as complete annual burden
+  ---
+  duration_ms: 1.483882
+  type: 'test'
+  ...
+# Subtest: report revision comparison aligns current periods and marks scope mismatches
+ok 26 - report revision comparison aligns current periods and marks scope mismatches
+  ---
+  duration_ms: 1.973843
+  type: 'test'
+  ...
+# Subtest: period change uses matched periods and does not fabricate gaps or zero baselines
+ok 27 - period change uses matched periods and does not fabricate gaps or zero baselines
+  ---
+  duration_ms: 2.324231
+  type: 'test'
+  ...
+# Subtest: old shared configurations restore with a previous-period change default
+ok 28 - old shared configurations restore with a previous-period change default
+  ---
+  duration_ms: 0.82869
+  type: 'test'
+  ...
+# Subtest: geographic aggregation sums aligned sibling regions and leaves incomplete periods blank
+ok 29 - geographic aggregation sums aligned sibling regions and leaves incomplete periods blank
+  ---
+  duration_ms: 2.263551
+  type: 'test'
+  ...
+# Subtest: geographic aggregation refuses a parent and its child
+ok 30 - geographic aggregation refuses a parent and its child
+  ---
+  duration_ms: 1.087079
+  type: 'test'
+  ...
+# Subtest: allowed entities cannot be restored through shared configuration
+ok 31 - allowed entities cannot be restored through shared configuration
+  ---
+  duration_ms: 0.782328
+  type: 'test'
+  ...
+# Subtest: default query chooses recent data and an explicit comparison uses a common window
+ok 32 - default query chooses recent data and an explicit comparison uses a common window
+  ---
+  duration_ms: 0.683361
+  type: 'test'
+  ...
+# Subtest: default query selects the first populated metric when cases are unavailable
+ok 33 - default query selects the first populated metric when cases are unavailable
+  ---
+  duration_ms: 0.31411
+  type: 'test'
+  ...
+# Subtest: specific sources retain their own identity and non-case metric semantics
+ok 34 - specific sources retain their own identity and non-case metric semantics
+  ---
+  duration_ms: 0.575338
+  type: 'test'
+  ...
+# Subtest: unloaded sources are represented explicitly rather than mistaken for no observations
+ok 35 - unloaded sources are represented explicitly rather than mistaken for no observations
+  ---
+  duration_ms: 0.528814
+  type: 'test'
+  ...
+# Subtest: annual aggregation rejects duplicate periods even with twelve values
+ok 36 - annual aggregation rejects duplicate periods even with twelve values
+  ---
+  duration_ms: 2.199481
+  type: 'test'
+  ...
+# Subtest: annual aggregation sums complete calendar coverage and preserves incomplete diagnostics
+ok 37 - annual aggregation sums complete calendar coverage and preserves incomplete diagnostics
+  ---
+  duration_ms: 0.855199
+  type: 'test'
+  ...
+# Subtest: registered non-additive series cannot produce annual or window totals
+ok 38 - registered non-additive series cannot produce annual or window totals
+  ---
+  duration_ms: 1.143584
+  type: 'test'
+  ...
+# Subtest: weekly dates without period boundaries do not invent complete calendar years
+ok 39 - weekly dates without period boundaries do not invent complete calendar years
+  ---
+  duration_ms: 1.213926
+  type: 'test'
+  ...
+# Subtest: rates cannot be summed as annual counts
+ok 40 - rates cannot be summed as annual counts
+  ---
+  duration_ms: 0.390798
+  type: 'test'
+  ...
+# Subtest: no common interval keeps independent series available
+ok 41 - no common interval keeps independent series available
+  ---
+  duration_ms: 0.649105
+  type: 'test'
+  ...
+# Subtest: explicitly noncomparable sources remain available only as independent panels
+ok 42 - explicitly noncomparable sources remain available only as independent panels
+  ---
+  duration_ms: 0.666796
+  type: 'test'
+  ...
+# Subtest: automatic facets give large same-definition selections separate pages
+ok 43 - automatic facets give large same-definition selections separate pages
+  ---
+  duration_ms: 1.725764
+  type: 'test'
+  ...
+# Subtest: out-of-domain windows remain empty instead of clamping to a point
+ok 44 - out-of-domain windows remain empty instead of clamping to a point
+  ---
+  duration_ms: 0.574896
+  type: 'test'
+  ...
+# Subtest: table input and summaries use the display window while peak normalization stays fixed
+ok 45 - table input and summaries use the display window while peak normalization stays fixed
+  ---
+  duration_ms: 0.593765
+  type: 'test'
+  ...
+# Subtest: historical references use only prior years and exclude provisional baseline values
+ok 46 - historical references use only prior years and exclude provisional baseline values
+  ---
+  duration_ms: 0.883325
+  type: 'test'
+  ...
+# Subtest: nonpositive observations disable log rendering with an explicit diagnostic
+ok 47 - nonpositive observations disable log rendering with an explicit diagnostic
+  ---
+  duration_ms: 0.713289
+  type: 'test'
+  ...
+# Subtest: seasonality retains actual source dates in periods while using a common phase axis
+ok 48 - seasonality retains actual source dates in periods while using a common phase axis
+  ---
+  duration_ms: 0.883424
+  type: 'test'
+  ...
+# Subtest: seasonality aligns exact ISO weeks by ISO year, including week 53
+ok 49 - seasonality aligns exact ISO weeks by ISO year, including week 53
+  ---
+  duration_ms: 0.842141
+  type: 'test'
+  ...
+# Subtest: weekly seasonality stays unavailable without an exact declared ISO calendar
+ok 50 - weekly seasonality stays unavailable without an exact declared ISO calendar
+  ---
+  duration_ms: 0.457641
+  type: 'test'
+  ...
+# Subtest: selected Japanese curves never inherit the first Australian source in worldwide metadata
+ok 51 - selected Japanese curves never inherit the first Australian source in worldwide metadata
+  ---
+  duration_ms: 2.375255
+  type: 'test'
+  ...
+# Subtest: multiple selected countries retain their own authorities and deduplicate provenance
+ok 52 - multiple selected countries retain their own authorities and deduplicate provenance
+  ---
+  duration_ms: 0.601069
+  type: 'test'
+  ...
+# Subtest: scope follows the selected entity and visible nonmissing observations rather than global coverage
+ok 53 - scope follows the selected entity and visible nonmissing observations rather than global coverage
+  ---
+  duration_ms: 20.635572
+  type: 'test'
+  ...
+# Subtest: every country coverage entry has geographic and income classifications
+ok 54 - every country coverage entry has geographic and income classifications
+  ---
+  duration_ms: 2.012192
+  type: 'test'
+  ...
+# Subtest: subnational coverage inherits its parent country classification
+ok 55 - subnational coverage inherits its parent country classification
+  ---
+  duration_ms: 0.222286
+  type: 'test'
+  ...
+# Subtest: classification snapshot records its official source vintage
+ok 56 - classification snapshot records its official source vintage
+  ---
+  duration_ms: 0.38208
+  type: 'test'
+  ...
+# Subtest: an empty seeded metadata row does not activate a scheduled country
+ok 57 - an empty seeded metadata row does not activate a scheduled country
+  ---
+  duration_ms: 3.625387
+  type: 'test'
+  ...
+# Subtest: a snapshot requires records or a disease-bearing coverage window
+ok 58 - a snapshot requires records or a disease-bearing coverage window
+  ---
+  duration_ms: 0.367804
+  type: 'test'
+  ...
+# Subtest: existing active pipelines remain supported without a generated snapshot
+ok 59 - existing active pipelines remain supported without a generated snapshot
+  ---
+  duration_ms: 0.291366
+  type: 'test'
+  ...
+# Subtest: Ontario is a first-class region that activates when its snapshot exists
+ok 60 - Ontario is a first-class region that activates when its snapshot exists
+  ---
+  duration_ms: 0.366295
+  type: 'test'
+  ...
+# Subtest: Sweden remains supported after its verified baseline import
+ok 61 - Sweden remains supported after its verified baseline import
+  ---
+  duration_ms: 0.327996
+  type: 'test'
+  ...
+# Subtest: ISO subdivision locations use their parent country flag
+ok 62 - ISO subdivision locations use their parent country flag
+  ---
+  duration_ms: 0.476071
+  type: 'test'
+  ...
+# Subtest: every country coverage marker has a bundled flag asset
+ok 63 - every country coverage marker has a bundled flag asset
+  ---
+  duration_ms: 2.234089
+  type: 'test'
+  ...
+# Subtest: the local flag library contains every ISO country flag
+ok 64 - the local flag library contains every ISO country flag
+  ---
+  duration_ms: 3.003196
+  type: 'test'
+  ...
+# Subtest: the ECharts React compatibility entry resolves to a component
+ok 65 - the ECharts React compatibility entry resolves to a component
+  ---
+  duration_ms: 1.154061
+  type: 'test'
+  ...
+# Subtest: lean surveillance and heatmap registries render their actual option features in SVG SSR
+ok 66 - lean surveillance and heatmap registries render their actual option features in SVG SSR
+  ---
+  duration_ms: 1349.096517
+  type: 'test'
+  ...
+# Subtest: a queued upstream progressive paint exits after the painter is disposed
+ok 67 - a queued upstream progressive paint exits after the painter is disposed
+  ---
+  duration_ms: 1.403906
+  type: 'test'
+  ...
+# Subtest: the public null refresh option delegates as the canvas default
+ok 68 - the public null refresh option delegates as the canvas default
+  ---
+  duration_ms: 1.09645
+  type: 'test'
+  ...
+# Subtest: US, Brazil and Japan coordinate catalogues cover published subdivisions
+ok 69 - US, Brazil and Japan coordinate catalogues cover published subdivisions
+  ---
+  duration_ms: 2.648782
+  type: 'test'
+  ...
+1..69
+# tests 69
+# suites 0
+# pass 69
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1672.652705

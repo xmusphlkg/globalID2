@@ -1,0 +1,114 @@
+
+> globalid-web@0.1.0 build
+> next build
+
+▲ Next.js 16.3.0 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 258ms
+
+(node:988912) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  Creating an optimized production build ...
+(node:988912) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✓ Compiled successfully in 4.3s
+  Running TypeScript ...
+  Finished TypeScript in 13.5s ...
+  Collecting page data using 39 workers ...
+  Generating static pages using 39 workers (0/83) ...
+  Generating static pages using 39 workers (20/83) 
+  Generating static pages using 39 workers (41/83) 
+  Generating static pages using 39 workers (62/83) 
+✓ Generating static pages using 39 workers (83/83) in 1299ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /ai
+├ ƒ /ai/agent-runs
+├ ○ /ai/disease-audit
+├ ○ /ai/disease-mapping
+├ ○ /ai/interactions
+├ ○ /ai/models
+├ ƒ /ai/tasks
+├ ƒ /api/panel-session
+├ ƒ /api/v1/[...path]
+├ ○ /apple-icon.png
+├ ƒ /collection
+├ ƒ /collection/research
+├ ƒ /collection/runs
+├ ƒ /collection/runs/[taskUuid]
+├ ○ /collection/runtime
+├ ○ /collection/schedules
+├ ○ /collection/schedules/ingestion
+├ ○ /collection/sources/ingestion
+├ ○ /collection/sources/knowledge
+├ ○ /collection/sources/literature
+├ ○ /collection/sources/situation
+├ ○ /data
+├ ○ /data/analytics
+├ ○ /data/audit
+├ ○ /data/dashboard
+├ ○ /data/diseases
+├ ○ /data/explorer
+├ ○ /data/knowledge
+├ ○ /data/literature
+├ ○ /data/mappings
+├ ○ /data/quality
+├ ○ /data/release
+├ ○ /diseases
+├ ○ /explorer
+├ ○ /icon.png
+├ ○ /manifest.webmanifest
+├ ○ /models
+├ ○ /models/agents
+├ ○ /models/interactions
+├ ○ /models/knowledge
+├ ○ /models/literature
+├ ○ /models/queue
+├ ○ /models/reports
+├ ƒ /models/runs
+├ ○ /models/tasks
+├ ƒ /operations/runtime
+├ ƒ /operations/schedules
+├ ○ /operations/schedules/ingestion
+├ ƒ /operations/sources
+├ ƒ /operations/tasks
+├ ○ /overview
+├ ○ /overview/events
+├ ƒ /overview/runtime
+├ ƒ /production/ai
+├ ○ /production/campaigns
+├ ○ /production/distribution
+├ ƒ /production/interactions
+├ ƒ /production/releases
+├ ƒ /production/reports
+├ ƒ /production/research
+├ ƒ /production/runs
+├ ○ /publish
+├ ○ /publish/realtime
+├ ƒ /publish/reports
+├ ○ /publish/schedules
+├ ○ /publish/tasks
+├ ○ /quality
+├ ○ /reports
+├ ○ /setting
+├ ○ /settings
+├ ○ /settings/integrations
+├ ƒ /settings/models
+├ ƒ /settings/schedules
+├ ƒ /settings/sources
+├ ○ /situation
+├ ○ /sources
+├ ○ /sources/automation
+├ ○ /sources/flow
+├ ○ /sources/tasks
+├ ○ /subscriptions
+├ ○ /subscriptions/notifications
+└ ƒ /tasks
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

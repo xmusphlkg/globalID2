@@ -1,0 +1,85 @@
+........................................................................ [ 12%]
+........................................................................ [ 25%]
+........................................................................ [ 38%]
+........................................................................ [ 51%]
+...................F..............................FFF................... [ 64%]
+........................................................................ [ 77%]
+........................................................................ [ 90%]
+.......................................................                  [100%]
+=================================== FAILURES ===================================
+_______________ test_official_channels_match_source_registration _______________
+
+    def test_official_channels_match_source_registration():
+        channels = load_source_channels()
+>       assert {c['country_code'] for c in channels} == {'NG', 'KH', 'AR', 'PE', 'ZA', 'ID', 'MX', 'CL', 'CO', 'MW'}
+E       AssertionError: assert {'AR', 'BN', ...R', 'EC', ...} == {'AR', 'CL', ...H', 'MW', ...}
+E         
+E         Extra items in the left set:
+E         'TL'
+E         'VN'
+E         'ET'
+E         'MQ'
+E         'MM'...
+E         
+E         ...Full output truncated (14 lines hidden), use '-vv' to show
+
+tests/unit/test_priority_country_updates.py:18: AssertionError
+________________ test_jobs_keep_native_cadence_and_raw_evidence ________________
+
+    def test_jobs_keep_native_cadence_and_raw_evidence():
+        jobs = setup.desired_jobs()
+>       assert len(jobs) == 10
+E       AssertionError: assert 28 == 10
+E        +  where 28 = len({'ng-ncdc-surveillance-daily': {'name': 'NG Official Surveillance Publication Check', 'country_code': 'NG', 'source': ... Official Surveillance Publication Check', 'country_code': 'PE', 'source': 'pe_cdc_weekly', 'enabled': True, ...}, ...})
+
+tests/unit/test_priority_country_updates.py:61: AssertionError
+______________________ test_preview_does_not_change_jobs _______________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f64eb014a60>
+
+    async def test_preview_does_not_change_jobs(monkeypatch):
+        db = database(monkeypatch, [])
+        changes = await setup.configure()
+>       assert len(changes) == 10
+E       AssertionError: assert 28 == 10
+E        +  where 28 = len([JobChange(job_id='ng-ncdc-surveillance-daily', action='create', enabled=True, changed_fields=('name', 'country_code',...rent_month', 'revision_window_months', 'retry_threshold', 'interval_minutes', 'daily_time', 'timezone', 'notes')), ...])
+
+tests/unit/test_priority_country_updates.py:73: AssertionError
+________________ test_apply_preserves_pauses_and_is_idempotent _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f650219f930>
+
+    async def test_apply_preserves_pauses_and_is_idempotent(monkeypatch):
+        jobs = setup.desired_jobs()
+        rows = [SimpleNamespace(job_id=key, **{**value, 'enabled': False}) for key, value in jobs.items()]
+        db = database(monkeypatch, rows)
+        changes = await setup.configure(apply=True)
+        assert all(x.action == 'unchanged' and not x.enabled for x in changes)
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+        setup.automation_service.reschedule_job.assert_not_awaited()
+        await setup.configure(apply=True, enable=True)
+        assert all(x.enabled for x in rows)
+>       assert setup.automation_service.reschedule_job.await_count == 10
+E       AssertionError: assert 28 == 10
+E        +  where 28 = <AsyncMock id='140071535499248'>.await_count
+E        +    where <AsyncMock id='140071535499248'> = namespace(reschedule_job=<AsyncMock id='140071535499248'>).reschedule_job
+E        +      where namespace(reschedule_job=<AsyncMock id='140071535499248'>) = setup.automation_service
+
+tests/unit/test_priority_country_updates.py:90: AssertionError
+=============================== warnings summary ===============================
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[holding-nl_virological]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[holding-nl_respiratory]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[holding-my_flunet]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[mapped-nl_virological]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[mapped-nl_respiratory]
+tests/unit/test_nl_my_missing_revisions.py::test_explicit_missing_replaces_same_identity_and_retains_unoffered_history[mapped-my_flunet]
+  <sys>:0: SADeprecationWarning: DISTINCT ON is currently supported only by the PostgreSQL dialect.  Use of DISTINCT ON for other backends is currently silently ignored, however this usage is deprecated, and will raise CompileError in a future release for all backends that do not support this syntax.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_priority_country_updates.py::test_official_channels_match_source_registration
+FAILED tests/unit/test_priority_country_updates.py::test_jobs_keep_native_cadence_and_raw_evidence
+FAILED tests/unit/test_priority_country_updates.py::test_preview_does_not_change_jobs
+FAILED tests/unit/test_priority_country_updates.py::test_apply_preserves_pauses_and_is_idempotent
+4 failed, 555 passed, 6 warnings in 193.06s (0:03:13)

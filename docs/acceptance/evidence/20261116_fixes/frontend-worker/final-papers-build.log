@@ -1,0 +1,10 @@
+
+ ⛅️ wrangler 4.158.0
+────────────────────
+Total Upload: 45.96 KiB / gzip: 13.17 KiB
+Your Worker has access to the following bindings:
+Binding                                         Resource                  
+env.DATA (globalid-papers)                      R2 Bucket                 
+env.PAPERS_PROJECTION_V3 ("1")                  Environment Variable      
+
+--dry-run: exiting now.

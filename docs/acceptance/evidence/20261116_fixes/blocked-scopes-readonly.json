@@ -1,0 +1,511 @@
+{
+  "observed_at": "2026-11-16T03:58:32.398005+00:00",
+  "read_only": true,
+  "scopes": {
+    "AR": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "license_review_pending",
+      "license": null,
+      "source_policies": {},
+      "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+      "pending": {
+        "count": 4,
+        "oldest_at": "2026-11-15 15:21:40.563019+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "AR",
+          "source_system": "SRC_AR_BEN",
+          "series": 300,
+          "mapped_series": 0,
+          "holding_series": 300
+        }
+      ]
+    },
+    "BQ": {
+      "country_exists": false,
+      "country_active": null,
+      "public_release_enabled": true,
+      "public_legacy_enabled": true,
+      "reuse_status": null,
+      "license": null,
+      "source_policies": {},
+      "notes": null,
+      "pending": {
+        "count": 1,
+        "oldest_at": "2026-11-15 14:55:49.796409+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [],
+      "origin": {
+        "dirty_id": 129520,
+        "source_task_uuid": "9bb612a6-f3d2-46cd-a3c5-e1eaf31814b0",
+        "task_status": "COMPLETED",
+        "task_type": "CRAWL_DATA",
+        "source_series_country": "NL",
+        "source_series_codes": [
+          "HOLD_NL_bfdfdf0a539c58fa74a4265d8109",
+          "HOLD_NL_c18e7ba3f86399fba9ea47f4ad30"
+        ],
+        "geography_key": "country:BQ:national",
+        "period_years": [
+          2016,
+          2025
+        ],
+        "change_set_operations": 20
+      }
+    },
+    "CL": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "source_terms_review_pending",
+      "license": null,
+      "source_policies": {},
+      "notes": "Historical ENO notifications; preserve source geography, diagnosis and reporting period. Public release awaits source and snapshot review.",
+      "pending": {
+        "count": 1,
+        "oldest_at": "2026-11-16 02:44:29.923127+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "CL",
+          "source_system": "SRC_CL_ENO",
+          "series": 66,
+          "mapped_series": 0,
+          "holding_series": 66
+        }
+      ]
+    },
+    "CO": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "cc_by_sa_4_0",
+      "license": null,
+      "source_policies": {},
+      "notes": "Historical municipality-level SIVIGILA aggregate; no national rollup before completeness audit.",
+      "pending": {
+        "count": 1,
+        "oldest_at": "2026-11-16 03:58:13.820181+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "CO",
+          "source_system": "SRC_CO_INS_SIVIGILA",
+          "series": 74,
+          "mapped_series": 0,
+          "holding_series": 74
+        }
+      ]
+    },
+    "ID": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "license_review_pending",
+      "license": null,
+      "source_policies": {},
+      "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+      "pending": {
+        "count": 2,
+        "oldest_at": "2026-11-16 01:07:25.095658+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "ID",
+          "source_system": "SRC_ID_KEMKES_PROFILE",
+          "series": 634,
+          "mapped_series": 0,
+          "holding_series": 634
+        }
+      ]
+    },
+    "KH": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "license_review_pending",
+      "license": null,
+      "source_policies": {},
+      "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+      "pending": {
+        "count": 4,
+        "oldest_at": "2026-11-15 15:22:26.169716+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "KH",
+          "source_system": "SRC_KH_CAMEWARN",
+          "series": 11,
+          "mapped_series": 0,
+          "holding_series": 11
+        }
+      ]
+    },
+    "MW": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "source_terms_review_pending",
+      "license": null,
+      "source_policies": {},
+      "notes": "Published IDSR weeks only; preserve suspected and confirmed counts and audit missing weeks.",
+      "pending": {
+        "count": 4,
+        "oldest_at": "2026-11-16 02:48:35.930578+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "MW",
+          "source_system": "SRC_MW_PHIM_IDSR",
+          "series": 28,
+          "mapped_series": 0,
+          "holding_series": 28
+        }
+      ]
+    },
+    "MX": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "license_review_pending",
+      "license": null,
+      "source_policies": {},
+      "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+      "pending": {
+        "count": 3,
+        "oldest_at": "2026-11-16 02:04:58.636932+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "MX",
+          "source_system": "SRC_MX_DGE_ANNUAL",
+          "series": 43682,
+          "mapped_series": 0,
+          "holding_series": 43682
+        }
+      ]
+    },
+    "MY": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": true,
+      "reuse_status": null,
+      "license": "source_specific",
+      "source_policies": {
+        "moh_std_annual": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "CC BY 4.0",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "supports_fill_missing": false,
+          "default_fill_missing": false
+        },
+        "my_idengue_daily": {
+          "source_kind": "national_primary",
+          "temporal_granularity": "daily",
+          "source_update_cadence": "daily",
+          "license": "review_required",
+          "public_release_enabled": false,
+          "supports_start_year": false,
+          "supports_fill_missing": false,
+          "default_fill_missing": false
+        },
+        "who_flunet_weekly": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "weekly",
+          "source_update_cadence": "weekly",
+          "license": "review_required",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1996,
+          "supports_fill_missing": false,
+          "default_fill_missing": false
+        },
+        "who_gho_annual": {
+          "source_kind": "international_surveillance",
+          "temporal_granularity": "annual",
+          "source_update_cadence": "annual_revisable",
+          "license": "review_required",
+          "public_release_enabled": false,
+          "supports_start_year": true,
+          "full_history_start_year": 1954,
+          "supports_fill_missing": false,
+          "default_fill_missing": false
+        }
+      },
+      "notes": "Independent daily iDengue observations, WHO FluNet laboratory weekly returns, WHO GHO annual reported indicators and annual STD notifications. Preserve source-native metrics, reporting origins, denominators and geography; never difference ambiguous cumulative dengue totals or merge laboratory detections with notification counts. Broader Malaysian disease coverage remains incomplete. Public snapshot validation is pending.",
+      "pending": {
+        "count": 7,
+        "oldest_at": "2026-11-15 14:54:40.179485+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "MY",
+          "source_system": "SRC_MY_IDENGUE_DAILY",
+          "series": 1,
+          "mapped_series": 0,
+          "holding_series": 1
+        },
+        {
+          "country_code": "MY",
+          "source_system": "SRC_MY_MOH_STD",
+          "series": 5,
+          "mapped_series": 0,
+          "holding_series": 5
+        },
+        {
+          "country_code": "MY",
+          "source_system": "SRC_MY_WHO_FLUNET",
+          "series": 21,
+          "mapped_series": 0,
+          "holding_series": 21
+        },
+        {
+          "country_code": "MY",
+          "source_system": "SRC_MY_WHO_GHO",
+          "series": 15,
+          "mapped_series": 0,
+          "holding_series": 15
+        }
+      ]
+    },
+    "NG": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "license_review_pending",
+      "license": null,
+      "source_policies": {},
+      "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+      "pending": {
+        "count": 2,
+        "oldest_at": "2026-11-15 15:42:42.219272+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "NG",
+          "source_system": "SRC_NG_NCDC",
+          "series": 177,
+          "mapped_series": 0,
+          "holding_series": 177
+        }
+      ]
+    },
+    "PE": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "license_review_pending",
+      "license": null,
+      "source_policies": {},
+      "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+      "pending": {
+        "count": 16,
+        "oldest_at": "2026-11-15 15:28:58.018539+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "PE",
+          "source_system": "SRC_PE_CDC",
+          "series": 273,
+          "mapped_series": 0,
+          "holding_series": 273
+        }
+      ]
+    },
+    "TH": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": true,
+      "reuse_status": "license_review_pending",
+      "license": null,
+      "source_policies": {
+        "th_dds_weekly": {
+          "source_kind": "national_primary",
+          "cadence": "weekly",
+          "supports_start_year": false,
+          "public_release_enabled": false
+        },
+        "th_doe506_monthly": {
+          "source_kind": "history",
+          "cadence": "monthly",
+          "full_history_start_year": 2003,
+          "supports_start_year": true,
+          "recent_years": 3,
+          "public_release_enabled": false
+        },
+        "th_id_th_history": {
+          "source_kind": "history",
+          "cadence": "weekly",
+          "full_history_start_year": 2020,
+          "supports_start_year": true,
+          "public_release_enabled": false
+        },
+        "th_dds_tableau": {
+          "source_kind": "national_primary",
+          "cadence": "weekly",
+          "supports_start_year": false,
+          "public_release_enabled": false
+        }
+      },
+      "notes": "DDS national closed-week onset reports and independent Report 506 monthly history from advertised 2003 onward. Retain every source disease category and reporting basis; never difference cumulative reports or sum overlapping categories. Discover live year links and refresh recent closed-year revisions; missing reports remain explicit gaps. ID_TH user-curated weekly archive is a separate provenance and reporting-basis contract. The live DDS Tableau national report is independently identified; merged source labels remain merged and report/onset bases stay separate.",
+      "pending": {
+        "count": 45,
+        "oldest_at": "2026-11-15 14:57:16.174247+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "TH",
+          "source_system": "SRC_TH_DDS_TABLEAU",
+          "series": 64,
+          "mapped_series": 0,
+          "holding_series": 64
+        },
+        {
+          "country_code": "TH",
+          "source_system": "SRC_TH_DDS_WEEKLY",
+          "series": 62,
+          "mapped_series": 0,
+          "holding_series": 62
+        },
+        {
+          "country_code": "TH",
+          "source_system": "SRC_TH_DOE506",
+          "series": 72,
+          "mapped_series": 0,
+          "holding_series": 72
+        },
+        {
+          "country_code": "TH",
+          "source_system": "SRC_TH_ID_TH_ARCHIVE",
+          "series": 112,
+          "mapped_series": 0,
+          "holding_series": 112
+        }
+      ]
+    },
+    "ZA": {
+      "country_exists": true,
+      "country_active": true,
+      "public_release_enabled": false,
+      "public_legacy_enabled": false,
+      "reuse_status": "license_review_pending",
+      "license": null,
+      "source_policies": {},
+      "notes": "Full publicly discoverable official historical archives and all validated source-native categories. Preserve cumulative/period, case/death, syndrome/diagnosis and geography semantics. Unreadable charts and unavailable files remain audited coverage gaps; no fabricated zeroes. Public release awaits verified mapped snapshots.",
+      "pending": {
+        "count": 2,
+        "oldest_at": "2026-11-16 01:11:04.275544+00:00"
+      },
+      "public_read_model": null,
+      "publish_state": null,
+      "source_series": [
+        {
+          "country_code": "ZA",
+          "source_system": "SRC_ZA_NICD_NMC",
+          "series": 1329,
+          "mapped_series": 0,
+          "holding_series": 1329
+        }
+      ]
+    }
+  },
+  "planner_classification": {
+    "pending": {
+      "count": 310,
+      "scope_count": 216,
+      "oldest_at": "2026-11-15T14:50:55.474053+00:00",
+      "oldest_age_seconds": 47257.056
+    },
+    "publishable_pending": {
+      "count": 206,
+      "scope_count": 191,
+      "oldest_at": "2026-11-15T14:50:55.474053+00:00",
+      "oldest_age_seconds": 47257.056,
+      "expanded_country_count": 191
+    },
+    "blocked_pending": {
+      "count": 104,
+      "scope_count": 25,
+      "oldest_at": "2026-11-15T14:54:40.179485+00:00",
+      "oldest_age_seconds": 47032.35,
+      "scopes": [
+        "AR",
+        "BQ",
+        "CL",
+        "CO",
+        "ET",
+        "GF",
+        "GH",
+        "GP",
+        "ID",
+        "KE",
+        "KH",
+        "LA",
+        "MM",
+        "MQ",
+        "MW",
+        "MX",
+        "MY",
+        "NG",
+        "PE",
+        "PH",
+        "TH",
+        "TZ",
+        "UG",
+        "VN",
+        "ZA"
+      ],
+      "scopes_truncated": false
+    }
+  },
+  "alembic_revisions": [
+    "0033_not_applicable_observations"
+  ],
+  "schema_check": [
+    {
+      "conname": "ck_disease_series_observation_value_or_suppressed",
+      "definition": "CHECK ((suppressed OR (value IS NOT NULL) OR ((metadata ->> 'missing_value_status'::text) = ANY (ARRAY['source_missing'::text, 'not_applicable'::text])))) NOT VALID"
+    }
+  ]
+}

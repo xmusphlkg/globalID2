@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "copied_byte_for_byte": true,
+  "files": [
+    {
+      "file": "final-astro-all-tests.log",
+      "source": "/tmp/globalid-fixes-20261116/final-astro-all-tests.log",
+      "bytes": 94509,
+      "sha256": "2c9488e5ac0299ad255ff4d2bbf43fb6d81f5037c615404d0400ab2d6aa87b0f"
+    },
+    {
+      "file": "final-changelog-tests.log",
+      "source": "/tmp/globalid-fixes-20261116/final-changelog-tests.log",
+      "bytes": 603,
+      "sha256": "92a7257e65045654682f02dc709322342926502615a1a1aa424f561aadaac008"
+    },
+    {
+      "file": "final-astro-check.log",
+      "source": "/tmp/globalid-fixes-20261116/final-astro-check.log",
+      "bytes": 5155,
+      "sha256": "ad0e6d19b29397f45701df541562b0f8ab8518b19ffa2f75c67f4fae066f4875"
+    },
+    {
+      "file": "final-astro-check-after-e2e.log",
+      "source": "/tmp/globalid-fixes-20261116/final-astro-check-after-e2e.log",
+      "bytes": 5155,
+      "sha256": "62b9b72851bc32da1bd28e89627526d4f8b02bc0410aaa2d45aa835b788383bb"
+    },
+    {
+      "file": "final-i18n-check.log",
+      "source": "/tmp/globalid-fixes-20261116/final-i18n-check.log",
+      "bytes": 153,
+      "sha256": "35be4a0dd7f259f4379d9fcfa46345aae0febb1049332738bb4a19ad318facfb"
+    },
+    {
+      "file": "final-map-iso-check.log",
+      "source": "/tmp/globalid-fixes-20261116/final-map-iso-check.log",
+      "bytes": 170,
+      "sha256": "2c344327aa5f3cb43a7bb0023e2b3223504a18e3dd021ab7f97faf3565607d5a"
+    },
+    {
+      "file": "final-worker-tests.log",
+      "source": "/tmp/globalid-fixes-20261116/final-worker-tests.log",
+      "bytes": 9689,
+      "sha256": "75e4afaa9deab0ea0a92a12bf714d0afab7647f9c7fe82ef389615eeecbfaa7a"
+    },
+    {
+      "file": "final-worker-typecheck.log",
+      "source": "/tmp/globalid-fixes-20261116/final-worker-typecheck.log",
+      "bytes": 29,
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    },
+    {
+      "file": "final-worker-runtime.log",
+      "source": "/tmp/globalid-fixes-20261116/final-worker-runtime.log",
+      "bytes": 2969,
+      "sha256": "b2e73491ff286dc0d7b14d01bb3705b59d0b45c00649b0701ceb4c96c7687b6a"
+    },
+    {
+      "file": "final-subscriptions-verify.log",
+      "source": "/tmp/globalid-fixes-20261116/final-subscriptions-verify.log",
+      "bytes": 43398,
+      "sha256": "008b97b0738ca38a228f43e2bbfb757d28c5909312dce20d5ede8942c0aa3191"
+    },
+    {
+      "file": "final-papers-worker-tests.log",
+      "source": "/tmp/globalid-fixes-20261116/final-papers-worker-tests.log",
+      "bytes": 736,
+      "sha256": "0f2f1602e1057073601dfe074f25a245bb9e2f393dc0dd662c9b55eccbd8fbe5"
+    },
+    {
+      "file": "final-papers-build.log",
+      "source": "/tmp/globalid-fixes-20261116/final-papers-build.log",
+      "bytes": 429,
+      "sha256": "ebe7349097a06425a834897a4a6dc77ae0feaddfa34b7167f8be9fda4031b449"
+    },
+    {
+      "file": "final-papers-runtime.log",
+      "source": "/tmp/globalid-fixes-20261116/final-papers-runtime.log",
+      "bytes": 980,
+      "sha256": "3f6d6a14ba0624f0bd257b2725e8e9b8503842c3b31550d97327120f611ba11a"
+    },
+    {
+      "file": "final-astro-e2e.log",
+      "source": "/tmp/globalid-fixes-20261116/final-astro-e2e.log",
+      "bytes": 22312,
+      "sha256": "2309c6a60959570a4eb23a9ed0e37af5bd35d30879bb32ef7c5686e1d079d8ad"
+    },
+    {
+      "file": "final-focused-fixed-e2e.log",
+      "source": "/tmp/globalid-fixes-20261116/final-focused-fixed-e2e.log",
+      "bytes": 18278,
+      "sha256": "f7387fd0aa529929cdf7ae0f639d94e7eab1d2e2647b9f835a3c1aa2bf28b17f"
+    },
+    {
+      "file": "final-situation-recheck.log",
+      "source": "/tmp/globalid-fixes-20261116/final-situation-recheck.log",
+      "bytes": 1208,
+      "sha256": "3c90e62de5cd4700abe3a52ebda3b203f3646e8da847834ddf00d3ae0fcba222"
+    },
+    {
+      "file": "final-country-public-final-e2e.log",
+      "source": "/tmp/globalid-fixes-20261116/final-country-public-final-e2e.log",
+      "bytes": 1526,
+      "sha256": "9be28be33dcbe54ab077d0afe93dffaa87e37c6e209f5ea82c7517a6694eea28"
+    },
+    {
+      "file": "final-surveillance-data-check.log",
+      "source": "/tmp/globalid-fixes-20261116/final-surveillance-data-check.log",
+      "bytes": 188,
+      "sha256": "d7ca4b80e55f23b2c11df321dac3f4ca3bbd536fe424e959e00eb6d6453d03a0"
+    },
+    {
+      "file": "surveillance-identity-mismatches.json",
+      "source": "/tmp/globalid-fixes-20261116/surveillance-identity-mismatches.json",
+      "bytes": 2887,
+      "sha256": "29814e6313973eea054ebf78c377bfbeac7954b84b1fe60856ee3900ddc6869a"
+    },
+    {
+      "file": "map-ui-smoke.json",
+      "source": "/tmp/globalid-fixes-20261116/map-ui-smoke.json",
+      "bytes": 567,
+      "sha256": "8bf508fb81caa484bedbcfe41932735892a5c45ed5c45eba81098f904e9657bb"
+    },
+    {
+      "file": "map-ui-smoke.log",
+      "source": "/tmp/globalid-fixes-20261116/map-ui-smoke.log",
+      "bytes": 435,
+      "sha256": "567d09a5cc5dae31cc55cd8b025375309dad27d57f58476b338b250f1aff5e8f"
+    },
+    {
+      "file": "map-ui-smoke.mjs",
+      "source": "/tmp/globalid-fixes-20261116/map-ui-smoke.mjs",
+      "bytes": 3489,
+      "sha256": "ead20ed16b5089b38f4dd837362c5d40d98ffb55f3cae3bb5285d3c94a8f1675"
+    },
+    {
+      "file": "map-ui-390.png",
+      "source": "/tmp/globalid-fixes-20261116/map-ui-390.png",
+      "bytes": 41808,
+      "sha256": "414c6f1ac102276e43bcae2ee8464e7077c93b0c86c67718f4b305137166f30e"
+    },
+    {
+      "file": "map-ui-1280.png",
+      "source": "/tmp/globalid-fixes-20261116/map-ui-1280.png",
+      "bytes": 69887,
+      "sha256": "0a747a1f80b9529a8f8eb8d9082d9cdabcad4f7502f3e2f52b8e98316529d46b"
+    },
+    {
+      "file": "rss-ui-smoke.json",
+      "source": "/tmp/globalid-fixes-20261116/rss-ui-smoke.json",
+      "bytes": 767,
+      "sha256": "e9a03d5ef39c43b24046de9325d766480b76e1bc2252ca3db9ae7e7c80d4bdce"
+    },
+    {
+      "file": "rss-ui-smoke.log",
+      "source": "/tmp/globalid-fixes-20261116/rss-ui-smoke.log",
+      "bytes": 551,
+      "sha256": "c7a4a1a6893118976d921d7818e20bda8fd1d2aa3098f18de33ec5b6b14f86ec"
+    },
+    {
+      "file": "rss-ui-smoke.mjs",
+      "source": "/tmp/globalid-fixes-20261116/rss-ui-smoke.mjs",
+      "bytes": 1934,
+      "sha256": "9234ed91edbdf72949328d20f5bdbdf6b6f20c6b25f203a067c146f03d4f7e54"
+    },
+    {
+      "file": "rc3-before.json",
+      "source": "/tmp/globalid-fixes-20261116/rc3-before.json",
+      "bytes": 2325,
+      "sha256": "1b37066d67392abba90f001901525825ee97e77dd0e1ca583ae29124a7fb146f"
+    },
+    {
+      "file": "rc3-after.json",
+      "source": "/tmp/globalid-fixes-20261116/rc3-after.json",
+      "bytes": 2319,
+      "sha256": "b850348bc23962c26b3605aae41f72528abc861d13d6db6e33279d795c63b048"
+    },
+    {
+      "file": "rc3-final.json",
+      "source": "/tmp/globalid-fixes-20261116/rc3-final.json",
+      "bytes": 2322,
+      "sha256": "a9b5d50f82ff2fe53907620558fe5168699a04094f21fd8fb8c167a0f931201e"
+    },
+    {
+      "file": "rc3-node.log",
+      "source": "/tmp/globalid-fixes-20261116/rc3-node.log",
+      "bytes": 5342,
+      "sha256": "37958fc7a44d1f6727781b4ac9263375de7ee7e718bd01781940511d570ed8fa"
+    },
+    {
+      "file": "rc3-astro-check.log",
+      "source": "/tmp/globalid-fixes-20261116/rc3-astro-check.log",
+      "bytes": 5155,
+      "sha256": "e55cf4da12ce3710449e3eaf8c8b7d2506e6cc5c54e09ca7af153bcf4caf75dd"
+    }
+  ]
+}

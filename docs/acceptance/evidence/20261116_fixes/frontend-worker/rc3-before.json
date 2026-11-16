@@ -1,0 +1,68 @@
+{
+  "model": "/tmp/globalid-fixes-20261116/rc3-model-before.ts",
+  "input_sha256": {
+    "index": "881eac21d7f132619676275174c1df4e82d1448f8fb2693ef8f179270664d1ba",
+    "population": "07dbc1bc8a477b6e398ff6e865efcd057e9d8e8adb7379e27907faebaac23a1f",
+    "d094": "442a2fe4afb71ce3513fe816c7f5b966be9fc57af013497264e03beba8572e9e"
+  },
+  "samples": [
+    {
+      "cold_shared_ceiling_ms": 2870.53,
+      "hot_shared_ceiling_ms": 2430.184,
+      "changed_view_ms": 2425.064,
+      "changed_dates_ms": 2396.088,
+      "default_window_ms": 2735.422,
+      "ceiling": 700,
+      "changed_ceiling": 200,
+      "default_window": {
+        "from": "2025-01-01",
+        "to": "2025-12-31",
+        "metric": "rate",
+        "view": "monthly"
+      },
+      "result_sha256": "d7f9cf5e8dbf651b3107f7a7e43fc2ba69b0e6bb56388ad555f8f4773cd873d7",
+      "changed_result_sha256": "3dd44df3e82cd1c567fb145a913c00a5005b0c7dbbc6abc024346b0585f2d8ef"
+    },
+    {
+      "cold_shared_ceiling_ms": 2495.875,
+      "hot_shared_ceiling_ms": 2667.616,
+      "changed_view_ms": 2489.834,
+      "changed_dates_ms": 2439.322,
+      "default_window_ms": 2827.781,
+      "ceiling": 700,
+      "changed_ceiling": 200,
+      "default_window": {
+        "from": "2025-01-01",
+        "to": "2025-12-31",
+        "metric": "rate",
+        "view": "monthly"
+      },
+      "result_sha256": "d7f9cf5e8dbf651b3107f7a7e43fc2ba69b0e6bb56388ad555f8f4773cd873d7",
+      "changed_result_sha256": "3dd44df3e82cd1c567fb145a913c00a5005b0c7dbbc6abc024346b0585f2d8ef"
+    },
+    {
+      "cold_shared_ceiling_ms": 2636.694,
+      "hot_shared_ceiling_ms": 2422.981,
+      "changed_view_ms": 2696.08,
+      "changed_dates_ms": 2638.52,
+      "default_window_ms": 2805.494,
+      "ceiling": 700,
+      "changed_ceiling": 200,
+      "default_window": {
+        "from": "2025-01-01",
+        "to": "2025-12-31",
+        "metric": "rate",
+        "view": "monthly"
+      },
+      "result_sha256": "d7f9cf5e8dbf651b3107f7a7e43fc2ba69b0e6bb56388ad555f8f4773cd873d7",
+      "changed_result_sha256": "3dd44df3e82cd1c567fb145a913c00a5005b0c7dbbc6abc024346b0585f2d8ef"
+    }
+  ],
+  "median_ms": {
+    "cold_shared_ceiling_ms": 2636.694,
+    "hot_shared_ceiling_ms": 2430.184,
+    "changed_view_ms": 2489.834,
+    "changed_dates_ms": 2439.322,
+    "default_window_ms": 2805.494
+  }
+}

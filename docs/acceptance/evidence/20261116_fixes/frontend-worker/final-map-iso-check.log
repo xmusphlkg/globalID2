@@ -1,0 +1,5 @@
+
+> globalid-report-site@0.20.0 map:iso:check
+> node --experimental-strip-types scripts/build-world-feature-iso.mjs --check
+
+[world-feature-iso] up to date (212 features)

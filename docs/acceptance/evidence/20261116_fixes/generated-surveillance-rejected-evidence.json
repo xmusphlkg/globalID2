@@ -1,0 +1,15 @@
+{
+  "status": "rejected_by_source_version_guard",
+  "read_only_validation": true,
+  "release_id": "data-acceptance-20261116",
+  "log": "/tmp/globalid-fixes-20261116/full-data-generation.log",
+  "log_sha256": "3e3dae94e968fda2c11e6f241afe1c02323dcd90978500c3c76162dbc2a90c9a",
+  "reason": "Surveillance projection implementation changed during export; retry with one version",
+  "projection_complete": true,
+  "projection_seconds": 688.4,
+  "final_current_exists": false,
+  "completed_receipt_exists": false,
+  "acceptance": "No completed artifact acceptance performed. Partial files are not an attested release.",
+  "observed_country_library_mtime_ns": 1794802251490742766,
+  "followup": "After source version freeze, generate a fresh full data-only candidate and run validate_generated_surveillance.py. No duplicate export started."
+}

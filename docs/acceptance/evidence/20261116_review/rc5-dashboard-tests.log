@@ -1,0 +1,13 @@
+
+> globalid-web@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 /home/likangguo/globalID/globalID2/dashboard
+
+
+ Test Files  40 passed (40)
+      Tests  170 passed (170)
+   Start at  11:20:02
+   Duration  11.63s (transform 52.40s, setup 27.51s, import 82.81s, tests 22.10s, environment 130.71s)
+

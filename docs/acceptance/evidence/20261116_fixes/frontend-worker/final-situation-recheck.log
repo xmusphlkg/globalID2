@@ -1,0 +1,20 @@
+
+> globalid-report-site@0.20.0 test:e2e
+> playwright test e2e/situation.spec.ts --grep=explicit time and source deep links|MERS shared link --project=chromium-390 --project=chromium-1280 --workers=1 --output=/tmp/globalid-fixes-20261116/situation-final-recheck-results --reporter=line
+
+
+Running 4 tests using 1 worker
+
+(node:1040003) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/4] [chromium-390] › e2e/situation.spec.ts:118:1 › explicit time and source deep links survive reload with a selected place
+[2/4] [chromium-390] › e2e/situation.spec.ts:245:1 › MERS shared link groups identical cumulative figures across channels and dates
+(node:1040677) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/4] [chromium-1280] › e2e/situation.spec.ts:118:1 › explicit time and source deep links survive reload with a selected place
+[4/4] [chromium-1280] › e2e/situation.spec.ts:245:1 › MERS shared link groups identical cumulative figures across channels and dates
+  4 passed (26.1s)

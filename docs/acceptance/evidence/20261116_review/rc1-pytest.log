@@ -1,0 +1,47 @@
+........................................................................ [ 13%]
+........................................................................ [ 27%]
+........................................................................ [ 40%]
+........................................................................ [ 54%]
+...............................................................F........ [ 67%]
+........................................................................ [ 81%]
+........................................................................ [ 94%]
+...........................                                              [100%]
+=================================== FAILURES ===================================
+_ test_country_task_roundtrip_uses_canonical_archive_connector[CO-co_ins_sivigila_historical-ColombiaINSSivigilaUpdater-Colombia INS SIVIGILA Historical Public Health Surveillance] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f4d7de34d70>
+country = 'CO', scope = 'co_ins_sivigila_historical'
+updater_name = 'ColombiaINSSivigilaUpdater'
+label = 'Colombia INS SIVIGILA Historical Public Health Surveillance'
+
+    @pytest.mark.parametrize('country,scope,updater_name,label', SOURCES)
+    async def test_country_task_roundtrip_uses_canonical_archive_connector(monkeypatch, country, scope, updater_name, label):
+        from src.services.ingestion import runner
+        run = AsyncMock(return_value=object())
+        monkeypatch.setattr(runner, 'run_surveillance', run)
+        assert canonicalize_task_source('all', country_code=country) == scope
+        assert scope_from_data_source(label) == scope
+        assert scope_from_data_source(scope) == scope
+        assert canonical_data_source_label(scope, country_code=country) == label
+        assert {option['value'] for option in source_options_for_country(country)} == {scope}
+        config = get_country_bootstrap_config(country)
+        assert config['public_release_enabled'] is False
+        updater = CrawlService._make_updater(updater_name, country)
+        value = await CrawlService().execute(
+            task=SimpleNamespace(input_data={'start_year': max(2020, updater.full_history_start_year)}), country_code=country,
+            source=scope, force=True, process=True, save_raw=True, fill_missing=False,
+        )
+        assert value is run.return_value
+        args = run.call_args.kwargs
+>       assert args['connector'].__name__ == 'src.services.ingestion.countries.' + country.lower()
+E       AssertionError: assert 'src.services...o_update_gate' == 'src.services....countries.co'
+E         
+E         - src.services.ingestion.countries.co
+E         ?                           ^ -- ^^^^
+E         + src.services.ingestion.co_update_gate
+E         ?                          + ^^^  ^^^^^
+
+tests/unit/test_priority_surveillance_onboarding.py:48: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_priority_surveillance_onboarding.py::test_country_task_roundtrip_uses_canonical_archive_connector[CO-co_ins_sivigila_historical-ColombiaINSSivigilaUpdater-Colombia INS SIVIGILA Historical Public Health Surveillance]
+1 failed, 530 passed in 189.24s (0:03:09)

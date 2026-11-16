@@ -25,6 +25,22 @@ remain available in Git history; they are not active deployment instructions.
 ## Countries and source contracts
 
 - [Add New Country Guide](data-sources/ADD_NEW_COUNTRY_GUIDE.md)
+- [Thailand Report 506 historical integration](data-sources/TH_DDS_INTEGRATION.md)
+- [Thailand DDS weekly report contract](data-sources/TH_DDS_WEEKLY.md)
+- [Thailand DDS Tableau national weekly contract](data-sources/TH_DDS_TABLEAU.md)
+- [Thailand ID_TH archive provenance and import](data-sources/TH_ID_TH_REUSE.md)
+- [National notification automation](data-sources/NATIONAL_NOTIFICATION_AUTOMATION.md)
+- [Malaysia MOH annual STD notifications](data-sources/MY_MOH_STD_ANNUAL.md)
+- [Malaysia daily dengue](data-sources/MY_IDENGUE_DAILY.md)
+- [Malaysia additional sources and WHO history](data-sources/MY_ADDITIONAL_SOURCES.md)
+- [Malaysia and Netherlands current surveillance integration](data-sources/MY_NL_CURRENT_SURVEILLANCE.md)
+- [Netherlands RIVM annual notifications](data-sources/NL_RIVM_NOTIFIABLE_ANNUAL.md)
+- [Netherlands RIVM weekly surveillance](data-sources/NL_WEEKLY_SURVEILLANCE.md)
+- [Remaining countries WHO annual baselines](data-sources/WHO_REMAINING_COUNTRIES.md)
+- [SPF overseas annual notifications](data-sources/SPF_OVERSEAS_INTEGRATION.md)
+- [Costa Rica Ministry notification reports](data-sources/CR_MOH_NOTIFICATIONS.md)
+- [WHO WPRO dengue updates](data-sources/WHO_WPRO_DENGUE.md)
+- [Remaining national source access audit](data-sources/REMAINING_NATIONAL_SOURCE_AUDIT.md)
 - [Canada Provincial High-Frequency Surveillance Data Plan](data-sources/CA_HIGH_FREQUENCY_SURVEILLANCE_PLAN.md)
 - [中国省级法定传染病数据接入](data-sources/CN_PROVINCE_DATA.md)
 - [Iceland 数据接入终审核对单](data-sources/ICELAND_INTEGRATION_REVIEW.md)
@@ -54,6 +70,8 @@ remain available in Git history; they are not active deployment instructions.
 - [Realtime publication monitoring](operations/REALTIME_DATA_MONITORING.md)
 - [Repository size maintenance](operations/REPOSITORY_SIZE_MAINTENANCE.md)
 - [Situation automation](operations/SITUATION_AUTOMATION.md)
+- [Situation RSS and email acceptance](operations/SITUATION_RSS_AND_SUBSCRIPTION_ACCEPTANCE.md)
+- [Situation host metadata — phase 1](operations/SITUATION_ONE_HEALTH_PHASE1.md)
 
 ## Publication and public data
 
@@ -74,6 +92,8 @@ remain available in Git history; they are not active deployment instructions.
 
 ## Research and literature
 
+- [月度监测算法信号离线试点](research/SURVEILLANCE_SIGNAL_PILOT.md)
+- [疾病页病原体资源入口](research/PATHOGEN_RESOURCE_LINKS.md)
 - [缺失摘要修复并重新进入 AI 评审](research/LITERATURE_ABSTRACT_REPAIR.md)
 - [Literature source activation](research/LITERATURE_SOURCE_ACTIVATION.md)
 - [GIDS Research Radar](research/RESEARCH_RADAR.md)
@@ -94,6 +114,8 @@ remain available in Git history; they are not active deployment instructions.
 
 ## Acceptance evidence
 
+- [Situation 宿主字段数据库迁移（2026-11-16）](acceptance/SITUATION_HOST_MIGRATION_20261116.md)
+- [订阅、宿主标记、病原体资源与算法试点（2026-11-15）](acceptance/PUBLIC_FEATURE_PILOT_20261115.md)
 - [数据线实际运行验收：2026-10-30](acceptance/DATA_LINE_RUNTIME_20261030.md)
 - [更新页、数据发布与控制面验收（2026-11-14）](acceptance/DATA_UPDATES_20261114.md)
 - [增量生成优化验收：2026-10-30](acceptance/INCREMENTAL_GENERATION_20261030.md)
