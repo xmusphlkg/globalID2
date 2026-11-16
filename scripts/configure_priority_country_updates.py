@@ -25,6 +25,10 @@ from src.services.automation_service import automation_service
 
 def refresh_note(channel):
     strategy = channel['refresh_strategy']
+    if strategy == 'metadata_version_check_requires_verified_full_history':
+        return ('Daily metadata and year-count check against independently verified full history. '
+                'A changed version requires the resumable full backfill and verification; '
+                'the check reports requires_full_backfill without importing a partial page. ')
     if strategy == 'full_published_history_upsert':
         return 'Full published history is reread for revisions. '
     if strategy == 'full_live_directory_and_verified_reports':

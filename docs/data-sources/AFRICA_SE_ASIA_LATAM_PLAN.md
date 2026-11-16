@@ -40,17 +40,17 @@
 
 ## 第三批执行（2026-11-16）
 
-智利、哥伦比亚和马拉维的官方来源、国家专用解析器、数据库接入器与私有 holding 序列已接通；原档和数据库分别验收，公开发布仍关闭。智利和马拉维的每日检查任务已创建并启用。哥伦比亚历史源规模较大，其每日任务已创建但暂时关闭，待完整回填及元数据变更门控验收后再启用。
+智利、哥伦比亚和马拉维的官方来源、国家专用解析器、数据库接入器与私有 holding 序列已接通；原档和数据库分别验收，公开发布仍关闭。智利和马拉维的每日检查任务已创建并启用。哥伦比亚 254 个批次、2,465,826 行历史数据已全部入库并通过最终逐行验证；每日元数据与逐年行数检查已启用，源版本变化会明确要求重新全量回填。
 
 | 国家 | 官方历史范围 | 当前进度 | 待核验 |
 | --- | --- | --- | --- |
 | 智利 CL | MINSAL ENO CSV，2007–2024，333,300 病例行 | 5 份原档；442 条年度原生观测已入库并逐条复核，计数与原 CSV 一致；[接入记录](CL_ENO_HISTORICAL.md) | 官方目录说明与当前 CSV 范围不一致；疾病映射、权利与公开快照待审核 |
-| 哥伦比亚 CO | INS SIVIGILA 官方 SODA 数据集，2007–2022，共 2,465,826 条市级事件／周记录 | 按年度分页持久回填中，2007 年 48,305 条已验收；[接入记录](CO_SIVIGILA_INTEGRATION.md) | 全量逐年验收；官方周界与全国分母未确认，不能发布为全国周病例 |
+| 哥伦比亚 CO | INS SIVIGILA 官方 SODA 数据集，2007–2022，共 2,465,826 条市级事件／周记录 | 254 个批次、2,465,826 行全部入库；16 个年份逐行对账零差异，每日元数据检查已启用；[接入记录](CO_SIVIGILA_INTEGRATION.md) | 官方周界与全国分母未确认，不能发布为全国周病例 |
 | 马拉维 MW | PHIM IDSR 官方帖子及媒体目录，2025–2026 存在缺周 | 91 份原档含 57 份 PDF；56 份范围内报告形成 1,241 条全国周观测、28 个原生 holding 序列，逐字段数据库对账零差异；[接入记录](MW_PHIM_IDSR_INTEGRATION.md) | 2025 年 W7–W50 间缺 22 周、2026 年 W2–W43 间缺 9 周；疟疾、地区附录和累计叙述未纳入本合同，疾病映射与公开快照待完成 |
 
 ## 第四批执行（2026-11-16）
 
-18 个新增国家和地区均已完成真实原档采集、离线重放、正式入库及逐字段数据库对账；18 个年度渠道已完成真实调度器触发的 collect/organize/store 刷新。另有哥斯达黎加卫生部、老挝和越南 WPRO 登革热三个独立专项源，定时运行与数据验收见[本轮验收](../acceptance/REMAINING_COUNTRIES_20261116.md)。
+18 个新增国家和地区均已完成真实原档采集、离线重放、正式入库及逐字段数据库对账；18 个年度渠道和哥斯达黎加卫生部、老挝及越南 WPRO 登革热三个独立专项源，均已完成真实调度器触发的 collect/organize/store 刷新；最终 21 个来源、11,024 条观测逐字段验收全部通过。定时运行与数据验收见[本轮验收](../acceptance/REMAINING_COUNTRIES_20261116.md)。
 
 | 范围 | 已入库年度观测 | 数据合同 |
 | --- | ---: | --- |
@@ -80,7 +80,7 @@
 | MX | 墨西哥 | 已解析事实全部入库并逐条核验；官方渠道和每日计划已接入 | [DGE Anuario de Morbilidad](https://epidemiologia.salud.gob.mx/anuario/html/index.html) |
 | AR | 阿根廷 | 首批事实已入库，剩余解析缺口见接入记录 | [Ministerio de Salud Boletín Epidemiológico Nacional](https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional) |
 | PE | 秘鲁 | 持久全量回填执行中 | [CDC Perú Boletines Epidemiológicos](https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/) |
-| CO | 哥伦比亚 | 官方市级／周历史数据持久回填中；每日任务暂时关闭 | [INS SIVIGILA government open data](https://www.datos.gov.co/d/4hyg-wa9d) |
+| CO | 哥伦比亚 | 2,465,826 行历史数据已入库并逐行验收；每日元数据检查已启用 | [INS SIVIGILA government open data](https://www.datos.gov.co/d/4hyg-wa9d) |
 | CL | 智利 | 442 条历史观测已入库并逐条验收；每日检查已配置 | [MINSAL ENO open data](https://datos.gob.cl/dataset/notificaciones-eno) |
 | MW | 马拉维 | 1,241 条全国周观测已入库并逐条验收；每日检查已配置 | [PHIM IDSR bulletin archive](https://phim.health.gov.mw/wp-json/wp/v2/search?search=IDSR&per_page=100&page=1) |
 | PY | 巴拉圭 | WHO 年度基线已入库、每日全历史刷新；国家原始周报仍有覆盖缺口 | [DGVS Boletín Epidemiológico Semanal](https://dgvs.mspbs.gov.py/boletin-epidemiologico-semanal/) |

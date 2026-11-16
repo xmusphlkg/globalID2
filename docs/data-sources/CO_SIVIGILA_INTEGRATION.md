@@ -101,3 +101,24 @@ official count. Its independent receipt is
 `data/current/co/database_acceptance.json`.
 
 Focused parser checks: `venv/bin/python -m pytest tests/unit/test_co_sivigila.py -q`.
+
+## Full historical acceptance (2026-11-16)
+
+All 254 frozen pages for 2007–2022 were imported: 2,465,826 official rows and
+2,465,826 database observations. The final full-row verifier independently
+reparsed every archived page and compared the source record, stored date,
+geography, event identity, definition, value and dimension identity. All 16
+years passed, with zero missing, unexpected, duplicate or mismatched rows.
+The observations comprise 2,423,515 municipality rows, 29,752 unknown-location
+rows and 12,559 exterior rows. Evidence: `data/current/co/history-state.json`
+and `data/current/co/database_acceptance.json`.
+
+The live metadata gate also passed against this complete version, producing
+`unchanged_verified_metadata_only` without downloading any case pages; its
+captured evidence is referenced by `data/current/co/update_check_acceptance.json`.
+The saved daily metadata check is enabled at 11:15 America/Bogota. If INS
+changes the dataset or its year counts, the task reports `requires_full_backfill`;
+the resumable controller and full verifier must then be run again. This daily
+check does not automatically launch the multi-hour backfill. Public release
+remains disabled because the weekly calendar and national aggregation contract
+remain unverified.

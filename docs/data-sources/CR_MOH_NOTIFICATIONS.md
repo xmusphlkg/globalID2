@@ -32,6 +32,13 @@ row is an explicit zero. The published rate is retained as source metadata and
 never substituted for the count. Source asterisks indicating preliminary values
 remain explicit. The 2014 layout is presently unsupported.
 
+Annual category identities remove source footnote asterisks and exclude the
+preliminary/final flag from dimensions. Finalization and later count revisions
+therefore update the same observation; the original label and provisional flag
+remain source evidence. The initial import's older identities were reconciled
+only after matching all 64 rows to identical immutable originals and counts;
+see the [onboarding acceptance](../acceptance/REMAINING_COUNTRIES_20261116.md).
+
 For epidemiological bulletins, the reviewed national tables are dengue counts
 by health region and chikungunya notifications/confirmed PCR cases by health
 region. National totals are accepted only if all nine distinct health regions

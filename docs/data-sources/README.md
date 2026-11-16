@@ -135,8 +135,9 @@ The operations panel exposes these links in source rows, manual collection and
 schedule forms. Daily checks retain each publication's weekly, monthly,
 quarterly or annual observation periods. Recent revision replay covers two or
 three calendar years according to the source contract; older history uses an
-explicit replay. The Colombia job is saved but disabled while its large
-historical release is backfilled and a version-aware daily check is validated.
+explicit replay. Colombia’s 2,465,826-row historical release has passed full-row database
+verification. Its daily job checks metadata and year counts; a changed source
+version requires a new resumable full backfill and verification.
 Raw capture, numerical extraction, internal holding and public snapshots have
 separate acceptance states.
 

@@ -134,11 +134,11 @@
         "https://www.datos.gov.co/api/views/4hyg-wa9d.json"
       ],
       "cadence": "historical_revisable",
-      "refresh_strategy": "metadata_version_review_before_bounded_year_replay",
+      "refresh_strategy": "metadata_version_check_requires_verified_full_history",
       "refresh_years": 3,
       "daily_time": "11:15",
       "timezone": "America/Bogota",
-      "enabled_by_default": false
+      "enabled_by_default": true
     },
     {
       "country_code": "MW",

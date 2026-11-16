@@ -79,7 +79,10 @@ def test_jobs_keep_native_cadence_and_raw_evidence():
         if job['country_code'] in BASE_CHANNEL_CONTRACTS} == {
             f"{code.lower()}-{scope.replace('_', '-')}-daily": (code, scope)
             for code, (scope, _) in BASE_CHANNEL_CONTRACTS.items()}
-    assert not next(value for value in jobs.values() if value['country_code'] == 'CO')['enabled']
+    co_job = next(value for value in jobs.values() if value['country_code'] == 'CO')
+    assert co_job['enabled']
+    assert 'Daily metadata and year-count check' in co_job['notes']
+    assert 'requires_full_backfill' in co_job['notes']
     for job in jobs.values():
         assert canonicalize_task_source(job['source'], country_code=job['country_code']) == job['source']
         assert job['process'] and job['save_raw'] and not job['force'] and not job['fill_missing']

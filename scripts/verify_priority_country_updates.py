@@ -26,6 +26,8 @@ async def verify(args):
     channels = load_source_channels()
     if args.countries:
         channels = [row for row in channels if row['country_code'] in args.countries]
+    if not channels:
+        raise ValueError("No saved surveillance channels match the selected countries")
     evidence = {"checked_at": datetime.now(timezone.utc).isoformat(),
                 "mode": "readonly_live_panel_verification", "countries": [],
                 "jobs": [], "flows": {}, "errors": []}
@@ -46,7 +48,8 @@ async def verify(args):
             if row is None or job is None:
                 evidence["errors"].append(f"{country}: country or managed job missing")
                 continue
-            evidence["countries"].append(row)
+            if not any(saved["country_code"] == country for saved in evidence["countries"]):
+                evidence["countries"].append(row)
             evidence["jobs"].append(job)
             option = next((x for x in row["source_options"] if x["value"] == scope), {})
             saved = option.get("source_channel") or {}
@@ -63,8 +66,9 @@ async def verify(args):
                     job["source"] != scope or
                     job["revision_window_months"] != channel["refresh_years"]):
                 evidence["errors"].append(f"{country}: managed daily job is not ready")
-            flows = await get(f"/sources/flow?country_code={country}")
-            evidence["flows"][country] = flows
+            if country not in evidence["flows"]:
+                evidence["flows"][country] = await get(f"/sources/flow?country_code={country}")
+            flows = evidence["flows"][country]
             matching = [x for x in flows if x["source_scope"] == scope]
             if not matching or any((x.get("source_channel") or {}).get("official_url") != channel["official_url"] for x in matching):
                 evidence["errors"].append(f"{country}: source flow/channel missing")
@@ -74,7 +78,7 @@ async def verify(args):
     args.receipt.parent.mkdir(parents=True, exist_ok=True)
     args.receipt.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({"status": evidence["status"], "countries": len(evidence["countries"]),
-                      "enabled_jobs": sum(x["enabled"] for x in evidence["jobs"]),
+                      "channels": len(channels), "enabled_jobs": sum(x["enabled"] for x in evidence["jobs"]),
                       "observations": {code: sum(x.get("source_observation_count", 0) for x in rows)
                                        for code, rows in evidence["flows"].items()},
                       "errors": evidence["errors"]}, ensure_ascii=False))
@@ -85,6 +89,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default="http://127.0.0.1:8000/api/v1")
     parser.add_argument("--require-data", action="store_true")
-    parser.add_argument("--countries", nargs="+", help="Limit verification to selected country codes")
+    parser.add_argument("--countries", nargs="+", type=str.upper, help="Limit verification to selected country codes")
     parser.add_argument("--receipt", type=Path, default=ROOT / "exports/priority-country-updates-20261116/live-source-config.json")
     raise SystemExit(asyncio.run(verify(parser.parse_args())))
