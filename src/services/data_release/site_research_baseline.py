@@ -36,10 +36,11 @@ def _local_candidate(run, previous, origin):
         paths.append(root / "exports/research-runs" / release.removeprefix("literature-") / "projection-v3/candidate.json")
     else:
         paths.extend((root / "exports/site-research-runs").glob(f"*/{release}/projection-v3/candidate.json"))
+    export_root = (root / "exports").resolve()
     for path in paths:
         if not path.exists():
             continue
-        if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+        if path.is_symlink() or not path.resolve().is_relative_to(export_root):
             raise ValueError("Unsafe captured Papers candidate")
         candidate = load_projection_candidate(path)
         if (candidate.release_id == release and candidate.origin == origin
