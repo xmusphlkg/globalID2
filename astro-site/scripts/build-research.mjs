@@ -42,8 +42,9 @@ export function prepareResearchWorkspace({ site, snapshot, work }) {
     // change the candidate during rendering. Large unrelated trees are not
     // generated or published by this workspace.
     const from = resolve(site, 'src/data', entry.name), to = resolve(data, entry.name);
-    if (entry.isFile()) cpSync(from, to);
-    else symlinkSync(from, to, 'dir');
+    if (entry.isFile()) {
+      if (entry.name !== 'meta.json') cpSync(from, to);
+    } else symlinkSync(from, to, 'dir');
   }
   symlinkSync(resolve(snapshot, 'build/research'), resolve(data, 'research'), 'dir');
   for (const path of ['research', 'zh/research', 'fr/research']) {

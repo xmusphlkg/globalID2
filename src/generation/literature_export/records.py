@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 from typing import Any
 
+from src.core.country_library import get_country_display_name
 from src.generation.literature_visualizations import _facet_slug, build_related_surveillance
 
 
@@ -107,7 +108,9 @@ def _project_historical_seed_article(
         {
             "code": str(link.get("code") or link.get("country_code") or "").upper(),
             "name_en": str(link.get("name_en") or link.get("country_name") or link.get("code") or ""),
-            "name_zh": link.get("name_zh"),
+            "name_zh": link.get("name_zh") or get_country_display_name(
+                str(link.get("code") or link.get("country_code") or ""), "zh"
+            ),
             "confidence": float(link.get("confidence") or 0.82),
         }
         for link in item.get("countries") or []
