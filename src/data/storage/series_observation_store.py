@@ -1754,6 +1754,15 @@ class SeriesObservationStore:
         cache_key = (country_code, source_id, local_code, local_label)
         if cache_key in self._resolved_series_cache:
             return self._resolved_series_cache[cache_key]
+        if source_id == "SRC_CO_INS_BES" and local_code:
+            # The same event label occurs in both the YTD annex and the
+            # explicit single-week body table. A label fallback would turn
+            # cumulative counts into weekly notifications. Their codes are
+            # deliberately disjoint and authoritative within this source.
+            matches = self.ontology.series_lookup(
+                country_code=country_code, source_id=source_id, local_code=local_code)
+            self._resolved_series_cache[cache_key] = matches
+            return matches
         filters = {
             "country_code": country_code,
             "source_id": source_id,

@@ -1,10 +1,13 @@
 from types import SimpleNamespace
 
+import pytest
+
 from src.ai.catalogue.errors import (
     _health_check_failure_status,
     _legacy_transient_probe_unavailable,
     _runtime_failure_kind,
     extract_retry_after_seconds,
+    is_account_quota_exhausted,
     is_model_channel_failure,
     is_model_unavailable_error,
     is_provider_authentication_error,
@@ -23,6 +26,66 @@ class DummyRateLimitError(Exception):
         super().__init__(message)
         self.status_code = status_code
         self.response = SimpleNamespace(status_code=status_code, headers=headers or {})
+
+
+@pytest.mark.parametrize("error", [
+    DummyRateLimitError("Insufficient user quota, remaining quota: -0.000516", 403),
+    DummyRateLimitError("{'error': {'code': 'insufficient_user_quota'}}", 403),
+    DummyRateLimitError("insufficient_quota: please upgrade your plan", 429),
+])
+def test_exhausted_account_credit_is_recoverable_without_delaying_failover(error):
+    from src.ai.catalogue.errors import FailureKind, classify_failure
+
+    assert is_account_quota_exhausted(error)
+    failure = classify_failure(error)
+    assert failure.kind is FailureKind.RATE_LIMIT
+    assert failure.scope == "model"
+    assert failure.retryable
+    # The route cooldown is distinct from an upstream Retry-After; a healthy
+    # alternate route can accept this activity without waiting 15 minutes.
+    assert failure.retry_after_seconds is None
+    assert _health_check_failure_status(error) == "rate_limited"
+
+
+@pytest.mark.parametrize("error", [
+    DummyRateLimitError("Too many requests", 429),
+    DummyRateLimitError("Per-minute quota exceeded", 429),
+    DummyRateLimitError("Token quota exceeded for this minute", 403),
+    DummyRateLimitError("insufficient_user_quota", 401),
+    DummyRateLimitError("No access to this model", 403),
+])
+def test_short_limits_and_rejected_credentials_are_not_exhausted_credit(error):
+    assert not is_account_quota_exhausted(error)
+
+
+def test_exhausted_credit_reads_structured_gateway_error_code():
+    error = DummyRateLimitError("Permission denied", 403)
+    error.body = {"error": {"code": "insufficient_user_quota"}}
+    assert is_account_quota_exhausted(error)
+
+
+def test_generic_structured_quota_limit_keeps_short_request_backoff():
+    error = DummyRateLimitError("Per-minute token limit reached", 429)
+    error.body = {"error": {"code": "quota_exceeded"}}
+    assert not is_account_quota_exhausted(error)
+
+
+def test_late_ordinary_rate_limit_cannot_shorten_quota_cooldown():
+    from datetime import timedelta
+
+    from src.ai.catalogue.health import (
+        _mark_payload_rate_limited,
+        _rate_limit_state,
+        _utcnow,
+    )
+
+    now = _utcnow()
+    parked = _mark_payload_rate_limited({}, now + timedelta(seconds=900), now)
+    late = _mark_payload_rate_limited(
+        parked, now + timedelta(seconds=11), now + timedelta(seconds=1)
+    )
+    assert _rate_limit_state(late, now)["rate_limit_remaining_seconds"] == 900
+    assert not _rate_limit_state(late, now + timedelta(seconds=901))["rate_limit_active"]
 
 
 def test_is_rate_limit_error_detects_http_429() -> None:

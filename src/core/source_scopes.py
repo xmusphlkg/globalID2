@@ -5,11 +5,12 @@ from __future__ import annotations
 from typing import Optional
 
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
+from src.core.south_asia_sources import SOUTH_ASIA_SOURCES, SOUTH_ASIA_ALL_SOURCES, south_asia_source
 from src.core.remaining_country_sources import REMAINING_COUNTRIES, EXTRA_SOURCE_CONTRACTS, source_contract
 
 EXPECTED_SCOPES_BY_COUNTRY = {
     'CL': ['cl_eno_historical'],
-    'CO': ['co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly'],
+    'CO': ['co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly', 'co_ins_sivigila_microdatos'],
     'MW': ['mw_phim_idsr_weekly'],
     'ZA': ['za_nicd_nmc'],
     'ID': ['id_kemkes_profile'],
@@ -65,6 +66,9 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     ],
 }
 
+for _code, _spec in SOUTH_ASIA_SOURCES.items():
+    EXPECTED_SCOPES_BY_COUNTRY[_code] = [scope for country, scope in SOUTH_ASIA_ALL_SOURCES if country == _code]
+
 for _remaining_code in REMAINING_COUNTRIES:
     EXPECTED_SCOPES_BY_COUNTRY[_remaining_code] = [source_contract(_remaining_code)["scope"]]
 
@@ -80,7 +84,8 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
     "spf_odisse_annual": {"en": "SPF ODISSE Annual Notifications", "zh": "SPF ODISSÉ 年度疾病报告"},
     'cl_eno_historical': {'en': 'Chile MINSAL ENO Historical Notifications', 'zh': '智利 MINSAL 法定报告疾病历史数据'},
     'co_ins_sivigila_historical': {'en': 'Colombia INS SIVIGILA Historical Public Health Surveillance', 'zh': '哥伦比亚 INS SIVIGILA 历史监测数据'},
-    'co_ins_sivigila_current': {'en': 'Colombia INS SIVIGILA Successor Dataset (2023 onward)', 'zh': '哥伦比亚 INS SIVIGILA 后续数据集（2023 年起）'},
+    'co_ins_sivigila_current': {'en': 'Colombia INS SIVIGILA Successor Dataset (2022–2024)', 'zh': '哥伦比亚 INS SIVIGILA 后续数据集（2022–2024）'},
+    'co_ins_sivigila_microdatos': {'en': 'Colombia INS SIVIGILA Annual Microdata', 'zh': '哥伦比亚 INS SIVIGILA 年度微观数据'},
     'co_ins_bes_weekly': {'en': 'Colombia INS BES Epidemiological Bulletins', 'zh': '哥伦比亚 INS BES 流行病学周报'},
     'mw_phim_idsr_weekly': {'en': 'Malawi PHIM IDSR Weekly Bulletin', 'zh': '马拉维 PHIM IDSR 疾病监测周报'},
     'za_nicd_nmc': {'en': 'South Africa NICD NMC', 'zh': '南非 NICD 法定传染病月报'},
@@ -278,6 +283,20 @@ for _remaining_code in REMAINING_COUNTRIES:
 for (_remaining_code, _scope), _extra in EXTRA_SOURCE_CONTRACTS.items():
     COUNTRY_SOURCE_LABEL_OVERRIDES[(_remaining_code, _scope)] = {"en": _extra["label_en"], "zh": _extra["label_zh"]}
 
+for (_code, _scope), _spec in SOUTH_ASIA_ALL_SOURCES.items():
+    SOURCE_SCOPE_LABELS[_spec["scope"]] = {"en": _spec["label_en"], "zh": _spec["label_zh"]}
+    COUNTRY_SOURCE_LABEL_OVERRIDES[(_code, _spec["scope"])] = SOURCE_SCOPE_LABELS[_spec["scope"]]
+
+from src.core.high_frequency_sources import HIGH_FREQUENCY_SOURCES
+
+for (_frequency_code, _frequency_scope), _frequency_spec in HIGH_FREQUENCY_SOURCES.items():
+    COUNTRY_SOURCE_LABEL_OVERRIDES[(_frequency_code, _frequency_scope)] = {
+        "en": _frequency_spec.label_en, "zh": _frequency_spec.label_zh,
+    }
+    _frequency_scopes = EXPECTED_SCOPES_BY_COUNTRY.setdefault(_frequency_code, [])
+    if _frequency_scope not in _frequency_scopes:
+        _frequency_scopes.append(_frequency_scope)
+
 _EXACT_SCOPE_BY_DATA_SOURCE = {
     'cl_eno_historical': 'cl_eno_historical',
     'src_cl_eno': 'cl_eno_historical',
@@ -288,6 +307,11 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     'co_ins_sivigila_current': 'co_ins_sivigila_current',
     'src_co_ins_sivigila_current': 'co_ins_sivigila_current',
     'colombia ins sivigila current public health surveillance': 'co_ins_sivigila_current',
+    'co_ins_sivigila_microdatos': 'co_ins_sivigila_microdatos',
+    'src_co_ins_sivigila_microdatos': 'co_ins_sivigila_microdatos',
+    'colombia ins sivigila annual microdata': 'co_ins_sivigila_microdatos',
+    'colombia ins sivigila successor dataset (2023 onward)': 'co_ins_sivigila_current',
+    'colombia ins sivigila successor dataset (2022–2024)': 'co_ins_sivigila_current',
     'co_ins_bes_weekly': 'co_ins_bes_weekly',
     'src_co_ins_bes': 'co_ins_bes_weekly',
     'colombia ins bes epidemiological bulletins': 'co_ins_bes_weekly',
@@ -426,6 +450,14 @@ for _remaining_code in REMAINING_COUNTRIES:
 for (_remaining_code, _scope), _extra in EXTRA_SOURCE_CONTRACTS.items():
     for _alias in (_extra["source_id"], _extra["label_en"], _scope):
         _EXACT_SCOPE_BY_DATA_SOURCE[_alias.lower()] = _scope
+
+for (_code, _scope), _spec in SOUTH_ASIA_ALL_SOURCES.items():
+    for _alias in (_spec["source_id"], _spec["label_en"], _spec["scope"]):
+        _EXACT_SCOPE_BY_DATA_SOURCE[_alias.lower()] = _spec["scope"]
+
+for _frequency_spec in HIGH_FREQUENCY_SOURCES.values():
+    for _alias in (_frequency_spec.source_id, _frequency_spec.label_en, _frequency_spec.scope):
+        _EXACT_SCOPE_BY_DATA_SOURCE[_alias.lower()] = _frequency_spec.scope
 
 _TASK_SOURCE_ALIASES = {
     'cl': 'cl_eno_historical',
@@ -604,6 +636,13 @@ def canonicalize_task_source(
     if not normalized:
         normalized = "all"
     code = (country_code or "").strip().upper()
+    if normalized == "all" and code:
+        from src.core.country_library import get_country_bootstrap_config
+        preferred = get_country_bootstrap_config(code).get("crawler_config", {}).get("preferred_source")
+        if preferred:
+            return str(preferred)
+    if code in SOUTH_ASIA_SOURCES and normalized in {"all", code.lower(), SOUTH_ASIA_SOURCES[code]["name"].lower()}:
+        return south_asia_source(code)["scope"]
     if code in REMAINING_COUNTRIES and normalized in {"all", code.lower()}:
         return source_contract(code)["scope"]
     normalized = _TASK_SOURCE_ALIASES.get(normalized, normalized)
@@ -782,6 +821,10 @@ def source_options_for_country(country_code: Optional[str]) -> list[dict[str, st
 def default_source_for_country(country_code: Optional[str]) -> str:
     """Return the preferred source value for forms and automation presets."""
     code = (country_code or "").strip().upper()
+    from src.core.country_library import get_country_bootstrap_config
+    preferred = get_country_bootstrap_config(code).get("crawler_config", {}).get("preferred_source")
+    if preferred:
+        return str(preferred)
     scopes = get_expected_scopes_for_country(code)
     if len(scopes) > 1 and code not in {"IE", "CO", "AR"}:
         return "all"
@@ -863,6 +906,13 @@ def canonical_data_source_label(
     """Normalize persisted data_source text to a stable display label."""
     text = (data_source or "").strip().lower()
     code = (country_code or "").strip().upper()
+    frequency_scope = _EXACT_SCOPE_BY_DATA_SOURCE.get(text)
+    frequency_spec = HIGH_FREQUENCY_SOURCES.get((code, frequency_scope))
+    if frequency_spec is not None:
+        return frequency_spec.label_en
+    for contract in SOUTH_ASIA_ALL_SOURCES.values():
+        if _EXACT_SCOPE_BY_DATA_SOURCE.get(text) == contract["scope"]:
+            return contract["label_en"]
     if code in REMAINING_COUNTRIES:
         scope = _EXACT_SCOPE_BY_DATA_SOURCE.get(text)
         if (code, scope) in EXTRA_SOURCE_CONTRACTS:
@@ -870,7 +920,7 @@ def canonical_data_source_label(
         contract = source_contract(code)
         if _EXACT_SCOPE_BY_DATA_SOURCE.get(text) == contract["scope"]:
             return contract["label_en"]
-    for scope in ('cl_eno_historical', 'co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly', 'mw_phim_idsr_weekly'):
+    for scope in ('cl_eno_historical', 'co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly', 'co_ins_sivigila_microdatos', 'mw_phim_idsr_weekly'):
         if _EXACT_SCOPE_BY_DATA_SOURCE.get(text) == scope:
             return SOURCE_SCOPE_LABELS[scope]['en']
     if text in {'south africa nicd nmc', 'za_nicd_nmc', 'src_za_nicd_nmc'}:

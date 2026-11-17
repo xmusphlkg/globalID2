@@ -8,11 +8,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.collection import PublishDirty
-from src.domain import DataReleaseJob
+from src.domain import Country, DataReleaseJob
+from src.core.country_library import get_country_bootstrap_config
 from src.core.config import get_config
 from src.services.data_release_service import data_release_service
 from src.services.data_release import publication_planning
 from src.services.data_release import publication_execution
+from src.services.data_release.planning import plan_changes
 
 from ..deps import get_db
 from ..schemas.collection import PendingOut, PublishRunCreate
@@ -39,6 +41,7 @@ async def plan(body: PublicationPlanCreate, db: AsyncSession = DB_DEPENDENCY):
 
 
 async def _create_plan(body: PublicationPlanCreate, *, db, rollback_of=None):
+    rebuild_codes = None
     # Do not call load_jobs(): its initial storage setup may seed a job. This
     # endpoint only observes existing state and persists its private preview.
     job = (await db.execute(select(DataReleaseJob).where(DataReleaseJob.job_id == body.job_id))).scalar_one_or_none()
@@ -46,6 +49,18 @@ async def _create_plan(body: PublicationPlanCreate, *, db, rollback_of=None):
         raise HTTPException(404, {"code": "publication_job_not_found", "job_id": body.job_id})
     rows = (await db.execute(select(PublishDirty).where(PublishDirty.published_at.is_(None))
                              .order_by(PublishDirty.id))).scalars().all()
+    if body.surveillance_rebuild_all:
+        known = (await db.execute(select(Country.code, Country.is_active))).all()
+        known_codes = {str(code).strip().upper() for code, _active in known}
+        available = {str(code).strip().upper() for code, active in known
+                     if active and get_country_bootstrap_config(code).get("public_release_enabled", True) is not False}
+        selected = set(plan_changes(
+            [row for row in rows if row.line == "surveillance"], available, full=True,
+        )["dirty_ids"])
+        # Unknown scopes still fail admission; disabled scopes remain pending.
+        selected.update(row.id for row in rows if row.line == "surveillance" and row.scope_key not in known_codes)
+        rows = [row for row in rows if row.line != "surveillance" or row.id in selected]
+        rebuild_codes = sorted(available)
     frozen_rows = [{"id": row.id, "line": row.line, "scope_key": row.scope_key,
                     "change_set": row.change_set, "marked_at": row.marked_at} for row in rows]
     config = get_config()
@@ -56,6 +71,7 @@ async def _create_plan(body: PublicationPlanCreate, *, db, rollback_of=None):
             job_configuration={column.name: getattr(job, column.name) for column in DataReleaseJob.__table__.columns},
             execution_service=data_release_service, requested_kind=body.kind, channel=body.channel, rollback_of=rollback_of,
             suppress_subscription_dispatch=body.suppress_subscription_dispatch,
+            **({"rebuild_country_codes": rebuild_codes} if rebuild_codes is not None else {}),
         )
     except publication_execution.PublicationPlanError as exc:
         raise HTTPException(exc.status, {"code": exc.code}) from exc

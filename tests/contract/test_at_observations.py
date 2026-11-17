@@ -9,7 +9,7 @@ from tests.contract.monthly_helpers import artifact, assert_same_facts
 FIXTURE = Path(__file__).parents[1] / "fixtures/ingestion/AT/ages.csv"
 
 
-def test_at_source_native_observations_remain_unpublished(tmp_path, monkeypatch):
+def test_at_source_native_observations_use_authorized_release_gate(tmp_path, monkeypatch):
     raw = FIXTURE.read_bytes()
     issue = AGESIssue("https://example.org/issue", "https://example.org/ages.csv", date(2026, 2, 1), datetime(2026, 3, 1, tzinfo=timezone.utc))
     monkeypatch.setattr(AustriaAGESRadarCrawler, "discover_issues", lambda self: [issue])
@@ -21,4 +21,4 @@ def test_at_source_native_observations_remain_unpublished(tmp_path, monkeypatch)
     monkeypatch.setattr(AustriaAGESRadarCrawler, "get", lambda *args, **kwargs: pytest.fail("organize fetched source"))
     actual = organize([saved], updater=updater, source="ages_radar", months=[(2026, 2)], output_csv=updater.output_csv)
     assert_same_facts(actual, expected, "AT", "SRC_AT_AGES_RADAR")
-    assert actual.rows[0]["PublicReleaseEnabled"] == "false"
+    assert actual.rows[0]["PublicReleaseEnabled"] == "true"

@@ -1,0 +1,46 @@
+[
+  {
+    "fixture": "dge-monthly-2025.pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/2025/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_mes.pdf",
+    "retrieved_on": "2026-11-17",
+    "sha256": "e6bf0af5022d3369b995455985c8eda5cdf92b39d3ec508ecdeeb0b9e90fd95f",
+    "byte_size": 959780
+  },
+  {
+    "fixture": "boletin-2026-week43.pdf",
+    "source_url": "https://www.gob.mx/cms/uploads/attachment/file/1115232/sem43.pdf",
+    "retrieved_on": "2026-11-17",
+    "sha256": "f24aea9306d95d1489d3a8f373527918db1ae31a9c6a6f6aeab63826842f3c8a",
+    "byte_size": 2350631
+  },
+  {
+    "fixture": "boletin-2026.html",
+    "source_url": "https://www.gob.mx/salud/documentos/boletinepidemiologico-sistema-nacional-de-vigilancia-epidemiologica-sistema-unico-de-informacion-417103",
+    "retrieved_on": "2026-11-17",
+    "sha256": "25185b0df43b4259f435ca83ba2bc3700227dca36bb81cda020bb00f32c2f730",
+    "byte_size": 88343
+  },
+  {
+    "fixture": "dge-national-menu.html",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html",
+    "retrieved_on": "2026-11-17",
+    "sha256": "be4a750f0787b29e79b85fdfd71fd0007140d111b9c3240b2ef459ce1f086720",
+    "byte_size": 137044
+  },
+  {
+    "fixture": "boletin-2026-week44.pdf",
+    "source_url": "https://www.gob.mx/cms/uploads/attachment/file/1116659/Boletin-4426.pdf",
+    "retrieved_on": "2026-11-17",
+    "sha256": "c6b328e4a88c293cbd9b912403b14f8e8a27ab54b780566fc51537b03b52d1a3",
+    "byte_size": 3195949,
+    "derivation": "Official PDF original"
+  },
+  {
+    "fixture": "boletin-2026-week44-title-ocr.json",
+    "source_url": "https://www.gob.mx/cms/uploads/attachment/file/1116659/Boletin-4426.pdf",
+    "retrieved_on": "2026-11-17",
+    "sha256": "9a41d2d5a755d51104cefd597d06bbc70346499f636379e4f3148d6b9bd5e8cf",
+    "byte_size": 1540,
+    "derivation": "Frozen local two-scale OCR of source title region; numerical cells excluded"
+  }
+]

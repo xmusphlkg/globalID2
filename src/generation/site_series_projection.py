@@ -14,7 +14,11 @@ from collections import defaultdict
 from datetime import date, datetime
 
 from src.core.disease_cutover import get_disease_cutover_config
-from src.core.reporting_period import report_period_key, selected_series_granularity
+from src.core.reporting_period import (
+    report_date,
+    report_period_key,
+    selected_series_granularity,
+)
 from src.services.disease_series_policy import (
     PRIORITY_OVERLAY_POLICY,
     SOURCE_OBSERVATIONS_ONLY_POLICY,
@@ -124,6 +128,7 @@ def _source_series_details(records: list[dict]) -> list[dict]:
         "series_is_active",
         "calendar",
         "paired_case_series_code",
+        "observation_kind",
     )
     details: list[dict] = []
     for series_code, dimension_key, dimensions_key in sorted(by_series):
@@ -191,7 +196,10 @@ def _source_series_details(records: list[dict]) -> list[dict]:
                 "period_ends_exclusive": [
                     item.get("period_end_exclusive") for item in dated_records
                 ],
-                "total_value": sum(value for value in values if value is not None),
+                "total_value": (None if first.get("observation_kind") == "cumulative_count"
+                                or "ytd" in str(first.get("metric_type", "")).lower()
+                                or "cumulative" in str(first.get("metric_type", "")).lower()
+                                else sum(value for value in values if value is not None)),
                 "observation_count": len(values),
                 "quality_statuses": quality_statuses,
                 "point_quality_statuses": point_quality_statuses,
@@ -203,6 +211,15 @@ def _source_series_details(records: list[dict]) -> list[dict]:
                 ),
             }
         )
+        # Older stored FluNet captures predate the explicit raw observation
+        # kind field. A reviewed weekly interval metric has an unambiguous
+        # interval meaning; infer it at export time while keeping YTD and
+        # cumulative metrics untouched.
+        if details[-1].get("observation_kind") in (None, ""):
+            metric = str(details[-1].get("metric_type") or "").lower()
+            granularity = str(details[-1].get("temporal_granularity") or "").lower()
+            if granularity == "weekly" and "cumulative" not in metric and "ytd" not in metric:
+                details[-1]["observation_kind"] = "interval_count"
     return details
 
 
@@ -291,6 +308,38 @@ def _projection_context(series_records: list[dict], *, source_series: list[dict]
     }
 
 
+def _align_explicit_source_week(record: dict, granularity: str | None) -> dict:
+    """Keep an explicit source epi week when the stored date falls in another week.
+
+    A bulletin can stamp two different source weeks onto timestamps that share
+    one ISO week. Treating those timestamps as one public period would drop a
+    real count or abort the country. The public point stays on the source week.
+    """
+
+    if str(granularity or "").strip().lower() != "weekly" or not isinstance(record, dict):
+        return record
+    dimensions = record.get("dimensions")
+    if not isinstance(dimensions, dict):
+        return record
+    try:
+        year = int(dimensions["source_reporting_year"])
+        week = int(dimensions["source_reporting_week"])
+    except (KeyError, TypeError, ValueError):
+        return record
+    if not 1 <= week <= 53:
+        return record
+    parsed = report_date(record.get("date"))
+    if parsed is not None and parsed.isocalendar()[:2] == (year, week):
+        return record
+    try:
+        aligned_date = date.fromisocalendar(year, week, 1).isoformat()
+    except ValueError:
+        return record
+    aligned = dict(record)
+    aligned["date"] = aligned_date
+    return aligned
+
+
 def _collapse_selected_series_records(records: list[dict], context: dict, *, period_key=report_period_key) -> list[dict]:
     """Collapse only the explicitly selected series to the legacy chart grain."""
 
@@ -300,6 +349,7 @@ def _collapse_selected_series_records(records: list[dict], context: dict, *, per
     seen: set[tuple[str, str]] = set()
     by_period: dict[str, list[dict]] = defaultdict(list)
     for record in selected:
+        record = _align_explicit_source_week(record, period_granularity)
         period = period_key(record.get("date"), period_granularity)
         identity = (
             str(record.get("series_code") or ""),

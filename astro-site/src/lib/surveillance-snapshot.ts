@@ -13,6 +13,8 @@ export function latestSnapshot(row: Summary) {
   const unit = String(row.period_granularity ?? '').toLowerCase();
   const adjacent = cadenceDays[unit] ? (currentDate.getTime() - previousDate.getTime()) / 86400000 === cadenceDays[unit]
     : months[unit] ? (currentDate.getUTCFullYear() - previousDate.getUTCFullYear()) * 12 + currentDate.getUTCMonth() - previousDate.getUTCMonth() === months[unit] : false;
-  const comparable = adjacent && row.comparability !== 'not_comparable' && row.data_layer !== 'mixed';
+  const cumulative = row.observation_kind === 'cumulative_count' ||
+    /cumulative|(?:^|_)ytd(?:_|$)/i.test(String(row.metric_type ?? ''));
+  const comparable = !cumulative && adjacent && row.comparability !== 'not_comparable' && row.data_layer !== 'mixed';
   return { date: dates[index], value: values[index], change: comparable && typeof previous === 'number' && previous > 0 ? (values[index] - previous) / previous * 100 : null };
 }

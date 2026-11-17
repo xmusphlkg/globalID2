@@ -1,4 +1,4 @@
-"""INS SIVIGILA 2023 onward, published as a separate official SODA dataset."""
+"""INS successor table (observed 2022–2024); ingest 2023+ to exclude overlap."""
 from __future__ import annotations
 
 import json

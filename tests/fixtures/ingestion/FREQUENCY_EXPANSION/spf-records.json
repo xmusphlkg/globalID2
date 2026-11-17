@@ -1,0 +1,254 @@
+[
+  {
+    "country": "GP",
+    "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+    "raw": {
+      "date_complet": "2021-01-04",
+      "semaine": "2021-S01",
+      "reglib": "Guadeloupe",
+      "sursaud_cl_age_gene": "00-04 ans",
+      "taux_passages_grippe_sau": 0.0,
+      "taux_hospit_grippe_sau": 0.0,
+      "taux_actes_grippe_sos": null,
+      "region": "01"
+    }
+  },
+  {
+    "country": "GP",
+    "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+    "raw": {
+      "date_complet": "2026-11-02",
+      "semaine": "2026-S45",
+      "reglib": "Guadeloupe",
+      "sursaud_cl_age_gene": "Tous âges",
+      "taux_passages_grippe_sau": 224.46689113,
+      "taux_hospit_grippe_sau": 0.0,
+      "taux_actes_grippe_sos": null,
+      "region": "01"
+    }
+  },
+  {
+    "country": "GP",
+    "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2019-12-30",
+      "semaine": "2020-S01",
+      "region": "01",
+      "reglib": "Guadeloupe",
+      "sursaud_cl_age_gene": "0 an",
+      "taux_passages_bronchio_sau": 19444.444444,
+      "taux_hospit_bronchio_sau": 47368.421053,
+      "taux_actes_bronchio_sos": null
+    }
+  },
+  {
+    "country": "GP",
+    "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2026-10-26",
+      "semaine": "2026-S44",
+      "region": "01",
+      "reglib": "Guadeloupe",
+      "sursaud_cl_age_gene": "0 an",
+      "taux_passages_bronchio_sau": 20338.983051,
+      "taux_hospit_bronchio_sau": 47619.047619,
+      "taux_actes_bronchio_sos": null
+    }
+  },
+  {
+    "country": "GP",
+    "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2021-01-04",
+      "semaine": "2021-S01",
+      "reglib": "Guadeloupe",
+      "sursaud_cl_age_gene": "00-04 ans",
+      "taux_passages_covid_sau": 0.0,
+      "taux_hospit_covid_sau": 0.0,
+      "taux_actes_covid_sos": null,
+      "region": "01"
+    }
+  },
+  {
+    "country": "GP",
+    "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2026-11-02",
+      "semaine": "2026-S45",
+      "reglib": "Guadeloupe",
+      "sursaud_cl_age_gene": "Tous âges",
+      "taux_passages_covid_sau": 224.46689113,
+      "taux_hospit_covid_sau": 0.0,
+      "taux_actes_covid_sos": null,
+      "region": "01"
+    }
+  },
+  {
+    "country": "MQ",
+    "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+    "raw": {
+      "date_complet": "2021-01-04",
+      "semaine": "2021-S01",
+      "reglib": "Martinique",
+      "sursaud_cl_age_gene": "00-04 ans",
+      "taux_passages_grippe_sau": null,
+      "taux_hospit_grippe_sau": null,
+      "taux_actes_grippe_sos": 0.0,
+      "region": "02"
+    }
+  },
+  {
+    "country": "MQ",
+    "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+    "raw": {
+      "date_complet": "2026-11-02",
+      "semaine": "2026-S45",
+      "reglib": "Martinique",
+      "sursaud_cl_age_gene": "Tous âges",
+      "taux_passages_grippe_sau": 366.03221083,
+      "taux_hospit_grippe_sau": 0.0,
+      "taux_actes_grippe_sos": 1865.1362984,
+      "region": "02"
+    }
+  },
+  {
+    "country": "MQ",
+    "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2019-12-30",
+      "semaine": "2020-S01",
+      "region": "02",
+      "reglib": "Martinique",
+      "sursaud_cl_age_gene": "0 an",
+      "taux_passages_bronchio_sau": null,
+      "taux_hospit_bronchio_sau": null,
+      "taux_actes_bronchio_sos": 0.0
+    }
+  },
+  {
+    "country": "MQ",
+    "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2026-10-26",
+      "semaine": "2026-S44",
+      "region": "02",
+      "reglib": "Martinique",
+      "sursaud_cl_age_gene": "0 an",
+      "taux_passages_bronchio_sau": 36190.47619,
+      "taux_hospit_bronchio_sau": 52941.176471,
+      "taux_actes_bronchio_sos": 0.0
+    }
+  },
+  {
+    "country": "MQ",
+    "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2021-01-04",
+      "semaine": "2021-S01",
+      "reglib": "Martinique",
+      "sursaud_cl_age_gene": "00-04 ans",
+      "taux_passages_covid_sau": null,
+      "taux_hospit_covid_sau": null,
+      "taux_actes_covid_sos": 0.0,
+      "region": "02"
+    }
+  },
+  {
+    "country": "MQ",
+    "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2026-11-02",
+      "semaine": "2026-S45",
+      "reglib": "Martinique",
+      "sursaud_cl_age_gene": "Tous âges",
+      "taux_passages_covid_sau": 0.0,
+      "taux_hospit_covid_sau": 0.0,
+      "taux_actes_covid_sos": 860.83213773,
+      "region": "02"
+    }
+  },
+  {
+    "country": "GF",
+    "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+    "raw": {
+      "date_complet": "2021-01-04",
+      "semaine": "2021-S01",
+      "reglib": "Guyane",
+      "sursaud_cl_age_gene": "00-04 ans",
+      "taux_passages_grippe_sau": 292.39766082,
+      "taux_hospit_grippe_sau": 0.0,
+      "taux_actes_grippe_sos": null,
+      "region": "03"
+    }
+  },
+  {
+    "country": "GF",
+    "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+    "raw": {
+      "date_complet": "2026-11-02",
+      "semaine": "2026-S45",
+      "reglib": "Guyane",
+      "sursaud_cl_age_gene": "Tous âges",
+      "taux_passages_grippe_sau": 743.14909429,
+      "taux_hospit_grippe_sau": 400.0,
+      "taux_actes_grippe_sos": null,
+      "region": "03"
+    }
+  },
+  {
+    "country": "GF",
+    "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2019-12-30",
+      "semaine": "2020-S01",
+      "region": "03",
+      "reglib": "Guyane",
+      "sursaud_cl_age_gene": "0 an",
+      "taux_passages_bronchio_sau": 5084.7457627,
+      "taux_hospit_bronchio_sau": 16666.666667,
+      "taux_actes_bronchio_sos": null
+    }
+  },
+  {
+    "country": "GF",
+    "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2026-10-26",
+      "semaine": "2026-S44",
+      "region": "03",
+      "reglib": "Guyane",
+      "sursaud_cl_age_gene": "0 an",
+      "taux_passages_bronchio_sau": 4545.4545455,
+      "taux_hospit_bronchio_sau": 18181.818182,
+      "taux_actes_bronchio_sos": null
+    }
+  },
+  {
+    "country": "GF",
+    "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2021-01-04",
+      "semaine": "2021-S01",
+      "reglib": "Guyane",
+      "sursaud_cl_age_gene": "00-04 ans",
+      "taux_passages_covid_sau": 877.19298246,
+      "taux_hospit_covid_sau": 0.0,
+      "taux_actes_covid_sos": null,
+      "region": "03"
+    }
+  },
+  {
+    "country": "GF",
+    "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+    "raw": {
+      "date_complet": "2026-11-02",
+      "semaine": "2026-S45",
+      "reglib": "Guyane",
+      "sursaud_cl_age_gene": "Tous âges",
+      "taux_passages_covid_sau": 46.446818393,
+      "taux_hospit_covid_sau": 0.0,
+      "taux_actes_covid_sos": null,
+      "region": "03"
+    }
+  }
+]

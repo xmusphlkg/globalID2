@@ -1,0 +1,28 @@
+ILI SARI
+Epidemiological week
+detropeR
+sesaC
+fo
+.oN
+Biweekly National Respiratory Virus Sentinel Surveillance Report
+Epidemiological Week 51 & 52 ( Dec 15 — Dec 28), 2025)
+Influenza activity showed a positivity rate of 30.6% (22 cases) in week 51, and 30.8% (16 cases) in week 52. A total of 124
+respiratory samples were tested for Influenza, SARS-CoV-2, and RSV using real-time RT-PCR, including 72 ILI cases, 22 SARI
+cases, and 30 eSARI samples. No SARS-CoV-2 cases were detected during weeks 51 and 52. Among RSV-positive cases, 4 were
+RSV-A and 12 were RSV-B. All sentinel sites reported in week 51; however, in week 52, Paro Hospital and ERRH Mongar did
+not submit SARI data, while Punakha and Samtse Hospitals did not submit ILI data.
+Figure 1. Weekly Influenza subtypes, RSV and SARS-CoV-2 through ILI and SARI Sentinel Surveillance
+Table 1. Influenza subtypes, RSV and SARS-CoV-2 in Testing week 51 & 52
+350
+300
+250
+200
+150
+100
+50
+123456789 1 3 5 7 9 1 3 5 7 9 1 3 5 7 9 1 3 5 7 9 1
+1 1 1 1 1 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5
+Figure 2. Weekly ILI and SARI cases reported from Sentinel Hospitals
+Table 2. ILI and SARI cases reporting status for week 51, 2025
+Table 3. ILI and SARI cases reporting status for week 52, 2025
+*ILI– Influenza-Like Illness, SARI– Severe Acute Respiratory Infection, eSARI– extended Severe Acute Respiratory Infection

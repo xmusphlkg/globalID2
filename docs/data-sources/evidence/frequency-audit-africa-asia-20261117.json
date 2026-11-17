@@ -1,0 +1,2483 @@
+{
+  "checked_at": "2026-11-17T01:12:02.279496+00:00",
+  "scope": "26 Africa/Asia/Oceania jurisdictions; local read-only ledger + live published source-series + official HTTP checks",
+  "live_release_id": "data-20261116T154800Z-reviewed-countries",
+  "countries": [
+    {
+      "code": "ET",
+      "name_zh": "埃塞俄比亚",
+      "public_source_grains": {
+        "annual": {
+          "series": 15,
+          "points": 326,
+          "numeric_points": 326,
+          "first": "1970-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_ET_WHO_GHO": {
+          "annual": 326
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "ET",
+          "source_system": "SRC_ET_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 478,
+          "numeric_observations": 326,
+          "first": "1970-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 WHO 年度；EPHI 页面有周报栏目，但连续数值原档尚未验证。FluNet 已核实近期周样本。"
+    },
+    {
+      "code": "KE",
+      "name_zh": "肯尼亚",
+      "public_source_grains": {
+        "annual": {
+          "series": 15,
+          "points": 382,
+          "numeric_points": 382,
+          "first": "1971-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_KE_WHO_GHO": {
+          "annual": 382
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "KE",
+          "source_system": "SRC_KE_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 533,
+          "numeric_observations": 382,
+          "first": "1971-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 WHO 年度；MOH 首页的 Weekly News 不能当疫情周报。FluNet 已核实近期周样本。"
+    },
+    {
+      "code": "UG",
+      "name_zh": "乌干达",
+      "public_source_grains": {
+        "annual": {
+          "series": 14,
+          "points": 336,
+          "numeric_points": 336,
+          "first": "1971-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_UG_WHO_GHO": {
+          "annual": 336
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "UG",
+          "source_system": "SRC_UG_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 515,
+          "numeric_observations": 336,
+          "first": "1971-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 WHO 年度；UNIPH 公报目录返回406。FluNet 已核实近期周样本。"
+    },
+    {
+      "code": "GH",
+      "name_zh": "加纳",
+      "public_source_grains": {
+        "annual": {
+          "series": 15,
+          "points": 458,
+          "numeric_points": 458,
+          "first": "1970-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_GH_WHO_GHO": {
+          "annual": 458
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "GH",
+          "source_system": "SRC_GH_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 543,
+          "numeric_observations": 458,
+          "first": "1970-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 WHO 年度；GHS 首页可达不足以证明全国数值周报。FluNet 已核实近期周样本。"
+    },
+    {
+      "code": "TZ",
+      "name_zh": "坦桑尼亚",
+      "public_source_grains": {
+        "annual": {
+          "series": 15,
+          "points": 384,
+          "numeric_points": 384,
+          "first": "1974-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_TZ_WHO_GHO": {
+          "annual": 384
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "TZ",
+          "source_system": "SRC_TZ_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 536,
+          "numeric_observations": 384,
+          "first": "1974-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 WHO 年度；MOH报告入口可达但未建立全国周报合同。FluNet 已核实近期周样本。"
+    },
+    {
+      "code": "NG",
+      "name_zh": "尼日利亚",
+      "public_source_grains": {
+        "weekly": {
+          "series": 10,
+          "points": 2227,
+          "numeric_points": 2227,
+          "first": "2018-01-07",
+          "last": "2026-08-23"
+        }
+      },
+      "public_sources": {
+        "SRC_NG_NCDC": {
+          "weekly": 2227
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "NG",
+          "source_system": "SRC_NG_NCDC",
+          "temporal_granularity": "daily",
+          "observations": 1813,
+          "numeric_observations": 1813,
+          "first": "2020-04-26 00:00:00+00:00",
+          "last": "2023-02-26 00:00:00+00:00"
+        },
+        {
+          "country_code": "NG",
+          "source_system": "SRC_NG_NCDC",
+          "temporal_granularity": "monthly",
+          "observations": 182,
+          "numeric_observations": 182,
+          "first": "2020-07-01 00:00:00+00:00",
+          "last": "2026-10-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "NG",
+          "source_system": "SRC_NG_NCDC",
+          "temporal_granularity": "multiweek",
+          "observations": 18,
+          "numeric_observations": 18,
+          "first": "2024-02-25 00:00:00+00:00",
+          "last": "2024-07-14 00:00:00+00:00"
+        },
+        {
+          "country_code": "NG",
+          "source_system": "SRC_NG_NCDC",
+          "temporal_granularity": "weekly",
+          "observations": 13795,
+          "numeric_observations": 13795,
+          "first": "2015-09-06 00:00:00+00:00",
+          "last": "2026-11-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已公开周数据；DB还存月度/日度/多周及其他周记录，不等于全部已公开。在线最新周值8-23，需逐类别核对覆盖。"
+    },
+    {
+      "code": "ZA",
+      "name_zh": "南非",
+      "public_source_grains": {
+        "monthly": {
+          "series": 31,
+          "points": 101,
+          "numeric_points": 101,
+          "first": "2026-05-01",
+          "last": "2026-08-01"
+        }
+      },
+      "public_sources": {
+        "SRC_ZA_NICD_NMC": {
+          "monthly": 101
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "ZA",
+          "source_system": "SRC_ZA_NICD_NMC",
+          "temporal_granularity": "monthly",
+          "observations": 16327,
+          "numeric_observations": 16090,
+          "first": "2023-02-01 00:00:00+00:00",
+          "last": "2026-08-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "ZA",
+          "source_system": "SRC_ZA_NICD_NMC",
+          "temporal_granularity": "quarterly",
+          "observations": 686,
+          "numeric_observations": 684,
+          "first": "2026-01-01 00:00:00+00:00",
+          "last": "2026-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已公开月数据；DB另有季报。当前源档存在月份缺口，季度不能拆月；本轮源目录TLS失败。"
+    },
+    {
+      "code": "MW",
+      "name_zh": "马拉维",
+      "public_source_grains": {
+        "weekly": {
+          "series": 10,
+          "points": 249,
+          "numeric_points": 249,
+          "first": "2025-02-16",
+          "last": "2026-10-25"
+        }
+      },
+      "public_sources": {
+        "SRC_MW_PHIM_IDSR": {
+          "weekly": 249
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "MW",
+          "source_system": "SRC_MW_PHIM_IDSR",
+          "temporal_granularity": "weekly",
+          "observations": 1241,
+          "numeric_observations": 1241,
+          "first": "2025-02-16 00:00:00+00:00",
+          "last": "2026-10-25 00:00:00+00:00"
+        }
+      ],
+      "finding": "已公开周数据；已知2025/2026缺周，表1不含疟疾，不能声称全病种覆盖。"
+    },
+    {
+      "code": "BN",
+      "name_zh": "文莱",
+      "public_source_grains": {
+        "annual": {
+          "series": 14,
+          "points": 373,
+          "numeric_points": 373,
+          "first": "1955-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_BN_WHO_GHO": {
+          "annual": 373
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "BN",
+          "source_system": "SRC_BN_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 432,
+          "numeric_observations": 373,
+          "first": "1955-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 WHO 年度；卫生部首页不证明周/月数值档案。FluNet 已核实近期周样本。"
+    },
+    {
+      "code": "ID",
+      "name_zh": "印度尼西亚",
+      "public_source_grains": {
+        "annual": {
+          "series": 9,
+          "points": 49,
+          "numeric_points": 49,
+          "first": "2017-12-31",
+          "last": "2025-12-31"
+        }
+      },
+      "public_sources": {
+        "SRC_ID_KEMKES_PROFILE": {
+          "annual": 49
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "ID",
+          "source_system": "SRC_ID_KEMKES_PROFILE",
+          "temporal_granularity": "annual",
+          "observations": 881,
+          "numeric_observations": 879,
+          "first": "2015-12-31 00:00:00+00:00",
+          "last": "2025-12-31 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 Health Profile 年度；已核实 WPRO 的2026-09登革热月病例1920、死亡7；FluNet也有周样本。SKDR跳转登录。"
+    },
+    {
+      "code": "PH",
+      "name_zh": "菲律宾",
+      "public_source_grains": {
+        "annual": {
+          "series": 15,
+          "points": 473,
+          "numeric_points": 473,
+          "first": "1961-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_PH_WHO_GHO": {
+          "annual": 473
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "PH",
+          "source_system": "SRC_PH_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 542,
+          "numeric_observations": 473,
+          "first": "1961-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 WHO 年度；DOH EB页403；WPRO现行合同未启用PH。FluNet已核实近期周样本。"
+    },
+    {
+      "code": "MM",
+      "name_zh": "缅甸",
+      "public_source_grains": {
+        "annual": {
+          "series": 15,
+          "points": 476,
+          "numeric_points": 476,
+          "first": "1950-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_MM_WHO_GHO": {
+          "annual": 476
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "MM",
+          "source_system": "SRC_MM_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 544,
+          "numeric_observations": 476,
+          "first": "1950-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 WHO 年度；WHO有月度 Health Cluster bulletin，尚未验证全国病例合同。FluNet已核实近期周样本。"
+    },
+    {
+      "code": "TL",
+      "name_zh": "东帝汶",
+      "public_source_grains": {
+        "annual": {
+          "series": 13,
+          "points": 256,
+          "numeric_points": 256,
+          "first": "2002-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_TL_WHO_GHO": {
+          "annual": 256
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "TL",
+          "source_system": "SRC_TL_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 282,
+          "numeric_observations": 256,
+          "first": "2002-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "仅 WHO 年度；WHO出版目录本轮未验证连续全国周/月病例。FluNet已核实近期周样本。"
+    },
+    {
+      "code": "VN",
+      "name_zh": "越南",
+      "public_source_grains": {
+        "annual": {
+          "series": 15,
+          "points": 487,
+          "numeric_points": 487,
+          "first": "1950-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_VN_WHO_GHO": {
+          "annual": 487
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "VN",
+          "source_system": "SRC_VN_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 549,
+          "numeric_observations": 487,
+          "first": "1950-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "VN",
+          "source_system": "SRC_VN_WHO_WPRO_DENGUE",
+          "temporal_granularity": "weekly",
+          "observations": 7,
+          "numeric_observations": 7,
+          "first": "2026-09-20 00:00:00+00:00",
+          "last": "2026-10-29 00:00:00+00:00"
+        }
+      ],
+      "finding": "网站仅年度；DB另有7条WPRO专项记录，混合周值/累计快照，未公开。11-12新报现有解析器可解析3行，尚不在DB快照。"
+    },
+    {
+      "code": "LA",
+      "name_zh": "老挝",
+      "public_source_grains": {
+        "annual": {
+          "series": 15,
+          "points": 397,
+          "numeric_points": 397,
+          "first": "1953-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_LA_WHO_GHO": {
+          "annual": 397
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "LA",
+          "source_system": "SRC_LA_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 474,
+          "numeric_observations": 397,
+          "first": "1953-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "LA",
+          "source_system": "SRC_LA_WHO_WPRO_DENGUE",
+          "temporal_granularity": "weekly",
+          "observations": 18,
+          "numeric_observations": 18,
+          "first": "2026-08-08 00:00:00+00:00",
+          "last": "2026-10-29 00:00:00+00:00"
+        }
+      ],
+      "finding": "网站仅年度；DB另有18条WPRO专项记录，未公开。11-12新报为六天区间，现有七天合同正确拒绝。"
+    },
+    {
+      "code": "MY",
+      "name_zh": "马来西亚",
+      "public_source_grains": {
+        "annual": {
+          "series": 20,
+          "points": 533,
+          "numeric_points": 533,
+          "first": "1954-01-01",
+          "last": "2025-01-01"
+        }
+      },
+      "public_sources": {
+        "SRC_MY_WHO_GHO": {
+          "annual": 493
+        },
+        "SRC_MY_MOH_STD": {
+          "annual": 40
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "MY",
+          "source_system": "SRC_MY_IDENGUE_DAILY",
+          "temporal_granularity": "daily",
+          "observations": 32,
+          "numeric_observations": 32,
+          "first": "2026-11-15 00:00:00+00:00",
+          "last": "2026-11-16 00:00:00+00:00"
+        },
+        {
+          "country_code": "MY",
+          "source_system": "SRC_MY_MOH_STD",
+          "temporal_granularity": "annual",
+          "observations": 40,
+          "numeric_observations": 40,
+          "first": "2017-01-01 00:00:00+00:00",
+          "last": "2024-01-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "MY",
+          "source_system": "SRC_MY_WHO_FLUNET",
+          "temporal_granularity": "weekly",
+          "observations": 19722,
+          "numeric_observations": 19722,
+          "first": "1996-12-23 00:00:00+00:00",
+          "last": "2026-10-19 00:00:00+00:00"
+        },
+        {
+          "country_code": "MY",
+          "source_system": "SRC_MY_WHO_GHO",
+          "temporal_granularity": "annual",
+          "observations": 553,
+          "numeric_observations": 493,
+          "first": "1954-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "网站仅年度；DB另有19722条FluNet周检测、32条iDengue日记录，未公开专项。"
+    },
+    {
+      "code": "KH",
+      "name_zh": "柬埔寨",
+      "public_source_grains": {
+        "weekly": {
+          "series": 4,
+          "points": 509,
+          "numeric_points": 509,
+          "first": "2014-12-31",
+          "last": "2019-02-13"
+        }
+      },
+      "public_sources": {
+        "SRC_KH_CAMEWARN": {
+          "weekly": 509
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "KH",
+          "source_system": "SRC_KH_CAMEWARN",
+          "temporal_granularity": "weekly",
+          "observations": 2775,
+          "numeric_observations": 1775,
+          "first": "2014-12-31 00:00:00+00:00",
+          "last": "2026-10-19 00:00:00+00:00"
+        }
+      ],
+      "finding": "已公开周数据但最新公开有值2019-02-13；DB时限到2026不代表近年图表有精确数值。另有官方月度流感栏目（HTTP200，列年2009–2024有缺年）；PDF数值与连续性待核验，未接入。"
+    },
+    {
+      "code": "TH",
+      "name_zh": "泰国",
+      "public_source_grains": {
+        "weekly": {
+          "series": 86,
+          "points": 554,
+          "numeric_points": 554,
+          "first": "2026-08-22",
+          "last": "2026-11-14"
+        },
+        "monthly": {
+          "series": 42,
+          "points": 9684,
+          "numeric_points": 9684,
+          "first": "2003-01-01",
+          "last": "2023-12-01"
+        }
+      },
+      "public_sources": {
+        "SRC_TH_DDS_WEEKLY": {
+          "weekly": 47
+        },
+        "SRC_TH_DDS_TABLEAU": {
+          "weekly": 507
+        },
+        "SRC_TH_DOE506": {
+          "monthly": 9684
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "TH",
+          "source_system": "SRC_TH_DDS_TABLEAU",
+          "temporal_granularity": "weekly",
+          "observations": 832,
+          "numeric_observations": 832,
+          "first": "2026-08-22 00:00:00+00:00",
+          "last": "2026-11-14 00:00:00+00:00"
+        },
+        {
+          "country_code": "TH",
+          "source_system": "SRC_TH_DDS_WEEKLY",
+          "temporal_granularity": "weekly",
+          "observations": 62,
+          "numeric_observations": 62,
+          "first": "2026-11-14 00:00:00+00:00",
+          "last": "2026-11-14 00:00:00+00:00"
+        },
+        {
+          "country_code": "TH",
+          "source_system": "SRC_TH_DOE506",
+          "temporal_granularity": "monthly",
+          "observations": 15888,
+          "numeric_observations": 15888,
+          "first": "2003-01-01 00:00:00+00:00",
+          "last": "2023-12-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "TH",
+          "source_system": "SRC_TH_ID_TH_ARCHIVE",
+          "temporal_granularity": "weekly",
+          "observations": 31670,
+          "numeric_observations": 31670,
+          "first": "2020-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已公开周和月数据；历史月值至2023，当前DDS周数据至11-14；历史ID_TH周界未验证，仍不能直接绘周日期曲线。"
+    },
+    {
+      "code": "CN",
+      "name_zh": "中国",
+      "public_source_grains": {
+        "monthly": {
+          "series": 9,
+          "points": 1692,
+          "numeric_points": 1692,
+          "first": "2010-01-01",
+          "last": "2026-10-01"
+        }
+      },
+      "public_sources": {
+        "SRC_CN_CDC": {
+          "monthly": 1692
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "CN",
+          "source_system": "SRC_CN_CDC",
+          "temporal_granularity": "monthly",
+          "observations": 1893,
+          "numeric_observations": 1893,
+          "first": "2010-01-01 00:00:00+00:00",
+          "last": "2026-10-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "CN",
+          "source_system": "SRC_CN_PROV_DATACENTER",
+          "temporal_granularity": "monthly",
+          "observations": 134882,
+          "numeric_observations": 134882,
+          "first": "2004-01-01 00:00:00+00:00",
+          "last": "2021-12-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "CN",
+          "source_system": "SRC_CN_PROV_MONTHLY_REPORT",
+          "temporal_granularity": "monthly",
+          "observations": 48421,
+          "numeric_observations": 48417,
+          "first": "2021-01-01 00:00:00+00:00",
+          "last": "2026-10-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已有全国月度来源；CDC Weekly刊名本身不代表全国全病种周病例。"
+    },
+    {
+      "code": "HK",
+      "name_zh": "中国香港",
+      "public_source_grains": {
+        "monthly": {
+          "series": 10,
+          "points": 814,
+          "numeric_points": 814,
+          "first": "2004-01-01",
+          "last": "2026-09-01"
+        }
+      },
+      "public_sources": {
+        "SRC_HK_CHP": {
+          "monthly": 814
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "HK",
+          "source_system": "SRC_HK_CHP",
+          "temporal_granularity": "monthly",
+          "observations": 814,
+          "numeric_observations": 814,
+          "first": "2004-01-01 00:00:00+00:00",
+          "last": "2026-09-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "HK",
+          "source_system": "SRC_HK_CHP",
+          "temporal_granularity": "unknown",
+          "observations": 413,
+          "numeric_observations": 413,
+          "first": "2026-03-01 00:00:00+00:00",
+          "last": "2026-09-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已有全国/地区月度来源；部分unknown粒度不应自动改判周/月。"
+    },
+    {
+      "code": "TW",
+      "name_zh": "中国台湾",
+      "public_source_grains": {
+        "monthly": {
+          "series": 11,
+          "points": 1691,
+          "numeric_points": 1691,
+          "first": "1998-01-01",
+          "last": "2026-10-01"
+        }
+      },
+      "public_sources": {
+        "SRC_TW_NIDSS": {
+          "monthly": 1691
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "TW",
+          "source_system": "SRC_TW_NIDSS",
+          "temporal_granularity": "monthly",
+          "observations": 1691,
+          "numeric_observations": 1691,
+          "first": "1998-01-01 00:00:00+00:00",
+          "last": "2026-10-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "TW",
+          "source_system": "SRC_TW_NIDSS",
+          "temporal_granularity": "unknown",
+          "observations": 359,
+          "numeric_observations": 359,
+          "first": "1998-01-01 00:00:00+00:00",
+          "last": "2026-10-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已有月度来源；本轮未验证额外周源，不等于官方没有。"
+    },
+    {
+      "code": "JP",
+      "name_zh": "日本",
+      "public_source_grains": {
+        "weekly": {
+          "series": 107,
+          "points": 35862,
+          "numeric_points": 35862,
+          "first": "2012-09-16",
+          "last": "2026-11-01"
+        }
+      },
+      "public_sources": {
+        "SRC_JP_NIID": {
+          "weekly": 35862
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "JP",
+          "source_system": "SRC_JP_NIID",
+          "temporal_granularity": "weekly",
+          "observations": 2908691,
+          "numeric_observations": 2908691,
+          "first": "2012-09-16 00:00:00+00:00",
+          "last": "2026-11-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已有全国周度来源；月度数据不是必备另一源，不宜任意按月切分跨月周。"
+    },
+    {
+      "code": "KR",
+      "name_zh": "韩国",
+      "public_source_grains": {
+        "monthly": {
+          "series": 6,
+          "points": 930,
+          "numeric_points": 930,
+          "first": "2001-01-01",
+          "last": "2026-11-01"
+        }
+      },
+      "public_sources": {
+        "SRC_KR_KDCA": {
+          "monthly": 930
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "KR",
+          "source_system": "SRC_KR_KDCA",
+          "temporal_granularity": "monthly",
+          "observations": 930,
+          "numeric_observations": 930,
+          "first": "2001-01-01 00:00:00+00:00",
+          "last": "2026-11-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "KR",
+          "source_system": "SRC_KR_KDCA",
+          "temporal_granularity": "unknown",
+          "observations": 360,
+          "numeric_observations": 360,
+          "first": "2026-06-01 00:00:00+00:00",
+          "last": "2026-11-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已有全国月度来源；API或原站更新频率不等于入库粒度。"
+    },
+    {
+      "code": "SG",
+      "name_zh": "新加坡",
+      "public_source_grains": {
+        "weekly": {
+          "series": 76,
+          "points": 27109,
+          "numeric_points": 27109,
+          "first": "2012-01-01",
+          "last": "2026-11-01"
+        }
+      },
+      "public_sources": {
+        "SRC_SG_CDA_WIDB": {
+          "weekly": 7638
+        },
+        "SRC_SG_DATA_GOV_WIDB": {
+          "weekly": 19471
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "SG",
+          "source_system": "SRC_SG_CDA_WIDB",
+          "temporal_granularity": "weekly",
+          "observations": 7638,
+          "numeric_observations": 7638,
+          "first": "2023-01-01 00:00:00+00:00",
+          "last": "2026-11-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "SG",
+          "source_system": "SRC_SG_DATA_GOV_WIDB",
+          "temporal_granularity": "weekly",
+          "observations": 19471,
+          "numeric_observations": 19471,
+          "first": "2012-01-01 00:00:00+00:00",
+          "last": "2022-12-25 00:00:00+00:00"
+        }
+      ],
+      "finding": "已有全国周度来源，2012–2022和2023+两条官方来源。"
+    },
+    {
+      "code": "AU",
+      "name_zh": "澳大利亚",
+      "public_source_grains": {
+        "monthly": {
+          "series": 16,
+          "points": 4444,
+          "numeric_points": 4444,
+          "first": "2000-01-01",
+          "last": "2026-10-01"
+        }
+      },
+      "public_sources": {
+        "SRC_AU_NINDSS": {
+          "monthly": 4444
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "AU",
+          "source_system": "SRC_AU_NINDSS",
+          "temporal_granularity": "monthly",
+          "observations": 45849,
+          "numeric_observations": 40254,
+          "first": "2000-01-01 00:00:00+00:00",
+          "last": "2026-10-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "AU",
+          "source_system": "SRC_AU_NINDSS",
+          "temporal_granularity": "unknown",
+          "observations": 146662,
+          "numeric_observations": 126056,
+          "first": "2000-01-01 00:00:00+00:00",
+          "last": "2026-10-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已有全国月度来源；州/领地数据独立，unknown不自动当月。"
+    },
+    {
+      "code": "NZ",
+      "name_zh": "新西兰",
+      "public_source_grains": {
+        "monthly": {
+          "series": 34,
+          "points": 3758,
+          "numeric_points": 3758,
+          "first": "2016-01-01",
+          "last": "2026-09-01"
+        }
+      },
+      "public_sources": {
+        "SRC_NZ_PHS": {
+          "monthly": 3758
+        }
+      },
+      "ledger_sources": [
+        {
+          "country_code": "NZ",
+          "source_system": "SRC_NZ_PHS",
+          "temporal_granularity": "monthly",
+          "observations": 3758,
+          "numeric_observations": 3758,
+          "first": "2016-01-01 00:00:00+00:00",
+          "last": "2026-09-01 00:00:00+00:00"
+        },
+        {
+          "country_code": "NZ",
+          "source_system": "SRC_NZ_PHS_DHB",
+          "temporal_granularity": "annual",
+          "observations": 17100,
+          "numeric_observations": 17100,
+          "first": "2006-01-01 00:00:00+00:00",
+          "last": "2025-01-01 00:00:00+00:00"
+        }
+      ],
+      "finding": "已有全国月度来源；DHB年值是地区来源，不能替代全国周/月。"
+    }
+  ],
+  "official_http_checks": {
+    "ET": {
+      "url": "https://ephi.gov.et/publications/latest-downloads/",
+      "status": 200,
+      "resolved_url": "https://ephi.gov.et/publications/latest-downloads/",
+      "bytes": 93226,
+      "title": "Latest Downloads – Ethiopian Public Health Institute",
+      "text_excerpt": "Latest Downloads – Ethiopian Public Health Institute .. for Emergency Call 8335   |   0112765340 EPHI 100 Years Anniversary EJPHN NDMC NIPN NTC × Home About us History of EPHI Leadership Fact Sheet Strategic Framework Relationship with sectors Sectorial Ministries Regions International Partners Contact Research Nutrition, environmental health and NCDs research directorate Nutrition, and Food Sc Research   Division NIPN National Information Platform for Nutrition (NIPN) Newsletters Nutrition And ",
+      "links": [
+        {
+          "text": "Non-Communicable Diseases Research Division (NCDRD)",
+          "url": "https://ephi.gov.et/non-communicable-diseases-research-division/"
+        },
+        {
+          "text": "Burden of Disease and Health Economic Research Division",
+          "url": "https://ephi.gov.et/burden-of-disease-and-health-economic-research-division/"
+        },
+        {
+          "text": "Zoonotic disease Research Division",
+          "url": "https://ephi.gov.et/zoonotic-disease-research-division/"
+        },
+        {
+          "text": "Neglected Tropical Diseases and Other Parasites Research Division",
+          "url": "https://ephi.gov.et/neglected-tropical-diseases-and-other-parasites-research-division/"
+        },
+        {
+          "text": "Infectious diseases Research Directorate",
+          "url": "https://ephi.gov.et/infectious-diseases-research-directorate/"
+        },
+        {
+          "text": "Vaccine preventable disease Research Division",
+          "url": "https://ephi.gov.et/research/vaccine-diagnostics-production/"
+        },
+        {
+          "text": "Arboviral and other viral diseases Research Division",
+          "url": "https://ephi.gov.et/arboviral-and-other-viral-diseases-research-division/"
+        },
+        {
+          "text": "National diseases Surveillance and Emergency Response",
+          "url": "https://ephi.gov.et/national-diseases-surveillance-and-emergency-response/"
+        },
+        {
+          "text": "Recent Downloads",
+          "url": "https://ephi.gov.et/publications/recent-downloads/"
+        },
+        {
+          "text": "Latest Downloads",
+          "url": "https://ephi.gov.et/publications/latest-downloads/"
+        },
+        {
+          "text": "Multi-sectoral Health Security Bulletin",
+          "url": "#1743062087683-eb009b22-f677"
+        },
+        {
+          "text": "Ethiopia Multisectorial Health Security Bulletin, Eight edition…..",
+          "url": "https://ephi.gov.et/wp-content/uploads/2025/04/Ethiopia-Multisectorial-Health-Security-Bulletin-Eight-edition.pdf"
+        },
+        {
+          "text": "Ethiopia-Health-Security-Bulletin-Vol.-6.pdf",
+          "url": "https://ephi.gov.et/wp-content/uploads/2024/05/Ethiopia-Health-Security-Bulletin-Vol.-6.pdf"
+        },
+        {
+          "text": "Ethiopia Multi Sectoral Health Security Bulletin Vol. 7th ( ( Seventh Edition) _March_2025_",
+          "url": "https://ephi.gov.et/wp-content/uploads/2025/03/Ethiopia-Multi-Sectoral-Health-Security-Bulletin-Vol.-7th-Seventh-Edition-_March_2025_.pdf"
+        },
+        {
+          "text": "Covid-19 Confirmed Cases",
+          "url": "https://ephi.gov.et/download/covid-19-confirmed-cases/"
+        },
+        {
+          "text": "Login",
+          "url": "https://ephi.gov.et/wp-login.php?redirect_to=https://ephi.gov.et/publications/latest-downloads/"
+        },
+        {
+          "text": "Ethiopian Weekly Epidemiological Bulletin",
+          "url": "#1614545349182-ebca872e-ada7"
+        },
+        {
+          "text": "EPHI PHEOC COVID-19",
+          "url": "https://ephi.gov.et/download/ephi-pheoc-covid-19/"
+        },
+        {
+          "text": "Download",
+          "url": "#"
+        },
+        {
+          "text": "NCD fact sheet",
+          "url": "https://ephi.gov.et/download/ncd-fact-sheet/"
+        }
+      ],
+      "sha256": "cc1997c19728dbe9ec45bb897416cd52b9947aacabaf8f973c18f6ed2398f88e"
+    },
+    "KE": {
+      "url": "https://www.health.go.ke/",
+      "status": 200,
+      "resolved_url": "https://www.health.go.ke/",
+      "bytes": 99012,
+      "title": "MoH | Ministry of Health",
+      "text_excerpt": "MoH | Ministry of Health Skip to main content | Staff Mail | A-Z Listing Select Language English French Japanese Swahili Main navigation Home Alerts Cholera Covid-19 Ebola Mpox Mpox Key messages MPOX FAQ About Us Who We Are Background of MoH Vision, Mission & Mandate Service Charter Our Structure MoH Leadership SAGA’s, Regulatory Bodies and Councils State Departments Services Travelers Information Truck Drivers MoH Self Service Portal Register to Donate Blood Travel Related FAQs Media Center New",
+      "links": [
+        {
+          "text": "MOH Weekly News",
+          "url": "/moh-weekly-news"
+        },
+        {
+          "text": "Downloads",
+          "url": "/downloads"
+        },
+        {
+          "text": "Environmental and Social Safeguards",
+          "url": "/esia-reports"
+        }
+      ],
+      "sha256": "4e42328ab10ff39c7da05bfb0ce479d1d8ae49c6f75c17df214cb64aaf545499"
+    },
+    "UG": {
+      "url": "https://uniph.go.ug/category/bulletins/",
+      "status": 406,
+      "resolved_url": "https://uniph.go.ug/category/bulletins/",
+      "bytes": 226,
+      "title": "Not Acceptable!",
+      "text_excerpt": "Not Acceptable! Not Acceptable! An appropriate representation of the requested resource could not be found on this server. This error was generated by Mod_Security.",
+      "links": [],
+      "sha256": "80a265bed528211aa708dcd58f7a95db36eeb7f873c6fe4ddab0b3a1dc0973a4"
+    },
+    "GH": {
+      "url": "https://ghs.gov.gh/",
+      "status": 200,
+      "resolved_url": "https://ghs.gov.gh/",
+      "bytes": 363319,
+      "title": "Ghana Health Service - Your Health Our Concern",
+      "text_excerpt": "Ghana Health Service - Your Health Our Concern Have a complaint or suggestion? Let us hear from you! Home About Us Divisions Regions Facilities Inclusive Health Care Medical Tourism Resource Hub Media & Updates en Welcome to Ghana Health Service All communities having access to timely, quality and comprehensive health care. Find Healthcare Facility Latest News & Events About GHS Ebola disease · Port Health Travelling to Ghana? Declare your health before you arrive. Every passenger arriving in Gh",
+      "links": [
+        {
+          "text": "Read more",
+          "url": "/news-and-events/ghs-and-boehringer-ingelheim-launch-crm-patient-africa-program-to-tackle-chronic-kidney-disease"
+        },
+        {
+          "text": "View All",
+          "url": "/disease-outbreaks"
+        },
+        {
+          "text": "Diseases Outbreaks Statistics Track disease outbreaks and statistics Explore feature",
+          "url": "/disease-outbreaks"
+        }
+      ],
+      "sha256": "eaf867922a8a72df16ed8596a912f82b4f073fef105057eb232686ac0fe4c922"
+    },
+    "TZ": {
+      "url": "https://www.moh.go.tz/services/27",
+      "status": 200,
+      "resolved_url": "https://www.moh.go.tz/services/27",
+      "bytes": 43938,
+      "title": "Services|Ministry of Health",
+      "text_excerpt": "Services|Ministry of Health Ongea na Mhe. Waziri wa Afya Kiswahili English Jamhuri ya Muungano wa Tanzania Wizara Ya Afya Wizara Ya Afya Toggle navigation Mwanzo Kuhusu sisi Kuhusu Wizara Muundo wa Utawala Dira na Dhima Kazi Zetu Mkataba Wa Huduma Kwa Wateja Utawala Idara Utawala na Rasilimali Watu Sera na Mipango Huduma Za Kinga Huduma Za Tiba Uhakiki Ubora Fedha na Akaunti Mafunzo Na Maendeleo Ya Watumishi Teknolojia Ya Hbari Na Mawasiliano Nursing And Midwifery Vitengo Mawasiliano Serikalini ",
+      "links": [
+        {
+          "text": "Ripoti",
+          "url": "https://www.moh.go.tz/report"
+        }
+      ],
+      "sha256": "291376523a29da844c4da8d4b58cf6b76fb6281c8dfeed7498d768b1563d8bec"
+    },
+    "ID": {
+      "url": "https://skdr.surveilans.org/",
+      "status": 200,
+      "resolved_url": "https://skdr.kemkes.go.id/auth",
+      "bytes": 6369,
+      "title": "Auth | Auth",
+      "text_excerpt": "Auth | Auth Auth | Auth ERROR: Authentication Form Sign In",
+      "links": [],
+      "sha256": "0021f787a66f7f877a705b3f70522816c7b36cddce56e408582e664890b3f1b5"
+    },
+    "PH": {
+      "url": "https://doh.gov.ph/epidemiology-bureau/",
+      "status": 403,
+      "resolved_url": "https://doh.gov.ph/epidemiology-bureau/",
+      "bytes": 5513,
+      "title": "Just a moment...",
+      "text_excerpt": "Just a moment... Enable JavaScript and cookies to continue",
+      "links": [],
+      "sha256": "483ff84829f34fb5965ab0d8a5af3ef10ca6e048394bfd836563acd803321a3d"
+    },
+    "MM": {
+      "url": "https://www.who.int/myanmar/emergencies",
+      "status": 200,
+      "resolved_url": "https://www.who.int/myanmar/emergencies",
+      "bytes": 106176,
+      "title": "\n\tEmergencies\n",
+      "text_excerpt": "Emergencies Skip to main content Global Regions WHO Regional websites Africa Americas South-East Asia Europe Eastern Mediterranean Western Pacific Countries Countries in the WHO South-East Asia  Region: Bangladesh Bhutan Democratic People’s Republic of Korea India Maldives Myanmar Nepal Sri Lanka Thailand Timor-Leste When autocomplete results are available use up and down arrows to review and enter to select. South-East Asia Myanmar Home Health topics News Our work Emergencies About us Multimedi",
+      "links": [
+        {
+          "text": "1 May 2021 News release WHO’s Attack on Healthcare Initiative advocates for safeguarding healthcare; does not aim at reporting incidents",
+          "url": "https://www.who.int/myanmar/news/detail/01-05-2021-who-s-attack-on-healthcare-initiative-advocates-for-safeguarding-healthcare-does-not-aim-at-reporting-incidents"
+        },
+        {
+          "text": "From Detection to Prevention: How Disease Surveillance protects public health in Myanmar",
+          "url": "https://www.who.int/myanmar/activities/from-detection-to-prevention--how-disease-surveillance-protects-public-health-in-myanmar"
+        },
+        {
+          "text": "Health Cluster Sitrep #5: 23 June 2023",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/hc_myanmar_bulletinno_5_23june2023.pdf?sfvrsn=6c3662ff_3"
+        },
+        {
+          "text": "Health Cluster Sitrep #4: 9 June 2023",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/hc_myanmar_bulletinno_4_9-june-2023.pdf?sfvrsn=548a8bbe_3"
+        },
+        {
+          "text": "Health Cluster Sitrep #3: 2 June 2023",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/hc_myanmar_bulletinno_3_2june2023.pdf?sfvrsn=d4676a6b_3"
+        },
+        {
+          "text": "Health Cluster Sitrep #2: 26 May 2023",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/hc_myanmar_bulletin_no_2_26may2023.pdf?sfvrsn=d9ed0e4c_5"
+        },
+        {
+          "text": "Myanmar: Cyclone Mocha Flash Appeal, May 2023",
+          "url": "https://reliefweb.int/report/myanmar/myanmar-cyclone-mocha-flash-appeal-may-2023"
+        },
+        {
+          "text": "Myanmar Health Cluster Bulletin, February 2025",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/myanmar-health-cluster-bulletin_february-2025.pdf?sfvrsn=e1a7bbee_2"
+        },
+        {
+          "text": "Myanmar Health Cluster Bulletin, January 2025",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/myanmar-health-cluster-bulletin_january-2025.pdf?sfvrsn=9af8e04e_3"
+        },
+        {
+          "text": "Myanmar Health Cluster Bulletin, December 2024",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/myanmar-health-cluster-bulletin_december2024.pdf?sfvrsn=b5205668_3"
+        },
+        {
+          "text": "Myanmar Health Cluster Bulletin, July-November 2024",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/myanmar-health-cluster-bulletin_jul-nov2024.pdf?sfvrsn=89b1b1cc_2"
+        },
+        {
+          "text": "Myanmar Health Cluster Bulletin - Quarter One – 2024",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/myanmar-health-cluster-bulletin-(q1-2024).pdf?sfvrsn=d286f5b9_3"
+        },
+        {
+          "text": "Health Cluster Bulletin, Quarter Four - 2023",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/health-cluster-bulletin_q4_2023_final.pdf?sfvrsn=c215ef3e_1"
+        },
+        {
+          "text": "Health Cluster Bulletin, Quarter Three - 2023",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/health-cluster-bulletin_q3_2023_final.pdf?sfvrsn=ab8ae789_3"
+        },
+        {
+          "text": "Health Cluster Bulletin, January - June 2023",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/documents/health-cluster-bulletin_jan-jun-2023.pdf?sfvrsn=852229a6_3"
+        },
+        {
+          "text": "",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/health-cluster-bulletin_myanmar_issue_jul-dec-2022_final.pdf?sfvrsn=edf132b1_3"
+        },
+        {
+          "text": "Health Cluster Bulletin, July - December 2022",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/health-cluster-bulletin_myanmar_issue_jul-dec-2022_final.pdf?sfvrsn=edf132b1_3"
+        },
+        {
+          "text": "",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/health-cluster-bulletin_2020_11-dec-2020_web.pdf?sfvrsn=1a9e4624_3"
+        },
+        {
+          "text": "Health Cluster Bulletin, January - June 2022",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/health-cluster-bulletin_issue_jan-jun-2022-_final.pdf?sfvrsn=3497c317_3"
+        },
+        {
+          "text": "Health Cluster Bulletin, January - June 2020",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/myanmar/health-cluster-bulletin_2020_11-dec-2020_web.pdf?sfvrsn=1a9e4624_3"
+        }
+      ],
+      "sha256": "1b4bfc3c25e4b90d0b04cf51ce9b000a23993dca5a419c34d01a0be889b12dbb"
+    },
+    "BN": {
+      "url": "https://moh.gov.bn/",
+      "status": 200,
+      "resolved_url": "https://moh.gov.bn/",
+      "bytes": 227571,
+      "title": "Ministry of Health - Brunei Darussalam",
+      "text_excerpt": "Ministry of Health - Brunei Darussalam Skip to content Care at MOH Close Care at MOH Open Care at MOH National Health Screening Programme Paediatrics Department Dental  Services Foreign Worker Health Screening Services Pharmacy Services Cardiology Department Radiology Services Vaccination Services View All Services News Highlights Close News Highlights Open News Highlights Newsroom Health Messages from the Minister (Perutusan) Connect Sign up for e-Newsletter Discover More About Us Close About U",
+      "links": [
+        {
+          "text": "ACTINOMYCES ODONTOLYTICUS: A RARE CAUSE OF PRIMARY CHRONIC LACRIMAL CANALICULITIS. Rui Ping CHEW, Akmal Haliza ZAMLI, Julieana MUHAMMAD, Kamariah ABDUL JALIL. Category: Case Report",
+          "url": "https://demowebsite1.net/ministry-of-health-bn/wp-content/uploads/2023/11/BIMJ2023-19-70-74.pdf"
+        }
+      ],
+      "sha256": "fd18c51e1285783247a597a7bef0b7d2b36fcb32e72d79b2a26abd79fef9cbef"
+    },
+    "TL": {
+      "url": "https://www.who.int/timorleste/publications",
+      "status": 200,
+      "resolved_url": "https://www.who.int/timorleste/publications",
+      "bytes": 83157,
+      "title": "\n\tPublications\n",
+      "text_excerpt": "Publications Skip to main content Global Regions WHO Regional websites Africa Americas South-East Asia Europe Eastern Mediterranean Western Pacific Countries Countries in the WHO South-East Asia  Region: Bangladesh Bhutan Democratic People’s Republic of Korea India Maldives Myanmar Nepal Sri Lanka Thailand Timor-Leste When autocomplete results are available use up and down arrows to review and enter to select. South-East Asia Timor-Leste Home Health topics News Our work Emergencies About us Home",
+      "links": [
+        {
+          "text": "Download",
+          "url": "https://iris.who.int/server/api/core/bitstreams/f1ea0826-d14a-4fec-a1f0-7ae303609e47/content"
+        },
+        {
+          "text": "Download",
+          "url": "https://iris.who.int/server/api/core/bitstreams/49de3c27-0bcf-45ec-a4a2-b5f92f8193f1/content"
+        },
+        {
+          "text": "Download",
+          "url": "https://iris.who.int/server/api/core/bitstreams/a780a450-d6f6-4138-a5bb-be3fee4a8225/content"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/timor-leste-docs/1_28092021-final_accelerated-plan-tb-in-next-5-years_final.pdf?sfvrsn=d6fe2485_1&download=true"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/timor-leste/cresh-policy---strategy.pdf?sfvrsn=640ef2b_3&download=true"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/searo/timor-leste/hcwm-policy.pdf?sfvrsn=405a816_3&download=true"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/timor-leste-docs/report-of-the-jerm_tb_hiv-prog-review-19_feb2024-with-figures-final.pdf?sfvrsn=26e14c86_1&download=true"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/timor-leste-docs/2_art-guidelines---2-may-2023-final.pdf?sfvrsn=9875b8e_1&download=true"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/timor-leste-docs/8_timor-leste-hhs-nsp_08-may-2023.pdf?sfvrsn=ccc4dc51_1&download=true"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/2021-dha-docs/7_sbcc-strategy-for-por--timor-leste_final_04-may-2023.pdf?sfvrsn=49832f31_1&download=true"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/timor-leste-docs/6_national-strategic-plan-for-leprosy_clean_03apri2023.pdf?sfvrsn=24c49bf1_1&download=true"
+        },
+        {
+          "text": "National Guideline for Clinical Management of Dengue 2022",
+          "url": "/timorleste/publications/m/item/national-guideline-for-clinical-management-of-dengue-2022"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/2021-dha-docs/5_national-clinical-guideline-of-dengue-timor-leste_clean_final-12-dec-2022.pdf?sfvrsn=e80bf9cd_1&download=true"
+        },
+        {
+          "text": "Read More",
+          "url": "/timorleste/publications/m/item/national-guideline-for-clinical-management-of-dengue-2022"
+        },
+        {
+          "text": "National strategic plan for Integrated Vector-borne diseases,Timor-Leste2021-2030",
+          "url": "/timorleste/publications/m/item/national-strategic-plan-for-integrated-vector-borne-diseases-timor-leste2021-2030"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/timor-leste-docs/4_ivbdc-nsp-timore-strategic-plan-2021-2030_04-may-2023.pdf?sfvrsn=1e7bfcb3_1&download=true"
+        },
+        {
+          "text": "Read More",
+          "url": "/timorleste/publications/m/item/national-strategic-plan-for-integrated-vector-borne-diseases-timor-leste2021-2030"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/timor-leste-docs/3_emtct-hiv-syphilis-hep-b_02052023.pdf?sfvrsn=f267fa17_1&download=true"
+        },
+        {
+          "text": "TB Epidemiological Review 2023 \nTimor-Leste",
+          "url": "/timorleste/publications/m/item/tb-epidemiological-review-2023-timor-leste"
+        },
+        {
+          "text": "Download",
+          "url": "https://cdn.who.int/media/docs/default-source/timor-leste-docs/tb_epi_report_2023_24_nov_2023.pdf?sfvrsn=31ac5be0_1&download=true"
+        }
+      ],
+      "sha256": "9b3e9af97b204abd45a45a7ac4bd9fa6bf09e70125f7c73b79a41eab07bd6365"
+    },
+    "VN": {
+      "url": "https://www.who.int/westernpacific/wpro-emergencies/surveillance/dengue",
+      "status": 200,
+      "resolved_url": "https://www.who.int/westernpacific/wpro-emergencies/surveillance/dengue",
+      "bytes": 488682,
+      "title": "\n\tDengue\n",
+      "text_excerpt": "Dengue Skip to main content Global Regions WHO Regional websites Africa Americas South-East Asia Europe Eastern Mediterranean Western Pacific Countries Countries, territories and areas in the WHO Western Pacific Region: American Samoa (USA) Australia Brunei Darussalam Cambodia China Cook Islands Fiji French Polynesia (France) Guam (USA) Hong Kong SAR (China) Indonesia Japan Kiribati Lao People's Democratic Republic Macao SAR (China) Malaysia Marshall Islands Micronesia, Federated States of Mongo",
+      "links": [
+        {
+          "text": "Coronavirus disease (COVID-19)",
+          "url": "/westernpacific/menu/mega-menu/all-health-topics/popular-topics/coronavirus-disease-(covid-19)"
+        },
+        {
+          "text": "The Regional Director's Report",
+          "url": "/westernpacific/about/governance/regional-director/report"
+        },
+        {
+          "text": "Coronavirus disease (COVID-19)",
+          "url": "/westernpacific/menu/mega-menu/emergencies/outbreaks-and-emergencies/pneumonia-in-wuhan-china"
+        },
+        {
+          "text": "Dengue outbreak",
+          "url": "/westernpacific/menu/mega-menu/emergencies/outbreaks-and-emergencies/dengue-outbreak"
+        },
+        {
+          "text": "Surveillance",
+          "url": "/westernpacific/menu/mega-menu/emergencies/surveillance"
+        },
+        {
+          "text": "Respiratory viruses",
+          "url": "/westernpacific/menu/mega-menu/emergencies/surveillance/respiratory-viruses"
+        },
+        {
+          "text": "Avian influenza",
+          "url": "/westernpacific/menu/mega-menu/emergencies/surveillance/avian-influenza"
+        },
+        {
+          "text": "Dengue",
+          "url": "/westernpacific/menu/mega-menu/emergencies/surveillance/dengue"
+        },
+        {
+          "text": "Pacific islands",
+          "url": "/westernpacific/menu/mega-menu/emergencies/surveillance/pacific-islands"
+        },
+        {
+          "text": "11 November 2026 Dengue Situation Update # 758: 12 November 2026 Dengue Situation Update # 758: 12 November 2026",
+          "url": "https://www.who.int/westernpacific/publications/m/item/dengue-situation-update---758--12-november-2026"
+        },
+        {
+          "text": "28 October 2026 Dengue Situation Update # 757: 29 October 2026 Dengue Situation Update # 757: 29 October 2026",
+          "url": "https://www.who.int/westernpacific/publications/m/item/dengue-situation-update---757--29-october-2026"
+        },
+        {
+          "text": "14 October 2026 Dengue Situation Update # 756: 15 October 2026 Dengue Situation Update # 756: 15 October 2026",
+          "url": "https://www.who.int/westernpacific/publications/m/item/dengue-situation-update---756--15-october-2026"
+        },
+        {
+          "text": "30 September 2026 Dengue Situation Update # 757: 1 October 2026 Dengue Situation Update # 757: 1 October 2026",
+          "url": "https://www.who.int/westernpacific/publications/m/item/dengue-situation-update---757--1-october-2026"
+        },
+        {
+          "text": "16 September 2026 Dengue Situation Update # 754: 17 September 2026 Dengue Situation Update # 754: 17 September 2026",
+          "url": "https://www.who.int/westernpacific/publications/m/item/dengue-situation-update---754--17-september-2026"
+        },
+        {
+          "text": "2 September 2026 Dengue Situation Update # 753: 3 September 2026 Dengue Situation Update # 753: 3 September 2026",
+          "url": "https://www.who.int/westernpacific/publications/m/item/dengue-situation-update---753--3-september-2026"
+        },
+        {
+          "text": "Dengue Situation Updates 2026",
+          "url": "https://iris.who.int/handle/10665/384752"
+        },
+        {
+          "text": "Dengue Situation Updates 2025",
+          "url": "https://apps.who.int/iris/handle/10665/380305"
+        },
+        {
+          "text": "Dengue Situation Updates 2024",
+          "url": "https://apps.who.int/iris/handle/10665/375485"
+        },
+        {
+          "text": "Dengue Situation Updates 2023",
+          "url": "https://apps.who.int/iris/handle/10665/365676"
+        },
+        {
+          "text": "Dengue Situation Updates 2022",
+          "url": "http://apps.who.int/iris/handle/10665/352792"
+        }
+      ],
+      "sha256": "80c37cac13179c9b9d1eb08000edef004ff21a0a6fe78da37785846297569514"
+    },
+    "NG": {
+      "url": "https://ncdc.gov.ng/reports/weekly",
+      "status": 200,
+      "resolved_url": "https://ncdc.gov.ng/reports/weekly",
+      "bytes": 236227,
+      "title": "Nigeria Centre for Disease Control and Prevention",
+      "text_excerpt": "Nigeria Centre for Disease Control and Prevention Nigeria Centre for Disease Control and Prevention Protecting the health of Nigerians Toggle navigation Home About NCDC Departments Leadership Office of the DG Publications Weekly Epidemiological Reports Situation Reports Project Reports Annual Reports Guidelines/Protocol Establishment/Guiding Documents Research IDSR Forms State Incident Action Plan Diseases A-Z News General News Disease Outbreak News Ebola Training NFELTP Internship NCDC Tour Pro",
+      "links": [
+        {
+          "text": "Weekly Epidemiological Reports",
+          "url": "/reports/weekly"
+        },
+        {
+          "text": "Situation Reports",
+          "url": "/diseases/sitreps"
+        },
+        {
+          "text": "Project Reports",
+          "url": "/reports/projects"
+        },
+        {
+          "text": "Annual Reports",
+          "url": "/reports/annualreports"
+        },
+        {
+          "text": "Guidelines/Protocol",
+          "url": "/diseases/guidelines"
+        },
+        {
+          "text": "Establishment/Guiding Documents",
+          "url": "/reports/establishment"
+        },
+        {
+          "text": "IDSR Forms",
+          "url": "/idsr_forms"
+        },
+        {
+          "text": "Diseases",
+          "url": "#"
+        },
+        {
+          "text": "A-Z",
+          "url": "/diseases/a-z"
+        },
+        {
+          "text": "Disease Outbreak News",
+          "url": "#"
+        },
+        {
+          "text": "Epi-Week 37",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/9/37"
+        },
+        {
+          "text": "Epi-Week 39",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/9/39"
+        },
+        {
+          "text": "Epi-Week 40",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/10/40"
+        },
+        {
+          "text": "Epi-Week 41",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/10/41"
+        },
+        {
+          "text": "Epi-Week 42",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/10/42"
+        },
+        {
+          "text": "Epi-Week 43",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/10/43"
+        },
+        {
+          "text": "Epi-Week 44",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/11/44"
+        },
+        {
+          "text": "Epi-Week 45",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/11/45"
+        },
+        {
+          "text": "Epi-Week 46",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/11/46"
+        },
+        {
+          "text": "Epi-Week 47",
+          "url": "https://ncdc.gov.ng/reports/weekly/2016/11/47"
+        }
+      ],
+      "sha256": "e65d2a672aa1b3f21cdad1c5e5caa670fef4af31437a16b5dc330081134042db"
+    },
+    "ZA": {
+      "url": "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
+      "error": "SSLError: HTTPSConnectionPool(host='www.nicd.ac.za', port=443): Max retries exceeded with url: /nmc-overview/nmc-monthly-surveillance-report/ (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:",
+      "links": [],
+      "text_excerpt": ""
+    },
+    "MW": {
+      "url": "https://phim.health.gov.mw/wp-json/wp/v2/search?search=IDSR&per_page=100&page=1",
+      "status": 200,
+      "resolved_url": "https://phim.health.gov.mw/wp-json/wp/v2/search?search=IDSR&per_page=100&page=1",
+      "bytes": 22022,
+      "title": null,
+      "text_excerpt": "[{\"id\":42944,\"title\":\"IDSR Epidemiological Bulletin \\u2013 Week 43.\",\"url\":\"https:\\/\\/phim.health.gov.mw\\/idsr-epidemiological-bulletin-week-43\\/\",\"type\":\"post\",\"subtype\":\"post\",\"_links\":{\"self\":[{\"embeddable\":true,\"href\":\"https:\\/\\/phim.health.gov.mw\\/wp-json\\/wp\\/v2\\/posts\\/42944\",\"targetHints\":{\"allow\":[\"GET\"]}}],\"about\":[{\"href\":\"https:\\/\\/phim.health.gov.mw\\/wp-json\\/wp\\/v2\\/types\\/post\"}],\"collection\":[{\"href\":\"https:\\/\\/phim.health.gov.mw\\/wp-json\\/wp\\/v2\\/search\"}]}},{\"id\":42936,\"title\":",
+      "links": [],
+      "sha256": "06f5aff4f71641a8b4c33fbd39bd3a69b1978e98c1d43a2ea72ea4920b374321"
+    },
+    "KH": {
+      "url": "https://cdcmoh.gov.kh/surveillance/camewarn",
+      "status": 200,
+      "resolved_url": "https://cdcmoh.gov.kh/surveillance/camewarn",
+      "bytes": 222370,
+      "title": "CamEWARN",
+      "text_excerpt": "CamEWARN Home COVID-19 Announcements Vaccine Information Daily Surveillance Reports Joint WHO-MoH Situation Report Event Surveillance Report COVID-19 documents COVID-19 Maps COVID-19 Global Cases Validation Application on Payment Guarantee/Invitation Quarantine Documents Vaccination Requirement Quarantine formality Activities Surveillance CamEWARN Monthly Influenza bulletins Influenza Surveillance MPOX Situation Report CISED-Dengue Line Listing MBDS Viral Hepatitis Prevention & Control AMR Foodb",
+      "links": [
+        {
+          "text": "Daily Surveillance Reports",
+          "url": "/resource-documents/daily-surveillance-reports"
+        },
+        {
+          "text": "Joint WHO-MoH Situation Report",
+          "url": "/resource-documents/who-moh-situation-report"
+        },
+        {
+          "text": "Event Surveillance Report",
+          "url": "/resource-documents/event-surveillance-report"
+        },
+        {
+          "text": "CamEWARN",
+          "url": "/surveillance/camewarn"
+        },
+        {
+          "text": "Monthly Influenza bulletins",
+          "url": "/surveillance/ili-surveillance-2"
+        },
+        {
+          "text": "Influenza Surveillance",
+          "url": "/surveillance/influenza-surveillance"
+        },
+        {
+          "text": "MPOX Situation Report",
+          "url": "/surveillance/mpox-situation-report"
+        },
+        {
+          "text": "CISED-Dengue",
+          "url": "/surveillance/cised-dengue"
+        },
+        {
+          "text": "Line Listing",
+          "url": "/surveillance/line-list"
+        },
+        {
+          "text": "MBDS",
+          "url": "/surveillance/mbds-menu"
+        },
+        {
+          "text": "Viral Hepatitis",
+          "url": "/surveillance/viral-hepatitis"
+        },
+        {
+          "text": "Foodborne Disease",
+          "url": "/prevention-control/foodborne-disease"
+        },
+        {
+          "text": "Project report",
+          "url": "/health-security-project/project-implementation/project-report"
+        },
+        {
+          "text": "CamEWARN",
+          "url": "/surveillance/camewarn"
+        },
+        {
+          "text": "Print",
+          "url": "/surveillance/camewarn?tmpl=component&print=1&page="
+        },
+        {
+          "text": "CamEWARN",
+          "url": "/surveillance/camewarn/15-surveillance/camwwarn"
+        },
+        {
+          "text": "Threshold_Graphic",
+          "url": "/images/Document/Camewarn/Graphic_zero_Reporting_by_week.pdf"
+        },
+        {
+          "text": "2015",
+          "url": "/images/Document/Camewarn/Weekly_reports/Report_2015.zip"
+        },
+        {
+          "text": "2016",
+          "url": "/images/Document/Camewarn/Weekly_reports/Report_2016.zip"
+        },
+        {
+          "text": "2017",
+          "url": "/images/Document/Camewarn/Weekly_reports/2017/2017.zip"
+        }
+      ],
+      "sha256": "a3ebb8f36aa36de591b5416333b43423b1ab0da1a1f3382f2519347a243bfea8"
+    },
+    "TH": {
+      "url": "https://dds.moph.go.th/",
+      "error": "SSLError: HTTPSConnectionPool(host='dds.moph.go.th', port=443): Max retries exceeded with url: / (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1029)')))",
+      "links": [],
+      "text_excerpt": ""
+    }
+  },
+  "flunet_latest_row_probes": {
+    "ET": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27ETH%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1052,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "AFR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "NH",
+          "ITZ": "FLU_EST_AFR",
+          "COUNTRY_CODE": "ETH",
+          "COUNTRY_AREA_TERRITORY": "Ethiopia",
+          "ISO_WEEKSTARTDATE": "2026-09-28",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 40,
+          "MMWR_WEEKSTARTDATE": "2026-09-27",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 39,
+          "ORIGIN_SOURCE": "SENTINEL",
+          "SPEC_PROCESSED_NB": 59,
+          "SPEC_RECEIVED_NB": 59,
+          "AH1N12009": 0,
+          "AH1": null,
+          "AH3": 2,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 0,
+          "ANOTSUBTYPABLE": 0,
+          "AOTHER_SUBTYPE": 0,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": 2,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": 0,
+          "BVIC_DELUNK": null,
+          "BYAM": 0,
+          "BNOTDETERMINED": 2,
+          "INF_B": 2,
+          "INF_ALL": 4,
+          "INF_NEGATIVE": 55,
+          "ILI_ACTIVITY": null,
+          "ADENO": null,
+          "BOCA": null,
+          "HUMAN_CORONA": null,
+          "METAPNEUMO": null,
+          "PARAINFLUENZA": null,
+          "RHINO": null,
+          "RSV_PROCESSED": null,
+          "RSV": 0,
+          "OTHERRESPVIRUS": null,
+          "OTHER_RESPVIRUS_DETAILS": null,
+          "LAB_RESULT_COMMENT": null,
+          "WCR_COMMENT": null,
+          "ISO2": "ET",
+          "ISOYW": 202640,
+          "MMWRYW": 202639,
+          "PSOURCE_SUBTYPE_INF": 1,
+          "PSOURCE_PPOS_INF": 1,
+          "PSOURCE_RSV": 1
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    },
+    "KE": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27KEN%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1050,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "AFR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "NH",
+          "ITZ": "FLU_EST_AFR",
+          "COUNTRY_CODE": "KEN",
+          "COUNTRY_AREA_TERRITORY": "Kenya",
+          "ISO_WEEKSTARTDATE": "2026-10-19",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 43,
+          "MMWR_WEEKSTARTDATE": "2026-10-18",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 42,
+          "ORIGIN_SOURCE": "SENTINEL",
+          "SPEC_PROCESSED_NB": 62,
+          "SPEC_RECEIVED_NB": 62,
+          "AH1N12009": 21,
+          "AH1": null,
+          "AH3": 0,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 0,
+          "ANOTSUBTYPABLE": 0,
+          "AOTHER_SUBTYPE": 0,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": 21,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": 1,
+          "BVIC_DELUNK": null,
+          "BYAM": 0,
+          "BNOTDETERMINED": 0,
+          "INF_B": 1,
+          "INF_ALL": 22,
+          "INF_NEGATIVE": 40,
+          "ILI_ACTIVITY": null,
+          "ADENO": null,
+          "BOCA": null,
+          "HUMAN_CORONA": null,
+          "METAPNEUMO": null,
+          "PARAINFLUENZA": null,
+          "RHINO": null,
+          "RSV_PROCESSED": 22,
+          "RSV": 0,
+          "OTHERRESPVIRUS": null,
+          "OTHER_RESPVIRUS_DETAILS": null,
+          "LAB_RESULT_COMMENT": null,
+          "WCR_COMMENT": null,
+          "ISO2": "KE",
+          "ISOYW": 202643,
+          "MMWRYW": 202642,
+          "PSOURCE_SUBTYPE_INF": 1,
+          "PSOURCE_PPOS_INF": 1,
+          "PSOURCE_RSV": 1
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    },
+    "UG": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27UGA%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1051,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "AFR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "NH",
+          "ITZ": "FLU_EST_AFR",
+          "COUNTRY_CODE": "UGA",
+          "COUNTRY_AREA_TERRITORY": "Uganda",
+          "ISO_WEEKSTARTDATE": "2026-11-02",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 45,
+          "MMWR_WEEKSTARTDATE": "2026-11-01",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 44,
+          "ORIGIN_SOURCE": "SENTINEL",
+          "SPEC_PROCESSED_NB": 48,
+          "SPEC_RECEIVED_NB": 48,
+          "AH1N12009": 1,
+          "AH1": null,
+          "AH3": 0,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 0,
+          "ANOTSUBTYPABLE": 0,
+          "AOTHER_SUBTYPE": 0,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": 1,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": 0,
+          "BVIC_DELUNK": null,
+          "BYAM": null,
+          "BNOTDETERMINED": 0,
+          "INF_B": 0,
+          "INF_ALL": 1,
+          "INF_NEGATIVE": 47,
+          "ILI_ACTIVITY": null,
+          "ADENO": null,
+          "BOCA": null,
+          "HUMAN_CORONA": null,
+          "METAPNEUMO": null,
+          "PARAINFLUENZA": null,
+          "RHINO": null,
+          "RSV_PROCESSED": 19,
+          "RSV": 1,
+          "OTHERRESPVIRUS": null,
+          "OTHER_RESPVIRUS_DETAILS": null,
+          "LAB_RESULT_COMMENT": null,
+          "WCR_COMMENT": null,
+          "ISO2": "UG",
+          "ISOYW": 202645,
+          "MMWRYW": 202644,
+          "PSOURCE_SUBTYPE_INF": 1,
+          "PSOURCE_PPOS_INF": 1,
+          "PSOURCE_RSV": 1
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    },
+    "GH": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27GHA%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1056,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "AFR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "NH",
+          "ITZ": "FLU_WST_AFR",
+          "COUNTRY_CODE": "GHA",
+          "COUNTRY_AREA_TERRITORY": "Ghana",
+          "ISO_WEEKSTARTDATE": "2026-10-05",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 41,
+          "MMWR_WEEKSTARTDATE": "2026-10-04",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 40,
+          "ORIGIN_SOURCE": "SENTINEL",
+          "SPEC_PROCESSED_NB": 263,
+          "SPEC_RECEIVED_NB": 263,
+          "AH1N12009": 0,
+          "AH1": null,
+          "AH3": 4,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 0,
+          "ANOTSUBTYPABLE": 0,
+          "AOTHER_SUBTYPE": 0,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": 4,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": 43,
+          "BVIC_DELUNK": null,
+          "BYAM": 0,
+          "BNOTDETERMINED": 0,
+          "INF_B": 43,
+          "INF_ALL": 47,
+          "INF_NEGATIVE": 216,
+          "ILI_ACTIVITY": null,
+          "ADENO": null,
+          "BOCA": null,
+          "HUMAN_CORONA": null,
+          "METAPNEUMO": null,
+          "PARAINFLUENZA": null,
+          "RHINO": null,
+          "RSV_PROCESSED": 18,
+          "RSV": null,
+          "OTHERRESPVIRUS": null,
+          "OTHER_RESPVIRUS_DETAILS": null,
+          "LAB_RESULT_COMMENT": null,
+          "WCR_COMMENT": null,
+          "ISO2": "GH",
+          "ISOYW": 202641,
+          "MMWRYW": 202640,
+          "PSOURCE_SUBTYPE_INF": 1,
+          "PSOURCE_PPOS_INF": 1,
+          "PSOURCE_RSV": 1
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    },
+    "TZ": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27TZA%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1091,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "AFR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "SH",
+          "ITZ": "FLU_EST_AFR",
+          "COUNTRY_CODE": "TZA",
+          "COUNTRY_AREA_TERRITORY": "United Republic of Tanzania",
+          "ISO_WEEKSTARTDATE": "2026-11-09",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 46,
+          "MMWR_WEEKSTARTDATE": "2026-11-08",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 45,
+          "ORIGIN_SOURCE": "NOTDEFINED",
+          "SPEC_PROCESSED_NB": 136,
+          "SPEC_RECEIVED_NB": 136,
+          "AH1N12009": 0,
+          "AH1": null,
+          "AH3": 4,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 0,
+          "ANOTSUBTYPABLE": null,
+          "AOTHER_SUBTYPE": 0,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": 4,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": 0,
+          "BVIC_DELUNK": null,
+          "BYAM": 0,
+          "BNOTDETERMINED": 0,
+          "INF_B": 0,
+          "INF_ALL": 4,
+          "INF_NEGATIVE": 132,
+          "ILI_ACTIVITY": null,
+          "ADENO": null,
+          "BOCA": null,
+          "HUMAN_CORONA": null,
+          "METAPNEUMO": null,
+          "PARAINFLUENZA": null,
+          "RHINO": null,
+          "RSV_PROCESSED": null,
+          "RSV": null,
+          "OTHERRESPVIRUS": null,
+          "OTHER_RESPVIRUS_DETAILS": null,
+          "LAB_RESULT_COMMENT": null,
+          "WCR_COMMENT": null,
+          "ISO2": "TZ",
+          "ISOYW": 202646,
+          "MMWRYW": 202645,
+          "PSOURCE_SUBTYPE_INF": null,
+          "PSOURCE_PPOS_INF": null,
+          "PSOURCE_RSV": null
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    },
+    "BN": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27BRN%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1065,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "WPR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "NH",
+          "ITZ": "FLU_SE_ASIA",
+          "COUNTRY_CODE": "BRN",
+          "COUNTRY_AREA_TERRITORY": "Brunei Darussalam",
+          "ISO_WEEKSTARTDATE": "2026-11-02",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 45,
+          "MMWR_WEEKSTARTDATE": "2026-11-01",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 44,
+          "ORIGIN_SOURCE": "NONSENTINEL",
+          "SPEC_PROCESSED_NB": 48,
+          "SPEC_RECEIVED_NB": 48,
+          "AH1N12009": 16,
+          "AH1": null,
+          "AH3": 0,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 0,
+          "ANOTSUBTYPABLE": null,
+          "AOTHER_SUBTYPE": null,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": 16,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": null,
+          "BVIC_DELUNK": null,
+          "BYAM": null,
+          "BNOTDETERMINED": 0,
+          "INF_B": 0,
+          "INF_ALL": 16,
+          "INF_NEGATIVE": 32,
+          "ILI_ACTIVITY": null,
+          "ADENO": 0,
+          "BOCA": 0,
+          "HUMAN_CORONA": 0,
+          "METAPNEUMO": 2,
+          "PARAINFLUENZA": 1,
+          "RHINO": 11,
+          "RSV_PROCESSED": null,
+          "RSV": 0,
+          "OTHERRESPVIRUS": 0,
+          "OTHER_RESPVIRUS_DETAILS": "0",
+          "LAB_RESULT_COMMENT": "0",
+          "WCR_COMMENT": "0",
+          "ISO2": "BN",
+          "ISOYW": 202645,
+          "MMWRYW": 202644,
+          "PSOURCE_SUBTYPE_INF": null,
+          "PSOURCE_PPOS_INF": null,
+          "PSOURCE_RSV": null
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    },
+    "ID": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27IDN%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1044,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "WPR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "SH",
+          "ITZ": "FLU_SE_ASIA",
+          "COUNTRY_CODE": "IDN",
+          "COUNTRY_AREA_TERRITORY": "Indonesia",
+          "ISO_WEEKSTARTDATE": "2026-11-02",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 45,
+          "MMWR_WEEKSTARTDATE": "2026-11-01",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 44,
+          "ORIGIN_SOURCE": "SENTINEL",
+          "SPEC_PROCESSED_NB": 186,
+          "SPEC_RECEIVED_NB": 307,
+          "AH1N12009": 38,
+          "AH1": 0,
+          "AH3": 2,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 0,
+          "ANOTSUBTYPABLE": null,
+          "AOTHER_SUBTYPE": 0,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": 40,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": 2,
+          "BVIC_DELUNK": null,
+          "BYAM": 0,
+          "BNOTDETERMINED": 0,
+          "INF_B": 2,
+          "INF_ALL": 42,
+          "INF_NEGATIVE": null,
+          "ILI_ACTIVITY": null,
+          "ADENO": 0,
+          "BOCA": 0,
+          "HUMAN_CORONA": 0,
+          "METAPNEUMO": 0,
+          "PARAINFLUENZA": null,
+          "RHINO": 0,
+          "RSV_PROCESSED": null,
+          "RSV": 0,
+          "OTHERRESPVIRUS": null,
+          "OTHER_RESPVIRUS_DETAILS": null,
+          "LAB_RESULT_COMMENT": null,
+          "WCR_COMMENT": "0",
+          "ISO2": "ID",
+          "ISOYW": 202645,
+          "MMWRYW": 202644,
+          "PSOURCE_SUBTYPE_INF": 1,
+          "PSOURCE_PPOS_INF": 1,
+          "PSOURCE_RSV": 1
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    },
+    "PH": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27PHL%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1037,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "WPR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "NH",
+          "ITZ": "FLU_SE_ASIA",
+          "COUNTRY_CODE": "PHL",
+          "COUNTRY_AREA_TERRITORY": "Philippines",
+          "ISO_WEEKSTARTDATE": "2026-10-26",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 44,
+          "MMWR_WEEKSTARTDATE": "2026-10-25",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 43,
+          "ORIGIN_SOURCE": "SENTINEL",
+          "SPEC_PROCESSED_NB": 16,
+          "SPEC_RECEIVED_NB": 16,
+          "AH1N12009": 0,
+          "AH1": null,
+          "AH3": 4,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 0,
+          "ANOTSUBTYPABLE": null,
+          "AOTHER_SUBTYPE": null,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": 4,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": 1,
+          "BVIC_DELUNK": null,
+          "BYAM": 0,
+          "BNOTDETERMINED": 0,
+          "INF_B": 1,
+          "INF_ALL": 5,
+          "INF_NEGATIVE": 11,
+          "ILI_ACTIVITY": null,
+          "ADENO": 0,
+          "BOCA": 0,
+          "HUMAN_CORONA": 0,
+          "METAPNEUMO": 0,
+          "PARAINFLUENZA": 0,
+          "RHINO": 0,
+          "RSV_PROCESSED": 16,
+          "RSV": 1,
+          "OTHERRESPVIRUS": 0,
+          "OTHER_RESPVIRUS_DETAILS": "0",
+          "LAB_RESULT_COMMENT": null,
+          "WCR_COMMENT": null,
+          "ISO2": "PH",
+          "ISOYW": 202644,
+          "MMWRYW": 202643,
+          "PSOURCE_SUBTYPE_INF": 1,
+          "PSOURCE_PPOS_INF": 1,
+          "PSOURCE_RSV": 1
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    },
+    "MM": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27MMR%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1064,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "SEAR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "NH",
+          "ITZ": "FLU_SE_ASIA",
+          "COUNTRY_CODE": "MMR",
+          "COUNTRY_AREA_TERRITORY": "Myanmar",
+          "ISO_WEEKSTARTDATE": "2026-11-02",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 45,
+          "MMWR_WEEKSTARTDATE": "2026-11-01",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 44,
+          "ORIGIN_SOURCE": "NONSENTINEL",
+          "SPEC_PROCESSED_NB": 0,
+          "SPEC_RECEIVED_NB": 0,
+          "AH1N12009": 0,
+          "AH1": null,
+          "AH3": 0,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 0,
+          "ANOTSUBTYPABLE": null,
+          "AOTHER_SUBTYPE": 0,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": null,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": 0,
+          "BVIC_DELUNK": null,
+          "BYAM": 0,
+          "BNOTDETERMINED": 0,
+          "INF_B": 0,
+          "INF_ALL": null,
+          "INF_NEGATIVE": 0,
+          "ILI_ACTIVITY": null,
+          "ADENO": null,
+          "BOCA": null,
+          "HUMAN_CORONA": null,
+          "METAPNEUMO": null,
+          "PARAINFLUENZA": null,
+          "RHINO": null,
+          "RSV_PROCESSED": null,
+          "RSV": null,
+          "OTHERRESPVIRUS": null,
+          "OTHER_RESPVIRUS_DETAILS": null,
+          "LAB_RESULT_COMMENT": null,
+          "WCR_COMMENT": null,
+          "ISO2": "MM",
+          "ISOYW": 202645,
+          "MMWRYW": 202644,
+          "PSOURCE_SUBTYPE_INF": 1,
+          "PSOURCE_PPOS_INF": 1,
+          "PSOURCE_RSV": 1
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    },
+    "TL": {
+      "url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27TLS%27&%24top=1&%24orderby=ISO_WEEKSTARTDATE+desc&%24format=json",
+      "status": 200,
+      "bytes": 1063,
+      "keys": [
+        "@odata.context",
+        "value"
+      ],
+      "rows": [
+        {
+          "WHOREGION": "SEAR",
+          "FLUSEASON": "YR",
+          "HEMISPHERE": "SH",
+          "ITZ": "FLU_SE_ASIA",
+          "COUNTRY_CODE": "TLS",
+          "COUNTRY_AREA_TERRITORY": "Timor-Leste",
+          "ISO_WEEKSTARTDATE": "2026-11-02",
+          "ISO_YEAR": 2026,
+          "ISO_WEEK": 45,
+          "MMWR_WEEKSTARTDATE": "2026-11-01",
+          "MMWR_YEAR": 2026,
+          "MMWR_WEEK": 44,
+          "ORIGIN_SOURCE": "SENTINEL",
+          "SPEC_PROCESSED_NB": 3,
+          "SPEC_RECEIVED_NB": 12,
+          "AH1N12009": 0,
+          "AH1": 0,
+          "AH3": 1,
+          "AH5": 0,
+          "AH7N9": 0,
+          "ANOTSUBTYPED": 1,
+          "ANOTSUBTYPABLE": null,
+          "AOTHER_SUBTYPE": null,
+          "AOTHER_SUBTYPE_DETAILS": null,
+          "INF_A": 2,
+          "BVIC_2DEL": null,
+          "BVIC_3DEL": null,
+          "BVIC_NODEL": 0,
+          "BVIC_DELUNK": null,
+          "BYAM": 0,
+          "BNOTDETERMINED": null,
+          "INF_B": 0,
+          "INF_ALL": 2,
+          "INF_NEGATIVE": 1,
+          "ILI_ACTIVITY": null,
+          "ADENO": null,
+          "BOCA": null,
+          "HUMAN_CORONA": null,
+          "METAPNEUMO": null,
+          "PARAINFLUENZA": null,
+          "RHINO": null,
+          "RSV_PROCESSED": null,
+          "RSV": null,
+          "OTHERRESPVIRUS": null,
+          "OTHER_RESPVIRUS_DETAILS": null,
+          "LAB_RESULT_COMMENT": null,
+          "WCR_COMMENT": null,
+          "ISO2": "TL",
+          "ISOYW": 202645,
+          "MMWRYW": 202644,
+          "PSOURCE_SUBTYPE_INF": 1,
+          "PSOURCE_PPOS_INF": 1,
+          "PSOURCE_RSV": 1
+        }
+      ],
+      "next_link": null,
+      "count": 1
+    }
+  },
+  "new_wpro_758": {
+    "url": "https://www.who.int/westernpacific/publications/m/item/dengue-situation-update---758--12-november-2026",
+    "status": 200,
+    "pdfs": [
+      {
+        "url": "https://cdn.who.int/media/docs/default-source/wpro---documents/emergency/surveillance/dengue/dengue_biweekly_758_20261112.pdf?sfvrsn=6ca48fac_1&download=true",
+        "status": 200,
+        "sha256": "2e01eb45b6f41c0971952d20c358f708223363fc66870dc888c5f18338931035",
+        "bytes": 1187384
+      }
+    ]
+  },
+  "new_wpro_758_existing_parser_replay": {
+    "LA": {
+      "error": "Dengue source interval is not a reviewed seven-day period before publication"
+    },
+    "VN": {
+      "rows": [
+        {
+          "Date": "2026-11-08",
+          "PeriodStart": "2026-11-02",
+          "PeriodEnd": "2026-11-08",
+          "SourceDiseaseCode": "dengue__weekly_cases",
+          "Cases": "8898",
+          "PeriodType": "weekly",
+          "SourcePeriodLabel": "(2 to 8 November 2026"
+        },
+        {
+          "Date": "2026-11-12",
+          "PeriodStart": "2026-01-01",
+          "PeriodEnd": "2026-11-12",
+          "SourceDiseaseCode": "dengue__cumulative_cases",
+          "Cases": "190009",
+          "PeriodType": "cumulative",
+          "SourcePeriodLabel": "(2 to 8 November 2026"
+        },
+        {
+          "Date": "2026-11-12",
+          "PeriodStart": "2026-01-01",
+          "PeriodEnd": "2026-11-12",
+          "SourceDiseaseCode": "dengue__cumulative_deaths",
+          "Cases": "21",
+          "PeriodType": "cumulative",
+          "SourcePeriodLabel": "(2 to 8 November 2026"
+        }
+      ],
+      "audit": {
+        "status": "parsed",
+        "country_code": "VN",
+        "report_date": "2026-11-12",
+        "observation_start": "2026-11-02",
+        "observation_end": "2026-11-08",
+        "rows": 3,
+        "cumulative_year_mismatch": false
+      }
+    }
+  },
+  "limitations": [
+    "FluNet $top=1 only verifies an offered current weekly laboratory row, not complete historical coverage or national patient counts.",
+    "HTTP errors are source-access findings, not evidence that no reports exist.",
+    "No database, job, publication or external-message mutations performed."
+  ],
+  "additional_official_http_checks": {
+    "https://cdcmoh.gov.kh/surveillance/ili-surveillance-2": {
+      "status": 200,
+      "sha256": "301f059b05bc6e46c0c64418cc7e793148797dd6b65ce9dec8101152f4b7feeb",
+      "bytes": 24427,
+      "links": [],
+      "text_excerpt": "Monthly Influenza bulletins Home COVID-19 Announcements Vaccine Information Daily Surveillance Reports Joint WHO-MoH Situation Report Event Surveillance Report COVID-19 documents COVID-19 Maps COVID-19 Global Cases Validation Application on Payment Guarantee/Invitation Quarantine Documents Vaccination Requirement Quarantine formality Activities Surveillance CamEWARN Monthly Influenza bulletins Influenza Surveillance MPOX Situation Report CISED-Dengue Line Listing MBDS Viral Hepatitis Prevention & Control AMR Foodborne Disease Term of Reference IMCI Strategy Health Security Project concept Project management Project implementation Project location Project organogram Project contact directory Project document Project report Project event Procurement Job opportunity About us Organogram Mission and ToR History and background Links Ministry of Health WHO US-CDC Regional GMS-CDC2 CDC documents sharing TEPHINET BIREGIONAL ADB Integrity Unit Search Monthly Respiratory disease and Influenza bulletins Print Email Details Category: Monthly Influenza Bulletin Published: 19 January 2021 Last Updated: 28 February 2024 Hits: 14163 Year 2024 Year 2023 Year 2022 Year 2021 Year 2020 Year 2017 Year 2016 Year 2015 Year 2014 Year 2012 Year 2011 Year 2010 Year 2009 Home Surveillance Monthly Influenza bulletins Press Release Avian Influenza SARS Severe Watery Diarrhea Swine Influenza Other Disease MERS Monthly respiratory bulletin Year 9 (2012) Year 8 (2011) Year 7 (2010) Year 6 (2009) Year 2014 Year 2015 Year 2016 Year 2017 Year 2020 Year 2021 Year 2022 Year 2023 Year 2024 IEC material and documents Law Posters Booklets Radio Spot TV Spots Leaflet National Guideline, Policy, and Strategy EOC-IMS SOP Epidemiology Training Collaborative Projects with Hopital Service Latest Articles បច្ចុប្បន្នភាពនៃជំងឺកូរ៉ូណាថ្មី COVID-19 នៅប្រទេសកម្ពុជា ការផ្តល់ថ្នាំបង្ការ ជំងឺមហារីកមាត់ស្បូន សំរាប់កុមាររីអាយុពី ៩ ដល់ ១៤ឆ្នាំ កម្ពុជាសម្រេចបានគោលដៅសកល មេរោគអេដស៍ ៩៥-៩៥-៩៥ PrEP មិនមែនជាវ៉ាក់សាំងទេ ការបើកសមយុទ្ធឆ្លើយតបនឹង ជំងឺអេបូឡា និងជំងឺឆ្លងដទៃទៀត ដើម្បីត្រៀមបម្រុង ការពារសុវត្ថិភាពមុន កិច្ចប្រជុំហ្វ្រង់កូហ្វូនី Login Form User Name Password Remember Me Log in Forgot your username? Forgot your password? Visitors Counter Today 114 Yesterday 2870 This week 2986 This month 40232 Total 5419916 Powered by CoalaWeb Back to Top © 2026 CDC Department Website"
+    },
+    "https://ephi.gov.et/publications/latest-downloads/": {
+      "status": 200,
+      "sha256": "cc1997c19728dbe9ec45bb897416cd52b9947aacabaf8f973c18f6ed2398f88e",
+      "bytes": 93226,
+      "links": [
+        {
+          "text": "Recent Downloads",
+          "url": "https://ephi.gov.et/publications/recent-downloads/"
+        },
+        {
+          "text": "Latest Downloads",
+          "url": "https://ephi.gov.et/publications/latest-downloads/"
+        },
+        {
+          "text": "Ethiopia Multisectorial Health Security Bulletin, Eight edition…..",
+          "url": "https://ephi.gov.et/wp-content/uploads/2025/04/Ethiopia-Multisectorial-Health-Security-Bulletin-Eight-edition.pdf"
+        },
+        {
+          "text": "Ethiopia-Health-Security-Bulletin-Vol.-6.pdf",
+          "url": "https://ephi.gov.et/wp-content/uploads/2024/05/Ethiopia-Health-Security-Bulletin-Vol.-6.pdf"
+        },
+        {
+          "text": "Ethiopia Multi Sectoral Health Security Bulletin Vol. 7th ( ( Seventh Edition) _March_2025_",
+          "url": "https://ephi.gov.et/wp-content/uploads/2025/03/Ethiopia-Multi-Sectoral-Health-Security-Bulletin-Vol.-7th-Seventh-Edition-_March_2025_.pdf"
+        },
+        {
+          "text": "Covid-19 Confirmed Cases",
+          "url": "https://ephi.gov.et/download/covid-19-confirmed-cases/"
+        },
+        {
+          "text": "Login",
+          "url": "https://ephi.gov.et/wp-login.php?redirect_to=https://ephi.gov.et/publications/latest-downloads/"
+        },
+        {
+          "text": "EPHI PHEOC COVID-19",
+          "url": "https://ephi.gov.et/download/ephi-pheoc-covid-19/"
+        },
+        {
+          "text": "NCD fact sheet",
+          "url": "https://ephi.gov.et/download/ncd-fact-sheet/"
+        },
+        {
+          "text": "NCD Report",
+          "url": "https://ephi.gov.et/download/ncd-report/"
+        },
+        {
+          "text": "Training Manual Clinical Specimen Collection",
+          "url": "https://ephi.gov.et/download/training-manual-clinical-specimen-collection/"
+        },
+        {
+          "text": "Symposium Proceedings",
+          "url": "https://ephi.gov.et/download/symposium-proceedings/"
+        },
+        {
+          "text": "Ethiopian Journal of Public Health and Nutrition",
+          "url": "https://ephi.gov.et/download/ethiopian-journal-of-public-health-and-nutrition/"
+        },
+        {
+          "text": "",
+          "url": "https://ephi.gov.et/wp-content/uploads/2022/09/Call_for_Abstract_2022.pdf"
+        },
+        {
+          "text": "Training Manual Clinical Specimen",
+          "url": "https://ephi.gov.et/download/training-manual-clinical-specimen-collection/"
+        }
+      ],
+      "text_excerpt": "rboviral and other viral diseases Research Division PHEM National diseases Surveillance and Emergency Response Response and Recovery Preparedness and Capacity Building Travelers and Border Health Laboratory National Laboratories Capacity Building Referral and Reference Laboratories Laboratory Equipment and Information System Technology Development operation wing Strategic Affairs Executive Office Latest News Publications Events Guidelines Recent Downloads Latest Downloads News Letter Scientific News Letter Research Findings An Ethnobotanical Study of Medicinal Plants by Wereda Research Articles on Ethiopian Medicinal Plants Knowledge Translation Directorate Scientific and Ethical Review Office (SERO) Search for: Search Button MENU Latest Downloads EPHI Downloadable Documents Under this section are official documents, and all downloadable documents are produced by EPHI and/or its partners, you can download and read them by categories. Multi-sectoral Health Security Bulletin Ethiopia Multisectorial Health Security Bulletin, Eight edition….. Ethiopia-Health-Security-Bulletin-Vol.-6.pdf Ethiopia Multi Sectoral Health Security Bulletin Vol. 7th ( ( Seventh Edition) _March_2025_ Covid-19 Press releases by MoH and EPHI Under this section are official Covid-19 press release documents by the Ministry of Health and Ethiopian Public Health Institutes. You can download all at once using the DOWNLOAD green button on the right side. If you also want to see the list of files please click on the  “COVID-19 CONFIRMED CASES” or Title of the Package. Covid-19 Confirmed Cases 87.76 MB 0 downloads ... Login is required to access this page Login Ethiopian Weekly Epidemiological Bulletin Under this section are official Bulletin documents produced by the Ethiopian Weekly Epidemiological Bulletin. You can download all at once using the DOWNLOAD green button on the right side. If you also want to see the list of files please click on the blue link  “ETHIOPIAN WEEKLY EPIDEMIOLOGICAL BULLETIN” or Title of the Package. EPHI PHEOC COVID-19 EPHI PHEOC COVID-19 22 file(s) 80.56 MB Download NCD fact sheet NCD fact sheet 5 file(s) 635.59 KB Download NCD Report NCD Report 2 file(s) 7.82 MB Download Training Manual Clinical Specimen Collection Training Manual Clinical Specimen Collection 3 file(s) 15.25 MB Download Symposium Proceedings Symposium Proceedings 6 file(s) 9.13 MB Download Ethiopian Journal of Public Health and Nutrition Ethiopian Journal of Public Health and Nutrition 7 file(s) 374.37 MB Download Call for Abstract ABOUT EPHI The Ethiopian Public Health Institute(EPHI) is established by the council of ministers regulation No. 529/2023 which recognize the Institute an autonomous federal government office having its own legal personality. The institute is accountable for the Federal Minister of Health. +251 (0)1 12 13 34 99 info@ephi.gov.et https://ephi.gov.et Gulele Sub City, near Pasteur Square ABOUT EPHI The Ethiopian Public Health Institute(EPHI) is established by the council of ministers regulation No. 529/2023 which recognize the Institute an autonomous federal government office having its own legal personality. The institute is accountable for the Federal Minister of Health. +251 (0)1 12 13 34 99 info@ephi.gov.et https://ephi.gov.et Gulele Sub City, near Pasteur Square Quick Links News Contact FAQ EMRN EPHI Library Herbal Medicine Training Manual Clinical Specimen Copyright © 2026 All Rights Reserved  | EPHI Designed and Developed by Rackmint System PLC X"
+    }
+  }
+}

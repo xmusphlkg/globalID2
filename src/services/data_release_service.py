@@ -793,7 +793,14 @@ class DataReleaseService:
         suppress_subscription_dispatch: bool = False,
         theme_only: bool = False,
         publication_plan: dict | None = None,
+        surveillance_rebuild_all: bool = False,
     ) -> dict[str, Any]:
+        if surveillance_rebuild_all and not (
+            manual and data_only and data_line == "surveillance" and not any((full, reports_only, code_only, theme_only))
+            and publication_plan and publication_plan.get("surveillance_rebuild_all") is True
+            and publication_plan.get("execution_mode") == "content" and pending_ids
+        ):
+            raise ValueError("Full surveillance rebuilding requires a frozen manual surveillance content plan")
         if sum(bool(value) for value in (full, reports_only, code_only, data_only, theme_only)) > 1:
             raise ValueError("Full, reports-only, code-only and data-only release modes are mutually exclusive")
         async with self._lock:
@@ -819,6 +826,7 @@ class DataReleaseService:
                     pending_ids=pending_ids,
                     **({"suppress_subscription_dispatch": True} if suppress_subscription_dispatch else {}),
                     **({"publication_plan": publication_plan} if publication_plan else {}),
+                    **({"surveillance_rebuild_all": True} if surveillance_rebuild_all else {}),
                 )
 
             tz_name = job.timezone or self._config().timezone
@@ -1256,7 +1264,14 @@ class DataReleaseService:
         suppress_subscription_dispatch: bool = False,
         theme_only: bool = False,
         publication_plan: dict | None = None,
+        surveillance_rebuild_all: bool = False,
     ) -> dict[str, Any]:
+        if surveillance_rebuild_all and not (
+            manual and data_only and data_line == "surveillance" and not any((full, reports_only, code_only, theme_only))
+            and publication_plan and publication_plan.get("surveillance_rebuild_all") is True
+            and publication_plan.get("execution_mode") == "content" and pending_ids
+        ):
+            raise ValueError("Full surveillance rebuilding requires a frozen manual surveillance content plan")
         if sum(bool(value) for value in (full, reports_only, code_only, data_only, theme_only)) > 1:
             raise ValueError("Release modes are mutually exclusive")
         _data_line({"data_line": data_line})
@@ -1339,7 +1354,13 @@ class DataReleaseService:
                 release_plan = plan_changes(
                     dirty, available_codes,
                     max_countries=int(getattr(self._config(), "batch_max_countries", 8)),
+                    full=surveillance_rebuild_all,
                 )
+                if surveillance_rebuild_all:
+                    if sorted(available_codes) != publication_plan.get("country_codes"):
+                        from .data_release.publication_execution import PublicationPlanError
+                        raise PublicationPlanError("publication_country_inventory_changed")
+                    release_plan["country_codes"] = sorted(available_codes)
                 incremental_country_codes = release_plan["country_codes"]
                 dirty_ids = release_plan["dirty_ids"]
                 if (data_only or pending_ids is not None or not manual) and not dirty_ids:
@@ -1417,6 +1438,8 @@ class DataReleaseService:
             "raw_archive_repo_url": raw_archive.repo_url,
             "raw_archive_branch": raw_archive.branch,
         }
+        if surveillance_rebuild_all:
+            input_data["surveillance_rebuild_all"] = True
         if publication_plan:
             input_data["publication_plan"] = dict(publication_plan)
             input_data["publication_expected_generations"] = dict(publication_plan.get("expected_generations", {}))

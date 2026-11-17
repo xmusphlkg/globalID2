@@ -1,0 +1,1681 @@
+{
+  "audit_date": "2026-11-17",
+  "generated_at": "2026-11-17T01:14:24.832460+00:00",
+  "public_release": "data-20261116T154800Z-reviewed-countries",
+  "scope": [
+    "CA",
+    "CA-ON",
+    "AR",
+    "CL",
+    "CO",
+    "CR",
+    "EC",
+    "PA",
+    "PY",
+    "BR",
+    "BQ",
+    "GF",
+    "GP",
+    "MQ",
+    "US",
+    "PE"
+  ],
+  "database_read_only": true,
+  "public_default_grains": {
+    "CA": {
+      "annual": {
+        "diseases": 65,
+        "first": "1924-01-01",
+        "last": "2024-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "CA-ON": {
+      "monthly": {
+        "diseases": 54,
+        "first": "2026-01-01",
+        "last": "2026-09-01",
+        "legacy_diseases": 54
+      }
+    },
+    "AR": {
+      "annual": {
+        "diseases": 1,
+        "first": "2014-01-01",
+        "last": "2023-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "CL": {
+      "annual": {
+        "diseases": 33,
+        "first": "2007-12-31",
+        "last": "2024-12-31",
+        "legacy_diseases": 0
+      }
+    },
+    "CO": {},
+    "CR": {
+      "annual": {
+        "diseases": 14,
+        "first": "1974-01-01",
+        "last": "2025-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "EC": {
+      "annual": {
+        "diseases": 14,
+        "first": "1974-01-01",
+        "last": "2025-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "PA": {
+      "annual": {
+        "diseases": 14,
+        "first": "1974-01-01",
+        "last": "2025-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "PY": {
+      "annual": {
+        "diseases": 14,
+        "first": "1974-01-01",
+        "last": "2025-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "BR": {
+      "monthly": {
+        "diseases": 48,
+        "first": "2000-01-01",
+        "last": "2026-11-01",
+        "legacy_diseases": 42
+      },
+      "unknown": {
+        "diseases": 2,
+        "first": "2011-05-01",
+        "last": "2025-11-01",
+        "legacy_diseases": 2
+      }
+    },
+    "BQ": {
+      "annual": {
+        "diseases": 2,
+        "first": "2016-01-01",
+        "last": "2025-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "GF": {
+      "annual": {
+        "diseases": 5,
+        "first": "1998-01-01",
+        "last": "2025-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "GP": {
+      "annual": {
+        "diseases": 5,
+        "first": "1998-01-01",
+        "last": "2025-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "MQ": {
+      "annual": {
+        "diseases": 5,
+        "first": "1998-01-01",
+        "last": "2025-01-01",
+        "legacy_diseases": 0
+      }
+    },
+    "US": {
+      "weekly": {
+        "diseases": 78,
+        "first": "2006-01-07",
+        "last": "2026-11-07",
+        "legacy_diseases": 63
+      },
+      "annual": {
+        "diseases": 1,
+        "first": "2014-12-31",
+        "last": "2022-12-31",
+        "legacy_diseases": 1
+      },
+      "unknown": {
+        "diseases": 2,
+        "first": "2023-03-25",
+        "last": "2023-03-25",
+        "legacy_diseases": 2
+      }
+    },
+    "PE": {
+      "weekly": {
+        "diseases": 12,
+        "first": "2012-08-06",
+        "last": "2026-07-13",
+        "legacy_diseases": 0
+      }
+    }
+  },
+  "public_source_detail_grains": {
+    "CA": {
+      "annual": {
+        "series": 68,
+        "points": 3610,
+        "numeric_points": 3610,
+        "first": "1924-01-01",
+        "last": "2024-01-01"
+      }
+    },
+    "CA-ON": {},
+    "AR": {
+      "annual": {
+        "series": 1,
+        "points": 10,
+        "numeric_points": 10,
+        "first": "2014-01-01",
+        "last": "2023-01-01"
+      }
+    },
+    "CL": {
+      "annual": {
+        "series": 61,
+        "points": 428,
+        "numeric_points": 428,
+        "first": "2007-12-31",
+        "last": "2024-12-31"
+      }
+    },
+    "CO": {},
+    "CR": {
+      "annual": {
+        "series": 15,
+        "points": 437,
+        "numeric_points": 437,
+        "first": "1974-01-01",
+        "last": "2025-01-01"
+      }
+    },
+    "EC": {
+      "annual": {
+        "series": 15,
+        "points": 445,
+        "numeric_points": 445,
+        "first": "1974-01-01",
+        "last": "2025-01-01"
+      }
+    },
+    "PA": {
+      "annual": {
+        "series": 15,
+        "points": 436,
+        "numeric_points": 436,
+        "first": "1974-01-01",
+        "last": "2025-01-01"
+      }
+    },
+    "PY": {
+      "annual": {
+        "series": 15,
+        "points": 443,
+        "numeric_points": 443,
+        "first": "1974-01-01",
+        "last": "2025-01-01"
+      }
+    },
+    "BR": {
+      "monthly": {
+        "series": 11,
+        "points": 1873,
+        "numeric_points": 1873,
+        "first": "2006-01-01",
+        "last": "2026-10-01"
+      }
+    },
+    "BQ": {
+      "annual": {
+        "series": 2,
+        "points": 20,
+        "numeric_points": 20,
+        "first": "2016-01-01",
+        "last": "2025-01-01"
+      }
+    },
+    "GF": {
+      "annual": {
+        "series": 6,
+        "points": 112,
+        "numeric_points": 112,
+        "first": "1998-01-01",
+        "last": "2025-01-01"
+      }
+    },
+    "GP": {
+      "annual": {
+        "series": 6,
+        "points": 108,
+        "numeric_points": 108,
+        "first": "1998-01-01",
+        "last": "2025-01-01"
+      }
+    },
+    "MQ": {
+      "annual": {
+        "series": 6,
+        "points": 111,
+        "numeric_points": 111,
+        "first": "1998-01-01",
+        "last": "2025-01-01"
+      }
+    },
+    "US": {
+      "weekly": {
+        "series": 90,
+        "points": 10561,
+        "numeric_points": 10561,
+        "first": "2022-01-08",
+        "last": "2026-11-07"
+      }
+    },
+    "PE": {
+      "weekly": {
+        "series": 20,
+        "points": 1923,
+        "numeric_points": 1923,
+        "first": "2012-08-04",
+        "last": "2026-07-25"
+      }
+    }
+  },
+  "database_observation_groups": [
+    {
+      "country_code": "AR",
+      "source_system": "SRC_AR_BEN",
+      "temporal_granularity": "weekly",
+      "observations": 7326,
+      "numeric_observations": 7198,
+      "first": "2019-01-26 00:00:00+00:00",
+      "last": "2026-10-31 00:00:00+00:00"
+    },
+    {
+      "country_code": "AR",
+      "source_system": "SRC_AR_MOH_HIV_ANNUAL",
+      "temporal_granularity": "annual",
+      "observations": 10,
+      "numeric_observations": 10,
+      "first": "2014-01-01 00:00:00+00:00",
+      "last": "2023-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "BR",
+      "source_system": "SRC_BR_SINAN",
+      "temporal_granularity": "monthly",
+      "observations": 59329,
+      "numeric_observations": 59329,
+      "first": "2000-02-01 00:00:00+00:00",
+      "last": "2026-10-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "BR",
+      "source_system": "SRC_BR_SINAN",
+      "temporal_granularity": "unknown",
+      "observations": 262714,
+      "numeric_observations": 262714,
+      "first": "2000-01-01 00:00:00+00:00",
+      "last": "2026-11-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "CA",
+      "source_system": "SRC_CA_PHAC_CNDSS",
+      "temporal_granularity": "annual",
+      "observations": 3732,
+      "numeric_observations": 3732,
+      "first": "1924-01-01 00:00:00+00:00",
+      "last": "2024-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "CA-ON",
+      "source_system": "SRC_CA_ON_PHO_IDTO",
+      "temporal_granularity": "monthly",
+      "observations": 486,
+      "numeric_observations": 486,
+      "first": "2026-01-01 00:00:00+00:00",
+      "last": "2026-09-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "CA-ON",
+      "source_system": "SRC_CA_ON_PHO_IDTO",
+      "temporal_granularity": "unknown",
+      "observations": 18,
+      "numeric_observations": 18,
+      "first": "2026-01-01 00:00:00+00:00",
+      "last": "2026-09-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "CL",
+      "source_system": "SRC_CL_ENO",
+      "temporal_granularity": "annual",
+      "observations": 442,
+      "numeric_observations": 442,
+      "first": "2007-12-31 00:00:00+00:00",
+      "last": "2024-12-31 00:00:00+00:00"
+    },
+    {
+      "country_code": "CO",
+      "source_system": "SRC_CO_INS_BES",
+      "temporal_granularity": "weekly",
+      "observations": 159393,
+      "numeric_observations": 159377,
+      "first": "2025-01-04 00:00:00+00:00",
+      "last": "2026-11-07 00:00:00+00:00"
+    },
+    {
+      "country_code": "CO",
+      "source_system": "SRC_CO_INS_SIVIGILA",
+      "temporal_granularity": "weekly",
+      "observations": 2465826,
+      "numeric_observations": 2465826,
+      "first": "2007-01-01 00:00:00+00:00",
+      "last": "2022-12-24 00:00:00+00:00"
+    },
+    {
+      "country_code": "CO",
+      "source_system": "SRC_CO_INS_SIVIGILA_CURRENT",
+      "temporal_granularity": "weekly",
+      "observations": 456557,
+      "numeric_observations": 456557,
+      "first": "2023-01-01 00:00:00+00:00",
+      "last": "2024-12-23 00:00:00+00:00"
+    },
+    {
+      "country_code": "CR",
+      "source_system": "SRC_CR_MOH_NOTIFICATIONS",
+      "temporal_granularity": "annual",
+      "observations": 64,
+      "numeric_observations": 64,
+      "first": "2015-01-01 00:00:00+00:00",
+      "last": "2015-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "CR",
+      "source_system": "SRC_CR_MOH_NOTIFICATIONS",
+      "temporal_granularity": "daily",
+      "observations": 86,
+      "numeric_observations": 86,
+      "first": "2025-03-28 00:00:00+00:00",
+      "last": "2026-11-02 00:00:00+00:00"
+    },
+    {
+      "country_code": "CR",
+      "source_system": "SRC_CR_WHO_GHO",
+      "temporal_granularity": "annual",
+      "observations": 452,
+      "numeric_observations": 437,
+      "first": "1974-01-01 00:00:00+00:00",
+      "last": "2025-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "EC",
+      "source_system": "SRC_EC_WHO_GHO",
+      "temporal_granularity": "annual",
+      "observations": 471,
+      "numeric_observations": 445,
+      "first": "1974-01-01 00:00:00+00:00",
+      "last": "2025-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "GF",
+      "source_system": "SRC_GF_SPF_ODISSE",
+      "temporal_granularity": "annual",
+      "observations": 1198,
+      "numeric_observations": 1198,
+      "first": "1998-01-01 00:00:00+00:00",
+      "last": "2025-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "GP",
+      "source_system": "SRC_GP_SPF_ODISSE",
+      "temporal_granularity": "annual",
+      "observations": 1194,
+      "numeric_observations": 1194,
+      "first": "1998-01-01 00:00:00+00:00",
+      "last": "2025-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "MQ",
+      "source_system": "SRC_MQ_SPF_ODISSE",
+      "temporal_granularity": "annual",
+      "observations": 1197,
+      "numeric_observations": 1197,
+      "first": "1998-01-01 00:00:00+00:00",
+      "last": "2025-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "PA",
+      "source_system": "SRC_PA_WHO_GHO",
+      "temporal_granularity": "annual",
+      "observations": 454,
+      "numeric_observations": 436,
+      "first": "1974-01-01 00:00:00+00:00",
+      "last": "2025-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "PE",
+      "source_system": "SRC_PE_CDC",
+      "temporal_granularity": "weekly",
+      "observations": 26521,
+      "numeric_observations": 26521,
+      "first": "1993-10-16 00:00:00+00:00",
+      "last": "2026-08-08 00:00:00+00:00"
+    },
+    {
+      "country_code": "PY",
+      "source_system": "SRC_PY_WHO_GHO",
+      "temporal_granularity": "annual",
+      "observations": 455,
+      "numeric_observations": 443,
+      "first": "1974-01-01 00:00:00+00:00",
+      "last": "2025-01-01 00:00:00+00:00"
+    },
+    {
+      "country_code": "US",
+      "source_system": "SRC_US_CDC_RESP_NHSN",
+      "temporal_granularity": "weekly",
+      "observations": 81,
+      "numeric_observations": 81,
+      "first": "2026-04-18 00:00:00+00:00",
+      "last": "2026-10-17 00:00:00+00:00"
+    },
+    {
+      "country_code": "US",
+      "source_system": "SRC_US_CDC_RESP_NREVSS",
+      "temporal_granularity": "weekly",
+      "observations": 636,
+      "numeric_observations": 636,
+      "first": "2022-10-01 00:00:00+00:00",
+      "last": "2026-10-17 00:00:00+00:00"
+    },
+    {
+      "country_code": "US",
+      "source_system": "SRC_US_NHSS",
+      "temporal_granularity": "annual",
+      "observations": 20,
+      "numeric_observations": 20,
+      "first": "2014-12-31 00:00:00+00:00",
+      "last": "2024-12-31 00:00:00+00:00"
+    },
+    {
+      "country_code": "US",
+      "source_system": "SRC_US_NNDSS",
+      "temporal_granularity": "weekly",
+      "observations": 1824463,
+      "numeric_observations": 275582,
+      "first": "2014-01-04 00:00:00+00:00",
+      "last": "2026-11-07 00:00:00+00:00"
+    }
+  ],
+  "official_http_receipts": {
+    "CA_fluwatch": {
+      "url": "https://www.canada.ca/en/public-health/services/surveillance/respiratory-virus-detections-canada.html",
+      "checked_at": "2026-11-17T01:09:55.019025+00:00",
+      "status": 200,
+      "final_url": "https://www.canada.ca/en/public-health/services/surveillance/respiratory-virus-detections-canada.html",
+      "bytes": 22204,
+      "sha256": "6e5a47bd1883142276ed1dc396fda0d43e79f6d5eee9116951c818b75e798754",
+      "content_type": "text/html;charset=utf-8",
+      "relevant_links": [
+        {
+          "title": "Français fr",
+          "href": "/fr/sante-publique/services/surveillance/detection-virus-voies-respiratoires-canada.html"
+        },
+        {
+          "title": "Flu (seasonal influenza): Monitoring",
+          "href": "/en/public-health/services/diseases/flu-influenza/influenza-surveillance.html"
+        },
+        {
+          "title": "2023 - 2024 season",
+          "href": "/en/public-health/services/surveillance/respiratory-virus-detections-canada/2023-2024.html"
+        },
+        {
+          "title": "2022 - 2023 season",
+          "href": "/en/public-health/services/surveillance/respiratory-virus-detections-canada/2022-2023.html"
+        },
+        {
+          "title": "2021 - 2022 season",
+          "href": "/en/public-health/services/surveillance/respiratory-virus-detections-canada/2021-2022.html"
+        },
+        {
+          "title": "2020 - 2021 season",
+          "href": "/en/public-health/services/surveillance/respiratory-virus-detections-canada/2020-2021.html"
+        },
+        {
+          "title": "2019 - 2020 season",
+          "href": "/en/public-health/services/surveillance/respiratory-virus-detections-canada/2019-2020.html"
+        },
+        {
+          "title": "2018 - 2019 season",
+          "href": "/en/public-health/services/surveillance/respiratory-virus-detections-canada/2018-2019.html"
+        },
+        {
+          "title": "2017 - 2018 season",
+          "href": "/en/public-health/services/surveillance/respiratory-virus-detections-canada/2017-2018.html"
+        },
+        {
+          "title": "2016 - 2017 season",
+          "href": "/en/public-health/services/surveillance/respiratory-virus-detections-canada/2016-2017.html"
+        },
+        {
+          "title": "2015 - 2016 season",
+          "href": "/en/public-health/services/surveillance/respiratory-virus-detections-canada/2015-2016.html"
+        },
+        {
+          "title": "FluWatch report",
+          "href": "/en/public-health/services/diseases/flu-influenza/influenza-surveillance/weekly-influenza-reports.html"
+        }
+      ]
+    },
+    "CA_fluwatch_weekly": {
+      "url": "https://health-infobase.canada.ca/respiratory-virus-surveillance/",
+      "checked_at": "2026-11-17T01:09:55.019736+00:00",
+      "status": 200,
+      "final_url": "https://health-infobase.canada.ca/respiratory-virus-surveillance/",
+      "bytes": 67991,
+      "sha256": "4e8064320bd3ef4ce607ecfae820dd38179d789f7d0760e07b0114692ac27188",
+      "content_type": "text/html",
+      "relevant_links": [
+        {
+          "title": "FranÃ§ais",
+          "href": "https://sante-infobase.canada.ca/surveillance-virus-respiratoires/"
+        },
+        {
+          "title": "Respiratory virus monitoring in Canada",
+          "href": "https://www.canada.ca/en/public-health/services/diseases/flu-influenza/influenza-surveillance/about-fluwatch.html"
+        },
+        {
+          "title": "Subscribe for weekly FluWatch+ report notifications (Canada.ca)",
+          "href": "https://www.canada.ca/en/public-health/services/diseases/flu-influenza/influenza-surveillance/subscribe.html"
+        },
+        {
+          "title": "COVID-19 wastewater surveillance dashboard",
+          "href": "https://health-infobase.canada.ca/covid-19/wastewater/"
+        },
+        {
+          "title": "The Canadian Nosocomial Infection Surveillance Program (CNISP)",
+          "href": "https://health-infobase.canada.ca/cnisp/viral-respiratory-infections.html"
+        }
+      ]
+    },
+    "PA_bulletins": {
+      "url": "https://www.minsa.gob.pa/boletines-semanales",
+      "checked_at": "2026-11-17T01:09:55.020127+00:00",
+      "status": 200,
+      "final_url": "https://www.minsa.gob.pa/publicacion/boletines-semanales",
+      "bytes": 40453,
+      "sha256": "aaf6c044d887fcf8ee6b9fe7c7d96c3e1a6272e3c7c946ffd7849c6081df894e",
+      "content_type": "text/html; charset=utf-8",
+      "relevant_links": [
+        {
+          "title": "Manual de la Organización",
+          "href": "/sites/default/files/publicaciones/manual_de_organizacion_minsa_-_30_de_abril_de_2019.pdf"
+        },
+        {
+          "title": "Manual de Procedimientos",
+          "href": "/sites/default/files/publicaciones/reglas_de_procedimientos.pdf"
+        },
+        {
+          "title": "Política Nacional de Salud 2016-2025",
+          "href": "/sites/default/files/transparencia/politicas_de_salud_del_minsa.pdf"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2026"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2025"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2024"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2023"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2022"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2021"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2020"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2019"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2018"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2017"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2016"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2015"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2014"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2012"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2011"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2010"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2009"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2008"
+        },
+        {
+          "title": "",
+          "href": "/boletines-semanales-2004"
+        },
+        {
+          "title": "Manual de la Organización",
+          "href": "/sites/default/files/publicaciones/manual_de_organizacion_minsa_-_30_de_abril_de_2019.pdf"
+        },
+        {
+          "title": "Manual de Procedimientos",
+          "href": "/sites/default/files/publicaciones/reglas_de_procedimientos.pdf"
+        },
+        {
+          "title": "Política Nacional de Salud 2016-2025",
+          "href": "/sites/default/files/transparencia/politicas_de_salud_del_minsa.pdf"
+        }
+      ]
+    },
+    "PA_2026": {
+      "url": "https://www.minsa.gob.pa/publicacion/boletin-epidemiologico-semanal-3",
+      "checked_at": "2026-11-17T01:09:55.020668+00:00",
+      "status": 200,
+      "final_url": "https://www.minsa.gob.pa/publicacion/boletin-epidemiologico-semanal-3",
+      "bytes": 41284,
+      "sha256": "9e26cf9ea1114c632a18076eafb850e86c3b236b8adbbeb651d48291a7032c26",
+      "content_type": "text/html; charset=utf-8",
+      "relevant_links": [
+        {
+          "title": "Manual de la Organización",
+          "href": "/sites/default/files/publicaciones/manual_de_organizacion_minsa_-_30_de_abril_de_2019.pdf"
+        },
+        {
+          "title": "Manual de Procedimientos",
+          "href": "/sites/default/files/publicaciones/reglas_de_procedimientos.pdf"
+        },
+        {
+          "title": "Política Nacional de Salud 2016-2025",
+          "href": "/sites/default/files/transparencia/politicas_de_salud_del_minsa.pdf"
+        },
+        {
+          "title": "Semana N° 01",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_no_1_2026_v1_pdf.pdf"
+        },
+        {
+          "title": "Semana N° 02",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_no_2_2026_pdf.pdf"
+        },
+        {
+          "title": "Semana N° 03",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_no_3_2026_pdf38.pdf"
+        },
+        {
+          "title": "Semana N° 04",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_no_4_202699.pdf"
+        },
+        {
+          "title": "2026_boletin_semanal_s5.pdf",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//2026_boletin_semanal_s5.pdf"
+        },
+        {
+          "title": "Semana N° 06",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_06-dd.pdf"
+        },
+        {
+          "title": "Semana N° 07",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_07.pdf"
+        },
+        {
+          "title": "Semana N° 08",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_08.pdf"
+        },
+        {
+          "title": "Semana N° 09",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_9.pdf"
+        },
+        {
+          "title": "Semana N° 10",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_10_2026.pdf"
+        },
+        {
+          "title": "Semana N° 11",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_11_2026.pdf"
+        },
+        {
+          "title": "Semana N° 12",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_12_cc.pdf"
+        },
+        {
+          "title": "Semana N° 13",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_13_2026.pdf"
+        },
+        {
+          "title": "Semana N° 14",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_14_202646.pdf"
+        },
+        {
+          "title": "Semana N° 15",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_15_2026.pdf"
+        },
+        {
+          "title": "Semana N° 16",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_16_2026.pdf"
+        },
+        {
+          "title": "Semana N° 17",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_17_2026.pdf"
+        },
+        {
+          "title": "Semana N° 18",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_18.pdf"
+        },
+        {
+          "title": "Semana N° 19",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_19_2026.pdf"
+        },
+        {
+          "title": "Semana N° 20",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_20_2026.pdf"
+        },
+        {
+          "title": "Semana N° 21",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_21_2026.pdf"
+        },
+        {
+          "title": "Semana N° 23",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_23.pdf"
+        },
+        {
+          "title": "Semana N° 24",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_24.pdf"
+        },
+        {
+          "title": "Semana N° 25",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_25.pdf"
+        },
+        {
+          "title": "Semana N° 26",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_26.pdf"
+        },
+        {
+          "title": "Semana N° 27",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_27.pdf"
+        },
+        {
+          "title": "Semana N° 28",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_28.pdf"
+        },
+        {
+          "title": "Semana N° 29",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_29.pdf"
+        },
+        {
+          "title": "Semana N° 30",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_30.pdf"
+        },
+        {
+          "title": "Semana N° 31",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_31.pdf"
+        },
+        {
+          "title": "Semana N° 32",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_32.pdf"
+        },
+        {
+          "title": "Semana N° 33",
+          "href": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_33.pdf"
+        },
+        {
+          "title": "Semana N° 34",
+          "href": "https://minsa.b-cdn.net/sites/default/files/2026-10/BOLETIN%20EPIDEMIOLOGICO%20SEMANAL%20%2034%5B8%5D_0.pdf"
+        },
+        {
+          "title": "Semana N° 35",
+          "href": "https://minsa.b-cdn.net/sites/default/files/2026-10/BOLETIN%20EPIDEMIOLOGICO%20SEMANAL%20%2035%5B89%5D_0.pdf"
+        },
+        {
+          "title": "Semana N° 36",
+          "href": "https://minsa.b-cdn.net/sites/default/files/2026-10/BOLETIN%20EPIDEMIOLOGICO%20SEMANAL%20%2036_0.pdf"
+        },
+        {
+          "title": "Semana N° 37",
+          "href": "https://minsa.b-cdn.net/sites/default/files/2026-10/BOLETIN%20EPIDEMIOLOGICO%20SEMANAL%20%2037_0.pdf"
+        },
+        {
+          "title": "Semana N° 38",
+          "href": "https://minsa.b-cdn.net/sites/default/files/2026-10/BOLETIN%20EPIDEMIOLOGICO%20SEMANAL%20%2038_0.pdf"
+        },
+        {
+          "title": "Semana N° 39",
+          "href": "https://minsa.b-cdn.net/sites/default/files/2026-10/BOLETIN%20EPIDEMIOLOGICO%20SEMANAL%20%2039.pdf"
+        },
+        {
+          "title": "Semana N° 40",
+          "href": "https://minsa.b-cdn.net/sites/default/files/2026-11/BOLETIN%20EPIDEMIOLOGICO%20SEMANAL%20%2040.pdf"
+        },
+        {
+          "title": "Manual de la Organización",
+          "href": "/sites/default/files/publicaciones/manual_de_organizacion_minsa_-_30_de_abril_de_2019.pdf"
+        },
+        {
+          "title": "Manual de Procedimientos",
+          "href": "/sites/default/files/publicaciones/reglas_de_procedimientos.pdf"
+        },
+        {
+          "title": "Política Nacional de Salud 2016-2025",
+          "href": "/sites/default/files/transparencia/politicas_de_salud_del_minsa.pdf"
+        }
+      ]
+    },
+    "PY_bulletins": {
+      "url": "https://dgvs.mspbs.gov.py/boletin-epidemiologico-semanal/",
+      "checked_at": "2026-11-17T01:09:55.021199+00:00",
+      "error_type": "SSLError",
+      "error": "HTTPSConnectionPool(host='dgvs.mspbs.gov.py', port=443): Max retries exceeded with url: /boletin-epidemiologico-semanal/ (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1029)')))"
+    },
+    "EC_bulletins": {
+      "url": "https://www.salud.gob.ec/gacetas-epidemiologicas/",
+      "checked_at": "2026-11-17T01:09:55.021824+00:00",
+      "error_type": "SSLError",
+      "error": "HTTPSConnectionPool(host='www.salud.gob.ec', port=443): Max retries exceeded with url: /gacetas-epidemiologicas/ (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1029)')))"
+    },
+    "CL_catalog": {
+      "url": "https://datos.gob.cl/api/3/action/package_show?id=notificaciones-eno",
+      "checked_at": "2026-11-17T01:09:55.022578+00:00",
+      "status": 200,
+      "final_url": "https://datos.gob.cl/api/3/action/package_show?id=notificaciones-eno",
+      "bytes": 8287,
+      "sha256": "fb039df16618057f68af604136de185cfcf9691c7cfd024c0a430d55f0102fec",
+      "content_type": "application/json;charset=utf-8",
+      "relevant_links": []
+    },
+    "GP_situation": {
+      "url": "https://www.santepubliquefrance.fr/regions/antilles/documents/bulletin-regional/2026/surveillance-de-la-dengue-aux-antilles.-point-au-12-novembre-2026",
+      "checked_at": "2026-11-17T01:09:55.023195+00:00",
+      "status": 403,
+      "final_url": "https://www.santepubliquefrance.fr/regions/antilles/documents/bulletin-regional/2026/surveillance-de-la-dengue-aux-antilles.-point-au-12-novembre-2026",
+      "bytes": 9,
+      "sha256": "78342a0905a72ce44da083dcb5d23b8ea0c16992ba2a82eece97e033d76ba3d3",
+      "content_type": "text/plain; charset=utf-8"
+    },
+    "SPF_Antilles": {
+      "url": "https://www.santepubliquefrance.fr/regions/antilles",
+      "checked_at": "2026-11-17T01:10:01.120887+00:00",
+      "status": 403,
+      "final_url": "https://www.santepubliquefrance.fr/regions/antilles",
+      "bytes": 9,
+      "sha256": "78342a0905a72ce44da083dcb5d23b8ea0c16992ba2a82eece97e033d76ba3d3",
+      "content_type": "text/plain; charset=utf-8"
+    },
+    "SPF_Guyane": {
+      "url": "https://www.santepubliquefrance.fr/regions/guyane",
+      "checked_at": "2026-11-17T01:10:01.129799+00:00",
+      "status": 403,
+      "final_url": "https://www.santepubliquefrance.fr/regions/guyane",
+      "bytes": 9,
+      "sha256": "78342a0905a72ce44da083dcb5d23b8ea0c16992ba2a82eece97e033d76ba3d3",
+      "content_type": "text/plain; charset=utf-8"
+    },
+    "BQ_rivm": {
+      "url": "https://www.rivm.nl/caribisch-nederland/infectieziekten",
+      "checked_at": "2026-11-17T01:10:01.429931+00:00",
+      "status": 404,
+      "final_url": "https://www.rivm.nl/caribisch-nederland/infectieziekten",
+      "bytes": 25853,
+      "sha256": "49431ba9ed4109a89fb21a9903bd4be42ddb67c48db8e5ef55cc2b1526564e7a",
+      "content_type": "text/html; charset=utf-8"
+    },
+    "AR_BEN": {
+      "url": "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional",
+      "checked_at": "2026-11-17T01:10:01.623817+00:00",
+      "status": 200,
+      "final_url": "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional",
+      "bytes": 34438,
+      "sha256": "e779d853194beb6a9d9793d5fff2223f24b482d80d49edcfa77a638cd46cdf49",
+      "content_type": "text/html; charset=utf-8",
+      "relevant_links": [
+        {
+          "title": "Compartir en Facebook",
+          "href": "https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.argentina.gob.ar%2Fsalud%2Fboletin-epidemiologico-nacional&amp;title=Bolet%C3%ADn+Epidemiol%C3%B3gico+Nacional"
+        },
+        {
+          "title": "Compartir en X",
+          "href": "https://x.com/share?url=https%3A%2F%2Fwww.argentina.gob.ar%2Fsalud%2Fboletin-epidemiologico-nacional&amp;title=Bolet%C3%ADn+Epidemiol%C3%B3gico+Nacional"
+        },
+        {
+          "title": "Compartir en Linkedin",
+          "href": "https://www.linkedin.com/shareArticle?mini=true&url=https%3A%2F%2Fwww.argentina.gob.ar%2Fsalud%2Fboletin-epidemiologico-nacional"
+        },
+        {
+          "title": "Compartir en Whatsapp",
+          "href": "https://web.whatsapp.com/send?text=https%3A%2F%2Fwww.argentina.gob.ar%2Fsalud%2Fboletin-epidemiologico-nacional"
+        },
+        {
+          "title": "Compartir en Telegram",
+          "href": "https://t.me/share/url?url=https%3A%2F%2Fwww.argentina.gob.ar%2Fsalud%2Fboletin-epidemiologico-nacional"
+        },
+        {
+          "title": "Boletines 2026",
+          "href": "/salud/boletin-epidemiologico-nacional/boletines-2026"
+        },
+        {
+          "title": "Boletines 2025",
+          "href": "/salud/boletin-epidemiologico-nacional/boletines-2025"
+        },
+        {
+          "title": "Boletines 2024",
+          "href": "/salud/boletin-epidemiologico-nacional/boletines-2024"
+        },
+        {
+          "title": "Boletines 2023",
+          "href": "/boletin-epidemiologico-nacional/boletines-2023"
+        },
+        {
+          "title": "Circulares de vigilancia epidemiológica.",
+          "href": "/salud/boletin-epidemiologico-nacional/circulares-de-vigilancia-epidemiologica"
+        },
+        {
+          "title": "Comunicaciones epidemiológicas",
+          "href": "/salud/boletin-epidemiologico-nacional/comunicaciones-epidemiologicas"
+        }
+      ]
+    },
+    "PE_bulletins": {
+      "url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
+      "checked_at": "2026-11-17T01:10:01.828268+00:00",
+      "status": 200,
+      "final_url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
+      "bytes": 230547,
+      "sha256": "5eaf4d6e4fb091ff56e5546f2343614e1d2dfb56de237f047032c14059b9f06a",
+      "content_type": "text/html; charset=UTF-8",
+      "relevant_links": [
+        {
+          "title": "Inteligencia Epidémica",
+          "href": "https://www.dge.gob.pe/portalnuevo/alerta-respuesta/inteligencia-epidemica/"
+        },
+        {
+          "title": "Vigilancia en Salud Pública",
+          "href": "https://www.dge.gob.pe/portalnuevo/vigilancia-epidemiologica/#tab1-vigilancia"
+        },
+        {
+          "title": "¿Qué es la Vigilancia en Salud Pública?",
+          "href": "https://www.dge.gob.pe/portalnuevo/vigilancia-epidemiologica/#tab1-vigilancia"
+        },
+        {
+          "title": "Unidades de Vigilancia en Salud Pública",
+          "href": "https://www.dge.gob.pe/portalnuevo/vigilancia-epidemiologica/#tab2-Unidades-Tecnicas"
+        },
+        {
+          "title": "Salas de situación de salud",
+          "href": "https://www.dge.gob.pe/portalnuevo/vigilancia-epidemiologica/#tab3-salas-vsp"
+        },
+        {
+          "title": "Definiciones de caso",
+          "href": "https://www.dge.gob.pe/portalnuevo/vigilancia-epidemiologica/#tab4-definiciones-de-caso"
+        },
+        {
+          "title": "Investigación y Evaluación",
+          "href": "https://www.dge.gob.pe/portalnuevo/inteligencia-sanitaria/investigacion-monitoreo-y-evaluacion/investigacion-epidemiologica/"
+        },
+        {
+          "title": "Capacitación. Programa de Entrenamiento en Epidemiología de Campo (FETP)",
+          "href": "https://www.dge.gob.pe/portalnuevo/inteligencia-sanitaria/capacitacion-programa-de-enfermedades-en-epidemiologia-de-campo/cursos-y-capacitaciones/"
+        },
+        {
+          "title": "Boletines epidemiológicos",
+          "href": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/"
+        },
+        {
+          "title": "Salas de situación de salud",
+          "href": "https://www.dge.gob.pe/portalnuevo/vigilancia-epidemiologica/#tab3-salas-vsp"
+        },
+        {
+          "title": "Teleconferencias semanales",
+          "href": "https://www.dge.gob.pe/portalnuevo/informacion-publica/teleconferencias-semanales-descargar-archivos-de-presentacion/"
+        },
+        {
+          "title": "Avisos y alertas epidemiológicas",
+          "href": "https://www.dge.gob.pe/portalnuevo/informacion-publica/avisos-y-alertas-epidemiologicas/"
+        },
+        {
+          "title": "Vigilancia de eventos sanitarios en medios de comunicación",
+          "href": "https://www.dge.gob.pe/portalnuevo/respuesta-a-brotes-y-otros-evisap/inteligencia-epidemica/#tab2-vigilancia-eventos-sanitarios-en-medios-de-comunicacion"
+        },
+        {
+          "title": "Calendario epidemiológico 2026",
+          "href": "https://www.dge.gob.pe/portalnuevo/wp-content/uploads/2026/01/CALENDARIO-EPIDEMIOLOGICO-PARED-2026.pdf?v1.0"
+        },
+        {
+          "title": "AULA VIRTUAL",
+          "href": "https://www.dge.gob.pe/portalnuevo/inteligencia-sanitaria/capacitacion-programa-de-enfermedades-en-epidemiologia-de-campo/aula-virtual/"
+        },
+        {
+          "title": "Aula virtual",
+          "href": "https://www.dge.gob.pe/portalnuevo/inteligencia-sanitaria/capacitacion-programa-de-enfermedades-en-epidemiologia-de-campo/aula-virtual/"
+        }
+      ]
+    },
+    "BR_sinan": {
+      "url": "https://portalsinan.saude.gov.br/",
+      "checked_at": "2026-11-17T01:10:01.949150+00:00",
+      "status": 200,
+      "final_url": "https://portalsinan.saude.gov.br/",
+      "bytes": 20920,
+      "sha256": "04421623f419ceaab34ea14ab3b74ad3646d22423e4697e18c918d088d04f40e",
+      "content_type": "text/html; charset=utf-8",
+      "relevant_links": [
+        {
+          "title": "Calendário Epidemiológico",
+          "href": "/calendario-epidemiologico"
+        },
+        {
+          "title": "Sinan Dengue/Chikungunya",
+          "href": "/sinan-dengue-chikungunya"
+        },
+        {
+          "title": "Dados Epidemiológicos Sinan",
+          "href": "/dados-epidemiologicos-sinan"
+        },
+        {
+          "title": "Sinan Dengue/Chikungunya",
+          "href": "/sinan-dengue-chikungunya"
+        }
+      ]
+    },
+    "US_nndss": {
+      "url": "https://data.cdc.gov/resource/x9gk-5huc.json?$limit=1",
+      "checked_at": "2026-11-17T01:10:04.165325+00:00",
+      "status": 200,
+      "final_url": "https://data.cdc.gov/resource/x9gk-5huc.json?$limit=1",
+      "bytes": 190,
+      "sha256": "f7560073a4233eca669f1bdaf388384f37fb71db39caeccf62c09dcd5c50739b",
+      "content_type": "application/json;charset=utf-8",
+      "relevant_links": []
+    },
+    "CA_data": {
+      "url": "https://health-infobase.canada.ca/src/data/respiratory-virus-surveillance/respiratory-virus-surveillance.csv",
+      "status": 200,
+      "bytes": 3033,
+      "sha256": "18a2bec9fc49df53bfcae06d131cd4160e271f7534f8af6a5186d2f5b34323ac",
+      "final_url": "https://health-infobase.canada.ca/404.html",
+      "redirects": [
+        {
+          "url": "https://health-infobase.canada.ca/src/data/respiratory-virus-surveillance/respiratory-virus-surveillance.csv",
+          "status": 302,
+          "location": "https://health-infobase.canada.ca/404.html"
+        }
+      ],
+      "interpretation": "Guessed path returned soft 404 through /404.html; rejected. Use CA_weekly_csv actual page-bound resource."
+    },
+    "PA_pdf": {
+      "url": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_no_1_2026_v1_pdf.pdf",
+      "status": 200,
+      "bytes": 1154728,
+      "sha256": "50f00e7425b33a9e731940f3c4471f5b369cb782923b5f96036798f74cbb068f",
+      "final_url": "https://minsa.b-cdn.net/sites/default/files/migration/publication//boletin_epidemiologico_semanal_no_1_2026_v1_pdf.pdf",
+      "redirects": [],
+      "verified_pdf": {
+        "pages": 12,
+        "source_year": 2026,
+        "source_week": 1,
+        "period_start": "2026-01-04",
+        "period_end": "2026-01-10",
+        "current_and_cumulative_columns_separate": true,
+        "preliminary": true,
+        "verified_current_week_examples": {
+          "bronchiolitis": 401,
+          "severe_acute_respiratory_infections": 493,
+          "influenza_like_syndrome": 1052
+        }
+      }
+    },
+    "BQ_source": {
+      "url": "https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen",
+      "status": 200,
+      "bytes": 43728,
+      "sha256": "7233992b021bb7d9d28ca9d71e463403e7c7f49688b7b9356d431bba6705c92f",
+      "final_url": "https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen",
+      "redirects": []
+    },
+    "CL_epi": {
+      "url": "https://epi.minsal.cl/",
+      "status": 403,
+      "bytes": 5659,
+      "sha256": "979bd58b98524792113225221c30bf6ee7695c331ceefe70f703bd43c8fc46e9",
+      "final_url": "https://epi.minsal.cl/",
+      "redirects": []
+    },
+    "SPF_dengue_catalog": {
+      "url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets?where=search(title,%22dengue%22)&limit=100",
+      "status": 200,
+      "bytes": 33,
+      "sha256": "b40a5ce424590aa2d85084c9a423d90252d3ba8a22202193a62874533698a3a3",
+      "final_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets?where=search(title,%22dengue%22)&limit=100",
+      "redirects": []
+    },
+    "SPF_resp_catalog": {
+      "url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets?where=search(title,%22grippe%22)&limit=100",
+      "status": 200,
+      "bytes": 38625,
+      "sha256": "3e25f0f560b1e676f6d3b2d8d61c68ce01ac5614dac74bbc25b3a0e3808555f3",
+      "final_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets?where=search(title,%22grippe%22)&limit=100",
+      "redirects": []
+    },
+    "SPF_grippe_territories": {
+      "url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=reglib%20in%20(%22Guadeloupe%22,%22Martinique%22,%22Guyane%22)&limit=3&order_by=date_complet%20desc",
+      "status": 200,
+      "bytes": 751,
+      "sha256": "19380e373c3d22d2fb9f1035f12bdea8c3771435977590e6d58b96389336aec5"
+    },
+    "SPF_grippe_groups": {
+      "url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?select=reglib,count(*)&group_by=reglib&limit=100",
+      "status": 200,
+      "bytes": 905,
+      "sha256": "557824a8c3ef1d35c717ac472ae802035ca07515a5103af8cddefab39cc588c0"
+    },
+    "CA_weekly_csv": {
+      "url": "https://health-infobase.canada.ca/src/data/respiratory-virus-detections/RVD_WeeklyData.csv",
+      "status": 200,
+      "bytes": 49680,
+      "sha256": "ef43beb5bc93b90ff8be54a52bd233021aabf1599bdc824c08634aa4c7ddd5fa",
+      "row_count": 800,
+      "columns": [
+        "region",
+        "province",
+        "week",
+        "weekorder",
+        "year",
+        "date",
+        "virus",
+        "tests",
+        "detections",
+        "percentpositive"
+      ],
+      "first_rows": [
+        {
+          "region": "Prairies",
+          "province": "Alberta",
+          "week": "35",
+          "weekorder": "1",
+          "year": "2026",
+          "date": "2026-09-05",
+          "virus": "SARS-CoV-2",
+          "tests": "2410",
+          "detections": "72",
+          "percentpositive": "3.0"
+        },
+        {
+          "region": "Prairies",
+          "province": "Alberta",
+          "week": "36",
+          "weekorder": "2",
+          "year": "2026",
+          "date": "2026-09-12",
+          "virus": "SARS-CoV-2",
+          "tests": "2601",
+          "detections": "56",
+          "percentpositive": "2.2"
+        }
+      ],
+      "last_rows": [
+        {
+          "region": "Territories",
+          "province": "Territories",
+          "week": "43",
+          "weekorder": "9",
+          "year": "2026",
+          "date": "2026-10-31",
+          "virus": "HCoV",
+          "tests": "N/A",
+          "detections": "N/A",
+          "percentpositive": "N/A"
+        },
+        {
+          "region": "Territories",
+          "province": "Territories",
+          "week": "44",
+          "weekorder": "10",
+          "year": "2026",
+          "date": "2026-11-07",
+          "virus": "HCoV",
+          "tests": "N/A",
+          "detections": "N/A",
+          "percentpositive": "N/A"
+        }
+      ],
+      "profile": {
+        "regions": [
+          "Atlantic",
+          "British Columbia",
+          "Canada",
+          "Ontario",
+          "Prairies",
+          "Quebec",
+          "Territories"
+        ],
+        "provinces": [
+          "Alberta",
+          "Atlantic",
+          "British Columbia",
+          "Canada",
+          "Manitoba",
+          "New Brunswick",
+          "Newfoundland and Labrador",
+          "Northwest Territories",
+          "Nova Scotia",
+          "Nunavut",
+          "Ontario",
+          "Prairies",
+          "Prince Edward Island",
+          "Quebec",
+          "Saskatchewan",
+          "Territories",
+          "Yukon"
+        ],
+        "viruses": [
+          "ADV",
+          "EV/RV",
+          "HCoV",
+          "HMPV",
+          "HPIV",
+          "Influenza",
+          "Influenza A",
+          "Influenza B",
+          "RSV",
+          "SARS-CoV-2"
+        ],
+        "first": "2026-09-05",
+        "last": "2026-11-07",
+        "national_rows": 100,
+        "warning": "Laboratory detections, tests and positivity, not all-disease notification cases; N/A not zero; nested influenza total/subtypes not additive."
+      }
+    },
+    "CA_summary_csv": {
+      "url": "https://health-infobase.canada.ca/src/data/respiratory-virus-detections/RVD_SummaryData.csv",
+      "status": 200,
+      "bytes": 210,
+      "sha256": "3f8b2f1d6033a36613779bb49d64a0f8b0cfdef7cb5cda801e28ebaec9aeb5b9",
+      "row_count": 8,
+      "columns": [
+        "virus",
+        "percentpositive",
+        "trend",
+        "activitylevel"
+      ],
+      "first_rows": [
+        {
+          "virus": "SARS-CoV-2",
+          "percentpositive": "6.3",
+          "trend": "stable",
+          "activitylevel": "Low"
+        },
+        {
+          "virus": "Influenza",
+          "percentpositive": "13.7",
+          "trend": "up",
+          "activitylevel": "Moderate"
+        }
+      ]
+    },
+    "PA_year_2026": {
+      "url": "https://www.minsa.gob.pa/boletines-semanales-2026",
+      "status": 200,
+      "sha256": "1fa5f58c61caf8247a1aeb33e2987027f540207cce2c3c52ba27ff9b7ae9d7e3",
+      "bytes": 30639,
+      "relevant_links": [
+        {
+          "title": "Manual de la Organización",
+          "href": "/sites/default/files/publicaciones/manual_de_organizacion_minsa_-_30_de_abril_de_2019.pdf"
+        },
+        {
+          "title": "Manual de Procedimientos",
+          "href": "/sites/default/files/publicaciones/reglas_de_procedimientos.pdf"
+        },
+        {
+          "title": "Política Nacional de Salud 2016-2025",
+          "href": "/sites/default/files/transparencia/politicas_de_salud_del_minsa.pdf"
+        },
+        {
+          "title": "",
+          "href": "/publicacion/boletin-epidemiologico-semanal-3"
+        },
+        {
+          "title": "Manual de la Organización",
+          "href": "/sites/default/files/publicaciones/manual_de_organizacion_minsa_-_30_de_abril_de_2019.pdf"
+        },
+        {
+          "title": "Manual de Procedimientos",
+          "href": "/sites/default/files/publicaciones/reglas_de_procedimientos.pdf"
+        },
+        {
+          "title": "Política Nacional de Salud 2016-2025",
+          "href": "/sites/default/files/transparencia/politicas_de_salud_del_minsa.pdf"
+        }
+      ]
+    },
+    "SPF_grippe_contract": {
+      "dataset_id": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+      "fields": [
+        {
+          "name": "date_complet",
+          "description": null,
+          "annotations": {},
+          "label": "1er jour de la semaine",
+          "type": "date"
+        },
+        {
+          "name": "semaine",
+          "description": null,
+          "annotations": {},
+          "label": "Semaine",
+          "type": "text"
+        },
+        {
+          "name": "reglib",
+          "description": "Libellé",
+          "annotations": {},
+          "label": "Région",
+          "type": "text"
+        },
+        {
+          "name": "sursaud_cl_age_gene",
+          "description": null,
+          "annotations": {},
+          "label": "Classe d'âge",
+          "type": "text"
+        },
+        {
+          "name": "taux_passages_grippe_sau",
+          "description": "Pour 100 000 passages",
+          "annotations": {
+            "decimals": 1
+          },
+          "label": "Taux de passages aux urgences pour grippe",
+          "type": "double"
+        },
+        {
+          "name": "taux_hospit_grippe_sau",
+          "description": "Pour 100 000 passages",
+          "annotations": {
+            "decimals": 1
+          },
+          "label": "Taux d'hospitalisations après passages aux urgences pour grippe",
+          "type": "double"
+        },
+        {
+          "name": "taux_actes_grippe_sos",
+          "description": "Pour 100 000 actes médicaux",
+          "annotations": {
+            "decimals": 1
+          },
+          "label": "Taux d'actes médicaux SOS médecins pour grippe",
+          "type": "double"
+        },
+        {
+          "name": "region",
+          "description": null,
+          "annotations": {},
+          "label": "Région Code",
+          "type": "text"
+        }
+      ],
+      "metadata_default": {
+        "title": "Grippe : Passages aux urgences et Actes SOS Médecins (Région)",
+        "theme": [
+          "Maladies Infectieuses"
+        ],
+        "keyword": [
+          "SurSAUD",
+          "surveillance syndromique",
+          "service d'urgence",
+          "réseau OSCOUR",
+          "associations SOS Médecins",
+          "SOS Médecins",
+          "grippe"
+        ],
+        "license": "Licence ouverte 2.0",
+        "license_url": "https://www.etalab.gouv.fr/wp-content/uploads/2017/04/ETALAB-Licence-Ouverte-v2.0.pdf",
+        "language": "fr",
+        "modified": "2026-11-11T14:00:43+00:00",
+        "publisher": "Santé publique France",
+        "references": null,
+        "attributions": [
+          "Données : Réseau OSCOUR®, Associations SOS Médecins. Traitements : Santé publique France"
+        ],
+        "update_frequency": "WEEKLY",
+        "bbox": null,
+        "data_processed": "2026-11-11T14:00:43+00:00",
+        "federated": false,
+        "geographic_reference": [
+          "world_fr"
+        ],
+        "geographic_reference_auto": true,
+        "geometry_types": null,
+        "metadata_languages": [
+          "fr"
+        ],
+        "metadata_processed": "2026-11-11T14:00:45.063000+00:00",
+        "modified_updates_on_data_change": true,
+        "modified_updates_on_metadata_change": false,
+        "parent_domain": null,
+        "records_count": 32940,
+        "shared_catalog": null,
+        "source_dataset": null,
+        "source_domain": null,
+        "source_domain_address": null,
+        "source_domain_title": null,
+        "territory": [
+          "France"
+        ],
+        "timezone": null
+      },
+      "groups": {
+        "total_count": 18,
+        "results": [
+          {
+            "reglib": "Auvergne et Rhône-Alpes",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Bourgogne et Franche-Comté",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Bretagne",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Centre-Val de Loire",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Corse",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Grand Est",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Guadeloupe",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Guyane",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Hauts-de-France",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Martinique",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Mayotte",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Normandie",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Nouvelle Aquitaine",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Occitanie",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Pays de la Loire",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Provence-Alpes-Côte d'Azur",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Réunion",
+            "count(*)": 1830
+          },
+          {
+            "reglib": "Île-de-France",
+            "count(*)": 1830
+          }
+        ]
+      },
+      "territory_sample": {
+        "total_count": 5490,
+        "results": [
+          {
+            "date_complet": "2026-11-02",
+            "semaine": "2026-S45",
+            "reglib": "Guadeloupe",
+            "sursaud_cl_age_gene": "00-04 ans",
+            "taux_passages_grippe_sau": 862.06896552,
+            "taux_hospit_grippe_sau": 0.0,
+            "taux_actes_grippe_sos": null,
+            "region": "01"
+          },
+          {
+            "date_complet": "2026-11-02",
+            "semaine": "2026-S45",
+            "reglib": "Guadeloupe",
+            "sursaud_cl_age_gene": "Tous âges",
+            "taux_passages_grippe_sau": 224.46689113,
+            "taux_hospit_grippe_sau": 0.0,
+            "taux_actes_grippe_sos": null,
+            "region": "01"
+          },
+          {
+            "date_complet": "2026-11-02",
+            "semaine": "2026-S45",
+            "reglib": "Martinique",
+            "sursaud_cl_age_gene": "00-14 ans",
+            "taux_passages_grippe_sau": 1095.890411,
+            "taux_hospit_grippe_sau": 0.0,
+            "taux_actes_grippe_sos": 735.29411765,
+            "region": "02"
+          }
+        ]
+      },
+      "semantic_warning": "Syndromic visit/hospitalization/SOS rates; never notification counts. Field denominator text and long description for hospitalizations require reconciliation."
+    },
+    "CL_frozen_original_header": {
+      "path": "data/raw/cl/a8fbc288-ce02-4d3f-802e-27e8f091de32/1/23052ebb492b49829dd14b5ad91883c4-85d037b8824eae95.csv",
+      "bytes": 68280694,
+      "sha256": "85d037b8824eae95743af436c9a547fc49d5bc07f1ee28bd0d4f68aad1f0777d",
+      "columns": [
+        "etapa_clinica",
+        "region",
+        "seremi",
+        "nacionalidad",
+        "cie_10_diagnostico",
+        "diagnostico",
+        "Autóctono",
+        "anho_notificacion",
+        "ENO",
+        "pueblo_indigena",
+        "nombre_instruccion",
+        "presenta_sintomas",
+        "sintomas",
+        "consumo_agua_no_potable",
+        "antecedente_teniasis",
+        "imagenologia",
+        "manifestaciones",
+        "existe_coinfeccion",
+        "via_transmision",
+        "n_parejas_sexuales",
+        "uso_preservativo",
+        "pais_contagio",
+        "paciente_inmunosuprimido",
+        "vih",
+        "pareja",
+        "exantema_mpox",
+        "factores_exposicion",
+        "neumonia",
+        "contacto_aves",
+        "genotipo_1",
+        "recuento_linfocitos",
+        "clasificacion_final_vih",
+        "etapa_vih_sida",
+        "hospitalizacion",
+        "nombre_primer_sintoma",
+        "SeroGrupo",
+        "sexo",
+        "grupo_edad",
+        "codigo_comuna_residencia"
+      ],
+      "time_column": "anho_notificacion",
+      "month_week_date_columns": [],
+      "interpretation": "Current ENO original contains notification year only; month/week has not been discarded by annual aggregation."
+    }
+  }
+}

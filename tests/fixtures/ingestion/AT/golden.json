@@ -1,30 +1,56 @@
 {
   "rows": [
     {
+      "AggregationPolicy": "non_additive",
       "AuthoritativeRevision": "true",
+      "Calendar": "Gregorian",
       "Cases": "7",
       "DatasetStatus": "closed_revisable",
       "Date": "2026-02-01",
+      "DefinitionVersion": "AT_AGES_RADAR_source_native",
       "Dimensions": "{\"source_disease_code\": \"masern\", \"source_disease_label\": \"Masern\"}",
       "DiseaseCode": "__source_native__",
       "DownloadURL": "https://example.org/ages.csv",
+      "Frequency": "monthly",
       "Geography": "Austria",
       "GeographyKey": "country:AT:national",
       "IsProvisional": "false",
       "License": "not_specified_by_AGES",
-      "LicenseReviewStatus": "pending",
+      "LicenseReviewStatus": "operator_authorized_public_release",
+      "Measure": "case_notifications",
+      "MissingValueStatus": "reported",
       "Month": "2",
+      "PeriodEnd": "2026-02-28",
+      "PeriodStart": "2026-02-01",
       "PeriodType": "monthly",
-      "PublicReleaseEnabled": "false",
+      "PublicReleaseEnabled": "true",
       "RawDiseaseLabel": "Masern",
       "RawSHA256": "edfb78af6b794e9dd44d019001ea89b255a92d1a9be243cd6e4368ad26e2315c",
+      "ReportingBasis": "national_notifiable_disease_radar",
       "RetrievedAt": "2026-03-01T00:00:00Z",
       "RevisionSemantics": "authoritative_revision",
       "Source": "Austria AGES Radar for Infectious Diseases",
-      "SourceDiseaseCode": "masern",
+      "SourceCategoryCode": "masern",
+      "SourceContractVersion": "at_ages_radar_calendar_month_notifications_v1",
+      "SourceDiseaseCode": "__source_native__",
       "SourceURL": "https://example.org/issue",
+      "TimeBasis": "calendar_month_notification",
+      "Unit": "count",
       "Year": "2026"
     }
   ],
-  "observations": []
+  "observations": [
+    {
+      "time": "2026-02-01T00:00:00+00:00",
+      "series_code": "SER_AT_AGES_RADAR_SOURCE_NATIVE",
+      "geography_key": "country:AT:national",
+      "dimension_key": "sha256:af098342be26ea18161a2f473aab97d71774c49fd44880fc26a690a3a6a2f373",
+      "value": 7.0,
+      "suppressed": false,
+      "quality_status": "raw",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ]
 }

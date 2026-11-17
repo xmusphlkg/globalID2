@@ -1,0 +1,46 @@
+[
+  {
+    "title": "ডেঙ্গু প্রেস রিলিজ (১০/১০/২০২৬",
+    "date": "2026-10-10",
+    "publication_date": "2026-10-10",
+    "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/84b44004-8e94-4680-bef0-03967fe44d24.pdf",
+    "pdf_sha256": "fe2899fab0f6389cd581b44de0dabb8c533a5faefe398c39d1d5a5f556042000",
+    "text_fixture": "dghs_dashboard_2026-10-10.txt",
+    "pdfium_text_page": 1,
+    "retrieved_date": "2026-11-17"
+  },
+  {
+    "title": "ডেঙ্গু প্রেস রিলিজ (০৪/০৯/২০২৬)",
+    "date": "2026-09-04",
+    "publication_date": "2026-09-04",
+    "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/652f9ac1-2c6d-4f1a-a9c6-21e99261ee8f.pdf",
+    "pdf_sha256": "090acc748d9ad8c7d1c003c7956184eda97bec76a179fb3dc9144169f322cf34",
+    "text_fixture": "dghs_dashboard_2026-09-04.txt",
+    "pdfium_text_page": 1,
+    "retrieved_date": "2026-11-17"
+  },
+  {
+    "date": "2026-11-07",
+    "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/709dcc8c-a53d-462a-9e95-275d79048afd.pdf",
+    "pdf_sha256": "4c8c166584751d2de8e118bced02e3c83bdab4483251ee6998c55963ca666c6a",
+    "text_fixture": "dghs_summary_2026-11-07.txt",
+    "pdfium_text_page": 1,
+    "retrieved_date": "2026-11-17"
+  },
+  {
+    "date": "2026-10-26",
+    "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/b7f77d0d-3942-4a5d-b284-28bc71457805.pdf",
+    "pdf_sha256": "184b60bcdfc91260cb41d2bb37c6266e34490fc8cde47593686314d8f0ffcf4e",
+    "text_fixture": "dghs_summary_2026-10-26.txt",
+    "pdfium_text_page": 1,
+    "retrieved_date": "2026-11-17"
+  },
+  {
+    "date": "2026-09-30",
+    "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/eb331128-b2b1-4041-8a84-0b1ee97be8fc.pdf",
+    "pdf_sha256": "3572822c58b8c96605a723d4025388dde831cc689c13f850d20bcb38d6f84c0e",
+    "text_fixture": "dghs_dashboard_2026-09-30.txt",
+    "pdfium_text_page": 1,
+    "retrieved_date": "2026-11-17"
+  }
+]

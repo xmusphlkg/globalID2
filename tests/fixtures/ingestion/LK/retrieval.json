@@ -1,0 +1,8 @@
+{
+  "checked_date": "2026-11-17",
+  "source_url": "https://www.epid.gov.lk/epid/public/weekly-epidemiological-report",
+  "http_status": 500,
+  "body_title": "509 Bandwidth Limit Exceeded",
+  "sha256": "a8a284f377cb9f21c53e5553234ecb693dc4c2c38f3306b6cde4aead5e05e913",
+  "note": "Real official error response; no successful report or numerical sample was obtainable. Root/current and historical URLs returned HTTP 403."
+}

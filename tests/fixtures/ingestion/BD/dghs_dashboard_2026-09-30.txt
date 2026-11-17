@@ -1,0 +1,104 @@
+30-Sep-2026
+Government of the People's Republic of Bangladesh
+Directorate General of Health Services (DGHS)
+Management Information System (MIS)
+Health Emergency Operation Center & Control Room
+Daily Dengue Press Release
+W39: 8,084 26 79,620 245
+Dengue cases of last 24 hours
+No.
+1,,948
+Admitted
+0
+500
+1000
+1500
+2000
+2500
+Dengue death of last 24 hours
+No.
+6
+Death
+0
+1
+2
+3
+4
+5
+6
+7
+Division & City corporation cases of last 24 hours
+No.
+212
+343
+320
+189
+210
+248
+102
+211
+99
+14
+Admitted
+Barishal
+Division
+Chattogram
+Division
+Dhaka Division
+(Out of CC)
+DNCC DSCC Khulna Division Mymensingh
+Division
+Rajshahi
+Division
+Rangpur
+Division
+Sylhet Division
+0
+100
+200
+300
+400
+Division & City corporation deaths of last 24 hours
+No.
+1 1 1
+2
+1
+Death
+Barishal Division (O…
+Chattogram Divisi…
+DSCC
+Khulna Division (O…
+Rangpur Division (…
+0
+0.5
+1
+1.5
+2
+2.5
+Age Group Male Female Total
+0-5 41 37 78
+06-10 60 40 100
+11-15 86 42 128
+16-20 181 97 278
+21-25 190 94 284
+26-30 168 101 269
+31-35 129 85 214
+36-40 93 65 158
+41-45 70 58 128
+46-50 49 35 84
+51-55 39 23 62
+56-60 36 28 64
+61-65 24 21 45
+66-70 18 9 27
+71-75 5 6 11
+76-80 7 6 13
+80+ 3 2 5
+Grand Total 1,199 749 1,948
+Age group distribution of affected cases of last 24
+hours
+Age Group Male Female Total
+06-10 1 0 1
+36-40 1 1 2
+41-45 1 2 3
+Grand Total 3 3 6
+Age group distribution of deaths of last 24 hours

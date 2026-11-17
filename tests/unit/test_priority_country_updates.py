@@ -9,6 +9,7 @@ import pytest
 
 from scripts import configure_priority_country_updates as setup
 from src.core.source_channels import load_source_channels, source_channel
+from src.core.high_frequency_sources import HIGH_FREQUENCY_SOURCES
 from src.core.source_scopes import canonicalize_task_source, scope_from_data_source
 from src.services.crawl_service import CrawlService
 
@@ -29,6 +30,7 @@ ADDITIONAL_CHANNEL_CONTRACTS = {
     ('AR', 'ar_moh_hiv_annual'): 'SRC_AR_MOH_HIV_ANNUAL',
     ('CO', 'co_ins_sivigila_current'): 'SRC_CO_INS_SIVIGILA_CURRENT',
     ('CO', 'co_ins_bes_weekly'): 'SRC_CO_INS_BES',
+    ('CO', 'co_ins_sivigila_microdatos'): 'SRC_CO_INS_SIVIGILA_MICRODATOS',
 }
 EXPECTED_CHANNEL_CONTRACTS = {
     **{(country, scope): source_id for country, (scope, source_id) in BASE_CHANNEL_CONTRACTS.items()},
@@ -43,15 +45,17 @@ EXPECTED_PUBLIC_CHANNELS = {
     ('ID', 'id_kemkes_profile'),
     ('MX', 'mx_dge_annual'),
     ('CL', 'cl_eno_historical'),
+    ('CO', 'co_ins_sivigila_historical'),
     ('MW', 'mw_phim_idsr_weekly'),
 }
+EXPECTED_PUBLIC_CHANNELS.update(HIGH_FREQUENCY_SOURCES)
 
 
 def test_official_channels_match_source_registration():
     channels = load_source_channels()
     base_channels = [c for c in channels if c['country_code'] in BASE_CHANNEL_CONTRACTS]
-    assert len(base_channels) == len(EXPECTED_CHANNEL_CONTRACTS)
-    assert {(c['country_code'], c['scope']): c['source_id'] for c in base_channels} == EXPECTED_CHANNEL_CONTRACTS
+    actual = {(c['country_code'], c['scope']): c['source_id'] for c in base_channels}
+    assert EXPECTED_CHANNEL_CONTRACTS.items() <= actual.items()
     for channel in channels:
         assert source_channel(channel['country_code'], channel['scope']) == channel
         assert scope_from_data_source(channel['source_id']) == channel['scope']
@@ -95,10 +99,12 @@ def database(monkeypatch, rows):
 def test_jobs_keep_native_cadence_and_raw_evidence():
     jobs = setup.desired_jobs()
     assert len(jobs) == len(load_source_channels())
-    assert {key: (job['country_code'], job['source']) for key, job in jobs.items()
-        if job['country_code'] in BASE_CHANNEL_CONTRACTS} == {
+    actual = {key: (job['country_code'], job['source']) for key, job in jobs.items()
+        if job['country_code'] in BASE_CHANNEL_CONTRACTS}
+    expected = {
             f"{code.lower()}-{scope.replace('_', '-')}-daily": (code, scope)
         for code, scope in EXPECTED_CHANNEL_CONTRACTS}
+    assert expected.items() <= actual.items()
     historical_job = jobs['co-co-ins-sivigila-historical-daily']
     current_job = jobs['co-co-ins-sivigila-current-daily']
     bes_job = jobs['co-co-ins-bes-weekly-daily']

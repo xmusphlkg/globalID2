@@ -3,7 +3,7 @@ import asyncio
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from src.data.crawlers.at import DEFAULT_SCOPE, AustriaAGESRadarCrawler, AGESIssue, parse_ages_csv
+from src.data.crawlers.at import DEFAULT_SCOPE, AustriaAGESRadarCrawler, AGESIssue, parse_ages_csv, category_code
 from src.data.processors.at import ATUpdateFetchResult, _parse_date
 from src.services.ingestion.artifacts import read_artifact
 from src.services.ingestion.capture import capture_writer
@@ -46,9 +46,9 @@ def organize(artifacts, *, updater, source, months=None, output_csv, force=False
         else:
             continue
         for row in rows:
-            merged[(row["Date"], row["SourceDiseaseCode"])] = row
-    rows = updater.parse_source_csv(normalized_csv(sorted(merged.values(), key=lambda row: (row["Date"], row["SourceDiseaseCode"])), add_disease=False)) if merged else []
+            merged[(row["Date"], category_code(row))] = row
+    rows = updater.parse_source_csv(normalized_csv(sorted(merged.values(), key=lambda row: (row["Date"], category_code(row))), add_disease=False)) if merged else []
     if not force:
         rows = [row for row in rows if (parsed := _parse_date(row)) and (parsed.year, parsed.month) in set(map(tuple, targets))]
     latest = max((_parse_date(row) for row in merged.values()), default=None)
-    return ATUpdateFetchResult(rows, latest, Path(output_csv), ["[gate] public release disabled pending AGES license review"])
+    return ATUpdateFetchResult(rows, latest, Path(output_csv), ["[gate] operator-authorized publication; exact reviewed AGES monthly categories only"])

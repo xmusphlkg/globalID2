@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "verified_on": "2026-11-16",
+  "verified_on": "2026-11-17",
   "channels": [
     {
       "country_code": "NG",
@@ -171,7 +171,8 @@
       "refresh_years": 4,
       "daily_time": "11:30",
       "timezone": "America/Bogota",
-      "enabled_by_default": true
+      "enabled_by_default": true,
+      "coverage_note": "Source rows cover 2022–2024; ingestion excludes overlapping 2022. No 2025–2026 observations in the checked release."
     },
     {
       "country_code": "CO",
@@ -197,8 +198,14 @@
       "backfill_summary": {
         "as_of": "2026-11-16",
         "source_epi_weeks": {
-          "2025": [1, 53],
-          "2026": [1, 44]
+          "2025": [
+            1,
+            53
+          ],
+          "2026": [
+            1,
+            44
+          ]
         },
         "report_count": 97,
         "record_count": 159393,
@@ -574,6 +581,1123 @@
       "refresh_years": 2,
       "daily_time": "05:30",
       "timezone": "Asia/Ho_Chi_Minh"
+    },
+    {
+      "country_code": "CO",
+      "scope": "co_ins_sivigila_microdatos",
+      "source_id": "SRC_CO_INS_SIVIGILA_MICRODATOS",
+      "publisher": "Instituto Nacional de Salud Colombia",
+      "official_url": "https://portalsivigila.ins.gov.co/Paginas/Buscador.aspx",
+      "archive_url": "https://portalsivigila.ins.gov.co/Paginas/Buscador.aspx",
+      "discovery_urls": [
+        "https://portalsivigila.ins.gov.co/_api/web/lists/GetByTitle('Microdatos')/items?$select=*,FileRef,File/Length&$expand=File&$top=3000"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "local_archive_weekly_aggregation_force_refreshes_official_catalogue",
+      "refresh_years": 1,
+      "daily_time": "12:00",
+      "timezone": "America/Bogota",
+      "enabled_by_default": false,
+      "integration_status": "automated_managed_runtime",
+      "coverage_verified": false,
+      "coverage_note": "Closed-year workbook aggregates, preview only. Individual forms retain raw classifications; collective forms are quarantined. No 2026 workbook.",
+      "automation_owner": "globalid-co-microdatos-refresh.timer",
+      "integration_note": "Weekly closed-year catalogue refresh; private weekly classification strata, never live incidence."
+    },
+    {
+      "country_code": "BD",
+      "scope": "bd_dghs_dengue_daily",
+      "source_id": "SRC_BD_DGHS_DENGUE",
+      "publisher": "Directorate General of Health Services",
+      "official_url": "https://dghs.gov.bd/pages/miscellaneous-infos?filters=%7B%22miscellaneous_info_type%22:%226a9cf0471fa8cd87d1f50227%22%7D",
+      "archive_url": "https://dghs.gov.bd/pages/miscellaneous-infos?filters=%7B%22miscellaneous_info_type%22:%226a9cf0471fa8cd87d1f50227%22%7D",
+      "discovery_urls": [
+        "https://dghs.gov.bd/pages/miscellaneous-infos?filters=%7B%22miscellaneous_info_type%22:%226a9cf0471fa8cd87d1f50227%22%7D"
+      ],
+      "cadence": "daily",
+      "refresh_strategy": "linked_official_reports_with_explicit_coverage_audit",
+      "refresh_years": 2,
+      "daily_time": "10:15",
+      "timezone": "Asia/Dhaka",
+      "enabled_by_default": false
+    },
+    {
+      "country_code": "BT",
+      "scope": "bt_rcdc_publications",
+      "source_id": "SRC_BT_RCDC_PUBLICATIONS",
+      "publisher": "Royal Centre for Disease Control",
+      "official_url": "https://www.rcdc.gov.bt/web/",
+      "archive_url": "https://www.rcdc.gov.bt/web/",
+      "discovery_urls": [
+        "https://www.rcdc.gov.bt/web/"
+      ],
+      "cadence": "biweekly_monthly_quarterly_and_events",
+      "refresh_strategy": "linked_official_reports_with_explicit_coverage_audit",
+      "refresh_years": 2,
+      "daily_time": "10:15",
+      "timezone": "Asia/Thimphu",
+      "enabled_by_default": false
+    },
+    {
+      "country_code": "MV",
+      "scope": "mv_hpa_communicable",
+      "source_id": "SRC_MV_HPA_COMMUNICABLE",
+      "publisher": "Health Protection Agency / Ministry of Health",
+      "official_url": "https://health.gov.mv/en/publications?search=monthly",
+      "archive_url": "https://health.gov.mv/en/publications?search=monthly",
+      "discovery_urls": [
+        "https://health.gov.mv/en/publications?search=monthly"
+      ],
+      "cadence": "monthly",
+      "refresh_strategy": "linked_official_reports_with_explicit_coverage_audit",
+      "refresh_years": 2,
+      "daily_time": "10:15",
+      "timezone": "Indian/Maldives",
+      "enabled_by_default": false
+    },
+    {
+      "country_code": "AF",
+      "scope": "af_ndsr_weekly",
+      "source_id": "SRC_AF_MOPH_NDSR",
+      "publisher": "Ministry of Public Health",
+      "official_url": "https://moph.gov.af/en/reports",
+      "archive_url": "https://moph.gov.af/en/reports",
+      "discovery_urls": [
+        "https://moph.gov.af/en/reports"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "linked_official_reports_with_explicit_coverage_audit",
+      "refresh_years": 2,
+      "daily_time": "10:15",
+      "timezone": "Asia/Kabul",
+      "enabled_by_default": false
+    },
+    {
+      "country_code": "AR",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_AR_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Argentina/Buenos_Aires"
+    },
+    {
+      "country_code": "AT",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_AT_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Vienna"
+    },
+    {
+      "country_code": "BE",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_BE_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Brussels"
+    },
+    {
+      "country_code": "BG",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_BG_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Sofia"
+    },
+    {
+      "country_code": "BN",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_BN_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Asia/Brunei"
+    },
+    {
+      "country_code": "CA",
+      "scope": "ca_phac_respiratory_weekly",
+      "source_id": "SRC_CA_PHAC_RESPIRATORY",
+      "publisher": "Public Health Agency of Canada (PHAC)",
+      "official_url": "https://health-infobase.canada.ca/respiratory-virus-surveillance/",
+      "archive_url": "https://health-infobase.canada.ca/respiratory-virus-surveillance/",
+      "discovery_urls": [
+        "https://health-infobase.canada.ca/respiratory-virus-surveillance/"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Toronto"
+    },
+    {
+      "country_code": "CL",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_CL_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Santiago"
+    },
+    {
+      "country_code": "CR",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_CR_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Costa_Rica"
+    },
+    {
+      "country_code": "CY",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_CY_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Asia/Nicosia"
+    },
+    {
+      "country_code": "CZ",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_CZ_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Prague"
+    },
+    {
+      "country_code": "CZ",
+      "scope": "cz_szu_monthly",
+      "source_id": "SRC_CZ_SZU_MONTHLY",
+      "publisher": "Státní zdravotní ústav (SZÚ)",
+      "official_url": "https://szu.gov.cz/publikace-szu/data/infekce-v-cr/",
+      "archive_url": "https://szu.gov.cz/publikace-szu/data/infekce-v-cr/",
+      "discovery_urls": [
+        "https://szu.gov.cz/publikace-szu/data/infekce-v-cr/"
+      ],
+      "cadence": "monthly",
+      "refresh_strategy": "full_live_directory_and_verified_reports",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Prague"
+    },
+    {
+      "country_code": "DE",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_DE_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Berlin"
+    },
+    {
+      "country_code": "DK",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_DK_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Copenhagen"
+    },
+    {
+      "country_code": "EC",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_EC_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Guayaquil"
+    },
+    {
+      "country_code": "EE",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_EE_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Tallinn"
+    },
+    {
+      "country_code": "EE",
+      "scope": "ee_terviseamet_monthly",
+      "source_id": "SRC_EE_TERVISEAMET_MONTHLY",
+      "publisher": "Terviseamet",
+      "official_url": "https://www.terviseamet.ee/nakkushaigused/nakkushaiguste-statistika",
+      "archive_url": "https://www.terviseamet.ee/nakkushaigused/nakkushaiguste-statistika",
+      "discovery_urls": [
+        "https://www.terviseamet.ee/nakkushaigused/nakkushaiguste-statistika"
+      ],
+      "cadence": "monthly",
+      "refresh_strategy": "full_live_directory_and_verified_reports",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Tallinn"
+    },
+    {
+      "country_code": "ES",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_ES_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Madrid"
+    },
+    {
+      "country_code": "ET",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_ET_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Africa/Addis_Ababa"
+    },
+    {
+      "country_code": "FI",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_FI_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Helsinki"
+    },
+    {
+      "country_code": "FR",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_FR_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Paris"
+    },
+    {
+      "country_code": "GF",
+      "scope": "spf_odisse_weekly",
+      "source_id": "SRC_GF_SPF_ODISSE_WEEKLY",
+      "publisher": "Santé publique France",
+      "official_url": "https://odisse.santepubliquefrance.fr/explore/dataset/grippe-passages-urgences-et-actes-sos-medecin_reg/",
+      "archive_url": "https://odisse.santepubliquefrance.fr/explore/dataset/grippe-passages-urgences-et-actes-sos-medecin_reg/",
+      "discovery_urls": [
+        "https://odisse.santepubliquefrance.fr/explore/dataset/grippe-passages-urgences-et-actes-sos-medecin_reg/"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Cayenne"
+    },
+    {
+      "country_code": "GH",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_GH_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Africa/Accra"
+    },
+    {
+      "country_code": "GP",
+      "scope": "spf_odisse_weekly",
+      "source_id": "SRC_GP_SPF_ODISSE_WEEKLY",
+      "publisher": "Santé publique France",
+      "official_url": "https://odisse.santepubliquefrance.fr/explore/dataset/grippe-passages-urgences-et-actes-sos-medecin_reg/",
+      "archive_url": "https://odisse.santepubliquefrance.fr/explore/dataset/grippe-passages-urgences-et-actes-sos-medecin_reg/",
+      "discovery_urls": [
+        "https://odisse.santepubliquefrance.fr/explore/dataset/grippe-passages-urgences-et-actes-sos-medecin_reg/"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Guadeloupe"
+    },
+    {
+      "country_code": "GR",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_GR_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Athens"
+    },
+    {
+      "country_code": "HR",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_HR_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Zagreb"
+    },
+    {
+      "country_code": "HU",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_HU_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Budapest"
+    },
+    {
+      "country_code": "ID",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_ID_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Asia/Jakarta"
+    },
+    {
+      "country_code": "IE",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_IE_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Dublin"
+    },
+    {
+      "country_code": "IS",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_IS_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Atlantic/Reykjavik"
+    },
+    {
+      "country_code": "IT",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_IT_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Rome"
+    },
+    {
+      "country_code": "KE",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_KE_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Africa/Nairobi"
+    },
+    {
+      "country_code": "LA",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_LA_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Asia/Vientiane"
+    },
+    {
+      "country_code": "LI",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_LI_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Vaduz"
+    },
+    {
+      "country_code": "LT",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_LT_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Vilnius"
+    },
+    {
+      "country_code": "LU",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_LU_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Luxembourg"
+    },
+    {
+      "country_code": "LV",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_LV_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Riga"
+    },
+    {
+      "country_code": "MM",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_MM_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Asia/Yangon"
+    },
+    {
+      "country_code": "MQ",
+      "scope": "spf_odisse_weekly",
+      "source_id": "SRC_MQ_SPF_ODISSE_WEEKLY",
+      "publisher": "Santé publique France",
+      "official_url": "https://odisse.santepubliquefrance.fr/explore/dataset/grippe-passages-urgences-et-actes-sos-medecin_reg/",
+      "archive_url": "https://odisse.santepubliquefrance.fr/explore/dataset/grippe-passages-urgences-et-actes-sos-medecin_reg/",
+      "discovery_urls": [
+        "https://odisse.santepubliquefrance.fr/explore/dataset/grippe-passages-urgences-et-actes-sos-medecin_reg/"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Martinique"
+    },
+    {
+      "country_code": "MT",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_MT_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Malta"
+    },
+    {
+      "country_code": "MX",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_MX_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Mexico_City"
+    },
+    {
+      "country_code": "MX",
+      "scope": "mx_dge_weekly",
+      "source_id": "SRC_MX_DGE_WEEKLY",
+      "publisher": "Secretaría de Salud, Dirección General de Epidemiología (DGE)",
+      "official_url": "https://www.gob.mx/salud/acciones-y-programas/direccion-general-de-epidemiologia-boletin-epidemiologico",
+      "archive_url": "https://www.gob.mx/salud/acciones-y-programas/direccion-general-de-epidemiologia-boletin-epidemiologico",
+      "discovery_urls": [
+        "https://www.gob.mx/salud/acciones-y-programas/direccion-general-de-epidemiologia-boletin-epidemiologico"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "full_live_directory_and_verified_reports",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Mexico_City"
+    },
+    {
+      "country_code": "MX",
+      "scope": "mx_dge_monthly",
+      "source_id": "SRC_MX_DGE_MONTHLY",
+      "publisher": "Secretaría de Salud, Dirección General de Epidemiología (DGE)",
+      "official_url": "https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html",
+      "archive_url": "https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html",
+      "discovery_urls": [
+        "https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html"
+      ],
+      "cadence": "monthly",
+      "refresh_strategy": "full_live_directory_and_verified_reports",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Mexico_City"
+    },
+    {
+      "country_code": "NL",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_NL_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Amsterdam"
+    },
+    {
+      "country_code": "NO",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_NO_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Oslo"
+    },
+    {
+      "country_code": "PA",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_PA_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Panama"
+    },
+    {
+      "country_code": "PH",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_PH_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Asia/Manila"
+    },
+    {
+      "country_code": "PL",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_PL_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Warsaw"
+    },
+    {
+      "country_code": "PT",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_PT_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Lisbon"
+    },
+    {
+      "country_code": "PY",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_PY_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Asuncion"
+    },
+    {
+      "country_code": "RO",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_RO_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Bucharest"
+    },
+    {
+      "country_code": "SE",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_SE_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Stockholm"
+    },
+    {
+      "country_code": "SI",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_SI_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Ljubljana"
+    },
+    {
+      "country_code": "SK",
+      "scope": "ecdc_respiratory_weekly",
+      "source_id": "SRC_SK_ECDC_RESPIRATORY",
+      "publisher": "European Centre for Disease Prevention and Control (ECDC)",
+      "official_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "archive_url": "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data",
+      "discovery_urls": [
+        "https://github.com/EU-ECDC/Respiratory_viruses_weekly_data"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Europe/Bratislava"
+    },
+    {
+      "country_code": "TL",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_TL_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Asia/Dili"
+    },
+    {
+      "country_code": "TZ",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_TZ_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Africa/Dar_es_Salaam"
+    },
+    {
+      "country_code": "UG",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_UG_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Africa/Kampala"
+    },
+    {
+      "country_code": "VN",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_VN_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "Asia/Ho_Chi_Minh"
+    },
+    {
+      "country_code": "IN",
+      "scope": "in_idsp_weekly",
+      "source_id": "SRC_IN_IDSP",
+      "publisher": "India NCDC IDSP Weekly Outbreak Reports",
+      "official_url": "https://ncdc.mohfw.gov.in/includes/WeeklyOutbreaks.php",
+      "archive_url": "https://ncdc.mohfw.gov.in/includes/WeeklyOutbreaks.php",
+      "discovery_urls": [
+        "https://ncdc.mohfw.gov.in/includes/WeeklyOutbreaks.php"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "bounded_public_archive_replay",
+      "refresh_years": 2,
+      "daily_time": "10:00",
+      "timezone": "Asia/Kolkata",
+      "enabled_by_default": false,
+      "public_release_enabled": false,
+      "status": "internal_adapter_validation"
+    },
+    {
+      "country_code": "PK",
+      "scope": "pk_nih_idsr_weekly",
+      "source_id": "SRC_PK_NIH_IDSR",
+      "publisher": "Pakistan NIH IDSR Weekly Bulletin",
+      "official_url": "https://nih.org.pk/public/phb/weekly-bulletin",
+      "archive_url": "https://nih.org.pk/public/phb/weekly-bulletin",
+      "discovery_urls": [
+        "https://nih.org.pk/public/phb/weekly-bulletin",
+        "https://phb.nih.org.pk/integratedisease-surveillance-and-response"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "bounded_public_archive_replay",
+      "refresh_years": 2,
+      "daily_time": "10:10",
+      "timezone": "Asia/Karachi",
+      "enabled_by_default": false,
+      "public_release_enabled": false,
+      "status": "internal_adapter_validation"
+    },
+    {
+      "country_code": "NP",
+      "scope": "np_sormas_weekly",
+      "source_id": "SRC_NP_EDCD_SORMAS",
+      "publisher": "Nepal EDCD SORMAS Public Weekly Bulletin",
+      "official_url": "https://analysis.edcd.gov.np/",
+      "archive_url": "https://analysis.edcd.gov.np/",
+      "discovery_urls": [
+        "https://analysis.edcd.gov.np/",
+        "https://analysis.edcd.gov.np/sormas-public-rest/public/v1/bulletin/weeks"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "bounded_public_archive_replay",
+      "refresh_years": 2,
+      "daily_time": "10:20",
+      "timezone": "Asia/Kathmandu",
+      "enabled_by_default": false,
+      "public_release_enabled": false,
+      "status": "internal_adapter_validation"
+    },
+    {
+      "country_code": "LK",
+      "scope": "lk_epid_wer_weekly",
+      "source_id": "SRC_LK_EPID_WER",
+      "publisher": "Sri Lanka Epidemiology Unit Weekly Epidemiological Report",
+      "official_url": "https://www.epid.gov.lk/epid/public/weekly-epidemiological-report",
+      "archive_url": "https://www.epid.gov.lk/epid/public/weekly-epidemiological-report",
+      "discovery_urls": [
+        "https://www.epid.gov.lk/epid/public/weekly-epidemiological-report"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "bounded_public_archive_replay",
+      "refresh_years": 2,
+      "daily_time": "10:30",
+      "timezone": "Asia/Colombo",
+      "enabled_by_default": false,
+      "public_release_enabled": false,
+      "status": "source_unavailable"
+    },
+    {
+      "country_code": "CO",
+      "scope": "who_flunet_weekly",
+      "source_id": "SRC_CO_WHO_FLUNET",
+      "publisher": "World Health Organization, Global Influenza Surveillance and Response System",
+      "official_url": "https://www.who.int/tools/flunet",
+      "archive_url": "https://www.who.int/tools/flunet",
+      "discovery_urls": [
+        "https://www.who.int/tools/flunet"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 3,
+      "daily_time": "08:30",
+      "timezone": "America/Bogota",
+      "enabled_by_default": false,
+      "integration_status": "automated_managed_runtime",
+      "automation_owner": "globalid-co-flunet-refresh.timer",
+      "integration_note": "Daily 08:30 America/Bogota; authoritative 2025+ closed-week revision replay. Generic scheduler disabled to prevent duplicate ownership."
+    },
+    {
+      "country_code": "AF",
+      "scope": "af_who_outbreaks_weekly",
+      "source_id": "SRC_AF_WHO_OUTBREAKS",
+      "publisher": "WHO Afghanistan",
+      "official_url": "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html",
+      "archive_url": "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html",
+      "discovery_urls": [
+        "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "linked_official_reports_with_explicit_coverage_audit",
+      "refresh_years": 2,
+      "daily_time": "10:15",
+      "timezone": "Asia/Kabul",
+      "enabled_by_default": false
     }
   ]
 }

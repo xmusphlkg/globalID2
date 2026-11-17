@@ -57,7 +57,13 @@ async def run_surveillance(service, *, task, updater, connector, source, force, 
     try:
         await stages.transition("collect")
         await cancelled()
-        artifacts = await connector.collect(writer, source=source, **(connector_options or {}))
+        collection = connector.collect(writer, source=source, **(connector_options or {}))
+        if getattr(connector, "collect_cancellation_safe", False):
+            # Opt-in connectors own and drain their blocking work before exit.
+            # Never interrupt a store transaction or detach unowned threads.
+            artifacts = await _organize_with_cancellation(collection, cancelled)
+        else:
+            artifacts = await collection
         await stages.finish(metrics={"artifact_count": len(artifacts), "artifact_bytes": sum(a.byte_size for a in artifacts)})
         await stages.transition("organize")
         await cancelled()
@@ -77,6 +83,9 @@ async def run_surveillance(service, *, task, updater, connector, source, force, 
         await stages.transition("store")
         await cancelled()
         imported = 0
+        if process and getattr(updater, "requires_verified_observations", False) and not fetched.rows:
+            status = source_audit.get("status", "no_verified_observations") if isinstance(source_audit, dict) else "no_verified_observations"
+            raise ValueError(f"{updater.country_code}: {status}; no verified numerical observations to import; inspect organize source_audit")
         if process:
             async with get_db() as db:
                 result = await (strategy or UpdaterCommitStrategy()).commit(db, service=service, updater=updater, fetched=fetched, force=force, task_uuid=task.task_uuid, **(strategy_options or {}))

@@ -1,0 +1,801 @@
+region,province,week,weekorder,year,date,virus,tests,detections,percentpositive
+Prairies,Alberta,35,1,2026,2026-09-05,SARS-CoV-2,2410,72,3.0
+Prairies,Alberta,36,2,2026,2026-09-12,SARS-CoV-2,2601,56,2.2
+Prairies,Alberta,37,3,2026,2026-09-19,SARS-CoV-2,2783,77,2.8
+Prairies,Alberta,38,4,2026,2026-09-26,SARS-CoV-2,3090,64,2.1
+Prairies,Alberta,39,5,2026,2026-10-03,SARS-CoV-2,3422,85,2.5
+Prairies,Alberta,40,6,2026,2026-10-10,SARS-CoV-2,3822,112,2.9
+Prairies,Alberta,41,7,2026,2026-10-17,SARS-CoV-2,3811,111,2.9
+Prairies,Alberta,42,8,2026,2026-10-24,SARS-CoV-2,4247,146,3.4
+Prairies,Alberta,43,9,2026,2026-10-31,SARS-CoV-2,4643,181,3.9
+Prairies,Alberta,44,10,2026,2026-11-07,SARS-CoV-2,5523,252,4.6
+Atlantic,Atlantic,35,1,2026,2026-09-05,SARS-CoV-2,1211,35,2.9
+Atlantic,Atlantic,36,2,2026,2026-09-12,SARS-CoV-2,1374,27,2.0
+Atlantic,Atlantic,37,3,2026,2026-09-19,SARS-CoV-2,1569,35,2.2
+Atlantic,Atlantic,38,4,2026,2026-09-26,SARS-CoV-2,1809,36,2.0
+Atlantic,Atlantic,39,5,2026,2026-10-03,SARS-CoV-2,2055,46,2.2
+Atlantic,Atlantic,40,6,2026,2026-10-10,SARS-CoV-2,2373,93,3.9
+Atlantic,Atlantic,41,7,2026,2026-10-17,SARS-CoV-2,2388,80,3.4
+Atlantic,Atlantic,42,8,2026,2026-10-24,SARS-CoV-2,2496,77,3.1
+Atlantic,Atlantic,43,9,2026,2026-10-31,SARS-CoV-2,2511,101,4.0
+Atlantic,Atlantic,44,10,2026,2026-11-07,SARS-CoV-2,2785,161,5.8
+British Columbia,British Columbia,35,1,2026,2026-09-05,SARS-CoV-2,1839,102,5.5
+British Columbia,British Columbia,36,2,2026,2026-09-12,SARS-CoV-2,2070,126,6.1
+British Columbia,British Columbia,37,3,2026,2026-09-19,SARS-CoV-2,2379,145,6.1
+British Columbia,British Columbia,38,4,2026,2026-09-26,SARS-CoV-2,2976,232,7.8
+British Columbia,British Columbia,39,5,2026,2026-10-03,SARS-CoV-2,3420,272,8.0
+British Columbia,British Columbia,40,6,2026,2026-10-10,SARS-CoV-2,3596,292,8.1
+British Columbia,British Columbia,41,7,2026,2026-10-17,SARS-CoV-2,3580,254,7.1
+British Columbia,British Columbia,42,8,2026,2026-10-24,SARS-CoV-2,3598,269,7.5
+British Columbia,British Columbia,43,9,2026,2026-10-31,SARS-CoV-2,3891,295,7.6
+British Columbia,British Columbia,44,10,2026,2026-11-07,SARS-CoV-2,2410,183,7.6
+Canada,Canada,35,1,2026,2026-09-05,SARS-CoV-2,17810,516,2.9
+Canada,Canada,36,2,2026,2026-09-12,SARS-CoV-2,18980,514,2.7
+Canada,Canada,37,3,2026,2026-09-19,SARS-CoV-2,21165,623,2.9
+Canada,Canada,38,4,2026,2026-09-26,SARS-CoV-2,23673,907,3.8
+Canada,Canada,39,5,2026,2026-10-03,SARS-CoV-2,26402,1117,4.2
+Canada,Canada,40,6,2026,2026-10-10,SARS-CoV-2,27876,1150,4.1
+Canada,Canada,41,7,2026,2026-10-17,SARS-CoV-2,28525,1286,4.5
+Canada,Canada,42,8,2026,2026-10-24,SARS-CoV-2,29419,1506,5.1
+Canada,Canada,43,9,2026,2026-10-31,SARS-CoV-2,30902,1795,5.8
+Canada,Canada,44,10,2026,2026-11-07,SARS-CoV-2,31912,2001,6.3
+Prairies,Manitoba,35,1,2026,2026-09-05,SARS-CoV-2,565,2,0.4
+Prairies,Manitoba,36,2,2026,2026-09-12,SARS-CoV-2,521,4,0.8
+Prairies,Manitoba,37,3,2026,2026-09-19,SARS-CoV-2,641,3,0.5
+Prairies,Manitoba,38,4,2026,2026-09-26,SARS-CoV-2,690,17,2.5
+Prairies,Manitoba,39,5,2026,2026-10-03,SARS-CoV-2,827,31,3.7
+Prairies,Manitoba,40,6,2026,2026-10-10,SARS-CoV-2,884,19,2.1
+Prairies,Manitoba,41,7,2026,2026-10-17,SARS-CoV-2,930,36,3.9
+Prairies,Manitoba,42,8,2026,2026-10-24,SARS-CoV-2,932,19,2.0
+Prairies,Manitoba,43,9,2026,2026-10-31,SARS-CoV-2,832,17,2.0
+Prairies,Manitoba,44,10,2026,2026-11-07,SARS-CoV-2,918,24,2.6
+Atlantic,New Brunswick,35,1,2026,2026-09-05,SARS-CoV-2,446,16,3.6
+Atlantic,New Brunswick,36,2,2026,2026-09-12,SARS-CoV-2,472,8,1.7
+Atlantic,New Brunswick,37,3,2026,2026-09-19,SARS-CoV-2,512,18,3.5
+Atlantic,New Brunswick,38,4,2026,2026-09-26,SARS-CoV-2,637,21,3.3
+Atlantic,New Brunswick,39,5,2026,2026-10-03,SARS-CoV-2,688,25,3.6
+Atlantic,New Brunswick,40,6,2026,2026-10-10,SARS-CoV-2,889,43,4.8
+Atlantic,New Brunswick,41,7,2026,2026-10-17,SARS-CoV-2,901,33,3.7
+Atlantic,New Brunswick,42,8,2026,2026-10-24,SARS-CoV-2,864,35,4.1
+Atlantic,New Brunswick,43,9,2026,2026-10-31,SARS-CoV-2,857,39,4.6
+Atlantic,New Brunswick,44,10,2026,2026-11-07,SARS-CoV-2,887,70,7.9
+Atlantic,Newfoundland and Labrador,35,1,2026,2026-09-05,SARS-CoV-2,140,1,0.7
+Atlantic,Newfoundland and Labrador,36,2,2026,2026-09-12,SARS-CoV-2,217,4,1.8
+Atlantic,Newfoundland and Labrador,37,3,2026,2026-09-19,SARS-CoV-2,243,2,0.8
+Atlantic,Newfoundland and Labrador,38,4,2026,2026-09-26,SARS-CoV-2,264,4,1.5
+Atlantic,Newfoundland and Labrador,39,5,2026,2026-10-03,SARS-CoV-2,304,4,1.3
+Atlantic,Newfoundland and Labrador,40,6,2026,2026-10-10,SARS-CoV-2,308,11,3.6
+Atlantic,Newfoundland and Labrador,41,7,2026,2026-10-17,SARS-CoV-2,310,13,4.2
+Atlantic,Newfoundland and Labrador,42,8,2026,2026-10-24,SARS-CoV-2,338,19,5.6
+Atlantic,Newfoundland and Labrador,43,9,2026,2026-10-31,SARS-CoV-2,379,21,5.5
+Atlantic,Newfoundland and Labrador,44,10,2026,2026-11-07,SARS-CoV-2,420,33,7.9
+Territories,Northwest Territories,35,1,2026,2026-09-05,SARS-CoV-2,27,0,0.0
+Territories,Northwest Territories,36,2,2026,2026-09-12,SARS-CoV-2,20,0,0.0
+Territories,Northwest Territories,37,3,2026,2026-09-19,SARS-CoV-2,19,0,0.0
+Territories,Northwest Territories,38,4,2026,2026-09-26,SARS-CoV-2,22,0,0.0
+Territories,Northwest Territories,39,5,2026,2026-10-03,SARS-CoV-2,38,0,0.0
+Territories,Northwest Territories,40,6,2026,2026-10-10,SARS-CoV-2,44,1,2.3
+Territories,Northwest Territories,41,7,2026,2026-10-17,SARS-CoV-2,37,2,5.4
+Territories,Northwest Territories,42,8,2026,2026-10-24,SARS-CoV-2,56,3,5.4
+Territories,Northwest Territories,43,9,2026,2026-10-31,SARS-CoV-2,62,4,6.5
+Territories,Northwest Territories,44,10,2026,2026-11-07,SARS-CoV-2,65,0,0.0
+Atlantic,Nova Scotia,35,1,2026,2026-09-05,SARS-CoV-2,595,16,2.7
+Atlantic,Nova Scotia,36,2,2026,2026-09-12,SARS-CoV-2,654,14,2.1
+Atlantic,Nova Scotia,37,3,2026,2026-09-19,SARS-CoV-2,768,13,1.7
+Atlantic,Nova Scotia,38,4,2026,2026-09-26,SARS-CoV-2,836,10,1.2
+Atlantic,Nova Scotia,39,5,2026,2026-10-03,SARS-CoV-2,950,16,1.7
+Atlantic,Nova Scotia,40,6,2026,2026-10-10,SARS-CoV-2,1037,38,3.7
+Atlantic,Nova Scotia,41,7,2026,2026-10-17,SARS-CoV-2,1057,26,2.5
+Atlantic,Nova Scotia,42,8,2026,2026-10-24,SARS-CoV-2,1120,23,2.1
+Atlantic,Nova Scotia,43,9,2026,2026-10-31,SARS-CoV-2,1083,38,3.5
+Atlantic,Nova Scotia,44,10,2026,2026-11-07,SARS-CoV-2,1303,55,4.2
+Territories,Nunavut,35,1,2026,2026-09-05,SARS-CoV-2,55,1,1.8
+Territories,Nunavut,36,2,2026,2026-09-12,SARS-CoV-2,45,0,0.0
+Territories,Nunavut,37,3,2026,2026-09-19,SARS-CoV-2,54,1,1.9
+Territories,Nunavut,38,4,2026,2026-09-26,SARS-CoV-2,69,0,0.0
+Territories,Nunavut,39,5,2026,2026-10-03,SARS-CoV-2,58,1,1.7
+Territories,Nunavut,40,6,2026,2026-10-10,SARS-CoV-2,66,0,0.0
+Territories,Nunavut,41,7,2026,2026-10-17,SARS-CoV-2,71,2,2.8
+Territories,Nunavut,42,8,2026,2026-10-24,SARS-CoV-2,70,0,0.0
+Territories,Nunavut,43,9,2026,2026-10-31,SARS-CoV-2,53,4,7.5
+Territories,Nunavut,44,10,2026,2026-11-07,SARS-CoV-2,N/A,N/A,N/A
+Ontario,Ontario,35,1,2026,2026-09-05,SARS-CoV-2,5990,139,2.3
+Ontario,Ontario,36,2,2026,2026-09-12,SARS-CoV-2,6138,124,2.0
+Ontario,Ontario,37,3,2026,2026-09-19,SARS-CoV-2,6878,164,2.4
+Ontario,Ontario,38,4,2026,2026-09-26,SARS-CoV-2,7525,217,2.9
+Ontario,Ontario,39,5,2026,2026-10-03,SARS-CoV-2,8409,305,3.6
+Ontario,Ontario,40,6,2026,2026-10-10,SARS-CoV-2,8558,254,3.0
+Ontario,Ontario,41,7,2026,2026-10-17,SARS-CoV-2,9016,313,3.5
+Ontario,Ontario,42,8,2026,2026-10-24,SARS-CoV-2,8874,294,3.3
+Ontario,Ontario,43,9,2026,2026-10-31,SARS-CoV-2,9101,337,3.7
+Ontario,Ontario,44,10,2026,2026-11-07,SARS-CoV-2,9509,358,3.8
+Prairies,Prairies,35,1,2026,2026-09-05,SARS-CoV-2,3571,77,2.2
+Prairies,Prairies,36,2,2026,2026-09-12,SARS-CoV-2,3767,62,1.6
+Prairies,Prairies,37,3,2026,2026-09-19,SARS-CoV-2,4243,93,2.2
+Prairies,Prairies,38,4,2026,2026-09-26,SARS-CoV-2,4601,86,1.9
+Prairies,Prairies,39,5,2026,2026-10-03,SARS-CoV-2,5144,128,2.5
+Prairies,Prairies,40,6,2026,2026-10-10,SARS-CoV-2,5651,152,2.7
+Prairies,Prairies,41,7,2026,2026-10-17,SARS-CoV-2,5648,157,2.8
+Prairies,Prairies,42,8,2026,2026-10-24,SARS-CoV-2,6094,176,2.9
+Prairies,Prairies,43,9,2026,2026-10-31,SARS-CoV-2,6397,222,3.5
+Prairies,Prairies,44,10,2026,2026-11-07,SARS-CoV-2,7537,300,4.0
+Atlantic,Prince Edward Island,35,1,2026,2026-09-05,SARS-CoV-2,30,2,6.7
+Atlantic,Prince Edward Island,36,2,2026,2026-09-12,SARS-CoV-2,31,1,3.2
+Atlantic,Prince Edward Island,37,3,2026,2026-09-19,SARS-CoV-2,46,2,4.3
+Atlantic,Prince Edward Island,38,4,2026,2026-09-26,SARS-CoV-2,72,1,1.4
+Atlantic,Prince Edward Island,39,5,2026,2026-10-03,SARS-CoV-2,113,1,0.9
+Atlantic,Prince Edward Island,40,6,2026,2026-10-10,SARS-CoV-2,139,1,0.7
+Atlantic,Prince Edward Island,41,7,2026,2026-10-17,SARS-CoV-2,120,8,6.7
+Atlantic,Prince Edward Island,42,8,2026,2026-10-24,SARS-CoV-2,174,0,0.0
+Atlantic,Prince Edward Island,43,9,2026,2026-10-31,SARS-CoV-2,192,3,1.6
+Atlantic,Prince Edward Island,44,10,2026,2026-11-07,SARS-CoV-2,175,3,1.7
+Quebec,Quebec,35,1,2026,2026-09-05,SARS-CoV-2,5083,162,3.2
+Quebec,Quebec,36,2,2026,2026-09-12,SARS-CoV-2,5519,175,3.2
+Quebec,Quebec,37,3,2026,2026-09-19,SARS-CoV-2,5969,185,3.1
+Quebec,Quebec,38,4,2026,2026-09-26,SARS-CoV-2,6628,335,5.1
+Quebec,Quebec,39,5,2026,2026-10-03,SARS-CoV-2,7223,361,5.0
+Quebec,Quebec,40,6,2026,2026-10-10,SARS-CoV-2,7514,353,4.7
+Quebec,Quebec,41,7,2026,2026-10-17,SARS-CoV-2,7726,471,6.1
+Quebec,Quebec,42,8,2026,2026-10-24,SARS-CoV-2,8183,685,8.4
+Quebec,Quebec,43,9,2026,2026-10-31,SARS-CoV-2,8831,829,9.4
+Quebec,Quebec,44,10,2026,2026-11-07,SARS-CoV-2,9530,994,10.4
+Prairies,Saskatchewan,35,1,2026,2026-09-05,SARS-CoV-2,596,3,0.5
+Prairies,Saskatchewan,36,2,2026,2026-09-12,SARS-CoV-2,645,2,0.3
+Prairies,Saskatchewan,37,3,2026,2026-09-19,SARS-CoV-2,819,13,1.6
+Prairies,Saskatchewan,38,4,2026,2026-09-26,SARS-CoV-2,821,5,0.6
+Prairies,Saskatchewan,39,5,2026,2026-10-03,SARS-CoV-2,895,12,1.3
+Prairies,Saskatchewan,40,6,2026,2026-10-10,SARS-CoV-2,945,21,2.2
+Prairies,Saskatchewan,41,7,2026,2026-10-17,SARS-CoV-2,907,10,1.1
+Prairies,Saskatchewan,42,8,2026,2026-10-24,SARS-CoV-2,915,11,1.2
+Prairies,Saskatchewan,43,9,2026,2026-10-31,SARS-CoV-2,922,24,2.6
+Prairies,Saskatchewan,44,10,2026,2026-11-07,SARS-CoV-2,1096,24,2.2
+Territories,Territories,35,1,2026,2026-09-05,SARS-CoV-2,116,1,0.9
+Territories,Territories,36,2,2026,2026-09-12,SARS-CoV-2,112,0,0.0
+Territories,Territories,37,3,2026,2026-09-19,SARS-CoV-2,127,1,0.8
+Territories,Territories,38,4,2026,2026-09-26,SARS-CoV-2,134,1,0.7
+Territories,Territories,39,5,2026,2026-10-03,SARS-CoV-2,151,5,3.3
+Territories,Territories,40,6,2026,2026-10-10,SARS-CoV-2,184,6,3.3
+Territories,Territories,41,7,2026,2026-10-17,SARS-CoV-2,167,11,6.6
+Territories,Territories,42,8,2026,2026-10-24,SARS-CoV-2,174,5,2.9
+Territories,Territories,43,9,2026,2026-10-31,SARS-CoV-2,171,11,6.4
+Territories,Territories,44,10,2026,2026-11-07,SARS-CoV-2,141,5,3.5
+Territories,Yukon,35,1,2026,2026-09-05,SARS-CoV-2,34,0,0.0
+Territories,Yukon,36,2,2026,2026-09-12,SARS-CoV-2,47,0,0.0
+Territories,Yukon,37,3,2026,2026-09-19,SARS-CoV-2,54,0,0.0
+Territories,Yukon,38,4,2026,2026-09-26,SARS-CoV-2,43,1,2.3
+Territories,Yukon,39,5,2026,2026-10-03,SARS-CoV-2,55,4,7.3
+Territories,Yukon,40,6,2026,2026-10-10,SARS-CoV-2,74,5,6.8
+Territories,Yukon,41,7,2026,2026-10-17,SARS-CoV-2,59,7,11.9
+Territories,Yukon,42,8,2026,2026-10-24,SARS-CoV-2,48,2,4.2
+Territories,Yukon,43,9,2026,2026-10-31,SARS-CoV-2,56,3,5.4
+Territories,Yukon,44,10,2026,2026-11-07,SARS-CoV-2,76,5,6.6
+Atlantic,Atlantic,35,1,2026,2026-09-05,Influenza,1156,15,1.3
+Atlantic,Atlantic,36,2,2026,2026-09-12,Influenza,1280,13,1.0
+Atlantic,Atlantic,37,3,2026,2026-09-19,Influenza,1490,15,1.0
+Atlantic,Atlantic,38,4,2026,2026-09-26,Influenza,1718,41,2.4
+Atlantic,Atlantic,39,5,2026,2026-10-03,Influenza,1984,74,3.7
+Atlantic,Atlantic,40,6,2026,2026-10-10,Influenza,2358,103,4.4
+Atlantic,Atlantic,41,7,2026,2026-10-17,Influenza,2385,87,3.6
+Atlantic,Atlantic,42,8,2026,2026-10-24,Influenza,2497,145,5.8
+Atlantic,Atlantic,43,9,2026,2026-10-31,Influenza,2485,233,9.4
+Atlantic,Atlantic,44,10,2026,2026-11-07,Influenza,2776,331,11.9
+British Columbia,British Columbia,35,1,2026,2026-09-05,Influenza,2105,123,5.8
+British Columbia,British Columbia,36,2,2026,2026-09-12,Influenza,2329,218,9.4
+British Columbia,British Columbia,37,3,2026,2026-09-19,Influenza,2616,279,10.7
+British Columbia,British Columbia,38,4,2026,2026-09-26,Influenza,3301,424,12.8
+British Columbia,British Columbia,39,5,2026,2026-10-03,Influenza,3765,503,13.4
+British Columbia,British Columbia,40,6,2026,2026-10-10,Influenza,3909,622,15.9
+British Columbia,British Columbia,41,7,2026,2026-10-17,Influenza,3835,622,16.2
+British Columbia,British Columbia,42,8,2026,2026-10-24,Influenza,3872,682,17.6
+British Columbia,British Columbia,43,9,2026,2026-10-31,Influenza,3991,774,19.4
+British Columbia,British Columbia,44,10,2026,2026-11-07,Influenza,2534,522,20.6
+Canada,Canada,35,1,2026,2026-09-05,Influenza,16402,296,1.8
+Canada,Canada,36,2,2026,2026-09-12,Influenza,17614,435,2.5
+Canada,Canada,37,3,2026,2026-09-19,Influenza,19446,571,2.9
+Canada,Canada,38,4,2026,2026-09-26,Influenza,22173,895,4.0
+Canada,Canada,39,5,2026,2026-10-03,Influenza,25203,1251,5.0
+Canada,Canada,40,6,2026,2026-10-10,Influenza,26717,1490,5.6
+Canada,Canada,41,7,2026,2026-10-17,Influenza,27572,1754,6.4
+Canada,Canada,42,8,2026,2026-10-24,Influenza,28646,2275,7.9
+Canada,Canada,43,9,2026,2026-10-31,Influenza,30091,3305,11.0
+Canada,Canada,44,10,2026,2026-11-07,Influenza,30828,4221,13.7
+Ontario,Ontario,35,1,2026,2026-09-05,Influenza,5911,80,1.4
+Ontario,Ontario,36,2,2026,2026-09-12,Influenza,6065,113,1.9
+Ontario,Ontario,37,3,2026,2026-09-19,Influenza,6763,127,1.9
+Ontario,Ontario,38,4,2026,2026-09-26,Influenza,7423,235,3.2
+Ontario,Ontario,39,5,2026,2026-10-03,Influenza,8236,292,3.5
+Ontario,Ontario,40,6,2026,2026-10-10,Influenza,8418,238,2.8
+Ontario,Ontario,41,7,2026,2026-10-17,Influenza,8995,330,3.7
+Ontario,Ontario,42,8,2026,2026-10-24,Influenza,8874,414,4.7
+Ontario,Ontario,43,9,2026,2026-10-31,Influenza,9141,672,7.4
+Ontario,Ontario,44,10,2026,2026-11-07,Influenza,9542,739,7.7
+Prairies,Prairies,35,1,2026,2026-09-05,Influenza,2701,40,1.5
+Prairies,Prairies,36,2,2026,2026-09-12,Influenza,2926,51,1.7
+Prairies,Prairies,37,3,2026,2026-09-19,Influenza,3310,91,2.7
+Prairies,Prairies,38,4,2026,2026-09-26,Influenza,3797,108,2.8
+Prairies,Prairies,39,5,2026,2026-10-03,Influenza,4776,207,4.3
+Prairies,Prairies,40,6,2026,2026-10-10,Influenza,5390,324,6.0
+Prairies,Prairies,41,7,2026,2026-10-17,Influenza,5473,427,7.8
+Prairies,Prairies,42,8,2026,2026-10-24,Influenza,5928,614,10.4
+Prairies,Prairies,43,9,2026,2026-10-31,Influenza,6235,935,15.0
+Prairies,Prairies,44,10,2026,2026-11-07,Influenza,7367,1555,21.1
+Quebec,Quebec,35,1,2026,2026-09-05,Influenza,4422,31,0.7
+Quebec,Quebec,36,2,2026,2026-09-12,Influenza,4909,32,0.7
+Quebec,Quebec,37,3,2026,2026-09-19,Influenza,5154,52,1.0
+Quebec,Quebec,38,4,2026,2026-09-26,Influenza,5814,86,1.5
+Quebec,Quebec,39,5,2026,2026-10-03,Influenza,6304,158,2.5
+Quebec,Quebec,40,6,2026,2026-10-10,Influenza,6480,181,2.8
+Quebec,Quebec,41,7,2026,2026-10-17,Influenza,6723,252,3.7
+Quebec,Quebec,42,8,2026,2026-10-24,Influenza,7307,366,5.0
+Quebec,Quebec,43,9,2026,2026-10-31,Influenza,8074,622,7.7
+Quebec,Quebec,44,10,2026,2026-11-07,Influenza,8474,1031,12.2
+Territories,Territories,35,1,2026,2026-09-05,Influenza,107,7,6.5
+Territories,Territories,36,2,2026,2026-09-12,Influenza,105,8,7.6
+Territories,Territories,37,3,2026,2026-09-19,Influenza,113,7,6.2
+Territories,Territories,38,4,2026,2026-09-26,Influenza,120,1,0.8
+Territories,Territories,39,5,2026,2026-10-03,Influenza,138,17,12.3
+Territories,Territories,40,6,2026,2026-10-10,Influenza,162,22,13.6
+Territories,Territories,41,7,2026,2026-10-17,Influenza,161,36,22.4
+Territories,Territories,42,8,2026,2026-10-24,Influenza,168,54,32.1
+Territories,Territories,43,9,2026,2026-10-31,Influenza,165,69,41.8
+Territories,Territories,44,10,2026,2026-11-07,Influenza,135,43,31.9
+Atlantic,Atlantic,35,1,2026,2026-09-05,Influenza A,1156,15,1.3
+Atlantic,Atlantic,36,2,2026,2026-09-12,Influenza A,1280,13,1.0
+Atlantic,Atlantic,37,3,2026,2026-09-19,Influenza A,1490,13,0.9
+Atlantic,Atlantic,38,4,2026,2026-09-26,Influenza A,1718,41,2.4
+Atlantic,Atlantic,39,5,2026,2026-10-03,Influenza A,1984,71,3.6
+Atlantic,Atlantic,40,6,2026,2026-10-10,Influenza A,2358,100,4.2
+Atlantic,Atlantic,41,7,2026,2026-10-17,Influenza A,2385,86,3.6
+Atlantic,Atlantic,42,8,2026,2026-10-24,Influenza A,2497,142,5.7
+Atlantic,Atlantic,43,9,2026,2026-10-31,Influenza A,2485,231,9.3
+Atlantic,Atlantic,44,10,2026,2026-11-07,Influenza A,2776,330,11.9
+British Columbia,British Columbia,35,1,2026,2026-09-05,Influenza A,2105,121,5.7
+British Columbia,British Columbia,36,2,2026,2026-09-12,Influenza A,2329,217,9.3
+British Columbia,British Columbia,37,3,2026,2026-09-19,Influenza A,2616,273,10.4
+British Columbia,British Columbia,38,4,2026,2026-09-26,Influenza A,3301,417,12.6
+British Columbia,British Columbia,39,5,2026,2026-10-03,Influenza A,3765,496,13.2
+British Columbia,British Columbia,40,6,2026,2026-10-10,Influenza A,3909,616,15.8
+British Columbia,British Columbia,41,7,2026,2026-10-17,Influenza A,3835,619,16.1
+British Columbia,British Columbia,42,8,2026,2026-10-24,Influenza A,3872,673,17.4
+British Columbia,British Columbia,43,9,2026,2026-10-31,Influenza A,3991,761,19.1
+British Columbia,British Columbia,44,10,2026,2026-11-07,Influenza A,2534,515,20.3
+Canada,Canada,35,1,2026,2026-09-05,Influenza A,16402,283,1.7
+Canada,Canada,36,2,2026,2026-09-12,Influenza A,17614,428,2.4
+Canada,Canada,37,3,2026,2026-09-19,Influenza A,19446,556,2.9
+Canada,Canada,38,4,2026,2026-09-26,Influenza A,22173,876,4.0
+Canada,Canada,39,5,2026,2026-10-03,Influenza A,25203,1223,4.9
+Canada,Canada,40,6,2026,2026-10-10,Influenza A,26717,1466,5.5
+Canada,Canada,41,7,2026,2026-10-17,Influenza A,27572,1732,6.3
+Canada,Canada,42,8,2026,2026-10-24,Influenza A,28646,2244,7.8
+Canada,Canada,43,9,2026,2026-10-31,Influenza A,30091,3252,10.8
+Canada,Canada,44,10,2026,2026-11-07,Influenza A,30828,4178,13.6
+Ontario,Ontario,35,1,2026,2026-09-05,Influenza A,5911,78,1.3
+Ontario,Ontario,36,2,2026,2026-09-12,Influenza A,6065,112,1.8
+Ontario,Ontario,37,3,2026,2026-09-19,Influenza A,6763,125,1.8
+Ontario,Ontario,38,4,2026,2026-09-26,Influenza A,7423,233,3.1
+Ontario,Ontario,39,5,2026,2026-10-03,Influenza A,8236,286,3.5
+Ontario,Ontario,40,6,2026,2026-10-10,Influenza A,8418,232,2.8
+Ontario,Ontario,41,7,2026,2026-10-17,Influenza A,8995,323,3.6
+Ontario,Ontario,42,8,2026,2026-10-24,Influenza A,8874,407,4.6
+Ontario,Ontario,43,9,2026,2026-10-31,Influenza A,9141,652,7.1
+Ontario,Ontario,44,10,2026,2026-11-07,Influenza A,9542,727,7.6
+Prairies,Prairies,35,1,2026,2026-09-05,Influenza A,2701,38,1.4
+Prairies,Prairies,36,2,2026,2026-09-12,Influenza A,2926,50,1.7
+Prairies,Prairies,37,3,2026,2026-09-19,Influenza A,3310,90,2.7
+Prairies,Prairies,38,4,2026,2026-09-26,Influenza A,3797,105,2.8
+Prairies,Prairies,39,5,2026,2026-10-03,Influenza A,4776,201,4.2
+Prairies,Prairies,40,6,2026,2026-10-10,Influenza A,5390,323,6.0
+Prairies,Prairies,41,7,2026,2026-10-17,Influenza A,5473,422,7.7
+Prairies,Prairies,42,8,2026,2026-10-24,Influenza A,5928,610,10.3
+Prairies,Prairies,43,9,2026,2026-10-31,Influenza A,6235,931,14.9
+Prairies,Prairies,44,10,2026,2026-11-07,Influenza A,7367,1551,21.1
+Quebec,Quebec,35,1,2026,2026-09-05,Influenza A,4422,25,0.6
+Quebec,Quebec,36,2,2026,2026-09-12,Influenza A,4909,28,0.6
+Quebec,Quebec,37,3,2026,2026-09-19,Influenza A,5154,48,0.9
+Quebec,Quebec,38,4,2026,2026-09-26,Influenza A,5814,79,1.4
+Quebec,Quebec,39,5,2026,2026-10-03,Influenza A,6304,152,2.4
+Quebec,Quebec,40,6,2026,2026-10-10,Influenza A,6480,173,2.7
+Quebec,Quebec,41,7,2026,2026-10-17,Influenza A,6723,246,3.7
+Quebec,Quebec,42,8,2026,2026-10-24,Influenza A,7307,358,4.9
+Quebec,Quebec,43,9,2026,2026-10-31,Influenza A,8074,608,7.5
+Quebec,Quebec,44,10,2026,2026-11-07,Influenza A,8474,1013,12.0
+Territories,Territories,35,1,2026,2026-09-05,Influenza A,107,6,5.6
+Territories,Territories,36,2,2026,2026-09-12,Influenza A,105,8,7.6
+Territories,Territories,37,3,2026,2026-09-19,Influenza A,113,7,6.2
+Territories,Territories,38,4,2026,2026-09-26,Influenza A,120,1,0.8
+Territories,Territories,39,5,2026,2026-10-03,Influenza A,138,17,12.3
+Territories,Territories,40,6,2026,2026-10-10,Influenza A,162,22,13.6
+Territories,Territories,41,7,2026,2026-10-17,Influenza A,161,36,22.4
+Territories,Territories,42,8,2026,2026-10-24,Influenza A,168,54,32.1
+Territories,Territories,43,9,2026,2026-10-31,Influenza A,165,69,41.8
+Territories,Territories,44,10,2026,2026-11-07,Influenza A,135,42,31.1
+Atlantic,Atlantic,35,1,2026,2026-09-05,Influenza B,1156,0,0.0
+Atlantic,Atlantic,36,2,2026,2026-09-12,Influenza B,1280,0,0.0
+Atlantic,Atlantic,37,3,2026,2026-09-19,Influenza B,1490,2,0.1
+Atlantic,Atlantic,38,4,2026,2026-09-26,Influenza B,1718,0,0.0
+Atlantic,Atlantic,39,5,2026,2026-10-03,Influenza B,1984,3,0.2
+Atlantic,Atlantic,40,6,2026,2026-10-10,Influenza B,2358,3,0.1
+Atlantic,Atlantic,41,7,2026,2026-10-17,Influenza B,2385,1,0.0
+Atlantic,Atlantic,42,8,2026,2026-10-24,Influenza B,2497,3,0.1
+Atlantic,Atlantic,43,9,2026,2026-10-31,Influenza B,2485,2,0.1
+Atlantic,Atlantic,44,10,2026,2026-11-07,Influenza B,2776,1,0.0
+British Columbia,British Columbia,35,1,2026,2026-09-05,Influenza B,2105,2,0.1
+British Columbia,British Columbia,36,2,2026,2026-09-12,Influenza B,2329,1,0.0
+British Columbia,British Columbia,37,3,2026,2026-09-19,Influenza B,2616,6,0.2
+British Columbia,British Columbia,38,4,2026,2026-09-26,Influenza B,3301,7,0.2
+British Columbia,British Columbia,39,5,2026,2026-10-03,Influenza B,3765,7,0.2
+British Columbia,British Columbia,40,6,2026,2026-10-10,Influenza B,3909,6,0.2
+British Columbia,British Columbia,41,7,2026,2026-10-17,Influenza B,3835,3,0.1
+British Columbia,British Columbia,42,8,2026,2026-10-24,Influenza B,3872,9,0.2
+British Columbia,British Columbia,43,9,2026,2026-10-31,Influenza B,3991,13,0.3
+British Columbia,British Columbia,44,10,2026,2026-11-07,Influenza B,2534,7,0.3
+Canada,Canada,35,1,2026,2026-09-05,Influenza B,16402,13,0.1
+Canada,Canada,36,2,2026,2026-09-12,Influenza B,17614,7,0.0
+Canada,Canada,37,3,2026,2026-09-19,Influenza B,19446,15,0.1
+Canada,Canada,38,4,2026,2026-09-26,Influenza B,22173,19,0.1
+Canada,Canada,39,5,2026,2026-10-03,Influenza B,25203,28,0.1
+Canada,Canada,40,6,2026,2026-10-10,Influenza B,26717,24,0.1
+Canada,Canada,41,7,2026,2026-10-17,Influenza B,27572,22,0.1
+Canada,Canada,42,8,2026,2026-10-24,Influenza B,28646,31,0.1
+Canada,Canada,43,9,2026,2026-10-31,Influenza B,30091,53,0.2
+Canada,Canada,44,10,2026,2026-11-07,Influenza B,30828,43,0.1
+Ontario,Ontario,35,1,2026,2026-09-05,Influenza B,5911,2,0.0
+Ontario,Ontario,36,2,2026,2026-09-12,Influenza B,6065,1,0.0
+Ontario,Ontario,37,3,2026,2026-09-19,Influenza B,6763,2,0.0
+Ontario,Ontario,38,4,2026,2026-09-26,Influenza B,7423,2,0.0
+Ontario,Ontario,39,5,2026,2026-10-03,Influenza B,8236,6,0.1
+Ontario,Ontario,40,6,2026,2026-10-10,Influenza B,8418,6,0.1
+Ontario,Ontario,41,7,2026,2026-10-17,Influenza B,8995,7,0.1
+Ontario,Ontario,42,8,2026,2026-10-24,Influenza B,8874,7,0.1
+Ontario,Ontario,43,9,2026,2026-10-31,Influenza B,9141,20,0.2
+Ontario,Ontario,44,10,2026,2026-11-07,Influenza B,9542,12,0.1
+Prairies,Prairies,35,1,2026,2026-09-05,Influenza B,2701,2,0.1
+Prairies,Prairies,36,2,2026,2026-09-12,Influenza B,2926,1,0.0
+Prairies,Prairies,37,3,2026,2026-09-19,Influenza B,3310,1,0.0
+Prairies,Prairies,38,4,2026,2026-09-26,Influenza B,3797,3,0.1
+Prairies,Prairies,39,5,2026,2026-10-03,Influenza B,4776,6,0.1
+Prairies,Prairies,40,6,2026,2026-10-10,Influenza B,5390,1,0.0
+Prairies,Prairies,41,7,2026,2026-10-17,Influenza B,5473,5,0.1
+Prairies,Prairies,42,8,2026,2026-10-24,Influenza B,5928,4,0.1
+Prairies,Prairies,43,9,2026,2026-10-31,Influenza B,6235,4,0.1
+Prairies,Prairies,44,10,2026,2026-11-07,Influenza B,7367,4,0.1
+Quebec,Quebec,35,1,2026,2026-09-05,Influenza B,4422,6,0.1
+Quebec,Quebec,36,2,2026,2026-09-12,Influenza B,4909,4,0.1
+Quebec,Quebec,37,3,2026,2026-09-19,Influenza B,5154,4,0.1
+Quebec,Quebec,38,4,2026,2026-09-26,Influenza B,5814,7,0.1
+Quebec,Quebec,39,5,2026,2026-10-03,Influenza B,6304,6,0.1
+Quebec,Quebec,40,6,2026,2026-10-10,Influenza B,6480,8,0.1
+Quebec,Quebec,41,7,2026,2026-10-17,Influenza B,6723,6,0.1
+Quebec,Quebec,42,8,2026,2026-10-24,Influenza B,7307,8,0.1
+Quebec,Quebec,43,9,2026,2026-10-31,Influenza B,8074,14,0.2
+Quebec,Quebec,44,10,2026,2026-11-07,Influenza B,8474,18,0.2
+Territories,Territories,35,1,2026,2026-09-05,Influenza B,107,1,0.9
+Territories,Territories,36,2,2026,2026-09-12,Influenza B,105,0,0.0
+Territories,Territories,37,3,2026,2026-09-19,Influenza B,113,0,0.0
+Territories,Territories,38,4,2026,2026-09-26,Influenza B,120,0,0.0
+Territories,Territories,39,5,2026,2026-10-03,Influenza B,138,0,0.0
+Territories,Territories,40,6,2026,2026-10-10,Influenza B,162,0,0.0
+Territories,Territories,41,7,2026,2026-10-17,Influenza B,161,0,0.0
+Territories,Territories,42,8,2026,2026-10-24,Influenza B,168,0,0.0
+Territories,Territories,43,9,2026,2026-10-31,Influenza B,165,0,0.0
+Territories,Territories,44,10,2026,2026-11-07,Influenza B,135,1,0.7
+Atlantic,Atlantic,35,1,2026,2026-09-05,RSV,1156,2,0.2
+Atlantic,Atlantic,36,2,2026,2026-09-12,RSV,1280,3,0.2
+Atlantic,Atlantic,37,3,2026,2026-09-19,RSV,1490,4,0.3
+Atlantic,Atlantic,38,4,2026,2026-09-26,RSV,1718,11,0.6
+Atlantic,Atlantic,39,5,2026,2026-10-03,RSV,1984,5,0.3
+Atlantic,Atlantic,40,6,2026,2026-10-10,RSV,2358,3,0.1
+Atlantic,Atlantic,41,7,2026,2026-10-17,RSV,2385,3,0.1
+Atlantic,Atlantic,42,8,2026,2026-10-24,RSV,2497,2,0.1
+Atlantic,Atlantic,43,9,2026,2026-10-31,RSV,2485,3,0.1
+Atlantic,Atlantic,44,10,2026,2026-11-07,RSV,2776,2,0.1
+British Columbia,British Columbia,35,1,2026,2026-09-05,RSV,2094,2,0.1
+British Columbia,British Columbia,36,2,2026,2026-09-12,RSV,2309,7,0.3
+British Columbia,British Columbia,37,3,2026,2026-09-19,RSV,2588,8,0.3
+British Columbia,British Columbia,38,4,2026,2026-09-26,RSV,3264,9,0.3
+British Columbia,British Columbia,39,5,2026,2026-10-03,RSV,3715,4,0.1
+British Columbia,British Columbia,40,6,2026,2026-10-10,RSV,3861,14,0.4
+British Columbia,British Columbia,41,7,2026,2026-10-17,RSV,3801,13,0.3
+British Columbia,British Columbia,42,8,2026,2026-10-24,RSV,3833,14,0.4
+British Columbia,British Columbia,43,9,2026,2026-10-31,RSV,3981,18,0.5
+British Columbia,British Columbia,44,10,2026,2026-11-07,RSV,2556,14,0.5
+Canada,Canada,35,1,2026,2026-09-05,RSV,15765,26,0.2
+Canada,Canada,36,2,2026,2026-09-12,RSV,16929,32,0.2
+Canada,Canada,37,3,2026,2026-09-19,RSV,18776,40,0.2
+Canada,Canada,38,4,2026,2026-09-26,RSV,21328,35,0.2
+Canada,Canada,39,5,2026,2026-10-03,RSV,24114,38,0.2
+Canada,Canada,40,6,2026,2026-10-10,RSV,25423,58,0.2
+Canada,Canada,41,7,2026,2026-10-17,RSV,26296,62,0.2
+Canada,Canada,42,8,2026,2026-10-24,RSV,27111,81,0.3
+Canada,Canada,43,9,2026,2026-10-31,RSV,28244,91,0.3
+Canada,Canada,44,10,2026,2026-11-07,RSV,28709,98,0.3
+Ontario,Ontario,35,1,2026,2026-09-05,RSV,5805,6,0.1
+Ontario,Ontario,36,2,2026,2026-09-12,RSV,5941,7,0.1
+Ontario,Ontario,37,3,2026,2026-09-19,RSV,6659,16,0.2
+Ontario,Ontario,38,4,2026,2026-09-26,RSV,7279,8,0.1
+Ontario,Ontario,39,5,2026,2026-10-03,RSV,8087,18,0.2
+Ontario,Ontario,40,6,2026,2026-10-10,RSV,8290,17,0.2
+Ontario,Ontario,41,7,2026,2026-10-17,RSV,8843,19,0.2
+Ontario,Ontario,42,8,2026,2026-10-24,RSV,8742,26,0.3
+Ontario,Ontario,43,9,2026,2026-10-31,RSV,8988,31,0.3
+Ontario,Ontario,44,10,2026,2026-11-07,RSV,9381,41,0.4
+Prairies,Prairies,35,1,2026,2026-09-05,RSV,2669,4,0.1
+Prairies,Prairies,36,2,2026,2026-09-12,RSV,2885,4,0.1
+Prairies,Prairies,37,3,2026,2026-09-19,RSV,3220,5,0.2
+Prairies,Prairies,38,4,2026,2026-09-26,RSV,3643,3,0.1
+Prairies,Prairies,39,5,2026,2026-10-03,RSV,4584,2,0.0
+Prairies,Prairies,40,6,2026,2026-10-10,RSV,5111,8,0.2
+Prairies,Prairies,41,7,2026,2026-10-17,RSV,5206,10,0.2
+Prairies,Prairies,42,8,2026,2026-10-24,RSV,5611,16,0.3
+Prairies,Prairies,43,9,2026,2026-10-31,RSV,5862,15,0.3
+Prairies,Prairies,44,10,2026,2026-11-07,RSV,6868,15,0.2
+Quebec,Quebec,35,1,2026,2026-09-05,RSV,3934,12,0.3
+Quebec,Quebec,36,2,2026,2026-09-12,RSV,4409,11,0.2
+Quebec,Quebec,37,3,2026,2026-09-19,RSV,4706,7,0.1
+Quebec,Quebec,38,4,2026,2026-09-26,RSV,5304,4,0.1
+Quebec,Quebec,39,5,2026,2026-10-03,RSV,5606,9,0.2
+Quebec,Quebec,40,6,2026,2026-10-10,RSV,5640,16,0.3
+Quebec,Quebec,41,7,2026,2026-10-17,RSV,5901,17,0.3
+Quebec,Quebec,42,8,2026,2026-10-24,RSV,6260,23,0.4
+Quebec,Quebec,43,9,2026,2026-10-31,RSV,6763,24,0.4
+Quebec,Quebec,44,10,2026,2026-11-07,RSV,6993,26,0.4
+Territories,Territories,35,1,2026,2026-09-05,RSV,107,0,0.0
+Territories,Territories,36,2,2026,2026-09-12,RSV,105,0,0.0
+Territories,Territories,37,3,2026,2026-09-19,RSV,113,0,0.0
+Territories,Territories,38,4,2026,2026-09-26,RSV,120,0,0.0
+Territories,Territories,39,5,2026,2026-10-03,RSV,138,0,0.0
+Territories,Territories,40,6,2026,2026-10-10,RSV,163,0,0.0
+Territories,Territories,41,7,2026,2026-10-17,RSV,160,0,0.0
+Territories,Territories,42,8,2026,2026-10-24,RSV,168,0,0.0
+Territories,Territories,43,9,2026,2026-10-31,RSV,165,0,0.0
+Territories,Territories,44,10,2026,2026-11-07,RSV,135,0,0.0
+Atlantic,Atlantic,35,1,2026,2026-09-05,HPIV,316,17,5.4
+Atlantic,Atlantic,36,2,2026,2026-09-12,HPIV,349,12,3.4
+Atlantic,Atlantic,37,3,2026,2026-09-19,HPIV,413,7,1.7
+Atlantic,Atlantic,38,4,2026,2026-09-26,HPIV,436,8,1.8
+Atlantic,Atlantic,39,5,2026,2026-10-03,HPIV,505,18,3.6
+Atlantic,Atlantic,40,6,2026,2026-10-10,HPIV,528,4,0.8
+Atlantic,Atlantic,41,7,2026,2026-10-17,HPIV,476,13,2.7
+Atlantic,Atlantic,42,8,2026,2026-10-24,HPIV,498,8,1.6
+Atlantic,Atlantic,43,9,2026,2026-10-31,HPIV,535,10,1.9
+Atlantic,Atlantic,44,10,2026,2026-11-07,HPIV,572,11,1.9
+British Columbia,British Columbia,35,1,2026,2026-09-05,HPIV,608,14,2.3
+British Columbia,British Columbia,36,2,2026,2026-09-12,HPIV,654,17,2.6
+British Columbia,British Columbia,37,3,2026,2026-09-19,HPIV,678,16,2.4
+British Columbia,British Columbia,38,4,2026,2026-09-26,HPIV,864,15,1.7
+British Columbia,British Columbia,39,5,2026,2026-10-03,HPIV,963,21,2.2
+British Columbia,British Columbia,40,6,2026,2026-10-10,HPIV,898,19,2.1
+British Columbia,British Columbia,41,7,2026,2026-10-17,HPIV,853,16,1.9
+British Columbia,British Columbia,42,8,2026,2026-10-24,HPIV,809,26,3.2
+British Columbia,British Columbia,43,9,2026,2026-10-31,HPIV,790,13,1.6
+British Columbia,British Columbia,44,10,2026,2026-11-07,HPIV,448,8,1.8
+Canada,Canada,35,1,2026,2026-09-05,HPIV,6914,133,1.9
+Canada,Canada,36,2,2026,2026-09-12,HPIV,7306,129,1.8
+Canada,Canada,37,3,2026,2026-09-19,HPIV,8023,123,1.5
+Canada,Canada,38,4,2026,2026-09-26,HPIV,8659,128,1.5
+Canada,Canada,39,5,2026,2026-10-03,HPIV,9393,152,1.6
+Canada,Canada,40,6,2026,2026-10-10,HPIV,9467,124,1.3
+Canada,Canada,41,7,2026,2026-10-17,HPIV,9452,141,1.5
+Canada,Canada,42,8,2026,2026-10-24,HPIV,9474,146,1.5
+Canada,Canada,43,9,2026,2026-10-31,HPIV,9682,145,1.5
+Canada,Canada,44,10,2026,2026-11-07,HPIV,9365,133,1.4
+Ontario,Ontario,35,1,2026,2026-09-05,HPIV,3135,52,1.7
+Ontario,Ontario,36,2,2026,2026-09-12,HPIV,3093,46,1.5
+Ontario,Ontario,37,3,2026,2026-09-19,HPIV,3516,44,1.3
+Ontario,Ontario,38,4,2026,2026-09-26,HPIV,3761,66,1.8
+Ontario,Ontario,39,5,2026,2026-10-03,HPIV,4254,64,1.5
+Ontario,Ontario,40,6,2026,2026-10-10,HPIV,4243,57,1.3
+Ontario,Ontario,41,7,2026,2026-10-17,HPIV,4510,58,1.3
+Ontario,Ontario,42,8,2026,2026-10-24,HPIV,4373,69,1.6
+Ontario,Ontario,43,9,2026,2026-10-31,HPIV,4340,75,1.7
+Ontario,Ontario,44,10,2026,2026-11-07,HPIV,4439,68,1.5
+Prairies,Prairies,35,1,2026,2026-09-05,HPIV,1900,31,1.6
+Prairies,Prairies,36,2,2026,2026-09-12,HPIV,2086,30,1.4
+Prairies,Prairies,37,3,2026,2026-09-19,HPIV,2274,41,1.8
+Prairies,Prairies,38,4,2026,2026-09-26,HPIV,2356,24,1.0
+Prairies,Prairies,39,5,2026,2026-10-03,HPIV,2370,33,1.4
+Prairies,Prairies,40,6,2026,2026-10-10,HPIV,2458,29,1.2
+Prairies,Prairies,41,7,2026,2026-10-17,HPIV,2397,37,1.5
+Prairies,Prairies,42,8,2026,2026-10-24,HPIV,2595,32,1.2
+Prairies,Prairies,43,9,2026,2026-10-31,HPIV,2740,35,1.3
+Prairies,Prairies,44,10,2026,2026-11-07,HPIV,3029,37,1.2
+Quebec,Quebec,35,1,2026,2026-09-05,HPIV,955,19,2.0
+Quebec,Quebec,36,2,2026,2026-09-12,HPIV,1124,24,2.1
+Quebec,Quebec,37,3,2026,2026-09-19,HPIV,1142,15,1.3
+Quebec,Quebec,38,4,2026,2026-09-26,HPIV,1242,15,1.2
+Quebec,Quebec,39,5,2026,2026-10-03,HPIV,1301,16,1.2
+Quebec,Quebec,40,6,2026,2026-10-10,HPIV,1340,15,1.1
+Quebec,Quebec,41,7,2026,2026-10-17,HPIV,1216,17,1.4
+Quebec,Quebec,42,8,2026,2026-10-24,HPIV,1199,11,0.9
+Quebec,Quebec,43,9,2026,2026-10-31,HPIV,1277,12,0.9
+Quebec,Quebec,44,10,2026,2026-11-07,HPIV,877,9,1.0
+Territories,Territories,35,1,2026,2026-09-05,HPIV,N/A,N/A,N/A
+Territories,Territories,36,2,2026,2026-09-12,HPIV,N/A,N/A,N/A
+Territories,Territories,37,3,2026,2026-09-19,HPIV,N/A,N/A,N/A
+Territories,Territories,38,4,2026,2026-09-26,HPIV,N/A,N/A,N/A
+Territories,Territories,39,5,2026,2026-10-03,HPIV,N/A,N/A,N/A
+Territories,Territories,40,6,2026,2026-10-10,HPIV,N/A,N/A,N/A
+Territories,Territories,41,7,2026,2026-10-17,HPIV,N/A,N/A,N/A
+Territories,Territories,42,8,2026,2026-10-24,HPIV,N/A,N/A,N/A
+Territories,Territories,43,9,2026,2026-10-31,HPIV,N/A,N/A,N/A
+Territories,Territories,44,10,2026,2026-11-07,HPIV,N/A,N/A,N/A
+Atlantic,Atlantic,35,1,2026,2026-09-05,ADV,316,5,1.6
+Atlantic,Atlantic,36,2,2026,2026-09-12,ADV,349,4,1.1
+Atlantic,Atlantic,37,3,2026,2026-09-19,ADV,413,4,1.0
+Atlantic,Atlantic,38,4,2026,2026-09-26,ADV,436,3,0.7
+Atlantic,Atlantic,39,5,2026,2026-10-03,ADV,505,7,1.4
+Atlantic,Atlantic,40,6,2026,2026-10-10,ADV,528,4,0.8
+Atlantic,Atlantic,41,7,2026,2026-10-17,ADV,476,6,1.3
+Atlantic,Atlantic,42,8,2026,2026-10-24,ADV,498,7,1.4
+Atlantic,Atlantic,43,9,2026,2026-10-31,ADV,535,6,1.1
+Atlantic,Atlantic,44,10,2026,2026-11-07,ADV,572,8,1.4
+British Columbia,British Columbia,35,1,2026,2026-09-05,ADV,631,8,1.3
+British Columbia,British Columbia,36,2,2026,2026-09-12,ADV,676,7,1.0
+British Columbia,British Columbia,37,3,2026,2026-09-19,ADV,700,7,1.0
+British Columbia,British Columbia,38,4,2026,2026-09-26,ADV,880,3,0.3
+British Columbia,British Columbia,39,5,2026,2026-10-03,ADV,988,12,1.2
+British Columbia,British Columbia,40,6,2026,2026-10-10,ADV,924,12,1.3
+British Columbia,British Columbia,41,7,2026,2026-10-17,ADV,872,14,1.6
+British Columbia,British Columbia,42,8,2026,2026-10-24,ADV,829,6,0.7
+British Columbia,British Columbia,43,9,2026,2026-10-31,ADV,815,7,0.9
+British Columbia,British Columbia,44,10,2026,2026-11-07,ADV,459,5,1.1
+Canada,Canada,35,1,2026,2026-09-05,ADV,6559,68,1.0
+Canada,Canada,36,2,2026,2026-09-12,ADV,6898,73,1.1
+Canada,Canada,37,3,2026,2026-09-19,ADV,7581,88,1.2
+Canada,Canada,38,4,2026,2026-09-26,ADV,8140,50,0.6
+Canada,Canada,39,5,2026,2026-10-03,ADV,8907,91,1.0
+Canada,Canada,40,6,2026,2026-10-10,ADV,8902,124,1.4
+Canada,Canada,41,7,2026,2026-10-17,ADV,8868,137,1.5
+Canada,Canada,42,8,2026,2026-10-24,ADV,8897,137,1.5
+Canada,Canada,43,9,2026,2026-10-31,ADV,9057,161,1.8
+Canada,Canada,44,10,2026,2026-11-07,ADV,8696,158,1.8
+Ontario,Ontario,35,1,2026,2026-09-05,ADV,2742,22,0.8
+Ontario,Ontario,36,2,2026,2026-09-12,ADV,2656,15,0.6
+Ontario,Ontario,37,3,2026,2026-09-19,ADV,3056,23,0.8
+Ontario,Ontario,38,4,2026,2026-09-26,ADV,3242,8,0.2
+Ontario,Ontario,39,5,2026,2026-10-03,ADV,3739,17,0.5
+Ontario,Ontario,40,6,2026,2026-10-10,ADV,3647,29,0.8
+Ontario,Ontario,41,7,2026,2026-10-17,ADV,3904,30,0.8
+Ontario,Ontario,42,8,2026,2026-10-24,ADV,3738,44,1.2
+Ontario,Ontario,43,9,2026,2026-10-31,ADV,3659,58,1.6
+Ontario,Ontario,44,10,2026,2026-11-07,ADV,3726,68,1.8
+Prairies,Prairies,35,1,2026,2026-09-05,ADV,1900,6,0.3
+Prairies,Prairies,36,2,2026,2026-09-12,ADV,2086,17,0.8
+Prairies,Prairies,37,3,2026,2026-09-19,ADV,2274,18,0.8
+Prairies,Prairies,38,4,2026,2026-09-26,ADV,2356,6,0.3
+Prairies,Prairies,39,5,2026,2026-10-03,ADV,2369,21,0.9
+Prairies,Prairies,40,6,2026,2026-10-10,ADV,2459,19,0.8
+Prairies,Prairies,41,7,2026,2026-10-17,ADV,2397,17,0.7
+Prairies,Prairies,42,8,2026,2026-10-24,ADV,2595,24,0.9
+Prairies,Prairies,43,9,2026,2026-10-31,ADV,2740,27,1.0
+Prairies,Prairies,44,10,2026,2026-11-07,ADV,3028,24,0.8
+Quebec,Quebec,35,1,2026,2026-09-05,ADV,943,27,2.9
+Quebec,Quebec,36,2,2026,2026-09-12,ADV,1111,30,2.7
+Quebec,Quebec,37,3,2026,2026-09-19,ADV,1119,36,3.2
+Quebec,Quebec,38,4,2026,2026-09-26,ADV,1204,30,2.5
+Quebec,Quebec,39,5,2026,2026-10-03,ADV,1268,32,2.5
+Quebec,Quebec,40,6,2026,2026-10-10,ADV,1300,58,4.5
+Quebec,Quebec,41,7,2026,2026-10-17,ADV,1182,67,5.7
+Quebec,Quebec,42,8,2026,2026-10-24,ADV,1181,56,4.7
+Quebec,Quebec,43,9,2026,2026-10-31,ADV,1246,60,4.8
+Quebec,Quebec,44,10,2026,2026-11-07,ADV,846,53,6.3
+Territories,Territories,35,1,2026,2026-09-05,ADV,N/A,N/A,N/A
+Territories,Territories,36,2,2026,2026-09-12,ADV,N/A,N/A,N/A
+Territories,Territories,37,3,2026,2026-09-19,ADV,N/A,N/A,N/A
+Territories,Territories,38,4,2026,2026-09-26,ADV,N/A,N/A,N/A
+Territories,Territories,39,5,2026,2026-10-03,ADV,N/A,N/A,N/A
+Territories,Territories,40,6,2026,2026-10-10,ADV,N/A,N/A,N/A
+Territories,Territories,41,7,2026,2026-10-17,ADV,N/A,N/A,N/A
+Territories,Territories,42,8,2026,2026-10-24,ADV,N/A,N/A,N/A
+Territories,Territories,43,9,2026,2026-10-31,ADV,N/A,N/A,N/A
+Territories,Territories,44,10,2026,2026-11-07,ADV,N/A,N/A,N/A
+Atlantic,Atlantic,35,1,2026,2026-09-05,HMPV,316,1,0.3
+Atlantic,Atlantic,36,2,2026,2026-09-12,HMPV,349,3,0.9
+Atlantic,Atlantic,37,3,2026,2026-09-19,HMPV,413,2,0.5
+Atlantic,Atlantic,38,4,2026,2026-09-26,HMPV,436,1,0.2
+Atlantic,Atlantic,39,5,2026,2026-10-03,HMPV,505,1,0.2
+Atlantic,Atlantic,40,6,2026,2026-10-10,HMPV,528,1,0.2
+Atlantic,Atlantic,41,7,2026,2026-10-17,HMPV,476,0,0.0
+Atlantic,Atlantic,42,8,2026,2026-10-24,HMPV,498,1,0.2
+Atlantic,Atlantic,43,9,2026,2026-10-31,HMPV,535,0,0.0
+Atlantic,Atlantic,44,10,2026,2026-11-07,HMPV,572,3,0.5
+British Columbia,British Columbia,35,1,2026,2026-09-05,HMPV,608,5,0.8
+British Columbia,British Columbia,36,2,2026,2026-09-12,HMPV,653,6,0.9
+British Columbia,British Columbia,37,3,2026,2026-09-19,HMPV,678,5,0.7
+British Columbia,British Columbia,38,4,2026,2026-09-26,HMPV,864,4,0.5
+British Columbia,British Columbia,39,5,2026,2026-10-03,HMPV,963,8,0.8
+British Columbia,British Columbia,40,6,2026,2026-10-10,HMPV,898,7,0.8
+British Columbia,British Columbia,41,7,2026,2026-10-17,HMPV,853,0,0.0
+British Columbia,British Columbia,42,8,2026,2026-10-24,HMPV,809,6,0.7
+British Columbia,British Columbia,43,9,2026,2026-10-31,HMPV,790,3,0.4
+British Columbia,British Columbia,44,10,2026,2026-11-07,HMPV,447,0,0.0
+Canada,Canada,35,1,2026,2026-09-05,HMPV,6857,27,0.4
+Canada,Canada,36,2,2026,2026-09-12,HMPV,7239,42,0.6
+Canada,Canada,37,3,2026,2026-09-19,HMPV,7926,35,0.4
+Canada,Canada,38,4,2026,2026-09-26,HMPV,8604,32,0.4
+Canada,Canada,39,5,2026,2026-10-03,HMPV,9323,48,0.5
+Canada,Canada,40,6,2026,2026-10-10,HMPV,9343,36,0.4
+Canada,Canada,41,7,2026,2026-10-17,HMPV,9295,25,0.3
+Canada,Canada,42,8,2026,2026-10-24,HMPV,9397,25,0.3
+Canada,Canada,43,9,2026,2026-10-31,HMPV,9587,30,0.3
+Canada,Canada,44,10,2026,2026-11-07,HMPV,9289,45,0.5
+Ontario,Ontario,35,1,2026,2026-09-05,HMPV,3063,12,0.4
+Ontario,Ontario,36,2,2026,2026-09-12,HMPV,3018,19,0.6
+Ontario,Ontario,37,3,2026,2026-09-19,HMPV,3420,18,0.5
+Ontario,Ontario,38,4,2026,2026-09-26,HMPV,3718,19,0.5
+Ontario,Ontario,39,5,2026,2026-10-03,HMPV,4175,22,0.5
+Ontario,Ontario,40,6,2026,2026-10-10,HMPV,4109,21,0.5
+Ontario,Ontario,41,7,2026,2026-10-17,HMPV,4343,22,0.5
+Ontario,Ontario,42,8,2026,2026-10-24,HMPV,4255,13,0.3
+Ontario,Ontario,43,9,2026,2026-10-31,HMPV,4208,15,0.4
+Ontario,Ontario,44,10,2026,2026-11-07,HMPV,4324,22,0.5
+Prairies,Prairies,35,1,2026,2026-09-05,HMPV,1900,4,0.2
+Prairies,Prairies,36,2,2026,2026-09-12,HMPV,2086,5,0.2
+Prairies,Prairies,37,3,2026,2026-09-19,HMPV,2274,3,0.1
+Prairies,Prairies,38,4,2026,2026-09-26,HMPV,2356,7,0.3
+Prairies,Prairies,39,5,2026,2026-10-03,HMPV,2369,12,0.5
+Prairies,Prairies,40,6,2026,2026-10-10,HMPV,2458,5,0.2
+Prairies,Prairies,41,7,2026,2026-10-17,HMPV,2396,1,0.0
+Prairies,Prairies,42,8,2026,2026-10-24,HMPV,2595,3,0.1
+Prairies,Prairies,43,9,2026,2026-10-31,HMPV,2740,3,0.1
+Prairies,Prairies,44,10,2026,2026-11-07,HMPV,3028,14,0.5
+Quebec,Quebec,35,1,2026,2026-09-05,HMPV,943,5,0.5
+Quebec,Quebec,36,2,2026,2026-09-12,HMPV,1113,9,0.8
+Quebec,Quebec,37,3,2026,2026-09-19,HMPV,1122,7,0.6
+Quebec,Quebec,38,4,2026,2026-09-26,HMPV,1208,1,0.1
+Quebec,Quebec,39,5,2026,2026-10-03,HMPV,1273,5,0.4
+Quebec,Quebec,40,6,2026,2026-10-10,HMPV,1306,2,0.2
+Quebec,Quebec,41,7,2026,2026-10-17,HMPV,1190,2,0.2
+Quebec,Quebec,42,8,2026,2026-10-24,HMPV,1184,2,0.2
+Quebec,Quebec,43,9,2026,2026-10-31,HMPV,1252,9,0.7
+Quebec,Quebec,44,10,2026,2026-11-07,HMPV,853,6,0.7
+Territories,Territories,35,1,2026,2026-09-05,HMPV,N/A,N/A,N/A
+Territories,Territories,36,2,2026,2026-09-12,HMPV,N/A,N/A,N/A
+Territories,Territories,37,3,2026,2026-09-19,HMPV,N/A,N/A,N/A
+Territories,Territories,38,4,2026,2026-09-26,HMPV,N/A,N/A,N/A
+Territories,Territories,39,5,2026,2026-10-03,HMPV,N/A,N/A,N/A
+Territories,Territories,40,6,2026,2026-10-10,HMPV,N/A,N/A,N/A
+Territories,Territories,41,7,2026,2026-10-17,HMPV,N/A,N/A,N/A
+Territories,Territories,42,8,2026,2026-10-24,HMPV,N/A,N/A,N/A
+Territories,Territories,43,9,2026,2026-10-31,HMPV,N/A,N/A,N/A
+Territories,Territories,44,10,2026,2026-11-07,HMPV,N/A,N/A,N/A
+Atlantic,Atlantic,35,1,2026,2026-09-05,EV/RV,316,70,22.2
+Atlantic,Atlantic,36,2,2026,2026-09-12,EV/RV,349,67,19.2
+Atlantic,Atlantic,37,3,2026,2026-09-19,EV/RV,413,115,27.8
+Atlantic,Atlantic,38,4,2026,2026-09-26,EV/RV,436,144,33.0
+Atlantic,Atlantic,39,5,2026,2026-10-03,EV/RV,505,158,31.3
+Atlantic,Atlantic,40,6,2026,2026-10-10,EV/RV,528,157,29.7
+Atlantic,Atlantic,41,7,2026,2026-10-17,EV/RV,476,136,28.6
+Atlantic,Atlantic,42,8,2026,2026-10-24,EV/RV,498,131,26.3
+Atlantic,Atlantic,43,9,2026,2026-10-31,EV/RV,535,98,18.3
+Atlantic,Atlantic,44,10,2026,2026-11-07,EV/RV,572,103,18.0
+British Columbia,British Columbia,35,1,2026,2026-09-05,EV/RV,645,82,12.7
+British Columbia,British Columbia,36,2,2026,2026-09-12,EV/RV,677,112,16.5
+British Columbia,British Columbia,37,3,2026,2026-09-19,EV/RV,704,128,18.2
+British Columbia,British Columbia,38,4,2026,2026-09-26,EV/RV,887,179,20.2
+British Columbia,British Columbia,39,5,2026,2026-10-03,EV/RV,999,222,22.2
+British Columbia,British Columbia,40,6,2026,2026-10-10,EV/RV,926,193,20.8
+British Columbia,British Columbia,41,7,2026,2026-10-17,EV/RV,880,173,19.7
+British Columbia,British Columbia,42,8,2026,2026-10-24,EV/RV,858,169,19.7
+British Columbia,British Columbia,43,9,2026,2026-10-31,EV/RV,812,144,17.7
+British Columbia,British Columbia,44,10,2026,2026-11-07,EV/RV,458,63,13.8
+Canada,Canada,35,1,2026,2026-09-05,EV/RV,6910,997,14.4
+Canada,Canada,36,2,2026,2026-09-12,EV/RV,7227,1364,18.9
+Canada,Canada,37,3,2026,2026-09-19,EV/RV,7887,1678,21.3
+Canada,Canada,38,4,2026,2026-09-26,EV/RV,8503,2017,23.7
+Canada,Canada,39,5,2026,2026-10-03,EV/RV,9273,2208,23.8
+Canada,Canada,40,6,2026,2026-10-10,EV/RV,9343,2049,21.9
+Canada,Canada,41,7,2026,2026-10-17,EV/RV,9387,1816,19.3
+Canada,Canada,42,8,2026,2026-10-24,EV/RV,9461,1700,18.0
+Canada,Canada,43,9,2026,2026-10-31,EV/RV,9622,1425,14.8
+Canada,Canada,44,10,2026,2026-11-07,EV/RV,9223,1183,12.8
+Ontario,Ontario,35,1,2026,2026-09-05,EV/RV,3135,341,10.9
+Ontario,Ontario,36,2,2026,2026-09-12,EV/RV,3083,428,13.9
+Ontario,Ontario,37,3,2026,2026-09-19,EV/RV,3499,574,16.4
+Ontario,Ontario,38,4,2026,2026-09-26,EV/RV,3753,743,19.8
+Ontario,Ontario,39,5,2026,2026-10-03,EV/RV,4254,903,21.2
+Ontario,Ontario,40,6,2026,2026-10-10,EV/RV,4244,845,19.9
+Ontario,Ontario,41,7,2026,2026-10-17,EV/RV,4503,801,17.8
+Ontario,Ontario,42,8,2026,2026-10-24,EV/RV,4377,721,16.5
+Ontario,Ontario,43,9,2026,2026-10-31,EV/RV,4328,555,12.8
+Ontario,Ontario,44,10,2026,2026-11-07,EV/RV,4414,558,12.6
+Prairies,Prairies,35,1,2026,2026-09-05,EV/RV,1901,375,19.7
+Prairies,Prairies,36,2,2026,2026-09-12,EV/RV,2086,521,25.0
+Prairies,Prairies,37,3,2026,2026-09-19,EV/RV,2275,622,27.3
+Prairies,Prairies,38,4,2026,2026-09-26,EV/RV,2353,681,28.9
+Prairies,Prairies,39,5,2026,2026-10-03,EV/RV,2367,674,28.5
+Prairies,Prairies,40,6,2026,2026-10-10,EV/RV,2458,584,23.8
+Prairies,Prairies,41,7,2026,2026-10-17,EV/RV,2395,503,21.0
+Prairies,Prairies,42,8,2026,2026-10-24,EV/RV,2593,486,18.7
+Prairies,Prairies,43,9,2026,2026-10-31,EV/RV,2740,436,15.9
+Prairies,Prairies,44,10,2026,2026-11-07,EV/RV,3028,367,12.1
+Quebec,Quebec,35,1,2026,2026-09-05,EV/RV,886,120,13.5
+Quebec,Quebec,36,2,2026,2026-09-12,EV/RV,1012,227,22.4
+Quebec,Quebec,37,3,2026,2026-09-19,EV/RV,977,230,23.5
+Quebec,Quebec,38,4,2026,2026-09-26,EV/RV,1052,258,24.5
+Quebec,Quebec,39,5,2026,2026-10-03,EV/RV,1110,228,20.5
+Quebec,Quebec,40,6,2026,2026-10-10,EV/RV,1143,253,22.1
+Quebec,Quebec,41,7,2026,2026-10-17,EV/RV,1096,191,17.4
+Quebec,Quebec,42,8,2026,2026-10-24,EV/RV,1079,183,17.0
+Quebec,Quebec,43,9,2026,2026-10-31,EV/RV,1145,173,15.1
+Quebec,Quebec,44,10,2026,2026-11-07,EV/RV,686,83,12.1
+Territories,Territories,35,1,2026,2026-09-05,EV/RV,N/A,N/A,N/A
+Territories,Territories,36,2,2026,2026-09-12,EV/RV,N/A,N/A,N/A
+Territories,Territories,37,3,2026,2026-09-19,EV/RV,N/A,N/A,N/A
+Territories,Territories,38,4,2026,2026-09-26,EV/RV,N/A,N/A,N/A
+Territories,Territories,39,5,2026,2026-10-03,EV/RV,N/A,N/A,N/A
+Territories,Territories,40,6,2026,2026-10-10,EV/RV,N/A,N/A,N/A
+Territories,Territories,41,7,2026,2026-10-17,EV/RV,N/A,N/A,N/A
+Territories,Territories,42,8,2026,2026-10-24,EV/RV,N/A,N/A,N/A
+Territories,Territories,43,9,2026,2026-10-31,EV/RV,N/A,N/A,N/A
+Territories,Territories,44,10,2026,2026-11-07,EV/RV,N/A,N/A,N/A
+Atlantic,Atlantic,35,1,2026,2026-09-05,HCoV,316,1,0.3
+Atlantic,Atlantic,36,2,2026,2026-09-12,HCoV,349,3,0.9
+Atlantic,Atlantic,37,3,2026,2026-09-19,HCoV,413,4,1.0
+Atlantic,Atlantic,38,4,2026,2026-09-26,HCoV,436,4,0.9
+Atlantic,Atlantic,39,5,2026,2026-10-03,HCoV,505,3,0.6
+Atlantic,Atlantic,40,6,2026,2026-10-10,HCoV,528,2,0.4
+Atlantic,Atlantic,41,7,2026,2026-10-17,HCoV,476,0,0.0
+Atlantic,Atlantic,42,8,2026,2026-10-24,HCoV,498,3,0.6
+Atlantic,Atlantic,43,9,2026,2026-10-31,HCoV,535,3,0.6
+Atlantic,Atlantic,44,10,2026,2026-11-07,HCoV,572,4,0.7
+British Columbia,British Columbia,35,1,2026,2026-09-05,HCoV,601,1,0.2
+British Columbia,British Columbia,36,2,2026,2026-09-12,HCoV,641,0,0.0
+British Columbia,British Columbia,37,3,2026,2026-09-19,HCoV,664,3,0.5
+British Columbia,British Columbia,38,4,2026,2026-09-26,HCoV,845,6,0.7
+British Columbia,British Columbia,39,5,2026,2026-10-03,HCoV,950,5,0.5
+British Columbia,British Columbia,40,6,2026,2026-10-10,HCoV,887,4,0.5
+British Columbia,British Columbia,41,7,2026,2026-10-17,HCoV,844,6,0.7
+British Columbia,British Columbia,42,8,2026,2026-10-24,HCoV,803,6,0.7
+British Columbia,British Columbia,43,9,2026,2026-10-31,HCoV,772,7,0.9
+British Columbia,British Columbia,44,10,2026,2026-11-07,HCoV,438,1,0.2
+Canada,Canada,35,1,2026,2026-09-05,HCoV,6302,23,0.4
+Canada,Canada,36,2,2026,2026-09-12,HCoV,6719,23,0.3
+Canada,Canada,37,3,2026,2026-09-19,HCoV,7296,24,0.3
+Canada,Canada,38,4,2026,2026-09-26,HCoV,7932,33,0.4
+Canada,Canada,39,5,2026,2026-10-03,HCoV,8487,43,0.5
+Canada,Canada,40,6,2026,2026-10-10,HCoV,8528,37,0.4
+Canada,Canada,41,7,2026,2026-10-17,HCoV,8466,34,0.4
+Canada,Canada,42,8,2026,2026-10-24,HCoV,8619,47,0.5
+Canada,Canada,43,9,2026,2026-10-31,HCoV,8827,65,0.7
+Canada,Canada,44,10,2026,2026-11-07,HCoV,8442,59,0.7
+Ontario,Ontario,35,1,2026,2026-09-05,HCoV,2541,6,0.2
+Ontario,Ontario,36,2,2026,2026-09-12,HCoV,2530,7,0.3
+Ontario,Ontario,37,3,2026,2026-09-19,HCoV,2823,7,0.2
+Ontario,Ontario,38,4,2026,2026-09-26,HCoV,3088,9,0.3
+Ontario,Ontario,39,5,2026,2026-10-03,HCoV,3390,18,0.5
+Ontario,Ontario,40,6,2026,2026-10-10,HCoV,3349,15,0.4
+Ontario,Ontario,41,7,2026,2026-10-17,HCoV,3560,13,0.4
+Ontario,Ontario,42,8,2026,2026-10-24,HCoV,3539,18,0.5
+Ontario,Ontario,43,9,2026,2026-10-31,HCoV,3528,28,0.8
+Ontario,Ontario,44,10,2026,2026-11-07,HCoV,3551,19,0.5
+Prairies,Prairies,35,1,2026,2026-09-05,HCoV,1900,8,0.4
+Prairies,Prairies,36,2,2026,2026-09-12,HCoV,2086,8,0.4
+Prairies,Prairies,37,3,2026,2026-09-19,HCoV,2274,4,0.2
+Prairies,Prairies,38,4,2026,2026-09-26,HCoV,2356,6,0.3
+Prairies,Prairies,39,5,2026,2026-10-03,HCoV,2369,10,0.4
+Prairies,Prairies,40,6,2026,2026-10-10,HCoV,2458,8,0.3
+Prairies,Prairies,41,7,2026,2026-10-17,HCoV,2396,8,0.3
+Prairies,Prairies,42,8,2026,2026-10-24,HCoV,2595,11,0.4
+Prairies,Prairies,43,9,2026,2026-10-31,HCoV,2740,17,0.6
+Prairies,Prairies,44,10,2026,2026-11-07,HCoV,3028,25,0.8
+Quebec,Quebec,35,1,2026,2026-09-05,HCoV,944,7,0.7
+Quebec,Quebec,36,2,2026,2026-09-12,HCoV,1113,5,0.4
+Quebec,Quebec,37,3,2026,2026-09-19,HCoV,1122,6,0.5
+Quebec,Quebec,38,4,2026,2026-09-26,HCoV,1207,8,0.7
+Quebec,Quebec,39,5,2026,2026-10-03,HCoV,1273,7,0.5
+Quebec,Quebec,40,6,2026,2026-10-10,HCoV,1306,8,0.6
+Quebec,Quebec,41,7,2026,2026-10-17,HCoV,1190,7,0.6
+Quebec,Quebec,42,8,2026,2026-10-24,HCoV,1184,9,0.8
+Quebec,Quebec,43,9,2026,2026-10-31,HCoV,1252,10,0.8
+Quebec,Quebec,44,10,2026,2026-11-07,HCoV,853,10,1.2
+Territories,Territories,35,1,2026,2026-09-05,HCoV,N/A,N/A,N/A
+Territories,Territories,36,2,2026,2026-09-12,HCoV,N/A,N/A,N/A
+Territories,Territories,37,3,2026,2026-09-19,HCoV,N/A,N/A,N/A
+Territories,Territories,38,4,2026,2026-09-26,HCoV,N/A,N/A,N/A
+Territories,Territories,39,5,2026,2026-10-03,HCoV,N/A,N/A,N/A
+Territories,Territories,40,6,2026,2026-10-10,HCoV,N/A,N/A,N/A
+Territories,Territories,41,7,2026,2026-10-17,HCoV,N/A,N/A,N/A
+Territories,Territories,42,8,2026,2026-10-24,HCoV,N/A,N/A,N/A
+Territories,Territories,43,9,2026,2026-10-31,HCoV,N/A,N/A,N/A
+Territories,Territories,44,10,2026,2026-11-07,HCoV,N/A,N/A,N/A

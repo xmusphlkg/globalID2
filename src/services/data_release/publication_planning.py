@@ -152,7 +152,13 @@ def create_plan(*, root: Path, data_dir: Path, job_id: str, config: Any,
                 dirty_rows: list[dict], job_configuration: dict | None = None,
                 now: datetime | None = None, execution_service=None,
                 requested_kind: str = "auto", channel: str | None = None, rollback_of: str | None = None,
-                suppress_subscription_dispatch: bool = False) -> dict:
+                suppress_subscription_dispatch: bool = False,
+                rebuild_country_codes: list[str] | None = None) -> dict:
+    if rebuild_country_codes is not None and (
+        requested_kind != "content" or channel != "surveillance" or not rebuild_country_codes
+        or rebuild_country_codes != sorted(set(rebuild_country_codes))
+    ):
+        raise ValueError("Full surveillance rebuilding requires exact eligible countries and a content plan")
     now = now or datetime.now(timezone.utc)
     source = inspect_source(root)
     try:
@@ -215,6 +221,8 @@ def create_plan(*, root: Path, data_dir: Path, job_id: str, config: Any,
                             "generations": source["generations"], "job_id": job_id,
                             "job_configuration": job_configuration,
                             "suppress_subscription_dispatch": suppress_subscription_dispatch})
+    if rebuild_country_codes is not None:
+        input_digest = _digest({"input_digest": input_digest, "rebuild_country_codes": rebuild_country_codes})
     plan = {
         "plan_id": str(uuid4()), "job_id": job_id,
         "created_at": now.isoformat(), "expires_at": (now + timedelta(minutes=15)).isoformat(),
@@ -232,6 +240,8 @@ def create_plan(*, root: Path, data_dir: Path, job_id: str, config: Any,
         "dirty_ids": sorted(row["id"] for row in dirty_rows), "pending_scopes": scopes,
         "warnings": sorted(set(warnings)), "preview_only": True, "executable": False,
         "suppress_subscription_dispatch": suppress_subscription_dispatch,
+        "surveillance_rebuild_all": rebuild_country_codes is not None,
+        "country_codes": rebuild_country_codes or [],
     }
     if execution_service is not None:
         from .publication_execution import prepare_execution

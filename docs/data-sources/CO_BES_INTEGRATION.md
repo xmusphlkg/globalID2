@@ -25,6 +25,11 @@ The fixed territorial appendix reports **source-year cumulative counts at each
 epidemiological week**, not weekly new cases. Only the explicit `Acumulado
 <source year>` column is imported. Expected/observed comparison columns and
 narrative tables have different definitions and are excluded from this scope.
+The v5 deterministic parser also retains identifiable comparison cells as raw
+evidence in `SourceComparisonCells`; they never supply the observation value.
+`weekly_incidence_coverage_complete` is explicitly false even when the cumulative
+annex is fully extracted. See the [multi-source design](CO_MULTI_SOURCE_DESIGN.md)
+for the 2025 microdata aggregates and the remaining 2026 weekly-incidence gap.
 The source epidemiological year/week remain explicit dimensions; 2025 week 53
 ends on 2026-01-03 and belongs to source year 2025. Explicit blank cells remain
 missing. Ambiguous repeated source event headings retain distinct group codes
@@ -151,3 +156,25 @@ all 2,067 rows, with zero missing, unexpected, duplicate or mismatched rows.
 The refresh state is `up_to_date`, with 97 applied reports and no pending
 reports. This verifies the managed import path; BES remains outside the accepted
 public release.
+
+## 2026-11-17 typed refresh addendum
+
+The typed replay supersedes the earlier cumulative-only count in this document.
+It retains **159,393** cumulative source facts and adds **630** rows from the
+reviewed body table whose text explicitly defines notifications in the analysed
+week (628 numeric values and 2 source-missing cells). Those rows use
+`co_bes_explicit_weekly_notifications_v1`, `interval_count`, and the INS week
+boundaries; they are not derived by differencing `Acumulado`.
+
+The active mapping release contains 102 reviewed CO categories. WHO FluNet is
+stored in its separate `SRC_CO_WHO_FLUNET` channel (4,850 2025–2026 cells), and
+the annual microdata channel remains private. The full typed verification report
+is `data/current/co/bes-typed-verification-postrefresh.json`; its database facts
+match is true, while completeness remains false for eight unreadable source
+cells and the intentionally unsupported narrative/chart tables.
+
+The three managed timers are enabled: BES hourly at minute 45, FluNet daily at
+08:30, and completed-year microdata Sundays at 07:15, all in
+`America/Bogota`. The control-panel duplicate jobs remain disabled. The current
+refresh state can show a transient retry after a transport check; it does not
+invalidate the already committed replay or its reconciliation.

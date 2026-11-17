@@ -1,0 +1,46 @@
+{
+  "retrieved_date": "2026-11-17",
+  "index_url": "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html",
+  "purpose": "Real WHO source originals. W01 tests the explicit cross-year source interval; W49 and W50 test partial extraction and unreadable tables. Not MoPH NDSR originals.",
+  "reports": [
+    {
+      "pdf_url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-50-2025.pdf",
+      "post_url": "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html",
+      "title": "Epidemiological Week 50, 07 - 13 December 2025",
+      "listed_year": 2025,
+      "listed_week": 50,
+      "discovery": "official_link"
+    },
+    {
+      "pdf_url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-49-2025.pdf",
+      "post_url": "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html",
+      "title": "Epidemiological Week 49, 30 Nov - 06 December 2025",
+      "listed_year": 2025,
+      "listed_week": 49,
+      "discovery": "official_link"
+    },
+    {
+      "pdf_url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-01-2025.pdf",
+      "post_url": "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html",
+      "title": "Epidemiological Week 1, 29 Dec 2024 - 4 January 2025",
+      "listed_year": 2025,
+      "listed_week": 1,
+      "discovery": "official_link"
+    },
+    {
+      "pdf_url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-18-2025.pdf",
+      "post_url": "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html",
+      "title": "Epidemiological Week 18, 27 Apr - 3 May 2025",
+      "listed_year": 2025,
+      "listed_week": 18,
+      "discovery": "official_link"
+    }
+  ],
+  "files": {
+    "who_outbreaks_index_20261117.html": "911a38752da76f15f9288a99bd7e604924c062f5bf1f44c1a450a7100ff54a7c",
+    "who_outbreaks_2025_w01.pdf": "e044dfc68649b3fd669c9ce4b5004603324c5d83e4b11a3b522d8c1418ec98c2",
+    "who_outbreaks_2025_w50.pdf": "948e392cb1fe9a2c4c5ea537f2b1abf1ef6b15a387b9bf590460abf12597471e",
+    "who_outbreaks_2025_w49.pdf": "de28387c61da333bcfc332744bd9e5d3a57173103147d9723db45267b9d66825",
+    "who_outbreaks_2025_w18.pdf": "6a63f3f320f2ca0530c7d973187f3489a197d08f5208312f60ef699617e7a864"
+  }
+}

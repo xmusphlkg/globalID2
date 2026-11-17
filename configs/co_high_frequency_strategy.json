@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "strategy_id": "co_typed_weekly_surveillance_v1",
+  "status": "design_with_validated_source_probes_not_live_publication",
+  "timezone": "America/Bogota",
+  "channels": [
+    {
+      "id": "bes_explicit_weekly_notifications",
+      "source_scope": "co_ins_bes_weekly",
+      "contract": "co-ins-bes-national-last-week-notifications-v1",
+      "role": "primary_weekly_notifications_for_reviewed_events",
+      "observation_kind": "interval_count",
+      "case_definition": "notifications_of_analyzed_week_excluding_discarded_as_reported_in_that_issue",
+      "calendar": "INS_source_epi_week",
+      "case_event_codes": ["217", "320", "420", "430", "450", "895"],
+      "death_event_codes": ["580"],
+      "requires_table_local_week_definition": true,
+      "annex_observed_allowed": false,
+      "site_target": "reviewed_source_series_and_compatible_cases_or_deaths_projection",
+      "missing_policy": "null_with_parse_or_source_gap_reason",
+      "publication_enabled": false
+    },
+    {
+      "id": "who_flunet_respiratory",
+      "source_scope": "who_flunet_weekly",
+      "country_filter": "COUNTRY_CODE eq 'COL'",
+      "official_url": "https://www.who.int/tools/flunet",
+      "api": "https://xmart-api-public.who.int/FLUMART/VIW_FNT",
+      "role": "independent_weekly_respiratory_laboratory_surveillance",
+      "observation_kind": "laboratory_detections",
+      "calendar": "ISO-8601",
+      "retain_dimensions": ["ORIGIN_SOURCE"],
+      "retain_denominators": ["SPEC_PROCESSED_NB", "RSV_PROCESSED"],
+      "site_target": "source_series_source_value",
+      "population_case_projection_allowed": false,
+      "sum_sentinel_and_nonsentinel": false,
+      "sum_influenza_total_and_subtypes": false,
+      "publication_enabled": false
+    },
+    {
+      "id": "bes_year_to_date_snapshots",
+      "source_scope": "co_ins_bes_weekly",
+      "role": "latest_ytd_indicator_panel",
+      "observation_kind": "cumulative_count",
+      "calendar": "INS_source_epi_week",
+      "site_target": "source_series_separate_ytd_panel",
+      "weekly_case_projection_allowed": false,
+      "cumulative_differencing_allowed": false,
+      "sum_across_weeks_allowed": false,
+      "show_weekly_incidence_change": false,
+      "publication_enabled": false
+    },
+    {
+      "id": "closed_year_microdata",
+      "source_scope": "co_ins_sivigila_microdatos",
+      "role": "retrospective_release_and_definition_reconciliation",
+      "automatic_high_frequency_fallback": false,
+      "replace_contemporaneous_weekly_notifications": false,
+      "publication_enabled": false
+    },
+    {
+      "id": "historical_municipality_open_tables",
+      "source_scopes": ["co_ins_sivigila_historical", "co_ins_sivigila_current"],
+      "role": "independent_historical_municipality_facts",
+      "owner_of_overlap_year_2022": "co_ins_sivigila_historical",
+      "assume_current_year_coverage": false,
+      "automatic_national_rollup": false
+    }
+  ],
+  "proposed_schedule": {
+    "bes_discovery": "hourly; reuse the existing managed capture, one PDF download shared by all parsers",
+    "bes_changed_reports": "parse only new or changed originals; retry extraction failures separately from capture",
+    "bes_recent_report_revalidation": "daily, trailing 12 published reports",
+    "bes_full_year_reconciliation": "monthly, current and previous epidemiological years",
+    "flunet_poll": "daily, closed weeks only",
+    "flunet_revision_replay": "daily, trailing 12 weeks; monthly current and previous years",
+    "open_table_version_and_new_dataset_check": "weekly",
+    "microdata_catalogue_check": "weekly; aggregate changed completed-year workbooks only",
+    "event_reports": "weekly catalogue check for definitions and reconciliation, not a weekly cases fallback"
+  },
+  "publication_rules": {
+    "identity": ["source_system", "event", "measure", "case_definition", "geography", "calendar", "source_year", "source_week", "dimensions"],
+    "retain_provenance": ["raw_sha256", "source_url", "page_and_cell", "published_at_if_known", "retrieved_at", "parser_version", "revision_vintage"],
+    "atomic_scope": "per_source_contract_snapshot",
+    "failed_parse": "retain_last_accepted_snapshot_and_show_staleness; do_not_overwrite_with_zero_or_empty_success",
+    "changed_definition": "new_series_version_and_explicit_break",
+    "mixed_measure_country_total": "disabled",
+    "latest_snapshot_date": "per_series_not_country_wide_maximum",
+    "cross_calendar_week_alignment": "exact_period_boundaries_only_never_week_number_alone"
+  },
+  "evidence": {
+    "bes_weekly_probe": "data/current/co/bes-weekly-notifications-preview/audit.json",
+    "flunet_probe": "data/current/co/flunet-source-probe.json",
+    "microdata_verification": "data/current/co/microdatos-weekly/verification.json",
+    "plan": "docs/data-sources/CO_HIGH_FREQUENCY_UPDATE_PLAN.md"
+  }
+}

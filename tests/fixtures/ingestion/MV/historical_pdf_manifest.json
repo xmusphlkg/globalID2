@@ -1,0 +1,80 @@
+[
+  {
+    "fixture": "hpa_monthly_202403.pdf",
+    "source_url": "https://health.gov.mv/storage/uploads/yYje5BwP/24yxbjp2.pdf",
+    "sha256": "9ed156294fb257f8371bc77d9d64a46e89a279f7d2cee2bcfbbaba69d4dad56c",
+    "byte_size": 536874,
+    "report": {
+      "url": "https://health.gov.mv/en/publications/roagaage-gothugai-fethuremundhaa-balithah-maarch-2024",
+      "title": "Monthly Communicable disease report (March 2024)",
+      "year": 2024,
+      "month": 3,
+      "pdf_url": "https://health.gov.mv/storage/uploads/yYje5BwP/24yxbjp2.pdf"
+    }
+  },
+  {
+    "fixture": "hpa_monthly_202402.pdf",
+    "source_url": "https://health.gov.mv/storage/uploads/JYkjXlwR/pvjqiuoz.pdf",
+    "sha256": "77e7d6188b8b3809beb82644216edf94b14518fcb5eaa10c3f74ef66393c3bfb",
+    "byte_size": 524558,
+    "report": {
+      "url": "https://health.gov.mv/en/publications/roagaage-gothugai-fethuremundhaa-balithah-feburuaree-2024",
+      "title": "Monthly Communicable disease report ( February 2024)",
+      "year": 2024,
+      "month": 2,
+      "pdf_url": "https://health.gov.mv/storage/uploads/JYkjXlwR/pvjqiuoz.pdf"
+    }
+  },
+  {
+    "fixture": "hpa_monthly_202312.pdf",
+    "source_url": "https://health.gov.mv/storage/uploads/Vw9Z2BYv/0eotslj1.pdf",
+    "sha256": "70d406843b213dfe507822da6dd19d971fcfeab67bee5fb09004f7e20eb75b98",
+    "byte_size": 961815,
+    "report": {
+      "url": "https://health.gov.mv/en/publications/monthly-communicable-disease-report-december",
+      "title": "Monthly Communicable disease report ( December 2023)",
+      "year": 2023,
+      "month": 12,
+      "pdf_url": "https://health.gov.mv/storage/uploads/Vw9Z2BYv/0eotslj1.pdf"
+    }
+  },
+  {
+    "fixture": "hpa_monthly_202302.pdf",
+    "source_url": "https://health.gov.mv/storage/uploads/K5oBO8wG/ac0sec2c.pdf",
+    "sha256": "f0455fbd0ca93a3dc31eb0d40c475157d1f199e0db44e007a455757a914103d3",
+    "byte_size": 796726,
+    "report": {
+      "url": "https://health.gov.mv/en/publications/roagaage-gothugai-fethuremundhaa-balithah-feburuaree-2023",
+      "title": "Monthly Communicable Disease report (February 2023)",
+      "year": 2023,
+      "month": 2,
+      "pdf_url": "https://health.gov.mv/storage/uploads/K5oBO8wG/ac0sec2c.pdf"
+    }
+  },
+  {
+    "fixture": "hpa_monthly_202212.pdf",
+    "source_url": "https://health.gov.mv/storage/uploads/pDqKdyoO/hiwalidw.pdf",
+    "sha256": "b3ccf284c4ae3c9d6240c62b9214b0bb4b22fd271789cc3bf3fe4da7abbbbd19",
+    "byte_size": 797084,
+    "report": {
+      "url": "https://health.gov.mv/en/publications/roagaage-gothugai-fethuremundhaa-balithah-disembar-2022",
+      "title": "Monthly Communicable Disease report (December 2022)",
+      "year": 2022,
+      "month": 12,
+      "pdf_url": "https://health.gov.mv/storage/uploads/pDqKdyoO/hiwalidw.pdf"
+    }
+  },
+  {
+    "fixture": "hpa_monthly_202404.pdf",
+    "source_url": "https://health.gov.mv/storage/uploads/dodnKPYp/ih3ujvgo.pdf",
+    "sha256": "960debd8edf4d7883fe0c527aae5d17d288345e662447563ae9dbe18890ee1c6",
+    "byte_size": 932269,
+    "report": {
+      "url": "https://health.gov.mv/en/publications/monthly-communicable-disease-report-april-2024",
+      "title": "Monthly Communicable disease report (April 2024)",
+      "year": 2024,
+      "month": 4,
+      "pdf_url": "https://health.gov.mv/storage/uploads/dodnKPYp/ih3ujvgo.pdf"
+    }
+  }
+]

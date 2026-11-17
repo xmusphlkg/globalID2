@@ -15,7 +15,7 @@ import hashlib
 import json
 import sys
 import tempfile
-from collections import Counter, defaultdict
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -24,21 +24,22 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.data.crawlers.br import (
-    DEFAULT_SOURCE_NAME,
     BrazilSINANCrawler,
     _deduplicate_sinan_file_aliases,
 )
 from src.data.crawlers.br_cache import SINANContentCache
 from src.data.processors.br import BRMonthlyUpdater, BRUpdateImportResult
 from src.data.processors.br_subdivisions import (
-    STATE_CODES,
+    aggregate_residence_file,
     coalesce_source_rows,
     projected_dbf_records,
     record_month,
     residence_state,
 )
 
-CACHE_VERSION = "residence-notification-month-v2"
+__all__ = ["coalesce_source_rows", "projected_dbf_records", "record_month", "residence_state"]
+
+CACHE_VERSION = "residence-notification-month-v3"
 
 
 def aggregate_file(item, *, force=False):
@@ -61,79 +62,32 @@ def _aggregate_file(crawler, item, *, force=False):
     payload = cache.read() if not force else None
     if payload is not None:
         return payload
-    counts, months, unknown, date_fields = Counter(), Counter(), Counter(), Counter()
-    undated = 0
     with tempfile.TemporaryDirectory(prefix="globalid_br_states_") as directory:
         dbf = Path(directory) / (item.filename + ".dbf")
         crawler._decompress_to_dbf(dbc, dbf)
         try:
-            for record in projected_dbf_records(dbf):
-                year, month, basis = record_month(record, item.year)
-                if basis == "year_only_fallback":
-                    undated += 1
-                    continue  # An annual-only observation has no defensible monthly bucket.
-                months[(year, month)] += 1
-                date_fields[basis] += 1
-                state = residence_state(record)
-                if state is None:
-                    unknown[(year, month)] += 1
-                else:
-                    counts[(state, year, month)] += 1
+            aggregated = aggregate_residence_file(item, dbf)
         except LookupError:
             payload = {
                 "file": item.filename,
+                "source_url": item.url,
+                "sha256": digest,
                 "excluded": "no residence geography fields",
                 "rows": [],
             }
             cache.write(payload)
             return payload
-    if not counts:
-        payload = {
-            "file": item.filename,
-            "excluded": "no valid residence state observations",
-            "rows": [],
-        }
-        cache.write(payload)
-        return payload
-    rows = []
-    for year, month in sorted(months):
-        for state in sorted("BR-" + s for s in STATE_CODES.values()):
-            rows.append(
-                {
-                    "CountryCode": state,
-                    "GeographyKey": f"country:{state}:national",
-                    "Date": f"{year:04d}-{month:02d}-01",
-                    "Year": str(year),
-                    "Month": str(month),
-                    "DiseaseCode": item.prefix,
-                    "RawDiseaseLabel": item.disease_name,
-                    "Cases": str(counts[(state, year, month)]),
-                    "DatasetStatus": item.dataset_status,
-                    "SourceFiles": item.filename,
-                    "SourceURLs": item.url,
-                    "Source": DEFAULT_SOURCE_NAME,
-                    "GeographyBasis": "residence",
-                    "DateBasis": "notification_then_symptom_diagnosis_accident",
-                    "SourceUpdateCadence": "closed_revisable",
-                    "SourceAuthoritative": True,
-                }
-            )
-    if sum(counts.values()) + sum(unknown.values()) != sum(months.values()):
-        raise ValueError("State + unknown residence counts do not reconcile")
     payload = {
         "version": CACHE_VERSION,
         "signature": signature,
         "file": item.filename,
         "source_url": item.url,
         "sha256": digest,
-        "record_count": sum(months.values()) + undated,
-        "dated_record_count": sum(months.values()),
-        "assigned_count": sum(counts.values()),
-        "unknown_residence_count": sum(unknown.values()),
-        "undated_count": undated,
-        "date_fields": dict(date_fields),
-        "rows": rows,
+        "record_count": aggregated["dated_record_count"] + aggregated["undated_count"],
+        **aggregated,
     }
+    if not aggregated["rows"]:
+        payload["excluded"] = "no valid residence state observations"
     cache.write(payload)
     return payload
 
@@ -168,7 +122,7 @@ class StateBatchUpdater(BRMonthlyUpdater):
         )
 
 
-async def apply(rows):
+async def apply(rows, *, reviewed_revisions=None):
     from sqlalchemy import text
 
     from src.core.database import dispose_database, get_db
@@ -177,6 +131,16 @@ async def apply(rows):
 
     try:
         async with get_db() as db:
+            if reviewed_revisions is not None:
+                from src.core.disease_mutation_lock import (
+                    acquire_country_data_mutation_lock,
+                )
+                from src.services.ingestion.br_reviewed_revisions import (
+                    reviewed_residence_rows,
+                )
+
+                await acquire_country_data_mutation_lock(db, "BR")
+                rows = await reviewed_residence_rows(db, rows, reviewed_revisions, root=ROOT)
             result = await CrawlService._import_rows_with_series(
                 db,
                 StateBatchUpdater(),
@@ -218,8 +182,12 @@ def main():
     parser.add_argument("--recent-years", type=int)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--prefixes", nargs="+")
+    parser.add_argument("--reviewed-revisions", type=Path, help="Exact source-proven correction receipt; requires --apply")
+    parser.add_argument("--output-dir", type=Path, help="Write candidate CSV and audit reports to an isolated directory")
     parser.add_argument("--force", action="store_true", help="Refresh directory listings, redownload and reparse selected files")
     args = parser.parse_args()
+    if args.reviewed_revisions and not args.apply:
+        parser.error("--reviewed-revisions requires --apply")
     if args.export and not args.apply:
         parser.error("--export requires --apply")
     if args.recent_years is not None and args.recent_years < 1:
@@ -242,7 +210,7 @@ def main():
     ]
     if not items:
         raise ValueError("No official files match the requested period")
-    output = ROOT / "data/processed/br/subdivisions"
+    output = args.output_dir or ROOT / "data/processed/br/subdivisions"
     output.mkdir(parents=True, exist_ok=True)
     reports, failures, rows = [], [], []
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
@@ -296,7 +264,28 @@ def main():
         writer.writeheader()
         writer.writerows(rows)
     if args.apply:
-        report["import"] = asyncio.run(apply(rows))
+        from src.data.storage.series.quality import SeriesObservationQualityError
+
+        try:
+            if args.reviewed_revisions:
+                reviewed = json.loads(args.reviewed_revisions.read_text())
+                report["reviewed_revision_receipt"] = str(args.reviewed_revisions)
+                report["reviewed_revision_receipt_sha256"] = hashlib.sha256(
+                    json.dumps(reviewed, sort_keys=True).encode()
+                ).hexdigest()
+                report["import"] = asyncio.run(apply(rows, reviewed_revisions=reviewed))
+            else:
+                report["import"] = asyncio.run(apply(rows))
+        except (SeriesObservationQualityError, ValueError, TypeError) as exc:
+            # Retain the rejection alongside the exact candidate/source hashes.
+            # The import transaction has rolled back; no observations are approved
+            # and no publication is queued after this failure.
+            if isinstance(exc, SeriesObservationQualityError):
+                report["quality_report"] = exc.report.to_dict()
+            else:
+                report["review_error"] = str(exc)
+            (output / "import_report.json").write_text(json.dumps(report, indent=2) + "\n")
+            raise
         report["applied"] = True
     report["coverage"] = {
         code: {

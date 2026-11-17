@@ -1,0 +1,25 @@
+survtype,countryname,yearweek,pathogen,pathogentype,pathogensubtype,indicator,age,value
+non-sentinel,Austria,2026-W45,Influenza,Influenza,total,detections,total,9
+non-sentinel,Austria,2026-W45,Influenza,Influenza,total,tests,total,316
+non-sentinel,Austria,2026-W45,Influenza,Influenza A,A (unknown),detections,total,8
+non-sentinel,Austria,2026-W45,Influenza,Influenza B,B (unknown),detections,total,1
+non-sentinel,Austria,2026-W45,RSV,RSV,RSV,detections,total,0
+non-sentinel,Austria,2026-W45,RSV,RSV,RSV,tests,total,417
+non-sentinel,Austria,2026-W45,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,detections,total,5
+non-sentinel,Austria,2026-W45,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,detections,unk,5
+non-sentinel,Austria,2026-W45,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,tests,total,102
+non-sentinel,Austria,2026-W45,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,tests,unk,102
+non-sentinel,Austria,2026-W44,Influenza,Influenza,total,detections,total,5
+non-sentinel,Austria,2026-W44,Influenza,Influenza,total,tests,total,194
+non-sentinel,Austria,2023-W01,Influenza,Influenza,total,detections,total,322
+non-sentinel,Austria,2023-W01,Influenza,Influenza,total,tests,total,1793
+non-sentinel,Austria,2023-W01,Influenza,Influenza A,A (unknown),detections,total,279
+non-sentinel,Austria,2023-W01,Influenza,Influenza A,A(H3),detections,total,30
+non-sentinel,Austria,2023-W01,Influenza,Influenza B,B (unknown),detections,total,11
+non-sentinel,Austria,2023-W01,Influenza,Influenza B,B/Vic,detections,total,2
+non-sentinel,Austria,2023-W01,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,detections,0-4,200
+non-sentinel,Austria,2023-W01,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,detections,15-64,13549
+non-sentinel,Austria,2023-W01,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,detections,5-14,473
+non-sentinel,Austria,2023-W01,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,detections,65+,4575
+non-sentinel,Austria,2023-W01,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,detections,total,18797
+non-sentinel,Austria,2023-W01,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,tests,0-4,0

@@ -10003,6 +10003,11 @@
             "default": false,
             "title": "Suppress Subscription Dispatch",
             "type": "boolean"
+          },
+          "surveillance_rebuild_all": {
+            "default": false,
+            "title": "Surveillance Rebuild All",
+            "type": "boolean"
           }
         },
         "title": "PublicationPlanCreate",
@@ -10068,6 +10073,13 @@
             ],
             "title": "Cost Estimate Confidence",
             "type": "string"
+          },
+          "country_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Country Codes",
+            "type": "array"
           },
           "created_at": {
             "format": "date-time",
@@ -10198,6 +10210,11 @@
           "suppress_subscription_dispatch": {
             "default": false,
             "title": "Suppress Subscription Dispatch",
+            "type": "boolean"
+          },
+          "surveillance_rebuild_all": {
+            "default": false,
+            "title": "Surveillance Rebuild All",
             "type": "boolean"
           },
           "validation_scope": {

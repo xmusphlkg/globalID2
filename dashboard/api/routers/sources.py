@@ -62,6 +62,16 @@ _ICELAND_HISTORY_SCOPES = frozenset(
 )
 
 _SERIES_SOURCE_SCOPE_OVERRIDES = {
+    'SRC_IN_IDSP': 'in_idsp_weekly',
+    'SRC_PK_NIH_IDSR': 'pk_nih_idsr_weekly',
+    'SRC_NP_EDCD_SORMAS': 'np_sormas_weekly',
+    'SRC_LK_EPID_WER': 'lk_epid_wer_weekly',
+
+    'SRC_BD_DGHS_DENGUE': 'bd_dghs_dengue_daily',
+    'SRC_BT_RCDC_PUBLICATIONS': 'bt_rcdc_publications',
+    'SRC_MV_HPA_COMMUNICABLE': 'mv_hpa_communicable',
+    'SRC_AF_MOPH_NDSR': 'af_ndsr_weekly',
+
     'SRC_CL_ENO': 'cl_eno_historical',
     'SRC_CO_INS_SIVIGILA': 'co_ins_sivigila_historical',
     'SRC_CO_INS_SIVIGILA_CURRENT': 'co_ins_sivigila_current',

@@ -1,0 +1,30 @@
+ILI SARI
+Epidemiological week
+detropeR
+sesaC
+fo
+.oN
+Biweekly National Respiratory Virus Sentinel Surveillance Report
+Epidemiological Week 25 & 26 (June 15 - 28, 2026)
+In week 25, the influenza positivity rate was recorded at 34.1 % (53 cases), while in week 26 slightly increased
+influenza activity with positivity rate of 40.1 % (59 cases).
+A total of 311 respiratory samples were tested for Influenza, SARS-CoV-2, and RSV using real-time RT-PCR.
+This includes 116 samples of Influenza-like Illness (ILI), 50 samples of Severe Acute Respiratory Infection
+(SARI) and 33 samples of extended SARI (eSARI).
+A total of 5 SARS-CoV-2, 10 RSV-A and 6 RSV-B were detected during the weeks.
+All sentinnel sites have reported SARI and ILI except Punakha and Samdrup Jongkhar Hospitals have not
+report ILI for week 26.
+Figure 1. Weekly Influenza subtypes, RSV and SARS-CoV-2 through ILI and SARI Sentinel Surveillance
+Table 1. Influenza subtypes, RSV and SARS-CoV-2 in Testing week 25 & 26, 2026
+300
+250
+200
+150
+100
+50
+123456789 1 3 5 7 9 1 3 5 7 9 1 3 5 7 9 1 3 5 7 9 1
+1 1 1 1 1 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5
+Figure 2. Weekly ILI and SARI cases reported from Sentinel Hospitals for week 25 & 26
+Table 2. ILI and SARI cases reporting status for week 25, 2026
+Table 3. ILI and SARI cases reporting status for week 26, 2026
+*ILI– Influenza-Like Illness, SARI– Severe Acute Respiratory Infection, eSARI– extended Severe Acute Respiratory Infection

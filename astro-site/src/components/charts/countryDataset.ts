@@ -8,6 +8,7 @@ export interface SourceSeriesMetadata {
   source_system?: string;
   source_label?: string;
   metric_type?: string | null;
+  observation_kind?: string | null;
   reporting_basis?: string | null;
   time_basis?: string | null;
   temporal_granularity?: string;
@@ -29,7 +30,7 @@ export interface SourceSeriesMetadata {
   definition_effective_to?: string | null;
   comparability_break?: unknown;
   observation_count?: number;
-  total_value?: number;
+  total_value?: number | null;
   dates?: string[];
   values?: (number | null)[];
   quality_statuses?: string[];

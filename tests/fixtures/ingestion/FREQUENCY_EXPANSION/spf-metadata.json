@@ -1,0 +1,498 @@
+{
+  "grippe-passages-urgences-et-actes-sos-medecin_reg": {
+    "visibility": "domain",
+    "fields": [
+      {
+        "name": "date_complet",
+        "description": null,
+        "annotations": {},
+        "label": "1er jour de la semaine",
+        "type": "date"
+      },
+      {
+        "name": "semaine",
+        "description": null,
+        "annotations": {},
+        "label": "Semaine",
+        "type": "text"
+      },
+      {
+        "name": "reglib",
+        "description": "Libellé",
+        "annotations": {},
+        "label": "Région",
+        "type": "text"
+      },
+      {
+        "name": "sursaud_cl_age_gene",
+        "description": null,
+        "annotations": {},
+        "label": "Classe d'âge",
+        "type": "text"
+      },
+      {
+        "name": "taux_passages_grippe_sau",
+        "description": "Pour 100 000 passages",
+        "annotations": {
+          "decimals": 1
+        },
+        "label": "Taux de passages aux urgences pour grippe",
+        "type": "double"
+      },
+      {
+        "name": "taux_hospit_grippe_sau",
+        "description": "Pour 100 000 passages",
+        "annotations": {
+          "decimals": 1
+        },
+        "label": "Taux d'hospitalisations après passages aux urgences pour grippe",
+        "type": "double"
+      },
+      {
+        "name": "taux_actes_grippe_sos",
+        "description": "Pour 100 000 actes médicaux",
+        "annotations": {
+          "decimals": 1
+        },
+        "label": "Taux d'actes médicaux SOS médecins pour grippe",
+        "type": "double"
+      },
+      {
+        "name": "region",
+        "description": null,
+        "annotations": {},
+        "label": "Région Code",
+        "type": "text"
+      }
+    ],
+    "dataset_id": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+    "dataset_uid": "da_1rxhxq",
+    "has_records": true,
+    "features": [
+      "timeserie",
+      "analyze"
+    ],
+    "attachments": [],
+    "alternative_exports": [],
+    "data_visible": true,
+    "metas": {
+      "default": {
+        "title": "Grippe : Passages aux urgences et Actes SOS Médecins (Région)",
+        "description": "<p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les indicateurs\nde la surveillance des passages aux urgences (données du réseau OSCOUR®) et des\nconsultations SOS Médecins pour grippe/syndrome grippal sont issus du système\nde surveillance syndromique SurSaUD® (Surveillance Sanitaire des Urgences et\ndes Décès).<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les données du\nréseau OSCOUR® sont collectées à partir du format RPU (Résumé de passages aux\nurgences). Près de 700 structures d'urgences participent au réseau OSCOUR®,\nenregistrant 96% des passages aux urgences nationaux en 2024. <o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les données SOS\nMédecins sont issues des actes (visites à domicile, consultations) collectées\npar 62 associations SOS Médecins, enregistrant 95% des actes SOS Médecins.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le nombre de\npassages aux urgences pour grippe/syndrome grippal par classe d'âges et par\nzone géographique est rapporté au nombre total de passages aux urgences pour\nlesquels au moins un diagnostic médical est renseigné, pour la même classe\nd'âge et zone géographique.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le nombre\nd'hospitalisations après passage aux urgences pour grippe/syndrome grippal par\nclasse d'âges et par zone géographique est rapporté au nombre total\nd'hospitalisations après un passage aux urgences pour lesquels au moins un\ndiagnostic médical est renseigné, pour la même classe d'âge et zone\ngéographique.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le nombre\nd'actes SOS Médecins pour grippe/syndrome grippal par classe d'âges et par zone\ngéographique est rapporté au nombre total d'actes SOS Médecins pour lesquels au\nmoins un diagnostic médical est renseigné, pour la même classe d'âge et zone\ngéographique.<o:p></o:p></span></p><p class=\"MsoNormal\"><b><span style='font-family:\"Arial\",sans-serif'>Précisions : <o:p></o:p></span></b></p><ul><li><span style='font-family:\"Arial\",sans-serif'>Les passages\naux urgences et hospitalisations après passage pour grippe/syndrome grippal\ncorrespondent aux passages aux urgences avec un diagnostic médical de\ngrippe/syndrome grippal posé en diagnostic principal ou associé par les\nurgentistes (codes CIM10 : J09-J11.8).<o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>Les actes SOS\nMédecins pour grippe/syndrome grippal correspondent aux consultations avec un\ndiagnostic médical de grippe/syndrome grippal posé par les médecins des\nassociations SOS Médecins.<o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>Les données\nsont collectées en routine par les structures d’urgences et les associations\nSOS Médecins pour leurs propres besoins. Elles sont transmises dès J+1 à Santé\npublique France et retransmises dans les sept jours qui suivent pour\nconsolidation (3 jours pour les associations SOS Médecins). Les diagnostics\nmédicaux sont des diagnostics cliniques, ils ne font pas l’objet d’une\nvalidation et ne répondent pas à une définition de cas définis pour la\nsurveillance. Ils sont envoyés au fil de l’eau et ne sont en principe pas\nmodifiés au cours du temps. <o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>La zone\ngéographique correspond au département ou à la région de recours aux urgences\nou aux associations SOS Médecins et non à la zone géographique de domicile des\npatients.<o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>Tous les\ndépartements sont couverts par le réseau OSCOUR® (depuis 2023 pour La\nMartinique).<o:p></o:p></span></li></ul><p class=\"MsoNormal\"><b><span style='font-family:\"Arial\",sans-serif'>Pour aller plus loin :<o:p></o:p></span></b></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le jeu de\ndonnées contient trois indicateurs (Taux de passages aux urgences pour\ngrippe/syndrome grippal parmi 100 000 passages avec un diagnostic codé, taux\nd'hospitalisations après passage aux urgences pour grippe/syndrome grippal\nparmi 100 000 hospitalisations après passage avec un diagnostic renseigné, taux\nd'actes SOS Médecins pour grippe/syndrome grippal parmi 100 000 actes SOS\nMédecins avec un diagnostic médical renseigné). Ces trois indicateurs sont\nfournis tous âges et pour 4 classes d'âge (0-4 ans, 5-14 ans, 15-64 ans et 65\nans ou plus). Ils sont fournis par département. <o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les taux par\ndépartement ne doivent pas être agrégés. Deux autres jeux de données pour les\nmême classes d'âge sont disponibles pour le niveau régional et le niveau\nnational.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Consulter le\ndossier sur le système de surveillance syndromique SurSaUD® sur le site de\nSanté publique France :<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'><a href=\"https://www.santepubliquefrance.fr/surveillance-syndromique-sursaud-R\">https://www.santepubliquefrance.fr/surveillance-syndromique-sursaud-R</a><o:p></o:p></span></p><p class=\"MsoNormal\"><i><span style='font-family:\"Arial\",sans-serif'>Référence associée :<o:p></o:p></span></i></p><p class=\"MsoNormal\"><i><span style='font-family:\"Arial\",sans-serif'>Fouillet A, Pontais I, Forgeot C, Naud\nJ, Pedrono G, Serra D, et al. Surveillance de la pandémie de Covid-19 :\ncontribution et performances du système SurSaUD®. Bull Épidémiol Hebd.\n2024;(20-21):462-74. <o:p></o:p></span></i></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'><a href=\"http://beh.santepubliquefrance.fr/beh/2024/20-21/2024_20-21_4.html\">http://beh.santepubliquefrance.fr/beh/2024/20-21/2024_20-21_4.html</a><o:p></o:p></span></p><p>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n</p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'> </span></p>",
+        "theme": [
+          "Maladies Infectieuses"
+        ],
+        "keyword": [
+          "SurSAUD",
+          "surveillance syndromique",
+          "service d'urgence",
+          "réseau OSCOUR",
+          "associations SOS Médecins",
+          "SOS Médecins",
+          "grippe"
+        ],
+        "license": "Licence ouverte 2.0",
+        "license_url": "https://www.etalab.gouv.fr/wp-content/uploads/2017/04/ETALAB-Licence-Ouverte-v2.0.pdf",
+        "language": "fr",
+        "modified": "2026-11-11T14:00:43+00:00",
+        "publisher": "Santé publique France",
+        "references": null,
+        "attributions": [
+          "Données : Réseau OSCOUR®, Associations SOS Médecins. Traitements : Santé publique France"
+        ],
+        "update_frequency": "WEEKLY",
+        "bbox": null,
+        "data_processed": "2026-11-11T14:00:43+00:00",
+        "federated": false,
+        "geographic_reference": [
+          "world_fr"
+        ],
+        "geographic_reference_auto": true,
+        "geometry_types": null,
+        "metadata_languages": [
+          "fr"
+        ],
+        "metadata_processed": "2026-11-11T14:00:45.063000+00:00",
+        "modified_updates_on_data_change": true,
+        "modified_updates_on_metadata_change": false,
+        "parent_domain": null,
+        "records_count": 32940,
+        "shared_catalog": null,
+        "source_dataset": null,
+        "source_domain": null,
+        "source_domain_address": null,
+        "source_domain_title": null,
+        "territory": [
+          "France"
+        ],
+        "timezone": null
+      },
+      "dcat": {
+        "created": "2025-02-12",
+        "issued": "2025-03-16",
+        "creator": "Santé publique France",
+        "contributor": null,
+        "contact_name": null,
+        "contact_email": null,
+        "accrualperiodicity": "weekly",
+        "spatial": "France",
+        "temporal": "Année en cours + 5 années précédentes",
+        "granularity": "Région",
+        "dataquality": null,
+        "publisher_type": "NationalAuthority",
+        "conforms_to": null,
+        "temporal_coverage_start": null,
+        "temporal_coverage_end": null,
+        "accessRights": null,
+        "relation": null
+      },
+      "standard-insee": {
+        "sous-titre": null,
+        "source": [
+          "Système SurSaUD® (Surveillance sanitaire des urgences et des Décès) : Réseau OSCOUR® (structures d'urgence) et Associations SOS Médecins"
+        ],
+        "avertissement": "Les indicateurs disponibles sont des taux pour 100 000 passages, taux pour 100 000 hospitalisations et taux pour 100 000 actes SOS Médecins, tous âges et par classe d'âge, par zone géographique (département, région, France). Les taux ne doivent pas être agrégés.",
+        "documentation": "https://www.santepubliquefrance.fr/surveillance-syndromique-sursaud-R",
+        "unite-statistique": "Les données sont recueillies à l'échelle de l'individu, mais diffusées dans un jeu de données agrégé à l'échelle du département, de la région et de la France.",
+        "couverture-geographique": "France",
+        "mailles-geographiques": "Région",
+        "mailles-geographiques-multi": null,
+        "millesime-de-la-geographie": "2024",
+        "population-s-de-reference": "Le nombre total passages aux urgences pour lesquels au moins un diagnostic médical est renseigné, par classe d'âge, zone géographique et la même période. Le nombre total d'hospitalisations après passage aux urgences pour lesquels au moins un diagnostic médical est renseigné, par classe d'âge, zone géographique et la même période. Le nombre total d'actes SOS Médecins pour lesquels au moins un diagnostic médical est renseigné, par classe d'âge, zone géographique et la même période.",
+        "standardisation": null,
+        "nature-indicateur": null,
+        "non-disponible-sur-data-gouv-fr": null
+      }
+    }
+  },
+  "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region": {
+    "visibility": "domain",
+    "fields": [
+      {
+        "name": "date_complet",
+        "description": null,
+        "annotations": {},
+        "label": "1er jour de la semaine",
+        "type": "date"
+      },
+      {
+        "name": "semaine",
+        "description": null,
+        "annotations": {},
+        "label": "Semaine",
+        "type": "text"
+      },
+      {
+        "name": "region",
+        "description": null,
+        "annotations": {},
+        "label": "Région Code",
+        "type": "text"
+      },
+      {
+        "name": "reglib",
+        "description": "Libellé",
+        "annotations": {},
+        "label": "Région",
+        "type": "text"
+      },
+      {
+        "name": "sursaud_cl_age_gene",
+        "description": null,
+        "annotations": {},
+        "label": "Classe d'âge",
+        "type": "text"
+      },
+      {
+        "name": "taux_passages_bronchio_sau",
+        "description": "Pour 100 000 passages",
+        "annotations": {
+          "decimals": 1
+        },
+        "label": "Taux de passages aux urgences pour bronchiolite",
+        "type": "double"
+      },
+      {
+        "name": "taux_hospit_bronchio_sau",
+        "description": "Pour 100 000 passages",
+        "annotations": {
+          "decimals": 1
+        },
+        "label": "Taux d'hospitalisations après passages aux urgences pour bronchiolite",
+        "type": "double"
+      },
+      {
+        "name": "taux_actes_bronchio_sos",
+        "description": "Pour 100 000 actes médicaux",
+        "annotations": {
+          "decimals": 1
+        },
+        "label": "Taux d'actes médicaux SOS médecins pour bronchiolite",
+        "type": "double"
+      }
+    ],
+    "dataset_id": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+    "dataset_uid": "da_rrs4p8",
+    "has_records": true,
+    "features": [
+      "timeserie",
+      "analyze"
+    ],
+    "attachments": [],
+    "alternative_exports": [],
+    "data_visible": true,
+    "metas": {
+      "default": {
+        "title": "Bronchiolite : Passages aux urgences et Actes SOS Médecins (Région)",
+        "description": "<p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les indicateurs\nde la surveillance des passages aux urgences (données du réseau OSCOUR®) et des\nconsultations SOS Médecins pour bronchiolite sont issus du système de\nsurveillance syndromique SurSaUD® (Surveillance Sanitaire des Urgences et des\nDécès).<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les données du\nréseau OSCOUR® sont collectées à partir du format RPU (Résumé de passages aux\nurgences). Près de 700 structures d'urgences participent au réseau OSCOUR®,\nenregistrant 96% des passages aux urgences nationaux en 2024. <o:p></o:p></span></p><p class=\"MsoNormal\"><span style=\"font-family: Arial, sans-serif;\">Les données SOS\nMédecins sont issues des actes (visites à domicile, consultations) collectées\npar 62 associations SOS Médecins, enregistrant 95% des actes SOS Médecins.</span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le nombre de\npassages aux urgences pour bronchiolite chez les enfants de moins de 1 an et\npar zone géographique est rapporté au nombre total de passages aux urgences\npour lesquels au moins un diagnostic médical est renseigné, pour la même classe\nd'âge et zone géographique.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le nombre\nd'hospitalisations après passage aux urgences pour bronchiolite chez les\nenfants de moins de 1 an et par zone géographique est rapporté au nombre total\nd'hospitalisations après un passage aux urgences pour lesquels au moins un\ndiagnostic médical est renseigné, pour la même classe d'âge et zone\ngéographique.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le nombre\nd'actes SOS Médecins pour bronchiolite chez les enfants de moins de 1 an et\npar zone géographique est rapporté au nombre total d'actes SOS Médecins pour\nlesquels au moins un diagnostic médical est renseigné, pour la même classe\nd'âge et zone géographique.<o:p></o:p></span></p><p class=\"MsoNormal\"><b><span style='font-family:\"Arial\",sans-serif'>Précisions : <o:p></o:p></span></b></p><ul><li><span style='font-family:\"Arial\",sans-serif'>Les passages\naux urgences et hospitalisations après passage pour bronchiolite correspondent\naux passages aux urgences avec un diagnostic médical de bronchiolite posé en\ndiagnostic principal ou associé par les urgentistes (codes CIM10 : J21 et ses\ndérivés).<o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>Les actes SOS\nMédecins pour bronchiolite correspondent aux consultations avec un diagnostic\nmédical bronchiolite posé par les médecins des associations SOS Médecins.<o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>Les données\nsont collectées en routine par les structures d’urgences et les associations\nSOS Médecins pour leurs propres besoins. Elles sont transmises dès J+1 à Santé\npublique France et retransmises dans les sept jours qui suivent pour\nconsolidation (3 jours pour les associations SOS Médecins). Les diagnostics\nmédicaux sont des diagnostics cliniques, ils ne font pas l’objet d’une\nvalidation et ne répondent pas à une définition de cas définis pour la surveillance.\nIls sont envoyés au fil de l’eau et ne sont en principe pas modifiés au cours\ndu temps. <o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>La zone\ngéographique correspond au département ou à la région de recours aux urgences\nou aux associations SOS Médecins et non à la zone géographique de domicile des\npatients.<o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>Tous les\ndépartements sont couverts par le réseau OSCOUR® (depuis 2023 pour La\nMartinique).<o:p></o:p></span></li></ul><p class=\"MsoNormal\"><b><span style='font-family:\"Arial\",sans-serif'>Pour aller plus loin :<o:p></o:p></span></b></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le jeu de\ndonnées contient trois indicateurs (Taux de passages aux urgences pour\nbronchiolite parmi 100 000 passages avec un diagnostic codé, taux\nd'hospitalisations après passage aux urgences pour bronchiolite parmi 100 000\nhospitalisations après passage avec un diagnostic renseigné, taux d'actes SOS\nMédecins pour bronch</span><span style=\"font-family: Arial, sans-serif;\">iolite parmi 100 000 actes SOS Médecins avec un diagnostic\nmédical renseigné). Ces trois indicateurs sont fournis chez les enfants de\nmoins de 1 an (0 an). Ils sont fournis par département.</span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les taux par\ndépartement ne doivent pas être agrégés. Deux autres jeux de données pour la même classe d'âge sont disponibles pour le niveau départemental et le niveau\nnational.</span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Consulter le\ndossier sur le système de surveillance syndromique SurSaUD® sur le site de\nSanté publique France :<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'><a href=\"https://www.santepubliquefrance.fr/surveillance-syndromique-sursaud-R\">https://www.santepubliquefrance.fr/surveillance-syndromique-sursaud-R</a><o:p></o:p></span></p><p class=\"MsoNormal\"><i><span style='font-family:\"Arial\",sans-serif'>Référence associée :<o:p></o:p></span></i></p><p class=\"MsoNormal\"><i><span style='font-family:\"Arial\",sans-serif'>Fouillet A, Pontais I, Forgeot C, Naud\nJ, Pedrono G, Serra D, et al. Surveillance de la pandémie de Covid-19 :\ncontribution et performances du système SurSaUD®. Bull Épidémiol Hebd.\n2024;(20-21):462-74. <o:p></o:p></span></i></p><p>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n</p><p class=\"MsoNormal\"><a href=\"http://beh.santepubliquefrance.fr/beh/2024/20-21/2024_20-21_4.html\" target=\"_blank\">http://beh.santepubliquefrance.fr/beh/2024/20-21/2024_20-21_4.html</a><span style='font-family:\"Arial\",sans-serif'><a href=\"http://beh.santepubliquefrance.fr/beh/2024/20-21/2024_20-21_4.html\"></a></span></p><p class=\"MsoNormal\"><img src=\"/assets/theme_image/sos_medecins_2.jpg\" style=\"width: 25%;\"/><span style='font-family:\"Arial\",sans-serif'><br>\n<o:p></o:p></span></p>",
+        "theme": [
+          "Maladies Infectieuses"
+        ],
+        "keyword": [
+          "SurSAUD",
+          "surveillance syndromique",
+          "associations SOS Médecins",
+          "SOS Médecins",
+          "bronchiolite"
+        ],
+        "license": "Licence ouverte 2.0",
+        "license_url": "https://www.etalab.gouv.fr/wp-content/uploads/2017/04/ETALAB-Licence-Ouverte-v2.0.pdf",
+        "language": "fr",
+        "modified": "2026-11-04T13:56:19+00:00",
+        "publisher": "Santé publique France",
+        "references": null,
+        "attributions": [
+          "Données : Réseau OSCOUR®, Associations SOS Médecins. Traitements : Santé publique France"
+        ],
+        "update_frequency": "WEEKLY",
+        "bbox": null,
+        "data_processed": "2026-11-04T13:56:19+00:00",
+        "federated": false,
+        "geographic_reference": [
+          "world_fr"
+        ],
+        "geographic_reference_auto": true,
+        "geometry_types": null,
+        "metadata_languages": [
+          "fr"
+        ],
+        "metadata_processed": "2026-11-12T09:04:04.251000+00:00",
+        "modified_updates_on_data_change": true,
+        "modified_updates_on_metadata_change": false,
+        "parent_domain": null,
+        "records_count": 6426,
+        "shared_catalog": null,
+        "source_dataset": null,
+        "source_domain": null,
+        "source_domain_address": null,
+        "source_domain_title": null,
+        "territory": [
+          "France"
+        ],
+        "timezone": null
+      },
+      "dcat": {
+        "created": "2025-02-12",
+        "issued": "2025-03-17",
+        "creator": "Santé publique France",
+        "contributor": null,
+        "contact_name": null,
+        "contact_email": null,
+        "accrualperiodicity": "weekly",
+        "spatial": "France",
+        "temporal": "Année en cours + 5 années précédentes",
+        "granularity": "Région",
+        "dataquality": null,
+        "publisher_type": "NationalAuthority",
+        "conforms_to": null,
+        "temporal_coverage_start": null,
+        "temporal_coverage_end": null,
+        "accessRights": null,
+        "relation": null
+      },
+      "standard-insee": {
+        "sous-titre": null,
+        "source": [
+          "Système SurSaUD® (Surveillance sanitaire des urgences et des Décès) : Réseau OSCOUR® (structures d'urgence) et Associations SOS Médecins"
+        ],
+        "avertissement": "Les indicateurs disponibles sont des taux pour 100 000 passages, taux pour 100 000 hospitalisations et taux pour 100 000 actes SOS Médecins, tous âges et par classe d'âge, par zone géographique (département, région, France). Les taux ne doivent pas être agrégés.",
+        "documentation": "https://www.santepubliquefrance.fr/surveillance-syndromique-sursaud-R",
+        "unite-statistique": "Les données sont recueillies à l'échelle de l'individu, mais diffusées dans un jeu de données agrégé à l'échelle du département, de la région et de la France.",
+        "couverture-geographique": "France",
+        "mailles-geographiques": "Région",
+        "mailles-geographiques-multi": null,
+        "millesime-de-la-geographie": "2024",
+        "population-s-de-reference": "Le nombre total passages aux urgences pour lesquels au moins un diagnostic médical est renseigné, par classe d'âge, zone géographique et la même période. Le nombre total d'hospitalisations après passage aux urgences pour lesquels au moins un diagnostic médical est renseigné, par classe d'âge, zone géographique et la même période. Le nombre total d'actes SOS Médecins pour lesquels au moins un diagnostic médical est renseigné, par classe d'âge, zone géographique et la même période.",
+        "standardisation": null,
+        "nature-indicateur": null,
+        "non-disponible-sur-data-gouv-fr": null
+      }
+    }
+  },
+  "covid-19-passages-aux-urgences-et-actes-sos-medecins-region": {
+    "visibility": "domain",
+    "fields": [
+      {
+        "name": "date_complet",
+        "description": null,
+        "annotations": {},
+        "label": "1er jour de la semaine",
+        "type": "date"
+      },
+      {
+        "name": "semaine",
+        "description": null,
+        "annotations": {},
+        "label": "Semaine",
+        "type": "text"
+      },
+      {
+        "name": "reglib",
+        "description": "Libellé",
+        "annotations": {},
+        "label": "Région",
+        "type": "text"
+      },
+      {
+        "name": "sursaud_cl_age_gene",
+        "description": null,
+        "annotations": {},
+        "label": "Classe d'âge",
+        "type": "text"
+      },
+      {
+        "name": "taux_passages_covid_sau",
+        "description": "Pour 100 000 passages",
+        "annotations": {
+          "decimals": 1
+        },
+        "label": "Taux de passages aux urgences pour COVID-19",
+        "type": "double"
+      },
+      {
+        "name": "taux_hospit_covid_sau",
+        "description": "Pour 100 000 passages",
+        "annotations": {
+          "decimals": 1
+        },
+        "label": "Taux d'hospitalisations après passages aux urgences pour COVID-19",
+        "type": "double"
+      },
+      {
+        "name": "taux_actes_covid_sos",
+        "description": "Pour 100 000 actes médicaux",
+        "annotations": {
+          "decimals": 1
+        },
+        "label": "Taux d'actes médicaux SOS médecins pour COVID-19",
+        "type": "double"
+      },
+      {
+        "name": "region",
+        "description": null,
+        "annotations": {},
+        "label": "Région Code",
+        "type": "text"
+      }
+    ],
+    "dataset_id": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+    "dataset_uid": "da_nuszow",
+    "has_records": true,
+    "features": [
+      "timeserie",
+      "analyze"
+    ],
+    "attachments": [],
+    "alternative_exports": [],
+    "data_visible": true,
+    "metas": {
+      "default": {
+        "title": "COVID-19 : Passages aux urgences et Actes SOS Médecins (Région)",
+        "description": "<p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les indicateurs\nde la surveillance des passages aux urgences (données du réseau OSCOUR®) et des\nconsultations SOS Médecins pour suspicion de Covid-19 sont issus du système de\nsurveillance syndromique SurSaUD® (Surveillance Sanitaire des Urgences et des\nDécès).<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les données du\nréseau OSCOUR® sont collectées à partir du format RPU (Résumé de passages aux\nurgences). Près de 700 structures d'urgences participent au réseau OSCOUR®,\nenregistrant 96% des passages aux urgences nationaux en 2024. <o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les données SOS\nMédecins sont issues des actes (visites à domicile, consultations) collectées\npar 62 associations SOS Médecins, enregistrant 95% des actes SOS Médecins.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le nombre de\npassages aux urgences pour suspicion de Covid-19 par classe d'âges et par zone\ngéographique est rapporté au nombre total de passages aux urgences pour\nlesquels au moins un diagnostic médical est renseigné, pour la même classe\nd'âge et zone géographique.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le nombre\nd'hospitalisations après passage aux urgences pour suspicion de Covid-19 par\nclasse d'âges et par zone géographique est rapporté au nombre total\nd'hospitalisations après un passage aux urgences pour lesquels au moins un\ndiagnostic médical est renseigné, pour la même classe d'âge et zone\ngéographique.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le nombre d'actes\nSOS Médecins pour suspicion de Covid-19 par classe d'âges et par zone\ngéographique est rapporté au nombre total d'actes SOS Médecins pour lesquels au\nmoins un diagnostic médical est renseigné, pour la même classe d'âge et zone\ngéographique.<o:p></o:p></span></p><p class=\"MsoNormal\"><b><span style='font-family:\"Arial\",sans-serif'>Précisions : <o:p></o:p></span></b></p><ul><li><span style='font-family:\"Arial\",sans-serif'>Les passages\naux urgences et hospitalisations après passage pour suspicion de\nCovid-19correspondent aux passages aux urgences avec un diagnostic médical de\nsuspicion de Covid-19 posé en diagnostic principal ou associé par les\nurgentistes (codes CIM10 : B34.2, B97.2, B97.4, U04.9, U07.1, U07.10, U07.11,\nU07.12, U07.14, U07.15).<o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>Les actes SOS\nMédecins pour suspicion de Covid-19 correspondent aux consultations avec un\ndiagnostic médical de suspicion de Covid-19 posé par les médecins des\nassociations SOS Médecins.<o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>Les données\nsont collectées en routine par les structures d’urgences et les associations\nSOS Médecins pour leurs propres besoins. Elles sont transmises dès J+1 à Santé\npublique France et retransmises dans les sept jours qui suivent pour\nconsolidation (3 jours pour les associations SOS Médecins). Les diagnostics\nmédicaux sont des diagnostics cliniques, ils ne font pas l’objet d’une\nvalidation et ne répondent pas à une définition de cas définis pour la\nsurveillance. Ils sont envoyés au fil de l’eau et ne sont en principe pas\nmodifiés au cours du temps. <o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>La zone\ngéographique correspond au département ou à la région de recours aux urgences\nou aux associations SOS Médecins et non à la zone géographique de domicile des\npatients.<o:p></o:p></span></li><li><span style='font-family:\"Arial\",sans-serif'>Tous les\ndépartements sont couverts par le réseau OSCOUR® (depuis 2023 pour La\nMartinique).<o:p></o:p></span></li></ul><p class=\"MsoNormal\"><b><span style='font-family:\"Arial\",sans-serif'>Pour aller plus loin :<o:p></o:p></span></b></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Le jeu de\ndonnées contient trois indicateurs (Taux de passages aux urgences pour\nsuspicion de Covid-19 parmi 100 000 passages avec un diagnostic codé, taux\nd'hospitalisations après passage aux urgences pour suspicion de Covid-19 parmi\n100 000 hospitalisations après passage avec un diagnostic renseigné, taux\nd'actes SOS Médecins pour suspicion de Covid-19 parmi 100 000 actes SOS\nMédecins avec un diagnostic médical renseigné). Ces trois indicateurs sont\nfournis tous âges et pour 4 classes d'âge (0-4 ans, 5-14 ans, 15-64 ans et 65\nans ou plus). Ils sont fournis par département. <o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Les taux par\ndépartement ne doivent pas être agrégés. Deux autres jeux de données pour les\nmême classes d'âge sont disponibles pour le niveau régional et le niveau national.<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'>Consulter le\ndossier sur le système de surveillance syndromique SurSaUD® sur le site de\nSanté publique France :<o:p></o:p></span></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'><a href=\"https://www.santepubliquefrance.fr/surveillance-syndromique-sursaud-R\">https://www.santepubliquefrance.fr/surveillance-syndromique-sursaud-R</a><o:p></o:p></span></p><p class=\"MsoNormal\"><i><span style='font-family:\"Arial\",sans-serif'>Référence associée :<o:p></o:p></span></i></p><p class=\"MsoNormal\"><i><span style='font-family:\"Arial\",sans-serif'>Fouillet A, Pontais I, Forgeot C, Naud\nJ, Pedrono G, Serra D, et al. Surveillance de la pandémie de Covid-19 :\ncontribution et performances du système SurSaUD®. Bull Épidémiol Hebd.\n2024;(20-21):462-74. <o:p></o:p></span></i></p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'><a href=\"http://beh.santepubliquefrance.fr/beh/2024/20-21/2024_20-21_4.html\">http://beh.santepubliquefrance.fr/beh/2024/20-21/2024_20-21_4.html</a><o:p></o:p></span></p><p>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n</p><p class=\"MsoNormal\"><span style='font-family:\"Arial\",sans-serif'> </span></p>",
+        "theme": [
+          "Maladies Infectieuses"
+        ],
+        "keyword": [
+          "SurSAUD",
+          "surveillance syndromique",
+          "associations SOS Médecins",
+          "SOS Médecins",
+          "réseau OSCOUR",
+          "service d'urgence",
+          "COVID-19"
+        ],
+        "license": "Licence ouverte 2.0",
+        "license_url": "https://www.etalab.gouv.fr/wp-content/uploads/2017/04/ETALAB-Licence-Ouverte-v2.0.pdf",
+        "language": "fr",
+        "modified": "2026-11-11T11:10:34+00:00",
+        "publisher": "Santé publique France",
+        "references": null,
+        "attributions": [
+          "Données : Réseau OSCOUR®, Associations SOS Médecins. Traitements : Santé publique France"
+        ],
+        "update_frequency": "WEEKLY",
+        "bbox": null,
+        "data_processed": "2026-11-11T11:10:34+00:00",
+        "federated": false,
+        "geographic_reference": [
+          "world_fr"
+        ],
+        "geographic_reference_auto": true,
+        "geometry_types": null,
+        "metadata_languages": [
+          "fr"
+        ],
+        "metadata_processed": "2026-11-12T08:27:04.023000+00:00",
+        "modified_updates_on_data_change": true,
+        "modified_updates_on_metadata_change": false,
+        "parent_domain": null,
+        "records_count": 32940,
+        "shared_catalog": null,
+        "source_dataset": null,
+        "source_domain": null,
+        "source_domain_address": null,
+        "source_domain_title": null,
+        "territory": [
+          "France"
+        ],
+        "timezone": null
+      },
+      "dcat": {
+        "created": "2025-02-12",
+        "issued": "2025-03-16",
+        "creator": "Santé publique France",
+        "contributor": null,
+        "contact_name": null,
+        "contact_email": null,
+        "accrualperiodicity": "weekly",
+        "spatial": "France",
+        "temporal": "Année en cours + 5 années précédentes",
+        "granularity": "Région",
+        "dataquality": null,
+        "publisher_type": "NationalAuthority",
+        "conforms_to": null,
+        "temporal_coverage_start": null,
+        "temporal_coverage_end": null,
+        "accessRights": null,
+        "relation": null
+      },
+      "standard-insee": {
+        "sous-titre": null,
+        "source": [
+          "Système SurSaUD® (Surveillance sanitaire des urgences et des Décès) : Réseau OSCOUR® (structures d'urgence) et Associations SOS Médecins"
+        ],
+        "avertissement": "Les indicateurs disponibles sont des taux pour 100 000 passages, taux pour 100 000 hospitalisations et taux pour 100 000 actes SOS Médecins, tous âges et par classe d'âge, par zone géographique (département, région, France). Les taux ne doivent pas être agrégés.",
+        "documentation": "https://www.santepubliquefrance.fr/surveillance-syndromique-sursaud-R",
+        "unite-statistique": "Les données sont recueillies à l'échelle de l'individu, mais diffusées dans un jeu de données agrégé à l'échelle du département, de la région et de la France.",
+        "couverture-geographique": "France",
+        "mailles-geographiques": "Région",
+        "mailles-geographiques-multi": null,
+        "millesime-de-la-geographie": "2024",
+        "population-s-de-reference": "Le nombre total passages aux urgences pour lesquels au moins un diagnostic médical est renseigné, par classe d'âge, zone géographique et la même période. Le nombre total d'hospitalisations après passage aux urgences pour lesquels au moins un diagnostic médical est renseigné, par classe d'âge, zone géographique et la même période. Le nombre total d'actes SOS Médecins pour lesquels au moins un diagnostic médical est renseigné, par classe d'âge, zone géographique et la même période.",
+        "standardisation": null,
+        "nature-indicateur": null,
+        "non-disponible-sur-data-gouv-fr": null
+      }
+    }
+  }
+}

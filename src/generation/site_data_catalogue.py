@@ -6,6 +6,34 @@ from pathlib import Path
 from src.ontology import DiseaseOntology
 
 
+# Exact retired duplicates from the disease-ontology migration. A reviewed
+# assertion may still name the old id; public curves use the successor.
+DEPRECATED_EXACT_DUPLICATE_SUCCESSORS = {
+    "D012": "D071",
+    "D067": "D007",
+    "D160": "D115",
+    "D176": "D145",
+    "D179": "D085",
+}
+
+
+def publishable_concept_id(disease_id: str | None) -> str:
+    """Return the public concept for an exact deprecated duplicate."""
+
+    code = str(disease_id or "").strip()
+    return DEPRECATED_EXACT_DUPLICATE_SUCCESSORS.get(code, code)
+
+
+def use_public_concept(record: dict) -> dict:
+    """Point a fetched fact at its public successor without changing storage."""
+
+    disease_id = str(record.get("disease_id") or "").strip()
+    successor = DEPRECATED_EXACT_DUPLICATE_SUCCESSORS.get(disease_id)
+    if successor is not None:
+        record["disease_id"] = successor
+    return record
+
+
 def load_standard_diseases(csv_path: Path) -> list[dict]:
     diseases = []
     with open(csv_path, newline="", encoding="utf-8") as f:

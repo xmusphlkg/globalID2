@@ -31,6 +31,7 @@ class CountryProfile:
     source: str
 
 from src.core.remaining_country_sources import REMAINING_COUNTRIES
+from src.core.south_asia_sources import SOUTH_ASIA_SOURCES, bootstrap_config as south_asia_bootstrap_config
 
 
 COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
@@ -346,7 +347,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
     'CO': {'public_release_enabled': True, 'public_legacy_enabled': False,
            'data_source_url': 'https://www.datos.gov.co/d/4hyg-wa9d',
            'data_source_type': 'official_api',
-           'crawler_config': {'sources': ['co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly'], 'cadence': 'weekly',
+           'crawler_config': {'sources': ['co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly', 'co_ins_sivigila_microdatos'], 'cadence': 'weekly',
                               'full_history_start_year': 2007, 'supports_start_year': True,
                               'supports_fill_missing': False, 'default_fill_missing': False,
                               'dynamic_revision_enabled': True, 'reporting_area': 'source_geographies',
@@ -1313,6 +1314,12 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
 }
 
 
+for _code, _spec in SOUTH_ASIA_SOURCES.items():
+    COUNTRY_OVERRIDES[_code] = {key: _spec[key] for key in ("name", "name_local", "language", "timezone")}
+    COUNTRY_NAMES_ZH[_code] = _spec["name_zh"]
+    COUNTRY_BOOTSTRAP_CONFIGS[_code] = south_asia_bootstrap_config(_code)
+
+
 ROOT = Path(__file__).resolve().parents[2]
 COUNTRY_BOOTSTRAP_FILE = ROOT / "configs" / "country_bootstrap.json"
 SUBDIVISION_REGISTRY_FILE = ROOT / "configs" / "subdivision_registry.json"
@@ -1719,13 +1726,21 @@ def _merge_ecdc_baseline_config(code: str, config: dict) -> dict:
         ),
     }
     if code == "AT":
-        # Austria's national adapter remains permission-gated; use ECDC only.
-        merged["public_source_systems"] = [f"SRC_{code}_ECDC_ATLAS"]
+        # Publish the reviewed high-frequency supplements alongside the
+        # established ECDC annual baseline. AGES native monthly categories
+        # remain source-labelled and are admitted only through the reviewed
+        # category contract in ``reviewed_public_record``.
+        merged["public_source_systems"] = [
+            f"SRC_{code}_ECDC_ATLAS",
+            "SRC_AT_ECDC_RESPIRATORY",
+            "SRC_AT_AGES_RADAR",
+        ]
         merged["public_legacy_enabled"] = False
     if code == "IE":
         merged["public_source_systems"] = [
             "SRC_IE_ECDC_ATLAS", "SRC_IE_HPSC_NDH",
             "SRC_IE_HPSC_ANNUAL", "SRC_IE_HPSC_WEEKLY_ARCHIVE",
+            "SRC_IE_ECDC_RESPIRATORY",
         ]
         merged["public_legacy_enabled"] = False
         merged["public_source_scopes"] = [

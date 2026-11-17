@@ -171,13 +171,17 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
   { code: 'SI', name_en: 'Slovenia', name_zh: '斯洛文尼亚', lat: 46.1, lng: 14.8, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
   { code: 'SK', name_en: 'Slovakia', name_zh: '斯洛伐克', lat: 48.7, lng: 19.7, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
 
-  // South Asia onboarding candidates. These are planned sources, without
-  // imported observations or public country pages.
-  { code: 'IN', name_en: 'India', name_zh: '印度', lat: 22.6, lng: 79.0, status: 'Scheduled', labelOffset: [-100, 35], cadence: 'Annual', onboarding_track: 'International baseline', source_name: 'WHO GHO country-reported annual infections', source_url: 'https://www.who.int/data/gho' },
-  { code: 'PK', name_en: 'Pakistan', name_zh: '巴基斯坦', lat: 30.4, lng: 69.3, status: 'Scheduled', labelOffset: [-120, -30], cadence: 'Weekly', onboarding_track: 'National source', source_name: 'NIH IDSR Weekly Reports', source_url: 'https://www.nih.org.pk/phb/weekly-bulletin' },
-  { code: 'BD', name_en: 'Bangladesh', name_zh: '孟加拉国', lat: 23.7, lng: 90.4, status: 'Scheduled', labelOffset: [110, 35], cadence: 'Annual', onboarding_track: 'International baseline', source_name: 'WHO GHO country-reported annual infections', source_url: 'https://www.who.int/data/gho' },
-  { code: 'NP', name_en: 'Nepal', name_zh: '尼泊尔', lat: 28.4, lng: 84.1, status: 'Scheduled', labelOffset: [80, -45], cadence: 'Annual', onboarding_track: 'International baseline', source_name: 'WHO GHO country-reported annual infections', source_url: 'https://www.who.int/data/gho' },
-  { code: 'LK', name_en: 'Sri Lanka', name_zh: '斯里兰卡', lat: 7.9, lng: 80.7, status: 'Scheduled', labelOffset: [95, 40], cadence: 'Annual', onboarding_track: 'International baseline', source_name: 'WHO GHO country-reported annual infections', source_url: 'https://www.who.int/data/gho' },
+  // South Asia onboarding candidates. These sources are registered in the
+  // latest ingestion catalogue but remain planned until a reviewed public
+  // snapshot is available.
+  { code: 'IN', name_en: 'India', name_zh: '印度', lat: 22.6, lng: 79.0, status: 'Scheduled', labelOffset: [-100, 35], cadence: 'Weekly', onboarding_track: 'National source', source_name: 'India NCDC IDSP Weekly Outbreak Reports', source_url: 'https://ncdc.mohfw.gov.in/includes/WeeklyOutbreaks.php' },
+  { code: 'PK', name_en: 'Pakistan', name_zh: '巴基斯坦', lat: 30.4, lng: 69.3, status: 'Scheduled', labelOffset: [-120, -30], cadence: 'Weekly', onboarding_track: 'National source', source_name: 'Pakistan NIH IDSR Weekly Bulletin', source_url: 'https://nih.org.pk/public/phb/weekly-bulletin' },
+  { code: 'BD', name_en: 'Bangladesh', name_zh: '孟加拉国', lat: 23.7, lng: 90.4, status: 'Scheduled', labelOffset: [110, 35], cadence: 'Daily', onboarding_track: 'National source', source_name: 'Bangladesh DGHS Daily Dengue Hospital Surveillance', source_url: 'https://dghs.gov.bd/pages/miscellaneous-infos' },
+  { code: 'NP', name_en: 'Nepal', name_zh: '尼泊尔', lat: 28.4, lng: 84.1, status: 'Scheduled', labelOffset: [80, -45], cadence: 'Weekly', onboarding_track: 'National source', source_name: 'Nepal EDCD SORMAS Public Weekly Bulletin', source_url: 'https://analysis.edcd.gov.np/' },
+  { code: 'LK', name_en: 'Sri Lanka', name_zh: '斯里兰卡', lat: 7.9, lng: 80.7, status: 'Scheduled', labelOffset: [95, 40], cadence: 'Weekly', onboarding_track: 'National source', source_name: 'Sri Lanka Epidemiology Unit Weekly Epidemiological Report', source_url: 'https://www.epid.gov.lk/epid/public/weekly-epidemiological-report' },
+  { code: 'AF', name_en: 'Afghanistan', name_zh: '阿富汗', lat: 33.9, lng: 67.7, status: 'Scheduled', labelOffset: [-120, -30], cadence: 'Weekly', onboarding_track: 'National source', source_name: 'Afghanistan MoPH NDSR Weekly Epidemiological Report', source_url: 'https://moph.gov.af/en/reports' },
+  { code: 'BT', name_en: 'Bhutan', name_zh: '不丹', lat: 27.5, lng: 90.4, status: 'Scheduled', labelOffset: [95, -30], cadence: 'Mixed', onboarding_track: 'National source', source_name: 'Bhutan RCDC Publications and Sentinel Surveillance', source_url: 'https://www.rcdc.gov.bt/web/' },
+  { code: 'MV', name_en: 'Maldives', name_zh: '马尔代夫', lat: 3.2, lng: 73.2, status: 'Scheduled', labelOffset: [95, 30], cadence: 'Monthly', onboarding_track: 'National source', source_name: 'Maldives HPA Communicable Disease Reports', source_url: 'https://health.gov.mv/en/publications?search=monthly' },
 
   // Existing roadmap entry retained until an official machine-readable source
   // and ingestion contract are selected.

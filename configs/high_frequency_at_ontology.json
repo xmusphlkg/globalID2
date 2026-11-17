@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "sources": [],
+  "source_series": [
+    {
+      "id": "SER_AT_AGES_RADAR_SOURCE_NATIVE",
+      "source_id": "SRC_AT_AGES_RADAR",
+      "group_id": "G_UNMAPPED_SOURCE_CATEGORIES",
+      "local_codes": [
+        "__source_native__"
+      ],
+      "local_labels": [],
+      "frequency": "monthly",
+      "measure": "case_notifications",
+      "reporting_basis": "national_notifiable_disease_radar",
+      "unit": "count",
+      "definition_version": "AT_AGES_RADAR_source_native",
+      "mapping_relation": "unmapped",
+      "comparability": "not_comparable",
+      "aggregation_policy": "non_additive",
+      "missing_value_policy": "missing_is_unknown",
+      "case_definition": "Source-native AGES Radar category. The original disease category is retained in dimensions and is not automatically rolled up.",
+      "facet_tags": {
+        "population": [
+          "population.all"
+        ]
+      },
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "geography_key": "country:AT:national",
+      "time_basis": "calendar_month_notification"
+    }
+  ],
+  "availability": [],
+  "application_note": "Update existing holding series metadata by ID; NEVER add a replacement series. Retain stored unknown months. Category mappings attach original source facts."
+}

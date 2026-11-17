@@ -126,6 +126,10 @@ def prepare_execution(plan: dict, *, root: Path, data_dir: Path, service, kind: 
         execution.update(source_fingerprint=source_fingerprint(root), channel=channel,
                          remote_baselines={channel: hashlib.sha256(body).hexdigest() if body is not None else None},
                          destination=digest([config.s3_endpoint, config.bucket]))
+        if plan.get("surveillance_rebuild_all"):
+            if channel != "surveillance" or not plan.get("country_codes"):
+                raise PublicationPlanError("publication_invalid_surveillance_rebuild")
+            execution["country_codes"] = list(plan["country_codes"])
         plan.update(kind="content", channels=[channel], dirty_ids=ids, execution_mode="content",
                     expected_generations=dict(execution["remote_baselines"]),
                     pending_scopes={channel: plan["pending_scopes"].get(channel, [])},
@@ -134,6 +138,8 @@ def prepare_execution(plan: dict, *, root: Path, data_dir: Path, service, kind: 
         if channel == "literature":
             plan.update(html_page_count=None, asset_compile_scope=["research_projection"])
         plan["warnings"] = ["content_candidate_freezes_at_existing_export_snapshot", "public_visibility_requires_verification"]
+        if plan.get("surveillance_rebuild_all"):
+            plan["warnings"].append("all_eligible_surveillance_countries_rebuilt_only_selected_markers_acknowledged")
     elif kind in {"template", "full"}:
         if (job_configuration or {}).get("include_cloudflare_deploy") is False:
             plan["blocked_reason"] = "publication_pages_deployment_disabled"
@@ -290,6 +296,8 @@ async def enqueue_plan(body, *, db, root: Path, data_dir: Path, service) -> dict
               "country_baseline_digest": plan["_execution"].get("country_baseline_digest"),
               "site_baseline": plan["_execution"].get("site_baseline"),
               "country_baseline_release_sha256": plan["_execution"].get("country_baseline_release_sha256")}
+    if plan.get("surveillance_rebuild_all"):
+        frozen["surveillance_rebuild_all"] = True
     mode = plan["execution_mode"]
     kwargs = {"theme_only": mode == "theme", "full": mode == "full", "code_only": mode in {"code_only", "country_template"},
               "data_only": mode == "content", "publication_plan": frozen}
@@ -297,6 +305,8 @@ async def enqueue_plan(body, *, db, root: Path, data_dir: Path, service) -> dict
         kwargs["suppress_subscription_dispatch"] = True
     if mode == "content":
         kwargs.update(data_line=plan["channels"][0], pending_ids=plan["dirty_ids"])
+        if plan.get("surveillance_rebuild_all"):
+            kwargs["surveillance_rebuild_all"] = True
     elif mode == "full":
         kwargs["pending_ids"] = plan["dirty_ids"]
     result = await service.trigger_job(plan["job_id"], manual=True, trigger="publication_plan", **kwargs)

@@ -1,0 +1,13 @@
+survtype,countryname,yearweek,pathogen,pathogentype,pathogensubtype,indicator,age,value
+SARI virological,Belgium,2026-W44,Influenza,Influenza,total,detections,total,7
+SARI virological,Belgium,2026-W44,Influenza,Influenza,total,positivity,total,5.5
+SARI virological,Belgium,2026-W44,Influenza,Influenza,total,tests,total,128
+SARI virological,Belgium,2026-W44,Influenza,Influenza A,A(H1)pdm09,detections,total,7
+SARI virological,Belgium,2026-W44,RSV,RSV,RSV,detections,total,12
+SARI virological,Belgium,2026-W44,RSV,RSV,RSV,positivity,total,9.4
+SARI virological,Belgium,2026-W44,RSV,RSV,RSV,tests,total,128
+SARI virological,Belgium,2026-W44,RSV,RSV-A,NA,detections,total,5
+SARI virological,Belgium,2026-W44,RSV,RSV-B,NA,detections,total,7
+SARI virological,Belgium,2026-W44,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,detections,total,12
+SARI virological,Belgium,2026-W44,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,positivity,total,9.4
+SARI virological,Belgium,2026-W44,SARS-CoV-2,SARS-CoV-2,SARS-CoV-2,tests,total,128

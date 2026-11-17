@@ -1,0 +1,58 @@
+{
+  "country_code": "BD",
+  "source_id": "SRC_BD_DGHS_DENGUE",
+  "checked_at": "2026-11-17",
+  "historical_index_url": "https://dghs.gov.bd/pages/static-pages/dengue-press-release-gxrgtg-6a9eb4cc7a024513d1b8c896",
+  "historical_index_sha256": "d30c2f9c768a84a27cb17a57102137727e260356dc58f738ed6eb79a8c98e7d5",
+  "historical_index_bytes": 866933,
+  "linked_pdf_count": 1878,
+  "linked_year_counts": {
+    "2019": 158,
+    "2021": 19,
+    "2022": 365,
+    "2023": 365,
+    "2024": 360,
+    "2025": 365,
+    "2026": 246
+  },
+  "linked_years_before_current_press_directory": [
+    "2019",
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025"
+  ],
+  "sample_pdf_probes": [
+    {
+      "url": "https://dashboard.dghs.gov.bd/osource/images/docs/vpr/20260903_dengue_all.pdf",
+      "status_code": 502,
+      "content_type": "text/html",
+      "bytes": 150,
+      "sha256": "61b30d408583991fd69f3dec694e154cb652471e663328ad9c8482c9021ab5db",
+      "looks_pdf": false,
+      "retrieved_at": "2026-11-17T03:27:21.534782+00:00"
+    },
+    {
+      "url": "https://dashboard.dghs.gov.bd/osource/images/docs/vpr/20250601_dengue_all.pdf",
+      "status_code": 502,
+      "content_type": "text/html",
+      "bytes": 150,
+      "sha256": "61b30d408583991fd69f3dec694e154cb652471e663328ad9c8482c9021ab5db",
+      "looks_pdf": false,
+      "retrieved_at": "2026-11-17T03:27:24.595460+00:00"
+    },
+    {
+      "url": "https://dashboard.dghs.gov.bd/osource/images/docs/Notice/2019/dengue/Dengue_20191201.pdf",
+      "status_code": 502,
+      "content_type": "text/html",
+      "bytes": 150,
+      "sha256": "61b30d408583991fd69f3dec694e154cb652471e663328ad9c8482c9021ab5db",
+      "looks_pdf": false,
+      "retrieved_at": "2026-11-17T03:27:30.740587+00:00"
+    }
+  ],
+  "observation_imported": false,
+  "reason": "The official static index exposes historical PDF URLs (2019, 2021-2026), but representative originals on dashboard.dghs.gov.bd returned HTTP 502 text/html, not PDF. No historical numeric observations were admitted without original bytes.",
+  "missing_date_policy": "No zeros or interpolated days added."
+}

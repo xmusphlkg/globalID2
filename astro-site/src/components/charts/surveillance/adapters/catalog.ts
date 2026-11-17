@@ -43,13 +43,16 @@ const nullable = (v: unknown) =>
 function valueKind(
   metric: string | null,
   measure: Measure,
+  explicit?: string | null,
 ): SurveillanceSeries["valueKind"] {
+  if (["interval_count", "cumulative_count", "rate", "unknown"].includes(explicit ?? ""))
+    return explicit as SurveillanceSeries["valueKind"];
   if (
     measure === "incidence_rates" ||
     /rate|prevalence|percent/i.test(metric ?? "")
   )
     return "rate";
-  if (/cumulative/i.test(metric ?? "")) return "cumulative_count";
+  if (/cumulative|(?:^|_)ytd(?:_|$)/i.test(metric ?? "")) return "cumulative_count";
   if (/rolling|moving|average|mean|stock/i.test(metric ?? "")) return "unknown";
   return measure === "source_value" ? "unknown" : "interval_count";
 }
@@ -279,7 +282,7 @@ export function adaptCatalog(
             period.endExclusive = end;
             period.precision = "exact";
             period.calendar =
-              (isDefault ? entry.calendar : source?.calendar) === "iso-week"
+              ["iso-week", "ISO-8601"].includes((isDefault ? entry.calendar : source?.calendar) ?? "")
                 ? "iso-week"
                 : (isDefault ? entry.calendar : source?.calendar) ===
                     "gregorian"
@@ -319,7 +322,7 @@ export function adaptCatalog(
             : measure === "source_value"
               ? (metadata?.unit ?? "source_unit")
               : "count",
-        valueKind: valueKind(metadata?.metric_type ?? null, measure),
+        valueKind: valueKind(metadata?.metric_type ?? null, measure, metadata?.observation_kind),
         aggregationPolicy: nullable(
           metadata?.aggregation_policy ?? entry.aggregation_policy,
         ),

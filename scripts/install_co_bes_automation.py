@@ -18,7 +18,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 UNITS = ("globalid-co-bes-model-dispatch.service", "globalid-co-bes-refresh.service",
-         "globalid-co-bes-refresh.timer")
+         "globalid-co-bes-refresh.timer", "globalid-co-flunet-refresh.service",
+         "globalid-co-flunet-refresh.timer", "globalid-co-microdatos-refresh.service",
+         "globalid-co-microdatos-refresh.timer")
 SUFFIXES = {".py", ".json", ".csv", ".yml", ".yaml", ".txt", ".md", ".pem", ".sh",
             ".service", ".timer", ".conf", ".toml"}
 
@@ -78,7 +80,8 @@ def install(root: Path = ROOT, *, apply: bool = False):
                         f"/etc/systemd/system/{unit}"], check=True)
     subprocess.run(["sudo", "-n", "systemctl", "daemon-reload"], check=True)
     subprocess.run(["sudo", "-n", "systemctl", "enable", "--now",
-                    "globalid-co-bes-model-dispatch.service", "globalid-co-bes-refresh.timer"], check=True)
+                    "globalid-co-bes-model-dispatch.service", "globalid-co-bes-refresh.timer",
+                    "globalid-co-flunet-refresh.timer", "globalid-co-microdatos-refresh.timer"], check=True)
     return {"mode": "installed", "runtime": str(pinned), "units": UNITS,
             "note": "New code applies on next service start; a running dispatcher keeps its pinned code"}
 

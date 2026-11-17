@@ -211,6 +211,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
       ...(childJurisdictions.length > 0 ? [{ href: '#subnational-data', label: 'Administrative subdivisions', labelZh: '下级行政单位', labelFr: 'Subdivisions administratives' }] : []),
       { href: '#indicators', label: 'Indicators', labelZh: '核心指标', labelFr: 'Indicateurs' },
       { href: '#trends', label: 'Trends', labelZh: '趋势', labelFr: 'Tendances' },
+      ...(childJurisdictions.length > 0 ? [{ href: '#regional-distribution', label: 'Regional distribution', labelZh: '地区分布', labelFr: 'Répartition régionale' }] : []),
       { href: '#disease-directory', label: 'Diseases', labelZh: '疾病目录', labelFr: 'Maladies' },
       { href: '#reports', label: 'Reports', labelZh: '报告', labelFr: 'Rapports' },
       { href: '#downloads', label: 'Sources & downloads', labelZh: '来源与下载', labelFr: 'Sources et téléchargements' },

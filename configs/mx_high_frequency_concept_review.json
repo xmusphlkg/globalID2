@@ -1,0 +1,359 @@
+{
+  "reviewed_on": "2026-11-17",
+  "scope": "MX official DGE high-frequency source native categories",
+  "rules": [
+    {
+      "source_labels": [
+        "Varicela"
+      ],
+      "source_icd_codes": [
+        "B01"
+      ],
+      "target_code": "D054",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Parotiditis infecciosa",
+        "Parotiditis"
+      ],
+      "source_icd_codes": [
+        "B26"
+      ],
+      "target_code": "D039",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Escarlatina"
+      ],
+      "source_icd_codes": [
+        "A38"
+      ],
+      "target_code": "D031",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Rubéola"
+      ],
+      "source_icd_codes": [
+        "B06"
+      ],
+      "target_code": "D040",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Síndrome de rubéola congénita"
+      ],
+      "source_icd_codes": [
+        "P35.0"
+      ],
+      "target_code": "D168",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Enteritis debida a rotavirus"
+      ],
+      "source_icd_codes": [
+        "A08.0"
+      ],
+      "target_code": "D199",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Hepatitis vírica A"
+      ],
+      "source_icd_codes": [
+        "B15"
+      ],
+      "target_code": "D007",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Hepatitis vírica B"
+      ],
+      "source_icd_codes": [
+        "B16"
+      ],
+      "target_code": "D068",
+      "mapping_relation": "exact",
+      "review_basis": "ICD-10 B16 is acute hepatitis B; retain the course-qualified D068 concept rather than unspecified-course hepatitis B."
+    },
+    {
+      "source_labels": [
+        "Hepatitis virales"
+      ],
+      "source_icd_codes": [
+        "B15-B19"
+      ],
+      "target_code": "D006",
+      "mapping_relation": "exact",
+      "review_basis": "Source explicitly reports the viral hepatitis aggregate; D006 is a reported aggregate concept, not a derived subtype sum."
+    },
+    {
+      "source_labels": [
+        "Enfermedad por virus Chikungunya"
+      ],
+      "source_icd_codes": [
+        "A92.0"
+      ],
+      "target_code": "D052",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Infección por Virus Zika"
+      ],
+      "source_icd_codes": [
+        "A92.5"
+      ],
+      "target_code": "D051",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Viruela símica"
+      ],
+      "source_icd_codes": [
+        "B04"
+      ],
+      "target_code": "D065",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Shigelosis"
+      ],
+      "source_icd_codes": [
+        "A03"
+      ],
+      "target_code": "D105",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Peste"
+      ],
+      "source_icd_codes": [
+        "A20"
+      ],
+      "target_code": "D001",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Poliomielitis aguda",
+        "Poliomielitis"
+      ],
+      "source_icd_codes": [
+        "A80"
+      ],
+      "target_code": "D013",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Tracoma"
+      ],
+      "source_icd_codes": [
+        "A71"
+      ],
+      "target_code": "D200",
+      "mapping_relation": "exact",
+      "review_basis": "Exact Spanish source disease label and original ICD-10 code agree with the existing canonical concept definition."
+    },
+    {
+      "source_labels": [
+        "Meningitis meningocócica"
+      ],
+      "source_icd_codes": [
+        "A39.0"
+      ],
+      "target_code": "D110",
+      "mapping_relation": "narrower",
+      "review_basis": "Meningococcal meningitis is an explicitly typed subset of invasive meningococcal disease. Keep this source series distinct; no subtype rollup."
+    },
+    {
+      "source_labels": [
+        "Tuberculosis respiratoria"
+      ],
+      "source_icd_codes": [
+        "A15-A16"
+      ],
+      "target_code": "D025",
+      "mapping_relation": "narrower",
+      "review_basis": "Respiratory tuberculosis is a source-defined subset of tuberculosis. Never sum with other-form or meningeal series."
+    },
+    {
+      "source_labels": [
+        "Meningitis tuberculosa"
+      ],
+      "source_icd_codes": [
+        "A17.0"
+      ],
+      "target_code": "D025",
+      "mapping_relation": "narrower",
+      "review_basis": "Tuberculous meningitis is a distinct source subset of tuberculosis. Never sum with respiratory or other forms."
+    },
+    {
+      "source_labels": [
+        "Paludismo por Plasmodium falciparum",
+        "Paludismo por P. falciparum"
+      ],
+      "source_icd_codes": [
+        "B50"
+      ],
+      "target_code": "D037",
+      "mapping_relation": "narrower",
+      "review_basis": "Original source explicitly types P. falciparum malaria. Preserve subtype; no cross-species rollup."
+    },
+    {
+      "source_labels": [
+        "Paludismo por Plasmodium vivax",
+        "Paludismo por P. vivax"
+      ],
+      "source_icd_codes": [
+        "B51"
+      ],
+      "target_code": "D037",
+      "mapping_relation": "narrower",
+      "review_basis": "Original source explicitly types P. vivax malaria. Preserve subtype; no cross-species rollup."
+    },
+    {
+      "source_labels": [
+        "Leishmaniasis cutánea"
+      ],
+      "source_icd_codes": [
+        "B55.1"
+      ],
+      "target_code": "D082",
+      "mapping_relation": "narrower",
+      "review_basis": "Cutaneous leishmaniasis is explicitly narrower than form-unspecified leishmaniasis. Preserve form; no automatic rollup."
+    },
+    {
+      "source_labels": [
+        "Leishmaniasis visceral"
+      ],
+      "source_icd_codes": [
+        "B55.0"
+      ],
+      "target_code": "D082",
+      "mapping_relation": "narrower",
+      "review_basis": "Visceral leishmaniasis is explicitly narrower than form-unspecified leishmaniasis. Preserve form; no automatic rollup."
+    },
+    {
+      "source_labels": [
+        "Tripanosomiasis americana aguda (Enfermedad de Chagas)",
+        "Tripanosomiasis americana (enfermedad de Chagas) aguda"
+      ],
+      "source_icd_codes": [
+        "B57.0-B57.1"
+      ],
+      "target_code": "D084",
+      "mapping_relation": "narrower",
+      "review_basis": "Source explicitly reports acute Chagas disease. Keep stage distinct and do not sum with chronic stages."
+    },
+    {
+      "source_labels": [
+        "Tripanosomiasis americana crónica (Enfermedad de Chagas)",
+        "Tripanosomiasis americana (enfermedad de Chagas) crónica"
+      ],
+      "source_icd_codes": [
+        "B57.2-B57.5"
+      ],
+      "target_code": "D084",
+      "mapping_relation": "narrower",
+      "review_basis": "Source explicitly reports chronic Chagas disease. Keep stage distinct and do not sum with acute stages."
+    },
+    {
+      "source_labels": [
+        "Rabia por fauna silvestre"
+      ],
+      "source_icd_codes": [
+        "A82.0"
+      ],
+      "target_code": "D019",
+      "mapping_relation": "narrower",
+      "review_basis": "Source explicitly reports sylvatic rabies. Retain transmission category without combining it with urban rabies."
+    },
+    {
+      "source_labels": [
+        "Rabia por fauna urbana"
+      ],
+      "source_icd_codes": [
+        "A82.1"
+      ],
+      "target_code": "D019",
+      "mapping_relation": "narrower",
+      "review_basis": "Source explicitly reports urban rabies. Retain transmission category without combining it with sylvatic rabies."
+    },
+    {
+      "source_labels": [
+        "Dengue con signos de alarma"
+      ],
+      "source_icd_codes": [
+        "A97.1"
+      ],
+      "target_code": "D021",
+      "mapping_relation": "narrower",
+      "review_basis": "Source explicitly reports dengue with warning signs. Preserve severity category, no severity rollup."
+    },
+    {
+      "source_labels": [
+        "Dengue grave"
+      ],
+      "source_icd_codes": [
+        "A97.2"
+      ],
+      "target_code": "D021",
+      "mapping_relation": "narrower",
+      "review_basis": "Source explicitly reports severe dengue. Preserve severity category, no severity rollup."
+    },
+    {
+      "source_labels": [
+        "Dengue no grave",
+        "Dengue no grave (confirmados)"
+      ],
+      "source_icd_codes": [
+        "A97.0, A97.9",
+        "A97.0"
+      ],
+      "target_code": "D021",
+      "mapping_relation": "narrower",
+      "review_basis": "Source explicitly reports non-severe dengue; monthly estimated-formula values remain barred from incident-case projection."
+    }
+  ],
+  "conflicts": [
+    {
+      "source_label": "Fiebre amarilla",
+      "expected_icd_code": "A95",
+      "conflicting_weekly_icd_code": "A92.2",
+      "policy": "no canonical projection for conflicting original label/code"
+    },
+    {
+      "source_label": "Encefalitis equina venezolana",
+      "expected_icd_code": "A92.2",
+      "conflicting_weekly_icd_code": "A95",
+      "policy": "retain original conflicting label/code; no correction or inference"
+    }
+  ],
+  "policy": "Require both exact normalized source label and original source ICD code. Narrower relations are preserved as narrower with no_auto_rollup and non_additive. No claim that different source labels or surveillance definitions are interchangeable."
+}

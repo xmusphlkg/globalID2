@@ -235,3 +235,32 @@ async def test_changed_download_manifest_blocks_retry_before_remote_publication(
     with pytest.raises(RuntimeError, match="Frozen download"):
         await execute_release_task(s.service, s.task, runtime=s.runtime)
     assert not s.calls
+
+
+@pytest.mark.asyncio
+async def test_explicit_frozen_rebuild_initializes_without_reusing_or_relabeling_old_baseline(setup, monkeypatch):
+    s = setup
+    s.task.input_data.update(full=False, data_line="surveillance", manual_trigger=True,
+        surveillance_rebuild_all=True, publication_plan={"execution_mode": "content",
+            "surveillance_rebuild_all": True, "country_codes": ["JP"]})
+    monkeypatch.setattr("src.generation.surveillance_data_export.completed_generation", lambda *args: {"existing": True})
+    result = await data_pipeline.execute_data_release(s.service, s.task, runtime=s.runtime)
+    command = next(cmd for title, cmd in s.calls if title == "Export Surveillance JSON")
+    assert "--incremental-country" not in command
+    assert "--preserve-published-baseline-sha256" not in command
+    assert command[command.index("--surveillance-workers") + 1] == "2"
+    assert command[command.index("--surveillance-workers") + 1] == "2"
+    assert result["release_id"] == "data-json-task"
+    assert s.commit.await_args.kwargs["dirty_ids"] == [11]
+    assert s.commit.await_args.kwargs["full"] is True
+
+
+@pytest.mark.asyncio
+async def test_rebuild_flag_without_exact_frozen_plan_never_exports_or_publishes(setup):
+    s = setup
+    s.task.input_data.update(full=False, data_line="surveillance", manual_trigger=True,
+        surveillance_rebuild_all=True)
+    with pytest.raises(ValueError, match="exact frozen content plan"):
+        await data_pipeline.execute_data_release(s.service, s.task, runtime=s.runtime)
+    assert not s.calls
+    s.commit.assert_not_awaited()

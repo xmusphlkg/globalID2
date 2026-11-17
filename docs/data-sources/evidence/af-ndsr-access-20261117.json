@@ -1,0 +1,49 @@
+{
+  "checked_at": "2026-11-17T01:35:06.994872+00:00",
+  "country": "AF",
+  "scope": "af_ndsr_weekly",
+  "diagnostic": "Actual network collection with bounded 7-second timeout and no retries; hashed in-memory capture/replay; no database mutation",
+  "source_audit": {
+    "status": "source_access_blocked",
+    "coverage_complete": false,
+    "numerical_contract_live_verified": false,
+    "expected_reports": 1,
+    "captured_reports": 0,
+    "reports": [],
+    "failures": [
+      {
+        "error": "HTTPSConnectionPool(host='moph.gov.af', port=443): Max retries exceeded with url: /en/reports (Caused by ReadTimeoutError(\"HTTPSConnectionPool(host='moph.gov.af', port=443): Read timed out. (read timeout=7)\"))",
+        "stage": "directory",
+        "url": "https://moph.gov.af/en/reports"
+      },
+      {
+        "error": "HTTPSConnectionPool(host='moph.gov.af', port=443): Max retries exceeded with url: /sites/default/files/2026-09/NDSR%20WER%2033-%202026_0.pdf (Caused by ReadTimeoutError(\"HTTPSConnectionPool(host='moph.gov.af', port=443): Read timed out. (read timeout=7)\"))",
+        "stage": "pdf",
+        "url": "https://moph.gov.af/sites/default/files/2026-09/NDSR%20WER%2033-%202026_0.pdf"
+      }
+    ],
+    "conflicts": [],
+    "observations": 0,
+    "coverage_note": "MoPH NDSR originals only; no complete national incidence claim, inferred calendar, cumulative/outbreak count, laboratory or province/district extraction.",
+    "discovered_reports": 1,
+    "pending_directories": [],
+    "requested_start_year": 2025,
+    "requested_end_year": 2026,
+    "captured_at": "2026-11-17T01:35:06.988559+00:00"
+  },
+  "source_latest_date": null,
+  "artifacts": [
+    {
+      "source_url": "https://www.emro.who.int/afg/programmes/communicable-disease-surveillance-response-dews.html",
+      "sha256": "3cd150c15a78ed7e0242315537df71135ab34b0a19388fff2a7ec185b027f1f3",
+      "bytes": 64468,
+      "kind": "html_report"
+    },
+    {
+      "source_url": "https://moph.gov.af/en/reports",
+      "sha256": "9ba069725ce56ac49374fb477c0e7164e2ea6ba8008ed0b7af745e3f36dcdb2f",
+      "bytes": 1302,
+      "kind": "archive_json"
+    }
+  ]
+}

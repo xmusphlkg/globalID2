@@ -7,12 +7,15 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from pathlib import Path
+from threading import Event
 
 from src.data.crawlers.pe import (DEFAULT_SCOPE, HISTORY_START_YEAR, LISTING_URL,
     LISTING_FORM, PeruCDCCrawler, PeruContractError, discover_reports, parse_bulletin_pdf)
 from src.data.crawlers.pe import PARSER_SHA256
 from src.data.processors.pe import PeruCDCWeeklyUpdater, PeruFetchResult
 from src.services.ingestion.artifacts import read_artifact
+
+collect_cancellation_safe = True
 
 PARSE_CACHE_SCHEMA = "pe-cdc-physical-disease-lines-v2"
 
@@ -24,14 +27,30 @@ async def collect(writer, *, source=DEFAULT_SCOPE, start_year=HISTORY_START_YEAR
     crawler = (crawler_type(cache_directory=download_cache_directory)
                if download_cache_directory is not None else crawler_type())
     errors = []; captured = []; limiter = asyncio.Semaphore(8)
+    stop = Event()
+    workers = set()
+    cooperative = bool(getattr(crawler, "supports_cooperative_cancellation", False))
+
+    async def blocking(function, *args, **kwargs):
+        if cooperative:
+            kwargs["cancel_event"] = stop
+        operation = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
+        workers.add(operation)
+        try:
+            # Cancelling collection must not detach the executor thread.
+            return await asyncio.shield(operation)
+        finally:
+            if operation.done():
+                workers.discard(operation)
+
     try:
-        targets, listing = await asyncio.to_thread(crawler.discover, start_year=start_year, end_year=end_year)
+        targets, listing = await blocking(crawler.discover, start_year=start_year, end_year=end_year)
         await writer.write(listing, source_url=LISTING_URL, kind="html_report",
             metadata={"endpoint": "directory", "request_method": "POST", "request_form": LISTING_FORM})
         async def download(target):
             async with limiter:
                 try:
-                    payload, receipt = await asyncio.to_thread(crawler.download, target, force=force)
+                    payload, receipt = await blocking(crawler.download, target, force=force)
                 except Exception as exc:
                     errors.append({"url": target["url"], "stage": "download", "error": str(exc)})
                     return
@@ -47,6 +66,16 @@ async def collect(writer, *, source=DEFAULT_SCOPE, start_year=HISTORY_START_YEAR
             source_url=LISTING_URL, kind="archive_json", metadata={"endpoint": "collection_audit"})
         return writer.artifacts
     finally:
+        stop.set()
+        # Workers flush partial bytes and close their responses cooperatively.
+        # Keep cleanup owned even if a second shutdown cancellation arrives.
+        cleanup = asyncio.gather(*workers, return_exceptions=True)
+        while not cleanup.done():
+            try:
+                await asyncio.shield(cleanup)
+            except asyncio.CancelledError:
+                continue
+        cleanup.result()
         crawler.session.close()
 
 

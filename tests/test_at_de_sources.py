@@ -22,7 +22,7 @@ def test_ages_parser_uses_month_column_not_ytd() -> None:
     )
     assert [(row["Date"], row["Cases"], row["DiseaseCode"]) for row in rows] == [("2026-02-01", "7", "__source_native__")]
     assert json.loads(rows[0]["Dimensions"])["source_disease_code"] == "campylobacteriose"
-    assert rows[0]["PublicReleaseEnabled"] == "false"
+    assert rows[0]["PublicReleaseEnabled"] == "true"
 
 
 def test_ages_parser_accepts_live_german_month_and_two_digit_year() -> None:

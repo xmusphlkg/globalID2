@@ -6,6 +6,11 @@ does not re-verify live collection, licences or public snapshots. The supported
 source inventory below was previously reviewed on 2026-08-29; later national
 adapters are listed separately with their repository evidence.
 
+The [2026-11-17 weekly/monthly source audit](SURVEILLANCE_FREQUENCY_AUDIT_20261117.md)
+checks the live publication and database facts for all 326 configured entities,
+with regional official-source evidence and a complete frequency matrix. It
+distinguishes missing connectors from stored sources excluded from public curves.
+
 This document records the country and regional infectious-disease surveillance
 source contracts used by GIDS and the public `/countries/` inventory. It distinguishes live data
 pipelines from source-onboarding candidates. A country must not be presented as
@@ -19,6 +24,13 @@ cumulative blocker and Colombia geography/calendar blockers. Argentina's
 [Ministry HIV annual notifications](AR_HIV_ANNUAL_INTEGRATION.md) are separately
 ingested and locally accepted for 2014–2023; BEN remains excluded. It includes the
 source disclosures, ongoing evidence checklist and statistical review conditions.
+
+The [four-country South Asia integration](SOUTH_ASIA_FOUR_INTEGRATION.md)
+records the verified internal collection and source-series imports for Bangladesh
+DGHS, Bhutan RCDC, Maldives HPA/Ministry publications and Afghanistan WHO weekly
+outbreak reports. The independent MoPH NDSR connector remains available for
+diagnostics. These internal imports do not establish a public country snapshot
+or complete disease, geographic or historical coverage.
 
 ## Status definitions
 
@@ -165,8 +177,9 @@ separate acceptance states.
 | MX | [DGE annual morbidity and incidence](MX_DGE_ANNUAL_INTEGRATION.md) | `mx_dge_annual` |
 | CL | [MINSAL ENO historical notifications](CL_ENO_HISTORICAL.md) | `cl_eno_historical` |
 | CO | [INS SIVIGILA municipality/week history](CO_SIVIGILA_INTEGRATION.md) | `co_ins_sivigila_historical` |
-| CO | [INS SIVIGILA successor release, 2023 onward](CO_SIVIGILA_INTEGRATION.md) | `co_ins_sivigila_current` |
-| CO | [INS BES capture; awaiting exit and report contract](CO_BES_INTEGRATION.md) | `co_ins_bes_weekly` (disabled) |
+| CO | [INS SIVIGILA successor release, source 2022–2024; ingest 2023–2024](CO_SIVIGILA_INTEGRATION.md) | `co_ins_sivigila_current` |
+| CO | [INS annual microdata weekly aggregates; preview only](CO_MULTI_SOURCE_DESIGN.md) | `co_ins_sivigila_microdatos` (default schedule disabled) |
+| CO | [INS BES cumulative snapshots; national weekly incidence remains incomplete](CO_BES_INTEGRATION.md) | `co_ins_bes_weekly` (managed systemd runtime) |
 | MW | [PHIM IDSR weekly bulletins](MW_PHIM_IDSR_INTEGRATION.md) | `mw_phim_idsr_weekly` |
 
 See [daily update operations and verification](../acceptance/SEVEN_COUNTRY_DYNAMIC_UPDATES_20261116.md)
@@ -270,3 +283,10 @@ normal publication-retirement workflow.
 - [Provisional and revisable observations](PROVISIONAL_SURVEILLANCE_AUDIT.md)
 - [Situation authority coverage](SITUATION_SOURCE_COVERAGE.md)
 - [Parsers](PARSER.md)
+
+## South Asia weekly onboarding
+
+[India, Pakistan, Nepal and Sri Lanka initial integration](SOUTH_ASIA_WEEKLY_ONBOARDING_20261117.md)
+records verified samples and remaining gaps. These four adapters remain internal,
+with default schedules and public release disabled; they are not added to the
+supported-public-dataset table.

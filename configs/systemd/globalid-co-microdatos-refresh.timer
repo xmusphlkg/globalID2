@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Colombia completed-year microdata every week
+
+[Timer]
+OnCalendar=Sun *-*-* 07:15:00 America/Bogota
+RandomizedDelaySec=60
+Persistent=true
+Unit=globalid-co-microdatos-refresh.service
+
+[Install]
+WantedBy=timers.target
