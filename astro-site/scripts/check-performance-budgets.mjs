@@ -11,9 +11,11 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxJavaScriptChunkBytes: 350_000,
   // Disease pages carry the surveillance explorer plus a coverage map and a
   // seasonality heatmap. The 2026-10-23 release build measured that route at
-  // 381,198 gzip bytes. 395KB still rejects a second ECharts core: zrender
-  // alone is about 62KB gzip.
-  maxRouteCompressedAssetsBytes: 395_000,
+  // 381,198 gzip bytes. The 2026-11-17 country page, measured on
+  // /countries/au/index.html, is 436,760 gzip bytes: one ECharts core, the
+  // subdivision map, the heatmap, and the explorer. 448KB still rejects a
+  // second ECharts core, because zrender alone is about 62KB gzip.
+  maxRouteCompressedAssetsBytes: 448_000,
   maxOrdinaryRouteCompressedAssetsBytes: 300_000,
   // Raised from 100KB (2026-08-23): the multilingual Research Radar graph page
   // carries enough static graph metadata to sit just over the old cap.
@@ -21,7 +23,10 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   // /situation/map-data.json. Embedding the three-year marker set (1412 points)
   // plus monitoring measured /zh/situation/index.html at 139,777 gzip bytes on
   // 2026-11-02 and is not the generated shape.
-  maxPageHtmlGzipBytes: 115_000,
+  // The 2026-11-17 catalogue build measured the largest research article at
+  // 117,910 gzip bytes. 122KB keeps that page inside the cap and still rejects
+  // a page that embeds the situation marker set.
+  maxPageHtmlGzipBytes: 122_000,
   maxAverageHtmlBytes: 105_000,
   // Measured 2026-11-11 after independent research pages leave this gate:
   // 4,109 main-site pages averaged 168,783 raw bytes and 20,731 gzip bytes.
