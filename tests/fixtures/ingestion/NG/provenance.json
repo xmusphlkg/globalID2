@@ -1,0 +1,180 @@
+{
+  "wer_2026_w34.pdf": {
+    "url": "https://ncdc.gov.ng/themes/common/docs/wers/700_1791361960.pdf",
+    "sha256": "a645ca6e54b5f66fd972d6437366e8c50e5f4c043773f72144e9adda9c846264",
+    "retrieved_date": "2026-11-15"
+  },
+  "wer_2019_w01_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/docs/wers/169_1548415840.pdf",
+    "original_sha256": "1bd76b65c118290810aa61e26bdb27bf77419983e18e73db92a1e48a2efbbdc2",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "sitrep_category_6_pages.json": {
+    "category_id": 6,
+    "original_sha256": "593f1135baed958992b4d6101d67ccd4c42d4c8151134c34c533c88ce27e3595",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/762f7a36bf4a3344ad6f7bf990b3b71b.pdf"
+  },
+  "sitrep_category_8_pages.json": {
+    "category_id": 8,
+    "original_sha256": "624a6c1421120de68963a83fb88556c602a92b7e0086415bac94189aad643ef4",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/7363fe551ef3d26d7bf30d10c1994611.pdf"
+  },
+  "sitrep_category_11_pages.json": {
+    "category_id": 11,
+    "original_sha256": "294abd45edcaef3fe3b5a4e23b58d926976a45cab70d2b204992b22b734fd27a",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/95831863530c84c93d8b291198722371.pdf"
+  },
+  "sitrep_category_18_pages.json": {
+    "category_id": 18,
+    "original_sha256": "9f4f80b55f3c560b0057f609d02d1bf2e19d2ecc8e620b19a54d71b0bbd981b7",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/9ccc2c1b2bd1a865959365aab4ce892b.pdf"
+  },
+  "sitrep_category_19_pages.json": {
+    "category_id": 19,
+    "original_sha256": "96d2cb807219a8eca6cec0bde6cf194f91692750e206a6b43972e2e995d16c9d",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/703767dc0e1f46ed645a286b7b2dff4b.pdf"
+  },
+  "wer_2016_w36_first_page.pdf": {
+    "url": "https://ncdc.gov.ng/themes/common/docs/wers/7_1475852376.pdf",
+    "original_sha256": "e97a7cfa8ebc55c21622e53438594d1bea3237a3239cc1701e13ba46747ed6df",
+    "format": "PDF page 1 excerpt, source page unmodified",
+    "retrieved_date": "2026-11-15"
+  },
+  "covid_0_pages.json": {
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/4e947f95f2b5cd7826f0f42f44521439.pdf",
+    "original_sha256": "3fc101f37dfe2d5fe21c66ebaa543e5c18d9d0db979c63d18c50d31b25478f11"
+  },
+  "covid_150_pages.json": {
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/e3c0df62748f2c76da689af7986bf36b.pdf",
+    "original_sha256": "0d6ad848e977cbc5c67ca7baf017423c874a49e021c19934cb4f1cfff32a98d9"
+  },
+  "sitrep_category_7_pages.json": {
+    "original_sha256": "f5a07a2d75bed3a2ff26e8dd4f83e48a76a3f833349d111af2aa8b06381d460c",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/2bfedb8db1fddf6d05a6f341a0dc71e5.pdf"
+  },
+  "sitrep_category_10_pages.json": {
+    "original_sha256": "7cc27bcbef6958bcef98bca43ab22dc457b813ab6f2e7d7758601dde239bb168",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/a562e2afabc625712c8202f5c215feeb.pdf"
+  },
+  "sitrep_category_13_pages.json": {
+    "original_sha256": "e8d8ddd0aa9952c1cac10c5e0ae6f6e1e8984c846c0239e3c3d7d150b6afbae8",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15",
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/c1eb516732f2a1fdd38b62d5a55d327c.pdf"
+  },
+  "lassa_2024_w30_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/8204f6b1384af03de41a79f9e0553bfc.pdf",
+    "original_sha256": "3c3f259ef5aabcf82c45885f544d96d3d12768519a492cfc1350029a91ef1395",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "lassa_2021_w35_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/6ffc8c649cd99faf470d3ea3b0a1ca33.pdf",
+    "original_sha256": "99eea4c7a4ce7a2d3df8eb3426d8c8f01a6085924dfff1436334b1d3177212e0",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "lassa_2021_w29_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/5bfb71f4ee32f0f5d4352ee0fd5df93f.pdf",
+    "original_sha256": "8d5088fac75d472158c99c42342ae136438731b208074c87c4cbac67d7bdfe5d",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "lassa_2020_w03_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/f781e8e072592b37f51a19723a01cbba.pdf",
+    "original_sha256": "1cf09fcfd3a93c5682ca5ac8a78a588d3b33e3e90e6814cbc078f13f0646a116",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "mpox_2024_w40_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/4eda109fcbd433bd34c12b90420c6e12.pdf",
+    "original_sha256": "58ed92abfe0ff6694edd2006f0db16760be3da01df3fa42a95ae178151c236e6",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "covid_2021_w08_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/ba04fd710e2969bb910ca3a4c2180a9b.pdf",
+    "original_sha256": "14ebdbbf6fdb95122824be2066d7c375dfb388edbf8c1855b89e9037696aafed",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "covid_2020_w53_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/ae1506beefb0216db88ce6a62e56141f.pdf",
+    "original_sha256": "be8f5780510f0bcb40d327133e5ffe8119e0a9a31d304ebfa453633d615c1248",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "covid_2020_10_10_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/95c721203f89576a93e0e6f549b4b493.pdf",
+    "original_sha256": "80b5b6ddf5d1b9df3511c3e79be6b727533d6496ed4362ee00f9995850c92f46",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "lassa_2019_w02_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/4f51df6f3851ae215e709fe5e461cc4f.pdf",
+    "original_sha256": "d329eee31f3edcfcbeeee3ff644d78269bcd3eda0442c7c80a672ffa18391e62",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "lassa_2017_w09_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/f6459dcfacf635c7a50e6ae9071199bb.pdf",
+    "original_sha256": "5e69553c64a49ddc144ce5d5e5c2f0fd96e47f9eb1d1ed4c4624b43817aef8e5",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "mpox_2024_w25_28_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/ecca8043aba3055891669a605ce5188f.pdf",
+    "original_sha256": "9eb37c3ad163f67dbdef0294b5fb8409fc49a78e27d192cb26c036714f5f9b08",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "mpox_2022_w51_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/255cf3a93eb561ad24f68cc137e63d76.pdf",
+    "original_sha256": "b1923ad778d3f9d6fdeefc6bdec70f14d6b2c90236e62ded57c2a222f0237738",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "covid_2020_05_28_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/71c119ba14cfbd672dc963367e110879.pdf",
+    "original_sha256": "909a85768da70dc283390d3754fb1c5989dcedd1938d3172bf3ace5c6b0249eb",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "covid_2020_09_01_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/6221bd54ce3d09b413c5a9297fc46a29.pdf",
+    "original_sha256": "7a864ce8474ecaae89d4b2aa2191e43b308e950d4990f5d8dc114c6814e10cdb",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "cholera_2023_w09_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/8898421117dff683ef3e9e31a8d338b5.pdf",
+    "original_sha256": "e81150bc0ddc4fb346cf477468fc78005c2dc68d390e86fffc0559c4332a04d8",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  },
+  "yf_2018_w43_pages.json": {
+    "url": "https://ncdc.gov.ng/themes/common/files/sitreps/a29a0656702578e5d16d6f7d3bf34503.pdf",
+    "original_sha256": "e42adf1605742985a47e7a5b8f2b5cdd0205ad2e6e62a33b91e2968f4aa0121d",
+    "format": "unmodified PDFium page text",
+    "retrieved_date": "2026-11-15"
+  }
+}

@@ -1,0 +1,142 @@
+<html>
+<head>
+<link href="https://framework-gb.cdn.gob.mx/assets/styles/main.css" rel="stylesheet">
+<base target="_self">
+<style>
+h3 {font-family: verdana; font-size:14px; letter-spacing:0.3em;}
+select{font:verdana; font-size:12px; color:black;}
+strong{font-family: verdana; font-size:12px;}
+
+.cuadro{
+	position:absolute;
+	top:158px;
+	visibility:hidden;
+	width:450px;
+	left: 357px;
+}
+input{font-family:verdana; font-size:12px}
+</style>
+<script language="JavaScript">
+<!--
+	function fnConsulta(opcion){
+		var cadena;
+		cadena="../"+opcion;
+		cadena+=".pdf";		
+		window.open(cadena);		
+	}		
+-->
+</script>
+<title>Incidencia grupo edad</title>
+</head>
+<body bgcolor="#F2F2F2" text="#333">
+<script src="http://framework-gb.cdn.gob.mx/gobmx.js"></script>
+<font face="verdana,tahoma,arial,helvetica">
+<center>
+<h3> Anuario de Morbilidad 1984 - 2025</h3>
+<h3>INCIDENCIA POR GRUPO DE EDAD</h3>
+<form name="form_anio" action="javascript:fnConsulta(form_anio.anio.options[form_anio.anio.selectedIndex].value)">
+	<strong>Elija el año que desea consultar</strong><br>
+	<select name="anio">
+		<option value="2025/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad" selected>2025 General
+        <option value="20250/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2025 Femenino
+		<option value="20251/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2025 Masculino
+        <option value="2024/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2024 General
+        <option value="20240/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2024 Femenino
+		<option value="20241/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2024 Masculino
+        <option value="2023/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2023 General
+        <option value="20230/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2023 Femenino
+		<option value="20231/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2023 Masculino
+        <option value="2022/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad" >2022 General
+        <option value="20220/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2022 Femenino
+		<option value="20221/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2022 Masculino
+        <option value="2021/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad" >2021 General
+        <option value="20210/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2021 Femenino
+		<option value="20211/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2021 Masculino
+        <option value="2020/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad" >2020 General
+        <option value="20200/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2020 Femenino
+		<option value="20201/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2020 Masculino
+        <option value="2019/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad" >2019 General
+        <option value="20190/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2019 Femenino
+		<option value="20191/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2019 Masculino
+        <option value="2018/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2018 General
+        <option value="20180/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2018 Femenino
+		<option value="20181/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2018 Masculino
+        <option value="2017/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2017 General
+        <option value="20170/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2017 Femenino
+		<option value="20171/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2017 Masculino
+        <option value="2016/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2016 General
+        <option value="20160/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2016 Femenino
+		<option value="20161/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2016 Masculino
+        <option value="2015/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2015 General
+        <option value="20150/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2015 Femenino
+		<option value="20151/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2015 Masculino
+        <option value="2014/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad" >2014 General
+		<option value="20140/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2014 Femenino
+		<option value="20141/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2014 Masculino
+        <option value="2013/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2013 General
+		<option value="20130/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2013 Femenino
+		<option value="20131/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2013 Masculino
+        <option value="2012/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2012 General
+		<option value="1400/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2012 Femenino
+		<option value="1401/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2012 Masculino
+        <option value="2011/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2011 General
+		<option value="1300/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2011 Femenino
+		<option value="1301/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2011 Masculino
+        <option value="2010/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2010 General
+		<option value="1200/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2010 Femenino
+		<option value="1201/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2010 Masculino
+        <option value="2009/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2009 General
+		<option value="1100/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2009 Femenino
+		<option value="1101/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2009 Masculino
+        <option value="2008/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2008 General
+		<option value="1000/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2008 Femenino
+		<option value="1001/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2008 Masculino
+		<option value="2007/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2007 General
+		<option value="9000/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2007 Femenino
+		<option value="9001/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2007 Masculino
+		<option value="2006/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2006 General
+		<option value="8000/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2006 Femenino
+		<option value="8001/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2006 Masculino
+		<option value="2005/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2005 General
+		<option value="7000/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2005 Femenino
+		<option value="7001/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2005 Masculino
+		<option value="2004/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2004 General
+		<option value="6000/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2004 Femenino
+		<option value="6001/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2004 Masculino
+		<option value="2003/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2003 General
+		<option value="5000/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2003 Femenino
+		<option value="5001/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">2003 Masculino
+		<option value="2002/incidencia/incidencia_casos_nuevos_enfermedades_grupo_edad">2002
+		<option value="2001/incidencia/incidencia_casos_nuevos_enfermedades_grupo_edad">2001
+		<option value="2000/incidencia/incidencia_casos_nuevos_enfermedades_grupo_edad">2000
+		<option value="1999/incidencia/incidencia_enfermedades_grupo_edad">1999
+		<option value="1998/incidencia/incidencia_enfermedades_grupo_edad">1998		
+		<option value="1997/incidencia/incidencia_enfermedades_grupo_edad">1997		
+		<option value="1996/incidencia/incidencia_enfermedades_grupo_edad">1996
+		<option value="1995/incidencia/incidencia_enfermedades_grupo_edad">1995
+		<option value="1994/incidencia/incidencia_enfermedades_grupo_edad">1994
+		<option value="1993/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">1993
+		<option value="1992/incidencia/incidencia_grupo_edad_y_porcentaje_fuente_notificacion">1992
+		<option value="1991/incidencia/incidencia_grupo_edad_y_porcentaje_fuente_notificacion">1991
+		<option value="1990/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad">1990
+		<option value="1989/incidencia/no_disponible">1989
+		<option value="1988/incidencia/no_disponible">1988
+		<option value="1987/incidencia/no_disponible">1987
+		<option value="1986/incidencia/no_disponible">1986
+		<option value="1985/incidencia/no_disponible">1985
+		<option value="1984/incidencia/no_disponible">1984
+	</select>
+    <p> <font face="verdana,tahoma,arial,helvetica">
+      <input type="submit" name="BotonAceptar" value="Aceptar">
+      </font>
+  </form><p>
+  
+<br><br><br><br><br><br><br>
+<input type=button value=Atrás onClick="history.go(-1)">
+<p>
+
+<!-- JS -->
+    	<script src="https://framework-gb.cdn.gob.mx/gobmx.js"></script>
+</body>
+</html>
+

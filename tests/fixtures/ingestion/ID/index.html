@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="id" class="h-100">
+<head>
+    <title>Profil Kesehatan</title>
+    <meta name="title" content="Profil Kesehatan">
+<meta name="keywords" content="profil,kesehatan">
+<meta name="description" content="Profil Kesehatan
+">
+<meta name="csrf-param" content="__Secure-_csrf">
+<meta name="csrf-token" content="XKqfbiTFi4-iGuy4DXzmZd080U1XzVvo82IJs8pu7sNp_KsUEvf74ewjpoh1MLMtmkniKWH_DYzAID-HuyOMmw==">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="apple-mobile-web-app-title" content="Kemenkes">
+<link type="image/png" href="/app_asset/favicon/favicon-96x96.png" rel="icon" sizes="96x96">
+<link type="image/svg+xml" href="/app_asset/favicon/favicon.svg" rel="icon">
+<link href="/app_asset/favicon/favicon.ico" rel="shortcut icon">
+<link href="/app_asset/favicon/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180">
+<link href="/app_asset/favicon/site.webmanifest" rel="manifest">
+<link href="/assets/d40f3767/css/bootstrap.css" rel="stylesheet">
+<link href="/app_asset/css/styles.css" rel="stylesheet">
+<link href="/app_asset/css/swipper.css" rel="stylesheet">
+<link href="/app_asset/js/fullcalendar/main.css" rel="stylesheet">
+<link href="/app_asset/css/jquery.mmenu.all.css" rel="stylesheet">
+<link href="/app_asset/css/styles_profile.css" rel="stylesheet">
+<script src="/assets/de3a8f79/jquery.js"></script>
+<script src="/assets/80936868/yii.js"></script>
+<script src="/app_asset/js/script-bundle.min.js"></script>
+<script src="/app_asset/js/script.js"></script>
+<script src="/app_asset/js/fullcalendar/main.js"></script>
+<script src="/app_asset/js/main.js"></script>
+<script src="/app_asset/js/vendor/Youtube.js"></script>
+<script src="/app_asset/js/breaking.news.js"></script>
+<script src="/app_asset/js/jquery.mmenu.min.all.js"></script>
+<script src="/app_asset/spasial/js/scripts.js"></script>
+<script src="/app_asset/spasial/js/d3.min.js"></script>
+<script src="/app_asset/spasial/js/util.js"></script>
+<script src="/app_asset/spasial/js/mapscalecenter.2013.js"></script>
+<script src="/app_asset/spasial/js/ol.js"></script>
+<script src="/app_asset/spasial/js/LayerSwitcher.js"></script>
+<script src="/app_asset/js/swipper.js"></script>            <script src="https://cdn.userway.org/widget.js" data-account="7rcys5RZj4"></script>
+    <script>
+    
+	$(document).ready(function(){
+
+        $('.calendar-widget').datepicker();
+
+        $('.sehatnegriku').slick({
+		dots: false,
+		arrows: true,
+		autoplay: true,
+		autoplaySpeed: 2000,
+        pauseOnHover: true,
+        pauseOnFocus: true,
+		});
+	
+		$('.hero-banner').slick({
+		dots: true,
+		arrows: false,
+		autoplay: true,
+		autoplaySpeed: 4000,
+        pauseOnHover: true,
+        pauseOnFocus: true,
+		});
+		$('.category-slider').slick({
+		dots: false,
+		arrows: true,
+		slidesToShow: 5,
+        autoplay: true,
+        autoplaySpeed: 5000,
+        pauseOnHover: true,
+        pauseOnFocus: true,
+		slidesToScroll: 5,
+		responsive: [
+			{
+			breakpoint: 1024,
+			settings: {
+				slidesToShow: 4,
+				slidesToScroll: 1,
+				infinite: true,
+				dots: true
+			}
+			},
+			{
+			breakpoint: 600,
+			settings: {
+				slidesToShow: 3,
+				slidesToScroll: 1
+			}
+			},
+			{
+			breakpoint: 480,
+			settings: {
+				slidesToShow: 2,
+				slidesToScroll: 1
+			}
+			}
+		]
+		})
+		$('.vid-slider').slick({
+		dots: false,
+		arrows: true,
+		})
+
+        var swiper = new Swiper(".hero-slider", {
+            pagination: {
+                el: ".swiper-pagination",
+                clickable: true,
+            },
+            autoplay: {
+                delay: 5000,
+                disableOnInteraction: false,
+            },
+        });
+
+        // WCAG 1.4.13 & 2.1.1: Keyboard dropdown support and Escape to close
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                $('nav ul ul').hide();
+                $('.dropdown-menu').removeClass('show');
+                $('.dropdown.open').removeClass('open');
+                $('.nav-link.has-menu').attr('aria-expanded', 'false');
+                setTimeout(function() {
+                    $('nav ul ul').css('display', '');
+                }, 300);
+            }
+        });
+
+        $('.nav-link.has-menu').on('focus', function() {
+            $(this).attr('aria-expanded', 'true');
+        });
+        $('nav ul li').on('focusout', function(e) {
+            var $li = $(this);
+            setTimeout(function() {
+                if (!$li.find(':focus').length) {
+                    $li.find('.has-menu').attr('aria-expanded', 'false');
+                }
+            }, 50);
+        });
+	})
+  </script>
+
+  <style>
+    .hero-content h2{
+        font-size: 24px;
+        color: #047d78;
+    }
+    .hero-item {
+  position: relative; }
+  .hero-item .hero-content {
+    position: absolute;
+    right: 0;
+    bottom: 50px;
+    background: #fff;
+    border-left: 14px #d1dc05 solid;
+    padding: 20px;
+    max-width: 866px; }
+    @media (max-width: 991.98px) {
+      .hero-item .hero-content {
+        position: relative;
+        bottom: auto;
+        border-left: 6px #d1dc05 solid; }
+        .hero-item .hero-content img {
+          object-fit: cover;
+          height: 300px; } }
+    .hero-item .hero-content h2, .hero-item .hero-content .h2 {
+      font-size: 24px; }
+      @media (max-width: 991.98px) {
+        .hero-item .hero-content h2, .hero-item .hero-content .h2 {
+          font-size: 16px; } }
+  .hero-item img {
+    width: 100%; }
+
+	.category-slider .category-items{
+        min-height: 220px !important;
+    }
+    .slick-slide{
+        min-height:220px !important;
+    }
+
+    @media (min-width: 1200px){
+        .container, .container-sm, .container-md, .container-lg, .container-xl {
+            max-width: 1200px !important;
+        }
+    }
+
+    .pagination .active{
+        font-weight: bold;
+        background: #047d78;
+        color: white;
+    }
+
+    .footer{
+        padding: 0px 0 20px 0 !important;
+    }
+  </style>
+  
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-9L8H7NF8HP"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-9L8H7NF8HP');
+</script>
+
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6H7GTJ4PRX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6H7GTJ4PRX');
+</script>
+
+
+<meta name="google-site-verification" content="UTusWwHSuGd6V9XJwOqX6XD010jqo-izm1ixF72vAEM" />
+
+</head>
+<body >
+<a href="#konten-utama" class="skip-link">Lewati ke konten utama</a>
+
+<header class="header">
+    <div class="header-top">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-3">
+                                        <a href="/id/home" aria-label="Kementerian Kesehatan Republik Indonesia - Beranda">
+                        <img src="/image/images/logo_kemkes_jadi.png" class="img-fluid" alt="Kementerian Kesehatan Republik Indonesia">
+                    </a>
+                </div>
+                <div class="col-9">
+                    <div class="d-flex align-items-center justify-content-end">
+                        <h1 class="header-title pr-4">Generasi Sehat, Masa Depan Hebat</h1>
+                                                <form action="/id/search" method="get" role="search">
+                            <div class="header-search">
+                                <label for="header-search-input" class="sr-only">Pencarian informasi</label>
+                                <input type="text" id="header-search-input" name="s" required value="" minlength='2' class="form-control" placeholder="Pencarian.." aria-label="Pencarian informasi">
+                                <button type="submit" title="Submit Pencarian" aria-label="Submit Pencarian" class="btn-submit">
+                                    <i class="ico ico-search" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </form>
+                         <div class="dropdown">
+                                                     <button class="btn btn-languange dropdown-toggle ml-3" type="button" data-toggle="dropdown"
+                                aria-expanded="false" aria-label="Pilihan Bahasa: ID">
+                                ID								                            </button>
+                            
+                           <div class="dropdown-menu dropdown-menu-right">
+                                                                <a class="dropdown-item" href="/id/category-download/profil-kesehatan">ID</a>
+                                <a class="dropdown-item" href="/eng/category-download/profil-kesehatan">ENG</a>
+                            </div> 
+                            
+                        </div> 
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+        .nav-link{
+            font-weight: bold;
+            font-size: 14px !important;
+        }
+        .nav-link .ico{
+            vertical-align: sub;
+            width: 16px;
+            height: 16px;
+        }
+
+        nav ul ul {
+ 
+        display: none;
+        background: #0db0a9;
+        padding: 0;
+        position: absolute;
+        top: 100%;
+        min-width: 400px;
+      
+        width: auto;
+        z-index: 999999;
+        list-style: none;
+        margin-left: 1px;
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+
+        }
+
+        nav ul ul li {
+
+        float: none;
+       
+        position: relative;
+
+        }
+
+        nav ul li:hover > ul,
+        nav ul li:focus-within > ul {
+            display: block;
+        }
+
+        nav ul ul a {
+            color: #fff !important;
+        }
+
+        nav ul ul li a {
+            padding: 10px 40px;
+            color: #fff;
+        }
+
+        nav ul ul li a:hover,
+        nav ul ul li a:focus {
+           background: #00524f !important;
+           color: white !important;
+        }
+
+        nav ul ul ul {
+            position: absolute;
+            left: 100%;
+            top:0;
+            width: 200px;
+        }
+
+        /* ============================================================ */
+        /* WCAG 2.2 ACCESSIBILITY IMPROVEMENTS                          */
+        /* ============================================================ */
+
+        /* 2.4.1 Skip to main content link */
+        .skip-link {
+            position: absolute;
+            top: -9999px;
+            left: 10px;
+            background: #047d78;
+            color: #ffffff !important;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 9999999;
+            text-decoration: none;
+            border-radius: 0 0 6px 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: 2px solid #ffcc00;
+        }
+        .skip-link:focus,
+        .skip-link:focus-visible {
+            top: 0;
+            outline: 3px solid #ffcc00 !important;
+            outline-offset: 2px;
+        }
+
+        /* 2.4.11 Focus Not Obscured */
+        html {
+            scroll-padding-top: 130px;
+        }
+
+        /* 2.4.7 Focus Visible */
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible,
+        [tabindex]:focus-visible {
+            outline: 3px solid #ffaa00 !important;
+            outline-offset: 2px !important;
+        }
+
+        /* 1.4.3 Contrast Minimum for Language Button */
+        .header .btn-languange,
+        .header-mobile .btn-languange {
+            background: #047d78 !important;
+            color: #ffffff !important;
+            border: 2px solid #047d78 !important;
+            font-weight: bold !important;
+        }
+        .header .btn-languange:hover,
+        .header .btn-languange:focus,
+        .header-mobile .btn-languange:hover,
+        .header-mobile .btn-languange:focus {
+            background: #00524f !important;
+            color: #ffffff !important;
+        }
+
+        /* 2.5.8 Target Size */
+        .slick-dots li {
+            min-width: 24px !important;
+            min-height: 24px !important;
+            margin: 0 4px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .slick-dots li button {
+            min-width: 24px !important;
+            min-height: 24px !important;
+            cursor: pointer;
+        }
+
+        /* 1.4.3 Contrast for Tabs */
+        .tab-x .label-cat {
+            margin-right: 10px !important;
+            background: #374151 !important;
+            color: #ffffff !important;
+            cursor: pointer;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            padding: 8px 16px !important;
+            border: none !important;
+            border-radius: 6px 6px 0 0 !important;
+        }
+        .tab-x .label-cat.active,
+        .tab-x .label-cat[aria-selected="true"] {
+            background: #047d78 !important;
+            color: #ffffff !important;
+        }
+
+        /* Screen reader utility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
+    <div class="header-bottom">
+        <div class="container">
+            <nav class="navbar navbar-light navbar-expand-lg" style="padding: 0px !important;margin-bottom:0px;">
+                <div class="collapse navbar-collapse nav-menu" id="navcol-x" style="padding-left: 0px; padding-right:0px;">
+                 <ul class="nav navbar-nav" ><li id="1" style="min-width:133px;" ><a href="/id/home" class="nav-link "  ><img src="/app_asset/icon_menu/1663841232632c33d06beae8.69322938.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">BERANDA </span></a></li><li id="3" style="min-width:133px;" ><a href="/id/profil/all#" class="nav-link has-menu" data-toggle="dropdown" role="button" aria-expanded="false" ><img src="/app_asset/icon_menu/1663835765632c1e75eb1877.79502063.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">PROFIL           </span></a><ul ><li id="17" style="min-width:133px;" ><a href="/id/visi-misi/" class="nav-link "  > <span class="pl-3 w-100">VISI DAN MISI </span></a></li><li id="18" style="min-width:133px;" ><a href="/id/struktur-organisasi" class="nav-link "  > <span class="pl-3 w-100">STRUKTUR ORGANISASI </span></a></li><li id="19" style="min-width:133px;" ><a href="/id/tugas-dan-fungsi/" class="nav-link "  > <span class="pl-3 w-100">TUGAS, FUNGSI DAN KEDUDUKAN </span></a></li><li id="20" style="min-width:133px;" ><a href="/id/profil-pejabat-new/all" class="nav-link "  > <span class="pl-3 w-100">UNIT KERJA DAN PEJABAT </span></a></li><li id="21" style="min-width:133px;" ><a href="/id/filosofi-logo/" class="nav-link "  > <span class="pl-3 w-100">FILOSOFI LOGO KEMENTERIAN KESEHATAN </span></a></li></ul></li><li id="4" style="min-width:133px;" ><a href="/id/kinerja/all" class="nav-link has-menu" data-toggle="dropdown" role="button" aria-expanded="false" ><img src="/app_asset/icon_menu/1663835800632c1e985bff91.26299327.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">INFORMASI PUBLIK </span></a><ul ><li id="99" style="min-width:133px;" ><a href="/id/kinerja/profil-ppid" class="nav-link "  > <span class="pl-3 w-100">PROFIL PPID </span></a></li><li id="23" style="min-width:133px;" ><a href="/id/kinerja/informasi-berkala" class="nav-link "  > <span class="pl-3 w-100">INFORMASI BERKALA </span></a></li><li id="24" style="min-width:133px;" ><a href="/id/kinerja/informasi-setiap-saat" class="nav-link "  > <span class="pl-3 w-100">INFORMASI SETIAP SAAT </span></a></li><li id="72" style="min-width:133px;" ><a href="/id/kinerja/informasi-serta-merta" class="nav-link "  > <span class="pl-3 w-100">INFORMASI SERTA MERTA </span></a></li><li id="100" style="min-width:133px;" ><a href="/id/kinerja/info-pbj" class="nav-link "  > <span class="pl-3 w-100">INFO PBJ </span></a></li></ul></li><li id="5" style="min-width:133px;" ><a href="/id/layanan/all" class="nav-link has-menu" data-toggle="dropdown" role="button" aria-expanded="false" ><img src="/app_asset/icon_menu/1663835824632c1eb07db608.04206099.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">LAYANAN </span></a><ul ><li id="16" style="min-width:133px;" ><a href="https://upk.kemkes.go.id" class="nav-link "  > <span class="pl-3 w-100">UNIT PELAYANAN KESEHATAN (UPK) </span></a></li><li id="27" style="min-width:133px;" ><a href="https://kemkes.go.id/id/layanan/ult-unit-layanan-terpadu" class="nav-link "  > <span class="pl-3 w-100">UNIT LAYANAN TERPADU (ULT) </span></a></li><li id="97" style="min-width:133px;" ><a href="https://rs.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">RUMAH SAKIT KEMENKES </span></a></li></ul></li><li id="6" style="min-width:133px;" ><a href="/id/media/all" class="nav-link "  ><img src="/app_asset/icon_menu/1663835837632c1ebd80b1f9.17948860.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">MEDIA </span></a></li><li id="83" style="min-width:133px;" ><a href="/id/" class="nav-link has-menu" data-toggle="dropdown" role="button" aria-expanded="false" ><img src="/app_asset/icon_menu/169087258464c8ab08a2b618.74293435.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">TAUTAN </span></a><ul ><li id="84" style="min-width:133px;" ><a href="https://setjen.kemkes.go.id" class="nav-link "  > <span class="pl-3 w-100">SEKRETARIAT JENDERAL </span></a></li><li id="85" style="min-width:133px;" ></li><li id="87" style="min-width:133px;" ><a href="https://kesprimkom.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">DITJEN KESEHATAN PRIMER DAN KOMUNITAS </span></a></li><li id="86" style="min-width:133px;" ><a href="http://p2.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">DITJEN PENANGGULANGAN PENYAKIT </span></a></li><li id="96" style="min-width:133px;" ><a href="https://keslan.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">DITJEN KESEHATAN LANJUTAN </span></a></li><li id="88" style="min-width:133px;" ><a href="https://farmalkes.kemkes.go.id" class="nav-link "  > <span class="pl-3 w-100">DITJEN FARMASI DAN ALKES </span></a></li><li id="91" style="min-width:133px;" ><a href="https://ditjen-sdmk.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">DITJEN SDM  KESEHATAN </span></a></li><li id="89" style="min-width:133px;" ><a href="https://itjen.kemkes.go.id" class="nav-link "  > <span class="pl-3 w-100">INSPEKTORAT JENDERAL </span></a></li><li id="90" style="min-width:133px;" ><a href="https://www.badankebijakan.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">BADAN KEBIJAKAN PEMBANGUNAN KESEHATAN </span></a></li><li id="92" style="min-width:133px;" ></li></ul></li><li id="82" style="min-width:133px;" ><a href="/id/layanan/kontak-kami" class="nav-link "  ><img src="/app_asset/icon_menu/169087272664c8ab96a59506.27960703.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">KONTAK KAMI </span></a></li></ul>                </div>
+			</nav>	
+                    </div>
+    </div>
+</header>
+
+<script>
+    $(document).ready(function(){
+        // $('.menu').click(function(e){
+        //     //alert("OK");
+        //     e.preventDefault();
+        //     $('.menu-dropdown').toggleClass('show')
+        //     $('#nav-icon3').toggleClass('open');
+        //     $('.text-menu').text($('.text-menu').text() == 'Menu' ? 'Close' : 'Menu');
+        // })
+
+        $('nav#mmenu').mmenu({
+                    extensions 	: [ "fullscreen" ],
+                    navbars: [
+                        {
+                            content	: [
+                                'prev',
+                                'title',
+                                'close'
+                            ]
+                        }
+                    ]
+                });
+                
+                var api = $('#mmenu').data("mmenu");
+                api.bind( "opened", function() {
+                    $('.burger').removeClass('fa-reorder');
+                    $('#navigation2').css('display','none');
+					 $('#mmenu').css('display','block');
+                    $("html, body").animate({ scrollTop: 0 }, "slow");
+      return false;
+                });
+                api.bind( "closed", function() {
+                    $('#navigation2').css('display','block');
+					 $('#mmenu').css('display','none');
+                     $('.burger').addClass('fa-reorder');
+                });
+    })
+</script>
+
+<style>
+    .menu-mobile .dropdown-menu{
+        width: 100% !important;
+    }
+
+    .image-center{
+        text-align: center;
+    }
+
+    .image-center img{
+        margin: 0 auto !important;
+        max-width: 100%;
+    }
+
+    .isi-konten a{
+        color: #047d78 !important;
+    }
+</style>
+
+<header class="header-mobile">
+    <div class="header-top text-center">
+        <a href="/id/home" aria-label="Kementerian Kesehatan Republik Indonesia - Beranda">
+            <img src="/image/images/logo_kemkes_jadi.png" class="img-fluid" alt="Logo Kementerian Kesehatan Republik Indonesia">
+        </a>
+        <div class="header-title text-center mt-3" aria-hidden="true">Generasi Sehat, Masa Depan Hebat</div>
+    </div>
+    <div class="header-bottom">
+        <div class="container">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="menu-mobile">
+                        <a style="cursor:pointer;" href="#mmenu" class="menu" id="burger" aria-label="Buka menu navigasi" role="button">
+                            <div id="nav-icon3">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <span class="text-menu">Menu</span>
+                        </a>
+                        <div class="menu-dropdown">
+                                                                        </div>
+                    </div>
+                </div>
+                <div>
+                    <form action="/id/search" method="get" role="search" aria-label="Pencarian mobile">
+                        <div class="header-search">
+                            <label for="header-search-input-mobile" class="sr-only">Pencarian informasi</label>
+                            <input id="header-search-input-mobile" type="text" name="s" required class="form-control"  minlength='2' placeholder="Pencarian.." style="max-width:160px;" aria-label="Pencarian informasi">
+                            <button title="Submit Pencarian" class="btn-submit" aria-label="Cari">
+                                <i class="ico ico-search" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </form>
+                    
+                </div>
+                    <div class="dropdown">
+                        
+                        <button class="btn btn-languange dropdown-toggle ml-3" type="button" data-toggle="dropdown"
+                            aria-expanded="false" aria-label="Pilih Bahasa / Select Language">
+                            ID                                                    </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                                                        <a class="dropdown-item" href="/id/category-download/profil-kesehatan">ID</a>
+                            <a class="dropdown-item" href="/eng/category-download/profil-kesehatan">ENG</a>
+                            
+                        </div>
+                    </div>
+                
+            </div>
+        </div>
+    </div>
+</header>
+
+<style>
+    .flex-wrapper {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    
+</style>
+
+<main id="konten-utama" class="flex-wrapper" tabindex="-1">
+
+  <style>
+.image-box img {
+ object-fit: cover !important;
+  
+}
+
+.artikel-small .artikel-small-img {
+    flex: 0 0 145px;
+    max-width: 145px;
+}
+</style>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  
+  <div class="content-wrapper">
+    <div class="container">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/id/home">HOME</a></li>
+         
+          <li class="breadcrumb-item active" aria-current="page">Profil Kesehatan</li>
+        </ol>
+      </nav>
+
+      <div class="mt-4">
+        <h2 class="title mb-4">Profil Kesehatan</h2>
+        <div class="row">
+          
+                     <div class="col-md-6 mb-3">
+            <div class="card">
+              
+                <div class="artikel-small">
+                  <div class="artikel-small-img">
+                    <div class="image-box">
+                    <a href="/id/profil-kesehatan-indonesia-2025" class="link">
+                   
+
+                                          <img src="/app_asset/image_content_download/17882481226a96803a70c829.50621547.png" class="img-responsive">                  
+                                        </a>
+                    </div>
+
+                  </div>
+                  <div class="arikel-small-content">
+                  <a href="/id/profil-kesehatan-indonesia-2025" class="link">
+                    <h4 class="text-17">Profil Kesehatan Indonesia 2025</h4>
+                  </a>
+                     <p class="text-12">Profil Kesehatan Indonesia adalah publikasi tahunan strategis yang menyajikan gambaran</p>
+                                       </div>
+                  <div class="more-a">
+                  <a href="/id/profil-kesehatan-indonesia-2025" class="link"><i class="ico ico-arrow-grey"></i></a>
+                  </div>
+                </div>
+              
+            </div>
+          </div>
+
+       
+                      <div class="col-md-6 mb-3">
+            <div class="card">
+              
+                <div class="artikel-small">
+                  <div class="artikel-small-img">
+                    <div class="image-box">
+                    <a href="/id/profil-kesehatan-indonesia-2024" class="link">
+                   
+
+                                          <img src="/app_asset/image_content_download/175765127068c3a14675cf78.68913435.jpg" class="img-responsive">                  
+                                        </a>
+                    </div>
+
+                  </div>
+                  <div class="arikel-small-content">
+                  <a href="/id/profil-kesehatan-indonesia-2024" class="link">
+                    <h4 class="text-17">Profil Kesehatan Indonesia 2024</h4>
+                  </a>
+                     <p class="text-12">Profil ini merupakan publikasi tahunan yang menyajikan gambaran menyeluruh pembangunan</p>
+                                       </div>
+                  <div class="more-a">
+                  <a href="/id/profil-kesehatan-indonesia-2024" class="link"><i class="ico ico-arrow-grey"></i></a>
+                  </div>
+                </div>
+              
+            </div>
+          </div>
+
+       
+                      <div class="col-md-6 mb-3">
+            <div class="card">
+              
+                <div class="artikel-small">
+                  <div class="artikel-small-img">
+                    <div class="image-box">
+                    <a href="/id/profil-kesehatan-indonesia-2023" class="link">
+                   
+
+                                          <img src="/app_asset/image_content_download/172231123666a86244b83733.51137033.webp" class="img-responsive">                  
+                                        </a>
+                    </div>
+
+                  </div>
+                  <div class="arikel-small-content">
+                  <a href="/id/profil-kesehatan-indonesia-2023" class="link">
+                    <h4 class="text-17">Profil Kesehatan Indonesia 2023</h4>
+                  </a>
+                     <p class="text-12">Profil Kesehatan Indonesia 2023 hadir sebagai gerbang untuk memahami lanskap</p>
+                                            <p class="text-12" style="width:100px ;">
+                       <a class="btn btn-success btn-xl" href="/media-download/file_content_download/" target="_blank"><i class="fa-solid fa-download"></i> UNDUH</a>
+                      </p>
+                                      </div>
+                  <div class="more-a">
+                  <a href="/id/profil-kesehatan-indonesia-2023" class="link"><i class="ico ico-arrow-grey"></i></a>
+                  </div>
+                </div>
+              
+            </div>
+          </div>
+
+       
+                      <div class="col-md-6 mb-3">
+            <div class="card">
+              
+                <div class="artikel-small">
+                  <div class="artikel-small-img">
+                    <div class="image-box">
+                    <a href="/id/profil-kesehatan-indonesia-2022" class="link">
+                   
+
+                                          <img src="/app_asset/image_content_download/1703035618658242e2a3e590.07528807.png" class="img-responsive">                  
+                                        </a>
+                    </div>
+
+                  </div>
+                  <div class="arikel-small-content">
+                  <a href="/id/profil-kesehatan-indonesia-2022" class="link">
+                    <h4 class="text-17">Profil Kesehatan Indonesia 2022</h4>
+                  </a>
+                     <p class="text-12">Profil Kesehatan Indonesia ini menyajikan data nasional, data provinsi, perbandingan</p>
+                                            <p class="text-12" style="width:100px ;">
+                       <a class="btn btn-success btn-xl" href="/media-download/file_content_download/" target="_blank"><i class="fa-solid fa-download"></i> UNDUH</a>
+                      </p>
+                                      </div>
+                  <div class="more-a">
+                  <a href="/id/profil-kesehatan-indonesia-2022" class="link"><i class="ico ico-arrow-grey"></i></a>
+                  </div>
+                </div>
+              
+            </div>
+          </div>
+
+       
+                      <div class="col-md-6 mb-3">
+            <div class="card">
+              
+                <div class="artikel-small">
+                  <div class="artikel-small-img">
+                    <div class="image-box">
+                    <a href="/id/profil-kesehatan-indonesia-2021" class="link">
+                   
+
+                                          <img src="/app_asset/image_content_download/168905538664acf09a7420f5.21333272.webp" class="img-responsive">                  
+                                        </a>
+                    </div>
+
+                  </div>
+                  <div class="arikel-small-content">
+                  <a href="/id/profil-kesehatan-indonesia-2021" class="link">
+                    <h4 class="text-17">Profil Kesehatan Indonesia 2021</h4>
+                  </a>
+                     <p class="text-12">Profil Kesehatan Indonesia 2021</p>
+                                            <p class="text-12" style="width:100px ;">
+                       <a class="btn btn-success btn-xl" href="/media-download/file_content_download/" target="_blank"><i class="fa-solid fa-download"></i> UNDUH</a>
+                      </p>
+                                      </div>
+                  <div class="more-a">
+                  <a href="/id/profil-kesehatan-indonesia-2021" class="link"><i class="ico ico-arrow-grey"></i></a>
+                  </div>
+                </div>
+              
+            </div>
+          </div>
+
+       
+                      <div class="col-md-6 mb-3">
+            <div class="card">
+              
+                <div class="artikel-small">
+                  <div class="artikel-small-img">
+                    <div class="image-box">
+                    <a href="/id/profil-kesehatan-indonesia-2020" class="link">
+                   
+
+                                          <img src="/app_asset/image_content_download/168905536364acf083c1c362.15596555.webp" class="img-responsive">                  
+                                        </a>
+                    </div>
+
+                  </div>
+                  <div class="arikel-small-content">
+                  <a href="/id/profil-kesehatan-indonesia-2020" class="link">
+                    <h4 class="text-17">Profil Kesehatan Indonesia 2020</h4>
+                  </a>
+                     <p class="text-12">Profil Kesehatan Indonesia 2020</p>
+                                            <p class="text-12" style="width:100px ;">
+                       <a class="btn btn-success btn-xl" href="/media-download/file_content_download/" target="_blank"><i class="fa-solid fa-download"></i> UNDUH</a>
+                      </p>
+                                      </div>
+                  <div class="more-a">
+                  <a href="/id/profil-kesehatan-indonesia-2020" class="link"><i class="ico ico-arrow-grey"></i></a>
+                  </div>
+                </div>
+              
+            </div>
+          </div>
+
+       
+                      <div class="col-md-6 mb-3">
+            <div class="card">
+              
+                <div class="artikel-small">
+                  <div class="artikel-small-img">
+                    <div class="image-box">
+                    <a href="/id/profil-kesehatan-indonesia-2019" class="link">
+                   
+
+                                          <img src="/app_asset/image_content_download/168905533764acf069f1c978.23868619.webp" class="img-responsive">                  
+                                        </a>
+                    </div>
+
+                  </div>
+                  <div class="arikel-small-content">
+                  <a href="/id/profil-kesehatan-indonesia-2019" class="link">
+                    <h4 class="text-17">Profil Kesehatan Indonesia 2019</h4>
+                  </a>
+                     <p class="text-12">Profil Kesehatan Indonesia 2019</p>
+                                            <p class="text-12" style="width:100px ;">
+                       <a class="btn btn-success btn-xl" href="/media-download/file_content_download/" target="_blank"><i class="fa-solid fa-download"></i> UNDUH</a>
+                      </p>
+                                      </div>
+                  <div class="more-a">
+                  <a href="/id/profil-kesehatan-indonesia-2019" class="link"><i class="ico ico-arrow-grey"></i></a>
+                  </div>
+                </div>
+              
+            </div>
+          </div>
+
+       
+                      <div class="col-md-6 mb-3">
+            <div class="card">
+              
+                <div class="artikel-small">
+                  <div class="artikel-small-img">
+                    <div class="image-box">
+                    <a href="/id/profil-kesehatan-indonesia-2018" class="link">
+                   
+
+                                          <img src="/app_asset/image_content_download/168905529764acf041ac7355.02241648.webp" class="img-responsive">                  
+                                        </a>
+                    </div>
+
+                  </div>
+                  <div class="arikel-small-content">
+                  <a href="/id/profil-kesehatan-indonesia-2018" class="link">
+                    <h4 class="text-17">Profil Kesehatan Indonesia 2018</h4>
+                  </a>
+                     <p class="text-12">Profil Kesehatan Indonesia 2018</p>
+                                            <p class="text-12" style="width:100px ;">
+                       <a class="btn btn-success btn-xl" href="/media-download/file_content_download/" target="_blank"><i class="fa-solid fa-download"></i> UNDUH</a>
+                      </p>
+                                      </div>
+                  <div class="more-a">
+                  <a href="/id/profil-kesehatan-indonesia-2018" class="link"><i class="ico ico-arrow-grey"></i></a>
+                  </div>
+                </div>
+              
+            </div>
+          </div>
+
+       
+                      <div class="col-md-6 mb-3">
+            <div class="card">
+              
+                <div class="artikel-small">
+                  <div class="artikel-small-img">
+                    <div class="image-box">
+                    <a href="/id/profil-kesehatan-indonesia-2017" class="link">
+                   
+
+                                          <img src="/app_asset/image_content_download/168904388864acc3b0899236.53987708.webp" class="img-responsive">                  
+                                        </a>
+                    </div>
+
+                  </div>
+                  <div class="arikel-small-content">
+                  <a href="/id/profil-kesehatan-indonesia-2017" class="link">
+                    <h4 class="text-17">Profil Kesehatan Indonesia 2017</h4>
+                  </a>
+                     <p class="text-12">Profil Kesehatan 2017</p>
+                                            <p class="text-12" style="width:100px ;">
+                       <a class="btn btn-success btn-xl" href="/media-download/file_content_download/" target="_blank"><i class="fa-solid fa-download"></i> UNDUH</a>
+                      </p>
+                                      </div>
+                  <div class="more-a">
+                  <a href="/id/profil-kesehatan-indonesia-2017" class="link"><i class="ico ico-arrow-grey"></i></a>
+                  </div>
+                </div>
+              
+            </div>
+          </div>
+
+       
+          
+          <div class="col-md-12 mt-4">
+          <ul class="pagination">
+                        	  
+            </ul>
+          </div>
+
+          
+
+
+
+
+
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+
+
+<style>
+    .footer .nav .nav-link:hover{
+        background-color: #0db0a9 !important;
+    }
+</style>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 col-6 mb-4">
+                <div class="p-4 mt-4">
+                    Kementerian Kesehatan Republik Indonesia <br/>
+                    Jl. H.R. Rasuna Said Blok X-5 Kav. 4-9 <br/>
+                    Jakarta Selatan 12950 <br/>
+                    Indonesia <br/>                </div>
+                <ul class="nav flex-column">
+                                    <!-- <li class="nav-item">
+                        <a class="nav-link" href="#">Layanan dan Inovasi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Media dan Publikasi</a>
+                    </li> -->
+                </ul>
+            </div>
+            <div class="col-md-2 col-6 mb-4">
+                <ul class="nav flex-column">
+                                    <!-- <li class="nav-item">
+                        <a class="nav-link" href="#">Layanan dan Inovasi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Media dan Publikasi</a>
+                    </li> -->
+                
+                </ul>
+            </div>
+            <div class="col-md-3 col-6 mb-4">
+                <ul class="nav flex-column">
+                                    <!-- <li class="nav-item">
+                        <a class="nav-link" href="#">Layanan dan Inovasi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Media dan Publikasi</a>
+                    </li> -->
+                
+                </ul>
+            </div>
+            <div class="col-md-3 col-6 mb-4">
+
+            <p class="mt-5">IKUTI KAMI:</p>
+            
+            
+            <p>
+            <a href="https://www.facebook.com/KementerianKesehatanRI/" target="_blank" rel="noopener noreferrer" aria-label="Facebook Kementerian Kesehatan RI"><img src="/app_asset/images/1fb.png" alt="Facebook Kementerian Kesehatan RI"></a>
+            <a href="https://www.instagram.com/kemenkes_ri/" target="_blank" rel="noopener noreferrer" aria-label="Instagram Kementerian Kesehatan RI"><img src="/app_asset/images/2ig.png" alt="Instagram Kementerian Kesehatan RI"></a>
+
+            <a href="https://twitter.com/KemenkesRI" target="_blank" rel="noopener noreferrer" aria-label="Twitter X Kementerian Kesehatan RI"><img src="/app_asset/images/3tw.png" alt="Twitter X Kementerian Kesehatan RI"></a>
+
+            <a href="https://www.youtube.com/c/kementeriankesehatanri" target="_blank" rel="noopener noreferrer" aria-label="YouTube Kementerian Kesehatan RI"><img src="/app_asset/images/4yt.png" alt="YouTube Kementerian Kesehatan RI"></a>
+            </p>
+
+            <p>            
+			<a href="https://www.tiktok.com/@kemenkesri" target="_blank" rel="noopener noreferrer" aria-label="TikTok Kementerian Kesehatan RI"><img src="/app_asset/images/5tk.png" alt="TikTok Kementerian Kesehatan RI"></a>
+			<a href="https://kemkes.go.id/kemkes-radio-player.html" target="_blank" rel="noopener noreferrer" aria-label="Radio Kesehatan"><img src="/app_asset/images/6rk.png" alt="Radio Kesehatan"></a>
+            <a href="https://www.snackvideo.com/@KemenkesRI?" target="_blank" rel="noopener noreferrer" aria-label="SnackVideo Kementerian Kesehatan RI"><img src="/app_asset/images/snackvideo.png" alt="SnackVideo Kementerian Kesehatan RI"></a>
+            </p>
+            
+                <!-- <ul class="nav flex-column"> -->
+                                        <!-- <li class="nav-item">
+                        <a class="nav-link" href=""></a>
+                    </li> -->
+                                        <!-- <li class="nav-item">
+                        <a class="nav-link" href="#">Layanan dan Inovasi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Media dan Publikasi</a>
+                    </li> -->
+                
+                <!-- </ul> -->
+	    </div>
+
+        </div>
+        <div class="col-sm-9">
+            <div class="text-left text-14">
+                © 2026            </div>
+        </div>
+        <div class="col-sm-3" style="padding-left: 15px;">                
+            <div class="text-left" style="padding-left: 10px;">
+                <a style="color: white;"  href="/id/rss/all">RSS</a>
+                | <a style="color: white;"   href="/id/sitemap">SITEMAP</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<nav id="mmenu" style="display:none;z-index:1;">
+    <ul  ><li id="1" ><a href="/id/home" class="nav-link "  ><img src="/app_asset/icon_menu/1663841232632c33d06beae8.69322938.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">BERANDA </span></a></li><li id="3" ><a href="/id/profil/all#" class="nav-link "  ><img src="/app_asset/icon_menu/1663835765632c1e75eb1877.79502063.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">PROFIL           </span></a><ul ><li id="17" ><a href="/id/visi-misi/" class="nav-link "  > <span class="pl-3 w-100">VISI DAN MISI </span></a></li><li id="18" ><a href="/id/struktur-organisasi" class="nav-link "  > <span class="pl-3 w-100">STRUKTUR ORGANISASI </span></a></li><li id="19" ><a href="/id/tugas-dan-fungsi/" class="nav-link "  > <span class="pl-3 w-100">TUGAS, FUNGSI DAN KEDUDUKAN </span></a></li><li id="20" ><a href="/id/profil-pejabat-new/all" class="nav-link "  > <span class="pl-3 w-100">UNIT KERJA DAN PEJABAT </span></a></li><li id="21" ><a href="/id/filosofi-logo/" class="nav-link "  > <span class="pl-3 w-100">FILOSOFI LOGO KEMENTERIAN KESEHATAN </span></a></li></ul></li><li id="4" ><a href="/id/kinerja/all" class="nav-link "  ><img src="/app_asset/icon_menu/1663835800632c1e985bff91.26299327.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">INFORMASI PUBLIK </span></a><ul ><li id="99" ><a href="/id/kinerja/profil-ppid" class="nav-link "  > <span class="pl-3 w-100">PROFIL PPID </span></a></li><li id="23" ><a href="/id/kinerja/informasi-berkala" class="nav-link "  > <span class="pl-3 w-100">INFORMASI BERKALA </span></a></li><li id="24" ><a href="/id/kinerja/informasi-setiap-saat" class="nav-link "  > <span class="pl-3 w-100">INFORMASI SETIAP SAAT </span></a></li><li id="72" ><a href="/id/kinerja/informasi-serta-merta" class="nav-link "  > <span class="pl-3 w-100">INFORMASI SERTA MERTA </span></a></li><li id="100" ><a href="/id/kinerja/info-pbj" class="nav-link "  > <span class="pl-3 w-100">INFO PBJ </span></a></li></ul></li><li id="5" ><a href="/id/layanan/all" class="nav-link "  ><img src="/app_asset/icon_menu/1663835824632c1eb07db608.04206099.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">LAYANAN </span></a><ul ><li id="16" ><a href="https://upk.kemkes.go.id" class="nav-link "  > <span class="pl-3 w-100">UNIT PELAYANAN KESEHATAN (UPK) </span></a></li><li id="27" ><a href="https://kemkes.go.id/id/layanan/ult-unit-layanan-terpadu" class="nav-link "  > <span class="pl-3 w-100">UNIT LAYANAN TERPADU (ULT) </span></a></li><li id="97" ><a href="https://rs.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">RUMAH SAKIT KEMENKES </span></a></li></ul></li><li id="6" ><a href="/id/media/all" class="nav-link "  ><img src="/app_asset/icon_menu/1663835837632c1ebd80b1f9.17948860.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">MEDIA </span></a></li><li id="83" ><a href="/id/" class="nav-link "  ><img src="/app_asset/icon_menu/169087258464c8ab08a2b618.74293435.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">TAUTAN </span></a><ul ><li id="84" ><a href="https://setjen.kemkes.go.id" class="nav-link "  > <span class="pl-3 w-100">SEKRETARIAT JENDERAL </span></a></li><li id="85" ></li><li id="87" ><a href="https://kesprimkom.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">DITJEN KESEHATAN PRIMER DAN KOMUNITAS </span></a></li><li id="86" ><a href="http://p2.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">DITJEN PENANGGULANGAN PENYAKIT </span></a></li><li id="96" ><a href="https://keslan.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">DITJEN KESEHATAN LANJUTAN </span></a></li><li id="88" ><a href="https://farmalkes.kemkes.go.id" class="nav-link "  > <span class="pl-3 w-100">DITJEN FARMASI DAN ALKES </span></a></li><li id="91" ><a href="https://ditjen-sdmk.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">DITJEN SDM  KESEHATAN </span></a></li><li id="89" ><a href="https://itjen.kemkes.go.id" class="nav-link "  > <span class="pl-3 w-100">INSPEKTORAT JENDERAL </span></a></li><li id="90" ><a href="https://www.badankebijakan.kemkes.go.id/" class="nav-link "  > <span class="pl-3 w-100">BADAN KEBIJAKAN PEMBANGUNAN KESEHATAN </span></a></li><li id="92" ></li></ul></li><li id="82" ><a href="/id/layanan/kontak-kami" class="nav-link "  ><img src="/app_asset/icon_menu/169087272664c8ab96a59506.27960703.png" alt="" aria-hidden="true"> <span class="pl-3 w-100">KONTAK KAMI </span></a></li></ul></nav> 
+
+<style>
+    .footer .nav-link{
+        font-weight: normal !important;
+    }
+</style>
+
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5b23a557f9db3bb',t:'MTc5NDc4NzM1Nw=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5b23a557f9db3bb',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

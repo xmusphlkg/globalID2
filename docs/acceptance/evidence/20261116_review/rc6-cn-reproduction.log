@@ -1,0 +1,6 @@
+[32m2026-11-16 11:24:45[0m | [1mINFO    [0m | [36msrc.core.logging[0m:[36msetup_logging[0m:[36m64[0m - [1mLogging initialized - Level: INFO[0m
+{'scenario': 'daily_count_as_monthly', 'input': '2026年10月15日报告病例数为流行性感冒（100例）。', 'rows': [('2026-10-01', 'influenza', 100)]}
+{'scenario': 'daily_count_as_monthly', 'input': '2026年10月1日至10月7日报告病例数为流行性感冒（100例）。', 'rows': [('2026-10-01', 'influenza', 100)]}
+{'scenario': 'known_deaths_missing_cases', 'normalization': []}
+{'scenario': 'known_deaths_missing_cases', 'error': 'No registered disease rows parsed from https://official.example/monthly'}
+{'scenario': 'html_table_plus_broken_attachment', 'error': "HTTPError('404 missing supplemental attachment')", 'diagnostics': []}

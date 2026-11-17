@@ -1,0 +1,3 @@
+{"run":1,"operation":"sharedCeiling","country":"US","disease":"D094","years":13,"regions":56,"points":23693,"ceiling":700,"ms":2655}
+{"run":2,"operation":"sharedCeiling","country":"US","disease":"D094","years":13,"regions":56,"points":23693,"ceiling":700,"ms":2572}
+{"run":3,"operation":"sharedCeiling","country":"US","disease":"D094","years":13,"regions":56,"points":23693,"ceiling":700,"ms":2390}

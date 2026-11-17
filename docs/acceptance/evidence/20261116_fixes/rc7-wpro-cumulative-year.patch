@@ -1,0 +1,51 @@
+--- a/src/data/crawlers/wpro_dengue.py
++++ b/src/data/crawlers/wpro_dengue.py
+@@ -134,12 +134,25 @@
+         deaths = re.search(r'cases?,\s+including\s+([\d][\d ,]*|one|two|no|zero)\s+deaths?,\s+(?:were|was)\s*reported', narrative, re.I)
+     if deaths:
+         values.append(('weekly_deaths', count_value(deaths[1]), begin, end, 'weekly', 'death_notifications'))
+-    cumulative = re.search(r'(?:Cumulatively,\s*)?(?:As of epidemiological week\s+\d+\s+of\s+20\d{2},\s*)?a (?:cumulative )?total of\s+([\d][\d ,]*?)\s+cases(?:,\s+including\s+([\d][\d ,]*?)\s+deaths)?[,]?\s+(?:have|had)\s+been\s+reported.*?(?:in\s+20\d{2}|for this year)', narrative, re.I)
++    cumulative = re.search(
++        r'(?:Cumulatively,\s*)?(?:As of epidemiological week\s+\d+\s+of\s+(?P<asof_year>20\d{2}),\s*)?'
++        r'a (?:cumulative )?total of\s+(?P<cases>[\d][\d ,]*?)\s+cases'
++        r'(?:,\s+including\s+(?P<deaths>[\d][\d ,]*?)\s+deaths)?[,]?\s+'
++        r'(?:have|had)\s+been\s+reported[^.]*?(?:in\s+(?P<year>20\d{2})|(?P<this_year>for this year))', narrative, re.I)
++    cumulative_year_mismatch = False
+     if cumulative:
+-        start = end.replace(month=1, day=1)
+-        values.append(('cumulative_cases', count_value(cumulative[1]), start, published, 'cumulative', 'cumulative_case_notifications'))
+-        if cumulative[2]:
+-            values.append(('cumulative_deaths', count_value(cumulative[2]), start, published, 'cumulative', 'cumulative_death_notifications'))
++        source_years = {int(value) for value in (cumulative['asof_year'], cumulative['year']) if value}
++        if cumulative['this_year']:
++            source_years.add(published.year)
++        cumulative_year_mismatch = source_years != {end.year}
++        # Retain the existing publication-dated snapshot contract. A prior-year
++        # comparison or ambiguous January summary cannot become this source
++        # interval's cumulative observation.
++        if not cumulative_year_mismatch:
++            start = end.replace(month=1, day=1)
++            values.append(('cumulative_cases', count_value(cumulative['cases']), start, published, 'cumulative', 'cumulative_case_notifications'))
++            if cumulative['deaths']:
++                values.append(('cumulative_deaths', count_value(cumulative['deaths']), start, published, 'cumulative', 'cumulative_death_notifications'))
+     week_match = re.search(r'epidemiological week\s+(\d+)', narrative)
+     rows = []
+     for category, count, period_start, period_end, period_type, measure in values:
+@@ -157,6 +170,7 @@
+             'OriginatingAgency': agency, 'Distribution': 'WHO Western Pacific Regional Office',
+             'SourceDateBasis': 'publication_dated_cumulative_snapshot' if period_type == 'cumulative' else 'explicit_reporting_interval',
+             'SourceCumulativeCutoffVerified': 'false' if period_type == 'cumulative' else '',
++            'SourceCumulativeYear': str(end.year) if period_type == 'cumulative' else '',
+             'SourcePeriodLabel': original_period, 'SourceEpiWeek': week_match[1] if week_match else '',
+             'SourceNarrative': narrative, 'DatasetStatus': 'provisional_revisable', 'IsProvisional': 'true',
+             'RevisionSemantics': 'authoritative_revision', 'AuthoritativeRevision': 'true',
+@@ -165,7 +179,8 @@
+             **provenance,
+         })
+     return rows, {'status': 'parsed', 'country_code': code, 'report_date': published.isoformat(),
+-                  'observation_start': begin.isoformat(), 'observation_end': end.isoformat(), 'rows': len(rows)}
++                  'observation_start': begin.isoformat(), 'observation_end': end.isoformat(), 'rows': len(rows),
++                  'cumulative_year_mismatch': cumulative_year_mismatch}
+ 
+ 
+ class WPRODengueCrawler(BaseCrawler):

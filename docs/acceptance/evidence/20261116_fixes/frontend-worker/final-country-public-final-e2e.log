@@ -1,0 +1,22 @@
+
+> globalid-report-site@0.20.0 test:e2e
+> playwright test e2e/public-experience.spec.ts --grep=subnational titles|country directory links every parent|Chinese country and disease routes --project=chromium-390 --project=chromium-1280 --workers=1 --output=/tmp/globalid-fixes-20261116/country-public-final-e2e-results --reporter=line
+
+
+Running 6 tests using 1 worker
+
+(node:1055021) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/6] [chromium-390] › e2e/public-experience.spec.ts:223:1 › subnational titles use the full parent country name in each locale
+[2/6] [chromium-390] › e2e/public-experience.spec.ts:241:1 › country directory links every parent with published regional datasets
+[3/6] [chromium-390] › e2e/public-experience.spec.ts:395:1 › Chinese country and disease routes reuse the complete data templates
+(node:1056495) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[4/6] [chromium-1280] › e2e/public-experience.spec.ts:223:1 › subnational titles use the full parent country name in each locale
+[5/6] [chromium-1280] › e2e/public-experience.spec.ts:241:1 › country directory links every parent with published regional datasets
+[6/6] [chromium-1280] › e2e/public-experience.spec.ts:395:1 › Chinese country and disease routes reuse the complete data templates
+  6 passed (52.3s)

@@ -41,9 +41,19 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
     {revision}
   </div>;
   if (mode === 'country-indicators' || mode === 'directory-indicators') {
+    // Country summaries retain the latest observed value for each metric.
+    // An empty-sum zero without any reported metric is unavailable, not zero.
+    const observedTotal = (metric: 'cases' | 'deaths') => {
+      const total = data[`total_${metric}`];
+      const observed = typeof total === 'number' && Number.isFinite(total) && total > 0
+        || (data.diseases ?? []).some(
+          (row: Summary) => typeof row[`latest_${metric}`] === 'number' && Number.isFinite(row[`latest_${metric}`]),
+        );
+      return observed ? total : null;
+    };
     const values = mode === 'country-indicators' ? [
-      [pick('Total cases', '累计病例', 'Cas cumulés'), data.total_cases],
-      [pick('Total deaths', '累计死亡', 'Décès cumulés'), data.total_deaths],
+      [pick('Total cases', '累计病例', 'Cas cumulés'), observedTotal('cases')],
+      [pick('Total deaths', '累计死亡', 'Décès cumulés'), observedTotal('deaths')],
       [pick('Diseases tracked', '追踪疾病数', 'Maladies suivies'), data.disease_count],
       ...(reportCount !== undefined ? [[pick('Published reports', '已发布报告', 'Rapports publiés'), reportCount]] : []),
     ] : [

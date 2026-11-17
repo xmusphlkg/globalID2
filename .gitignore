@@ -1,7 +1,6 @@
 # Python / FastAPI
 __pycache__/
 *.py[cod]
-*.pyd
 *.so
 .Python
 build/
@@ -12,8 +11,8 @@ pip-wheel-metadata/
 
 # Virtual environments
 env/
-venv
-.venv
+venv/
+.venv/
 ENV/
 
 # Environment and secrets (backend + frontend)
@@ -47,11 +46,10 @@ coverage.xml
 .ipynb_checkpoints/
 
 # Node.js dependencies (dashboard, Astro and subscription worker)
-node_modules
+node_modules/
 .next/
 
 # Next.js control plane (including isolated GLOBALID_NEXT_DIST_DIR builds)
-/dashboard/.next/
 /dashboard/.next-*/
 /dashboard/out/
 /dashboard/.turbo/
@@ -65,9 +63,13 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
-**/.wrangler/
+.wrangler/
 *.tsbuildinfo
 *.log
+!/docs/acceptance/evidence/20261116_review/*.log
+!/docs/acceptance/evidence/20261116_fixes/*.log
+!/docs/acceptance/evidence/20261116_fixes/frontend-worker/*.log
+!/docs/acceptance/evidence/20261116_fixes/resumed/*.log
 .eslintcache
 npm-debug.log*
 yarn-debug.log*
@@ -83,6 +85,7 @@ pnpm-debug.log*
 # Project generated data and outputs
 /logs/
 /exports/
+/output/
 # Isolated worktrees belong outside the checkout; ignore accidental local copies.
 /.worktrees/
 /reports/
@@ -101,25 +104,9 @@ pnpm-debug.log*
 /astro-site/src/data/situation/
 /astro-site/src/data/_release-projection/
 
-# Runtime data, including data/raw/<line>/<task_uuid>/<attempt>/ artifacts.
-# Contract fixtures in tests/fixtures/ingestion/ must remain versioned.
-/data/current/
-/data/raw/
-/data/history/
-/data/processed/
-/data/cache/
-/data/demo_output/
-/data/test_output/
-/data/recovered/
-/data/backups/
+# Local datasets, imports, runtime state, and database backups.
+/data/
 /backups/
-/data/system-settings.json
-/data/cloudflare-publication-usage.json
-/data/publication-plans/
-/data/realtime-publishing-control.json
-/data/literature-publishing-control.json
-/data/*.lock
-!/data/.gitkeep
 /configs/literature/weekly_ai_reviews.json.lock
 
 # Documentation build artifacts / large fixtures

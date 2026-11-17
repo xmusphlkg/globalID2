@@ -1,0 +1,11 @@
+--- a/src/data/crawlers/cr_notifications.py
++++ b/src/data/crawlers/cr_notifications.py
+@@ -185,7 +185,7 @@
+ def parse_report_pdf(payload, report, *, as_of=None):
+     if not payload.startswith(b"%PDF") or b"%%EOF" not in payload[-65536:]:
+         raise CostaRicaContractError("Incomplete Ministry PDF")
+-    as_of = as_of or date.today()
++    as_of = as_of or datetime.now(ZoneInfo("America/Costa_Rica")).date()
+     if report["kind"] == "annual_individual" and report["year"] >= as_of.year:
+         raise CostaRicaContractError("Annual notification report must cover a closed calendar year")
+     rows, rejected = [], []

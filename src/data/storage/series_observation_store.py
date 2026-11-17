@@ -253,6 +253,7 @@ async def _persist_observation_revisions(
     recorded_at: datetime,
     seed_current_state: bool,
     changed_observations: list[dict[str, Any]] | None = None,
+    current_rows: list[dict[str, Any]] | None = None,
 ) -> int:
     """Seed legacy current rows once, then append only changed accepted states."""
     # Each identity expands to four bind parameters in both lookup queries,
@@ -266,6 +267,8 @@ async def _persist_observation_revisions(
             recorded_at=recorded_at,
             seed_current_state=seed_current_state,
             changed_observations=changed_observations,
+            current_rows=(current_rows[offset : offset + _WRITE_BATCH_SIZE]
+                          if current_rows is not None else None),
         )
     return inserted
 
@@ -277,36 +280,40 @@ async def _persist_observation_revisions_batch(
     recorded_at: datetime,
     seed_current_state: bool,
     changed_observations: list[dict[str, Any]] | None = None,
+    current_rows: list[dict[str, Any]] | None = None,
 ) -> int:
     if not observations:
         return 0
     keys = list(dict.fromkeys(_revision_identity(row) for row in observations))
-    current_result = await db.execute(
-        select(
-            DiseaseSeriesObservation.time,
-            DiseaseSeriesObservation.series_code,
-            DiseaseSeriesObservation.geography_key,
-            DiseaseSeriesObservation.dimension_key,
-            DiseaseSeriesObservation.value,
-            DiseaseSeriesObservation.unit,
-            DiseaseSeriesObservation.suppressed,
-            DiseaseSeriesObservation.suppression_reason,
-            DiseaseSeriesObservation.quality_status,
-            DiseaseSeriesObservation.dimensions,
-            DiseaseSeriesObservation.raw_data,
-            DiseaseSeriesObservation.metadata_.label("metadata"),
-            DiseaseSeriesObservation.created_at,
-            DiseaseSeriesObservation.updated_at,
-        ).where(
-            tuple_(
+    if current_rows is None:
+        current_result = await db.execute(
+            select(
                 DiseaseSeriesObservation.time,
                 DiseaseSeriesObservation.series_code,
                 DiseaseSeriesObservation.geography_key,
                 DiseaseSeriesObservation.dimension_key,
-            ).in_(keys)
+                DiseaseSeriesObservation.value,
+                DiseaseSeriesObservation.unit,
+                DiseaseSeriesObservation.suppressed,
+                DiseaseSeriesObservation.suppression_reason,
+                DiseaseSeriesObservation.quality_status,
+                DiseaseSeriesObservation.dimensions,
+                DiseaseSeriesObservation.raw_data,
+                DiseaseSeriesObservation.metadata_.label("metadata"),
+                DiseaseSeriesObservation.created_at,
+                DiseaseSeriesObservation.updated_at,
+            ).where(
+                tuple_(
+                    DiseaseSeriesObservation.time,
+                    DiseaseSeriesObservation.series_code,
+                    DiseaseSeriesObservation.geography_key,
+                    DiseaseSeriesObservation.dimension_key,
+                ).in_(keys)
+            )
         )
-    )
-    current = [dict(row) for row in current_result.mappings().all()]
+        current = [dict(row) for row in current_result.mappings().all()]
+    else:
+        current = [dict(row) for row in current_rows]
     if not current:
         return 0
 
@@ -549,10 +556,8 @@ class SeriesObservationStore:
         skipped_unregistered = 0
         skipped_missing = 0
         for row in rows:
-            source_missing = (
-                str(row.get("MissingValueStatus") or "").strip().lower()
-                == "source_missing"
-            )
+            missing_value_status = str(row.get("MissingValueStatus") or "").strip().lower()
+            explicit_missing = missing_value_status in {"source_missing", "source_unreadable", "not_applicable"}
             label = _first_text(
                 row,
                 "RawDiseaseLabel",
@@ -578,12 +583,12 @@ class SeriesObservationStore:
             )
             if not matches:
                 skipped_unregistered += 1
-                if row.get(value_field) is not None and str(row.get(value_field)).strip():
+                if explicit_missing or (row.get(value_field) is not None and str(row.get(value_field)).strip()):
                     unregistered_rows.append(dict(row))
                 continue
             raw_value = row.get(value_field)
             if raw_value is None or not str(raw_value).strip():
-                if not source_missing:
+                if not explicit_missing:
                     skipped_missing += 1
                     continue
             selected.append(row)
@@ -613,12 +618,10 @@ class SeriesObservationStore:
         for row in rows:
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
-            source_missing = (
-                str(row.get("MissingValueStatus") or "").strip().lower()
-                == "source_missing"
-            )
+            missing_value_status = str(row.get("MissingValueStatus") or "").strip().lower()
+            explicit_missing = missing_value_status in {"source_missing", "source_unreadable", "not_applicable"}
             if report_time is None or (
-                value is None and not suppressed and not source_missing
+                value is None and not suppressed and not explicit_missing
             ):
                 skipped_invalid += 1
                 unhandled_rows.append(row)
@@ -707,13 +710,16 @@ class SeriesObservationStore:
                     ),
                     "authoritative_revision": _allows_authoritative_revision(row),
                     "missing_value_status": (
-                        "source_missing" if source_missing else None
+                        "source_missing" if missing_value_status == "source_unreadable"
+                        else missing_value_status if explicit_missing else None
                     ),
                     "allow_equal_quality_overwrite": (
                         _allows_equal_quality_overwrite(row)
                     ),
                 },
             }
+            if missing_value_status == "source_unreadable":
+                observation["metadata"]["missing_value_reason"] = "source_unreadable"
             identity = (
                 observation["time"],
                 observation["series_code"],
@@ -766,6 +772,8 @@ class SeriesObservationStore:
         quality_policy: SeriesObservationQualityPolicy | None = None,
         jp_holding_profiles: dict | None = None,
         authoritative_window_start: datetime | None = None,
+        history_relevant_periods_only: bool = False,
+        reuse_upsert_rows_for_revisions: bool = False,
     ) -> SeriesObservationSaveResult:
         policy = quality_policy or SeriesObservationQualityPolicy()
         if policy.registry_coverage == "legacy_only":
@@ -847,12 +855,18 @@ class SeriesObservationStore:
             )
 
         requested_codes = {row["series_code"] for row in built.observations}
-        existing = await db.execute(
-            select(DiseaseSurveillanceSeries.series_code).where(
-                DiseaseSurveillanceSeries.series_code.in_(requested_codes)
+        # Wide national source archives can contain more distinct strata than
+        # asyncpg's 32,767 bind-parameter limit. Bound reads as well as writes;
+        # the full set is still validated in this transaction.
+        available_codes = set()
+        ordered_codes = sorted(requested_codes)
+        for offset in range(0, len(ordered_codes), _WRITE_BATCH_SIZE):
+            existing = await db.execute(
+                select(DiseaseSurveillanceSeries.series_code).where(
+                    DiseaseSurveillanceSeries.series_code.in_(ordered_codes[offset:offset + _WRITE_BATCH_SIZE])
+                )
             )
-        )
-        available_codes = set(existing.scalars())
+            available_codes.update(existing.scalars())
         missing_codes = requested_codes - available_codes
         if missing_codes:
             from src.services.disease_ontology_sync_service import restore_missing_registry_series
@@ -875,6 +889,7 @@ class SeriesObservationStore:
             await self._load_recent_history(
                 db, observations, policy,
                 include_metadata=country_code.strip().upper() != "JP",
+                relevant_periods_only=history_relevant_periods_only,
             )
             if observations and policy.mode != "off"
             else []
@@ -931,6 +946,8 @@ class SeriesObservationStore:
         )
         affected_rows = 0
         accepted_changes: list[dict[str, Any]] = []
+        reuse_returned_rows = reuse_upsert_rows_for_revisions and authoritative_window_start is None
+        accepted_rows: list[dict[str, Any]] = []
         for offset in range(0, len(observations), _WRITE_BATCH_SIZE):
             batch = observations[offset : offset + _WRITE_BATCH_SIZE]
             # Build the insert against the underlying table.  Passing the ORM
@@ -985,7 +1002,7 @@ class SeriesObservationStore:
                     == "true",
                 ),
             )
-            if authoritative_window_start is not None:
+            if authoritative_window_start is not None or reuse_returned_rows:
                 statement = statement.returning(*DiseaseSeriesObservation.__table__.c)
             else:
                 statement = statement.returning(DiseaseSeriesObservation.series_code)
@@ -997,16 +1014,25 @@ class SeriesObservationStore:
                     previous = window_before.get(_revision_identity(row))
                     if previous is None or _revision_state(previous) != _revision_state(row):
                         accepted_changes.append(row)
+            elif reuse_returned_rows:
+                accepted = [dict(row) for row in write_result.mappings().all()]
+                affected_rows += len(accepted)
+                accepted_rows.extend(accepted)
             else:
                 affected_rows += len(write_result.scalars().all())
 
         changed_observations: list[dict[str, Any]] = []
+        revision_rows = (
+            list({_revision_identity(row): row for row in accepted_rows}.values())
+            if reuse_returned_rows else observations
+        )
         await _persist_observation_revisions(
             db,
-            observations,
+            revision_rows,
             recorded_at=revision_time,
             seed_current_state=False,
             changed_observations=changed_observations,
+            current_rows=revision_rows if reuse_returned_rows else None,
         )
 
         deleted_observations: list[dict[str, Any]] = []
@@ -1071,13 +1097,17 @@ class SeriesObservationStore:
             raise ValueError("Authoritative source windows require a source and geography")
         window_start = _as_utc(window_start)
         codes = {row["series_code"] for row in observations}
-        scoped_codes = set((await db.execute(
-            select(DiseaseSurveillanceSeries.series_code).where(
-                DiseaseSurveillanceSeries.series_code.in_(codes),
-                DiseaseSurveillanceSeries.country_code == country_code.upper(),
-                DiseaseSurveillanceSeries.source_system == source_id,
+        scoped_codes = set()
+        ordered_codes = sorted(codes)
+        for offset in range(0, len(ordered_codes), _WRITE_BATCH_SIZE):
+            result = await db.execute(
+                select(DiseaseSurveillanceSeries.series_code).where(
+                    DiseaseSurveillanceSeries.series_code.in_(ordered_codes[offset:offset + _WRITE_BATCH_SIZE]),
+                    DiseaseSurveillanceSeries.country_code == country_code.upper(),
+                    DiseaseSurveillanceSeries.source_system == source_id,
+                )
             )
-        )).scalars())
+            scoped_codes.update(result.scalars())
         if scoped_codes != codes or any(
             row["geography_key"] != geography_key
             or (row.get("metadata") or {}).get("source_id") != source_id
@@ -1158,13 +1188,11 @@ class SeriesObservationStore:
                 continue
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
-            source_missing = (
-                str(row.get("MissingValueStatus") or "").strip().lower()
-                == "source_missing"
-            )
+            missing_value_status = str(row.get("MissingValueStatus") or "").strip().lower()
+            explicit_missing = missing_value_status in {"source_missing", "source_unreadable", "not_applicable"}
             if (
                 report_time is None
-                or (value is None and not suppressed and not source_missing)
+                or (value is None and not suppressed and not explicit_missing)
                 or not resolved_source
             ):
                 continue
@@ -1414,13 +1442,11 @@ class SeriesObservationStore:
 
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
-            source_missing = (
-                str(row.get("MissingValueStatus") or "").strip().lower()
-                == "source_missing"
-            )
+            missing_value_status = str(row.get("MissingValueStatus") or "").strip().lower()
+            explicit_missing = missing_value_status in {"source_missing", "source_unreadable", "not_applicable"}
             if (
                 report_time is None
-                or (value is None and not suppressed and not source_missing)
+                or (value is None and not suppressed and not explicit_missing)
                 or not resolved_source
             ):
                 continue
@@ -1545,10 +1571,13 @@ class SeriesObservationStore:
                     "authoritative_revision": _allows_authoritative_revision(row),
                     "allow_equal_quality_overwrite": _allows_equal_quality_overwrite(row),
                     "missing_value_status": (
-                        "source_missing" if source_missing else None
+                        "source_missing" if missing_value_status == "source_unreadable"
+                        else missing_value_status if explicit_missing else None
                     ),
                 },
             }
+            if missing_value_status == "source_unreadable":
+                observation["metadata"]["missing_value_reason"] = "source_unreadable"
             identity = (
                 observation["time"],
                 observation["series_code"],
@@ -1666,11 +1695,22 @@ class SeriesObservationStore:
         policy: SeriesObservationQualityPolicy,
         *,
         include_metadata: bool = True,
+        relevant_periods_only: bool = False,
     ) -> list[dict[str, Any]]:
         requested_codes = {row["series_code"] for row in observations}
         earliest = min(_as_utc(row["time"]) for row in observations)
         latest = max(_as_utc(row["time"]) for row in observations)
         lower_bound = earliest - timedelta(days=policy.history_lookback_days)
+        if relevant_periods_only:
+            # Quality checks use prior history only for same-identity revisions,
+            # the incoming time window, and the immediately preceding period
+            # of an all-zero tail. Preserve the configured lookback as a cap.
+            frequencies = set(_frequency_by_series(observations).values())
+            predecessors = [
+                previous for frequency in frequencies
+                if (previous := _previous_period(earliest, frequency)) is not None
+            ]
+            lower_bound = max(lower_bound, min(predecessors, default=earliest))
         # Quality checks compare identity, values and frequency. Historical raw
         # provenance is never consulted (revision overrides apply to incoming
         # rows), so do not transfer/decode millions of large JSON payloads here.
@@ -1690,14 +1730,18 @@ class SeriesObservationStore:
         # other callers; provenance writes and revision snapshots are separate.
         if include_metadata:
             columns.append(DiseaseSeriesObservation.metadata_.label("metadata"))
-        result = await db.execute(
-            select(*columns).where(
-                DiseaseSeriesObservation.series_code.in_(requested_codes),
-                DiseaseSeriesObservation.time >= lower_bound,
-                DiseaseSeriesObservation.time <= latest,
+        history = []
+        ordered_codes = sorted(requested_codes)
+        for offset in range(0, len(ordered_codes), _WRITE_BATCH_SIZE):
+            result = await db.execute(
+                select(*columns).where(
+                    DiseaseSeriesObservation.series_code.in_(ordered_codes[offset:offset + _WRITE_BATCH_SIZE]),
+                    DiseaseSeriesObservation.time >= lower_bound,
+                    DiseaseSeriesObservation.time <= latest,
+                )
             )
-        )
-        return [dict(row) for row in result.mappings().all()]
+            history.extend(dict(row) for row in result.mappings().all())
+        return history
 
     def _resolve_series(
         self,

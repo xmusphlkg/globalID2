@@ -18,6 +18,32 @@ class StageInfo(BaseModel):
     last_run: Optional[str] = None  # ISO datetime string
 
 
+class SourceTransportReadinessOut(BaseModel):
+    configured: bool
+    proxy_kind: str
+    dependency_ready: bool
+
+
+class SourceChannelOut(BaseModel):
+    country_code: str
+    scope: str
+    source_id: str
+    publisher: str
+    official_url: str
+    archive_url: str
+    discovery_urls: List[str]
+    discovery_method: str = "GET"
+    discovery_form: Dict[str, str] = Field(default_factory=dict)
+    cadence: str
+    refresh_strategy: str
+    refresh_years: int
+    daily_time: str
+    timezone: str
+    integration_status: Optional[str] = None
+    coverage_verified: Optional[bool] = None
+    transport_readiness: Optional[SourceTransportReadinessOut] = None
+
+
 class DataSourceFlow(BaseModel):
     """Full data-ingestion flow for one data source inside a country."""
 
@@ -38,6 +64,7 @@ class DataSourceFlow(BaseModel):
     latest_date: Optional[str] = None
     history_start_year: Optional[int] = None
     source_scope: Optional[str] = None
+    source_channel: Optional[SourceChannelOut] = None
     latest_task_uuid: Optional[str] = None
     latest_task_source: Optional[str] = None
     latest_task_status: Optional[str] = None
@@ -61,6 +88,7 @@ class SourcePolicyOut(BaseModel):
 
 
 class SourceOptionOut(BaseModel):
+    source_channel: Optional[SourceChannelOut] = None
     value: str
     label_en: str
     label_zh: str
@@ -121,10 +149,13 @@ class AutomationJobOut(BaseModel):
     skipped_count: int = 0
     health_status: Literal[
         "healthy",
+        "needs_review",
+        "partial",
         "active",
         "recovering",
         "failed",
         "stale",
+        "stale_source",
         "never_run",
         "disabled",
         "unknown",

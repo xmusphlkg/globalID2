@@ -1,0 +1,6 @@
+{"code":"au","disease":"D110","regions":8,"points":2568,"window":{"from":"2024-01-01","to":"2024-12-31","metric":"rate","view":"monthly"},"ceiling":5,"ms":1502}
+{"code":"br","disease":"D021","regions":27,"points":8667,"window":{"from":"2025-01-01","to":"2025-12-31","metric":"rate","view":"monthly"},"ceiling":10000,"ms":2819}
+{"code":"cn","disease":"D025","regions":31,"points":7123,"window":{"from":"2021-01-01","to":"2021-12-31","metric":"rate","view":"monthly"},"ceiling":300,"ms":2100}
+{"code":"us","disease":"D094","regions":56,"points":23693,"window":{"from":"2025-01-01","to":"2025-12-31","metric":"rate","view":"monthly"},"ceiling":700,"ms":6005}
+{"code":"jp","disease":"D216","regions":47,"points":28905,"window":{"from":"2023-01-01","to":"2023-12-31","metric":"rate","view":"monthly"},"ceiling":2,"ms":4055}
+{"code":"se","disease":"D236","regions":21,"points":2709,"window":{"from":"2025-01-01","to":"2025-12-31","metric":"rate","view":"monthly"},"ceiling":200,"ms":308}

@@ -19,6 +19,9 @@ from src.generation.site_export import knowledge_queries as _knowledge_queries
 from src.generation.site_export import report_queries as _report_queries
 
 from src.core.country_library import get_country_bootstrap_config
+from src.services.surveillance_onboarding_review import (
+    REVIEWED_COLLECTION_COUNTRIES, collection_country, reviewed_public_record,
+)
 from src.generation.site_series_projection import (
     _normalise_count,
     apply_disease_cutover_projection,
@@ -54,6 +57,53 @@ _JP_SENTINEL_DISEASE_IDS = ("D136", "D138", "D139", "D141", "D143")
 # Broad precise updates otherwise repeat category resolution for nearly every
 # historical observation. Keep small target sets on the selective query path.
 _DENSE_REVIEWED_DISEASE_QUERY_THRESHOLD = 16
+
+
+# Only all-population disease counts have a valid total-resident denominator.
+# A count at sentinel sites is not population surveillance, even if dimension
+# "all" means all ages/sexes in that sentinel sample.
+_POPULATION_CASE_METRICS = (
+    "cases", "case_notifications", "case_count", "case_count_reported",
+    "confirmed_cases", "reported_cases", "incident_cases", "all_case_notifications",
+)
+_POPULATION_REPORTING_BASES = (
+    "notification", "notifications", "case_notification", "case_notifications",
+    "all_case", "all_cases", "national_registry_notifications",
+    "national_notifiable_disease_registry", "notifiable_disease_registry",
+    "statutory_notification", "statutory_notifications", "population_surveillance",
+    "ecdc_member_state_reported_aggregate_surveillance",
+    "national_health_profile", "national_notifiable_disease_surveillance",
+    "provincial_territorial_voluntary_notifications_national",
+    "report_506_mostly_suspected_notifications",
+    "dds_notification_report_date_and_place", "dds_notification_onset_date_and_place",
+    "provincial_statutory_infectious_disease_monthly_report", "mandatory_notification",
+    "national_notifiable_disease_surveillance_by_onset",
+    "registry_and_laboratory_surveillance", "who_country_reported_notifications",
+    "syndromic_notification", "laboratory_and_registry_diagnoses",
+    "national_notifiable_disease_radar", "voluntary_notification",
+)
+
+
+def _population_count_condition(value: str, metric: str, basis: str, unit: str, dimension: str, *, excluded: str = "FALSE", legacy_defaults: bool = False) -> str:
+    """SQL predicate shared by rates and their denominator provenance.
+
+    Arguments are internal SQL expressions, never user input. Missing legacy
+    semantics retain the historical count/notification contract; explicit rate,
+    positivity, sentinel and demographic-stratum semantics fail closed.
+    """
+    metric_fallback = "'case_notifications'" if legacy_defaults else "''"
+    basis_fallback = "'notification'" if legacy_defaults else "''"
+    metrics = ", ".join(repr(value) for value in _POPULATION_CASE_METRICS)
+    bases = ", ".join(repr(value) for value in _POPULATION_REPORTING_BASES)
+    return f"""{dimension} = 'all' AND (
+        ({value}) IS NOT NULL AND ({value}) >= 0
+        AND lower(CAST(({value}) AS text)) NOT IN ('nan', 'infinity', '-infinity', 'inf', '-inf')
+        AND ({value}) = floor(({value}))
+        AND lower(COALESCE(NULLIF(trim(({metric})), ''), {metric_fallback})) IN ({metrics})
+        AND lower(COALESCE(NULLIF(trim(({basis})), ''), {basis_fallback})) IN ({bases})
+        AND lower(COALESCE(({unit}), '')) IN ('count', 'cases', 'persons')
+        AND NOT ({excluded})
+    )"""
 
 
 def compact_report_metadata(metadata: dict | None, *, include_figures: bool = False) -> dict:
@@ -279,24 +329,41 @@ async def fetch_disease_records_direct(
                   ) = 'CH'
         """
     jp_sentinel_condition = (
-        "c.code = 'JP' AND d.name IN ("
+        "(c.code = 'JP' OR c.code LIKE 'JP-%') AND d.name IN ("
         + ", ".join(f"'{disease_id}'" for disease_id in _JP_SENTINEL_DISEASE_IDS)
         + ")"
+    )
+    metric_expr = f"""CASE WHEN {jp_sentinel_condition} THEN 'sentinel_case_notifications' ELSE COALESCE(
+        NULLIF(dr.metadata::jsonb ->> 'measure', ''),
+        NULLIF(dr.metadata::jsonb ->> 'metric_type', ''),
+        NULLIF(dr.raw_data::jsonb ->> 'Measure', '')
+    ) END"""
+    basis_expr = f"""CASE WHEN {jp_sentinel_condition} THEN 'sentinel_surveillance' ELSE COALESCE(
+        NULLIF(dr.metadata::jsonb ->> 'reporting_basis', ''),
+        NULLIF(dr.raw_data::jsonb ->> 'ReportingBasis', ''),
+        NULLIF(dr.metadata::jsonb ->> 'surveillance_type', ''),
+        NULLIF(dr.raw_data::jsonb ->> 'SurveillanceType', '')
+    ) END"""
+    population_eligible = _population_count_condition(
+        "dr.cases", metric_expr, basis_expr,
+        "COALESCE(NULLIF(dr.metadata::jsonb ->> 'unit', ''), 'count')",
+        "COALESCE(NULLIF(dr.metadata::jsonb ->> 'dimension_key', ''), 'all')",
+        excluded=jp_sentinel_condition, legacy_defaults=True,
     )
     incidence_expr = "dr.incidence_rate"
     incidence_source_expr = "CASE WHEN dr.incidence_rate IS NOT NULL THEN 'original_db' ELSE 'missing_population' END"
     population_join = ""
     if use_population_table:
-        incidence_expr = """
+        incidence_expr = f"""
             CASE
-                WHEN pr.population IS NOT NULL AND pr.population > 0 AND dr.cases IS NOT NULL
+                WHEN pr.population IS NOT NULL AND pr.population > 0 AND {population_eligible}
                     THEN (dr.cases::double precision / pr.population) * 100000.0
                 ELSE dr.incidence_rate
             END
             """
-        incidence_source_expr = """
+        incidence_source_expr = f"""
             CASE
-                WHEN pr.population IS NOT NULL AND pr.population > 0 AND dr.cases IS NOT NULL
+                WHEN pr.population IS NOT NULL AND pr.population > 0 AND {population_eligible}
                     THEN CASE WHEN pr.source = 'WPP' THEN 'wpp_computed' ELSE lower(pr.source) || '_computed' END
                 WHEN dr.incidence_rate IS NOT NULL
                     THEN 'original_db'
@@ -402,12 +469,14 @@ async def fetch_disease_series_records(
         return []
     # Subdivision observations use a local geography key, while their source
     # series belongs to the parent country's registry.
-    series_country_code = country_code.split("-", 1)[0]
+    series_country_code = collection_country(country_code)
     # These sources retain unmapped facts in holding series. Their legacy
     # series.disease_id is neither complete nor an authoritative review
     # decision; the active v3 release decides which observations may appear
     # on a standard disease page.
-    use_reviewed_mapping = series_country_code in {"JP", "SE", "DE", "CH", "US", "NZ"}
+    use_reviewed_mapping = series_country_code in (
+        {"JP", "SE", "DE", "CH", "US", "NZ"} | REVIEWED_COLLECTION_COUNTRIES
+    )
     disease_id_expr = "mapping.target_code" if use_reviewed_mapping else "dss.disease_id"
     mapping_relation_expr = "mapping.mapping_relation" if use_reviewed_mapping else "dss.mapping_relation"
     comparability_expr = "mapping.comparability" if use_reviewed_mapping else "dss.comparability"
@@ -423,10 +492,26 @@ async def fetch_disease_series_records(
         "mapping.projection_policy" if use_reviewed_mapping
         else "NULLIF(dss.metadata::jsonb ->> 'projection_policy', '')"
     )
+    # New native contracts encode classification/measure in local_code. A
+    # source_disease_code retained as evidence can be only the bare disease
+    # name (for example NCDC cholera rather than WER/suspected/week/cases).
+    # Keep the established six-country resolver unchanged.
+    def category_code_sql(series_alias):
+        original = (
+            "COALESCE(NULLIF(dso.dimensions->>'source_disease_code', ''), "
+            f"NULLIF(dso.metadata->>'local_code', ''), {series_alias}.source_series_code)"
+        )
+        if series_country_code not in REVIEWED_COLLECTION_COUNTRIES:
+            return original
+        return (
+            f"CASE WHEN {series_alias}.metadata->>'dynamic_holding' = 'true' "
+            "THEN COALESCE(NULLIF(dso.metadata->>'local_code', ''), "
+            f"{original}) ELSE {original} END"
+        )
     reviewed_mapping_join = ""
     reviewed_assertions_join = ""
     if use_reviewed_mapping:
-        reviewed_mapping_join = """
+        reviewed_mapping_join = f"""
             JOIN LATERAL (
                 SELECT source_category.*
                 FROM source_disease_categories source_category
@@ -435,11 +520,7 @@ async def fetch_disease_series_records(
                   AND (
                         (
                             source_category.definition_version = dss.definition_version
-                            AND source_category.source_code = COALESCE(
-                                  NULLIF(dso.dimensions->>'source_disease_code', ''),
-                                  NULLIF(dso.metadata->>'local_code', ''),
-                                  dss.source_series_code
-                                )
+                            AND source_category.source_code = {category_code_sql('dss')}
                         )
                         OR (
                             source_category.definition_version = 'source-current'
@@ -455,11 +536,7 @@ async def fetch_disease_series_records(
                       )
                 ORDER BY CASE
                     WHEN source_category.definition_version = dss.definition_version
-                     AND source_category.source_code = COALESCE(
-                           NULLIF(dso.dimensions->>'source_disease_code', ''),
-                           NULLIF(dso.metadata->>'local_code', ''),
-                           dss.source_series_code
-                         ) THEN 0
+                     AND source_category.source_code = {category_code_sql('dss')} THEN 0
                     ELSE 1
                 END,
                 source_category.id DESC
@@ -481,18 +558,22 @@ async def fetch_disease_series_records(
              AND mapping_release.status = 'active'
         """
         reviewed_mapping_join += reviewed_assertions_join
+    population_eligible = _population_count_condition(
+        "dso.value", "dss.metric_type", "dss.reporting_basis", "dso.unit", "dso.dimension_key",
+        excluded=jp_sentinel_series_condition,
+    )
     incidence_expr = "NULL::double precision"
     incidence_source_expr = "'missing_population'"
     population_join = ""
     if use_population_table:
         incidence_expr = (
-            "CASE WHEN dso.dimension_key = 'all' "
+            f"CASE WHEN {population_eligible} "
             "AND pr.population IS NOT NULL AND pr.population > 0 "
             "THEN (dso.value::double precision / pr.population) * 100000.0 "
             "ELSE NULL END"
         )
         incidence_source_expr = (
-            "CASE WHEN dso.dimension_key = 'all' "
+            f"CASE WHEN {population_eligible} "
             "AND pr.population IS NOT NULL AND pr.population > 0 "
             "THEN CASE WHEN pr.source = 'WPP' THEN 'wpp_computed' ELSE lower(pr.source) || '_computed' END ELSE 'missing_population' END"
         )
@@ -590,13 +671,13 @@ async def fetch_disease_series_records(
         query_params["population_code"] = country_code
 
     population_expr = (
-        "CASE WHEN dso.dimension_key = 'all' THEN pr.population::double precision "
+        f"CASE WHEN {population_eligible} THEN pr.population::double precision "
         "ELSE NULL::double precision END"
         if use_population_table
         else "NULL::double precision"
     )
     population_source_expr = (
-        "CASE WHEN dso.dimension_key = 'all' THEN pr.source ELSE NULL::text END"
+        f"CASE WHEN {population_eligible} THEN pr.source ELSE NULL::text END"
         if use_population_table
         else "NULL::text"
     )
@@ -612,6 +693,9 @@ async def fetch_disease_series_records(
         # export fields, excluding heavyweight raw provenance from this scan.
         # Dense target sets share this path and retain the exact final target
         # predicate; reading a broad scope never widens the returned diseases.
+        # Separate exact and label lookups so the unique identity index serves
+        # each exact match. The fallback's one-time filter prevents rescanning
+        # source-current labels for every age/sex category in large sources.
         history_columns = (
             ", dso.recorded_at, dso.recorded_history_complete"
             if recorded_at_as_of is not None else ""
@@ -621,9 +705,7 @@ async def fetch_disease_series_records(
                 SELECT dso.time, dso.series_code, dso.geography_key,
                        dso.dimension_key, dso.dimensions, dso.metadata,
                        dso.value, dso.unit, dso.quality_status, dso.suppressed,
-                       COALESCE(NULLIF(dso.dimensions->>'source_disease_code', ''),
-                                NULLIF(dso.metadata->>'local_code', ''),
-                                export_series.source_series_code) AS effective_source_code,
+                       {category_code_sql('export_series')} AS effective_source_code,
                        lower(btrim(COALESCE(
                            NULLIF(dso.dimensions->>'source_disease_label', ''),
                            NULLIF(dso.metadata->>'local_label', ''),
@@ -646,27 +728,37 @@ async def fetch_disease_series_records(
                 JOIN disease_surveillance_series dss ON dss.series_code = dso.series_code
             ), export_categories AS MATERIALIZED (
                 SELECT identity.series_code, identity.effective_source_code,
-                       identity.effective_source_label, category.id
+                       identity.effective_source_label,
+                       COALESCE(exact_category.id, fallback_category.id) AS id,
+                       COALESCE(exact_category.source_code, fallback_category.source_code) AS source_code,
+                       COALESCE(exact_category.canonical_source_label,
+                                fallback_category.canonical_source_label) AS canonical_source_label
                 FROM export_identities identity
-                JOIN LATERAL (
-                    SELECT source_category.id
+                LEFT JOIN LATERAL (
+                    SELECT source_category.id, source_category.source_code,
+                           source_category.canonical_source_label
                     FROM source_disease_categories source_category
                     WHERE source_category.source_id = identity.source_system
                       AND source_category.is_active IS TRUE
-                      AND (
-                        (source_category.definition_version = identity.definition_version
-                         AND source_category.source_code = identity.effective_source_code)
-                        OR (source_category.definition_version = 'source-current'
-                            AND source_category.source_code LIKE 'label:%'
-                            AND lower(btrim(source_category.canonical_source_label)) = identity.effective_source_label)
-                      )
-                    ORDER BY CASE
-                        WHEN source_category.definition_version = identity.definition_version
-                         AND source_category.source_code = identity.effective_source_code THEN 0
-                        ELSE 1
-                    END, source_category.id DESC
+                      AND source_category.definition_version = identity.definition_version
+                      AND source_category.source_code = identity.effective_source_code
+                    ORDER BY source_category.id DESC
                     LIMIT 1
-                ) category ON TRUE
+                ) exact_category ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT source_category.id, source_category.source_code,
+                           source_category.canonical_source_label
+                    FROM source_disease_categories source_category
+                    WHERE exact_category.id IS NULL
+                      AND source_category.source_id = identity.source_system
+                      AND source_category.is_active IS TRUE
+                      AND source_category.definition_version = 'source-current'
+                      AND source_category.source_code LIKE 'label:%'
+                      AND lower(btrim(source_category.canonical_source_label)) = identity.effective_source_label
+                    ORDER BY source_category.id DESC
+                    LIMIT 1
+                ) fallback_category ON TRUE
+                WHERE COALESCE(exact_category.id, fallback_category.id) IS NOT NULL
             )
         """
         observation_relation = "export_observations AS dso"
@@ -714,9 +806,7 @@ async def fetch_disease_series_records(
                       AND (candidate_category.mapping_valid_to IS NULL OR dso.time::date <= candidate_category.mapping_valid_to)
                       AND (
                         (candidate_category.definition_version = candidate_series.definition_version
-                         AND candidate_category.source_code = COALESCE(
-                           NULLIF(dso.dimensions->>'source_disease_code', ''),
-                           NULLIF(dso.metadata->>'local_code', ''), candidate_series.source_series_code))
+                         AND candidate_category.source_code = {category_code_sql('candidate_series')})
                         OR (candidate_category.definition_version = 'source-current'
                             AND candidate_category.source_code LIKE 'label:%'
                             AND lower(btrim(candidate_category.canonical_source_label)) = lower(btrim(COALESCE(
@@ -751,6 +841,8 @@ async def fetch_disease_series_records(
                 dss.source_system,
                 dss.source_series_code,
                 dss.source_label,
+                {"category.source_code" if use_reviewed_mapping else "NULL::text"} AS reviewed_source_code,
+                {"category.canonical_source_label" if use_reviewed_mapping else "NULL::text"} AS reviewed_source_label,
                 dss.definition_version,
                 dss.case_definition,
                 dss.case_definition_uri,
@@ -761,6 +853,7 @@ async def fetch_disease_series_records(
                      THEN 'sentinel_surveillance'
                      ELSE dss.reporting_basis END AS reporting_basis,
                 NULLIF(dss.metadata::jsonb ->> 'time_basis', '') AS time_basis,
+                NULLIF(dss.metadata::jsonb ->> 'paired_case_series_code', '') AS paired_case_series_code,
                 CASE WHEN {jp_sentinel_series_condition}
                      THEN 'weekly'
                      ELSE dss.temporal_granularity END AS temporal_granularity,
@@ -830,6 +923,9 @@ async def fetch_disease_series_records(
     result: list[dict] = []
     async for row in rows:
         record = dict(row._mapping)
+        record = reviewed_public_record(record, country_code)
+        if record is None:
+            continue
         if (
             public_source_systems
             and str(record.get("source_system") or "") not in public_source_systems
@@ -864,7 +960,7 @@ async def fetch_country_frequency_meta(
     registry_tables_exist: bool | None = None,
 ) -> dict:
     """Describe source periods without converting period totals into weekly rates."""
-    series_country_code = country_code.split("-", 1)[0]
+    series_country_code = collection_country(country_code)
     source_frequencies: list[str] = []
     if registry_tables_exist is None:
         registry_tables_exist = await has_table(

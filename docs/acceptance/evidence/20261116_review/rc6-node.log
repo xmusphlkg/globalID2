@@ -1,0 +1,630 @@
+TAP version 13
+# Subtest: situation surveillance context uses the current summary and never falls back to baked observations
+ok 1 - situation surveillance context uses the current summary and never falls back to baked observations
+  ---
+  duration_ms: 3.783421
+  type: 'test'
+  ...
+# Subtest: published lower-level areas keep their own summary without creating a parent aggregate
+ok 2 - published lower-level areas keep their own summary without creating a parent aggregate
+  ---
+  duration_ms: 0.73003
+  type: 'test'
+  ...
+# Subtest: homepage and map default counts use the same 30-day window and deduplication
+ok 3 - homepage and map default counts use the same 30-day window and deduplication
+  ---
+  duration_ms: 28.240043
+  type: 'test'
+  ...
+# Subtest: recency buckets follow the age of the report, not any severity
+ok 4 - recency buckets follow the age of the report, not any severity
+  ---
+  duration_ms: 0.455081
+  type: 'test'
+  ...
+# Subtest: points updated in the last 7 days sort first, then newest first
+ok 5 - points updated in the last 7 days sort first, then newest first
+  ---
+  duration_ms: 0.457693
+  type: 'test'
+  ...
+# Subtest: filters combine and the window drops older points
+ok 6 - filters combine and the window drops older points
+  ---
+  duration_ms: 0.636376
+  type: 'test'
+  ...
+# Subtest: host filters treat legacy records as unknown and never collapse different hosts
+ok 7 - host filters treat legacy records as unknown and never collapse different hosts
+  ---
+  duration_ms: 4.762126
+  type: 'test'
+  ...
+# Subtest: time windows include the boundary but exclude future and invalid dates
+ok 8 - time windows include the boundary but exclude future and invalid dates
+  ---
+  duration_ms: 0.523797
+  type: 'test'
+  ...
+# Subtest: repeated facts from different feeds form one event and retain both sources
+ok 9 - repeated facts from different feeds form one event and retain both sources
+  ---
+  duration_ms: 0.886194
+  type: 'test'
+  ...
+# Subtest: distinct updates, places, outbreaks and count bases never collapse
+ok 10 - distinct updates, places, outbreaks and count bases never collapse
+  ---
+  duration_ms: 0.749452
+  type: 'test'
+  ...
+# Subtest: publication dates do not split reports of the same dated figures
+ok 11 - publication dates do not split reports of the same dated figures
+  ---
+  duration_ms: 0.856972
+  type: 'test'
+  ...
+# Subtest: MERS Saudi Arabia annual totals form two cards with all six source reports
+ok 12 - MERS Saudi Arabia annual totals form two cards with all six source reports
+  ---
+  duration_ms: 2.518013
+  type: 'test'
+  ...
+# Subtest: annual grouping separates years, suspected counts and different reporting periods
+ok 13 - annual grouping separates years, suspected counts and different reporting periods
+  ---
+  duration_ms: 0.69997
+  type: 'test'
+  ...
+# Subtest: New Zealand is a place name, while new laboratory-confirmed cases remain incident evidence
+ok 14 - New Zealand is a place name, while new laboratory-confirmed cases remain incident evidence
+  ---
+  duration_ms: 5.270388
+  type: 'test'
+  ...
+# Subtest: reports without figures need matching evidence, not just matching empty fields
+ok 15 - reports without figures need matching evidence, not just matching empty fields
+  ---
+  duration_ms: 0.392696
+  type: 'test'
+  ...
+# Subtest: map points collapse repeated place reports after source filtering
+ok 16 - map points collapse repeated place reports after source filtering
+  ---
+  duration_ms: 0.422404
+  type: 'test'
+  ...
+# Subtest: full history filtering keeps old channels and reduces each outbreak place to its newest matching marker
+ok 17 - full history filtering keeps old channels and reduces each outbreak place to its newest matching marker
+  ---
+  duration_ms: 0.842644
+  type: 'test'
+  ...
+# Subtest: structured cumulative data merge only across the same start, figures and literal count basis
+ok 18 - structured cumulative data merge only across the same start, figures and literal count basis
+  ---
+  duration_ms: 0.567441
+  type: 'test'
+  ...
+# Subtest: structured incident data require the same complete interval and take precedence over annual prose
+ok 19 - structured incident data require the same complete interval and take precedence over annual prose
+  ---
+  duration_ms: 0.503909
+  type: 'test'
+  ...
+# Subtest: invalid structured dates and missing incident ends cannot silently use annual fallback
+ok 20 - invalid structured dates and missing incident ends cannot silently use annual fallback
+  ---
+  duration_ms: 0.493335
+  type: 'test'
+  ...
+# Subtest: a quoted incident interval blocks a conflicting annual summary
+ok 21 - a quoted incident interval blocks a conflicting annual summary
+  ---
+  duration_ms: 0.770698
+  type: 'test'
+  ...
+# Subtest: ambiguous periods and conflicting quoted years do not combine with annual totals
+ok 22 - ambiguous periods and conflicting quoted years do not combine with annual totals
+  ---
+  duration_ms: 0.42776
+  type: 'test'
+  ...
+# Subtest: explicit annual start alone does not equate total, confirmed, suspected or probable bases
+ok 23 - explicit annual start alone does not equate total, confirmed, suspected or probable bases
+  ---
+  duration_ms: 0.794596
+  type: 'test'
+  ...
+# Subtest: period dates beyond publication or inconsistent with the count cutoff stay individual
+ok 24 - period dates beyond publication or inconsistent with the count cutoff stay individual
+  ---
+  duration_ms: 0.56093
+  type: 'test'
+  ...
+# Subtest: multiple incident intervals and undated month evidence cannot use an annual summary
+ok 25 - multiple incident intervals and undated month evidence cannot use an annual summary
+  ---
+  duration_ms: 0.461617
+  type: 'test'
+  ...
+# Subtest: anchors use the largest landmass and points in one country fan out
+ok 26 - anchors use the largest landmass and points in one country fan out
+  ---
+  duration_ms: 1.805912
+  type: 'test'
+  ...
+# Subtest: exported coordinates win over the country anchor and do not use its fan-out
+ok 27 - exported coordinates win over the country anchor and do not use its fan-out
+  ---
+  duration_ms: 0.790081
+  type: 'test'
+  ...
+# Subtest: timeline graph packs columns: a country holds one only while it is active, and lines bend left when one ends
+ok 28 - timeline graph packs columns: a country holds one only while it is active, and lines bend left when one ends
+  ---
+  duration_ms: 1.731412
+  type: 'test'
+  ...
+# Subtest: timeline graph stays one column wide when countries never overlap
+ok 29 - timeline graph stays one column wide when countries never overlap
+  ---
+  duration_ms: 0.63306
+  type: 'test'
+  ...
+# Subtest: timeline graph folds the quietest countries into one shared grey lane
+ok 30 - timeline graph folds the quietest countries into one shared grey lane
+  ---
+  duration_ms: 0.683538
+  type: 'test'
+  ...
+# Subtest: fitView falls back to the world with no points or no size
+ok 31 - fitView falls back to the world with no points or no size
+  ---
+  duration_ms: 0.471458
+  type: 'test'
+  ...
+# Subtest: fitView centres a single place and caps the zoom
+ok 32 - fitView centres a single place and caps the zoom
+  ---
+  duration_ms: 0.283172
+  type: 'test'
+  ...
+# Subtest: fitView zooms out further for a wider spread and frames its middle
+ok 33 - fitView zooms out further for a wider spread and frames its middle
+  ---
+  duration_ms: 0.280211
+  type: 'test'
+  ...
+# Subtest: fitView returns the world view for global spreads, including across the dateline
+ok 34 - fitView returns the world view for global spreads, including across the dateline
+  ---
+  duration_ms: 0.219418
+  type: 'test'
+  ...
+# Subtest: a report without per-event host metadata cannot match an explicit host filter
+ok 35 - a report without per-event host metadata cannot match an explicit host filter
+  ---
+  duration_ms: 2.228379
+  type: 'test'
+  ...
+# Subtest: monitoring combines source and time filters, rejects future/invalid dates and deduplicates notices
+ok 36 - monitoring combines source and time filters, rejects future/invalid dates and deduplicates notices
+  ---
+  duration_ms: 12.491611
+  type: 'test'
+  ...
+# Subtest: legacy title coverage combines disease and area without substring false positives
+ok 37 - legacy title coverage combines disease and area without substring false positives
+  ---
+  duration_ms: 4.096345
+  type: 'test'
+  ...
+# Subtest: legacy title matching accepts aliases from points, slug separators and Chinese names
+ok 38 - legacy title matching accepts aliases from points, slug separators and Chinese names
+  ---
+  duration_ms: 7.440191
+  type: 'test'
+  ...
+# Subtest: explicit coverage takes precedence over title and supports reports with generic titles
+ok 39 - explicit coverage takes precedence over title and supports reports with generic titles
+  ---
+  duration_ms: 0.54622
+  type: 'test'
+  ...
+# Subtest: unknown disease or area metadata never exposes unrelated reports
+ok 40 - unknown disease or area metadata never exposes unrelated reports
+  ---
+  duration_ms: 0.458756
+  type: 'test'
+  ...
+# Subtest: monitoring window includes its boundary and orders newest reports first
+ok 41 - monitoring window includes its boundary and orders newest reports first
+  ---
+  duration_ms: 0.279221
+  type: 'test'
+  ...
+# Subtest: all locales distinguish people, animals and records without a confirmed unit
+ok 42 - all locales distinguish people, animals and records without a confirmed unit
+  ---
+  duration_ms: 25.873998
+  type: 'test'
+  ...
+# Subtest: overview chooses a complete entity shard or only matching outbreaks
+ok 43 - overview chooses a complete entity shard or only matching outbreaks
+  ---
+  duration_ms: 2.768213
+  type: 'test'
+  ...
+# Subtest: legacy overview uses matching outbreak routes even with entity filters
+ok 44 - legacy overview uses matching outbreak routes even with entity filters
+  ---
+  duration_ms: 0.433583
+  type: 'test'
+  ...
+# Subtest: overview limits concurrent reads, preserves partial results and deduplicates report identities
+ok 45 - overview limits concurrent reads, preserves partial results and deduplicates report identities
+  ---
+  duration_ms: 8.227292
+  type: 'test'
+  ...
+# Subtest: abandoned overview reads never publish results or start another batch
+ok 46 - abandoned overview reads never publish results or start another batch
+  ---
+  duration_ms: 0.489069
+  type: 'test'
+  ...
+# Subtest: a glance uses the newest non-zero point and keeps the tail for the sparkline
+ok 47 - a glance uses the newest non-zero point and keeps the tail for the sparkline
+  ---
+  duration_ms: 2.271153
+  type: 'test'
+  ...
+# Subtest: an all-zero series still reports the latest zero, and empty input is absent
+ok 48 - an all-zero series still reports the latest zero, and empty input is absent
+  ---
+  duration_ms: 0.315968
+  type: 'test'
+  ...
+# Subtest: the site index prefixes catalogue links and sparks only the requested pairs
+ok 49 - the site index prefixes catalogue links and sparks only the requested pairs
+  ---
+  duration_ms: 1.88144
+  type: 'test'
+  ...
+# Subtest: a series that is not on the map omits the spark and an unpublished curve
+ok 50 - a series that is not on the map omits the spark and an unpublished curve
+  ---
+  duration_ms: 0.40964
+  type: 'test'
+  ...
+# Subtest: selected Japanese curves never inherit the first Australian source in worldwide metadata
+ok 51 - selected Japanese curves never inherit the first Australian source in worldwide metadata
+  ---
+  duration_ms: 2.2761
+  type: 'test'
+  ...
+# Subtest: multiple selected countries retain their own authorities and deduplicate provenance
+ok 52 - multiple selected countries retain their own authorities and deduplicate provenance
+  ---
+  duration_ms: 0.585507
+  type: 'test'
+  ...
+# Subtest: scope follows the selected entity and visible nonmissing observations rather than global coverage
+ok 53 - scope follows the selected entity and visible nonmissing observations rather than global coverage
+  ---
+  duration_ms: 18.620899
+  type: 'test'
+  ...
+# Subtest: every country coverage entry has geographic and income classifications
+ok 54 - every country coverage entry has geographic and income classifications
+  ---
+  duration_ms: 2.793291
+  type: 'test'
+  ...
+# Subtest: subnational coverage inherits its parent country classification
+ok 55 - subnational coverage inherits its parent country classification
+  ---
+  duration_ms: 0.279632
+  type: 'test'
+  ...
+# Subtest: classification snapshot records its official source vintage
+ok 56 - classification snapshot records its official source vintage
+  ---
+  duration_ms: 0.533728
+  type: 'test'
+  ...
+# Subtest: an empty seeded metadata row does not activate a scheduled country
+ok 57 - an empty seeded metadata row does not activate a scheduled country
+  ---
+  duration_ms: 1.418963
+  type: 'test'
+  ...
+# Subtest: a snapshot requires records or a disease-bearing coverage window
+ok 58 - a snapshot requires records or a disease-bearing coverage window
+  ---
+  duration_ms: 0.189146
+  type: 'test'
+  ...
+# Subtest: existing active pipelines remain supported without a generated snapshot
+ok 59 - existing active pipelines remain supported without a generated snapshot
+  ---
+  duration_ms: 0.146862
+  type: 'test'
+  ...
+# Subtest: Ontario is a first-class region that activates when its snapshot exists
+ok 60 - Ontario is a first-class region that activates when its snapshot exists
+  ---
+  duration_ms: 0.17986
+  type: 'test'
+  ...
+# Subtest: Sweden remains supported after its verified baseline import
+ok 61 - Sweden remains supported after its verified baseline import
+  ---
+  duration_ms: 0.163935
+  type: 'test'
+  ...
+# Subtest: ISO subdivision locations use their parent country flag
+ok 62 - ISO subdivision locations use their parent country flag
+  ---
+  duration_ms: 0.311747
+  type: 'test'
+  ...
+# Subtest: every country coverage marker has a bundled flag asset
+ok 63 - every country coverage marker has a bundled flag asset
+  ---
+  duration_ms: 2.545764
+  type: 'test'
+  ...
+# Subtest: the local flag library contains every ISO country flag
+ok 64 - the local flag library contains every ISO country flag
+  ---
+  duration_ms: 4.701328
+  type: 'test'
+  ...
+# (node:874443) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: one page pins summary, curves and lazy source details to one publication
+ok 65 - one page pins summary, curves and lazy source details to one publication
+  ---
+  duration_ms: 63.088789
+  type: 'test'
+  ...
+# Subtest: manifest 404 migrates through legacy paths; existing manifest never mixes missing or corrupt files
+ok 66 - manifest 404 migrates through legacy paths; existing manifest never mixes missing or corrupt files
+  ---
+  duration_ms: 6.118603
+  type: 'test'
+  ...
+# Subtest: failed manifest requests can retry and invalid manifests or object sizes fail closed
+ok 67 - failed manifest requests can retry and invalid manifests or object sizes fail closed
+  ---
+  duration_ms: 8.00223
+  type: 'test'
+  ...
+# Subtest: large curve readers can release raw JSON while keeping the publication pinned
+ok 68 - large curve readers can release raw JSON while keeping the publication pinned
+  ---
+  duration_ms: 3.465068
+  type: 'test'
+  ...
+# Subtest: HTTP gzip representations verify decoded JSON bytes rather than Content-Length
+ok 69 - HTTP gzip representations verify decoded JSON bytes rather than Content-Length
+  ---
+  duration_ms: 3.462099
+  type: 'test'
+  ...
+# Subtest: independent Situation namespace pins its map and late outbreak without using surveillance
+ok 70 - independent Situation namespace pins its map and late outbreak without using surveillance
+  ---
+  duration_ms: 3.312806
+  type: 'test'
+  ...
+# Subtest: small bootstrap renders a summary before loading the complete pinned manifest
+ok 71 - small bootstrap renders a summary before loading the complete pinned manifest
+  ---
+  duration_ms: 4.504476
+  type: 'test'
+  ...
+# Subtest: a missing bootstrap supports legacy servers; corrupt lazy manifests never fall back to current data
+ok 72 - a missing bootstrap supports legacy servers; corrupt lazy manifests never fall back to current data
+  ---
+  duration_ms: 6.021239
+  type: 'test'
+  ...
+# Subtest: bootstrap.json has a bounded fetch wait and can retry
+ok 73 - bootstrap.json has a bounded fetch wait and can retry
+  ---
+  duration_ms: 4.653657
+  type: 'test'
+  ...
+# Subtest: bootstrap.json has a bounded body wait and can retry
+ok 74 - bootstrap.json has a bounded body wait and can retry
+  ---
+  duration_ms: 2.876568
+  type: 'test'
+  ...
+# Subtest: current.json has a bounded fetch wait and can retry
+ok 75 - current.json has a bounded fetch wait and can retry
+  ---
+  duration_ms: 2.433953
+  type: 'test'
+  ...
+# Subtest: current.json has a bounded body wait and can retry
+ok 76 - current.json has a bounded body wait and can retry
+  ---
+  duration_ms: 2.096634
+  type: 'test'
+  ...
+# Subtest: manifests/one.json has a bounded fetch wait and can retry
+ok 77 - manifests/one.json has a bounded fetch wait and can retry
+  ---
+  duration_ms: 2.666837
+  type: 'test'
+  ...
+# Subtest: manifests/one.json has a bounded body wait and can retry
+ok 78 - manifests/one.json has a bounded body wait and can retry
+  ---
+  duration_ms: 2.256981
+  type: 'test'
+  ...
+# Subtest: objects/one.json has a bounded fetch wait and can retry
+ok 79 - objects/one.json has a bounded fetch wait and can retry
+  ---
+  duration_ms: 2.284787
+  type: 'test'
+  ...
+# Subtest: objects/one.json has a bounded body wait and can retry
+ok 80 - objects/one.json has a bounded body wait and can retry
+  ---
+  duration_ms: 2.817827
+  type: 'test'
+  ...
+# Subtest: body waits on /other/dataset.json also time out
+ok 81 - body waits on /other/dataset.json also time out
+  ---
+  duration_ms: 1.431199
+  type: 'test'
+  ...
+# Subtest: body waits on /site-data/legacy.json also time out
+ok 82 - body waits on /site-data/legacy.json also time out
+  ---
+  duration_ms: 1.252066
+  type: 'test'
+  ...
+# Subtest: canceling a consumer during bootstrap.json leaves other consumers and the in-flight cache intact
+ok 83 - canceling a consumer during bootstrap.json leaves other consumers and the in-flight cache intact
+  ---
+  duration_ms: 3.327417
+  type: 'test'
+  ...
+# Subtest: canceling a consumer during current.json leaves other consumers and the in-flight cache intact
+ok 84 - canceling a consumer during current.json leaves other consumers and the in-flight cache intact
+  ---
+  duration_ms: 5.265431
+  type: 'test'
+  ...
+# Subtest: canceling a consumer during manifests/one.json leaves other consumers and the in-flight cache intact
+ok 85 - canceling a consumer during manifests/one.json leaves other consumers and the in-flight cache intact
+  ---
+  duration_ms: 2.913223
+  type: 'test'
+  ...
+# Subtest: canceling a consumer during objects/one.json leaves other consumers and the in-flight cache intact
+ok 86 - canceling a consumer during objects/one.json leaves other consumers and the in-flight cache intact
+  ---
+  duration_ms: 2.292099
+  type: 'test'
+  ...
+# Subtest: successful retain:true consumers keep the cache even when retain:false consumers finish later
+ok 87 - successful retain:true consumers keep the cache even when retain:false consumers finish later
+  ---
+  duration_ms: 1.910694
+  type: 'test'
+  ...
+# Subtest: all canceled consumers release unretained results while preserving the pinned manifest
+ok 88 - all canceled consumers release unretained results while preserving the pinned manifest
+  ---
+  duration_ms: 38.177283
+  type: 'test'
+  ...
+# Subtest: abandoned requests abort at their deadline, and a late failure cannot evict the retry
+ok 89 - abandoned requests abort at their deadline, and a late failure cannot evict the retry
+  ---
+  duration_ms: 2.754478
+  type: 'test'
+  ...
+# Subtest: already canceled callers start no requests, and manifest subscribers cancel independently
+ok 90 - already canceled callers start no requests, and manifest subscribers cancel independently
+  ---
+  duration_ms: 0.797311
+  type: 'test'
+  ...
+# Subtest: successful requests clear their deadlines after completing the response body
+ok 91 - successful requests clear their deadlines after completing the response body
+  ---
+  duration_ms: 0.870939
+  type: 'test'
+  ...
+# Subtest: national coverage excludes subdivisions and unavailable datasets
+ok 92 - national coverage excludes subdivisions and unavailable datasets
+  ---
+  duration_ms: 2.439666
+  type: 'test'
+  ...
+# Subtest: source deduplication retains jurisdiction context and distinct definitions
+ok 93 - source deduplication retains jurisdiction context and distinct definitions
+  ---
+  duration_ms: 0.355626
+  type: 'test'
+  ...
+# Subtest: French labels and reporting cadence use the existing translations
+ok 94 - French labels and reporting cadence use the existing translations
+  ---
+  duration_ms: 33.323061
+  type: 'test'
+  ...
+# Subtest: hero curves preserve missing gaps, real zeros, and relative peaks
+ok 95 - hero curves preserve missing gaps, real zeros, and relative peaks
+  ---
+  duration_ms: 0.726219
+  type: 'test'
+  ...
+# Subtest: snapshot comparison requires consecutive reported periods and preserves a latest zero
+ok 96 - snapshot comparison requires consecutive reported periods and preserves a latest zero
+  ---
+  duration_ms: 0.597158
+  type: 'test'
+  ...
+# Subtest: archive boundaries use ISO weeks and monthly totals count distinct outbreaks
+ok 97 - archive boundaries use ISO weeks and monthly totals count distinct outbreaks
+  ---
+  duration_ms: 1.170586
+  type: 'test'
+  ...
+# Subtest: a country page slug resolves to the ISO-keyed shard
+ok 98 - a country page slug resolves to the ISO-keyed shard
+  ---
+  duration_ms: 3.239321
+  type: 'test'
+  ...
+# Subtest: sub-national pages never inherit their parent country alerts
+ok 99 - sub-national pages never inherit their parent country alerts
+  ---
+  duration_ms: 299.447978
+  type: 'test'
+  ...
+# Subtest: unknown slugs and traversal attempts resolve to nothing
+ok 100 - unknown slugs and traversal attempts resolve to nothing
+  ---
+  duration_ms: 1.101328
+  type: 'test'
+  ...
+# Subtest: a foreign schema version reads as absent
+ok 101 - a foreign schema version reads as absent
+  ---
+  duration_ms: 1.031241
+  type: 'test'
+  ...
+# Subtest: recentAlerts caps the list and keeps newest first
+ok 102 - recentAlerts caps the list and keeps newest first
+  ---
+  duration_ms: 19.907261
+  type: 'test'
+  ...
+# Subtest: ISO week helpers agree with the export keys
+ok 103 - ISO week helpers agree with the export keys
+  ---
+  duration_ms: 1.034522
+  type: 'test'
+  ...
+1..103
+# tests 103
+# suites 0
+# pass 103
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 655.816445

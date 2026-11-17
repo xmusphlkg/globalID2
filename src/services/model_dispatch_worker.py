@@ -7,6 +7,7 @@ two dispatchers from claiming the same model call.
 """
 from __future__ import annotations
 
+import argparse
 import asyncio
 import signal
 
@@ -18,7 +19,7 @@ from src.services.model_dispatch_ready import worker_ready
 logger = get_logger(__name__)
 
 
-async def run() -> None:
+async def run(*, wait_for_worker: bool = True) -> None:
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -27,7 +28,7 @@ async def run() -> None:
         except NotImplementedError:
             pass
     try:
-        while not stop.is_set() and not worker_ready():
+        while wait_for_worker and not stop.is_set() and not worker_ready():
             try:
                 await asyncio.wait_for(stop.wait(), timeout=1.0)
             except asyncio.TimeoutError:
@@ -42,4 +43,9 @@ async def run() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--standalone", action="store_true",
+        help="Run the existing owner-fenced dispatcher independently of a task-worker readiness marker",
+    )
+    asyncio.run(run(wait_for_worker=not parser.parse_args().standalone))

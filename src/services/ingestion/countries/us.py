@@ -16,6 +16,33 @@ from src.data.crawlers.us import (
 from src.services.ingestion.artifacts import read_artifact
 
 
+async def completed_archive_years(db, *, country_code):
+    """A successful store, rather than national facts, proves archive coverage.
+
+    Archived tables only produce subdivision facts. A national collection
+    stores all of those subdivisions; a subdivision collection covers itself.
+    Failed attempts and collection-only runs must never advance coverage.
+    """
+    from sqlalchemy import Integer, and_, cast, or_, select
+    from src.domain.collection import RunStage, SourceArtifact
+
+    scopes = {"us", country_code.lower()}
+    year = cast(SourceArtifact.metadata_["year"].as_string(), Integer)
+    return set((await db.execute(
+        select(year).distinct().join(RunStage, and_(
+            RunStage.task_uuid == SourceArtifact.task_uuid,
+            RunStage.attempt == SourceArtifact.attempt,
+            RunStage.stage == "store",
+            RunStage.status == "completed",
+            RunStage.metrics["process"].as_boolean().is_(True),
+        )).where(
+            SourceArtifact.kind == "archive_json",
+            year.in_(NNDSS_ARCHIVE_YEARS),
+            or_(*(SourceArtifact.relative_path.startswith(f"data/raw/{scope}/") for scope in sorted(scopes))),
+        )
+    )).scalars().all())
+
+
 def mmwr_lower_bound(day: date) -> tuple[int, int]:
     """First source week ending on/after day, using the existing CDC calendar."""
     from src.data.processors.us import _mmwr_week_end_date
@@ -34,14 +61,14 @@ async def plan_collection(db, *, country_code, source, force=False, fill_missing
 
     Normal refreshes revisit only the established eight-week revision window.
     Missing old years are repaired only on explicit fill_missing, or bootstrap
-    when this geography has no NNDSS data at all. Holding/unmapped ledger rows
-    participate without requiring a legacy disease mapping.
+    when this geography has no NNDSS data at all. Completed store receipts
+    prove archive coverage; holding/unmapped facts advance the recent window.
     """
     if normalize_source(source) == "nhss_hiv":
         return {}
     if force:
         return {"nndss_start": None, "archive_years": NNDSS_ARCHIVE_YEARS}
-    from sqlalchemy import Integer, String, cast, func, select
+    from sqlalchemy import func, select
     from src.domain import DiseaseSeriesObservation, DiseaseSurveillanceSeries
     from src.data.processors.us import NNDSS_MAPPING_SOURCE_ID, NNDSS_REVISION_LOOKBACK_WEEKS
     observation, series = DiseaseSeriesObservation, DiseaseSurveillanceSeries
@@ -58,27 +85,16 @@ async def plan_collection(db, *, country_code, source, force=False, fill_missing
     )).scalar_one()
     latest = ledger_latest.date() if ledger_latest is not None else None
     if latest is None:
-        return {"nndss_start": None, "archive_years": NNDSS_ARCHIVE_YEARS}
+        completed = await completed_archive_years(db, country_code=country_code)
+        return {"nndss_start": None, "archive_years": tuple(year for year in NNDSS_ARCHIVE_YEARS if year not in completed)}
     revision_start = latest - timedelta(weeks=NNDSS_REVISION_LOOKBACK_WEEKS)
     lower = mmwr_lower_bound(revision_start)
     # A latest week in an old source archive still needs its revision window;
     # the current CSV does not contain the 2014–2021 historical datasets.
     archives = {year for year in NNDSS_ARCHIVE_YEARS if year >= lower[0]}
     if fill_missing:
-        source_year = cast(func.coalesce(
-            func.nullif(observation.raw_data["MMWRYear"].as_string(), ""),
-            func.nullif(observation.raw_data["Current MMWR Year"].as_string(), ""),
-            func.nullif(observation.raw_data["year"].as_string(), ""),
-            func.nullif(observation.metadata_["mmwr_year"].as_string(), ""),
-            cast(func.extract("year", observation.time), String),
-        ), Integer)
-        ledger_years = (await db.execute(
-            select(source_year).distinct()
-            .join(series, series.series_code == observation.series_code)
-            .where(*ledger_filters)
-        )).scalars().all()
-        present = set(ledger_years)
-        archives.update(set(NNDSS_ARCHIVE_YEARS) - present)
+        completed = await completed_archive_years(db, country_code=country_code)
+        archives.update(set(NNDSS_ARCHIVE_YEARS) - completed)
     return {"nndss_start": None if fill_missing else lower, "archive_years": tuple(sorted(archives))}
 
 
@@ -114,7 +130,7 @@ def normalize_source(source):
     return source
 
 
-async def collect(writer, *, source="all", subdivision=False, nndss_start=None, archive_years=None, task_uuid=None):
+async def collect(writer, *, source="all", subdivision=False, nndss_start=None, archive_years=None, task_uuid=None, force=False):
     source = normalize_source(source)
     if source in {"all", "nndss_api"}:
         crawler = USNNDSSCrawler()
@@ -153,11 +169,14 @@ async def collect(writer, *, source="all", subdivision=False, nndss_start=None, 
                     offset = 0
                     while True:
                         await _check_cancelled(task_uuid)
-                        url = f"https://data.cdc.gov/resource/{resource['id']}.json"
-                        response = await asyncio.to_thread(crawler.get, url, params={"$limit": SOCRATA_PAGE_SIZE, "$offset": offset})
-                        await writer.write(response.content, source_url=response.url, kind="archive_json", metadata={"year": year, "resource": resource})
+                        from src.services.ingestion.us_archive_cache import fetch_archive_page
+                        payload, source_url, cached = await asyncio.to_thread(
+                            fetch_archive_page, crawler, resource, offset=offset,
+                            page_size=SOCRATA_PAGE_SIZE, force=force,
+                        )
+                        await writer.write(payload, source_url=source_url, kind="archive_json", metadata={"year": year, "resource": resource, "cache_hit": cached})
                         await _check_cancelled(task_uuid)
-                        if len(response.json()) < SOCRATA_PAGE_SIZE:
+                        if len(json.loads(payload)) < SOCRATA_PAGE_SIZE:
                             break
                         offset += SOCRATA_PAGE_SIZE
         finally:
@@ -179,7 +198,7 @@ async def collect(writer, *, source="all", subdivision=False, nndss_start=None, 
     return writer.artifacts
 
 
-def organize(artifacts, *, updater, source, subdivision=False, nndss_start=None, archive_years=None, task_uuid=None):
+def organize(artifacts, *, updater, source, subdivision=False, nndss_start=None, archive_years=None, task_uuid=None, force=False):
     source = normalize_source(source)
     nndss_rows, archive_refs = [], {}
     nhss = None
@@ -197,8 +216,9 @@ def organize(artifacts, *, updater, source, subdivision=False, nndss_start=None,
             nndss_rows.extend(rows)
             archive_counts[year] = archive_counts.get(year, 0) + len(rows)
             archive_refs.setdefault(year, {})[resource["id"]] = f"https://data.cdc.gov/d/{resource['id']}"
-    for year, count in archive_counts.items():
-        if not count:
+    expected_years = (NNDSS_ARCHIVE_YEARS if archive_years is None else archive_years) if source in {"all", "nndss_api"} else ()
+    for year in expected_years:
+        if not archive_counts.get(year):
             raise RuntimeError(f"[US-NNDSS] CDC archive tables for {year} contained no usable rows")
     refs = [DEFAULT_CSV_API_URL] + [ref for tables in archive_refs.values() for ref in tables.values()]
     nndss = (nndss_rows, " | ".join(refs)) if source in {"all", "nndss_api"} else None

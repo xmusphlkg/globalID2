@@ -1,0 +1,5 @@
+[32m2026-11-16 11:24:29[0m | [1mINFO    [0m | [36msrc.core.logging[0m:[36msetup_logging[0m:[36m64[0m - [1mLogging initialized - Level: INFO[0m
+NL numeric -> blank: incoming identity omitted; upsert projection retains stale value 65
+MY FluNet numeric -> null: 1 previously numeric identity omitted
+TH Tableau run after outage: offered weeks=1..45, automatic selected= [45]
+TH PDF run after outage: offered weeks=43,44,45, automatic selected= [45]

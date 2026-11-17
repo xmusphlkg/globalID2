@@ -1,0 +1,116 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_________ test_us_fixture_bytes_persist_exact_national_and_state_keys __________
+
+tmp_path = PosixPath('/tmp/pytest-of-likangguo/pytest-1324/test_us_fixture_bytes_persist_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f76dcff2b10>
+
+    async def test_us_fixture_bytes_persist_exact_national_and_state_keys(tmp_path, monkeypatch):
+        from src.services.ingestion.countries.us import organize
+    
+        monkeypatch.chdir(tmp_path)
+        artifacts = us_artifacts()
+        expected = []
+        async with records_database(CONTRACT["countries"]) as sessions:
+            for code in ("US", "US-CA", "US-AL"):
+                updater = USWeeklyUpdater(country_code=code)
+                fixture_mapping(monkeypatch, updater, CONTRACT["mappings"]["US"])
+>               fetched = organize(artifacts, updater=updater, source="all")
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/home/likangguo/globalID/globalID2/tests/contract/test_legacy_projection_contracts.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+artifacts = [namespace(relative_path='data/raw/us/legacy-contract/current.csv', byte_size=1864, sha256='0abeddced16476781819060ed0...55d8bcde6babbc2dea32346f9e1bd8a', kind='nhss_xlsx', metadata_={}, source_url='https://fixture.invalid/nhss_2024.xlsx')]
+updater = <src.data.processors.us.USWeeklyUpdater object at 0x7f76dcda6cf0>
+source = 'all', subdivision = False, nndss_start = None, archive_years = None
+task_uuid = None, force = False
+
+    def organize(artifacts, *, updater, source, subdivision=False, nndss_start=None, archive_years=None, task_uuid=None, force=False):
+        source = normalize_source(source)
+        nndss_rows, archive_refs = [], {}
+        nhss = None
+        archive_counts = {}
+        for artifact in artifacts:
+            payload = read_artifact(artifact)
+            if artifact.kind == "csv_page":
+                nndss_rows.extend(csv.DictReader(io.StringIO(payload.decode("utf-8-sig"))))
+            elif artifact.kind == "nhss_xlsx":
+                nhss = (USNHSSHIVCrawler.parse_current_workbook(payload, source_url=artifact.source_url), artifact.source_url)
+            elif artifact.kind == "archive_json" and "resource" in artifact.metadata_:
+                year = artifact.metadata_["year"]
+                resource = artifact.metadata_["resource"]
+                rows = USNNDSSCrawler.parse_archive_table(resource, json.loads(payload), year)
+                nndss_rows.extend(rows)
+                archive_counts[year] = archive_counts.get(year, 0) + len(rows)
+                archive_refs.setdefault(year, {})[resource["id"]] = f"https://data.cdc.gov/d/{resource['id']}"
+        expected_years = (NNDSS_ARCHIVE_YEARS if archive_years is None else archive_years) if source in {"all", "nndss_api"} else ()
+        for year in expected_years:
+            if not archive_counts.get(year):
+>               raise RuntimeError(f"[US-NNDSS] CDC archive tables for {year} contained no usable rows")
+E               RuntimeError: [US-NNDSS] CDC archive tables for 2014 contained no usable rows
+
+/home/likangguo/globalID/globalID2/src/services/ingestion/countries/us.py:222: RuntimeError
+----------------------------- Captured stderr call -----------------------------
+[32m2026-11-16 12:28:48[0m | [1mINFO    [0m | [36msrc.data.crawlers.us[0m:[36mparse_current_workbook[0m:[36m424[0m - [1m[US-NHSS] Parsed current HIV release | rows=2 years=2023-2024[0m
+______ test_updater_commit_strategy_persists_rows_separately_from_series _______
+
+tmp_path = PosixPath('/tmp/pytest-of-likangguo/pytest-1324/test_updater_commit_strategy_p0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f76dce64cb0>
+
+    async def test_updater_commit_strategy_persists_rows_separately_from_series(tmp_path, monkeypatch):
+        from src.services.crawl_service import CrawlService
+        from src.services.ingestion import strategies
+    
+        monkeypatch.chdir(tmp_path)
+        from src.services.ingestion.countries.us import organize
+        updater = USWeeklyUpdater()
+        fixture_mapping(monkeypatch, updater, CONTRACT["mappings"]["US"])
+        monkeypatch.setattr(updater, "get_db_latest_date", AsyncMock(return_value=None))
+        monkeypatch.setattr("src.services.crawl_service.acquire_country_data_mutation_lock", AsyncMock())
+        save_series = AsyncMock(return_value=SimpleNamespace(upserted=100))
+        monkeypatch.setattr(CrawlService, "_save_series_rows", save_series)
+        dirty = AsyncMock()
+        monkeypatch.setattr(strategies, "mark_observation_changes_dirty", dirty)
+>       fetched = organize(us_artifacts(), updater=updater, source="all")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/home/likangguo/globalID/globalID2/tests/contract/test_legacy_projection_contracts.py:265: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+artifacts = [namespace(relative_path='data/raw/us/legacy-contract/current.csv', byte_size=1864, sha256='0abeddced16476781819060ed0...55d8bcde6babbc2dea32346f9e1bd8a', kind='nhss_xlsx', metadata_={}, source_url='https://fixture.invalid/nhss_2024.xlsx')]
+updater = <src.data.processors.us.USWeeklyUpdater object at 0x7f76dcbbd1d0>
+source = 'all', subdivision = False, nndss_start = None, archive_years = None
+task_uuid = None, force = False
+
+    def organize(artifacts, *, updater, source, subdivision=False, nndss_start=None, archive_years=None, task_uuid=None, force=False):
+        source = normalize_source(source)
+        nndss_rows, archive_refs = [], {}
+        nhss = None
+        archive_counts = {}
+        for artifact in artifacts:
+            payload = read_artifact(artifact)
+            if artifact.kind == "csv_page":
+                nndss_rows.extend(csv.DictReader(io.StringIO(payload.decode("utf-8-sig"))))
+            elif artifact.kind == "nhss_xlsx":
+                nhss = (USNHSSHIVCrawler.parse_current_workbook(payload, source_url=artifact.source_url), artifact.source_url)
+            elif artifact.kind == "archive_json" and "resource" in artifact.metadata_:
+                year = artifact.metadata_["year"]
+                resource = artifact.metadata_["resource"]
+                rows = USNNDSSCrawler.parse_archive_table(resource, json.loads(payload), year)
+                nndss_rows.extend(rows)
+                archive_counts[year] = archive_counts.get(year, 0) + len(rows)
+                archive_refs.setdefault(year, {})[resource["id"]] = f"https://data.cdc.gov/d/{resource['id']}"
+        expected_years = (NNDSS_ARCHIVE_YEARS if archive_years is None else archive_years) if source in {"all", "nndss_api"} else ()
+        for year in expected_years:
+            if not archive_counts.get(year):
+>               raise RuntimeError(f"[US-NNDSS] CDC archive tables for {year} contained no usable rows")
+E               RuntimeError: [US-NNDSS] CDC archive tables for 2014 contained no usable rows
+
+/home/likangguo/globalID/globalID2/src/services/ingestion/countries/us.py:222: RuntimeError
+----------------------------- Captured stderr call -----------------------------
+[32m2026-11-16 12:28:48[0m | [1mINFO    [0m | [36msrc.data.crawlers.us[0m:[36mparse_current_workbook[0m:[36m424[0m - [1m[US-NHSS] Parsed current HIV release | rows=2 years=2023-2024[0m
+=========================== short test summary info ============================
+FAILED tests/contract/test_legacy_projection_contracts.py::test_us_fixture_bytes_persist_exact_national_and_state_keys
+FAILED tests/contract/test_legacy_projection_contracts.py::test_updater_commit_strategy_persists_rows_separately_from_series
+2 failed in 3.46s

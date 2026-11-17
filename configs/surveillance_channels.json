@@ -1,0 +1,579 @@
+{
+  "schema_version": 1,
+  "verified_on": "2026-11-16",
+  "channels": [
+    {
+      "country_code": "NG",
+      "scope": "ncdc_surveillance",
+      "source_id": "SRC_NG_NCDC",
+      "publisher": "Nigeria Centre for Disease Control and Prevention",
+      "official_url": "https://ncdc.gov.ng/reports/weekly",
+      "archive_url": "https://ncdc.gov.ng/diseases/sitreps",
+      "discovery_urls": [
+        "https://ncdc.gov.ng/reports/weekly",
+        "https://ncdc.gov.ng/diseases/sitreps"
+      ],
+      "cadence": "weekly_and_event_reports",
+      "refresh_strategy": "live_directory_with_recent_calendar_year_replay",
+      "refresh_years": 2,
+      "daily_time": "09:10",
+      "timezone": "Africa/Lagos"
+    },
+    {
+      "country_code": "KH",
+      "scope": "kh_camewarn_weekly",
+      "source_id": "SRC_KH_CAMEWARN",
+      "publisher": "Cambodia Ministry of Health CDC",
+      "official_url": "https://cdcmoh.gov.kh/surveillance/camewarn",
+      "archive_url": "https://cdcmoh.gov.kh/surveillance/camewarn",
+      "discovery_urls": [
+        "https://cdcmoh.gov.kh/surveillance/camewarn"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "live_directory_and_recent_year_archives",
+      "refresh_years": 2,
+      "daily_time": "09:25",
+      "timezone": "Asia/Phnom_Penh"
+    },
+    {
+      "country_code": "AR",
+      "scope": "ar_ben_weekly",
+      "source_id": "SRC_AR_BEN",
+      "publisher": "Ministerio de Salud Argentina",
+      "official_url": "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional",
+      "archive_url": "https://www.argentina.gob.ar/salud/epidemiologia/boletines",
+      "discovery_urls": [
+        "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional",
+        "https://www.argentina.gob.ar/salud/epidemiologia/boletines"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "live_directory_with_recent_calendar_year_replay",
+      "refresh_years": 2,
+      "daily_time": "09:40",
+      "timezone": "America/Argentina/Buenos_Aires"
+    },
+    {
+      "country_code": "AR",
+      "scope": "ar_moh_hiv_annual",
+      "source_id": "SRC_AR_MOH_HIV_ANNUAL",
+      "publisher": "Ministerio de Salud de la Nación Argentina",
+      "official_url": "https://datos.gob.ar/api/3/action/package_show?id=ed365e37-bac7-580f-911e-17c90ef73324",
+      "archive_url": "https://datos.salud.gob.ar/dataset/1f70534d-f5f0-41f7-bc9a-b9809c39a505",
+      "discovery_urls": [
+        "https://datos.gob.ar/api/3/action/package_show?id=ed365e37-bac7-580f-911e-17c90ef73324"
+      ],
+      "cadence": "annual",
+      "refresh_strategy": "versioned_official_resource_full_replay",
+      "refresh_years": 24,
+      "daily_time": "09:45",
+      "timezone": "America/Argentina/Buenos_Aires"
+    },
+    {
+      "country_code": "PE",
+      "scope": "pe_cdc_weekly",
+      "source_id": "SRC_PE_CDC",
+      "publisher": "CDC Perú Ministerio de Salud",
+      "official_url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
+      "archive_url": "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/",
+      "discovery_urls": [
+        "https://epipublic.dge.gob.pe/publico/listado_ajax"
+      ],
+      "discovery_method": "POST",
+      "discovery_form": {
+        "bq_anio": "",
+        "bq_categoria": "1"
+      },
+      "cadence": "weekly",
+      "refresh_strategy": "live_directory_and_resumable_recent_year_downloads",
+      "refresh_years": 2,
+      "daily_time": "09:55",
+      "timezone": "America/Lima"
+    },
+    {
+      "country_code": "ZA",
+      "scope": "za_nicd_nmc",
+      "source_id": "SRC_ZA_NICD_NMC",
+      "publisher": "National Institute for Communicable Diseases South Africa",
+      "official_url": "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
+      "archive_url": "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
+      "discovery_urls": [
+        "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/",
+        "https://www.nicd.ac.za/wp-json/wp/v2/media?search=NMCSS&per_page=100",
+        "https://www.nicd.ac.za/wp-json/wp/v2/media?search=Notifiable-Medical-Conditions&per_page=100"
+      ],
+      "cadence": "monthly_and_quarterly",
+      "refresh_strategy": "live_directory_and_official_media_catalogue",
+      "refresh_years": 2,
+      "daily_time": "10:10",
+      "timezone": "Africa/Johannesburg"
+    },
+    {
+      "country_code": "ID",
+      "scope": "id_kemkes_profile",
+      "source_id": "SRC_ID_KEMKES_PROFILE",
+      "publisher": "Kementerian Kesehatan Republik Indonesia",
+      "official_url": "https://kemkes.go.id/id/category-download/profil-kesehatan",
+      "archive_url": "https://kemkes.go.id/id/category-download/profil-kesehatan",
+      "discovery_urls": [
+        "https://kemkes.go.id/id/category-download/profil-kesehatan"
+      ],
+      "cadence": "annual",
+      "refresh_strategy": "live_annual_catalogue_and_linked_official_releases",
+      "refresh_years": 3,
+      "daily_time": "10:25",
+      "timezone": "Asia/Jakarta"
+    },
+    {
+      "country_code": "CL",
+      "scope": "cl_eno_historical",
+      "source_id": "SRC_CL_ENO",
+      "publisher": "Ministerio de Salud de Chile",
+      "official_url": "https://datos.gob.cl/api/3/action/package_show?id=notificaciones-eno",
+      "archive_url": "https://datos.gob.cl/api/3/action/package_show?id=notificaciones-eno",
+      "discovery_urls": [
+        "https://datos.gob.cl/api/3/action/package_show?id=notificaciones-eno"
+      ],
+      "cadence": "historical_revisable",
+      "refresh_strategy": "official_catalogue_with_source_hash_replay",
+      "refresh_years": 3,
+      "daily_time": "11:00",
+      "timezone": "America/Santiago"
+    },
+    {
+      "country_code": "CO",
+      "scope": "co_ins_sivigila_historical",
+      "source_id": "SRC_CO_INS_SIVIGILA",
+      "publisher": "Instituto Nacional de Salud Colombia",
+      "official_url": "https://www.datos.gov.co/d/4hyg-wa9d",
+      "archive_url": "https://www.datos.gov.co/d/4hyg-wa9d",
+      "discovery_urls": [
+        "https://www.datos.gov.co/api/views/4hyg-wa9d.json"
+      ],
+      "cadence": "historical_revisable",
+      "refresh_strategy": "metadata_version_check_requires_verified_full_history",
+      "refresh_years": 3,
+      "daily_time": "11:15",
+      "timezone": "America/Bogota",
+      "enabled_by_default": true
+    },
+    {
+      "country_code": "CO",
+      "scope": "co_ins_sivigila_current",
+      "source_id": "SRC_CO_INS_SIVIGILA_CURRENT",
+      "publisher": "Instituto Nacional de Salud Colombia",
+      "official_url": "https://www.datos.gov.co/d/wns8-p38i",
+      "archive_url": "https://www.datos.gov.co/d/wns8-p38i",
+      "discovery_urls": [
+        "https://www.datos.gov.co/api/views/wns8-p38i.json"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 4,
+      "daily_time": "11:30",
+      "timezone": "America/Bogota",
+      "enabled_by_default": true
+    },
+    {
+      "country_code": "CO",
+      "scope": "co_ins_bes_weekly",
+      "source_id": "SRC_CO_INS_BES",
+      "publisher": "Instituto Nacional de Salud Colombia",
+      "official_url": "https://www.ins.gov.co/buscador-eventos/Paginas/Vista-Boletin-Epidemilogico.aspx",
+      "archive_url": "https://www.ins.gov.co/buscador-eventos/Paginas/Vista-Boletin-Epidemilogico.aspx",
+      "discovery_urls": [
+        "https://www.ins.gov.co/buscador-eventos/Paginas/Vista-Boletin-Epidemilogico.aspx"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "live_official_directory_with_recent_year_replay",
+      "refresh_years": 2,
+      "daily_time": "11:45",
+      "timezone": "America/Bogota",
+      "enabled_by_default": false,
+      "integration_status": "automated_managed_runtime",
+      "automation_backend": "systemd",
+      "automation_timer": "globalid-co-bes-refresh.timer",
+      "automation_schedule": "hourly at :45 America/Bogota",
+      "coverage_verified": false,
+      "backfill_summary": {
+        "as_of": "2026-11-16",
+        "source_epi_weeks": {
+          "2025": [1, 53],
+          "2026": [1, 44]
+        },
+        "report_count": 97,
+        "record_count": 159393,
+        "source_unreadable_cells": 8,
+        "measure": "source_reported_ytd_event_count"
+      }
+    },
+    {
+      "country_code": "MW",
+      "scope": "mw_phim_idsr_weekly",
+      "source_id": "SRC_MW_PHIM_IDSR",
+      "publisher": "Public Health Institute of Malawi",
+      "official_url": "https://phim.health.gov.mw/",
+      "archive_url": "https://phim.health.gov.mw/wp-json/wp/v2/search?search=IDSR&per_page=100&page=1",
+      "discovery_urls": [
+        "https://phim.health.gov.mw/wp-json/wp/v2/search?search=IDSR&per_page=100&page=1"
+      ],
+      "cadence": "weekly",
+      "refresh_strategy": "live_official_post_directory_with_recent_year_replay",
+      "refresh_years": 2,
+      "daily_time": "11:30",
+      "timezone": "Africa/Blantyre"
+    },
+    {
+      "country_code": "MX",
+      "scope": "mx_dge_annual",
+      "source_id": "SRC_MX_DGE_ANNUAL",
+      "publisher": "Dirección General de Epidemiología México",
+      "official_url": "https://epidemiologia.salud.gob.mx/anuario/html/index.html",
+      "archive_url": "https://epidemiologia.salud.gob.mx/anuario/html/index.html",
+      "discovery_urls": [
+        "https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html",
+        "https://epidemiologia.salud.gob.mx/anuario/html/incidencia_casos.html"
+      ],
+      "cadence": "annual",
+      "refresh_strategy": "live_annual_catalogue_with_recent_year_revision_replay",
+      "refresh_years": 3,
+      "daily_time": "10:40",
+      "timezone": "America/Mexico_City"
+    },
+    {
+      "country_code": "ET",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_ET_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:00",
+      "timezone": "Africa/Addis_Ababa"
+    },
+    {
+      "country_code": "KE",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_KE_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:05",
+      "timezone": "Africa/Nairobi"
+    },
+    {
+      "country_code": "UG",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_UG_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:10",
+      "timezone": "Africa/Kampala"
+    },
+    {
+      "country_code": "GH",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_GH_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:15",
+      "timezone": "Africa/Accra"
+    },
+    {
+      "country_code": "TZ",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_TZ_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:20",
+      "timezone": "Africa/Dar_es_Salaam"
+    },
+    {
+      "country_code": "PH",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_PH_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:25",
+      "timezone": "Asia/Manila"
+    },
+    {
+      "country_code": "VN",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_VN_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:30",
+      "timezone": "Asia/Ho_Chi_Minh"
+    },
+    {
+      "country_code": "LA",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_LA_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:35",
+      "timezone": "Asia/Vientiane"
+    },
+    {
+      "country_code": "MM",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_MM_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:40",
+      "timezone": "Asia/Yangon"
+    },
+    {
+      "country_code": "BN",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_BN_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:45",
+      "timezone": "Asia/Brunei"
+    },
+    {
+      "country_code": "TL",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_TL_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:50",
+      "timezone": "Asia/Dili"
+    },
+    {
+      "country_code": "PY",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_PY_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "03:55",
+      "timezone": "America/Asuncion"
+    },
+    {
+      "country_code": "EC",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_EC_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "04:00",
+      "timezone": "America/Guayaquil"
+    },
+    {
+      "country_code": "CR",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_CR_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "04:05",
+      "timezone": "America/Costa_Rica"
+    },
+    {
+      "country_code": "PA",
+      "scope": "who_gho_annual",
+      "source_id": "SRC_PA_WHO_GHO",
+      "publisher": "World Health Organization",
+      "official_url": "https://www.who.int/data/gho",
+      "archive_url": "https://ghoapi.azureedge.net/api/",
+      "discovery_urls": [
+        "https://ghoapi.azureedge.net/api/"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "04:10",
+      "timezone": "America/Panama"
+    },
+    {
+      "country_code": "GP",
+      "scope": "spf_odisse_annual",
+      "source_id": "SRC_GP_SPF_ODISSE",
+      "publisher": "Santé publique France",
+      "official_url": "https://odisse.santepubliquefrance.fr/",
+      "archive_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets",
+      "discovery_urls": [
+        "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "04:15",
+      "timezone": "America/Guadeloupe"
+    },
+    {
+      "country_code": "MQ",
+      "scope": "spf_odisse_annual",
+      "source_id": "SRC_MQ_SPF_ODISSE",
+      "publisher": "Santé publique France",
+      "official_url": "https://odisse.santepubliquefrance.fr/",
+      "archive_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets",
+      "discovery_urls": [
+        "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "04:20",
+      "timezone": "America/Martinique"
+    },
+    {
+      "country_code": "GF",
+      "scope": "spf_odisse_annual",
+      "source_id": "SRC_GF_SPF_ODISSE",
+      "publisher": "Santé publique France",
+      "official_url": "https://odisse.santepubliquefrance.fr/",
+      "archive_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets",
+      "discovery_urls": [
+        "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets"
+      ],
+      "cadence": "annual_revisable",
+      "refresh_strategy": "full_published_history_upsert",
+      "refresh_years": 1,
+      "daily_time": "04:25",
+      "timezone": "America/Cayenne"
+    },
+    {
+      "country_code": "CR",
+      "scope": "cr_moh_notifications",
+      "source_id": "SRC_CR_MOH_NOTIFICATIONS",
+      "publisher": "Ministerio de Salud Costa Rica",
+      "official_url": "https://www.ministeriodesalud.go.cr/",
+      "archive_url": "https://www.ministeriodesalud.go.cr/index.php/biblioteca-de-archivos-left/documentos-ministerio-de-salud/material-informativo/material-publicado/boletines/boletines-vigilancia-vs-enfermedades-de-transmision-vectorial",
+      "discovery_urls": [
+        "https://www.ministeriodesalud.go.cr/index.php/biblioteca-de-archivos-left/documentos-ministerio-de-salud/material-informativo/material-publicado/boletines/boletines-vigilancia-vs-enfermedades-de-transmision-vectorial"
+      ],
+      "cadence": "mixed",
+      "refresh_strategy": "full_live_directory_and_verified_reports",
+      "refresh_years": 2,
+      "daily_time": "05:00",
+      "timezone": "America/Costa_Rica"
+    },
+    {
+      "country_code": "LA",
+      "scope": "who_wpro_dengue",
+      "source_id": "SRC_LA_WHO_WPRO_DENGUE",
+      "publisher": "WHO Western Pacific Regional Office",
+      "official_url": "https://www.who.int/westernpacific/wpro-emergencies/surveillance/dengue",
+      "archive_url": "https://www.who.int/westernpacific/wpro-emergencies/surveillance/dengue",
+      "discovery_urls": [
+        "https://www.who.int/westernpacific/wpro-emergencies/surveillance/dengue"
+      ],
+      "cadence": "weekly_and_cumulative_snapshots",
+      "refresh_strategy": "full_live_directory_and_verified_reports",
+      "refresh_years": 2,
+      "daily_time": "05:15",
+      "timezone": "Asia/Vientiane"
+    },
+    {
+      "country_code": "VN",
+      "scope": "who_wpro_dengue",
+      "source_id": "SRC_VN_WHO_WPRO_DENGUE",
+      "publisher": "WHO Western Pacific Regional Office",
+      "official_url": "https://www.who.int/westernpacific/wpro-emergencies/surveillance/dengue",
+      "archive_url": "https://www.who.int/westernpacific/wpro-emergencies/surveillance/dengue",
+      "discovery_urls": [
+        "https://www.who.int/westernpacific/wpro-emergencies/surveillance/dengue"
+      ],
+      "cadence": "weekly_and_cumulative_snapshots",
+      "refresh_strategy": "full_live_directory_and_verified_reports",
+      "refresh_years": 2,
+      "daily_time": "05:30",
+      "timezone": "Asia/Ho_Chi_Minh"
+    }
+  ]
+}

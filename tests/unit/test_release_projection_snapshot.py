@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -42,6 +43,10 @@ async def test_commit_uses_frozen_curves_without_reading_observations(tmp_path, 
     monkeypatch.setattr(projection, "_publish_country", raw_projection)
     monkeypatch.setattr(public_series_store, "_replace_country_rows", replace)
     monkeypatch.setattr(projection, "_retire_disabled_publications", AsyncMock(return_value=set()))
+    monkeypatch.setattr(projection, "read_selected_batch", AsyncMock(return_value=[SimpleNamespace(
+        id=7, line="surveillance", scope_key="JP", published_at=None)]))
+    acknowledge = AsyncMock()
+    monkeypatch.setattr(projection, "acknowledge_locked_batch", acknowledge)
     db = AsyncMock()
     await projection.commit_release_projection(
         db, task_uuid="release", country_codes=["JP"], full=False,
@@ -50,7 +55,8 @@ async def test_commit_uses_frozen_curves_without_reading_observations(tmp_path, 
     raw_projection.assert_not_awaited()
     assert replace.await_args.args[2][0]["cases"] == [7]
     assert replace.await_args.kwargs["source_high_water"] == watermark
-    db.execute.assert_awaited_once()
+    acknowledge.assert_awaited_once()
+    assert acknowledge.await_args.args[1] == [7]
 
 
 async def test_bad_snapshot_never_acknowledges_dirty_markers(tmp_path, monkeypatch):
@@ -91,6 +97,9 @@ async def test_precise_projection_does_not_expand_selected_country(tmp_path, mon
     replace = AsyncMock()
     monkeypatch.setattr(public_series_store, "_replace_country_rows", replace)
     monkeypatch.setattr(projection, "_retire_disabled_publications", AsyncMock(return_value=set()))
+    monkeypatch.setattr(projection, "read_selected_batch", AsyncMock(return_value=[SimpleNamespace(
+        id=7, line="surveillance", scope_key="JP", published_at=None)]))
+    monkeypatch.setattr(projection, "acknowledge_locked_batch", AsyncMock())
     await projection.commit_release_projection(
         AsyncMock(), task_uuid="exact", country_codes=["JP"], country_scopes_exact=True,
         full=False, dirty_ids=[7], prepared_dir=tmp_path,

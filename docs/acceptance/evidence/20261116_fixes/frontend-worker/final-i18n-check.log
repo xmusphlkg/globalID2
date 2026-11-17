@@ -1,0 +1,5 @@
+
+> globalid-report-site@0.20.0 check:i18n
+> node --experimental-strip-types scripts/check-i18n.mjs
+
+[i18n] PASS locales=en,fr,zh strings=58 frenchUi=392

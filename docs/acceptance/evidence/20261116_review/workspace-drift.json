@@ -1,0 +1,72 @@
+{
+  "checked_files": 536,
+  "changed_since_start": [
+    {
+      "path": "configs/country_bootstrap.json",
+      "before": "cfd6d905ebdccf050b663810340a8f3fa8ea0439eb94325491df25b28c17fced",
+      "after": "2c214feab5b9d1313ef5ab71239886316f94402a0d66afa14b244fda7af03f10"
+    },
+    {
+      "path": "docs/data-sources/CO_SIVIGILA_INTEGRATION.md",
+      "before": "c11a39bd412db6cd3d05a9ac0b8003d169fd9c79bc7ab71ec78df3317f25c210",
+      "after": "6dbe1518818f9acdca20d5ab269c768ded9c4d306b5617f04fd0785e4c2c6030"
+    },
+    {
+      "path": "scripts/imports/co_sivigila_history.py",
+      "before": "2e5bdfed84b438bccb70508ee89083c788d24ddcefe49ead9485aaabdb7794cd",
+      "after": "17606f29a560e7fb8d5d0667bce1eb061ffbaeca320bd4c609125a45d351b2b6"
+    },
+    {
+      "path": "scripts/imports/import_surveillance_archive.py",
+      "before": "6c1c9b1dac4f3e2d326c353fe8f96bffbd114b70e7099b2839fc25507160101c",
+      "after": "7c4038492dffd1d10e2fb6ca447f35680a854951f536bda429359d490ac9a5e6"
+    },
+    {
+      "path": "src/core/country_library.py",
+      "before": "dcdf3a414ea7d7dfcf6778ef1f5b330455301ed4c519ba3a33ed4773219fb549",
+      "after": "9b5b88439fbdc217b2098410a18f1387a01d6be5eb5dbc7a4da22ab5fa54e01e"
+    },
+    {
+      "path": "src/data/crawlers/mw.py",
+      "before": "ce1fc95ce0dfb412dcb816928a2dd03321b82e76458822bab4b6c2c6752bdc4a",
+      "after": "2337dc9edc94c9e963fc1468bdaf6c443a112a067f98b112035911afc1b084b1"
+    },
+    {
+      "path": "src/data/processors/co.py",
+      "before": "c21bf19c6248e5c6f46a6b4343e01aae6ef27724e7d81893afadb2e3a459c822",
+      "after": "84709f8e727c0210cc45d3bb4be6d826e1b9c32a69ad8ef56506670980317767"
+    },
+    {
+      "path": "src/data/storage/series_observation_store.py",
+      "before": "35b14b6a8a687e38988450b6c5e2b7503671fdf1be29e4b8274f8a19df41a341",
+      "after": "765c9a601378021c8bc14efa8c3f2d311cb615e6c8497a922ee74578fd2220dd"
+    },
+    {
+      "path": "src/services/crawl_service.py",
+      "before": "8b754ee1d876d304b935f032cc66f476c92a8791d22628680a68c8a5dff8f3cd",
+      "after": "6d1f5083f4f2fb2530347b91a6999a513a170a4b5a0fa4242da640646869ee02"
+    },
+    {
+      "path": "src/services/ingestion/countries/mw.py",
+      "before": "5a455dcb430323aa27b3aca85e344f7ef0914773a95751edf1d9344542bf209a",
+      "after": "9e5b180e7196f4807f3a5e428f97e8ef597b0189c1073870a15418b3650875bc"
+    },
+    {
+      "path": "src/services/ingestion/series_rows.py",
+      "before": "56792221bf19775d7d4b1d78a7f27b7d4610790818dcf148856a51dd4edd8761",
+      "after": "2949d7f4a01adc364b92e6b45e66cf5b816cb23f42f8278263e7b2de3a26ba3b"
+    },
+    {
+      "path": "tests/unit/test_co_sivigila.py",
+      "before": "5a02e7cf7b0329bdc3c63e7c1d6e878e51bb889b9ee490239f4a33c9288efbe8",
+      "after": "23bbfe13d57064f5ee30f02616a46e8192bcf6576e5ce65814b30f4b448bb44b"
+    },
+    {
+      "path": "tests/unit/test_mw_phim_idsr.py",
+      "before": "246844429a1f1a9e910f3c68aee584de1dfba3c5803b6477dc056c66c2265fe2",
+      "after": "068800b7d614c95aaa6869d0f0835562a8f3424e8c21f764f0d53e5c9238ead9"
+    }
+  ],
+  "head_unchanged": true,
+  "captured_at": "2026-11-16T11:25:29.162996+08:00"
+}

@@ -1,0 +1,53 @@
+---
+import diseasesRaw from '../../data/diseases/index.json';
+import { readSituationMap } from '../../utils/international';
+import { buildSituationRssOptions } from '../../lib/situation-rss';
+import { subscriptionText } from './messages';
+
+interface Props { locale: 'en' | 'zh' | 'fr' }
+const { locale } = Astro.props;
+const pick = subscriptionText(locale);
+const path = '/site-data/situation/rss.xml';
+const { countries, diseases } = buildSituationRssOptions(readSituationMap(), diseasesRaw, locale);
+---
+
+<section class="situation-rss" aria-labelledby="situation-rss-title">
+  <h2 id="situation-rss-title">{pick('Follow official outbreak reports via RSS', '通过 RSS 关注官方疫情通报', 'Suivre les rapports officiels de flambée par RSS')}</h2>
+  <p>{pick('Use an RSS reader without registering an email address. Each feed contains the latest 100 event notices and links to the original reports; routine monitoring is excluded.', '无需登记邮箱，可使用 RSS 阅读器关注更新。每个订阅源提供最新 100 条事件通报和原始报告链接，不含常规监测。', 'Utilisez un lecteur RSS sans inscrire votre adresse e-mail. Chaque flux contient les 100 derniers signalements et les liens vers les rapports originaux, hors surveillance de routine.')}</p>
+  <a href={`${path}?lang=${locale}`} type="application/rss+xml">{pick('All outbreak reports — RSS', '全部疫情通报 RSS', 'Tous les rapports de flambée — RSS')} →</a>
+  <div class="situation-rss-filters">
+    {countries.length > 0 && <form action={path} method="get">
+      <input type="hidden" name="lang" value={locale} />
+      <label for="rss-country">{pick('Country or area', '国家或区域', 'Pays ou zone')}</label>
+      <select id="rss-country" name="country" class="site-control-select" required>
+        <option value="" disabled selected>{pick('Choose a country or area', '选择国家或区域', 'Choisir un pays ou une zone')}</option>
+        {countries.map(country => <option value={country.code}>{country.name}</option>)}
+      </select>
+      <button type="submit">{pick('Open country RSS', '打开区域 RSS', 'Ouvrir le flux du pays')}</button>
+    </form>}
+    {diseases.length > 0 && <form action={path} method="get">
+      <input type="hidden" name="lang" value={locale} />
+      <label for="rss-disease">{pick('Disease', '疾病', 'Maladie')}</label>
+      <select id="rss-disease" name="disease" class="site-control-select" required>
+        <option value="" disabled selected>{pick('Choose a disease', '选择疾病', 'Choisir une maladie')}</option>
+        {diseases.map(disease => <option value={disease.id}>{disease.name}</option>)}
+      </select>
+      <button type="submit">{pick('Open disease RSS', '打开疾病 RSS', 'Ouvrir le flux de la maladie')}</button>
+    </form>}
+  </div>
+</section>
+
+<style>
+  .situation-rss { border-top: 1px solid rgb(var(--border)); margin-top: 2rem; padding-top: 1.5rem; }
+  .situation-rss h2 { color: rgb(var(--text-strong)); font-size: 1.1rem; font-weight: 700; }
+  .situation-rss p { color: rgb(var(--text-muted)); font-size: .9rem; line-height: 1.65; margin: .65rem 0; }
+  .situation-rss > a { color: rgb(var(--color-teal)); font-size: .9rem; font-weight: 700; }
+  .situation-rss-filters { display: grid; gap: 1rem; margin-top: 1rem; }
+  .situation-rss form { display: grid; gap: .5rem; min-width: 0; }
+  .situation-rss label { color: rgb(var(--text-strong)); font-size: .85rem; font-weight: 600; }
+  .situation-rss select { max-width: 100%; min-width: 0; width: 100%; }
+  .situation-rss button { background: rgb(var(--surface-raised)); border: 1px solid rgb(var(--border)); color: rgb(var(--text-strong)); font-size: .85rem; font-weight: 600; min-height: 2.75rem; padding: .5rem .75rem; text-align: left; }
+  .situation-rss button:hover { border-color: rgb(var(--color-teal)); }
+  .situation-rss button:focus-visible { outline: 2px solid rgb(var(--color-teal)); outline-offset: 2px; }
+  @media (min-width: 640px) { .situation-rss-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>

@@ -1,0 +1,204 @@
+[
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/1984/morbilidad/nacional/casos_nuevos_enfermedades_grupo_edad_fuente_notificacion.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/4ce81be9752418e98ced28668643821c0054fc0f1219df3cf9029f2057ba23c4.pdf",
+    "sha256": "4ce81be9752418e98ced28668643821c0054fc0f1219df3cf9029f2057ba23c4",
+    "byte_size": 8654,
+    "metadata_": {
+      "year": 1984,
+      "sex": "all",
+      "edition_path": "1984",
+      "edition_label": "1984",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/1984/morbilidad/nacional/casos_nuevos_enfermedades_grupo_edad_fuente_notificacion.pdf",
+      "table": "national_cases_age",
+      "label": "Casos nuevos de enfermedad por grupo de edad y fuente de notificación",
+      "retrieved_at": "2026-11-16T00:06:43.644072+00:00"
+    },
+    "fixture": "1984_all_national_cases_age.pdf"
+  },
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/1992/morbilidad/nacional/distribucion_casos_nuevos_grupo_edad_fuente_notificacion.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/0026fd1b9c138878d1566271c8af763745ce0e2eb7d297d8a9f70cefbbe3c0b7.pdf",
+    "sha256": "0026fd1b9c138878d1566271c8af763745ce0e2eb7d297d8a9f70cefbbe3c0b7",
+    "byte_size": 14758,
+    "metadata_": {
+      "year": 1992,
+      "sex": "all",
+      "edition_path": "1992",
+      "edition_label": "1992",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/1992/morbilidad/nacional/distribucion_casos_nuevos_grupo_edad_fuente_notificacion.pdf",
+      "table": "national_cases_age",
+      "label": "Distribución de casos nuevos de enfermedades",
+      "retrieved_at": "2026-11-16T00:06:45.356455+00:00"
+    },
+    "fixture": "1992_all_national_cases_age.pdf"
+  },
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/1997/morbilidad/nacional/distribucion_casos_nuevos_enfermedades_grupo_edad.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/83f83b01f3be136e709188685bffdf843d371768c6afa9b291535a60d5eef8e0.pdf",
+    "sha256": "83f83b01f3be136e709188685bffdf843d371768c6afa9b291535a60d5eef8e0",
+    "byte_size": 21844,
+    "metadata_": {
+      "year": 1997,
+      "sex": "all",
+      "edition_path": "1997",
+      "edition_label": "1997",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/1997/morbilidad/nacional/distribucion_casos_nuevos_enfermedades_grupo_edad.pdf",
+      "table": "national_cases_age",
+      "label": "Distribución de casos nuevos de enfermedad por grupo de edad",
+      "retrieved_at": "2026-11-16T00:06:46.807542+00:00"
+    },
+    "fixture": "1997_all_national_cases_age.pdf"
+  },
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/2003/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/ad5baedf7c20ae3422bd1adbc910b385d47bed008f9181859b46ecd962def293.pdf",
+    "sha256": "ad5baedf7c20ae3422bd1adbc910b385d47bed008f9181859b46ecd962def293",
+    "byte_size": 20885,
+    "metadata_": {
+      "year": 2003,
+      "sex": "all",
+      "edition_path": "2003",
+      "edition_label": "2003 General",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/2003/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+      "table": "national_cases_age",
+      "label": "Distribución de casos nuevos de enfermedad por grupo de edad",
+      "retrieved_at": "2026-11-16T00:06:48.070188+00:00"
+    },
+    "fixture": "2003_all_national_cases_age.pdf"
+  },
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/2004/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/84fd035e758c360123b8a0d812d57c5319a08d36ba7a3bd0eafa1eafe70f798c.pdf",
+    "sha256": "84fd035e758c360123b8a0d812d57c5319a08d36ba7a3bd0eafa1eafe70f798c",
+    "byte_size": 164199,
+    "metadata_": {
+      "year": 2004,
+      "sex": "all",
+      "edition_path": "2004",
+      "edition_label": "2004 General",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/2004/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+      "table": "national_cases_age",
+      "label": "Distribución de casos nuevos de enfermedad por grupo de edad",
+      "retrieved_at": "2026-11-16T00:06:49.252012+00:00"
+    },
+    "fixture": "2004_all_national_cases_age.pdf"
+  },
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/2010/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/963e8186f6786e8995f7becd85fd7d78769ecd9777dba537e85b10a68d490979.pdf",
+    "sha256": "963e8186f6786e8995f7becd85fd7d78769ecd9777dba537e85b10a68d490979",
+    "byte_size": 190444,
+    "metadata_": {
+      "year": 2010,
+      "sex": "all",
+      "edition_path": "2010",
+      "edition_label": "2010 General",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/2010/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+      "table": "national_cases_age",
+      "label": "Distribución de casos nuevos de enfermedad por grupo de edad",
+      "retrieved_at": "2026-11-16T00:08:30.261063+00:00"
+    },
+    "fixture": "2010_all_national_cases_age.pdf"
+  },
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/2025/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/4a7513acc6e4e2a780f74e407dcf26ca44c506e86d0a96cff27f7e54eadc6e01.pdf",
+    "sha256": "4a7513acc6e4e2a780f74e407dcf26ca44c506e86d0a96cff27f7e54eadc6e01",
+    "byte_size": 965023,
+    "metadata_": {
+      "year": 2025,
+      "sex": "all",
+      "edition_path": "2025",
+      "edition_label": "2025 General",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/2025/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+      "table": "national_cases_age",
+      "label": "Distribución de casos nuevos de enfermedad por grupo de edad",
+      "retrieved_at": "2026-11-16T00:08:45.777068+00:00"
+    },
+    "fixture": "2025_all_national_cases_age.pdf"
+  },
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/2025/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/d5d91beb6eb9d927909e352be5a50533049d0c27b9e22b103f8d4854650c2f0f.pdf",
+    "sha256": "d5d91beb6eb9d927909e352be5a50533049d0c27b9e22b103f8d4854650c2f0f",
+    "byte_size": 928080,
+    "metadata_": {
+      "year": 2025,
+      "sex": "all",
+      "edition_path": "2025",
+      "edition_label": "2025 General",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/2025/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad.pdf",
+      "table": "national_incidence_age",
+      "label": "2025 General",
+      "retrieved_at": "2026-11-16T00:08:44.683295+00:00"
+    },
+    "fixture": "2025_all_national_incidence_age.pdf"
+  },
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/20250/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/4b49070a83c3f867df27c68fd2a467166c3d6f81a79b28d84a85cc3a77dee08a.pdf",
+    "sha256": "4b49070a83c3f867df27c68fd2a467166c3d6f81a79b28d84a85cc3a77dee08a",
+    "byte_size": 865340,
+    "metadata_": {
+      "year": 2025,
+      "sex": "female",
+      "edition_path": "20250",
+      "edition_label": "2025 Femenino",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/20250/incidencia/incidencia_casos_nuevos_enfermedad_grupo_edad.pdf",
+      "table": "national_incidence_age",
+      "label": "2025 Femenino",
+      "retrieved_at": "2026-11-16T00:08:45.446757+00:00"
+    },
+    "fixture": "2025_female_national_incidence_age.pdf"
+  },
+  {
+    "kind": "mx_dge_index",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html",
+    "relative_path": "data/raw/mx/dge_annual_full_history/521cd13f086997505f13e33213ddd1885bf9a0d101286ddc91024ef9756d5d1b.html",
+    "sha256": "521cd13f086997505f13e33213ddd1885bf9a0d101286ddc91024ef9756d5d1b",
+    "byte_size": 136437,
+    "metadata_": {
+      "role": "national_discovery"
+    },
+    "fixture": "national_index.html"
+  },
+  {
+    "kind": "mx_dge_index",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/html/incidencia_casos.html",
+    "relative_path": "data/raw/mx/dge_annual_full_history/e66b32f54fef3f1fbd32d5a4185b937f7a3c7ce3379164542e6881c2d3f8d9e5.html",
+    "sha256": "e66b32f54fef3f1fbd32d5a4185b937f7a3c7ce3379164542e6881c2d3f8d9e5",
+    "byte_size": 9646,
+    "metadata_": {
+      "role": "national_discovery"
+    },
+    "fixture": "incidence_index.html"
+  },
+  {
+    "kind": "mx_dge_pdf",
+    "source_url": "https://epidemiologia.salud.gob.mx/anuario/1999/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+    "relative_path": "data/raw/mx/dge_annual_full_history/2c6a9574fae7375ffdd7a30294f69ba40d81dd8a7de248dbed9a32a1e9995621.pdf",
+    "sha256": "2c6a9574fae7375ffdd7a30294f69ba40d81dd8a7de248dbed9a32a1e9995621",
+    "byte_size": 21355,
+    "metadata_": {
+      "year": 1999,
+      "sex": "all",
+      "edition_path": "1999",
+      "edition_label": "1999",
+      "url": "https://epidemiologia.salud.gob.mx/anuario/1999/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_grupo_edad.pdf",
+      "table": "national_cases_age",
+      "label": "Distribución de casos nuevos de enfermedad por grupo de edad",
+      "retrieved_at": "2026-11-16T00:06:47.029558+00:00"
+    },
+    "fixture": "1999_all_national_cases_age.pdf"
+  }
+]

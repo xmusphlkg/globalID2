@@ -1,0 +1,244 @@
+
+> globalid-report-site@0.20.0 build:astro
+> node scripts/build-pipeline.mjs
+
+[build-stage] start sync flags
+[flags] synced 271 local SVG flags from flag-icons
+[build-timing] sync flags 0.1s
+[build-timing] group wall=0.1s workers=1
+[build-stage] start render and restore
+[build-stage] start source styles
+[build-stage] start source translations
+[build-stage] start map ISO mapping
+[style-boundaries] PASS global.css=1800 lines, files=447
+[build-timing] source styles 0.2s
+[i18n] PASS locales=en,fr,zh strings=58 frenchUi=392 generated=skipped(1 missing ignored snapshot)
+[world-feature-iso] up to date (212 features)
+[build-timing] source translations 0.2s
+[build-timing] map ISO mapping 0.2s
+[directory-cache] {"hits":0,"misses":10,"reads":10}
+[research-cache] full: render 1, reuse 0 article bundles
+[page-cache] full: render 17, reuse 0 collection/country/disease bundles
+[build-timing] plan inputs and verify cache 0.9s
+[build-plan] research {"mode":"full","selected":1,"reused":0,"removed":0,"groups":{"article":{"forced":1}}}
+[build-plan] pages {"mode":"full","selected":17,"reused":0,"removed":0,"groups":{"situation-week":{"forced":1},"situation-month":{"forced":1},"situation-outbreak":{"forced":1},"research":{"forced":4},"disease":{"forced":10}}}
+15:16:25 [vite] Re-optimizing dependencies because vite config has changed
+15:16:26 [vite] [optimizer] bundling dependencies...
+15:16:28 [types] Generated 3.40s
+15:16:28 [build] output: "static"
+15:16:28 [build] mode: "static"
+15:16:28 [build] directory: /tmp/globalid-fixes-20261116/frontend-build-isolation/test_alert_export_builds_situa0/astro-site/dist/
+15:16:28 [build] Collecting build info...
+15:16:28 [build] ✓ Completed in 3.52s.
+15:16:28 [build] Building static entrypoints...
+15:16:32 [vite] ✓ built in 3.16s
+15:16:33 [vite] ✓ built in 1.38s
+15:16:33 [build] Rearranging server assets...
+
+ generating static routes 
+15:16:34   ├─ /404.html15:16:34   ├─ /about/index.html15:16:34   ├─ /changelog/index.html15:16:34   ├─ /compare/index.html15:16:34   ├─ /copyright/index.html15:16:34   ├─ /countries/index.html15:16:34   ├─ /data-updates/index.html15:16:34   ├─ /diseases/influenza/index.html (+130ms) 
+15:16:35   ├─ /diseases/example-disease/index.html (+140ms) 
+15:16:35   ├─ /diseases/erythema-infectiosum-fifth-disease/index.html (+149ms) 
+15:16:35   ├─ /diseases/respiratory-syncytial-virus-infection-rsv/index.html (+158ms) 
+15:16:35   ├─ /diseases/roseola-exanthem-subitum/index.html (+166ms) 
+15:16:35   ├─ /diseases/flavivirus-infection-unspecified/index.html (+175ms) 
+15:16:35   ├─ /diseases/haemolytic-uraemic-syndrome-hus/index.html (+185ms) 
+15:16:35   ├─ /diseases/meningitis-all-reported-etiologies/index.html (+61ms) 
+15:16:35   ├─ /diseases/methicillin-resistant-staphylococcus-aureus-mrsa-surveillance/index.html (+58ms) 
+15:16:35   ├─ /diseases/escherichia-coli-enteritis-all-reported-pathotypes/index.html (+57ms) 
+15:16:35   ├─ /diseases/index.html (+60ms) 
+15:16:35   ├─ /downloads/index.html (+59ms) 
+15:16:35   ├─ /fr/about/index.html (+57ms) 
+15:16:35   ├─ /fr/changelog/index.html (+54ms) 
+15:16:35   ├─ /fr/compare/index.html (+244ms) 
+15:16:35   ├─ /fr/copyright/index.html (+58ms) 
+15:16:35   ├─ /fr/countries/index.html (+36ms) 
+15:16:35   ├─ /fr/data-updates/index.html (+59ms) 
+15:16:35   ├─ /fr/diseases/influenza/index.html (+59ms) 
+15:16:35   ├─ /fr/diseases/example-disease/index.html (+22ms) 
+15:16:35   ├─ /fr/diseases/erythema-infectiosum-fifth-disease/index.html (+26ms) 
+15:16:35   ├─ /fr/diseases/respiratory-syncytial-virus-infection-rsv/index.html (+60ms) 
+15:16:35   ├─ /fr/diseases/roseola-exanthem-subitum/index.html (+59ms) 
+15:16:35   ├─ /fr/diseases/flavivirus-infection-unspecified/index.html (+61ms) 
+15:16:35   ├─ /fr/diseases/haemolytic-uraemic-syndrome-hus/index.html (+58ms) 
+15:16:35   ├─ /fr/diseases/meningitis-all-reported-etiologies/index.html (+38ms) 
+15:16:35   ├─ /fr/diseases/methicillin-resistant-staphylococcus-aureus-mrsa-surveillance/index.html (+56ms) 
+15:16:35   ├─ /fr/diseases/escherichia-coli-enteritis-all-reported-pathotypes/index.html (+40ms) 
+15:16:35   ├─ /fr/diseases/index.html (+38ms) 
+15:16:35   ├─ /fr/downloads/index.html (+37ms) 
+15:16:35   ├─ /fr/reports/index.html (+30ms) 
+15:16:35   ├─ /fr/research/articles/ci-research-review/index.html (+76ms) 
+15:16:35   ├─ /fr/research/ask/index.html (+63ms) 
+15:16:35   ├─ /fr/research/countries/us/index.html (+55ms) 
+15:16:35   ├─ /fr/research/diseases/influenza/index.html (+50ms) 
+15:16:35   ├─ /fr/research/graph/index.html (+66ms) 
+15:16:35   ├─ /fr/research/integrity/index.html (+58ms) 
+15:16:35   ├─ /fr/research/preprints/index.html (+72ms) 
+15:16:35   ├─ /fr/research/rss/diseases/influenza.xml (+20ms) 
+15:16:35   ├─ /fr/research/rss/countries/us.xml (+14ms) 
+15:16:35   ├─ /fr/research/rss/topics/surveillance.xml (+10ms) 
+15:16:35   ├─ /fr/research/rss/study-types/systematic-review.xml (+57ms) 
+15:16:35   ├─ /fr/research/rss/collections/reviews-and-guidelines.xml (+39ms) 
+15:16:35   ├─ /fr/research/rss/peer-review/peer-reviewed.xml (+36ms) 
+15:16:35   ├─ /fr/research/rss/peer-review/preprint.xml (+68ms) 
+15:16:35   ├─ /fr/research/rss.xml (+8ms) 
+15:16:35   ├─ /fr/research/topics/surveillance/index.html (+10ms) 
+15:16:35   ├─ /fr/research/weekly/2000-W01/index.html (+28ms) 
+15:16:35   ├─ /fr/research/index.html (+49ms) 
+15:16:35   ├─ /fr/search/index.html (+53ms) 
+15:16:35   ├─ /fr/situation/methodology/index.html (+62ms) 
+15:16:35   ├─ /fr/situation/monthly/2026-10/index.html (+66ms) 
+15:16:35   ├─ /fr/situation/monthly/index.html (+25ms) 
+15:16:35   ├─ /fr/situation/weekly/2026-W43/index.html (+73ms) 
+15:16:35   ├─ /fr/situation/weekly/index.html (+59ms) 
+15:16:35   ├─ /fr/situation/index.html (+95ms) 
+15:16:35   ├─ /fr/subscribe/index.html (+104ms) 
+15:16:35   ├─ /fr/terms/index.html (+43ms) 
+15:16:35   ├─ /fr/index.html (+63ms) 
+15:16:35   ├─ /og-default.png (+82ms) 
+15:16:35   ├─ /papers-host/robots.txt (+55ms) 
+15:16:35   ├─ /papers-host/sitemap.xml (+75ms) 
+15:16:35   ├─ /reports/index.html (+69ms) 
+15:16:35   ├─ /reports-host/robots.txt (+44ms) 
+15:16:35   ├─ /reports-host/sitemap.xml (+33ms) 
+15:16:35   ├─ /research/articles/ci-research-review/index.html (+15ms) 
+15:16:35   ├─ /research/ask/index.html (+48ms) 
+15:16:35   ├─ /research/catalogue/diseases/d001.json (+30ms) 
+15:16:35   ├─ /research/catalogue/diseases/d001/2000010-a268156a7a98ca38.json (+28ms) 
+15:16:35   ├─ /research/catalogue/entities.json (+35ms) 
+15:16:35   ├─ /research/catalogue/manifest.json (+30ms) 
+15:16:35   ├─ /research/catalogue/0-2278a39b3ccf8bc4.json (+2ms) 
+15:16:35   ├─ /research/countries/us/index.html (+8ms) 
+15:16:35   ├─ /research/diseases/influenza/index.html (+12ms) 
+15:16:35   ├─ /research/evidence-manifest.json (+39ms) 
+15:16:35   ├─ /research/graph/index.html (+24ms) 
+15:16:35   ├─ /research/integrity/index.html (+30ms) 
+15:16:35   ├─ /research/preprints/index.html (+55ms) 
+15:16:35   ├─ /research/rss/diseases/influenza.xml (+14ms) 
+15:16:35   ├─ /research/rss/countries/us.xml (+19ms) 
+15:16:35   ├─ /research/rss/topics/surveillance.xml (+11ms) 
+15:16:35   ├─ /research/rss/study-types/systematic-review.xml (+9ms) 
+15:16:35   ├─ /research/rss/collections/reviews-and-guidelines.xml (+31ms) 
+15:16:35   ├─ /research/rss/peer-review/peer-reviewed.xml (+29ms) 
+15:16:35   ├─ /research/rss/peer-review/preprint.xml (+6ms) 
+15:16:35   ├─ /research/rss.xml (+7ms) 
+15:16:35   ├─ /research/search-index.json (+8ms) 
+15:16:35   ├─ /research/sitemap.xml (+9ms) 
+15:16:35   ├─ /research/sitemaps/1.xml (+15ms) 
+15:16:35   ├─ /research/topics/surveillance/index.html (+12ms) 
+15:16:35   ├─ /research/weekly/2000-W01/index.html (+22ms) 
+15:16:35   ├─ /research/index.html (+38ms) 
+15:16:35   ├─ /robots.txt (+39ms) 
+15:16:35   ├─ /search/index.html (+40ms) 
+15:16:35   ├─ /site-data/research-graph.json (+41ms) 
+15:16:35   ├─ /site-data/search-index.json (+18ms) 
+15:16:35   ├─ /sitemap.xml (+22ms) 
+15:16:35   ├─ /sitemaps/static.xml (+41ms) 
+15:16:35   ├─ /sitemaps/diseases.xml (+17ms) 
+15:16:35   ├─ /sitemaps/countries.xml (+20ms) 
+15:16:35   ├─ /sitemaps/country-diseases.xml (+58ms) 
+15:16:35   ├─ /sitemaps/situation.xml (+56ms) 
+15:16:35   ├─ /sitemaps/research.xml (+6ms) 
+15:16:35   ├─ /situation/map-data.json (+11ms) 
+15:16:35   ├─ /situation/methodology/index.html (+9ms) 
+15:16:35   ├─ /situation/monthly/2026-10/index.html (+13ms) 
+15:16:35   ├─ /situation/monthly/index.html (+17ms) 
+15:16:35   ├─ /situation/outbreaks/OB-e2efixture01.json (+16ms) 
+15:16:35   ├─ /situation/weekly/2026-W43/index.html (+18ms) 
+15:16:35   ├─ /situation/weekly/index.html (+21ms) 
+15:16:35   ├─ /situation/2026-W43/index.html (+20ms) 
+15:16:35   ├─ /situation/2026-10/index.html (+14ms) 
+15:16:35   ├─ /situation/index.html (+17ms) 
+15:16:35   ├─ /subscribe/index.html (+16ms) 
+15:16:35   ├─ /terms/index.html (+15ms) 
+15:16:35   ├─ /zh/about/index.html (+35ms) 
+15:16:35   ├─ /zh/changelog/index.html (+23ms) 
+15:16:35   ├─ /zh/compare/index.html (+39ms) 
+15:16:35   ├─ /zh/copyright/index.html (+33ms) 
+15:16:35   ├─ /zh/countries/index.html (+44ms) 
+15:16:35   ├─ /zh/data-updates/index.html (+38ms) 
+15:16:35   ├─ /zh/diseases/influenza/index.html (+16ms) 
+15:16:35   ├─ /zh/diseases/example-disease/index.html (+16ms) 
+15:16:35   ├─ /zh/diseases/erythema-infectiosum-fifth-disease/index.html (+47ms) 
+15:16:35   ├─ /zh/diseases/respiratory-syncytial-virus-infection-rsv/index.html (+48ms) 
+15:16:35   ├─ /zh/diseases/roseola-exanthem-subitum/index.html (+62ms) 
+15:16:35   ├─ /zh/diseases/flavivirus-infection-unspecified/index.html (+49ms) 
+15:16:35   ├─ /zh/diseases/haemolytic-uraemic-syndrome-hus/index.html (+253ms) 
+15:16:35   ├─ /zh/diseases/meningitis-all-reported-etiologies/index.html (+36ms) 
+15:16:35   ├─ /zh/diseases/methicillin-resistant-staphylococcus-aureus-mrsa-surveillance/index.html (+36ms) 
+15:16:35   ├─ /zh/diseases/escherichia-coli-enteritis-all-reported-pathotypes/index.html (+47ms) 
+15:16:35   ├─ /zh/diseases/index.html (+49ms) 
+15:16:35   ├─ /zh/downloads/index.html (+49ms) 
+15:16:35   ├─ /zh/reports/index.html (+80ms) 
+15:16:35   ├─ /zh/research/articles/ci-research-review/index.html (+53ms) 
+15:16:35   ├─ /zh/research/ask/index.html (+60ms) 
+15:16:35   ├─ /zh/research/countries/us/index.html (+58ms) 
+15:16:35   ├─ /zh/research/diseases/influenza/index.html (+58ms) 
+15:16:35   ├─ /zh/research/graph/index.html (+36ms) 
+15:16:35   ├─ /zh/research/integrity/index.html (+46ms) 
+15:16:35   ├─ /zh/research/preprints/index.html (+60ms) 
+15:16:35   ├─ /zh/research/rss/diseases/influenza.xml (+20ms) 
+15:16:35   ├─ /zh/research/rss/countries/us.xml (+12ms) 
+15:16:35   ├─ /zh/research/rss/topics/surveillance.xml (+17ms) 
+15:16:35   ├─ /zh/research/rss/study-types/systematic-review.xml (+46ms) 
+15:16:35   ├─ /zh/research/rss/collections/reviews-and-guidelines.xml (+34ms) 
+15:16:35   ├─ /zh/research/rss/peer-review/peer-reviewed.xml (+5ms) 
+15:16:35   ├─ /zh/research/rss/peer-review/preprint.xml (+32ms) 
+15:16:35   ├─ /zh/research/topics/surveillance/index.html (+56ms) 
+15:16:35   ├─ /zh/research/weekly/2000-W01/index.html (+17ms) 
+15:16:35   ├─ /zh/research/index.html (+38ms) 
+15:16:35   ├─ /zh/search/index.html (+48ms) 
+15:16:35   ├─ /zh/situation/methodology/index.html (+46ms) 
+15:16:35   ├─ /zh/situation/monthly/2026-10/index.html (+48ms) 
+15:16:35   ├─ /zh/situation/monthly/index.html (+51ms) 
+15:16:35   ├─ /zh/situation/weekly/2026-W43/index.html (+42ms) 
+15:16:35   ├─ /zh/situation/weekly/index.html (+24ms) 
+15:16:35   ├─ /zh/situation/index.html (+65ms) 
+15:16:35   ├─ /zh/subscribe/index.html (+68ms) 
+15:16:35   ├─ /zh/terms/index.html (+22ms) 
+15:16:35   ├─ /zh/index.html (+31ms) 
+15:16:35   ├─ /index.html (+51ms) 
+ (+58ms) 
+ (+32ms) 
+ (+26ms) 
+ (+47ms) 
+ (+54ms) 
+ (+22ms) 
+ (+8ms) 
+15:16:35 ✓ Completed in 2.11s.
+
+15:16:35 [build] ✓ Completed in 6.97s.
+15:16:35 [build] 120 page(s) built in 10.49s
+15:16:35 [build] Complete!
+[build-timing] Astro render 12.7s status=0
+[redirects] generated 0 legacy situation rules
+[build-timing] recheck source consistency 0.5s
+[asset-cache] saved 105 shared assets
+[build-timing] save shared assets and pending plans 0.0s
+[build-timing] render and restore 15.9s
+[build-timing] group wall=15.9s workers=4
+[build-stage] start split research evidence
+[research-evidence] wrote 1 article shards
+[build-timing] split research evidence 0.1s
+[build-timing] group wall=0.1s workers=1
+[build-stage] start optimize map
+[world-map] 217 features, 1010239 -> 508115 bytes
+[build-timing] optimize map 0.2s
+[build-timing] group wall=0.2s workers=1
+[build-stage] start performance audit
+[build-stage] start SEO audit
+[build-stage] start output translations
+[i18n] PASS locales=en,fr,zh strings=58 frenchUi=392 dist=checked generated=skipped(1 missing ignored snapshot)
+[build-timing] output translations 0.2s
+[seo-output] PASS {"passed":true,"errors":[],"pages":120,"indexable":99,"noindex":21,"redirects":30}
+[build-timing] SEO audit 0.4s
+[performance-budget] PASS {"passed":true,"errors":[],"budgets":{"maxJavaScriptChunkBytes":350000,"maxRouteCompressedAssetsBytes":395000,"maxOrdinaryRouteCompressedAssetsBytes":300000,"maxPageHtmlGzipBytes":115000,"maxAverageHtmlBytes":105000,"maxMainSiteAverageHtmlBytes":180000,"maxMainSiteAverageHtmlGzipBytes":22000,"maxAverageHtmlGzipBytes":19050,"maxTotalHtmlGzipBytes":26000000,"maxFontAssetBytes":220000,"maxLegacyWoffFiles":0,"maxWorldMapBytes":525000,"maxWorldMapBrotliBytes":140000},"pages":120,"javaScriptChunks":79,"largestJavaScript":{"file":"install.Cd4T8RD8.js","rawBytes":312066,"gzipBytes":105536},"fonts":{"woff2Files":2,"legacyWoffFiles":0,"rawBytes":95896},"worldMap":{"rawBytes":508115,"brotliBytes":123372},"html":{"rawBytes":4760678,"gzipBytes":1206200,"averageRawBytes":39672,"averageGzipBytes":10052,"gzipBudgetBytes":26000000,"largestPage":{"path":"/zh/research/index.html","gzipBytes":17568}},"largestRoute":{"path":"/diseases/erythema-infectiosum-fifth-disease/index.html","gzipBytes":393166,"assetCount":39},"largestOrdinaryRoute":{"path":"/fr/index.html","gzipBytes":112790,"assetCount":16},"pageFacts":{"hits":0,"misses":120},"compressionCache":{"hits":1,"misses":224}}
+[build-timing] performance audit 2.0s
+[build-timing] group wall=2.0s workers=3
+[build-stage] start finalize page caches
+[research-cache] recorded 1 complete page bundles
+[page-cache] recorded 17 complete page bundles
+[build-timing] finalize page caches 0.9s
+[build-timing] group wall=0.9s workers=1
+(node:1514848) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)

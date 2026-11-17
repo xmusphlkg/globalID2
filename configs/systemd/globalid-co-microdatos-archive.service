@@ -1,0 +1,16 @@
+[Unit]
+Description=Archive original Colombia INS Sivigila microdata workbooks
+Wants=globalid-co-ins-proxy.service
+After=globalid-co-ins-proxy.service
+
+[Service]
+Type=oneshot
+User=likangguo
+Group=likangguo
+WorkingDirectory=/home/likangguo/globalID/globalID2
+Environment=CO_INS_HTTP_PROXY=http://169.254.231.2:18088
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/likangguo/globalID/globalID2/venv/bin/python /home/likangguo/globalID/globalID2/scripts/imports/collect_co_microdatos.py --workers 8
+ExecStartPost=/home/likangguo/globalID/globalID2/venv/bin/python /home/likangguo/globalID/globalID2/scripts/verify_co_microdatos_archive.py
+TimeoutStartSec=infinity
+UMask=0077

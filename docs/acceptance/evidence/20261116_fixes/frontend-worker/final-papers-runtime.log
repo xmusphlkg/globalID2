@@ -1,0 +1,25 @@
+TAP version 13
+# {"event":"research_papers_read_failed","generation":"a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e","error_type":"Error"}
+# {"event":"research_papers_read_failed","generation":"c6c1c9a9c8543f1e4cd980064cf1625eeb61a90703b2464fff039f21682508b3","error_type":"Error"}
+# {"event":"research_papers_read_failed","generation":"c6c1c9a9c8543f1e4cd980064cf1625eeb61a90703b2464fff039f21682508b3","error_type":"Error"}
+# Subtest: template v2 catalogue entries fail closed and snapshot page URLs stay removed
+ok 1 - template v2 catalogue entries fail closed and snapshot page URLs stay removed
+  ---
+  duration_ms: 993.012961
+  type: 'test'
+  ...
+# Subtest: real template v2 records fail closed instead of assembling HTML
+ok 2 - real template v2 records fail closed instead of assembling HTML # SKIP
+  ---
+  duration_ms: 0.534396
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 1883.458758

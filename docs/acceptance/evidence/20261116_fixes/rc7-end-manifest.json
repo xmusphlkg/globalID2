@@ -1,0 +1,131 @@
+{
+  "captured_at": "2026-11-16T04:15:52.204374+00:00",
+  "head": "9d4d52bacb56081b6e061baad40d8884f8742a56",
+  "files": {
+    "src/core/remaining_country_sources.py": {
+      "sha256": "125f4a6f60b977496304bcea15db84a93c9a7eb53c5ebdfb79542949d034a50c",
+      "mtime_ns": 1794802105817073120
+    },
+    "src/core/source_channels.py": {
+      "sha256": "d0b768ad282333eaaa179fa9acfe81fe00536677e450cea8c3f8c855281ca0d1",
+      "mtime_ns": 1794788244840789324
+    },
+    "src/core/source_scopes.py": {
+      "sha256": "033ebbaf1b8672f29595611dc621be6a12a9955abf10fdf8a9d28eb754caa09d",
+      "mtime_ns": 1794801605314107195
+    },
+    "src/services/crawl_service.py": {
+      "sha256": "f704c5d601b7e6ff7ff16d30a9bd31dd29cd316b4adc0ca451ef2c50b075fb33",
+      "mtime_ns": 1794801635652954115
+    },
+    "configs/country_bootstrap.json": {
+      "sha256": "63cfb381a2dde107ca295f6c95c512f9146b182f9d6c8b624c1c3a55a25827d5",
+      "mtime_ns": 1794802159030066491
+    },
+    "configs/disease_ontology.json": {
+      "sha256": "63497c98a7f6abfd4d10f53fc9397e6c8b7ba190c1df15f91ab49e483da72456",
+      "mtime_ns": 1794801635648953740
+    },
+    "configs/surveillance_channels.json": {
+      "sha256": "c209029d163601a4511cabcd479e1db0e2e0afe2da013e985565434c987be693",
+      "mtime_ns": 1794801635652954115
+    },
+    "scripts/configure_priority_country_updates.py": {
+      "sha256": "e7647d76ab7202c46a7b967d911748dd8fca474ae7ddbaa43827083b55b7ac15",
+      "mtime_ns": 1794801672004365239
+    },
+    "src/data/crawlers/who_annual.py": {
+      "sha256": "8c0fe88d679dd0bb85bdfdbb56b2c3e9df67dcc023901f7e98392d0af618c9fa",
+      "mtime_ns": 1794801185786739815
+    },
+    "src/data/processors/who_annual.py": {
+      "sha256": "059ba4f2d5e16e8be230807e82bc381c3695b133f4193f1308d8b5109455d42f",
+      "mtime_ns": 1794801131417637956
+    },
+    "src/services/ingestion/countries/who_annual.py": {
+      "sha256": "29902629d1366499ddf0eb5a95a8094373bfb625b2533be5a37a6f1db2067fee",
+      "mtime_ns": 1794801131421638332
+    },
+    "src/data/crawlers/spf_overseas.py": {
+      "sha256": "5c6ecd3e81d97b597b0e9c26d2c98cf52d43db63cf0a408134ea4fdd3321e925",
+      "mtime_ns": 1794801405651371353
+    },
+    "src/data/processors/spf_overseas.py": {
+      "sha256": "42d9803a1cc0aff0f648b8b23e82888fe5a21e32e859fd0da125a56a40b41c22",
+      "mtime_ns": 1794801336708901966
+    },
+    "src/services/ingestion/countries/spf_overseas.py": {
+      "sha256": "4807b2f9d2ba9e35d97bf5a80046973fe64ad42a132089fa4ef1c5a8a3ff93af",
+      "mtime_ns": 1794801381061063860
+    },
+    "src/data/crawlers/cr_notifications.py": {
+      "sha256": "aa99ecb1f7c7c21c273ed9f7fde103e64fc712c121fb65a2e7e85b7f569e40fd",
+      "mtime_ns": 1794802313548566114
+    },
+    "src/data/processors/cr_notifications.py": {
+      "sha256": "23d5621b100e62b85158f2ca1f6d4e4f2da236c80891279c71cad9b104d3d780",
+      "mtime_ns": 1794801393218204655
+    },
+    "src/services/ingestion/countries/cr_notifications.py": {
+      "sha256": "a04fcc9cc0b5e3a43a1bde6f79fa1be051de7446e0758a8723e09f58b69facf1",
+      "mtime_ns": 1794802313580569117
+    },
+    "src/data/crawlers/wpro_dengue.py": {
+      "sha256": "90fa4de47630b29186c6abf6cf599b123b55cf67ab28be935c00cce68be1e36a",
+      "mtime_ns": 1794802398780564068
+    },
+    "src/data/processors/wpro_dengue.py": {
+      "sha256": "a45c4a24132c26a71fb9d22fd12d54df044f0b9ca38e799ff440a8c88f768db9",
+      "mtime_ns": 1794801623295794551
+    },
+    "src/services/ingestion/countries/wpro_dengue.py": {
+      "sha256": "98823e1839fb7f92d612d57f283097366fd76b770f1657b5c84b43b94052510e",
+      "mtime_ns": 1794801819670221827
+    },
+    "src/services/ingestion/countries/my_who_common.py": {
+      "sha256": "b23c048d36aa350b2eab444d058db5a00e996208ded177d9440b943abffbbe16",
+      "mtime_ns": 1794788431330168350
+    },
+    "src/services/situation_notices/documents.py": {
+      "sha256": "f9e6e2516448f4ef403342022ec58e6842976fdfb0372ffcabd2a48f07a672c5",
+      "mtime_ns": 1794793025513000529
+    },
+    "tests/unit/test_priority_country_updates.py": {
+      "sha256": "fcf50bf8a797a972e551b7f8358062d4c48d0e019d29472276db9de37509cb0f",
+      "mtime_ns": 1794801622479717972
+    },
+    "tests/unit/test_remaining_surveillance_onboarding.py": {
+      "sha256": "d7297598e4926f28d387b95e86626a48a914c6b48efbf1be15b788bf7b377fb3",
+      "mtime_ns": 1794802415282112531
+    },
+    "tests/unit/test_remaining_who_annual.py": {
+      "sha256": "4d734cc73a2fb708dbe53a18ba8f8430b91f0a13ee26679bbda2ef8c80bf7576",
+      "mtime_ns": 1794801246364424270
+    },
+    "tests/unit/test_spf_overseas.py": {
+      "sha256": "d1555a1efe8492bd5aab4cfee8fca6627e05cb9cb10a6fc725d526b107cf4cba",
+      "mtime_ns": 1794801279947575628
+    },
+    "tests/unit/test_my_who_sources.py": {
+      "sha256": "a15b9b23c70536a91ea427c8edd9abe8378cf9a9e355de6c892fff0d437237f0",
+      "mtime_ns": 1794800409837926753
+    },
+    "tests/unit/test_wpro_dengue.py": {
+      "sha256": "81d46a61648dc173fb613d6aa1fe10e5ffe71d52cbf0939fcb698b09d6ca01d6",
+      "mtime_ns": 1794802085163135007
+    },
+    "tests/unit/test_wpro_dengue_acceptance.py": {
+      "sha256": "66aeccb6bb73e2abc58f0f6a71f94d7f36ca302d73da2b3876b634e31a048bdf",
+      "mtime_ns": 1794802398828568573
+    },
+    "tests/unit/test_cr_notifications.py": {
+      "sha256": "3f28f6e81c7238b40eeb14736e3e39e2b6826c01f56eee9f9b4e87ef6e34ba92",
+      "mtime_ns": 1794801715184417146
+    },
+    "tests/unit/test_cr_notifications_acceptance.py": {
+      "sha256": "72d2df15d187afa8d882bfea8a5f00de9e8027a2f0b66fdc4aed1d62372bef81",
+      "mtime_ns": 1794802359104840999
+    }
+  },
+  "changed_paths": []
+}

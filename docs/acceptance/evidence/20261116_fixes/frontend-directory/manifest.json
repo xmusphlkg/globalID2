@@ -1,0 +1,24 @@
+{
+  "files": {
+    "frontend-directory-integration.json": {
+      "bytes": 3491,
+      "sha256": "fb04137ac92d315e71cb61109dd5bd400e3afc22107d66272965b36d35554e62"
+    },
+    "frontend-directory-integration.log": {
+      "bytes": 1969,
+      "sha256": "bede51996d61cf41953e635e6f3062eb0eb2dad5d4f4ad7c870aa4ae5fe89a66"
+    },
+    "frontend-directory-integration.mjs": {
+      "bytes": 3118,
+      "sha256": "7eedec21185f0cbda257f016569382e4366682fe8183999dbdb8a7d26b3f5cf2"
+    },
+    "frontend-integration-gates.json": {
+      "bytes": 2518,
+      "sha256": "fc4fe60e3471c08a051cb21b5c6c06ea6b2a28e87a4e57d27b727f370d8a26dd"
+    },
+    "frontend-integration-targeted.log": {
+      "bytes": 3426,
+      "sha256": "4867aa68e6d005ca50f8d6d27b47ef3df983ec8d15b1e8c630ac4b6a8f1fea8b"
+    }
+  }
+}

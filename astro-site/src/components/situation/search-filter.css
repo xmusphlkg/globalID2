@@ -1,0 +1,15 @@
+.sit-search-field { position: relative; }
+.sit-search-control { position: relative; min-width: 0; }
+.sit-search-control input { background: rgb(var(--bg-soft)); border: 1px solid rgb(var(--border)); border-radius: .25rem; box-sizing: border-box; color: rgb(var(--text-strong)); font: inherit; font-size: .8rem; font-weight: 400; min-width: 0; padding: .45rem 1.75rem .45rem .5rem; text-overflow: ellipsis; width: 100%; }
+.sit-search-control input::placeholder { color: rgb(var(--text-muted)); opacity: 1; }
+.sit-search-control input:focus-visible { outline: 2px solid rgb(var(--color-teal)); outline-offset: 1px; }
+.sit-search-toggle { align-items: center; background: transparent; border: 0; bottom: 1px; color: rgb(var(--text-muted)); cursor: pointer; display: flex; justify-content: center; padding: 0; position: absolute; right: 1px; top: 1px; width: 1.6rem; }
+.sit-search-toggle svg { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; }
+.sit-search-popup { background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); border-radius: .3rem; box-shadow: 0 .4rem 1rem rgb(0 0 0 / .15); left: 0; position: absolute; right: 0; top: calc(100% + .2rem); z-index: 8; }
+.sit-search-popup ul { display: grid; list-style: none; margin: 0; max-height: min(16rem, 35dvh); overflow: auto; padding: .2rem; }
+.sit-search-popup li { align-items: baseline; border-radius: .2rem; color: rgb(var(--text-strong)); cursor: pointer; display: flex; font-size: .76rem; font-weight: 400; gap: .45rem; justify-content: space-between; line-height: 1.4; padding: .45rem .4rem; }
+.sit-search-popup li > span { min-width: 0; overflow-wrap: anywhere; }
+.sit-search-popup li small { color: rgb(var(--text-faint)); flex: none; font-size: .68rem; font-variant-numeric: tabular-nums; }
+.sit-search-popup li[aria-selected='true'] { font-weight: 750; }
+.sit-search-popup li.is-active { background: rgb(var(--color-teal) / .12); }
+.sit-search-empty { color: rgb(var(--text-muted)); font-size: .74rem; font-weight: 400; line-height: 1.4; margin: 0; padding: .65rem; }

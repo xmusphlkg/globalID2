@@ -1,0 +1,10 @@
+{
+  "isolated_database": "globalid_targeted_acceptance_aaae9d9e509546ab8ba720fb66fc2958",
+  "created": true,
+  "dropped": true,
+  "nodes": [
+    "tests/integration/test_postgres_model_health_sampling.py::test_success_index_migration_is_concurrent_reversible_and_covers_count"
+  ],
+  "timeout_seconds": 180,
+  "exit_code": 1
+}

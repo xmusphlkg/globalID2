@@ -1,0 +1,51 @@
+{
+  "tool": "pypdf 7.1.0",
+  "operation": "retain report cover and parsed national evidence pages; remove raster images, preserve vector text/tables",
+  "original_archive_sha256": "331aa66be1fc1043c5e404a8f2c06114330b3b7d5ee651a5c0de4beaabd5f9b5",
+  "documents": {
+    "full_listing.html": {
+      "original_sha256": "938c8d309a6f01eb25b50969664a22b5e916137e06f9671e0a0766d499b6bcad",
+      "fixture_sha256": "938c8d309a6f01eb25b50969664a22b5e916137e06f9671e0a0766d499b6bcad",
+      "original_bytes": 1762936,
+      "fixture_bytes": 1762936,
+      "original_pages": "all"
+    },
+    "1993w52.pdf": {
+      "original_sha256": "da1c8eee00a350850dae2a089abf66b9b27d5b4b8e032de74226377cf5c1d752",
+      "fixture_sha256": "da1c8eee00a350850dae2a089abf66b9b27d5b4b8e032de74226377cf5c1d752",
+      "original_bytes": 718368,
+      "fixture_bytes": 718368,
+      "original_pages": "all"
+    },
+    "2013w52.pdf": {
+      "original_sha256": "afe4320fa6a5a9c2603b8a43ddb5ea35f2ff96d867fadccb3f66bc916fb304b1",
+      "fixture_sha256": "69774883a25dd7bfcb9d37cdf56a8366be1329f37aa918bd5c3b20de107e12fb",
+      "original_bytes": 7011113,
+      "fixture_bytes": 588278,
+      "original_pages": [
+        1,
+        22
+      ]
+    },
+    "2019w51.pdf": {
+      "original_sha256": "b30cc9d804d7f1af43d00f67331fedaad6dde9cd5b28558a55b9180748547b95",
+      "fixture_sha256": "ee38caa9e5754d43408b3a82291c42133a00bd54d86a076dd38315966c6d969a",
+      "original_bytes": 4068580,
+      "fixture_bytes": 506756,
+      "original_pages": [
+        1,
+        11
+      ]
+    },
+    "2026w13_cover_summary.pdf": {
+      "original_sha256": "7649ed3324b07ac3ebef7e4e6ddf93fd82d35dacc2a368a3eb6780ed87fbeddd",
+      "fixture_sha256": "2b902886019f12f723d2dad37e65ed136e46427ce22946a90abee53ff0ae9146",
+      "original_bytes": 5812723,
+      "fixture_bytes": 575350,
+      "original_pages": [
+        1,
+        23
+      ]
+    }
+  }
+}

@@ -1,0 +1,145 @@
+<div class="col-6 mb-2" id="fdz_gr">
+<label class="form-label" for="disease_group">กลุ่มโรค</label>
+<select class="form-select" id="f_dz_gr" name="f_dz_gr">
+<option value="all">-- ทั้งหมด --</option>
+<option value="1">โรคติดต่อจากสัตว์สู่คน</option>
+<option value="2">กลุ่มโรคจากการประกอบอาชีพและสิ่งแวดล้อม</option>
+<option value="3">กลุ่มโรคติดเชื้อจากการสัมผัส</option>
+<option value="4">กลุ่มโรคติดเชื้อที่นำโดยแมลง</option>
+<option value="5">กลุ่มโรคติดเชื้อที่ป้องกันได้ด้วยวัคซีน</option>
+<option value="6">กลุ่มโรคติดเชื้อระบบทางเดินหายใจ</option>
+<option value="7">กลุ่มโรคติดเชื้อระบบประสาทส่วนกลาง</option>
+<option value="8">กลุ่มโรคติดต่อทางเพศสัมพันธ์</option>
+<option value="9">กลุ่มโรคระบบทางเดินอาหารและน้ำ</option>
+<option value="10">การเฝ้าระวังกลุ่มอาการ (Syndromic)</option>
+<option value="11">กลุ่มโรคอื่นๆ</option>
+</select>
+</div>
+<div class="col-6 mb-4" id="fdz">
+<label class="form-label" for="disease">โรค<span class="text-danger">*</span></label>
+<select class="form-select" id="f_dz" name="f_dz" required="">
+<option value="all">-- โปรดเลือก --</option>
+</select>
+</div>
+<div class="col-6 mb-4" id="fyear">
+<label class="form-label" for="year">ปี<span class="text-danger">*</span></label>
+<select class="form-select" id="f_year" name="f_year" required="">
+<option value="">-- โปรดเลือก --</option>
+</select>
+</div>
+<div class="col-6 mb-4" id="fdate_type">
+<label class="form-label" for="date_type">วัน/สถานที่ <span class="text-danger">*</span></label>
+<select class="form-select" id="f_date_type" name="date_type">
+<option value="">-- โปรดเลือก --</option>
+<option value="onset">ตามวันและสถานที่เริ่มป่วย</option>
+<option value="gen">ตามวันและสถานที่รายงาน</option>
+</select>
+</div>
+<div class="col-12 mb-4" id="fwk_start_end">
+<label class="form-label" for="week_start">สัปดาห์ที่ <span class="text-danger">*</span></label>
+<select class="form-select" id="f_wk_start_end" name="f_wk_start_end" required="">
+<option value="">-- โปรดเลือก --</option>
+</select>
+</div>
+<script>
+$(document).ready(function() {
+	$.ajaxSetup({headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')}});
+	$('#f_dz_gr').change(function() {
+		$('#btn_submit').prop('disabled', false);
+		if ($(this).val() != '') {
+			let f_dz_gr = $(this).val();
+			let url = "https://doe.moph.go.th/dds-report/situation/nation/dzg/:f_dz_gr";
+			url = url.replace(':f_dz_gr', f_dz_gr);
+			$.ajax({
+				url: url,
+				type: 'GET',
+				async: false,
+				dataType: 'html',
+				success: function(response) {
+					$('#f_dz').html(response);
+				},
+				error: function(data, status, error) {
+					console.log(error);
+				}
+			});
+			$('#f_dz').prop('disabled', false);
+		} else {
+			$('#f_dz').html('<option value=\"\">-- โปรดเลือก --</option>');
+			$('#f_dz').prop('disabled', true);
+		}
+	});
+	$('#f_dz').change(function() {
+		$('#btn_submit').prop('disabled', false);
+		if ($(this).val() != '') {
+			let f_dz = $(this).val();
+			let url = "https://doe.moph.go.th/dds-report/situation/nation/dz/:f_dz";
+			url = url.replace(':f_dz', f_dz);
+			$.ajax({
+				url: url,
+				type: 'GET',
+				async: false,
+				dataType: 'html',
+				success: function(response) {
+					$('#f_year').html(response);
+				},
+				error: function(data, status, error) {
+					console.log(error);
+				}
+			});
+			$('#f_year').prop('disabled', false);
+		} else {
+			$('#f_year').html('<option value=\"\">-- โปรดเลือก --</option>');
+			$('#f_year').prop('disabled', true);
+		}
+	});
+	$('#f_year').change(function() {
+		$('#btn_submit').prop('disabled', false);
+		if ($(this).val() == '') {
+			$('#f_date_type').find('option:eq(0)').prop('selected', true);
+			$('#f_date_type').prop('disabled', true);
+			$('#f_wk_start_end').html('<option value=\"\">-- โปรดเลือก --</option>');
+			$('#f_wk_start_end').prop('disabled', true);
+		} else {
+			$('#f_date_type').find('option:eq(0)').prop('selected', true);
+			$('#f_date_type').prop('disabled', false);
+			$('#f_wk_start_end').html('<option value=\"\">-- โปรดเลือก --</option>');
+			$('#f_wk_start_end').prop('disabled', false);
+		}
+	});
+	$('#f_date_type').change(function() {
+		$('#btn_submit').prop('disabled', false);
+		if ($(this).val() != '') {
+			let f_date_type = $(this).val();
+			let f_year = $('#f_year').val();
+			let f_dz = $('#f_dz').val();
+			let url = "https://doe.moph.go.th/dds-report/situation/nation/dz/:f_dz/year/:f_year/type/:f_date_type";
+			url = url.replace(':f_year', f_year);
+			url = url.replace(':f_dz', f_dz);
+			url = url.replace(':f_date_type', f_date_type);
+			$.ajax({
+				url: url,
+				type: 'GET',
+				async: false,
+				dataType: 'html',
+				success: function(response) {
+					$('#f_wk_start_end').html(response);
+				},
+				error: function(data, status, error) {
+					console.log(error);
+				}
+			});
+			$('#f_wk_start_end').prop('disabled', false);
+		} else {
+			$('#f_wk_start_end').html('<option value=\"\">-- โปรดเลือก --</option>');
+			$('#f_wk_start_end').prop('disabled', true);
+		}
+	});
+	$('#f_wk_start_end').change(function() {
+		if ($(this).val() == '') {
+			$('#btn_submit').prop('disabled', true);
+		} else {
+			$('#btn_submit').prop('disabled', false);
+		}
+	});
+});
+</script>

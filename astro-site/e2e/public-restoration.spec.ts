@@ -2,6 +2,9 @@ import { createHash } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 
 const hash = (body: string | Buffer) => createHash('sha256').update(body).digest('hex');
+// Astro's development-only island timings vary on each request; all published
+// markup and data must still match byte for byte.
+const htmlHash = (body: Buffer) => hash(body.toString('utf8').replace(/ server-render-time="[^"]*"/g, ''));
 const source = { label: 'Official weekly source', url: 'https://example.test/authority', cadence: 'weekly', description: 'Published weekly case notifications.' };
 const country = { code: 'JP', name_en: 'Japan', name_zh: '日本', data_available: true, record_count: 12, disease_count: 1, total_cases: 30, date_range: { start: '2026-10-04', end: '2026-10-11' }, source_info: { sources: [source] } };
 const series = { disease_id: 'D038', slug: 'influenza', name_en: 'Influenza', name_zh: '流感', dates: ['2026-10-04', '2026-10-11'], cases: [10, 0], total_cases: 10, period_granularity: 'weekly', comparability: 'comparable', date_range: country.date_range };
@@ -16,21 +19,27 @@ function bundle(entries: Record<string, unknown>, version: string, root: string)
 }
 function surveillance(version = 1) {
   return bundle({
+    'home-summary.json': { schema_version: 1, generated_at: '2026-11-07', national_count: 1, subdivision_count: 1,
+      total_diseases: 1, official_source_count: 1, recent_countries: [country], featured_countries: [country] },
     'meta.json': { generated_at: '2026-11-07', total_countries: 2, total_diseases: 1, countries: [country, { ...country, code: 'JP-13', name_en: 'Tokyo', name_zh: '东京都', name_fr: 'Tokyo', parent_code: 'JP', location_type: 'subdivision', source_info: { sources: [{ ...source, label: 'Regional monthly source' }] } }] },
     'site-status.json': { generated_at: '2026-11-07' },
     'home-influenza.json': { schema_version: 1, series: { JP: { cases: [1, 8 * version, 3] }, CN: { cases: [3, 1, 8] } } },
-    'countries/jp-summary.json': { ...country, country_code: 'JP', country_name_en: 'Japan', total_deaths: 0, generated_at: '2026-11-07', diseases: [series], source_info: { sources: [source, source] }, country_brief_updated_at: '2026-10-10' },
+    'countries/jp-summary.json': { ...country, schema_version: 1, country_code: 'JP', country_name_en: 'Japan', total_deaths: 0, generated_at: '2026-11-07', diseases: [series], source_info: { sources: [source, source] }, country_brief_updated_at: '2026-10-10',
+      download: { kind: 'country', code: 'JP', id: 'jp', generated_at: '2026-10-01', record_count: 12,
+        parts: [{ id: 'current', label: '2026', record_count: 12, date_range: country.date_range, files: { csv: { url: 'https://example.test/jp.csv', bytes: 1000 }, json: { url: 'https://example.test/jp.json' }, xlsx: { url: 'https://example.test/jp.xlsx' } } }] } },
     'countries/jp.json': { country_code: 'JP', disease_series: { D038: series } },
     'countries/jp-source-series.json': { v: 1, series: {} },
     'countries/jp-13.json': { country_code: 'JP-13', disease_series: { D038: series } },
     'countries/jp-13-summary.json': { ...country, country_code: 'JP-13', source_info: { sources: [{ ...source, label: 'Regional monthly source' }] } },
-    'diseases/d038-summary.json': { ...series, generated_at: '2026-11-07', country_count: 1, source_info: [{ country_code: 'JP', sources: [source, source] }], reporting_countries: [{ ...country, dates_tail: series.dates, cases_tail: series.cases, period_granularity: 'weekly', comparability: 'comparable' }] },
+    'diseases/d038-summary.json': { ...series, schema_version: 1, generated_at: '2026-11-07', country_count: 1, source_info: [{ country_code: 'JP', sources: [source, source] }], reporting_countries: [{ ...country, dates_tail: series.dates, cases_tail: series.cases, period_granularity: 'weekly', comparability: 'comparable' }],
+      download: { kind: 'disease', disease_id: 'D038', id: 'd038', generated_at: '2026-10-01', record_count: 12,
+        parts: [{ id: 'current', label: '2026', record_count: 12, date_range: country.date_range, files: { csv: { url: 'https://example.test/d038.csv', bytes: 1000 }, json: { url: 'https://example.test/d038.json' }, xlsx: { url: 'https://example.test/d038.xlsx' } } }] } },
     'diseases/d038.json': { disease_id: 'D038', country_series: { JP: { ...series, name_en: 'Japan', name_zh: '日本', period_granularity: 'monthly', dates: ['2026-09-01', '2026-10-01'] }, 'JP-13': { ...series, name_en: 'Influenza', name_zh: '流感', period_granularity: 'monthly', dates: ['2026-09-01', '2026-10-01'], cases: [4, 8] } } },
   }, `restored-${version}`, '/site-data');
 }
 const schema_version = 'gids.situation_alerts.v1';
 const outbreak = { outbreak_id: 'OB-restored', disease_id: 'D038', disease_name_en: 'Influenza', disease_name_zh: '流感', disease_label: 'Influenza', country_codes: ['JP'], first_published: '2026-11-02' };
-const alert = { ...outbreak, alert_id: 'restored-alert', country_code: 'JP', country_name_en: 'Japan', country_name_zh: '日本', published_date: '2026-11-05', status: 'ongoing', source_id: 'official', source_label_en: 'Official source', url: 'https://example.test/notice', summary_en: 'Reviewed update', cases: 10 };
+const alert = { ...outbreak, alert_id: 'restored-alert', host_type: 'human', country_code: 'JP', country_name_en: 'Japan', country_name_zh: '日本', published_date: '2026-11-05', status: 'ongoing', source_id: 'official', source_label_en: 'Official source', url: 'https://example.test/notice', summary_en: 'Reviewed update', cases: 10 };
 const week = { schema_version, period_key: '2026-W45', new_outbreaks: ['OB-restored'], updated_outbreaks: [], new_places: 1, alerts: 1, outbreaks: [outbreak] };
 const situation = bundle({
   'weekly/index.json': { schema_version, periods: [week, { ...week, period_key: '2026-W44', new_outbreaks: [], updated_outbreaks: ['OB-restored'] }] },
@@ -44,6 +53,8 @@ async function mock(page: Page) {
   let current = surveillance();
   const objects = new Map([...current.objects, ...surveillance(2).objects, ...situation.objects]);
   const requested: string[] = [];
+  await page.route('**/site-data/bootstrap.json', route => route.fulfill({ status: 404 }));
+  await page.route('**/site-data/situation/bootstrap.json', route => route.fulfill({ status: 404 }));
   await page.route('**/site-data/current.json', route => route.fulfill({ json: current.manifest }));
   await page.route('**/site-data/situation/current.json', route => route.fulfill({ json: situation.manifest }));
   await page.route(/\/site-data\/(?:situation\/)?objects\/.*\.json$/, route => {
@@ -58,12 +69,14 @@ async function mock(page: Page) {
 
 test('home restores real curves and clear national coverage without fetching country histories', async ({ page, request }) => {
   const data = await mock(page);
-  const before = hash(await (await request.get('/zh/')).body());
+  const before = htmlHash(await (await request.get('/zh/')).body());
   await page.goto('/zh/');
   await expect(page.locator('.curve-field polyline')).toHaveCount(2);
   await expect(page.locator('.curve-annotation')).toContainText('日本流感 · 中国流感');
-  await expect(page.locator('.data-console')).toContainText('国家级辖区');
-  await expect(page.locator('.data-console')).toContainText('省级／地区数据集');
+  for (const label of ['上级区域', '下级行政单位数据集']) {
+    const metric = page.locator('.data-console dl > div').filter({ has: page.locator('dt', { hasText: label }) });
+    await expect(metric.locator('dd')).toHaveText('1');
+  }
   await expect(page.locator('.home-recent')).toContainText('每周');
   const first = await page.locator('[data-country="JP"]').getAttribute('points');
   const full = surveillance().manifest.files['countries/jp.json'].url;
@@ -73,7 +86,7 @@ test('home restores real curves and clear national coverage without fetching cou
   await page.reload();
   await expect(page.locator('.curve-field')).toHaveAttribute('data-surveillance-version', 'restored-2');
   expect(await page.locator('[data-country="JP"]').getAttribute('points')).not.toBe(first);
-  expect(hash(await (await request.get('/zh/')).body())).toBe(before);
+  expect(htmlHash(await (await request.get('/zh/')).body())).toBe(before);
 });
 
 test('country restores contextual links, source cadence and separately dated download formats', async ({ page }) => {
@@ -91,6 +104,10 @@ test('country restores contextual links, source cadence and separately dated dow
   await expect(page.locator('#downloads a[href$=".xlsx"]')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await page.locator('#international').scrollIntoViewIfNeeded();
+  const notices = page.locator('#international [data-situation-version="restored-situation"]');
+  await expect(notices.locator('.intl-panel-item')).toHaveCount(1);
+  await expect(notices.locator('a.intl-panel-title')).toHaveAttribute('href', alert.url);
+  await expect(notices.locator('.intl-panel-counts')).toContainText('10');
   await expect(page.locator('.intl-panel-snapshot')).toContainText('本地快照');
   await expect(page.locator('.intl-panel-snapshot')).toContainText('-100%');
 });

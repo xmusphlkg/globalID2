@@ -1,0 +1,42 @@
+[
+  {
+    "provenance": "Extracted original tool stdout; no tests rerun. The original stdout may be a final poll chunk.",
+    "source_session": "/home/likangguo/.codex/sessions/2026/11/16/rollout-2026-11-16T11-19-02-01a1e25d-84a3-7ef0-b584-3929835f4974.jsonl",
+    "source_line": 826,
+    "timestamp": "2026-11-16T03:57:56.876Z",
+    "call_id": "call_5ed16df0da27443fbf799f9546d265a2",
+    "path": "/tmp/globalid-fixes-20261116/legacy-guard-za-22pass-tool-output.log",
+    "sha256": "995ffa7cf9f0140a1b3b204116a69b4b169af420c4e4adcb65a0f2d3ff4f9589",
+    "summary": "22 passed in 23.44s"
+  },
+  {
+    "provenance": "Extracted original tool stdout; no tests rerun. The original stdout may be a final poll chunk.",
+    "source_session": "/home/likangguo/.codex/sessions/2026/11/16/rollout-2026-11-16T11-19-02-01a1e25d-84a3-7ef0-b584-3929835f4974.jsonl",
+    "source_line": 881,
+    "timestamp": "2026-11-16T04:01:04.933Z",
+    "call_id": "call_eb7e24d783ef4e8e8f9ba8e18cf6f30a",
+    "path": "/tmp/globalid-fixes-20261116/ontology-60pass-tool-output.log",
+    "sha256": "b65c9e542a7d70761c46477b9d84dc20aea82d57a92f3385374e3fda26abeea3",
+    "summary": "60 passed in 28.86s"
+  },
+  {
+    "provenance": "Extracted original tool stdout; no tests rerun. The original stdout may be a final poll chunk.",
+    "source_session": "/home/likangguo/.codex/sessions/2026/11/16/rollout-2026-11-16T11-19-02-01a1e25d-84a3-7ef0-b584-3929835f4974.jsonl",
+    "source_line": 960,
+    "timestamp": "2026-11-16T04:05:09.917Z",
+    "call_id": "call_9dc83985be204d74a3e421794783b232",
+    "path": "/tmp/globalid-fixes-20261116/publication-atime-before-tool-output.log",
+    "sha256": "30e366385ec1e85a4753680b8515f8737ff689801370c83e9c52da31d611ebb4",
+    "summary": "1 failed, 5 passed, 32 deselected, 1 warning in 6.88s"
+  },
+  {
+    "provenance": "Extracted original tool stdout; no tests rerun. The original stdout may be a final poll chunk.",
+    "source_session": "/home/likangguo/.codex/sessions/2026/11/16/rollout-2026-11-16T11-19-02-01a1e25d-84a3-7ef0-b584-3929835f4974.jsonl",
+    "source_line": 978,
+    "timestamp": "2026-11-16T04:05:59.302Z",
+    "call_id": "call_824b276e2fde41dab8d67889f5a8c30b",
+    "path": "/tmp/globalid-fixes-20261116/publication-atime-after-69pass-tool-output.log",
+    "sha256": "da3d21b01fdb33c6de4df4405c13b9402ac1364a87775a65d6fdcf249f7a8d61",
+    "summary": "69 passed, 1 warning in 20.36s"
+  }
+]

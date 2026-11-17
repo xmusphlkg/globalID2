@@ -1,0 +1,44 @@
+[
+  {
+    "width": 390,
+    "lang": "en",
+    "country_form": true,
+    "disease_form": true,
+    "all_feed_language": true
+  },
+  {
+    "width": 390,
+    "lang": "zh",
+    "country_form": true,
+    "disease_form": true,
+    "all_feed_language": true
+  },
+  {
+    "width": 390,
+    "lang": "fr",
+    "country_form": true,
+    "disease_form": true,
+    "all_feed_language": true
+  },
+  {
+    "width": 1280,
+    "lang": "en",
+    "country_form": true,
+    "disease_form": true,
+    "all_feed_language": true
+  },
+  {
+    "width": 1280,
+    "lang": "zh",
+    "country_form": true,
+    "disease_form": true,
+    "all_feed_language": true
+  },
+  {
+    "width": 1280,
+    "lang": "fr",
+    "country_form": true,
+    "disease_form": true,
+    "all_feed_language": true
+  }
+]

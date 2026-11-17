@@ -1,0 +1,23 @@
+{
+  "total_count": 2,
+  "results": [
+    {
+      "annee": "2007",
+      "libgeo": "Guadeloupe",
+      "reglib": "Guadeloupe",
+      "nombre_de_cas_notifies_de_tuberculose": 20.0,
+      "taux_brut_de_cas_notifies_de_tuberculose": 5.0,
+      "departement": "971",
+      "reg": "01"
+    },
+    {
+      "annee": "2011",
+      "libgeo": "Guadeloupe",
+      "reglib": "Guadeloupe",
+      "nombre_de_cas_notifies_de_tuberculose": 32.0,
+      "taux_brut_de_cas_notifies_de_tuberculose": 7.9,
+      "departement": "971",
+      "reg": "01"
+    }
+  ]
+}

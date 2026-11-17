@@ -175,6 +175,11 @@ class SituationAlert(BaseModel):
     deaths: Mapped[Optional[int]] = mapped_column(BigInteger)
     #: confirmed | probable | suspected | total
     count_basis: Mapped[Optional[str]] = mapped_column(String(20))
+    #: Explicit report-supported host; legacy or ambiguous records stay unknown.
+    host_type: Mapped[str] = mapped_column(String(20), nullable=False, default="unknown", server_default="unknown")
+    host_species: Mapped[Optional[str]] = mapped_column(String(240))
+    count_unit: Mapped[str] = mapped_column(String(20), nullable=False, default="unknown", server_default="unknown")
+    host_evidence: Mapped[Optional[str]] = mapped_column(Text)
     as_of: Mapped[Optional[date]] = mapped_column(Date)
     quote: Mapped[str] = mapped_column(Text, nullable=False)
     summary_en: Mapped[Optional[str]] = mapped_column(Text)

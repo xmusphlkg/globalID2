@@ -1,0 +1,28 @@
+TAP version 13
+# Subtest: research wrapper serves short pages and removes snapshot page URLs
+ok 1 - research wrapper serves short pages and removes snapshot page URLs
+  ---
+  duration_ms: 60.774166
+  type: 'test'
+  ...
+# Subtest: research wrapper never activates surveillance or arbitrary R2 paths
+ok 2 - research wrapper never activates surveillance or arbitrary R2 paths
+  ---
+  duration_ms: 1.412873
+  type: 'test'
+  ...
+# Subtest: removed snapshot pages return Gone without reading R2 or redirecting
+ok 3 - removed snapshot pages return Gone without reading R2 or redirecting
+  ---
+  duration_ms: 11.956234
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 340.981155

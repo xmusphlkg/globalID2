@@ -1,0 +1,76 @@
+
+> globalid-report-site@0.19.4 check
+> astro check && npm run check:styles
+
+11:38:04 [types] Generated 353ms
+11:38:04 [check] Getting diagnostics for Astro files in /home/likangguo/globalID/globalID2/astro-site...
+[96mscripts/assemble-client-assets.mjs[0m:[93m58[0m:[93m52[0m - [93mwarning[0m[90m ts(6133): [0m'full' is declared but its value is never read.
+
+[7m58[0m     const restored = body.replace(assetReference, (full, name) => `/_astro/${reverse.get(name) || name}`);
+[7m  [0m [93m                                                   ~~~~[0m
+[96mscripts/assemble-client-assets.mjs[0m:[93m53[0m:[93m51[0m - [93mwarning[0m[90m ts(6133): [0m'full' is declared but its value is never read.
+
+[7m53[0m     const body = oldBody.replace(assetReference, (full, name) => {
+[7m  [0m [93m                                                  ~~~~[0m
+
+[96mscripts/capture-publication-baseline.mjs[0m:[93m119[0m:[93m30[0m - [93mwarning[0m[90m ts(6387): [0mThe signature '(options?: { signal?: AbortSignal | undefined; timeout?: number | undefined; url?: string | RegExp | URLPattern | ((url: URL) => boolean) | undefined; waitUntil?: "load" | ... 3 more ... | undefined; } | undefined): Promise<...>' of 'page.waitForNavigation' is deprecated.
+
+[7m119[0m       const navigated = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 });
+[7m   [0m [93m                             ~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/charts/vendor/qrcode.js[0m:[93m1781[0m:[93m32[0m - [93mwarning[0m[90m ts(6133): [0m'buffer' is declared but its value is never read.
+
+[7m1781[0m     _this.getLength = function(buffer) {
+[7m    [0m [93m                               ~~~~~~[0m
+[96msrc/components/charts/vendor/qrcode.js[0m:[93m1759[0m:[93m9[0m - [93mwarning[0m[90m ts(6133): [0m'_data' is declared but its value is never read.
+
+[7m1759[0m     var _data = data;
+[7m    [0m [93m        ~~~~~[0m
+[96msrc/components/charts/vendor/qrcode.js[0m:[93m1739[0m:[93m32[0m - [93mwarning[0m[90m ts(6133): [0m'buffer' is declared but its value is never read.
+
+[7m1739[0m     _this.getLength = function(buffer) {
+[7m    [0m [93m                               ~~~~~~[0m
+[96msrc/components/charts/vendor/qrcode.js[0m:[93m1730[0m:[93m9[0m - [93mwarning[0m[90m ts(6133): [0m'_data' is declared but its value is never read.
+
+[7m1730[0m     var _data = data;
+[7m    [0m [93m        ~~~~~[0m
+[96msrc/components/charts/vendor/qrcode.js[0m:[93m1675[0m:[93m32[0m - [93mwarning[0m[90m ts(6133): [0m'buffer' is declared but its value is never read.
+
+[7m1675[0m     _this.getLength = function(buffer) {
+[7m    [0m [93m                               ~~~~~~[0m
+[96msrc/components/charts/vendor/qrcode.js[0m:[93m1618[0m:[93m32[0m - [93mwarning[0m[90m ts(6133): [0m'buffer' is declared but its value is never read.
+
+[7m1618[0m     _this.getLength = function(buffer) {
+[7m    [0m [93m                               ~~~~~~[0m
+[96msrc/components/charts/vendor/qrcode.js[0m:[93m949[0m:[93m25[0m - [93mwarning[0m[90m ts(6133): [0m'i' is declared but its value is never read.
+
+[7m949[0m         return function(i, j) { return j % 3 == 0; };
+[7m   [0m [93m                        ~[0m
+[96msrc/components/charts/vendor/qrcode.js[0m:[93m947[0m:[93m28[0m - [93mwarning[0m[90m ts(6133): [0m'j' is declared but its value is never read.
+
+[7m947[0m         return function(i, j) { return i % 2 == 0; };
+[7m   [0m [93m                           ~[0m
+[96msrc/components/charts/vendor/qrcode.js[0m:[93m29[0m:[93m7[0m - [93mwarning[0m[90m ts(80002): [0mThis constructor function may be converted to a class declaration.
+
+[7m29[0m   var qrcode = function(typeNumber, errorCorrectionLevel) {
+[7m  [0m [93m      ~~~~~~[0m
+
+[96msrc/pages/research/graph.astro[0m:[93m136[0m:[93m114[0m - [93mwarning[0m[90m ts(2570): [0mCould not find name 'nodeTypeLabelsFr'. Did you mean 'nodeTypeLabel'?
+
+[7m136[0m       const nodeTypeLabel = node => lang() === 'zh' ? (nodeTypeLabelsZh[node.type] || '实体') : lang() === 'fr' ? (nodeTypeLabelsFr[node.type] || 'entité') : node.type === 'country' ? 'area' : String(node.type || '').replaceAll('_', ' ');
+[7m   [0m [93m                                                                                                                 ~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/research/graph.astro[0m:[93m136[0m:[93m56[0m - [93mwarning[0m[90m ts(2570): [0mCould not find name 'nodeTypeLabelsZh'. Did you mean 'nodeTypeLabel'?
+
+[7m136[0m       const nodeTypeLabel = node => lang() === 'zh' ? (nodeTypeLabelsZh[node.type] || '实体') : lang() === 'fr' ? (nodeTypeLabelsFr[node.type] || 'entité') : node.type === 'country' ? 'area' : String(node.type || '').replaceAll('_', ' ');
+[7m   [0m [93m                                                       ~~~~~~~~~~~~~~~~[0m
+
+Result (523 files): 
+- 0 errors
+- 0 warnings
+- 14 hints
+
+
+> globalid-report-site@0.19.4 check:styles
+> node scripts/check-style-boundaries.mjs
+
+[style-boundaries] PASS global.css=1800 lines, files=447

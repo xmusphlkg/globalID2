@@ -1,0 +1,117 @@
+{
+  "snapshot_date": "2026-11-16",
+  "purpose": "Design preview from existing local exports; no production import or publication",
+  "geometry": {
+    "provider": "geoBoundaries gbOpen, derived from Australian Bureau of Statistics ASGS 2021",
+    "boundary_id": "AUS-ADM1-82085004",
+    "boundary_year": 2021,
+    "metadata_url": "https://www.geoboundaries.org/api/current/gbOpen/AUS/ADM1/",
+    "download_url": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/AUS/ADM1/geoBoundaries-AUS-ADM1_simplified.geojson",
+    "upstream_source_url": "https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files/STE_2021_AUST_SHP_GDA2020.zip",
+    "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+    "license_url": "https://www.abs.gov.au/website-privacy-copyright-and-disclaimer#copyright-and-creative-commons",
+    "original_sha256": "0103d01ec8ce8b65f407498cae9eec2e1008566f3d75d256c13c25afa39c6302",
+    "output_sha256": "d3fb0f4290a52167c29d1ef2a752e1f73586b7a871c81d73c629e2558a54a9aa",
+    "transforms": [
+      "Shapely topology-preserving simplification with 0.015 degree tolerance",
+      "Coordinates rounded to 6 decimal places where geometry validity is preserved; original precision otherwise",
+      "All nine features and polygon members retained",
+      "ISO identifiers from source shapeISO; unassigned Other Territories explicitly AU-OTHER and no case data"
+    ]
+  },
+  "population": {
+    "local_path": "external-data/subdivision-population/official_population_latest.csv",
+    "sha256": "d8dbc5a0808692acba26dfdf2eb5f0eecd7660fc907233e249db5b82b0de67a2",
+    "source": "ABS",
+    "source_url": "https://www.abs.gov.au/statistics/people/population/national-state-and-territory-population/mar-2026/310104.xlsx",
+    "basis": "June estimated resident population, both sexes, persons",
+    "join_key": [
+      "country_code",
+      "calendar_year"
+    ]
+  },
+  "case_inputs": [
+    {
+      "country_code": "AU-ACT",
+      "export_path": "astro-site/public/site-data/countries/au-act.json",
+      "export_sha256": "76d66885f36e07b996870b347535f9c225dc59e80f53f692f6e8f094bfc36b24",
+      "raw_csv_path": "data/current/au/subdivisions/au-act_nindss_monthly.csv",
+      "raw_csv_sha256": "6f3502206c3bed7816180d132ac43a60e6a1258c4f4d90b9783a30b8a90452c8"
+    },
+    {
+      "country_code": "AU-NSW",
+      "export_path": "astro-site/public/site-data/countries/au-nsw.json",
+      "export_sha256": "625a57e88f1adcee29c8305f7e7db9af4770f3cb03cbc13b87f3438cc6c6507d",
+      "raw_csv_path": "data/current/au/subdivisions/au-nsw_nindss_monthly.csv",
+      "raw_csv_sha256": "84f360fbb223c2d3aedc5a4231f1335fbc9e6d74feb7d17da242021eeeb5855e"
+    },
+    {
+      "country_code": "AU-NT",
+      "export_path": "astro-site/public/site-data/countries/au-nt.json",
+      "export_sha256": "789c6c1924df2aa5a691b2476d91132767335dcf54ac6a8e02edcd697655f4eb",
+      "raw_csv_path": "data/current/au/subdivisions/au-nt_nindss_monthly.csv",
+      "raw_csv_sha256": "9e8e8667eeaf08d2eca81bcd6808b689882a27292585d16ecd46d8de7c21ffd8"
+    },
+    {
+      "country_code": "AU-QLD",
+      "export_path": "astro-site/public/site-data/countries/au-qld.json",
+      "export_sha256": "eaa54313bfd65d2fd4ea30bd65d0f1344b628cc56b67657efd5522c39835a221",
+      "raw_csv_path": "data/current/au/subdivisions/au-qld_nindss_monthly.csv",
+      "raw_csv_sha256": "39f656fc378b83ef386387cc2007278e70b6d3d8e6fdf2a104790d4c2275f1cf"
+    },
+    {
+      "country_code": "AU-SA",
+      "export_path": "astro-site/public/site-data/countries/au-sa.json",
+      "export_sha256": "8e43d28040dd336167c43571495f03f44ffbf8c806460e0119866d096088fc79",
+      "raw_csv_path": "data/current/au/subdivisions/au-sa_nindss_monthly.csv",
+      "raw_csv_sha256": "0a12da2468f36479093a596d733cadc48981daeaa605f525d36b1c3db8af5876"
+    },
+    {
+      "country_code": "AU-TAS",
+      "export_path": "astro-site/public/site-data/countries/au-tas.json",
+      "export_sha256": "456278346f18926e2a8cf49baf90007f6e80e15b012fc140837a423f787f7d9e",
+      "raw_csv_path": "data/current/au/subdivisions/au-tas_nindss_monthly.csv",
+      "raw_csv_sha256": "e9d7461556e5103425467b5c40b8719a2b8eca55d2fa5e011d2b89292bd9cba9"
+    },
+    {
+      "country_code": "AU-VIC",
+      "export_path": "astro-site/public/site-data/countries/au-vic.json",
+      "export_sha256": "cd73305caa2bc403fd691ebe7e76bd38365d86eb0c674fbb2ce9d65253506a09",
+      "raw_csv_path": "data/current/au/subdivisions/au-vic_nindss_monthly.csv",
+      "raw_csv_sha256": "5f92a73855c1fdb908d34ae63fbcf5db1444b40f42d5266c8f71c27ae47e5334"
+    },
+    {
+      "country_code": "AU-WA",
+      "export_path": "astro-site/public/site-data/countries/au-wa.json",
+      "export_sha256": "213f5c6609ebf170d70e8849f3fae63becafede57fbc2aca216862fbeb974cf0",
+      "raw_csv_path": "data/current/au/subdivisions/au-wa_nindss_monthly.csv",
+      "raw_csv_sha256": "13b45427c09ffaf6f7c331da985eccee8635426fdefd542dc4e5011f6ec79ae8"
+    }
+  ],
+  "verification": {
+    "regions": 8,
+    "diseases": 2,
+    "monthly_points": 384,
+    "all_cases_checked_against_raw_csv": true,
+    "null_counts_by_series": {
+      "AU-ACT:D028": 1,
+      "AU-ACT:D038": 0,
+      "AU-NSW:D028": 0,
+      "AU-NSW:D038": 0,
+      "AU-NT:D028": 3,
+      "AU-NT:D038": 0,
+      "AU-QLD:D028": 0,
+      "AU-QLD:D038": 0,
+      "AU-SA:D028": 0,
+      "AU-SA:D038": 0,
+      "AU-TAS:D028": 1,
+      "AU-TAS:D038": 0,
+      "AU-VIC:D028": 0,
+      "AU-VIC:D038": 0,
+      "AU-WA:D028": 0,
+      "AU-WA:D038": 0
+    },
+    "population_records": 16,
+    "all_geometry_features_valid": true
+  }
+}

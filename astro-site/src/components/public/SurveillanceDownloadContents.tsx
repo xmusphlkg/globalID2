@@ -2,7 +2,7 @@ import GIDSLoader from '../GIDSLoader';
 import { formatFileSize } from '../../lib/download-presentation';
 import '../download-dialog.css';
 import { useEffect, useRef, useState } from 'react';
-import { mainSiteBase } from '../../lib/papers';
+import { readSurveillanceDownloads } from '../../lib/surveillance-downloads';
 import { coverage, number, pick, safeUrl, type Language, type Summary } from '../../lib/surveillance-presentation.ts';
 
 const formats = ['csv', 'json', 'xlsx'] as const;
@@ -45,33 +45,30 @@ function FileCard({ part, format, file, language }: { part: Summary; format: str
 
 export default function SurveillanceDownloadContents({ dataUrl, language }: { dataUrl: string; language: Language }) {
   const [data, setData] = useState<Summary>();
+  const [version, setVersion] = useState<string>();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [period, setPeriod] = useState('all');
   const [format, setFormat] = useState('all');
   const text = (en: string, zh: string, fr: string) => pick(language, en, zh, fr);
-  const url = dataUrl.replace('/site-data/', '/site-data/downloads/').replace('-summary.json', '.json');
   const prefix = language === 'en' ? '' : `/${language}`;
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 15_000);
-    setData(undefined); setError(false);
-    void fetch(`${mainSiteBase()}${url}`, { cache: 'no-cache', signal: controller.signal }).then(async response => {
-      if (!response.ok) throw new Error('Download catalogue unavailable');
-      const value = await response.json();
-      if (value?.schema_version !== 1 || !Array.isArray(value.parts) || !value.parts.every((part: Summary) => part && typeof part.id === 'string')) throw new Error('Invalid download catalogue');
-      if (active) setData(value);
+    setData(undefined); setVersion(undefined); setError(false);
+    void readSurveillanceDownloads(dataUrl, { signal: controller.signal }).then(value => {
+      if (active) { setData(value.data); setVersion(value.version); }
     }).catch(() => { if (active) setError(true); }).finally(() => window.clearTimeout(timeout));
     return () => { active = false; controller.abort(); window.clearTimeout(timeout); };
-  }, [url, attempt]);
+  }, [dataUrl, attempt]);
   if (!data) return <p className="download-dialog__feedback" role="status">{error ? <>{text('Download information is unavailable.', '下载信息暂不可用。', 'Informations de téléchargement indisponibles.')} <button className="underline" onClick={() => setAttempt(value => value + 1)}>{text('Retry', '重试', 'Réessayer')}</button> · <a className="underline" href={`${prefix}/downloads/`}>{text('Browse downloads', '浏览下载档案', 'Parcourir les téléchargements')}</a></> : <GIDSLoader language={language} />}</p>;
   const files = data.parts.filter((part: Summary) => period === 'all' || part.id === period).flatMap((part: Summary) => formats.filter(kind => format === 'all' || kind === format).flatMap(kind => {
     const file = part.files?.[kind];
     const url = safeUrl(file?.url);
     return url ? [{ part, format: kind, file: { ...file, url } as File }] : [];
   }));
-  return <div className="download-dialog__content">
+  return <div className="download-dialog__content" data-surveillance-version={version}>
     <div className="download-dialog__selection">
       <div className="download-dialog__filters">
         <label className="download-filter"><span>{text('Time range', '时间范围', 'Période')}</span><select data-download-time-filter value={period} onChange={event => setPeriod(event.target.value)}><option value="all">{text('All time ranges', '全部时间范围', 'Toutes les périodes')}</option>{data.parts.map((part: Summary) => <option key={part.id} value={part.id}>{part.label || part.id}</option>)}</select></label>

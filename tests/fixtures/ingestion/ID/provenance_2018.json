@@ -1,0 +1,13 @@
+{
+  "source_url": "https://kemkes.go.id/id/profil-kesehatan-indonesia-2018",
+  "source_sha256": "b15cfa8b33106edfb5d89870995e568aa90def116fc5bb1fcded9c3cedbf2e98",
+  "fixture_to_source_physical_page": {
+    "1": 1,
+    "2": 43,
+    "3": 220,
+    "4": 245,
+    "5": 256,
+    "6": 367
+  },
+  "note": "Selected exact physical source pages; contents-page LAMPIRAN lines are not actual appendix dividers."
+}

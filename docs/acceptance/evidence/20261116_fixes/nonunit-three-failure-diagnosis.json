@@ -1,0 +1,22 @@
+{
+  "scope": "Three independently reproduced nonunit failures; fourth 100000-marker failure awaits primary traceback.",
+  "production_code_changed": false,
+  "test_files_changed": [
+    "tests/contract/test_legacy_projection_contracts.py",
+    "tests/integration/test_postgres_model_health_sampling.py"
+  ],
+  "us_fixture": "Only 2020 archive present; specify archive_years=(2020,) instead of default full historical plan. Expected records unchanged.",
+  "index": "Keep four concurrent reversible DDL actions, index validity, named Index Only Scan. Add exact count=3000. Stop asserting physical Heap Fetches=0, record visibility statistics instead. Original isolated failure had Heap Fetches=3000.",
+  "snapshot_causality": "A 20-minute old snapshot was observed on the shared cluster; this is consistent with constrained visibility horizons, but no individual transaction was proven to be the sole cause.",
+  "legacy_result": "38 passed, 189 warnings in 6.52s",
+  "health_result": "10 passed in 54.37s",
+  "isolated_databases_dropped": true,
+  "evidence": {
+    "nonunit-legacy-two-before.log": "3368fb3c9403bacfe925c44a43805a7add281daf55f64466aa1c95b27c501ce9",
+    "nonunit-legacy-after.log": "af82b94e9c241a125c552f94ffb302ca1a43dff36c19332f19338d1a3b826f25",
+    "nonunit-index-before.log": "c7cf36c3aa5420939289b2c202df8c1e1f71644f53c19c2a651389111bfd5730",
+    "nonunit-health-after.log": "012ae53d4af5fe4042bea34f15ebed72aa9296f97d2fc7c9936251abbf117440",
+    "nonunit-index-before.json": "890436b724da206e060061bf8a8f90d41294c875602e809c4808afc242edbddd",
+    "nonunit-health-after.json": "5236199ab5dd012ca08cb99417f5ba11353d11ec09199929c4a5b485759eadcf"
+  }
+}

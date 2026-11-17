@@ -1,10 +1,12 @@
 {
-  "updated_at": "2026-08-29",
+  "updated_at": "2026-11-16",
   "world_bank_fiscal_year": 2027,
   "sources": {
     "who_regions": "https://apps.who.int/violence-info/Countries%20and%20areas%20by%20WHO%20region%20-%2012bfe12.pdf",
     "world_bank_api": "https://api.worldbank.org/v2/country?format=json&per_page=400",
-    "world_bank_groups": "https://datahelpdesk.worldbank.org/knowledgebase/articles/906519-world-bank-country-and-lending-groups"
+    "world_bank_groups": "https://datahelpdesk.worldbank.org/knowledgebase/articles/906519-world-bank-country-and-lending-groups",
+    "who_indonesia_current": "https://www.who.int/indonesia",
+    "who_country_region_api": "https://ghoapi.azureedge.net/api/DIMENSION/COUNTRY/DimensionValues"
   },
   "countries": {
     "AU": { "who_region": "WPR", "wb_region": "EAS", "income_group": "HIC" },
@@ -50,6 +52,60 @@
     "SK": { "who_region": "EUR", "wb_region": "ECS", "income_group": "HIC" },
     "TH": { "who_region": "SEAR", "wb_region": "EAS", "income_group": "UMC" },
     "TW": { "who_region": "WPR", "wb_region": "EAS", "income_group": "HIC" },
-    "US": { "who_region": "AMR", "wb_region": "NAC", "income_group": "HIC" }
+    "US": { "who_region": "AMR", "wb_region": "NAC", "income_group": "HIC" },
+    "ZA": { "who_region": "AFR", "wb_region": "SSF", "income_group": "UMC" },
+    "NG": { "who_region": "AFR", "wb_region": "SSF", "income_group": "LMC" },
+    "ET": { "who_region": "AFR", "wb_region": "SSF", "income_group": "LIC" },
+    "KE": { "who_region": "AFR", "wb_region": "SSF", "income_group": "LMC" },
+    "UG": { "who_region": "AFR", "wb_region": "SSF", "income_group": "LIC" },
+    "GH": { "who_region": "AFR", "wb_region": "SSF", "income_group": "LMC" },
+    "MW": { "who_region": "AFR", "wb_region": "SSF", "income_group": "LIC" },
+    "KH": { "who_region": "WPR", "wb_region": "EAS", "income_group": "LMC" },
+    "ID": { "who_region": "WPR", "wb_region": "EAS", "income_group": "UMC" },
+    "PH": { "who_region": "WPR", "wb_region": "EAS", "income_group": "UMC" },
+    "VN": { "who_region": "WPR", "wb_region": "EAS", "income_group": "UMC" },
+    "LA": { "who_region": "WPR", "wb_region": "EAS", "income_group": "LMC" },
+    "MY": { "who_region": "WPR", "wb_region": "EAS", "income_group": "UMC" },
+    "MX": { "who_region": "AMR", "wb_region": "LCN", "income_group": "UMC" },
+    "AR": { "who_region": "AMR", "wb_region": "LCN", "income_group": "UMC" },
+    "PE": { "who_region": "AMR", "wb_region": "LCN", "income_group": "UMC" },
+    "CO": { "who_region": "AMR", "wb_region": "LCN", "income_group": "UMC" },
+    "CL": { "who_region": "AMR", "wb_region": "LCN", "income_group": "HIC" },
+    "PY": { "who_region": "AMR", "wb_region": "LCN", "income_group": "UMC" },
+    "EC": { "who_region": "AMR", "wb_region": "LCN", "income_group": "UMC" },
+    "BQ": { "who_region": "AMR", "wb_region": null, "income_group": null },
+    "GP": { "who_region": "AMR", "wb_region": null, "income_group": null },
+    "MQ": { "who_region": "AMR", "wb_region": null, "income_group": null },
+    "GF": { "who_region": "AMR", "wb_region": null, "income_group": null },
+    "TZ": { "who_region": "AFR", "wb_region": "SSF", "income_group": "LMC" },
+    "MM": { "who_region": "SEAR", "wb_region": "EAS", "income_group": "LMC" },
+    "BN": { "who_region": "WPR", "wb_region": "EAS", "income_group": "HIC" },
+    "TL": { "who_region": "SEAR", "wb_region": "EAS", "income_group": "LMC" },
+    "CR": { "who_region": "AMR", "wb_region": "LCN", "income_group": "HIC" },
+    "PA": { "who_region": "AMR", "wb_region": "LCN", "income_group": "HIC" },
+    "US-PR": { "who_region": "AMR", "wb_region": "LCN", "income_group": "HIC" },
+    "US-VI": { "who_region": "AMR", "wb_region": "LCN", "income_group": "HIC" },
+    "IN": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "LMC" },
+    "PK": { "who_region": "EMR", "wb_region": "MEA", "income_group": "LMC" },
+    "BD": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "LMC" },
+    "NP": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "LMC" },
+    "LK": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "UMC" }
+  },
+  "classification_notes": {
+    "new_entries_checked_at": "2026-11-15",
+    "remaining_country_entries_checked_at": "2026-11-16",
+    "remaining_country_codes": ["TZ", "MM", "BN", "TL", "CR", "PA"],
+    "south_asia_entries_checked_at": "2026-11-16",
+    "south_asia_country_codes": ["IN", "PK", "BD", "NP", "LK"],
+    "south_asia_note": "WHO Country Dimension and the current World Bank country API were checked. Pakistan is WHO EMR and World Bank MEA; Sri Lanka is upper middle income in this snapshot.",
+    "existing_entries_checked_at": "2026-08-29",
+    "unclassified_world_bank_areas": [
+      "BQ",
+      "GP",
+      "MQ",
+      "GF"
+    ],
+    "unclassified_world_bank_note": "No independent entry in the World Bank country API; region and income group remain null.",
+    "who_indonesia_note": "WHO Indonesia country office identifies itself as part of WHO Western Pacific."
   }
 }

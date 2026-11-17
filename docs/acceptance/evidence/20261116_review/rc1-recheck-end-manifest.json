@@ -1,0 +1,329 @@
+{
+  "captured_at": "2026-11-16T11:29:33.943966+08:00",
+  "head": "b86708d",
+  "files": [
+    {
+      "path": "configs/country_bootstrap.json",
+      "sha256": "2c214feab5b9d1313ef5ab71239886316f94402a0d66afa14b244fda7af03f10"
+    },
+    {
+      "path": "configs/surveillance_channels.json",
+      "sha256": "1d0eb4cc5531a010f95582a55b7bed26a444ad84465263fb0f77d60af68659ff"
+    },
+    {
+      "path": "docs/data-sources/CO_SIVIGILA_INTEGRATION.md",
+      "sha256": "6dbe1518818f9acdca20d5ab269c768ded9c4d306b5617f04fd0785e4c2c6030"
+    },
+    {
+      "path": "scripts/configure_national_notifications.py",
+      "sha256": "2bb8eefc412307d38c5357b1aee4fc25d799adbefc83f803eac76716116d27d4"
+    },
+    {
+      "path": "scripts/configure_priority_country_updates.py",
+      "sha256": "60c5a76b9b6025388243901680b8f335d7349236fb20af98d83f67abc96bbaa9"
+    },
+    {
+      "path": "scripts/imports/co_sivigila_history.py",
+      "sha256": "0cc7ed4f9f55c2d29687a997e7cc6e702fc8f5df33865209322c32e7c9c1a00d"
+    },
+    {
+      "path": "scripts/imports/import_surveillance_archive.py",
+      "sha256": "7c4038492dffd1d10e2fb6ca447f35680a854951f536bda429359d490ac9a5e6"
+    },
+    {
+      "path": "src/core/country_library.py",
+      "sha256": "9b5b88439fbdc217b2098410a18f1387a01d6be5eb5dbc7a4da22ab5fa54e01e"
+    },
+    {
+      "path": "src/core/source_channels.py",
+      "sha256": "d0b768ad282333eaaa179fa9acfe81fe00536677e450cea8c3f8c855281ca0d1"
+    },
+    {
+      "path": "src/core/source_scopes.py",
+      "sha256": "10bee5ecee551112e7964ed03d0462ab0ba923dd92f27bf07ec5415922ae6d1c"
+    },
+    {
+      "path": "src/data/crawlers/ar.py",
+      "sha256": "68f7820fdc44454e6efe3a58dfa30b35c5876409e047cdc4e2b35eaf55deefea"
+    },
+    {
+      "path": "src/data/crawlers/cl.py",
+      "sha256": "dc2d82ca2adf3bf83cdeb3cc786b8d8f3aa0b75dddc5b6edbce660a31336081f"
+    },
+    {
+      "path": "src/data/crawlers/co.py",
+      "sha256": "6c8c954fd532a3994a931315b78754c655bf3c9152e3e22f5f19004a8374aaaf"
+    },
+    {
+      "path": "src/data/crawlers/id.py",
+      "sha256": "a6c5cc37b904618ba528bcc10db93a57c5b26a172586a939590e0da52745a367"
+    },
+    {
+      "path": "src/data/crawlers/kh.py",
+      "sha256": "41be47f4201d9a4dc9b3fe966d36f0e28ab6b3901ce931a818e050883668d5ba"
+    },
+    {
+      "path": "src/data/crawlers/mw.py",
+      "sha256": "2337dc9edc94c9e963fc1468bdaf6c443a112a067f98b112035911afc1b084b1"
+    },
+    {
+      "path": "src/data/crawlers/mx.py",
+      "sha256": "15b2fd4752749621014803186c1fefb1625a36e3dae2e0ff2e1f5e4e4c331f2b"
+    },
+    {
+      "path": "src/data/crawlers/my_dengue.py",
+      "sha256": "569762ead777ce1996bf263774501482307f91ab6c15fedf7da8866249cd8d7e"
+    },
+    {
+      "path": "src/data/crawlers/my_notifiable.py",
+      "sha256": "4a18630a4512594628cb5ca2680bdec061a6c3dac7173733e523e0f9d23833e0"
+    },
+    {
+      "path": "src/data/crawlers/my_who_annual.py",
+      "sha256": "ccc62fa164bfa1ffa14976f8c9e1e520ad1e37570753bc3be879dbdd3eea9055"
+    },
+    {
+      "path": "src/data/crawlers/my_who_flunet.py",
+      "sha256": "2268e7196510d39df64902a56d774f127a77b278da417d9df96dbfad3c8a004a"
+    },
+    {
+      "path": "src/data/crawlers/ng.py",
+      "sha256": "8b79cfaae5f36a87dcf6fba5079e272e6df9b9e97982820a73c97161967ede27"
+    },
+    {
+      "path": "src/data/crawlers/nl_notifiable.py",
+      "sha256": "c1b29cee3b591036ec6e91a7a34b2150fcdbadd7643258cad07c17ead0e958df"
+    },
+    {
+      "path": "src/data/crawlers/nl_weekly.py",
+      "sha256": "9835d58b7fb66840042299a974c3690d9b278418534d856aebcad7411ff4604a"
+    },
+    {
+      "path": "src/data/crawlers/pe.py",
+      "sha256": "13c4cf09c389807a70dfa19c32496aa1ceaa18d009b2f8e506e033bc044164f9"
+    },
+    {
+      "path": "src/data/crawlers/th.py",
+      "sha256": "4fd0b30ff1671d45d646bf2766684c10b58946205565a8863d7781d1750cc55e"
+    },
+    {
+      "path": "src/data/crawlers/th_dds.py",
+      "sha256": "4c50b39de2e76a02f9af88d21ec563f353d4d59125ddb835df4d55cebb67c3bf"
+    },
+    {
+      "path": "src/data/crawlers/th_id_th.py",
+      "sha256": "3c5b8d8ce9800109faa252236788b1d2dfa57ee0411a966056d891d417490eb4"
+    },
+    {
+      "path": "src/data/crawlers/th_tableau.py",
+      "sha256": "4f52e0e4ae3f6bfa50f739ee668f234c9c02a1bc487e985f6517f02620b51dee"
+    },
+    {
+      "path": "src/data/crawlers/za.py",
+      "sha256": "9c053b850e8bb0a35a3ecc9f19028eae54ed443b1410ddd088252f4fd0e29126"
+    },
+    {
+      "path": "src/data/crawlers/za_cache.py",
+      "sha256": "77d73c6ca95fdfa41fc1d403f3a01e16d9014c8109c9d8b17ade43ccf19533a1"
+    },
+    {
+      "path": "src/data/processors/ar.py",
+      "sha256": "bbb449a0e48206dc62d5a1ff376be32753d0520ac3b3f83ca5b3d2fe25d7bd40"
+    },
+    {
+      "path": "src/data/processors/cl.py",
+      "sha256": "eb86cbb4fc14bfedfb138720daadfe1f60d414e10824f02d5d59bea010efbf0c"
+    },
+    {
+      "path": "src/data/processors/co.py",
+      "sha256": "84709f8e727c0210cc45d3bb4be6d826e1b9c32a69ad8ef56506670980317767"
+    },
+    {
+      "path": "src/data/processors/id.py",
+      "sha256": "325a68054e313011e93814c8e08730fba7ef85810898348004974093b494f479"
+    },
+    {
+      "path": "src/data/processors/kh.py",
+      "sha256": "91c0f476a3a5251eebe94cdcb83cad3018c3edf27b73588b4a48f9a8032235c2"
+    },
+    {
+      "path": "src/data/processors/mw.py",
+      "sha256": "0f08af9c84399cd61508b26e0bc7a9c22c20c28aeb8e2424c74f5339255ef2d8"
+    },
+    {
+      "path": "src/data/processors/mx.py",
+      "sha256": "59712b4b96a6ecd936f19b6d1a3dd75e3309472cbef19432ea11a75ecc89a93a"
+    },
+    {
+      "path": "src/data/processors/my_dengue.py",
+      "sha256": "7f9ac3ef86ec5337aa38e0101e51440cfdbc192e8762ed6e36b0f54add97caec"
+    },
+    {
+      "path": "src/data/processors/my_notifiable.py",
+      "sha256": "1dce60f05ab356a02128e600908aaec39d00738eee45bd31d793898b492064a3"
+    },
+    {
+      "path": "src/data/processors/my_who_annual.py",
+      "sha256": "aa34c47627ecf9e83b323caa9da0b92fd94e8bb2cf19b6a84395a49effadf3f6"
+    },
+    {
+      "path": "src/data/processors/my_who_flunet.py",
+      "sha256": "39207da67a46d2ebe2f74edeb9fc1b1edacbc31463fdfcc147b766090900e10a"
+    },
+    {
+      "path": "src/data/processors/ng.py",
+      "sha256": "d977e69825a1a5dae9025876a60a4209c309f98b77380fde2f035e3cf1781f4f"
+    },
+    {
+      "path": "src/data/processors/nl_notifiable.py",
+      "sha256": "fd7c6883fbc7d2196db26f4de822b83aef659070a77ca9c9d3447034ced9356a"
+    },
+    {
+      "path": "src/data/processors/nl_weekly.py",
+      "sha256": "68357d18759a3f5a3f51b8cede996b3723b9eb94bd61f12c083f55d16d238daa"
+    },
+    {
+      "path": "src/data/processors/pe.py",
+      "sha256": "1154d277d38e9a83d050671ab1cb321a3c9ac41d4010434da3a094c43f8e1d72"
+    },
+    {
+      "path": "src/data/processors/th.py",
+      "sha256": "7d76bb6718a3cffe5e7c120059efa24b9faa9da153a77461e832b94020ed2aed"
+    },
+    {
+      "path": "src/data/processors/th_dds.py",
+      "sha256": "0fec5b0236bf8102e211c65e51823d9a7a850cdd0619c93d9b16474237798fdd"
+    },
+    {
+      "path": "src/data/processors/th_id_th.py",
+      "sha256": "cab4bbde6e25a7732ba45dccd95ba891b6e28933c5f2dcf08dc9dd58f75444ca"
+    },
+    {
+      "path": "src/data/processors/th_tableau.py",
+      "sha256": "df7903000df74bccffd987de66ba1f5b6f795fbfed6b6e8b1b9ee89ca15324e5"
+    },
+    {
+      "path": "src/data/processors/za.py",
+      "sha256": "245d16bb9cf91e3a2b29dab5330faf30a8a7d3915c5bab4be7efc9ae9e3c8e18"
+    },
+    {
+      "path": "src/data/storage/series_observation_store.py",
+      "sha256": "765c9a601378021c8bc14efa8c3f2d311cb615e6c8497a922ee74578fd2220dd"
+    },
+    {
+      "path": "src/services/crawl_service.py",
+      "sha256": "6d1f5083f4f2fb2530347b91a6999a513a170a4b5a0fa4242da640646869ee02"
+    },
+    {
+      "path": "src/services/ingestion/co_update_gate.py",
+      "sha256": "ef35477cd5fc67418b33ce58aead9786766d82a26d7f4b7ef70fd9bfe4f5d59c"
+    },
+    {
+      "path": "src/services/ingestion/countries/ar.py",
+      "sha256": "e5c80ccd1ecb09a70870dfcc2620d250c7327c1852151b19670050cd06512ec3"
+    },
+    {
+      "path": "src/services/ingestion/countries/cl.py",
+      "sha256": "9dd214929d36090a780d06cbd80ed114b12ddbfdb7658964aa4b0a148cc1d0fa"
+    },
+    {
+      "path": "src/services/ingestion/countries/co.py",
+      "sha256": "b76207a85788bfbe4cfb357f4a6cea2fdf686b2e96b8e46b97d7f1479d471da8"
+    },
+    {
+      "path": "src/services/ingestion/countries/id.py",
+      "sha256": "712cd3a47e33e7ecb96324e3ea74ce9eda1825e13466d7cd6942aff6a0dee211"
+    },
+    {
+      "path": "src/services/ingestion/countries/kh.py",
+      "sha256": "6437909c7083af357d200e2a0298403677e7b7e2827f5e03190899f47fbb9080"
+    },
+    {
+      "path": "src/services/ingestion/countries/mw.py",
+      "sha256": "9e5b180e7196f4807f3a5e428f97e8ef597b0189c1073870a15418b3650875bc"
+    },
+    {
+      "path": "src/services/ingestion/countries/mx.py",
+      "sha256": "28dc298c4c8921defd756421843111d5fdee154e8f5c50f52b9e83d97e4dbfe7"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_dengue.py",
+      "sha256": "bb3c0cb721a5c10f4bb3ea7120cd98e3e5616ca35675aabf389aee78ab17c207"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_notifiable.py",
+      "sha256": "6635cf8d8e07bff1edf27be735e2465b5afeba7adcfb18030f03581fad6f2233"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_who_annual.py",
+      "sha256": "4e4ac9a107a6f804eab13b2c75c47e9bf0818b1f8f527e2b3b7321d15cbe1e69"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_who_common.py",
+      "sha256": "b23c048d36aa350b2eab444d058db5a00e996208ded177d9440b943abffbbe16"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_who_flunet.py",
+      "sha256": "8a0eefa189ebaac3f468ccb7f2548b4b8036301b974bb7a7ee98bf9c23aa11b0"
+    },
+    {
+      "path": "src/services/ingestion/countries/ng.py",
+      "sha256": "2a3c1db694b54c0196647e27122f2ad5c672652aff0ecde536cf98a4d2f9de50"
+    },
+    {
+      "path": "src/services/ingestion/countries/nl_notifiable.py",
+      "sha256": "20657edf1f3688f788a44ed0f4b331ecd4aaa6b548ad460de3a21c2deea9c69a"
+    },
+    {
+      "path": "src/services/ingestion/countries/nl_weekly.py",
+      "sha256": "5cc48436bded082f8ed7914dcb69651a9fd696e28ada169854f54a979ebd1289"
+    },
+    {
+      "path": "src/services/ingestion/countries/pe.py",
+      "sha256": "f7d2d8db92e1111d1f8e9f5818c9c83c17dfe32d7be8a348461e9cf60ad27f15"
+    },
+    {
+      "path": "src/services/ingestion/countries/th.py",
+      "sha256": "fcdeea01010de81bdec866ba35009f0dc348a5d730ac2856e045fdf0528da4ee"
+    },
+    {
+      "path": "src/services/ingestion/countries/th_dds.py",
+      "sha256": "aaaef713507b8601cbb81dc7f3117cffec3d753a13e90a66d6434769e626519d"
+    },
+    {
+      "path": "src/services/ingestion/countries/th_id_th.py",
+      "sha256": "c8e1c156bc45331766506b3d0dec3490777f78f6f82ab6d396c07052676d38c2"
+    },
+    {
+      "path": "src/services/ingestion/countries/th_tableau.py",
+      "sha256": "89bf1b1570133760aa17734c4ca859a7c807edfd0dd4cab14c44724dcf7e2d4b"
+    },
+    {
+      "path": "src/services/ingestion/countries/za.py",
+      "sha256": "650eac98afcf96c40294b34c8cc35c02d2b1dbc64981ae4c8d0669b43104c526"
+    },
+    {
+      "path": "src/services/ingestion/series_rows.py",
+      "sha256": "2949d7f4a01adc364b92e6b45e66cf5b816cb23f42f8278263e7b2de3a26ba3b"
+    },
+    {
+      "path": "tests/unit/test_co_sivigila.py",
+      "sha256": "23bbfe13d57064f5ee30f02616a46e8192bcf6576e5ce65814b30f4b448bb44b"
+    },
+    {
+      "path": "tests/unit/test_mw_phim_idsr.py",
+      "sha256": "068800b7d614c95aaa6869d0f0835562a8f3424e8c21f764f0d53e5c9238ead9"
+    },
+    {
+      "path": "tests/unit/test_priority_surveillance_onboarding.py",
+      "sha256": "3499911fe0d0b13001c0a0bd5aff7b43b2f31c58afddbc884b5cfbb65db6cf82"
+    }
+  ],
+  "changed_during_recheck": [
+    {
+      "path": "scripts/imports/co_sivigila_history.py",
+      "before": "17606f29a560e7fb8d5d0667bce1eb061ffbaeca320bd4c609125a45d351b2b6",
+      "after": "0cc7ed4f9f55c2d29687a997e7cc6e702fc8f5df33865209322c32e7c9c1a00d"
+    }
+  ]
+}

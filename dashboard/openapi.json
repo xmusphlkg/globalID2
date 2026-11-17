@@ -2272,10 +2272,13 @@
             "default": "unknown",
             "enum": [
               "healthy",
+              "needs_review",
+              "partial",
               "active",
               "recovering",
               "failed",
               "stale",
+              "stale_source",
               "never_run",
               "disabled",
               "unknown"
@@ -5114,6 +5117,16 @@
             },
             "title": "Source Availability",
             "type": "object"
+          },
+          "source_channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceChannelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "source_observation_count": {
             "default": 0,
@@ -13445,6 +13458,121 @@
         "title": "SmtpSettingsUpdate",
         "type": "object"
       },
+      "SourceChannelOut": {
+        "properties": {
+          "archive_url": {
+            "title": "Archive Url",
+            "type": "string"
+          },
+          "cadence": {
+            "title": "Cadence",
+            "type": "string"
+          },
+          "country_code": {
+            "title": "Country Code",
+            "type": "string"
+          },
+          "coverage_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Verified"
+          },
+          "daily_time": {
+            "title": "Daily Time",
+            "type": "string"
+          },
+          "discovery_form": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Discovery Form",
+            "type": "object"
+          },
+          "discovery_method": {
+            "default": "GET",
+            "title": "Discovery Method",
+            "type": "string"
+          },
+          "discovery_urls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Discovery Urls",
+            "type": "array"
+          },
+          "integration_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration Status"
+          },
+          "official_url": {
+            "title": "Official Url",
+            "type": "string"
+          },
+          "publisher": {
+            "title": "Publisher",
+            "type": "string"
+          },
+          "refresh_strategy": {
+            "title": "Refresh Strategy",
+            "type": "string"
+          },
+          "refresh_years": {
+            "title": "Refresh Years",
+            "type": "integer"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "transport_readiness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceTransportReadinessOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "country_code",
+          "scope",
+          "source_id",
+          "publisher",
+          "official_url",
+          "archive_url",
+          "discovery_urls",
+          "cadence",
+          "refresh_strategy",
+          "refresh_years",
+          "daily_time",
+          "timezone"
+        ],
+        "title": "SourceChannelOut",
+        "type": "object"
+      },
       "SourceOptionOut": {
         "properties": {
           "default_fill_missing": {
@@ -13485,6 +13613,16 @@
           "label_zh": {
             "title": "Label Zh",
             "type": "string"
+          },
+          "source_channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceChannelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "source_kind": {
             "default": "current",
@@ -13745,6 +13883,29 @@
           }
         },
         "title": "SourceRunCreate",
+        "type": "object"
+      },
+      "SourceTransportReadinessOut": {
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "dependency_ready": {
+            "title": "Dependency Ready",
+            "type": "boolean"
+          },
+          "proxy_kind": {
+            "title": "Proxy Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "configured",
+          "proxy_kind",
+          "dependency_ready"
+        ],
+        "title": "SourceTransportReadinessOut",
         "type": "object"
       },
       "StageInfo": {

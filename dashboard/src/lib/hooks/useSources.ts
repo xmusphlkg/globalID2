@@ -11,6 +11,28 @@ export interface StageInfo {
   last_run: string | null;
 }
 
+export interface SourceChannel {
+  country_code: string;
+  scope: string;
+  source_id: string;
+  publisher: string;
+  official_url: string;
+  archive_url: string;
+  discovery_urls: string[];
+  cadence: string;
+  refresh_strategy: string;
+  refresh_years: number;
+  daily_time: string;
+  timezone: string;
+  integration_status?: string | null;
+  coverage_verified?: boolean | null;
+  transport_readiness?: {
+    configured: boolean;
+    proxy_kind: string;
+    dependency_ready: boolean;
+  } | null;
+}
+
 export interface DataSourceFlow {
   data_source: string;
   country_id?: number | null;
@@ -29,6 +51,7 @@ export interface DataSourceFlow {
   latest_date: string | null;
   history_start_year?: number | null;
   source_scope?: string | null;
+  source_channel?: SourceChannel | null;
   latest_task_uuid?: string | null;
   latest_task_source?: string | null;
   latest_task_status?: string | null;
@@ -37,6 +60,7 @@ export interface DataSourceFlow {
 }
 
 export interface SourceOption {
+  source_channel?: SourceChannel | null;
   value: string;
   label: string;
   label_en: string;

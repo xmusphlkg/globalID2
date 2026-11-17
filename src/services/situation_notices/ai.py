@@ -41,11 +41,39 @@ from src.ai.peer_review import (  # noqa: F401 - re-exported for the pipeline an
     reviewer_system,
 )
 
-EXTRACTION_PROMPT_VERSION = "situation-alert-extract.v3"
+EXTRACTION_PROMPT_VERSION = "situation-alert-extract.v4"
 
 DOCUMENT_TYPES = ("event_report", "monitoring_product", "other")
 ALERT_STATUSES = ("new", "ongoing", "imported", "ended", "routine")
 COUNT_BASES = ("confirmed", "probable", "suspected", "total")
+HOST_TYPES = ("human", "animal", "unknown")
+COUNT_UNITS = ("people", "animals", "unknown")
+
+# These only validate quoted support; they never classify a disease name or
+# silently upgrade an unlabelled historical record. Unrecognised hosts remain
+# unknown, pending a better source-supported reading.
+_HOST_SUPPORT = {
+    "human": re.compile(r"\b(?:humans?|patients?|persons?|people|children|child|women|woman|men|man|adults?|boys?|girls?)\b|人类|患者|病人|儿童|成人", re.I),
+    "animal": re.compile(r"\b(?:animals?|birds?|poultry|chickens?|ducks?|cattle|cows?|pigs?|swine|goats?|sheep|horses?|dogs?|cats?|mammals?|wildlife|fox(?:es)?|bats?|camels?|mink|turkeys?)\b|动物|家禽|野鸟|鸡|鸭|牛|猪|羊|犬|猫", re.I),
+}
+
+
+def _host_metadata(raw: dict[str, Any], quote: str) -> dict[str, Any]:
+    host = clean_enum(raw.get("host_type"), HOST_TYPES) or "unknown"
+    evidence = clean_text(raw.get("host_evidence"), QUOTE_LIMIT)
+    species = clean_text(raw.get("host_species"), LABEL_LIMIT)
+    if (host == "unknown" or not evidence
+            or normalise(evidence) not in normalise(quote)
+            or not _HOST_SUPPORT[host].search(evidence)
+            # An animal exposure or reservoir in a patient's sentence does not
+            # establish an animal case. Mixed-host sentences stay conservative.
+            or (host == "animal" and _HOST_SUPPORT["human"].search(quote))
+            or (host == "animal" and (not species or normalise(species) not in normalise(evidence)))):
+        return {"host_type": "unknown", "host_species": None, "host_evidence": None, "count_unit": "unknown"}
+    expected = "people" if host == "human" else "animals"
+    unit = expected if raw.get("count_unit") == expected else "unknown"
+    return {"host_type": host, "host_species": species if host == "animal" else None,
+            "host_evidence": evidence, "count_unit": unit}
 
 MAX_ALERTS = 40
 SUMMARY_LIMIT = 420
@@ -140,6 +168,10 @@ def _output_schema() -> dict[str, Any]:
                 "cases": "integer the report states for this place, else null",
                 "deaths": "integer the report states for this place, else null",
                 "count_basis": "|".join(COUNT_BASES) + " or null when no count is given",
+                "host_type": "human|animal|unknown: only when the report explicitly identifies the affected host",
+                "host_species": "verbatim host species phrase from host_evidence for animals, otherwise null",
+                "count_unit": "people|animals|unknown: the unit of BOTH cases and deaths; unknown if unclear",
+                "host_evidence": "short verbatim phrase from this alert's quoted sentence identifying its affected host, else null",
                 "as_of": "YYYY-MM-DD date the counts refer to, else null",
                 "quote": f"one sentence copied word for word from the report, <= {QUOTE_LIMIT} chars",
                 "summary_en": f"<= {SUMMARY_LIMIT} chars, plain English, only facts from the report",
@@ -165,6 +197,9 @@ def _task(notice: dict[str, Any], allowed_diseases: list[dict[str, str]]) -> dic
 
 
 AUTHOR_RULES = [
+    "Separate human and animal events, and separate animal hosts when their figures differ, even for the same disease and place. Never combine human and animal figures.",
+    "host_type identifies the affected host, never an exposure animal or reservoir. Do not infer it from the disease name (avian influenza and rabies can affect humans). Use unknown unless this alert's quote explicitly supports the affected host, and copy that support into host_evidence. host_species must be a verbatim phrase from that evidence, not an invented taxonomic name. For human alerts, host_species is null.",
+    "count_unit applies to BOTH numeric fields: people for counts of human cases/deaths, animals for counts of affected/dead animals, unknown if not clear. Never put outbreak/premises counts, sequence counts or animals culled into cases/deaths. If a report mixes people and animals, split alerts and retain each group's own figures.",
     "Read the whole report, including tables. One alert is one disease in one country (and one admin area when the report separates them).",
     "A report that covers three countries for one outbreak yields three alerts, one per country, each with that country's own numbers.",
     "event_report: the report is about specific events (outbreak notice, alert, statement), including an update on one outbreak that spans several countries (a WHO Disease Outbreak News item is always an event_report). monitoring_product: a periodic roundup of many unrelated topics.",
@@ -196,6 +231,7 @@ def author_prompt(
 
 
 REVIEWER_RULES = [
+    "Check host_type, host_species, host_evidence and count_unit against the alert's quote. A disease name alone does not identify its host; a patient's animal exposure does not make it an animal case. Human/animal figures and infection/death/culling/outbreak/sequence counts must never be mixed. Unknown is correct when the report does not identify the affected host.",
     "Open the report and check every alert against it: disease, country, admin area, status, counts, date and quote.",
     "Dispute an alert whose quote does not support it, whose numbers belong to another place or date, or whose country or disease is wrong.",
     "Dispute a missing alert only when the report describes a current event in a place the draft leaves out. A country named only in a historical or cumulative list (for example 'cases were reported in five countries since the declaration') with no figures or developments of its own in this report is background, not a missing alert.",
@@ -250,7 +286,7 @@ def sanitize_extraction(
     notes: list[str] = []
     haystack = normalise(document_text)
     alerts: list[dict[str, Any]] = []
-    seen: set[tuple[str, str, str]] = set()
+    seen: set[tuple[str, ...]] = set()
 
     for raw in draft.get("alerts") or []:
         if not isinstance(raw, dict):
@@ -281,7 +317,11 @@ def sanitize_extraction(
             continue
 
         admin_area = clean_text(raw.get("admin_area"), LABEL_LIMIT)
-        key = (disease_id or normalise(label), country, normalise(admin_area or ""))
+        host = _host_metadata(raw, quote)
+        if raw.get("host_type") in ("human", "animal") and host["host_type"] == "unknown":
+            notes.append(f"guardrail: {country} {label} host not supported by this alert's quote, cleared")
+        key = (disease_id or normalise(label), country, normalise(admin_area or ""),
+               host["host_type"], normalise(host["host_species"] or ""))
         if key in seen:
             notes.append(f"guardrail: dropped duplicate {country} {label} alert")
             continue
@@ -299,6 +339,7 @@ def sanitize_extraction(
         basis = clean_enum(raw.get("count_basis"), COUNT_BASES)
         if counts["cases"] is None and counts["deaths"] is None:
             basis = None
+            host["count_unit"] = "unknown"
 
         as_of = _date(raw.get("as_of"))
         if raw.get("as_of") not in (None, "") and (
@@ -319,6 +360,7 @@ def sanitize_extraction(
                 "cases": counts["cases"],
                 "deaths": counts["deaths"],
                 "count_basis": basis,
+                **host,
                 "as_of": as_of.isoformat() if as_of else None,
                 "quote": quote,
                 "summary_en": summary_en,

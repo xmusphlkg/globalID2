@@ -1,0 +1,8 @@
+....................................                                     [100%]
+=============================== warnings summary ===============================
+tests/unit/test_cr_notifications_acceptance.py::test_footnote_removal_and_count_revision_update_one_persisted_identity[holding]
+tests/unit/test_cr_notifications_acceptance.py::test_footnote_removal_and_count_revision_update_one_persisted_identity[mapped]
+  <sys>:0: SADeprecationWarning: DISTINCT ON is currently supported only by the PostgreSQL dialect.  Use of DISTINCT ON for other backends is currently silently ignored, however this usage is deprecated, and will raise CompileError in a future release for all backends that do not support this syntax.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+36 passed, 2 warnings in 11.99s

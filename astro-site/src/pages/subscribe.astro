@@ -6,6 +6,7 @@ import { localizedRegionName } from '../utils/i18n';
 import metaRaw from '../data/meta.json';
 import SubscriptionForm from '../components/subscription/SubscriptionForm.astro';
 import SubscriptionModal from '../components/subscription/SubscriptionModal.astro';
+import SituationRss from '../components/subscription/SituationRss.astro';
 import { subscriptionText } from '../components/subscription/messages';
 import '../components/subscription/subscription.css';
 
@@ -64,6 +65,7 @@ const subscriptionOptionsUrl = import.meta.env.DEV
               <dd>{pick('One-click unsubscribe link', '一键退订链接')}</dd>
             </div>
           </dl>
+          <SituationRss locale={locale} />
         </div>
 
         <SubscriptionForm locale={locale} subscriptionsApiBase={subscriptionsApiBase} subscriptionOptionsUrl={subscriptionOptionsUrl} />

@@ -1,8 +1,10 @@
 # Official population sources and automatic refresh
 
-The current official snapshot is `official_population_latest.csv`: 1,900
-location/year rows for 68 jurisdictions, retrieved on 2026-10-06. Its input hash,
-source URLs, public query bodies, coverage and gaps are in
+The tracked review baseline is `official_population_latest.csv`: 1,900
+location/year rows for 68 jurisdictions, retrieved on 2026-10-06. The live database
+and scheduler now also include US, JP and SE; use `scheduler-status.json` and
+`latest.json` under `data/processed/official_population/` for current coverage.
+The tracked baseline's input hash, source URLs, public query bodies, coverage and gaps are in
 `official_sources_latest.json`. Original earlier yearbook/ABS files below remain
 as historical references; the latest NBS API can revise past estimates.
 
@@ -11,12 +13,15 @@ as historical references; the latest NBS API can revise past estimates.
 | NBS China | National + 31 mainland provinces, 2000–2025 | Discover total-population indicators in the new public data portal; query explicit years and exact regions |
 | ABS Australia | 8 states/territories, 1981–2026 | Discover newest published quarterly release and download table 310104 |
 | IBGE Brazil | National + 27 states/federal district, 2000–2026 except 2007 and 2023 | SIDRA table 6579 annual estimates; tables 202 and 4714 census totals for 2000/2010/2022 |
+| Census US | 50 states + DC, 2000–2025; Puerto Rico, 2010–2025 | Discover latest official population-estimate CSV vintage by decade, including official intercensal estimates; unsupported island areas remain missing |
+| Statistics Japan | 47 prefectures, 2011–2024 | Discover official annual/e-Stat workbooks and official census backcasts; total population includes foreign residents, 1 October, published thousand-person precision |
+| SCB Sweden | 21 counties, 2000–2025 | Discover historical and current CKM PxWeb tables, exact year-end resident totals; new years discovered from catalogue metadata |
 
 ```sh
-# Download, archive and validate; no database writes
-venv/bin/python scripts/refresh_official_population.py
-# Import and regenerate curves + CSV/JSON/XLSX downloads
-venv/bin/python scripts/refresh_official_population.py --apply --export
+# Discover, archive and validate each source independently; no database writes
+venv/bin/python scripts/update_population_automatically.py
+# Import official revisions and queue the existing release only when values change
+venv/bin/python scripts/update_population_automatically.py --apply --queue-release
 # Optionally refresh just one country source
 venv/bin/python scripts/refresh_official_population.py --sources CN --apply --export
 # Verify generated rates against the latest successfully applied population snapshot
@@ -27,7 +32,7 @@ Successful runs retain timestamped raw sources, normalized CSV and hash manifest
 under `data/processed/official_population/`. `latest.json` points to the latest
 successful database import; dry runs write `latest_plan.json` instead. A failed
 fetch or validation never replaces the successful manifest or writes population.
-NBS/IBGE schemas, units, demographic totals, full province/state coverage,
+Official schemas, units, demographic totals, full province/state coverage,
 positive counts and duplicate location/year keys are checked before import.
 Re-running imports updates published revisions without allocating national totals.
 
@@ -54,14 +59,39 @@ Annual-source contributions to the same notification month are summed; only one
 final/preliminary file per disease/year is selected. `NTRA` survey aggregates and
 `SDTA` outbreak rows are excluded from the individual-case state adapter.
 
-Monthly scheduling templates are provided in
-`deploy/systemd/globalid-population-refresh.service` and `.timer` (first day of
-month, 08:15 Asia/Shanghai, plus up to one hour randomized delay). The population timer is installed and enabled on this host. A separate weekly
-`globalid-br-subdivisions.timer` refreshes recent state-case reporting years while
-reading older annual-source contributions from their signature caches. To use them on a deployed host, render the
-existing `__PROJECT_DIR__`, `__RUN_AS_USER__`, `__RUN_AS_GROUP__` placeholders,
-install both units, then enable the timer. This checks published releases monthly;
-it does not estimate populations between releases or publish website changes.
+Daily scheduling templates are provided in
+`deploy/systemd/globalid-population-refresh.service` and `.timer` (08:15
+Asia/Shanghai, plus up to 30 minutes randomized delay). Each run discovers the
+current official publication for CN/AU/BR/US/JP/SE: NBS indicator catalogue and explicit years through
+the preceding calendar year, ABS latest release/workbook links, and every
+published SIDRA estimate period plus census tables, Census download directories,
+Japan annual and census-backcast catalogues, and SCB table metadata. No population CSV needs
+manual downloading or maintenance. SIDRA's live state identifiers/names are
+validated against the reviewed IBGE UF code crosswalk; an unrelated state-directory
+API is not required. Historical official revisions are refreshed as well.
+
+Sources have bounded HTTPS retries and independent validated imports. An IBGE
+outage cannot block NBS or ABS; an invalid or partial source never changes that
+source's imported data. The next daily check retries the unavailable source.
+An unsuccessful service exits nonzero for the host's existing failure monitor.
+The wrapper retains the last good source snapshot and writes
+`data/processed/official_population/scheduler-status.json`: last attempt,
+last success, consecutive failures, discovered official URLs, year coverage,
+changed rows and publication retry state. Last successful check is distinct from
+the population reference date: a successful check need not produce a new year.
+Dry runs have a separate `scheduler-plan.json` and never replace applied receipts.
+
+Changed values/basis/reference metadata create dirty scopes and request the
+existing release queue once per batch. A busy or unavailable queue leaves a
+pending retry for the next daily check, even if population values then remain
+unchanged. The combined `latest.json` preserves successful earlier-source rows
+when another source is unavailable. Per-source raw data, hashes and logs stay in
+`data/processed/official_population/sources/` and `checks/`.
+
+To install on another host, render the existing `__PROJECT_DIR__`,
+`__RUN_AS_USER__`, `__RUN_AS_GROUP__` placeholders, install both units and enable
+the timer. The six-source service has a four-hour timeout. This checks for publications daily; it never estimates an unpublished
+year. It uses the existing data release pipeline rather than committing code.
 
 The tracked CSV is a reviewable baseline, not the live update target. Runtime
 refreshes use the database and timestamped manifests described above.
@@ -122,10 +152,9 @@ are different denominator conventions and must remain visible in provenance.
 The earlier yearbook snapshot stops at 2024; the new public-API snapshot above
 adds verified 2025 denominators. China 2026 provincial rates remain missing.
 
-To update ABS, download its next official `310104.xlsx` release and pass both
-`--abs-input` and `--abs-source-url` so provenance matches the workbook. For China,
-append verified province/year records to the CSV with their precise source URLs;
-do not fill missing years using the previous year.
+The earlier snapshot importer is retained for reproducibility only. Normal
+updates use the scheduled official discovery above; they do not require manual
+ABS workbook downloads or China CSV edits.
 
 ## Australian disease history
 
@@ -162,12 +191,12 @@ venv/bin/python scripts/update_br_subdivisions.py --recent-years 2 --apply --exp
 systemctl status globalid-population-refresh.timer globalid-br-subdivisions.timer
 ```
 
-Population checks run monthly on day 1 at 08:15 Asia/Shanghai plus up to one hour
+Population checks run daily at 08:15 Asia/Shanghai plus up to 30 minutes
 of randomized delay. State-case checks run Sundays at 07:45 Asia/Shanghai plus
 up to 30 minutes. Both timers are enabled and active on this host. Services use
 the same `flock` to serialize these two imports/exports and avoid writing their
-site artifacts concurrently. They regenerate local artifacts; they do not commit
-Git changes or deploy/publish the website. Raw microdata is not copied into
+site artifacts concurrently. Population changes enter the existing data release queue; state-case refreshes
+retain their configured export policy. Neither task commits Git changes. Raw microdata is not copied into
 frontend downloads; only state/month aggregates are exported.
 
 The state adapter scans only non-identifying residence/date fields. It preserves
@@ -182,3 +211,36 @@ Audit reports and aggregate CSVs are stored under
 Official disease source and field definitions:
 [DATASUS transfer](https://datasus.saude.gov.br/transferencia-de-arquivos2/),
 [SINAN residence fields dictionary](https://www.portalsinan.saude.gov.br/images/documentos/Agravos/Notificacao_Individual/DIC_DADOS_NET---Notificao-Individual_rev.pdf).
+
+## Additional denominator conventions (US / JP / SE)
+
+US denominators are official July 1 resident estimates. The latest supported
+vintage is discovered dynamically because the Census API does not currently
+serve the latest estimates. Newer decade releases supersede overlapping years;
+the official 2000–2010 intercensal series is used as published, not interpolated
+locally. AS/GU/MP/VI and an unpublished 2026 have no annual denominator here.
+
+JP uses prefecture total population, all ages and both sexes, including foreign
+residents. The official thousand-person unit is converted to persons without
+claiming person-level precision. Official 2015/2020 census backcasts supersede
+the original annual estimates for 2011–2014 and 2016–2019, with basis
+`october_official_census_rebased_resident_population` and exact e-Stat file URLs.
+The published annual/census-year tables supply the other years. Pending 2025
+census and national monthly links do not become annual prefecture populations.
+The discovery receipt records pending releases and applied official revisions.
+
+SE uses 31 December residents for each county. Pre-2025 tables require all eight
+mutually exclusive sex/marital-status cells; any missing cell fails validation.
+2025+ CKM tables supply the official total directly, without adding perturbed
+subtotals. `year_end_resident_population_ckm` explicitly identifies official
+disclosure protection. The latest year advertised in the catalogue must appear
+in the fetched table; historical-only responses cannot masquerade as fresh.
+
+The daily service now checks six independent sources and has a four-hour outer
+timeout for bounded per-source retries. Values/basis revisions automatically
+mark their own geography dirty. Weekly map data retain source calendars (US
+MMWR, JP IDWR ISO); monthly/quarterly/annual and custom date ranges only include
+whole source periods. Cross-year cumulative report rates add each reporting
+year's cases divided by that year's local population, multiplied by 100,000,
+without annualization; annual contributions and both comparison windows' actual
+coverage/provenance are included in the UI and CSV.

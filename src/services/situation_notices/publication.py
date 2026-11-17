@@ -43,6 +43,7 @@ async def _export(state_dir: Path, public_dir: Path, *, release_id: str) -> dict
     _write(public_dir / "map-data.json", {
         "schema_version": mapping["schema_version"], "generated_at": mapping["generated_at"],
         "as_of": mapping["as_of"], "points": mapping["points"],
+        "filter_points": mapping.get("filter_points", mapping["points"]),
         "monitoring": monitoring["products"],
         "active_outbreaks": sum(row["status"] == "active" for row in mapping["outbreaks"]),
         "sources_ok": sum(row["status"] == "ok" for row in sources["sources"]),
@@ -63,7 +64,7 @@ async def _export(state_dir: Path, public_dir: Path, *, release_id: str) -> dict
         _write(path, week)
     from src.generation.home_summary import situation_home_summary
     _write(public_dir / "summary.json", situation_home_summary(read('map-data.json')))
-    logical = ["map.json", "map-data.json", "monitoring.json", "sources.json", "summary.json"]
+    logical = ["map.json", "map-data.json", "monitoring.json", "sources.json", "summary.json", "feed.json"]
     logical.extend(str(path.relative_to(public_dir)) for folder in
         ("outbreaks", "by-country", "by-disease", "weekly") for path in (public_dir / folder).glob("*.json"))
     files = {}

@@ -1,0 +1,15 @@
+[Unit]
+Description=Archive INS public event reports, bulletins and surveillance methods
+Wants=globalid-co-ins-proxy.service
+After=globalid-co-ins-proxy.service
+
+[Service]
+Type=oneshot
+User=likangguo
+Group=likangguo
+WorkingDirectory=/home/likangguo/globalID/globalID2
+Environment=CO_INS_HTTP_PROXY=http://169.254.231.2:18088
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/likangguo/globalID/globalID2/venv/bin/python /home/likangguo/globalID/globalID2/scripts/imports/collect_co_sivigila_resources.py --output /home/likangguo/globalID/globalID2/data/raw/co/ins-publications
+TimeoutStartSec=infinity
+UMask=0077

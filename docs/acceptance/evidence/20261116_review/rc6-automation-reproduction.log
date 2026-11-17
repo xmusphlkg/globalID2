@@ -1,0 +1,7 @@
+[32m2026-11-16 11:27:06[0m | [1mINFO    [0m | [36msrc.core.logging[0m:[36msetup_logging[0m:[36m64[0m - [1mLogging initialized - Level: INFO[0m
+{'scenario': 'stale_source_schema', 'health': {'health_status': 'stale_source', 'health_reason': 'latest explicit case month 2026-05 is 5 closed months behind; latest discovered report 2026-05; 3-month monitoring budget, not an official publication deadline', 'last_success_at': '2026-11-16T00:00:00+00:00', 'last_success_age_minutes': 0, 'stale_after_minutes': 20160}}
+1 validation error for literal['healthy','needs_review','partial','active','recovering','failed','stale','never_run','disabled','unknown']
+  Input should be 'healthy', 'needs_review', 'partial', 'active', 'recovering', 'failed', 'stale', 'never_run', 'disabled' or 'unknown' [type=literal_error, input_value='stale_source', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/literal_error
+{'scenario': 'pause_after_job_read_before_final_refresh', 'persisted_next_run': None, 'result': {'job_id': 'cn-bj-weekly', 'status': 'queued', 'task_uuid': 'offline-task'}, 'enqueue_calls': 1}
+{'scenario': 'notification_partial_optout_commit_boundary', 'commit_snapshots': [{'skipped': 'skipped', 'retained': 'pending'}, {'skipped': 'skipped', 'retained': 'sending'}, {'skipped': 'skipped', 'retained': 'sent'}], 'mock_sends': 1}

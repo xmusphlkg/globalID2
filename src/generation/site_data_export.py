@@ -79,6 +79,9 @@ from src.generation.site_data_dependencies import (
     load_receipt as _load_dependency_receipt,
     save_receipt as _save_dependency_receipt,
 )
+from src.generation.site_subdivision_maps import (
+    fetch_map_populations, parent_code as subdivision_parent_code, write_subdivision_maps,
+)
 from src.generation.country_projection_inputs import (
     attach_inputs as _attach_country_projection_inputs,
     merge_country_diseases as _merge_country_diseases,
@@ -532,7 +535,7 @@ async def _collect_country_export(
     country_data["location_type"] = country_metadata.get(
         "location_type"
     ) or ("subdivision" if "-" in code else "country")
-    country_data["parent_code"] = country_metadata.get("parent_country_code")
+    country_data["parent_code"] = subdivision_parent_code(country)
     if code.upper() == "IS":
         country_source_info = _retain_observed_iceland_sources(
             country_source_info,
@@ -712,9 +715,12 @@ async def collect_site_export_context(
     reports: list[dict] = []
     report_details: dict[int, dict] = {}
     literature_export: dict = {}
+    map_population_rows: list[dict] = []
 
     async with get_db() as session:
         population_enabled = False if static_content_only else await has_population_table(session)
+        if population_enabled:
+            map_population_rows = await fetch_map_populations(session)
         if population_enabled:
             print(
                 "  Population table detected: incidence will use jurisdiction-specific annual population"
@@ -761,11 +767,7 @@ async def collect_site_export_context(
                         if isinstance(country.get("metadata"), dict)
                         else None
                     ) or ("subdivision" if "-" in country["code"] else "country"),
-                    "parent_code": (
-                        (country.get("metadata") or {}).get("parent_country_code")
-                        if isinstance(country.get("metadata"), dict)
-                        else None
-                    ),
+                    "parent_code": subdivision_parent_code(country),
                 }
             )
 
@@ -1422,6 +1424,7 @@ async def collect_site_export_context(
     )
 
     return {
+        "map_population_rows": map_population_rows,
         "country_record_counts": country_record_counts,
         "countries_simple": countries_simple,
         "country_download_entries": country_download_entries,
@@ -1554,6 +1557,7 @@ def write_site_export_artifacts(
             f"({country_record_counts.get(code, 0)} records)"
         )
     report_phase("country JSON")
+    write_subdivision_maps(output_dir, public_site_data_dir, context.get("map_population_rows") or [], recorded_at_as_of=context.get("recorded_at_as_of"), active_codes={item["code"] for item in countries_simple})
 
     knowledge_mode_counts: dict[str, int] = defaultdict(int)
     knowledge_completeness_values: list[float] = []
@@ -1867,6 +1871,8 @@ def write_incremental_site_export_artifacts(
         (output_dir / "countries" / f"{code.lower()}.json").unlink(missing_ok=True)
         (public_site_data_dir / "countries" / f"{code.lower()}.json").unlink(missing_ok=True)
         (public_site_data_dir / "countries" / f"{code.lower()}-source-series.json").unlink(missing_ok=True)
+    if not context.get("static_content_only"):
+        write_subdivision_maps(output_dir, public_site_data_dir, context.get("map_population_rows") or [], recorded_at_as_of=context.get("recorded_at_as_of"), active_codes={item["code"] for item in context["countries_simple"]})
     _write_publish_hash_manifest(output_dir, context)
     if "country_dependency_inputs" in context:
         _save_dependency_receipt(context, output_dir, public_site_data_dir)

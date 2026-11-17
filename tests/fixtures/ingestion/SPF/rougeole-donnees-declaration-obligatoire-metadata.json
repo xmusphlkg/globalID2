@@ -1,0 +1,167 @@
+{
+  "visibility": "domain",
+  "fields": [
+    {
+      "name": "annee",
+      "description": null,
+      "annotations": {
+        "timeserie_precision": "year"
+      },
+      "label": "Année",
+      "type": "date"
+    },
+    {
+      "name": "libgeo",
+      "description": null,
+      "annotations": {},
+      "label": "Département",
+      "type": "text"
+    },
+    {
+      "name": "reglib",
+      "description": "Libellé",
+      "annotations": {
+        "hierarchical": "Département"
+      },
+      "label": "Région",
+      "type": "text"
+    },
+    {
+      "name": "mdo_cl_age_rougeole",
+      "description": null,
+      "annotations": {},
+      "label": "Classe d'âge",
+      "type": "text"
+    },
+    {
+      "name": "rou",
+      "description": null,
+      "annotations": {},
+      "label": "Nombre de cas",
+      "type": "int"
+    },
+    {
+      "name": "population",
+      "description": "Estimation localisée de population",
+      "annotations": {},
+      "label": "Population",
+      "type": "int"
+    },
+    {
+      "name": "tx",
+      "description": null,
+      "annotations": {
+        "decimals": 1
+      },
+      "label": "Taux de notification des cas de rougeole",
+      "type": "double"
+    },
+    {
+      "name": "dep",
+      "description": null,
+      "annotations": {},
+      "label": "Département Code",
+      "type": "text"
+    },
+    {
+      "name": "reg",
+      "description": null,
+      "annotations": {},
+      "label": "Région Code",
+      "type": "text"
+    }
+  ],
+  "dataset_id": "rougeole-donnees-declaration-obligatoire",
+  "dataset_uid": "da_etadd3",
+  "has_records": true,
+  "features": [
+    "analyze",
+    "timeserie"
+  ],
+  "attachments": [],
+  "alternative_exports": [],
+  "data_visible": true,
+  "metas": {
+    "default": {
+      "title": "Rougeole : Données de la déclaration obligatoire",
+      "description": "<p class=\"MsoNormal\">Les indicateurs de surveillance de la rougeole sont\nconstruits à partir des informations des déclarations obligatoires (DO),\ntransmises aux Agences régionales de santé (ARS), puis centralisées par Santé\npublique France. Ces déclarations obligatoires sont remplies par les cliniciens\net/ou biologistes à partir d’un formulaire Cerfa dédié pour tout nouveau\ndiagnostic.<o:p></o:p></p><p class=\"MsoNormal\">Les taux de notification correspondent au nombre de cas\ndéclarés rapportés à la population résidente du territoire concerné, estimée au\n1er janvier du territoire concerné, à partir des estimations localisées de\npopulation fournies par l’Insee pour une année donnée. Ils sont exprimés en\nnombre de cas pour 100 000 habitants. Les indicateurs de surveillance de la\nrougeole (nombre de cas, taux d’incidence bruts) sont mis à jour annuellement\net disponibles à partir de l’année 2005. Ils sont déclinés par classes d’âge.<o:p></o:p></p><p class=\"MsoNormal\"><b>Précisions : </b><o:p></o:p></p><ul><li>Tous les cas répondant à la définition des cas en vigueur au\nmoment de leur survenue ont été inclus dans l’analyse. L’analyse est réalisée\npar année calendaire à partir de la date d’éruption. <o:p></o:p></li><li>Ne sont pas inclus les cas importés ou résidant à l’étranger\nainsi que les cas dont le code postal de résidence, où à défaut dont le code\npostal du déclarant, n’a pu être précisé au moment de la déclaration. Les taux\nde notification sont des taux bruts non corrigés pour la sous-notification. <o:p></o:p></li><li>Pour la surveillance de la rougeole par la DO,\nl’exhaustivité a été estimée à 56% en 2013 chez les 18-32 ans dans le Sud-est\nde la France.<o:p></o:p></li></ul><p class=\"MsoNormal\"><b>Pour aller plus loin : </b><o:p></o:p></p><p class=\"MsoNormal\">Les critères de signalement et la fiche de notification sont\ndisponibles sur le site de Santé publique France. Les tendances épidémiologiques\net les analyses plus fines (par classe d’âge, par sévérité, etc.) sont décrites\ndans des bilans annuels de surveillance également disponibles sur le site de\nSanté publique France.</p><p>\n</p><br><p class=\"MsoNormal\"><o:p></o:p></p>",
+      "theme": [
+        "Maladies Infectieuses"
+      ],
+      "keyword": [
+        "rougeole"
+      ],
+      "license": "Licence ouverte 2.0",
+      "license_url": "https://www.etalab.gouv.fr/wp-content/uploads/2017/04/ETALAB-Licence-Ouverte-v2.0.pdf",
+      "language": "fr",
+      "modified": "2026-05-18T08:26:58+00:00",
+      "publisher": "Santé publique France",
+      "references": null,
+      "attributions": null,
+      "update_frequency": "ANNUAL",
+      "bbox": null,
+      "data_processed": "2026-05-18T08:26:58+00:00",
+      "federated": false,
+      "geographic_reference": [
+        "world_fr"
+      ],
+      "geographic_reference_auto": true,
+      "geometry_types": null,
+      "metadata_languages": [
+        "fr"
+      ],
+      "metadata_processed": "2026-06-30T10:05:35.236000+00:00",
+      "modified_updates_on_data_change": true,
+      "modified_updates_on_metadata_change": false,
+      "parent_domain": null,
+      "records_count": 19017,
+      "shared_catalog": null,
+      "source_dataset": null,
+      "source_domain": null,
+      "source_domain_address": null,
+      "source_domain_title": null,
+      "territory": [
+        "France"
+      ],
+      "timezone": null
+    },
+    "dcat": {
+      "created": null,
+      "issued": null,
+      "creator": null,
+      "contributor": null,
+      "contact_name": null,
+      "contact_email": null,
+      "accrualperiodicity": "annual",
+      "spatial": null,
+      "temporal": null,
+      "granularity": null,
+      "dataquality": null,
+      "publisher_type": "NationalAuthority",
+      "conforms_to": null,
+      "temporal_coverage_start": null,
+      "temporal_coverage_end": null,
+      "accessRights": null,
+      "relation": null
+    },
+    "standard-insee": {
+      "sous-titre": null,
+      "source": [
+        "Maladie à déclaration obligatoire"
+      ],
+      "avertissement": null,
+      "documentation": null,
+      "unite-statistique": null,
+      "couverture-geographique": "France",
+      "mailles-geographiques": "Département",
+      "mailles-geographiques-multi": [
+        "Département"
+      ],
+      "millesime-de-la-geographie": "2024",
+      "population-s-de-reference": "Estimation localisée de population",
+      "standardisation": null,
+      "nature-indicateur": null,
+      "non-disponible-sur-data-gouv-fr": null
+    }
+  }
+}

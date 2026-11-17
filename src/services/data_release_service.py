@@ -31,7 +31,7 @@ from src.domain.collection import PublishDirty
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
 from src.services.data_release.channel_control import is_automatic_json_paused
-from src.services.data_release.global_selection import selection_batches
+from src.services.data_release.global_selection import read_selected_batch, selection_batches
 from src.services.data_release.planning import publishable_scope_keys
 from src.services.data_release.public_changelog import (
     missing_public_changelog_versions,
@@ -1301,8 +1301,19 @@ class DataReleaseService:
                     # Sorted disjoint batches preserve the planner's global
                     # ordering and keep legacy parent groups together.
                     for batch in selection_batches(pending_ids):
-                        dirty.extend((await db.execute(selection_query.where(
-                            PublishDirty.id.in_(batch)).order_by(PublishDirty.id))).scalars().all())
+                        selected = await read_selected_batch(db, batch)
+                        for row in selected:
+                            if row.published_at is not None:
+                                continue
+                            if data_only:
+                                if row.line != data_line or (data_line != "surveillance"
+                                        and row.scope_key not in publishable_scope_keys(data_line)):
+                                    continue
+                            elif ((content_only and row.line == "surveillance")
+                                    or (situation_detached and row.line == "situation")
+                                    or (literature_detached and row.line == "literature")):
+                                continue
+                            dirty.append(row)
             if pending_ids is not None and not dirty and not full:
                 return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid, "reason": "no_pending_changes"}
             if full:
@@ -1454,9 +1465,9 @@ class DataReleaseService:
                         raise PublicationPlanError("publication_selection_changed")
                     pending_now = set()
                     for batch in selection_batches(list(frozen_ids)):
-                        pending_now.update((await db.execute(select(PublishDirty.id).where(
-                            PublishDirty.id.in_(batch), (PublishDirty.line == data_line) if data_only else True,
-                            PublishDirty.published_at.is_(None)).order_by(PublishDirty.id).with_for_update())).scalars())
+                        rows = await read_selected_batch(db, batch, lock=True)
+                        pending_now.update(row.id for row in rows if row.published_at is None
+                                           and (not data_only or row.line == data_line))
                     if pending_now != frozen_ids:
                         raise PublicationPlanError("publication_selection_changed")
             if pending_ids is not None and trigger_task_uuid:
@@ -1504,10 +1515,8 @@ class DataReleaseService:
                 # stale JSON candidate from that older selection.
                 pending = set()
                 for batch in selection_batches(dirty_ids):
-                    pending.update((await db.execute(select(PublishDirty.id).where(
-                        PublishDirty.id.in_(batch), PublishDirty.line == data_line,
-                        PublishDirty.published_at.is_(None),
-                    ).order_by(PublishDirty.id).with_for_update())).scalars())
+                    rows = await read_selected_batch(db, batch, lock=True)
+                    pending.update(row.id for row in rows if row.line == data_line and row.published_at is None)
                 if pending != set(dirty_ids):
                     return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid,
                             "reason": "no_pending_changes" if not pending else "selection_changed"}

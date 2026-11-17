@@ -1,0 +1,106 @@
+TAP version 13
+# Subtest: every country coverage entry has geographic and income classifications
+ok 1 - every country coverage entry has geographic and income classifications
+  ---
+  duration_ms: 2.272401
+  type: 'test'
+  ...
+# Subtest: subnational coverage inherits its parent country classification
+ok 2 - subnational coverage inherits its parent country classification
+  ---
+  duration_ms: 0.25457
+  type: 'test'
+  ...
+# Subtest: classification snapshot records its official source vintage
+ok 3 - classification snapshot records its official source vintage
+  ---
+  duration_ms: 0.454481
+  type: 'test'
+  ...
+# Subtest: an empty seeded metadata row does not activate a scheduled country
+ok 4 - an empty seeded metadata row does not activate a scheduled country
+  ---
+  duration_ms: 2.117121
+  type: 'test'
+  ...
+# Subtest: a snapshot requires records or a disease-bearing coverage window
+ok 5 - a snapshot requires records or a disease-bearing coverage window
+  ---
+  duration_ms: 0.351406
+  type: 'test'
+  ...
+# Subtest: existing active pipelines remain supported without a generated snapshot
+ok 6 - existing active pipelines remain supported without a generated snapshot
+  ---
+  duration_ms: 0.251362
+  type: 'test'
+  ...
+# Subtest: Ontario is a first-class region that activates when its snapshot exists
+ok 7 - Ontario is a first-class region that activates when its snapshot exists
+  ---
+  duration_ms: 0.317364
+  type: 'test'
+  ...
+# Subtest: Sweden remains supported after its verified baseline import
+ok 8 - Sweden remains supported after its verified baseline import
+  ---
+  duration_ms: 0.283236
+  type: 'test'
+  ...
+# Subtest: ISO subdivision locations use their parent country flag
+ok 9 - ISO subdivision locations use their parent country flag
+  ---
+  duration_ms: 0.531332
+  type: 'test'
+  ...
+# Subtest: every country coverage marker has a bundled flag asset
+ok 10 - every country coverage marker has a bundled flag asset
+  ---
+  duration_ms: 3.003767
+  type: 'test'
+  ...
+# Subtest: the local flag library contains every ISO country flag
+ok 11 - the local flag library contains every ISO country flag
+  ---
+  duration_ms: 5.602156
+  type: 'test'
+  ...
+# Subtest: uses the pathogen taxonomy rather than a clinical disease name as the sequence search
+ok 12 - uses the pathogen taxonomy rather than a clinical disease name as the sequence search
+  ---
+  duration_ms: 2.722421
+  type: 'test'
+  ...
+# Subtest: does not guess mappings for syndromes, broad influenza or unknown disease identifiers
+ok 13 - does not guess mappings for syndromes, broad influenza or unknown disease identifiers
+  ---
+  duration_ms: 0.366554
+  type: 'test'
+  ...
+# Subtest: public searches and account-based resources remain distinct and on official hosts
+ok 14 - public searches and account-based resources remain distinct and on official hosts
+  ---
+  duration_ms: 0.858882
+  type: 'test'
+  ...
+# Subtest: all three locales explain sequence-count limits and GISAID account access
+ok 15 - all three locales explain sequence-count limits and GISAID account access
+  ---
+  duration_ms: 0.542596
+  type: 'test'
+  ...
+# Subtest: US, Brazil and Japan coordinate catalogues cover published subdivisions
+ok 16 - US, Brazil and Japan coordinate catalogues cover published subdivisions
+  ---
+  duration_ms: 2.249803
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 277.620592

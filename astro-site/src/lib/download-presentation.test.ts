@@ -24,6 +24,6 @@ test('catalogue row total explains repeated observations beside the metric in ev
   for (const explanation of ['同一观测可能重复计入', 'Shared observations count again', 'Une même observation peut être comptée plusieurs fois']) {
     assert.ok(source.includes(explanation), explanation);
   }
-  assert.match(source, /<dd>\{compact\(totalRecords\)\}<small class="records-note">\{copy\.recordsNote\}<\/small><\/dd>/);
+  assert.match(source, /<dd><span data-download-metric="records">\{compact\(totalRecords\)\}<\/span><small class="records-note">\{copy\.recordsNote\}<\/small><\/dd>/);
   assert.doesNotMatch(source, /records: 'Enregistrements publiés'/);
 });

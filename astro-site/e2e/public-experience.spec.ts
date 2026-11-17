@@ -1,5 +1,34 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+// These template checks exercise the live JSON contract without depending on
+// a previous local export or the current production publication.
+async function mockAreaTemplates(page: Page) {
+  const codes = ['AU', 'BR', 'CA', 'CN', 'JP', 'SE', 'US'];
+  const children = ['AU-ACT', 'BR-AC', 'CA-ON', 'CN-BJ', 'JP-01', 'SE-01', 'US-CA'];
+  const area = { code: 'AU', name_en: 'Australia', name_zh: '澳大利亚', data_available: true,
+    record_count: 3, disease_count: 1, total_cases: 6, date_range: { start: '2025-01-01', end: '2025-03-01' } };
+  const series = { disease_id: 'D021', slug: 'dengue', name_en: 'Dengue', name_zh: '登革热',
+    dates: ['2025-01-01', '2025-02-01', '2025-03-01'], cases: [1, 2, 3], deaths: [0, 0, 0],
+    total_cases: 6, period_granularity: 'monthly', comparability: 'comparable', date_range: area.date_range };
+  const entries: Record<string, unknown> = {
+    'meta.json': { generated_at: '2026-11-16', total_diseases: 1, countries: codes.flatMap((code, index) => [
+      { ...area, code, name_en: new Intl.DisplayNames(['en'], { type: 'region' }).of(code), name_zh: new Intl.DisplayNames(['zh'], { type: 'region' }).of(code) },
+      { ...area, code: children[index], name_en: children[index], name_zh: children[index], parent_code: code, location_type: 'subdivision' },
+    ]) },
+    'countries/au-summary.json': { ...area, country_code: 'AU', country_name_en: 'Australia', country_name_zh: '澳大利亚',
+      generated_at: '2026-11-16', diseases: [series] },
+    'countries/au.json': { country_code: 'AU', disease_series: { D021: series } },
+    'countries/au-source-series.json': { v: 1, series: {} },
+    'diseases/d021-summary.json': { ...series, generated_at: '2026-11-16', country_count: 1, reporting_countries: [area] },
+    'diseases/d021.json': { disease_id: 'D021', country_series: { AU: { ...series, ...area } } },
+  };
+  await page.route('**/site-data/bootstrap.json', route => route.fulfill({ status: 404 }));
+  await page.route('**/site-data/current.json', route => route.fulfill({ status: 404 }));
+  for (const [key, value] of Object.entries(entries)) {
+    await page.route(`**/site-data/${key}`, route => route.fulfill({ json: value }));
+  }
+}
 
 const canonicalRoutes = [
   '/',
@@ -210,8 +239,10 @@ test('large disease source registers preview records and link to the full JSON l
 });
 
 test('country directory links every parent with published regional datasets', async ({ page }) => {
+  await mockAreaTemplates(page);
   await page.goto('/countries/');
-  await expect(page.getByText(/\d+ regional datasets across \d+ countries/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Subdivision datasets by parent area', exact: true })).toBeVisible();
+  await expect(page.getByText('7 subdivision datasets, counted separately from parent-area totals.', { exact: true })).toBeVisible();
   for (const code of ['au', 'br', 'ca', 'cn', 'jp', 'se', 'us']) {
     await expect(page.locator(`a[href="/countries/${code}/#subnational-data"]`)).toBeVisible();
   }
@@ -363,24 +394,30 @@ test('copyright center exposes reuse guidance, material rules, and citation tool
 
 test('Chinese country and disease routes reuse the complete data templates', async ({ page }, testInfo) => {
   test.skip(!['chromium-390', 'chromium-1280'].includes(testInfo.project.name));
+  await mockAreaTemplates(page);
   await page.goto('/zh/countries/au/');
   await expect(page.getByRole('heading', { level: 1, name: '澳大利亚' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: '核心监测指标' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: '各疾病监测趋势' })).toBeVisible();
   await expect(page.locator('.country-flag img').first()).toHaveAttribute('src', '/flags/au.svg');
-  await expect(page.locator('.figure-panel')).toHaveCount(8);
+  await expect(page.locator('.figure-panel')).toHaveCount(9);
+  await expect(page.locator('#regional-distribution[data-subdivision-country="AU"]')).toHaveCount(1);
+  await expect(page.locator('.figure-panel:not(#regional-distribution)')).toHaveCount(8);
   await expect(page.locator('#downloads')).toBeAttached();
-  await expect(page.locator('#disease-directory a').first()).toHaveAttribute('href', /^\/zh\/diseases\//);
+  await expect(page.locator('#disease-directory a').first()).toHaveAttribute('href', '/zh/diseases/dengue/');
+  await page.locator('#disease-comparison-table').scrollIntoViewIfNeeded();
   await expect(page.getByRole('button', { name: '全部', exact: true })).toBeVisible();
   await expect(page.locator('#disease-comparison-table tbody a').first()).toHaveAttribute('href', /^\/zh\/diseases\//);
 
   await page.goto('/zh/diseases/dengue/');
   await expect(page.getByRole('heading', { level: 1, name: '登革热' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: '报告国家和地区' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: '同一疾病 · 国家与省级地区比较' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: '报告地理区域' })).toBeVisible();
+  await expect(page.locator('#main-trend')).toContainText('区域监测趋势');
+  await expect(page.getByRole('heading', { level: 2, name: '所选区域的年 × 月季节分布' })).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: '近期相关研究' })).toBeVisible();
-  await expect(page.locator('.figure-panel')).toHaveCount(5);
-  await expect(page.locator('.reporting-country-link').first()).toHaveAttribute('href', /^\/zh\/countries\//);
+  await expect(page.locator('.figure-panel')).toHaveCount(6);
+  await expect(page.locator('#pathogen-resources').getByRole('heading', { level: 2 })).toHaveText('病原体序列与资源');
+  await expect(page.locator('#coverage a[href^="/zh/countries/"]').first()).toHaveAttribute('href', '/zh/countries/au/');
   await expect(page.locator('#downloads')).toBeAttached();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/zh\/diseases\/dengue\/$/);
 });

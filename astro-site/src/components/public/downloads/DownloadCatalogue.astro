@@ -5,10 +5,12 @@ import type { downloadMessages } from './messages';
 interface Props { locale: 'en' | 'zh' | 'fr'; model: ReturnType<typeof downloadCatalogue>; copy: ReturnType<typeof downloadMessages> }
 const {locale, model, copy} = Astro.props;
 const {countries, diseases, entries, generatedAt, totalRecords, compact, bytes, subdivisionCount, prefix} = model;
+// One complete row supplies the client template, including the same scoped styles.
+const rowTemplate = { kind: 'country', id: 'UN', name: '', aliases: '', count: 0, period: '', detail: '', files: {}, pageHref: '' };
 ---
 
 
-<div class="downloads-page">
+<div class="downloads-page" data-download-state="loading">
   <header class="hero">
     <div class="wrap hero-grid">
       <div>
@@ -16,22 +18,22 @@ const {countries, diseases, entries, generatedAt, totalRecords, compact, bytes, 
         <h1>{copy.title}</h1>
         <p>{copy.lead}</p>
       </div>
-      <dl>
+      <dl data-download-live>
         <div>
           <dt>{copy.countrySets}</dt>
-          <dd>{countries.length}</dd>
+          <dd data-download-metric="countries">{countries.length}</dd>
         </div>
         <div>
           <dt>{copy.diseaseSets}</dt>
-          <dd>{diseases.length}</dd>
+          <dd data-download-metric="diseases">{diseases.length}</dd>
         </div>
         <div>
           <dt>{copy.records}</dt>
-          <dd>{compact(totalRecords)}<small class="records-note">{copy.recordsNote}</small></dd>
+          <dd><span data-download-metric="records">{compact(totalRecords)}</span><small class="records-note">{copy.recordsNote}</small></dd>
         </div>
         <div>
           <dt>{copy.date}</dt>
-          <dd class="date">{generatedAt}</dd>
+          <dd class="date" data-download-metric="date">{generatedAt}</dd>
         </div>
       </dl>
     </div>
@@ -46,20 +48,18 @@ const {countries, diseases, entries, generatedAt, totalRecords, compact, bytes, 
       <p>{copy.intro}</p>
     </header>
 
-    {subdivisionCount > 0 && (
-      <a
+    <a data-download-subdivisions data-download-live hidden={subdivisionCount === 0}
         class="mb-6 flex flex-col gap-2 border border-[rgb(var(--border))] bg-[rgb(var(--surface-muted))] p-4 transition-colors hover:border-[rgb(var(--color-teal))] sm:flex-row sm:items-center sm:justify-between"
         href={`${prefix}/countries/`}
       >
         <span>
           <strong class="block text-[rgb(var(--text-strong))]">{copy.subdivisionTitle}</strong>
-          <span class="mt-1 block text-sm leading-6 text-[rgb(var(--text-muted))]">{copy.subdivisionNote}</span>
+          <span data-download-subdivision-note class="mt-1 block text-sm leading-6 text-[rgb(var(--text-muted))]">{copy.subdivisionNote}</span>
         </span>
         <span class="shrink-0 text-sm font-semibold text-[rgb(var(--color-teal))]">{copy.subdivisionLink}</span>
       </a>
-    )}
 
-    <div class="toolbar">
+    <div class="toolbar" data-download-live>
       <div class="search">
         <label for={`download-search-${locale}`}>{copy.search}</label>
         <input
@@ -92,11 +92,14 @@ const {countries, diseases, entries, generatedAt, totalRecords, compact, bytes, 
       </div>
     </div>
 
-    <p id={`download-count-${locale}`} class="result-count" aria-live="polite">
+    <p id={`download-count-${locale}`} data-download-live class="result-count" aria-live="polite">
       {copy.showing} {entries.length} {copy.dataset}
     </p>
 
-    <div class="table-wrap" role="region" aria-label={copy.choose} tabindex="0">
+    <p data-download-status role="status">{copy.loading}</p>
+    <button data-download-retry class="more" type="button" hidden>{copy.retry}</button>
+
+    <div class="table-wrap" data-download-live role="region" aria-label={copy.choose} tabindex="0">
       <table>
         <thead>
           <tr>
@@ -108,9 +111,11 @@ const {countries, diseases, entries, generatedAt, totalRecords, compact, bytes, 
         </thead>
         <tbody>
           {
-            entries.map((entry: any, index: number) => (
+            [...entries, rowTemplate].map((entry: any, index: number) => (
               <tr
-                data-download-row
+                data-download-row={entry === rowTemplate ? undefined : ""}
+                data-download-template={entry === rowTemplate ? "" : undefined}
+                hidden={entry === rowTemplate}
                 data-index={index}
                 data-kind={entry.kind}
                 data-name={entry.name.toLowerCase()}
@@ -119,35 +124,34 @@ const {countries, diseases, entries, generatedAt, totalRecords, compact, bytes, 
               >
                 <td data-label={copy.catalogue}>
                   <div class="dataset-name">
-                    {entry.kind === 'country' ? (
-                      <CountryFlag code={entry.id} name={entry.name} sizeClass="w-9 h-7" />
-                    ) : (
-                      <span class="disease-mark" aria-hidden="true"></span>
-                    )}
+                    <span data-download-country hidden={entry.kind !== 'country'}><CountryFlag code={entry.id} name={entry.name} sizeClass="w-9 h-7" /></span>
+                    <span data-download-disease class="disease-mark" aria-hidden="true" hidden={entry.kind === 'country'}></span>
                     <span>
-                      <strong>{entry.name}</strong>
-                      <small>{entry.id}</small>
+                      <strong data-download-name>{entry.name}</strong>
+                      <small data-download-id>{entry.id}</small>
                     </span>
                   </div>
                 </td>
                 <td data-label={copy.range}>
-                  <strong>{entry.period}</strong>
-                  <small>{entry.detail}</small>
+                  <strong data-download-period>{entry.period}</strong>
+                  <small data-download-detail>{entry.detail}</small>
                 </td>
                 <td data-label={copy.formats}>
                   <div class="formats">
                     {(['csv', 'json', 'xlsx'] as const).map((format) =>
-                      entry.files?.[format]?.url ? (
+                      (
                         <a
-                          href={entry.files[format].url}
+                          data-download-format={format}
+                          hidden={!entry.files?.[format]?.url}
+                          href={entry.files?.[format]?.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           aria-label={`${copy.download} ${entry.name} ${format.toUpperCase()}`}
                         >
                           <strong>{format.toUpperCase()}</strong>
-                          <small>{bytes(entry.files[format].bytes)}</small>
+                          <small>{bytes(entry.files?.[format]?.bytes)}</small>
                         </a>
-                      ) : null,
+                      ),
                     )}
                   </div>
                 </td>
@@ -163,8 +167,8 @@ const {countries, diseases, entries, generatedAt, totalRecords, compact, bytes, 
       </table>
     </div>
 
-    <p id={`downloads-empty-${locale}`} class="empty" hidden>{copy.empty}</p>
-    <button id={`downloads-more-${locale}`} class="more" type="button">
+    <p id={`downloads-empty-${locale}`} data-download-live class="empty" hidden>{copy.empty}</p>
+    <button id={`downloads-more-${locale}`} data-download-live class="more" type="button">
       {copy.more}
     </button>
   </section>
@@ -188,12 +192,15 @@ const {countries, diseases, entries, generatedAt, totalRecords, compact, bytes, 
 
 <script is:inline type="application/json" id="download-catalogue-config" set:html={JSON.stringify({ locale, copy }).replaceAll('<', '\\u003c')} />
 <script>
-  import { initializeDownloadCatalogue } from './controller.js';
+  import { hydrateDownloadCatalogue } from './hydration.ts';
   const config = JSON.parse(document.getElementById('download-catalogue-config')?.textContent || '{}');
-  initializeDownloadCatalogue(config.locale, config.copy);
+  void hydrateDownloadCatalogue(config.locale, config.copy);
 </script>
 
 <style>
+  .downloads-page[data-download-state="loading"] [data-download-live],
+  .downloads-page[data-download-state="error"] [data-download-live] { display: none; }
+  .downloads-page [hidden] { display: none; }
   .downloads-page {
     min-width: 0;
     contain: paint;

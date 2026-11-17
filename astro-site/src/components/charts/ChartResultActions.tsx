@@ -28,6 +28,9 @@ interface Props {
   showData?: boolean;
   /** Link to the page that owns the download dialog for this chart. */
   dataHref?: string;
+  /** Download the chart's current selection, taking precedence over the page dialog and dataHref. */
+  onData?: () => void;
+  dataDisabled?: boolean;
   leading?: ReactNode;
 }
 
@@ -121,6 +124,8 @@ export default function ChartResultActions({
   pngDisabled = false,
   showData = true,
   dataHref,
+  onData,
+  dataDisabled = false,
   leading,
 }: Props) {
   const copy = text[lang];
@@ -147,8 +152,8 @@ export default function ChartResultActions({
       setDataReady(false);
       return;
     }
-    setDataReady(Boolean(document.querySelector("[data-download-confirm-dialog], #downloads")));
-  }, [showData]);
+    setDataReady(Boolean(onData) || Boolean(document.querySelector("[data-download-confirm-dialog], #downloads")));
+  }, [showData, onData]);
 
   async function toggleFullscreen() {
     if (fullscreen) {
@@ -211,6 +216,11 @@ export default function ChartResultActions({
   }
 
   function openData() {
+    if (dataDisabled) return;
+    if (onData) {
+      onData();
+      return;
+    }
     const dialog = document.querySelector("[data-download-confirm-dialog]");
     if (!(dialog instanceof HTMLDialogElement)) {
       document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -261,10 +271,10 @@ export default function ChartResultActions({
         >
           {copy.png}
         </button>
-        {(dataReady || dataLink) && (
-          dataLink
+        {(onData ? showData : dataReady || dataLink) && (
+          !onData && dataLink
             ? <a className="chart-link-btn" href={dataLink}>{copy.data}</a>
-            : <button type="button" className="chart-link-btn" onClick={openData}>
+            : <button type="button" className="chart-link-btn" onClick={openData} disabled={dataDisabled}>
                 {copy.data}
               </button>
         )}

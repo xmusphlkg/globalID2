@@ -2,6 +2,8 @@
 
 import { type DataSourceFlow } from "@/features/operations/sources/api";
 
+import { SourceChannelLinks } from "@/features/operations/sources/source-channel-links";
+
 import { formatDate } from "@/lib/utils";
 import { getSourceDisplayLabel } from "@/lib/source-labels";
 import { formatSeriesMetadata } from "../series-format";
@@ -50,7 +52,8 @@ export function FlowRow({
                 ? `${sourceObservationCount.toLocaleString()} ${lang === "zh" ? "条来源观测" : "source observations"}`
                 : `${flow.record_count.toLocaleString()} ${lang === "zh" ? "条兼容记录" : "compatibility records"}`}
             </span>
-            {hasSeriesFacts ? (
+            <SourceChannelLinks channel={flow.source_channel} lang={lang} />
+          {hasSeriesFacts ? (
               <span className="inline-flex items-center gap-1 text-tremor-content dark:text-dark-tremor-content">
                 {sourceSeriesCount.toLocaleString()} {lang === "zh" ? "个来源序列" : "source series"}
               </span>

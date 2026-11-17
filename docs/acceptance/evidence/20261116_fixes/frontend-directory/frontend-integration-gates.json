@@ -1,0 +1,93 @@
+{
+  "mode": "readonly files; no DB/network/write to source",
+  "codes": [
+    "ET",
+    "KE",
+    "UG",
+    "GH",
+    "TZ",
+    "PH",
+    "VN",
+    "LA",
+    "MM",
+    "BN",
+    "TL",
+    "PY",
+    "EC",
+    "CR",
+    "PA",
+    "GP",
+    "MQ",
+    "GF"
+  ],
+  "public_release_enabled": {
+    "ET": false,
+    "KE": false,
+    "UG": false,
+    "GH": false,
+    "TZ": false,
+    "PH": false,
+    "VN": false,
+    "LA": false,
+    "MM": false,
+    "BN": false,
+    "TL": false,
+    "PY": false,
+    "EC": false,
+    "CR": false,
+    "PA": false,
+    "GP": false,
+    "MQ": false,
+    "GF": false
+  },
+  "new_codes_in_public_meta": [],
+  "public_meta_rows": 295,
+  "package_versions": {
+    "package": "0.20.0",
+    "lock": "0.20.0",
+    "lock_root": "0.20.0"
+  },
+  "isolated_built_source_identical": [
+    {
+      "path": "astro-site/src/components/public/SurveillanceDirectory.tsx",
+      "sha256": "ef878c4706fe4ae3809677bced784fe3a726b7f772981bffc14b98735c2cf615"
+    },
+    {
+      "path": "astro-site/src/lib/country-classifications.ts",
+      "sha256": "fa41b0b8050f4fdb015937708a4ebaf418da93340e98f43628187994a543d942"
+    },
+    {
+      "path": "astro-site/src/lib/country-coverage.ts",
+      "sha256": "dfdc1a6c045f8e1e927a04a9c724b0fb30f2954071b11388a9d16cda483897d1"
+    },
+    {
+      "path": "astro-site/src/lib/data/country-classifications.json",
+      "sha256": "39a744a259b600209ef8cc8a7b23295b7252169304367bfc8fbd9441e32f978d"
+    },
+    {
+      "path": "astro-site/src/lib/surveillance-coverage.ts",
+      "sha256": "68b2820f340492296d80c0707320886671801618d8e56449896069a1aa8e9cbb"
+    },
+    {
+      "path": "astro-site/src/pages/countries/[country]/diseases/[disease].astro",
+      "sha256": "46ac789a6bf6e061976ab68a354b4a88613a55e82b78719ba19138aa4922b1ba"
+    },
+    {
+      "path": "astro-site/src/pages/countries/[country]/index.astro",
+      "sha256": "4b9cffb6c2817a2b86f78897065b749ca69c57ff989d533e46d3c40c5e4e3eea"
+    },
+    {
+      "path": "astro-site/src/pages/diseases/[disease].astro",
+      "sha256": "06e5dab467794ea0186bd7cb86ac0e0f6979132c38b1bba488f91d73a92cb0ae"
+    },
+    {
+      "path": "astro-site/package.json",
+      "sha256": "86ac00fd9376afaed9dd5587a99d475d4a37063c181d852ca7e476e480a6042c"
+    },
+    {
+      "path": "astro-site/package-lock.json",
+      "sha256": "4c15ff6f8eab2b551a9977e5fa8c1c11d58c7c81cf43d7eac2695100c63fb42a"
+    }
+  ],
+  "isolated_dist": "/tmp/globalid-fixes-20261116/frontend-build-isolation/test_missing_only_ci_fixture_s0/astro-site/dist"
+}

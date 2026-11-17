@@ -1,0 +1,11 @@
+{
+  "source_url": "https://kemkes.go.id/id/profil-kesehatan-indonesia-2020",
+  "source_sha256": "6f4cc785713a7ae91b0fc092ebdd029578b69b53d5e037d9d47de381dca5bed4",
+  "fixture_to_source_physical_page": {
+    "1": 1,
+    "2": 3,
+    "3": 428,
+    "4": 431
+  },
+  "note": "Exact selected pages containing HIV service denominators and cumulative AIDS."
+}

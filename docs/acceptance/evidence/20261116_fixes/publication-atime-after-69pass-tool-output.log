@@ -1,0 +1,9 @@
+# {"provenance": "Extracted original tool stdout; no tests rerun. The original stdout may be a final poll chunk.", "source_session": "/home/likangguo/.codex/sessions/2026/11/16/rollout-2026-11-16T11-19-02-01a1e25d-84a3-7ef0-b584-3929835f4974.jsonl", "source_line": 978, "timestamp": "2026-11-16T04:05:59.302Z", "call_id": "call_824b276e2fde41dab8d67889f5a8c30b"}
+..............    [100%]
+=============================== warnings summary ===============================
+venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/likangguo/globalID/globalID2/venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+69 passed, 1 warning in 20.36s

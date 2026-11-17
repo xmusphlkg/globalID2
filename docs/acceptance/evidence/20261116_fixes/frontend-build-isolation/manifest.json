@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "copied_byte_for_byte": true,
+  "files": [
+    {
+      "file": "frontend-isolated-builds.log",
+      "source": "/tmp/globalid-fixes-20261116/frontend-isolated-builds.log",
+      "bytes": 99,
+      "sha256": "51abe6c8070bd760d8460d630ae98d320fd7a00312bc1a1d0c8aabe06306a73c"
+    },
+    {
+      "file": "frontend-seo-dynamic-routes.log",
+      "source": "/tmp/globalid-fixes-20261116/frontend-seo-dynamic-routes.log",
+      "bytes": 2846,
+      "sha256": "52861376025c028f9ab4c6fd772f64df1c3d3ea6d7b1daadb6a0bacc56784726"
+    },
+    {
+      "file": "frontend-seo-suite.log",
+      "source": "/tmp/globalid-fixes-20261116/frontend-seo-suite.log",
+      "bytes": 10984,
+      "sha256": "f9377279bde9df236411e6ee1af6f83e440e1e2b1f5403f82f04d55fee198415"
+    },
+    {
+      "file": "ci-fixture-astro-build.log",
+      "source": "/tmp/globalid-fixes-20261116/frontend-build-isolation/test_missing_only_ci_fixture_s0/astro-build.log",
+      "bytes": 14734,
+      "sha256": "75cd089a05ea6233e519d39370d7232ddb13db64fa4b36ff329f212236c800ab"
+    },
+    {
+      "file": "situation-astro-build.log",
+      "source": "/tmp/globalid-fixes-20261116/frontend-build-isolation/test_alert_export_builds_situa0/astro-build.log",
+      "bytes": 15403,
+      "sha256": "4e43065c380f11aa55ddfefa05d0f47b73fda0117599d50b2313dd14bf0ceb35"
+    }
+  ],
+  "source_files": [
+    {
+      "path": "astro-site/scripts/check-seo-output.mjs",
+      "sha256": "ab5a08344411e0ef3b3c2b4944097ae01c89cd9dadd624fdb5fa739d3dc015f0"
+    },
+    {
+      "path": "astro-site/scripts/check-seo-output.test.mjs",
+      "sha256": "9f7dab173b50352f05c7a7de9d4d28512cbe18a809f0e2bf80c3ed2cd97aac39"
+    },
+    {
+      "path": "scripts/automation/isolated_site_build_fixture.py",
+      "sha256": "ba1eb35f1ee198b6bb4b7d6095c032307c36ff3c9d82fc35be7720e4676947a2"
+    },
+    {
+      "path": "tests/e2e/test_ci_site_fixture_build.py",
+      "sha256": "6495a02319f8c6de9a65b42b21886236be69b0caacc3e329ad20106581797cf6"
+    },
+    {
+      "path": "tests/e2e/test_situation_static_build.py",
+      "sha256": "d8397f764920230ec8b6d98a35ce45f73f147ead221f3c977538eaf9f88cedb5"
+    }
+  ]
+}

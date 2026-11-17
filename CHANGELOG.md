@@ -4,6 +4,13 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-11-17
+
+### Improved
+
+- Refresh the public site template with the new English, Chinese and French GIDS positioning, navigation, homepage copy, About/Methods copy, and source-aware footer guidance.
+- Refine the Situation map surface with a softer focus treatment, clearer floating controls, and stronger keyboard focus states.
+
 ## [0.19.5] - 2026-11-15
 
 ### Improved

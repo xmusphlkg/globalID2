@@ -1,0 +1,89 @@
+{
+  "captured_at": "2026-11-16T11:57:35.681430+08:00",
+  "head": "b86708df70b26ba11c90a8483e90905369acd0f2",
+  "files": [
+    {
+      "path": "src/data/crawlers/nl_weekly.py",
+      "sha256": "e00d197e32c7ee5b2b2de49405fe69a184026804646db52bab58a621bbeb536a"
+    },
+    {
+      "path": "src/data/crawlers/my_who_flunet.py",
+      "sha256": "7964e882342914485f5ee7b2997a7de0a5a863e0070f24427113f540ca9985b0"
+    },
+    {
+      "path": "src/data/processors/th_dds.py",
+      "sha256": "30dffe2c35d9dc03b4feb5c81862faafb03efc8bfee03183bb9169ee8ea92d96"
+    },
+    {
+      "path": "src/services/crawl_service.py",
+      "sha256": "fe46db85e826c470175d20d4fd758c4d6ee46a93b12feea24ba117cbff0110a5"
+    },
+    {
+      "path": "src/services/ingestion/countries/th_dds.py",
+      "sha256": "ff95c29607ce23018a1742cf6c2e3399a2786073839344eede971c56fb3ccbfb"
+    },
+    {
+      "path": "src/services/ingestion/countries/th_tableau.py",
+      "sha256": "5fa677893bb0267aa0c5c59383af0fc82cbf71db059ef0df3f88740c6a589566"
+    },
+    {
+      "path": "src/services/ingestion/countries/th_refresh.py",
+      "sha256": "93d795a38459f0bf3e67be58d2cdaf0da915084f503e548500ed802bdb5f5cc8"
+    },
+    {
+      "path": "scripts/configure_national_notifications.py",
+      "sha256": "5aa053363af14374f3ea74717b9b93298eeeeb2384af197aec3d61ef34d8e7b2"
+    },
+    {
+      "path": "docs/data-sources/TH_DDS_TABLEAU.md",
+      "sha256": "4613e7ea0bfc33d8e1e9e285b27098d1ccd4d20d7dea6cbe8ed36ee4013a40d1"
+    },
+    {
+      "path": "docs/data-sources/TH_DDS_WEEKLY.md",
+      "sha256": "334b90e3bb8d94383a65e54ac554449e6a2f3c9211114277d6ef138c10ff8794"
+    },
+    {
+      "path": "docs/data-sources/NATIONAL_NOTIFICATION_AUTOMATION.md",
+      "sha256": "e7e724d1ae754c003694705341a34ac8a4e28d96f812f9eda1c6eca2df9b8f42"
+    },
+    {
+      "path": "tests/unit/test_nl_weekly.py",
+      "sha256": "084f4670d2f59365acabb5ebc8c8a877f3ffed76733b67e98465d26de490e256"
+    },
+    {
+      "path": "tests/unit/test_my_who_sources.py",
+      "sha256": "a15b9b23c70536a91ea427c8edd9abe8378cf9a9e355de6c892fff0d437237f0"
+    },
+    {
+      "path": "tests/unit/test_priority_surveillance_onboarding.py",
+      "sha256": "2268b8ed232dffdd16cb4d76b586dead26ecb54ce9c11a127bf4344584685f5c"
+    },
+    {
+      "path": "tests/unit/test_nl_my_missing_revisions.py",
+      "sha256": "d7d8d3d6493637fdebb899ae2e02b2f9bc5dd80aa4b84c247c9355961e51a75c"
+    },
+    {
+      "path": "tests/unit/test_th_bounded_refresh.py",
+      "sha256": "087b8aa5e0920b679b1f1bd1f7c0c7eb3e3f00918849452a64a8b26a909ff0cc"
+    },
+    {
+      "path": "src/services/ingestion/series_rows.py",
+      "sha256": "1d9dd4b69d8d3329e90e33183b45b8da44fabe8e98a8a53c90b10c6a72af71f5"
+    },
+    {
+      "path": "src/data/storage/series_observation_store.py",
+      "sha256": "d50e97ee396473f67207fd9ed4fc68ca9386a6d744d67fc97a46c48e2114c113"
+    },
+    {
+      "path": "tests/unit/test_crawl_service_series_dual_write.py",
+      "sha256": "03a1753240027023e30c3ffd7802be4854e161f91cfde10736ba8841751ae2eb"
+    },
+    {
+      "path": "src/data/processors/au.py",
+      "sha256": "d30f5dc64e278d71064adc7ffa4200691f15927fe23ff8e92fa63c60e33faef5"
+    }
+  ],
+  "changed_since_start": [
+    "src/services/crawl_service.py"
+  ]
+}

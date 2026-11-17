@@ -84,6 +84,34 @@ def _alert() -> dict:
     }
 
 
+def test_feed_is_validated_against_the_same_public_timeline(tmp_path: Path) -> None:
+    from src.services.situation_notices.feed_export import build_feed_payload
+
+    data = tmp_path / "data"
+    _tree(data, marker=_marker(), alert=_alert())
+    feed = build_feed_payload([_alert()], generated_at="2026-10-30T00:00:00+00:00", as_of="2026-10-30")
+    _write(data / "feed.json", feed)
+    result = validate(data, require_pages=False)
+    assert result["passed"], result["checks"]
+    feed["alerts"][0]["summary_en"] = "Invented outside the source snapshot"
+    _write(data / "feed.json", feed)
+    result = validate(data, require_pages=False)
+    assert any(check["id"] == "feed_provenance" and not check["passed"] for check in result["checks"])
+
+
+def test_feed_full_text_and_duplicate_identities_fail_the_release_gate(tmp_path: Path) -> None:
+    from src.services.situation_notices.feed_export import build_feed_payload
+
+    data = tmp_path / "data"
+    _tree(data, marker=_marker(), alert=_alert())
+    feed = build_feed_payload([_alert()], generated_at="2026-10-30T00:00:00+00:00", as_of="2026-10-30")
+    feed["alerts"].append({**feed["alerts"][0], "raw_text": "PRIVATE FULL TEXT"})
+    _write(data / "feed.json", feed)
+    result = validate(data, require_pages=False)
+    assert any(check["id"] == "feed_order" and not check["passed"] for check in result["checks"])
+    assert any(check["id"] == "no_full_text" and not check["passed"] for check in result["checks"])
+
+
 def test_marker_map_passes_when_the_timeline_keeps_the_quote(tmp_path: Path) -> None:
     data = tmp_path / "data"
     site = tmp_path / "site"
@@ -93,6 +121,14 @@ def test_marker_map_passes_when_the_timeline_keeps_the_quote(tmp_path: Path) -> 
     _tree(data, marker=_marker(), alert=_alert())
     result = validate(data, site)
     assert result["passed"], result["checks"]
+
+
+def test_mismatched_host_count_unit_fails_release_validation(tmp_path: Path) -> None:
+    data, site = tmp_path / "data", tmp_path / "site"
+    row = {**_alert(), "host_type": "animal", "host_species": "wild birds", "count_unit": "people"}
+    _tree(data, marker=_marker(), alert=row)
+    result = validate(data, site, require_pages=False)
+    assert any(check["id"] == "host_metadata" and not check["passed"] for check in result["checks"])
 
 
 def test_prose_on_a_map_point_fails_the_release_gate(tmp_path: Path) -> None:
@@ -109,3 +145,120 @@ def test_prose_on_a_map_point_fails_the_release_gate(tmp_path: Path) -> None:
     assert result["passed"] is False
     failed = {item["id"] for item in result["checks"] if not item["passed"]}
     assert "map_markers" in failed
+
+
+def _indexed_tree(root: Path, *, index=None, alerts=None) -> tuple[Path, Path]:
+    data, site = root / 'data', root / 'site'
+    for prefix in ('', 'zh/', 'fr/'):
+        path = site / prefix / 'situation' / 'index.html'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('<html></html>', encoding='utf-8')
+    _tree(data, marker=_marker(), alert=_alert())
+    mapping = json.loads((data / 'map.json').read_text())
+    mapping['filter_points'] = [_marker()] if index is None else index
+    _write(data / 'map.json', mapping)
+    if alerts is not None:
+        outbreak = json.loads((data / 'outbreaks' / 'OB-1.json').read_text())
+        outbreak['alerts'] = alerts
+        _write(data / 'outbreaks' / 'OB-1.json', outbreak)
+    return data, site
+
+
+def _failed(result: dict) -> set[str]:
+    return {check['id'] for check in result['checks'] if not check['passed']}
+
+
+def test_complete_filter_index_keeps_historical_sources_and_excludes_routine_alerts(tmp_path: Path) -> None:
+    older = {**_marker(), 'alert_id': 'historical-channel', 'source_id': 'ecdc_events', 'published_date': '2026-10-20'}
+    routine = {**_alert(), 'alert_id': 'routine', 'status': 'routine'}
+    data, site = _indexed_tree(tmp_path, index=[_marker(), older], alerts=[
+        _alert(), {**_alert(), **older}, routine,
+    ])
+    result = validate(data, site)
+    assert result['passed'], result['checks']
+    assert {'filter_index_shape', 'filter_index_markers', 'filter_index_unique',
+            'filter_index_in_timeline', 'filter_index_complete'} <= {check['id'] for check in result['checks']}
+
+
+def test_missing_historical_report_fails_index_completeness_even_with_valid_latest_marker(tmp_path: Path) -> None:
+    older = {**_alert(), 'alert_id': 'historical-channel', 'source_id': 'ecdc_events', 'published_date': '2026-10-20'}
+    data, site = _indexed_tree(tmp_path, alerts=[_alert(), older])
+    result = validate(data, site)
+    assert 'filter_index_complete' in _failed(result)
+    assert 'point_in_timeline' not in _failed(result)
+
+
+def test_index_prose_and_duplicate_ids_fail_the_release_gate(tmp_path: Path) -> None:
+    data, site = _indexed_tree(tmp_path, index=[_marker(), {**_marker(), 'summary_en': 'A private duplicate summary.'}])
+    failed = _failed(validate(data, site))
+    assert {'filter_index_markers', 'filter_index_unique'} <= failed
+
+
+def test_index_must_link_the_right_outbreak_and_match_source_geography_and_date(tmp_path: Path) -> None:
+    data, site = _indexed_tree(tmp_path, index=[{**_marker(), 'outbreak_id': 'OB-WRONG'}])
+    failed = _failed(validate(data, site))
+    assert {'filter_index_in_timeline', 'filter_index_complete'} <= failed
+    mapping = json.loads((data / 'map.json').read_text())
+    mapping['filter_points'] = [{**_marker(), 'source_id': 'ecdc_events', 'country_code': 'CD', 'published_date': '2026-10-22'}]
+    _write(data / 'map.json', mapping)
+    result = validate(data, site)
+    assert 'filter_index_in_timeline' in _failed(result)
+    detail = next(check['detail'] for check in result['checks'] if check['id'] == 'filter_index_in_timeline')
+    assert all(field in detail for field in ('source_id', 'country_code', 'published_date'))
+
+
+def test_routine_extra_and_malformed_index_fail_without_crashing(tmp_path: Path) -> None:
+    routine = {**_marker(), 'alert_id': 'routine', 'status': 'routine'}
+    data, site = _indexed_tree(tmp_path, index=[_marker(), routine], alerts=[_alert(), {**_alert(), **routine}])
+    assert 'filter_index_complete' in _failed(validate(data, site))
+    for malformed in ({'alert_id': 'a1'}, [None, _marker()], [{'source_id': 'who_don'}]):
+        mapping = json.loads((data / 'map.json').read_text())
+        mapping['filter_points'] = malformed
+        _write(data / 'map.json', mapping)
+        assert 'filter_index_shape' in _failed(validate(data, site))
+
+
+def test_runtime_map_index_must_match_the_same_release(tmp_path: Path) -> None:
+    data, site = _indexed_tree(tmp_path)
+    _write(data / 'map-data.json', {'schema_version': SCHEMA, 'points': [_marker()], 'filter_points': []})
+    assert 'filter_index_publication' in _failed(validate(data, site))
+    _write(data / 'map-data.json', {'schema_version': SCHEMA, 'points': [_marker()], 'filter_points': [_marker()]})
+    result = validate(data, site)
+    assert result['passed'], result['checks']
+
+
+
+def test_data_only_gate_requires_new_index_but_not_built_html_or_nonempty_map(tmp_path: Path) -> None:
+    data, _site = _indexed_tree(tmp_path)
+    result = validate(data, tmp_path / 'unbuilt-site', require_pages=False, require_points=False, require_filter_index=True)
+    assert result['passed'], result['checks']
+    mapping = json.loads((data / 'map.json').read_text())
+    del mapping['filter_points']
+    _write(data / 'map.json', mapping)
+    assert 'filter_index_present' in _failed(validate(data, require_pages=False, require_filter_index=True))
+    # A valid release containing monitoring only is still a complete generation.
+    mapping.update(points=[], filter_points=[], outbreaks=[])
+    _write(data / 'map.json', mapping)
+    (data / 'outbreaks' / 'OB-1.json').unlink()
+    result = validate(data, require_pages=False, require_points=False, require_filter_index=True)
+    assert result['passed'], result['checks']
+
+
+async def test_export_cli_semantic_gate_rejects_bad_index_before_returning_candidate(tmp_path: Path, monkeypatch) -> None:
+    import pytest
+    from scripts import export_situation_data as cli
+    data, _site = _indexed_tree(tmp_path)
+    calls = []
+    async def export(state_dir, public_dir, *, release_id):
+        calls.append((state_dir, public_dir, release_id))
+        return {'release_id': release_id, 'point_count': 1}
+    monkeypatch.setattr(cli, 'export_json_publication', export)
+    result = await cli.export_and_validate(tmp_path / 'state', data, release_id='review-valid')
+    assert result['release_id'] == 'review-valid'
+    assert result['validation_checks'] >= 10
+    assert calls == [(tmp_path / 'state', data, 'review-valid')]
+    mapping = json.loads((data / 'map.json').read_text())
+    mapping['filter_points'][0]['source_id'] = 'wrong-source'
+    _write(data / 'map.json', mapping)
+    with pytest.raises(ValueError, match='filter_index_in_timeline'):
+        await cli.export_and_validate(tmp_path / 'state', data, release_id='review-invalid')

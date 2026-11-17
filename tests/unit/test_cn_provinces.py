@@ -367,7 +367,9 @@ def test_province_source_series_include_49_phsm_categories_and_monthly_additions
     report = ontology.series_lookup(source_id=MONTHLY_REPORT_SOURCE_ID)
 
     assert len(center) == 49
-    assert len(report) == 60
+    assert len(report) == 120
+    assert sum(item["measure"] == "case_notifications" for item in report) == 60
+    assert sum(item["measure"] == "deaths" for item in report) == 60
     center_codes = {item["local_codes"][0] for item in center}
     report_codes = {item["local_codes"][0] for item in report}
     assert center_codes <= report_codes

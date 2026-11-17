@@ -11,7 +11,8 @@ export interface CountryCoverageItem {
   source_name?: string;
   source_url?: string;
   cadence?: string;
-  onboarding_track?: 'National source' | 'Regional baseline' | 'Source research';
+  onboarding_track?: 'National source' | 'Regional baseline' | 'International baseline' | 'Source research';
+  publication_pending?: boolean;
 }
 
 export interface CountryDataSnapshotMeta {
@@ -170,6 +171,14 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
   { code: 'SI', name_en: 'Slovenia', name_zh: '斯洛文尼亚', lat: 46.1, lng: 14.8, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
   { code: 'SK', name_en: 'Slovakia', name_zh: '斯洛伐克', lat: 48.7, lng: 19.7, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
 
+  // South Asia onboarding candidates. These are planned sources, without
+  // imported observations or public country pages.
+  { code: 'IN', name_en: 'India', name_zh: '印度', lat: 22.6, lng: 79.0, status: 'Scheduled', labelOffset: [-100, 35], cadence: 'Annual', onboarding_track: 'International baseline', source_name: 'WHO GHO country-reported annual infections', source_url: 'https://www.who.int/data/gho' },
+  { code: 'PK', name_en: 'Pakistan', name_zh: '巴基斯坦', lat: 30.4, lng: 69.3, status: 'Scheduled', labelOffset: [-120, -30], cadence: 'Weekly', onboarding_track: 'National source', source_name: 'NIH IDSR Weekly Reports', source_url: 'https://www.nih.org.pk/phb/weekly-bulletin' },
+  { code: 'BD', name_en: 'Bangladesh', name_zh: '孟加拉国', lat: 23.7, lng: 90.4, status: 'Scheduled', labelOffset: [110, 35], cadence: 'Annual', onboarding_track: 'International baseline', source_name: 'WHO GHO country-reported annual infections', source_url: 'https://www.who.int/data/gho' },
+  { code: 'NP', name_en: 'Nepal', name_zh: '尼泊尔', lat: 28.4, lng: 84.1, status: 'Scheduled', labelOffset: [80, -45], cadence: 'Annual', onboarding_track: 'International baseline', source_name: 'WHO GHO country-reported annual infections', source_url: 'https://www.who.int/data/gho' },
+  { code: 'LK', name_en: 'Sri Lanka', name_zh: '斯里兰卡', lat: 7.9, lng: 80.7, status: 'Scheduled', labelOffset: [95, 40], cadence: 'Annual', onboarding_track: 'International baseline', source_name: 'WHO GHO country-reported annual infections', source_url: 'https://www.who.int/data/gho' },
+
   // Existing roadmap entry retained until an official machine-readable source
   // and ingestion contract are selected.
   {
@@ -178,6 +187,41 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
     source_name: 'DOE DDS — national export and reuse contract pending',
     source_url: 'https://ddsdoe.ddc.moph.go.th/ddss/',
   },
+  // Africa, Southeast Asia and Latin America source catalogue (2026-11-16).
+  // Source ingestion and public snapshots have independent completion states.
+  // Keep unpublished datasets Scheduled until a real public snapshot exists.
+  { code: "ZA", name_en: "South Africa", name_zh: "南非", lat: -30.6, lng: 22.9, status: 'Scheduled', labelOffset: [80, -30], cadence: "Monthly", onboarding_track: "National source", source_name: "NICD NMC Monthly Surveillance Report", source_url: "https://www.nicd.ac.za/nmc-overview/nmc-monthly-surveillance-report/" },
+  { code: "NG", name_en: "Nigeria", name_zh: "尼日利亚", lat: 9.1, lng: 8.7, status: 'Scheduled', labelOffset: [80, -30], cadence: "Weekly", onboarding_track: "National source", source_name: "NCDC Weekly Epidemiological Reports and Situation Reports", source_url: "https://ncdc.gov.ng/reports/weekly" },
+  { code: "ET", name_en: "Ethiopia", name_zh: "埃塞俄比亚", lat: 9.1, lng: 40.5, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "KE", name_en: "Kenya", name_zh: "肯尼亚", lat: 0.02, lng: 37.9, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "UG", name_en: "Uganda", name_zh: "乌干达", lat: 1.4, lng: 32.3, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "GH", name_en: "Ghana", name_zh: "加纳", lat: 7.9, lng: -1.0, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "MW", name_en: "Malawi", name_zh: "马拉维", lat: -13.3, lng: 34.3, status: 'Scheduled', labelOffset: [80, -30], cadence: "Weekly", onboarding_track: "National source", source_name: "PHIM IDSR weekly bulletins", source_url: "https://phim.health.gov.mw/?s=IDSR" },
+  { code: "KH", name_en: "Cambodia", name_zh: "柬埔寨", lat: 12.6, lng: 105.0, status: 'Scheduled', labelOffset: [80, -30], cadence: "Weekly", onboarding_track: "National source", source_name: "Ministry of Health CamEWARN", source_url: "https://cdcmoh.gov.kh/surveillance/camewarn" },
+  { code: "ID", name_en: "Indonesia", name_zh: "印度尼西亚", lat: -0.8, lng: 113.9, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "National source", source_name: "Ministry of Health Indonesia Health Profile", source_url: "https://kemkes.go.id/id/profil-kesehatan-indonesia-2024" },
+  { code: "PH", name_en: "Philippines", name_zh: "菲律宾", lat: 12.9, lng: 121.8, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "VN", name_en: "Viet Nam", name_zh: "越南", lat: 14.1, lng: 108.3, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "LA", name_en: "Lao PDR", name_zh: "老挝", lat: 19.9, lng: 102.5, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "MY", name_en: "Malaysia", name_zh: "马来西亚", lat: 4.2, lng: 102.0, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "National source", source_name: "MOH annual STD notifications; broader disease coverage planned", source_url: "https://data.gov.my/data-catalogue/std_state" },
+  { code: "MX", name_en: "Mexico", name_zh: "墨西哥", lat: 23.6, lng: -102.6, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "National source", source_name: "DGE Anuario de Morbilidad", source_url: "https://epidemiologia.salud.gob.mx/anuario/html/index.html" },
+  { code: "AR", name_en: "Argentina", name_zh: "阿根廷", lat: -38.4, lng: -63.6, status: 'Scheduled', labelOffset: [80, -30], cadence: "Weekly", onboarding_track: "National source", source_name: "Ministerio de Salud Boletín Epidemiológico Nacional", source_url: "https://www.argentina.gob.ar/salud/boletin-epidemiologico-nacional" },
+  { code: "PE", name_en: "Peru", name_zh: "秘鲁", lat: -9.2, lng: -75.0, status: 'Scheduled', labelOffset: [80, -30], cadence: "Weekly", onboarding_track: "National source", source_name: "CDC Perú Boletines Epidemiológicos", source_url: "https://www.dge.gob.pe/portalnuevo/informacion-publica/boletines-epidemiologicos/" },
+  { code: "CO", name_en: "Colombia", name_zh: "哥伦比亚", lat: 4.6, lng: -74.3, status: 'Scheduled', labelOffset: [80, -30], cadence: "Weekly", onboarding_track: "National source", source_name: "INS SIVIGILA historical municipality records", source_url: "https://www.datos.gov.co/d/4hyg-wa9d" },
+  { code: "CL", name_en: "Chile", name_zh: "智利", lat: -35.7, lng: -71.5, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "National source", source_name: "MINSAL ENO historical notifications", source_url: "https://datos.gob.cl/dataset/notificaciones-eno" },
+  { code: "PY", name_en: "Paraguay", name_zh: "巴拉圭", lat: -23.4, lng: -58.4, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "EC", name_en: "Ecuador", name_zh: "厄瓜多尔", lat: -1.8, lng: -78.2, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "US-PR", name_en: "Puerto Rico", name_zh: "波多黎各", lat: 18.2, lng: -66.6, status: 'Scheduled', labelOffset: [80, -30], cadence: "Weekly", onboarding_track: "National source", source_name: "US CDC NNDSS territory observations", source_url: "https://data.cdc.gov/browse?category=NNDSS" },
+  { code: "US-VI", name_en: "U.S. Virgin Islands", name_zh: "美属维尔京群岛", lat: 18.3, lng: -64.9, status: 'Scheduled', labelOffset: [80, -30], cadence: "Weekly", onboarding_track: "Source research", source_name: "US CDC NNDSS territory observations", source_url: "https://data.cdc.gov/browse?category=NNDSS" },
+  { code: "BQ", name_en: "Caribbean Netherlands", name_zh: "荷属加勒比地区", lat: 12.2, lng: -68.3, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "National source", source_name: "RIVM Caribbean Netherlands notifications", source_url: "https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen" },
+  { code: "GP", name_en: "Guadeloupe", name_zh: "瓜德罗普", lat: 16.3, lng: -61.6, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "National source", publication_pending: true, source_name: "Santé publique France ODISSÉ annual notifications", source_url: "https://odisse.santepubliquefrance.fr/" },
+  { code: "MQ", name_en: "Martinique", name_zh: "马提尼克", lat: 14.6, lng: -61.0, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "National source", publication_pending: true, source_name: "Santé publique France ODISSÉ annual notifications", source_url: "https://odisse.santepubliquefrance.fr/" },
+  { code: "GF", name_en: "French Guiana", name_zh: "法属圭亚那", lat: 3.9, lng: -53.1, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "National source", publication_pending: true, source_name: "Santé publique France ODISSÉ annual notifications", source_url: "https://odisse.santepubliquefrance.fr/" },
+  { code: "TZ", name_en: "Tanzania", name_zh: "坦桑尼亚", lat: -6.4, lng: 34.9, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "MM", name_en: "Myanmar", name_zh: "缅甸", lat: 21.9, lng: 96, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "BN", name_en: "Brunei Darussalam", name_zh: "文莱", lat: 4.5, lng: 114.7, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "TL", name_en: "Timor-Leste", name_zh: "东帝汶", lat: -8.9, lng: 125.7, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "CR", name_en: "Costa Rica", name_zh: "哥斯达黎加", lat: 9.7, lng: -83.8, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
+  { code: "PA", name_en: "Panama", name_zh: "巴拿马", lat: 8.5, lng: -80.8, status: 'Scheduled', labelOffset: [80, -30], cadence: "Annual", onboarding_track: "International baseline", publication_pending: true, source_name: "WHO GHO country-reported annual infections", source_url: "https://www.who.int/data/gho" },
 ];
 
 const COUNTRY_COVERAGE_BY_CODE = new Map(

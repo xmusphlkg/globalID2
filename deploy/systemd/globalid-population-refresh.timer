@@ -1,9 +1,9 @@
 [Unit]
-Description=Check published official populations monthly
+Description=Discover published official populations daily; retry unavailable sources next day
 
 [Timer]
-OnCalendar=*-*-01 08:15:00 Asia/Shanghai
-RandomizedDelaySec=3600
+OnCalendar=*-*-* 08:15:00 Asia/Shanghai
+RandomizedDelaySec=1800
 Persistent=true
 Unit=globalid-population-refresh.service
 

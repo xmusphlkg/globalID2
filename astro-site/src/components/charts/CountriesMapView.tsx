@@ -160,14 +160,22 @@ function makeCountryPoints(worldGeoJson: any, metaByCode: Record<string, MetaCou
     if (name) featureByName.set(name, feature);
   }
   const coverageByCode = new Map(COUNTRY_COVERAGE.filter(c => !c.code.includes('-')).map(c => [c.code, c]));
+  const regionalCodes = new Set([
+    ...COUNTRY_COVERAGE.filter(c => c.code.includes('-')).map(c => c.code),
+    ...Object.keys(metaByCode).filter(code => code.includes('-')),
+  ]);
   const catalogue = (countryCatalogue as CatalogueCountry[]).filter(country => country.iso && /^[a-z]{2}$/i.test(country.code || ''));
   const markers: Marker[] = [];
+  const representedFeatures = new Set<string>();
   for (const country of catalogue) {
     const code = String(country.code).toUpperCase();
     const coverage = coverageByCode.get(code);
     const meta = metaByCode[code];
     const names = [country.name || '', ...(NAME_ALIASES[normaliseName(country.name || '')] || [])];
     const feature = names.map(normaliseName).map(name => featureByName.get(name)).find(Boolean);
+    if (feature) representedFeatures.add(normaliseName(feature.properties?.name));
+    // US territories use the same canonical subdivision codes as the directory.
+    if (['PR', 'VI', 'GU', 'AS', 'MP', 'UM'].includes(code) && regionalCodes.has(`US-${code}`)) continue;
     const point = coverage ? [coverage.lng, coverage.lat] as [number, number] : centroid(feature) || FALLBACK_POINTS[code];
     if (!point) continue;
     const hasData = hasCountryDataSnapshot(meta);
@@ -182,7 +190,7 @@ function makeCountryPoints(worldGeoJson: any, metaByCode: Record<string, MetaCou
   // A few boundary features (small islands and disputed territories) have no
   // ISO entry in the catalogue. Keep them visible as unsupported hollow dots
   // instead of silently dropping countries from the baseline layer.
-  const representedNames = new Set(markers.map(marker => normaliseName(marker.name)));
+  const representedNames = new Set([...representedFeatures, ...markers.map(marker => normaliseName(marker.name))]);
   let fallbackIndex = 0;
   for (const feature of worldGeoJson?.features ?? []) {
     const featureName = String(feature?.properties?.name || '').trim();
@@ -225,11 +233,17 @@ export default function CountriesMapView({ metaCountries: initialCountries = [],
       regionalCount: regionalCounts.get(marker.iso2) || 0,
       href: marker.href || (regionalCounts.has(marker.iso2) ? `/countries/${marker.iso2.toLowerCase()}/` : undefined),
     }));
-    const subdivisions: Marker[] = metaCountries
+    const regionalMeta = new Map<string, MetaCountry>(COUNTRY_COVERAGE
+      .filter(row => row.code.includes('-'))
+      .map(row => [row.code, { code: row.code, name: row.name_en, name_en: row.name_en,
+        name_zh: row.name_zh, parent_code: row.code.split('-')[0], location_type: 'subdivision' }]));
+    for (const row of metaCountries) regionalMeta.set(row.code.toUpperCase(), row);
+    const subdivisions: Marker[] = [...regionalMeta.values()]
       .filter(meta => meta.parent_code || meta.location_type === 'subdivision')
       .map(meta => {
         const code = meta.code.toUpperCase();
-        const point = SUBDIVISION_POINTS[code];
+        const planned = COUNTRY_COVERAGE.find(item => item.code === code);
+        const point = SUBDIVISION_POINTS[code] || (planned ? [planned.lng, planned.lat] : undefined);
         if (!point) return null;
         const hasData = hasCountryDataSnapshot(meta);
         const status: MarkerStatus = hasData ? 'Supported' : (COUNTRY_COVERAGE.find(item => item.code === code)?.status || 'Scheduled');

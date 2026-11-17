@@ -6,7 +6,7 @@ import { getFlagAssetPath } from '../../lib/country-flag';
 import { COUNTRY_CLASSIFICATION_METADATA, getCountryClassification, WHO_REGION_LABELS, WORLD_BANK_REGION_LABELS, INCOME_GROUP_LABELS } from '../../lib/country-classifications.ts';
 
 import { countryLabel, cadence, safeUrl } from '../../lib/surveillance-presentation.ts';
-import { hasData, subdivisionRows } from '../../lib/surveillance-coverage';
+import { hasData, subdivisionRows, parentAreaCode } from '../../lib/surveillance-coverage';
 type Language = 'en' | 'zh' | 'fr';
 type Row = Record<string, any>;
 const normalize = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -23,9 +23,15 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
   const prefix = language === 'en' ? '' : `/${language}`;
   const rows = useMemo<Row[]>(() => {
     const saved = new Map((publication.data?.countries ?? []).map((row: Row) => [String(row.code).toUpperCase(), row]));
-    if (parentCode) return [...saved.values()].filter((row: any) => String(row.parent_code ?? '').toUpperCase() === parentCode.toUpperCase()) as Row[];
+    if (parentCode) return [...saved.values()].filter((row: any) => parentAreaCode(row) === parentCode.toUpperCase()) as Row[];
     const base = new Map(COUNTRY_COVERAGE.map(row => [row.code.toUpperCase(), { ...row, data_available: false } as Row]));
-    for (const [code, row] of saved) if (!(row as Row).parent_code && (row as Row).location_type !== 'subdivision') base.set(String(code), { ...base.get(String(code)), ...(row as Row) });
+    for (const [code, row] of saved) {
+      // Planned territories can already have data under a parent pipeline.
+      // Merge their real snapshot instead of leaving a stale planned card.
+      if (base.has(String(code)) || (!(row as Row).parent_code && (row as Row).location_type !== 'subdivision')) {
+        base.set(String(code), { ...base.get(String(code)), ...(row as Row) });
+      }
+    }
     return [...base.values()].map(row => ({ ...row, classification: getCountryClassification(row.code) })).sort((a, b) => Number(hasData(b)) - Number(hasData(a)));
   }, [publication.data, parentCode]);
   const filtered = useMemo(() => rows.filter(row => {
@@ -45,7 +51,7 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
     window.history.replaceState({}, '', url);
   }, [filtered, query, who, wb, income, status, parentCode, publication.data]);
   if (!publication.data) return <p role="status" className="figure-caption">{publication.error ? pick('Current coverage is unavailable.', '当前覆盖数据暂不可用。', 'La couverture actuelle est indisponible.') : <GIDSLoader language={language} />}</p>;
-  const regional = subdivisionRows(publication.data);
+  const regional = subdivisionRows(publication.data).map((row: Row) => ({ ...row, parent_code: parentAreaCode(row) }));
   const parents = [...new Set(regional.map((row: Row) => String(row.parent_code)))].map(code => ({
     ...((publication.data?.countries ?? []).find((row: Row) => row.code === code) || { code }),
     count: regional.filter((row: Row) => row.parent_code === code).length,
@@ -75,7 +81,7 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
       {filtered.map(row => { const active = hasData(row);
         const name = countryLabel(row, language);
         const content = <><div className="flex items-center gap-3"><img src={getFlagAssetPath(row.code) ?? undefined} alt="" width="32" height="24" loading="lazy" /><div><strong>{name}</strong><span className="block text-xs text-[rgb(var(--text-muted))]">{row.code}</span></div></div>
-          <p className="mt-3 text-xs text-[rgb(var(--text-muted))]">{active ? `${Number(row.disease_count ?? 0).toLocaleString()} ${pick('diseases', '种疾病', 'maladies')} · ${[row.date_range?.start, row.date_range?.end].filter(Boolean).join(' → ')}` : row.status === 'Supported' ? pick('Data temporarily unavailable', '数据暂不可用', 'Données temporairement indisponibles') : pick('Planned source', '规划中的数据源', 'Source prévue')}</p></>;
+          <p className="mt-3 text-xs text-[rgb(var(--text-muted))]">{active ? `${Number(row.disease_count ?? 0).toLocaleString()} ${pick('diseases', '种疾病', 'maladies')} · ${[row.date_range?.start, row.date_range?.end].filter(Boolean).join(' → ')}` : row.publication_pending ? pick('Data publication pending', '数据待发布', 'Publication des données en attente') : row.status === 'Supported' ? pick('Data temporarily unavailable', '数据暂不可用', 'Données temporairement indisponibles') : pick('Planned source', '规划中的数据源', 'Source prévue')}</p></>;
         return active ? <a key={row.code} className="site-action-secondary border p-4 text-sm" href={`${prefix}/countries/${String(row.code).toLowerCase()}/`}>{content}</a> : <div key={row.code} className="border border-[rgb(var(--border))] p-4 text-sm">{content}
           {row.cadence && <p className="mt-2 text-xs">{pick('Reporting cadence', '报告频率', 'Fréquence de déclaration')}: {cadence(row.cadence, language)}</p>}
           {safeUrl(row.source_url) && <a className="underline mt-2 block text-xs" href={safeUrl(row.source_url)} target="_blank" rel="noopener noreferrer">{pick('Official source', '官方数据源', 'Source officielle')}: {row.source_name}</a>}

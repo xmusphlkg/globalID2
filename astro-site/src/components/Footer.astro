@@ -16,12 +16,13 @@ const pendingDate = initialLanguage === 'zh' ? '读取中' : initialLanguage ===
 const copy = createTranslator(initialLanguage);
 const links = [
   { href: '/situation/', label: copy('Situation', '全球态势', 'Situation') },
-  { href: '/countries/', label: copy('Geographic areas', '地理区域', 'Zones géographiques') },
+  { href: '/countries/', label: copy('Countries & Regions', '国家与地区', 'Pays et régions') },
   { href: '/diseases/', label: copy('Disease Directory', '疾病目录', 'Répertoire des maladies') },
-  { href: '/compare/', label: copy('Compare', '对比工具', 'Comparer') },
-  { href: '/downloads/', label: copy('Downloads', '数据下载', 'Téléchargements') },
+  { href: '/reports/', label: copy('Reports', '监测报告', 'Rapports') },
+  { href: '/compare/', label: copy('Compare', '数据对比', 'Comparer') },
+  { href: '/downloads/', label: copy('Data Downloads', '数据下载', 'Téléchargements') },
   { href: '/research/', label: copy('Research Radar', '研究雷达', 'Radar de recherche') },
-  { href: '/about/', label: copy('About', '关于', 'À propos') },
+  { href: '/about/', label: copy('About & Methods', '关于与方法', 'À propos et méthodes') },
   { href: '/subscribe/', label: copy('Subscribe', '订阅', 'S’abonner') },
   { href: '/copyright/', label: copy('Copyright Notice', '版权声明', 'Droits d’auteur') },
   { href: '/terms/', label: copy('Terms & Privacy', '条款与隐私', 'Conditions et confidentialité') },
@@ -65,7 +66,9 @@ const maintainer = copy({
           wordmarkClass="site-footer-wordmark"
         />
         <p class="site-footer-copy text-sm leading-relaxed">
-          {copy('Global infectious disease data with official source links and guidance for interpretation.', '全球传染病监测数据，附官方来源链接与数据使用提示。', 'Données mondiales sur les maladies infectieuses, avec liens vers les sources officielles et conseils d’interprétation.')}
+          <strong>{copy('Global Infectious Disease Surveillance (GIDS)', '全球传染病监测平台（GIDS）', 'Global Infectious Disease Surveillance (GIDS)')}</strong><br />
+          {copy('See the signals. Understand the evidence.', '洞察疫情动态，追溯科学证据。', 'Détecter les signaux. Comprendre les données.')}<br />
+          {copy('A global platform for infectious disease surveillance, data and research.', '一个整合全球传染病监测、数据与科学研究的公共卫生信息平台。', 'Une plateforme mondiale de surveillance, de données et de recherche sur les maladies infectieuses.')}
         </p>
       </div>
 
@@ -158,7 +161,7 @@ const maintainer = copy({
         >{copy('Changelog', '更新记录', 'Historique des versions')}</a>
       </p>
       <p class="site-footer-legal-note text-xs">
-        {copy('Data provided for informational purposes only. Always refer to official health authorities.', '数据仅供信息参考，请以官方卫生机构发布为准。', 'Ces données sont fournies à titre informatif. Consultez toujours les autorités sanitaires officielles.')}
+        {copy('GIDS is an independent public-interest project. Data are provided for informational and research purposes and do not replace official public health guidance. Always consult the relevant health authorities for authoritative information.', 'GIDS 是一个独立的公益性项目。平台数据仅用于信息参考与科研用途，不能替代官方公共卫生指导。如需获取权威信息，请以相关卫生主管部门发布的内容为准。', 'GIDS est un projet indépendant d’intérêt général. Les données sont fournies à des fins d’information et de recherche et ne remplacent pas les recommandations officielles de santé publique. Consultez toujours les autorités sanitaires compétentes pour obtenir des informations faisant autorité.')}
       </p>
     </div>
   </div>

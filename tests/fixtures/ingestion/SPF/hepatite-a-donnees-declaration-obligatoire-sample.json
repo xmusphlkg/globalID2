@@ -1,0 +1,23 @@
+{
+  "total_count": 2,
+  "results": [
+    {
+      "annee": "2017",
+      "libgeo": "Guadeloupe",
+      "reglib": "Guadeloupe",
+      "nbcas": 2,
+      "taux": 0.512488052622273,
+      "dep": "971",
+      "reg": "01"
+    },
+    {
+      "annee": "2019",
+      "libgeo": "Guadeloupe",
+      "reglib": "Guadeloupe",
+      "nbcas": 1,
+      "taux": 0.260254685234971,
+      "dep": "971",
+      "reg": "01"
+    }
+  ]
+}

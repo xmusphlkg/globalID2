@@ -1,0 +1,25 @@
+.............................F.......................................... [ 56%]
+.......................................................                  [100%]
+=================================== FAILURES ===================================
+_ test_offline_replay_keeps_html_when_failed_attachment_has_no_success_artifact _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f79d7849250>
+
+    async def test_offline_replay_keeps_html_when_failed_attachment_has_no_success_artifact(monkeypatch):
+        plan = {"country_code": "CN-BJ", "source": "cn_province_monthly_report", "reports": [{"date": "2026-10-01", "title": LINK.title, "url": ARTICLE}], "datacenter": [], "errors": []}
+        page = TABLE + f'<a href="{ATTACHMENT}">附件</a>'
+        artifacts = [SimpleNamespace(kind="province_plan", content=json.dumps(plan).encode()), SimpleNamespace(kind="province_response", source_url=ARTICLE, content=page.encode(), metadata_={"response_url": ARTICLE, "media_type": "text/html", "encoding": "utf-8", "status_code": 200})]
+        monkeypatch.setattr(connector, "read_artifact", lambda artifact: artifact.content)
+        monkeypatch.setattr(requests.Session, "send", lambda *args, **kwargs: pytest.fail("network forbidden"))
+        fetched = await connector.organize_async(artifacts, updater=None, source="cn_province_monthly_report", country_code="CN-BJ")
+        assert fetched.rows[0]["Cases"] == 3
+>       assert fetched.source_audit["status"] == "partial"
+E       AssertionError: assert 'parsed' == 'partial'
+E         
+E         - partial
+E         + parsed
+
+tests/unit/test_cn_province_acceptance_regressions.py:142: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_cn_province_acceptance_regressions.py::test_offline_replay_keeps_html_when_failed_attachment_has_no_success_artifact
+1 failed, 126 passed in 13.89s

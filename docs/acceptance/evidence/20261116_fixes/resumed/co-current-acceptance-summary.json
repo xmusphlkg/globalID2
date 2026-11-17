@@ -1,0 +1,37 @@
+{
+  "checked_at": "2026-11-16T07:23:02.693385+00:00",
+  "status": "passed",
+  "errors": [],
+  "job": {
+    "job_id": "co-co-ins-sivigila-historical-daily",
+    "enabled": true,
+    "next_run_at": "2026-11-16T16:15:00+00:00",
+    "health_status": "never_run",
+    "last_task_uuid": null,
+    "run_count": 0,
+    "notes": "Official channel: https://www.datos.gov.co/d/4hyg-wa9d\nArchive: https://www.datos.gov.co/d/4hyg-wa9d\nDaily metadata and year-count check against independently verified full history. A changed version requires the resumable full backfill and verification; the check reports requires_full_backfill without importing a partial page. Keep source-native definitions, measures, periods, geography, explicit missingness and raw evidence. Internal holding data; public release requires validated mappings and snapshots."
+  },
+  "flows": [
+    {
+      "scope": "co_ins_sivigila_historical",
+      "observations": 2465826,
+      "series": 77
+    }
+  ],
+  "external_enablement_receipt": {
+    "mode": "applied",
+    "jobs": [
+      {
+        "job_id": "co-co-ins-sivigila-historical-daily",
+        "action": "update",
+        "enabled": true,
+        "changed_fields": [
+          "enabled",
+          "notes"
+        ]
+      }
+    ]
+  },
+  "public_release_enabled": false,
+  "scheduled_first_run_proven": false
+}

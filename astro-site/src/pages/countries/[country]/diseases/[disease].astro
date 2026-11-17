@@ -4,6 +4,7 @@ import CountryFlag from '../../../../components/CountryFlag.astro';
 import SurveillanceSummary from '../../../../components/public/SurveillanceSummary';
 import EpidemicCurve from '../../../../components/charts/EpidemicCurve';
 import DiseaseResearchPanel from '../../../../components/research/DiseaseResearchPanel.astro';
+import SubdivisionIncidenceMap from '../../../../components/charts/SubdivisionIncidenceMap';
 import InternationalNoticePanel from '../../../../components/InternationalNoticePanel.astro';
 import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
 import { shouldBuildPage } from '../../../../lib/page-build-plan';
@@ -14,6 +15,8 @@ import {
 } from '../../../../lib/seo';
 import { localizedDiseaseName } from '../../../../utils/diseaseNames';
 import { localizedRegionName } from '../../../../utils/i18n';
+import { parentAreaCode } from '../../../../lib/surveillance-coverage';
+import metaRaw from '../../../../data/meta.json';
 
 export function getStaticPaths() {
   return countryDiseaseCandidates()
@@ -56,6 +59,9 @@ const diseaseName = zh ? diseaseNameZh : locale === 'fr' ? diseaseNameFr : disea
 const copy = (en: string, zhValue: string, frValue: string) => zh ? zhValue : locale === 'fr' ? frValue : en;
 const sourceInfo = country.source_info ?? {};
 const diseaseId = String(series.disease_id ?? '');
+const hasRegionalData = ((metaRaw as any).countries ?? []).some(
+  (entry: any) => parentAreaCode(entry) === String(code).toUpperCase()
+);
 // Only notices that name both this jurisdiction and this disease belong here.
 const countryDataUrl = `/site-data/countries/${String(code).toLowerCase()}.json`;
 const sourceUrls = [sourceInfo.primary_url, ...(sourceInfo.sources ?? []).map((source: any) => source?.url)]
@@ -127,6 +133,7 @@ const seo = {
         />
       </div>
     </section>
+    {hasRegionalData && <div class="mt-6"><SubdivisionIncidenceMap client:visible countryCode={String(code)} diseaseId={diseaseId} language={locale} /></div>}
     <div class="mt-6" id="research"><DiseaseResearchPanel diseaseId={diseaseId || slug} locale={locale} /></div>
     <div class="mt-6" id="international">
       <InternationalNoticePanel dataUrl={`/situation/by-country/${String(code).toUpperCase()}.json`} diseaseId={diseaseId} locale={locale} mapHref={diseaseId ? `${prefix}/situation/?country=${String(code).toUpperCase()}&disease=${encodeURIComponent(diseaseId)}` : `${prefix}/situation/?country=${String(code).toUpperCase()}`} />

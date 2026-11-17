@@ -1,0 +1,1095 @@
+
+> verify
+> npm test && npm run typecheck && npm run wrangler:types:check && npm run production:check
+
+
+> test
+> node --test --experimental-strip-types tests/*.test.ts
+
+TAP version 13
+# Subtest: admin campaign routes enforce authorization before querying D1
+ok 1 - admin campaign routes enforce authorization before querying D1
+  ---
+  duration_ms: 103.540492
+  type: 'test'
+  ...
+# Subtest: a routed campaign detail request reaches its handler
+ok 2 - a routed campaign detail request reaches its handler
+  ---
+  duration_ms: 12.914029
+  type: 'test'
+  ...
+# Subtest: D1 failures propagate to the worker error boundary
+ok 3 - D1 failures propagate to the worker error boundary
+  ---
+  duration_ms: 8.090205
+  type: 'test'
+  ...
+# Subtest: processing without SMTP leaves queued deliveries intact
+ok 4 - processing without SMTP leaves queued deliveries intact
+  ---
+  duration_ms: 13.675778
+  type: 'test'
+  ...
+# Subtest: manual campaigns cannot bypass verified Situation ingestion for the alerts list
+ok 5 - manual campaigns cannot bypass verified Situation ingestion for the alerts list
+  ---
+  duration_ms: 13.921691
+  type: 'test'
+  ...
+# Subtest: Research Radar campaigns honor subscriber topic and study preferences
+ok 6 - Research Radar campaigns honor subscriber topic and study preferences
+  ---
+  duration_ms: 142.029867
+  type: 'test'
+  ...
+# Subtest: campaign creation fails closed when the requested list does not exist
+ok 7 - campaign creation fails closed when the requested list does not exist
+  ---
+  duration_ms: 10.887511
+  type: 'test'
+  ...
+# Subtest: idempotent campaign replay returns the original campaign without rebuilding its audience
+ok 8 - idempotent campaign replay returns the original campaign without rebuilding its audience
+  ---
+  duration_ms: 11.544997
+  type: 'test'
+  ...
+# Subtest: an idempotency key cannot be reused for changed campaign content
+ok 9 - an idempotency key cannot be reused for changed campaign content
+  ---
+  duration_ms: 4.818509
+  type: 'test'
+  ...
+# (node:957908) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: concurrent consumers claim once and skip unsubscribed recipients
+ok 10 - concurrent consumers claim once and skip unsubscribed recipients
+  ---
+  duration_ms: 167.077601
+  type: 'test'
+  ...
+# Subtest: ambiguous SMTP failure becomes unknown and is not automatically resent
+ok 11 - ambiguous SMTP failure becomes unknown and is not automatically resent
+  ---
+  duration_ms: 34.258299
+  type: 'test'
+  ...
+# Subtest: 4xx SMTP rejection is retried only when due
+ok 12 - 4xx SMTP rejection is retried only when due
+  ---
+  duration_ms: 41.246912
+  type: 'test'
+  ...
+# Subtest: content items require one article to satisfy all selected dimensions
+ok 13 - content items require one article to satisfy all selected dimensions
+  ---
+  duration_ms: 50.008216
+  type: 'test'
+  ...
+# Subtest: personalized delivery uses same-item matching and current preferences in both languages
+ok 14 - personalized delivery uses same-item matching and current preferences in both languages
+  ---
+  duration_ms: 37.502285
+  type: 'test'
+  ...
+# Subtest: personalized delivery skips when preferences no longer match and on revision races
+ok 15 - personalized delivery skips when preferences no longer match and on revision races
+  ---
+  duration_ms: 37.307536
+  type: 'test'
+  ...
+# Subtest: a racing preference change is rematched and repeated churn is bounded
+ok 16 - a racing preference change is rematched and repeated churn is bounded
+  ---
+  duration_ms: 54.224079
+  type: 'test'
+  ...
+# Subtest: a preference change after finding no matching items is rematched before skipping
+ok 17 - a preference change after finding no matching items is rematched before skipping
+  ---
+  duration_ms: 30.641424
+  type: 'test'
+  ...
+# Subtest: malformed personalization fails before creating a campaign
+ok 18 - malformed personalization fails before creating a campaign
+  ---
+  duration_ms: 25.464523
+  type: 'test'
+  ...
+# Subtest: personalized issue fits exactly within the markdown limit and rejects one extra character
+ok 19 - personalized issue fits exactly within the markdown limit and rejects one extra character
+  ---
+  duration_ms: 39.129159
+  type: 'test'
+  ...
+# Subtest: scheduled recovery processes only campaigns explicitly started by an operator
+ok 20 - scheduled recovery processes only campaigns explicitly started by an operator
+  ---
+  duration_ms: 29.670003
+  type: 'test'
+  ...
+# Subtest: integrated weekly campaign remains queued without the per-attempt source guard, including Cron recovery
+ok 21 - integrated weekly campaign remains queued without the per-attempt source guard, including Cron recovery
+  ---
+  duration_ms: 26.887778
+  type: 'test'
+  ...
+# Subtest: blocked oldest weekly campaign does not starve a later started ordinary campaign
+ok 22 - blocked oldest weekly campaign does not starve a later started ordinary campaign
+  ---
+  duration_ms: 35.026421
+  type: 'test'
+  ...
+# Subtest: Cron processes an uppercase custom key that is not the guarded producer prefix
+ok 23 - Cron processes an uppercase custom key that is not the guarded producer prefix
+  ---
+  duration_ms: 27.054417
+  type: 'test'
+  ...
+# Subtest: legacy and integrated automated weekly producers receive a conflict for the same issue
+ok 24 - legacy and integrated automated weekly producers receive a conflict for the same issue
+  ---
+  duration_ms: 21.251567
+  type: 'test'
+  ...
+# Subtest: expired in-flight campaign claim becomes unknown without a resend
+ok 25 - expired in-flight campaign claim becomes unknown without a resend
+  ---
+  duration_ms: 17.21464
+  type: 'test'
+  ...
+# Subtest: provider feedback arriving before the SMTP response updates the campaign and is not downgraded
+ok 26 - provider feedback arriving before the SMTP response updates the campaign and is not downgraded
+  ---
+  duration_ms: 21.815979
+  type: 'test'
+  ...
+# Subtest: campaign and its audience roll back together if fan-out fails
+ok 27 - campaign and its audience roll back together if fan-out fails
+  ---
+  duration_ms: 22.834064
+  type: 'test'
+  ...
+# Subtest: pilot only delivers to administrators, holds existing jobs and resumes them after full release
+ok 28 - pilot only delivers to administrators, holds existing jobs and resumes them after full release
+  ---
+  duration_ms: 40.163299
+  type: 'test'
+  ...
+# Subtest: an absent pilot allowlist sends nothing and preserves an existing campaign
+ok 29 - an absent pilot allowlist sends nothing and preserves an existing campaign
+  ---
+  duration_ms: 19.932538
+  type: 'test'
+  ...
+# Subtest: authenticated audience export cannot bypass pilot restriction
+ok 30 - authenticated audience export cannot bypass pilot restriction
+  ---
+  duration_ms: 27.582569
+  type: 'test'
+  ...
+# Subtest: validates campaign idempotency keys and fingerprints canonical content
+ok 31 - validates campaign idempotency keys and fingerprints canonical content
+  ---
+  duration_ms: 44.779229
+  type: 'test'
+  ...
+# Subtest: normalizes campaign contents without changing top-level override rules
+ok 32 - normalizes campaign contents without changing top-level override rules
+  ---
+  duration_ms: 2.661872
+  type: 'test'
+  ...
+# Subtest: normalizes list codes and target locales with stable order and deduplication
+ok 33 - normalizes list codes and target locales with stable order and deduplication
+  ---
+  duration_ms: 2.12409
+  type: 'test'
+  ...
+# Subtest: parses and sanitizes notification metadata while preserving extension fields
+ok 34 - parses and sanitizes notification metadata while preserving extension fields
+  ---
+  duration_ms: 1.118073
+  type: 'test'
+  ...
+# Subtest: selects localized content using the established fallback order
+ok 35 - selects localized content using the established fallback order
+  ---
+  duration_ms: 0.525618
+  type: 'test'
+  ...
+# Subtest: calculates progress and campaign status for every terminal branch
+ok 36 - calculates progress and campaign status for every terminal branch
+  ---
+  duration_ms: 0.798253
+  type: 'test'
+  ...
+# Subtest: projects the established campaign summary defaults
+ok 37 - projects the established campaign summary defaults
+  ---
+  duration_ms: 0.653463
+  type: 'test'
+  ...
+# Subtest: projects detail metadata and delivery fields with established defaults
+ok 38 - projects detail metadata and delivery fields with established defaults
+  ---
+  duration_ms: 3.655087
+  type: 'test'
+  ...
+# Subtest: writes delivery metadata through the isolated D1 boundary
+ok 39 - writes delivery metadata through the isolated D1 boundary
+  ---
+  duration_ms: 2.55319
+  type: 'test'
+  ...
+# Subtest: optional logging can fail, while delivery ledger updates fail closed
+ok 40 - optional logging can fail, while delivery ledger updates fail closed
+  ---
+  duration_ms: 13.775003
+  type: 'test'
+  ...
+# Subtest: confirmation reservation fails closed when the delivery ledger is unavailable
+ok 41 - confirmation reservation fails closed when the delivery ledger is unavailable
+  ---
+  duration_ms: 1.15397
+  type: 'test'
+  ...
+# (node:957917) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: feedback settles an in-flight alert and never reverses a later hard bounce
+ok 42 - feedback settles an in-flight alert and never reverses a later hard bounce
+  ---
+  duration_ms: 49.184367
+  type: 'test'
+  ...
+# Subtest: normalizes only bounded identifiable delivery feedback
+ok 43 - normalizes only bounded identifiable delivery feedback
+  ---
+  duration_ms: 2.885293
+  type: 'test'
+  ...
+# Subtest: applies an idempotent bounce and suppresses the matched contact
+ok 44 - applies an idempotent bounce and suppresses the matched contact
+  ---
+  duration_ms: 7.290292
+  type: 'test'
+  ...
+# Subtest: late non-terminal feedback cannot downgrade a terminal delivery
+ok 45 - late non-terminal feedback cannot downgrade a terminal delivery
+  ---
+  duration_ms: 1.192837
+  type: 'test'
+  ...
+# Subtest: delivery feedback refreshes the affected parent campaign
+ok 46 - delivery feedback refreshes the affected parent campaign
+  ---
+  duration_ms: 7.254385
+  type: 'test'
+  ...
+# Subtest: duplicate provider events never update delivery state twice
+ok 47 - duplicate provider events never update delivery state twice
+  ---
+  duration_ms: 0.845664
+  type: 'test'
+  ...
+# Subtest: renders the established English and Chinese confirmation messages
+ok 48 - renders the established English and Chinese confirmation messages
+  ---
+  duration_ms: 2.054959
+  type: 'test'
+  ...
+# Subtest: renders notification markdown and localized unsubscribe copy
+ok 49 - renders notification markdown and localized unsubscribe copy
+  ---
+  duration_ms: 2.414523
+  type: 'test'
+  ...
+# Subtest: notification variants retain readable linked content and subscriber controls in both formats
+ok 50 - notification variants retain readable linked content and subscriber controls in both formats
+  ---
+  duration_ms: 1.09068
+  type: 'test'
+  ...
+# Subtest: management messages localize expiry and keep each escaped list name tied to its link
+ok 51 - management messages localize expiry and keep each escaped list name tied to its link
+  ---
+  duration_ms: 0.544278
+  type: 'test'
+  ...
+# Subtest: builds the established multipart MIME shape
+ok 52 - builds the established multipart MIME shape
+  ---
+  duration_ms: 5.910811
+  type: 'test'
+  ...
+# Subtest: adds a sanitized correlation Message-ID when supplied
+ok 53 - adds a sanitized correlation Message-ID when supplied
+  ---
+  duration_ms: 0.598418
+  type: 'test'
+  ...
+# Subtest: notification MIME provides an HTTPS one-click unsubscribe endpoint without header injection
+ok 54 - notification MIME provides an HTTPS one-click unsubscribe endpoint without header injection
+  ---
+  duration_ms: 0.835629
+  type: 'test'
+  ...
+# Subtest: does not allow address or subject values to inject MIME headers
+ok 55 - does not allow address or subject values to inject MIME headers
+  ---
+  duration_ms: 0.518833
+  type: 'test'
+  ...
+# (node:957936) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: management tokens expire on generation changes and remain purpose-specific
+ok 56 - management tokens expire on generation changes and remain purpose-specific
+  ---
+  duration_ms: 52.108536
+  type: 'test'
+  ...
+# Subtest: confirmation tokens retain TTL and fail closed without a signing secret
+ok 57 - confirmation tokens retain TTL and fail closed without a signing secret
+  ---
+  duration_ms: 28.748854
+  type: 'test'
+  ...
+# Subtest: confirmation SMTP sees a linked durable ledger and feedback is not downgraded
+ok 58 - confirmation SMTP sees a linked durable ledger and feedback is not downgraded
+  ---
+  duration_ms: 119.57513
+  type: 'test'
+  ...
+# Subtest: a lost confirmation outbox claim blocks SMTP
+ok 59 - a lost confirmation outbox claim blocks SMTP
+  ---
+  duration_ms: 25.903244
+  type: 'test'
+  ...
+# Subtest: confirmation classifies smtp_DATA_rejected:451 for conservative outbox recovery
+ok 60 - confirmation classifies smtp_DATA_rejected:451 for conservative outbox recovery
+  ---
+  duration_ms: 24.900857
+  type: 'test'
+  ...
+# Subtest: confirmation classifies smtp_RCPT_rejected:550 for conservative outbox recovery
+ok 61 - confirmation classifies smtp_RCPT_rejected:550 for conservative outbox recovery
+  ---
+  duration_ms: 17.069674
+  type: 'test'
+  ...
+# Subtest: confirmation classifies smtp_timeout for conservative outbox recovery
+ok 62 - confirmation classifies smtp_timeout for conservative outbox recovery
+  ---
+  duration_ms: 13.905376
+  type: 'test'
+  ...
+# Subtest: an accepted confirmation with a failed ledger commit propagates uncertainty
+ok 63 - an accepted confirmation with a failed ledger commit propagates uncertainty
+  ---
+  duration_ms: 13.552043
+  type: 'test'
+  ...
+# Subtest: requires an exactly matching bearer token without exposing it
+ok 64 - requires an exactly matching bearer token without exposing it
+  ---
+  duration_ms: 59.362416
+  type: 'test'
+  ...
+# Subtest: preserves CORS and JSON response behavior
+ok 65 - preserves CORS and JSON response behavior
+  ---
+  duration_ms: 13.7676
+  type: 'test'
+  ...
+# Subtest: escapes HTML and normalizes public URLs and numeric config
+ok 66 - escapes HTML and normalizes public URLs and numeric config
+  ---
+  duration_ms: 1.702489
+  type: 'test'
+  ...
+# Subtest: normalizes locale variants and rejects unsupported locales
+ok 67 - normalizes locale variants and rejects unsupported locales
+  ---
+  duration_ms: 1.948094
+  type: 'test'
+  ...
+# Subtest: normalizes email and codes without broadening accepted input
+ok 68 - normalizes email and codes without broadening accepted input
+  ---
+  duration_ms: 0.67084
+  type: 'test'
+  ...
+# Subtest: converts payload values using the existing first-value and comma rules
+ok 69 - converts payload values using the existing first-value and comma rules
+  ---
+  duration_ms: 1.720878
+  type: 'test'
+  ...
+# Subtest: parses only JSON objects and escapes HTML-sensitive characters
+ok 70 - parses only JSON objects and escapes HTML-sensitive characters
+  ---
+  duration_ms: 0.727189
+  type: 'test'
+  ...
+# Subtest: renders supported block markdown
+ok 71 - renders supported block markdown
+  ---
+  duration_ms: 3.561642
+  type: 'test'
+  ...
+# Subtest: escapes raw HTML while retaining safe supported inline markup
+ok 72 - escapes raw HTML while retaining safe supported inline markup
+  ---
+  duration_ms: 0.588258
+  type: 'test'
+  ...
+# Subtest: cleans headers and derives stable subjects
+ok 73 - cleans headers and derives stable subjects
+  ---
+  duration_ms: 1.075165
+  type: 'test'
+  ...
+# (node:957969) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: official contract requires published reviewed content without fabricating statistical data
+ok 74 - official contract requires published reviewed content without fabricating statistical data
+  ---
+  duration_ms: 3.024128
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"465ed76c-97b4-4f04-ad55-682b404ef9e4","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# {"message":"situation_alert_accepted","event_id":"465ed76c-97b4-4f04-ad55-682b404ef9e4","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":true,"queued":0,"dispatch":"not_required"}
+# Subtest: replayed accepted notice never expands audience after first fanout
+ok 75 - replayed accepted notice never expands audience after first fanout
+  ---
+  duration_ms: 149.214518
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"38494c32-7e2a-49a8-befb-3fe6cd21b5da","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# {"message":"situation_alert_accepted","event_id":"38494c32-7e2a-49a8-befb-3fe6cd21b5da","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":true,"queued":1,"dispatch":"d1_outbox"}
+# Subtest: recovering a partially fanned-out event excludes later confirmations
+ok 76 - recovering a partially fanned-out event excludes later confirmations
+  ---
+  duration_ms: 26.08076
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"30a249ac-c6f0-4d99-a708-fb43cfdc70a6","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# Subtest: temporary storage failure during recovery does not permanently fail a valid event
+ok 77 - temporary storage failure during recovery does not permanently fail a valid event
+  ---
+  duration_ms: 30.136999
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"7db031f5-c717-420b-a804-0798facaecbe","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# Subtest: retention keeps old mail ledgers while an alert delivery still refers to them
+ok 78 - retention keeps old mail ledgers while an alert delivery still refers to them
+  ---
+  duration_ms: 17.265203
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"f37a8907-0525-4910-98ca-61a481586c3f","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# {"message":"situation_alert_delivery_failed","event_id":"f37a8907-0525-4910-98ca-61a481586c3f","delivery_id":"f37a8907-0525-4910-98ca-61a481586c3f:subscription-first","attempt":1,"terminal":true,"error":"connection_reset"}
+# Subtest: ambiguous SMTP outcome is unknown and is not sent again
+ok 79 - ambiguous SMTP outcome is unknown and is not sent again
+  ---
+  duration_ms: 27.821479
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"73162241-fe90-4f36-be8d-70db921a729a","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# Subtest: concurrent consumers send a claimed notice once
+ok 80 - concurrent consumers send a claimed notice once
+  ---
+  duration_ms: 22.735217
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"ad44f2ea-8789-4248-b926-6589e6968c4a","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# Subtest: expired sending lease remains unknown rather than being retried
+ok 81 - expired sending lease remains unknown rather than being retried
+  ---
+  duration_ms: 28.356813
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"21c79105-f67e-4ce7-aec2-2761e3c0a458","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# Subtest: expired claim before creating a mail ledger is safely retried
+ok 82 - expired claim before creating a mail ledger is safely retried
+  ---
+  duration_ms: 21.019156
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"18765942-6837-4394-9b70-bb8007fac0c5","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# {"message":"situation_alert_delivery_failed","event_id":"18765942-6837-4394-9b70-bb8007fac0c5","delivery_id":"18765942-6837-4394-9b70-bb8007fac0c5:subscription-first","attempt":1,"terminal":true,"error":"RCPT_TO_rejected:550"}
+# Subtest: permanent SMTP rejection records dead letter without null next_attempt_at
+ok 83 - permanent SMTP rejection records dead letter without null next_attempt_at
+  ---
+  duration_ms: 20.65678
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"039a6ed3-ed06-4577-8d0e-ac10c5d630f2","report_id":"release-1","signal_id":"a1","verification_basis":"official_authority_notice","verification_policy_version":null,"duplicate":false,"queued":1,"dispatch":"d1_outbox"}
+# Subtest: pilot alert fanout is isolated from general readers even after release
+ok 84 - pilot alert fanout is isolated from general readers even after release
+  ---
+  duration_ms: 31.179345
+  type: 'test'
+  ...
+# Subtest: pilot requires the exact configured administrator and fails closed on configuration errors
+ok 85 - pilot requires the exact configured administrator and fails closed on configuration errors
+  ---
+  duration_ms: 2.496327
+  type: 'test'
+  ...
+# (node:957999) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: management tokens cannot be replaced by unsubscribe links, and preferences can be saved, paused and resumed
+ok 86 - management tokens cannot be replaced by unsubscribe links, and preferences can be saved, paused and resumed
+  ---
+  duration_ms: 142.830262
+  type: 'test'
+  ...
+# Subtest: management link requests return the same response before SMTP is complete
+ok 87 - management link requests return the same response before SMTP is complete
+  ---
+  duration_ms: 28.806876
+  type: 'test'
+  ...
+# Subtest: management link requests are non-enumerating, rate-limited, and never mail suppressed contacts
+ok 88 - management link requests are non-enumerating, rate-limited, and never mail suppressed contacts
+  ---
+  duration_ms: 27.417532
+  type: 'test'
+  ...
+# Subtest: management requests survive interruption and retry only known temporary SMTP rejections
+ok 89 - management requests survive interruption and retry only known temporary SMTP rejections
+  ---
+  duration_ms: 19.80196
+  type: 'test'
+  ...
+# Subtest: ambiguous or interrupted management sends are not retried, but feedback resolves them
+ok 90 - ambiguous or interrupted management sends are not retried, but feedback resolves them
+  ---
+  duration_ms: 19.522082
+  type: 'test'
+  ...
+# Subtest: provider feedback during an in-flight send wins over a late SMTP receipt
+ok 91 - provider feedback during an in-flight send wins over a late SMTP receipt
+  ---
+  duration_ms: 28.634229
+  type: 'test'
+  ...
+# Subtest: permanent SMTP rejections do not requeue management mail
+ok 92 - permanent SMTP rejections do not requeue management mail
+  ---
+  duration_ms: 24.524912
+  type: 'test'
+  ...
+# Subtest: management queue does not send after unsubscribe or suppression
+ok 93 - management queue does not send after unsubscribe or suppression
+  ---
+  duration_ms: 24.44519
+  type: 'test'
+  ...
+# Subtest: stale preference form cannot overwrite a newer save
+ok 94 - stale preference form cannot overwrite a newer save
+  ---
+  duration_ms: 51.666936
+  type: 'test'
+  ...
+# Subtest: historical report frequency remains unchanged until its owner explicitly selects weekly
+ok 95 - historical report frequency remains unchanged until its owner explicitly selects weekly
+  ---
+  duration_ms: 32.214224
+  type: 'test'
+  ...
+# Subtest: historical weekly alerts offer instant in Chinese without changing on pause or resume
+ok 96 - historical weekly alerts offer instant in Chinese without changing on pause or resume
+  ---
+  duration_ms: 43.416989
+  type: 'test'
+  ...
+# Subtest: unsupported or stale frequency changes cannot change the subscription
+ok 97 - unsupported or stale frequency changes cannot change the subscription
+  ---
+  duration_ms: 40.97828
+  type: 'test'
+  ...
+# Subtest: unsubscribe all revokes every list, pending request and unsent queue for the email
+ok 98 - unsubscribe all revokes every list, pending request and unsent queue for the email
+  ---
+  duration_ms: 20.381121
+  type: 'test'
+  ...
+# Subtest: enforces the submission threshold including string D1 counts
+ok 99 - enforces the submission threshold including string D1 counts
+  ---
+  duration_ms: 24.775656
+  type: 'test'
+  ...
+# Subtest: calculates confirmation retry windows and clamps stale rows
+ok 100 - calculates confirmation retry windows and clamps stale rows
+  ---
+  duration_ms: 2.504685
+  type: 'test'
+  ...
+# Subtest: matches every public and admin route with the established methods
+ok 101 - matches every public and admin route with the established methods
+  ---
+  duration_ms: 3.957803
+  type: 'test'
+  ...
+# Subtest: rejects method mismatches and near-match paths
+ok 102 - rejects method mismatches and near-match paths
+  ---
+  duration_ms: 0.535116
+  type: 'test'
+  ...
+# {"message":"subscription_scheduled_task_failed","task":"confirmation","error":"http_503"}
+# Subtest: scheduled tasks use independent same-origin authenticated requests and continue after a failure
+ok 103 - scheduled tasks use independent same-origin authenticated requests and continue after a failure
+  ---
+  duration_ms: 59.30785
+  type: 'test'
+  ...
+# Subtest: scheduled dispatch refuses unsafe origins and missing bearer credentials
+ok 104 - scheduled dispatch refuses unsafe origins and missing bearer credentials
+  ---
+  duration_ms: 1.763095
+  type: 'test'
+  ...
+# Subtest: round-trips a signed subscription token
+ok 105 - round-trips a signed subscription token
+  ---
+  duration_ms: 55.11431
+  type: 'test'
+  ...
+# Subtest: management tokens authenticate the subscription generation
+ok 106 - management tokens authenticate the subscription generation
+  ---
+  duration_ms: 12.587028
+  type: 'test'
+  ...
+# Subtest: rejects wrong purpose, secret, tampering, and expiration
+ok 107 - rejects wrong purpose, secret, tampering, and expiration
+  ---
+  duration_ms: 3.272972
+  type: 'test'
+  ...
+# Subtest: produces the expected SHA-256 digest
+ok 108 - produces the expected SHA-256 digest
+  ---
+  duration_ms: 1.897184
+  type: 'test'
+  ...
+# Subtest: compares ingest secrets after fixed-length hashing
+ok 109 - compares ingest secrets after fixed-length hashing
+  ---
+  duration_ms: 1.612366
+  type: 'test'
+  ...
+# {"message":"ses_sns_feedback_rejected","reason":"invalid_sns_signature","status":403}
+# {"message":"ses_sns_feedback_rejected","reason":"sns_topic_not_allowed","status":403}
+# {"message":"ses_sns_feedback_rejected","reason":"invalid_sns_certificate_url","status":400}
+# {"message":"ses_sns_feedback_rejected","reason":"sns_certificate_unavailable","status":503}
+# {"message":"ses_sns_feedback_rejected","reason":"sns_body_too_large","status":413}
+# {"message":"ses_sns_feedback_rejected","reason":"ses_message_id_conflict","status":403}
+# {"message":"ses_sns_feedback_rejected","reason":"invalid_sns_confirmation_url","status":400}
+# (node:958031) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: only exact topic-region AWS certificate URLs are accepted
+ok 110 - only exact topic-region AWS certificate URLs are accepted
+  ---
+  duration_ms: 9.018204
+  type: 'test'
+  ...
+# Subtest: forged signatures, topics, cert redirects and oversized SNS bodies are rejected
+ok 111 - forged signatures, topics, cert redirects and oversized SNS bodies are rejected
+  ---
+  duration_ms: 91.788623
+  type: 'test'
+  ...
+# Subtest: SES event type mapping only suppresses hard bounces and rejects multi-recipient messages
+ok 112 - SES event type mapping only suppresses hard bounces and rejects multi-recipient messages
+  ---
+  duration_ms: 12.426972
+  type: 'test'
+  ...
+# Subtest: verified early events persist only bounded fields, reconcile after SMTP, and replay idempotently
+ok 113 - verified early events persist only bounded fields, reconcile after SMTP, and replay idempotently
+  ---
+  duration_ms: 29.262413
+  type: 'test'
+  ...
+# Subtest: feedback settles an uncertain confirmation job and fences its old SMTP claim
+ok 114 - feedback settles an uncertain confirmation job and fences its old SMTP claim
+  ---
+  duration_ms: 30.942297
+  type: 'test'
+  ...
+# Subtest: early provider-only event retries when SES message ID becomes available
+ok 115 - early provider-only event retries when SES message ID becomes available
+  ---
+  duration_ms: 21.614255
+  type: 'test'
+  ...
+# Subtest: a signed event cannot pair one delivery's tag with another SES message ID
+ok 116 - a signed event cannot pair one delivery's tag with another SES message ID
+  ---
+  duration_ms: 21.309238
+  type: 'test'
+  ...
+# Subtest: signed subscription confirmation can only call the topic's pinned AWS endpoint
+ok 117 - signed subscription confirmation can only call the topic's pinned AWS endpoint
+  ---
+  duration_ms: 20.733274
+  type: 'test'
+  ...
+# Subtest: SES headers carry only a validated configuration set and delivery UUID
+ok 118 - SES headers carry only a validated configuration set and delivery UUID
+  ---
+  duration_ms: 2.225889
+  type: 'test'
+  ...
+# Subtest: ingest authentication fails before parsing or querying D1
+ok 119 - ingest authentication fails before parsing or querying D1
+  ---
+  duration_ms: 44.254367
+  type: 'test'
+  ...
+# Subtest: ingest rejects an unknown automatic verification policy before writing to D1
+ok 120 - ingest rejects an unknown automatic verification policy before writing to D1
+  ---
+  duration_ms: 8.017712
+  type: 'test'
+  ...
+# Subtest: ingest rejects tiered automatic policy by default before writing to D1
+ok 121 - ingest rejects tiered automatic policy by default before writing to D1
+  ---
+  duration_ms: 2.938385
+  type: 'test'
+  ...
+# Subtest: an explicit Worker flag lets calibrated automatic policy reach persistence
+ok 122 - an explicit Worker flag lets calibrated automatic policy reach persistence
+  ---
+  duration_ms: 5.056538
+  type: 'test'
+  ...
+# {"message":"situation_alert_accepted","event_id":"9c93a239-aa3a-4c97-a5b4-66ed5cab9900","report_id":"situation-v3-daily-2026-08-17-r8","signal_id":"signal-1","verification_basis":"analyst_review","verification_policy_version":null,"duplicate":false,"queued":2,"dispatch":"d1_outbox"}
+# Subtest: ingest persists once, fans out with filter SQL, and falls back to the D1 outbox
+ok 123 - ingest persists once, fans out with filter SQL, and falls back to the D1 outbox
+  ---
+  duration_ms: 6.066428
+  type: 'test'
+  ...
+# {"message":"situation_alert_delivery_failed","event_id":"event-1","delivery_id":"delivery-1","attempt":1,"terminal":false,"error":"DATA_END_rejected:450"}
+# Subtest: an idempotency key cannot be reused for different alert content
+ok 124 - an idempotency key cannot be reused for different alert content
+  ---
+  duration_ms: 2.854627
+  type: 'test'
+  ...
+# Subtest: outbox failure schedules an exponential retry and never logs an email address
+ok 125 - outbox failure schedules an exponential retry and never logs an email address
+  ---
+  duration_ms: 5.71469
+  type: 'test'
+  ...
+# Subtest: unsubscribe cancellation only changes queued or retrying Situation deliveries
+ok 126 - unsubscribe cancellation only changes queued or retrying Situation deliveries
+  ---
+  duration_ms: 0.380484
+  type: 'test'
+  ...
+# {"message":"situation_alert_queue_invalid_message","queue_message_id":"message-one"}
+# {"message":"situation_alert_smtp_not_configured"}
+# {"message":"situation_alert_queue_processing_failed","event_id":"event-one","queue_message_id":"message-one","error":"no such table: situation_alert_deliveries"}
+# (node:958041) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: invalid queue jobs are acknowledged without accessing SMTP or D1
+ok 127 - invalid queue jobs are acknowledged without accessing SMTP or D1
+  ---
+  duration_ms: 28.689615
+  type: 'test'
+  ...
+# Subtest: missing SMTP configuration retries the queue job after 300 seconds
+ok 128 - missing SMTP configuration retries the queue job after 300 seconds
+  ---
+  duration_ms: 21.172771
+  type: 'test'
+  ...
+# Subtest: finished jobs are acknowledged and storage failures retry with the attempt delay
+ok 129 - finished jobs are acknowledged and storage failures retry with the attempt delay
+  ---
+  duration_ms: 19.882793
+  type: 'test'
+  ...
+# Subtest: accepts the versioned, published, analyzed analyst-review contract
+ok 130 - accepts the versioned, published, analyzed analyst-review contract
+  ---
+  duration_ms: 30.20752
+  type: 'test'
+  ...
+# Subtest: rejects unknown verification bases, unverified, stale, unpublished, and non-alert inputs
+ok 131 - rejects unknown verification bases, unverified, stale, unpublished, and non-alert inputs
+  ---
+  duration_ms: 2.116359
+  type: 'test'
+  ...
+# Subtest: accepts tiered_auto_v3.2 only with a structured calibrated decision
+ok 132 - accepts tiered_auto_v3.2 only with a structured calibrated decision
+  ---
+  duration_ms: 0.675212
+  type: 'test'
+  ...
+# Subtest: accepts official corroboration for a review-level rare or fallback signal
+ok 133 - accepts official corroboration for a review-level rare or fallback signal
+  ---
+  duration_ms: 0.681606
+  type: 'test'
+  ...
+# Subtest: rejects unknown or weakened automated verification policies
+ok 134 - rejects unknown or weakened automated verification policies
+  ---
+  duration_ms: 18.235316
+  type: 'test'
+  ...
+# Subtest: analyst review may accept lagged data and a transparently identified fallback fit
+ok 135 - analyst review may accept lagged data and a transparently identified fallback fit
+  ---
+  duration_ms: 0.498076
+  type: 'test'
+  ...
+# Subtest: prevents a verification timestamp later than the published report
+ok 136 - prevents a verification timestamp later than the published report
+  ---
+  duration_ms: 0.590379
+  type: 'test'
+  ...
+# Subtest: allows public report links only from explicitly configured origins
+ok 137 - allows public report links only from explicitly configured origins
+  ---
+  duration_ms: 0.527233
+  type: 'test'
+  ...
+# Subtest: builds bilingual wording with an explicit verification basis and policy
+ok 138 - builds bilingual wording with an explicit verification basis and policy
+  ---
+  duration_ms: 10.259039
+  type: 'test'
+  ...
+# Subtest: uses a small versioned Queue message with no subscriber data
+ok 139 - uses a small versioned Queue message with no subscriber data
+  ---
+  duration_ms: 1.155291
+  type: 'test'
+  ...
+# Subtest: treats incomplete or invalid SMTP settings as a non-delivery boundary
+ok 140 - treats incomplete or invalid SMTP settings as a non-delivery boundary
+  ---
+  duration_ms: 1.585729
+  type: 'test'
+  ...
+# Subtest: normalizes a complete SMTP configuration without changing TLS semantics
+ok 141 - normalizes a complete SMTP configuration without changing TLS semantics
+  ---
+  duration_ms: 1.079617
+  type: 'test'
+  ...
+# Subtest: extracts an SES SMTP acceptance ID without mistaking generic OK responses for IDs
+ok 142 - extracts an SES SMTP acceptance ID without mistaking generic OK responses for IDs
+  ---
+  duration_ms: 4.928848
+  type: 'test'
+  ...
+# Subtest: extracts provider queue identifiers without mistaking generic OK text
+ok 143 - extracts provider queue identifiers without mistaking generic OK text
+  ---
+  duration_ms: 0.45336
+  type: 'test'
+  ...
+# Subtest: subscription options propagate D1 failures to the worker boundary
+ok 144 - subscription options propagate D1 failures to the worker boundary
+  ---
+  duration_ms: 38.442624
+  type: 'test'
+  ...
+# Subtest: subscription options expose Research Radar lists and filter dimensions
+ok 145 - subscription options expose Research Radar lists and filter dimensions
+  ---
+  duration_ms: 7.978697
+  type: 'test'
+  ...
+# Subtest: subscription stats authorize before any database query
+ok 146 - subscription stats authorize before any database query
+  ---
+  duration_ms: 1.045397
+  type: 'test'
+  ...
+# Subtest: audience handler preserves recipient projection and unsubscribe token routing
+ok 147 - audience handler preserves recipient projection and unsubscribe token routing
+  ---
+  duration_ms: 3.573041
+  type: 'test'
+  ...
+# Subtest: audience handler applies Research Radar topic, study, and review-status preferences
+ok 148 - audience handler applies Research Radar topic, study, and review-status preferences
+  ---
+  duration_ms: 2.102536
+  type: 'test'
+  ...
+# Subtest: audience export cannot bypass the verified Situation alert pipeline
+ok 149 - audience export cannot bypass the verified Situation alert pipeline
+  ---
+  duration_ms: 1.27572
+  type: 'test'
+  ...
+# (node:958095) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: confirmation and unsubscribe pages follow the subscriber language without changing consent on GET
+ok 150 - confirmation and unsubscribe pages follow the subscriber language without changing consent on GET
+  ---
+  duration_ms: 132.535403
+  type: 'test'
+  ...
+# Subtest: changes are staged, old confirmations survive resend, and confirmation is single-use
+ok 151 - changes are staged, old confirmations survive resend, and confirmation is single-use
+  ---
+  duration_ms: 37.635842
+  type: 'test'
+  ...
+# Subtest: unsubscribe invalidates outstanding confirmations and GET does not modify state
+ok 152 - unsubscribe invalidates outstanding confirmations and GET does not modify state
+  ---
+  duration_ms: 28.416253
+  type: 'test'
+  ...
+# Subtest: suppression blocks a previously issued confirmation
+ok 153 - suppression blocks a previously issued confirmation
+  ---
+  duration_ms: 18.601536
+  type: 'test'
+  ...
+# Subtest: legacy tokens cannot reactivate an unsubscribed subscription
+ok 154 - legacy tokens cannot reactivate an unsubscribed subscription
+  ---
+  duration_ms: 19.340142
+  type: 'test'
+  ...
+# Subtest: consent and list-specific delivery frequencies are validated before writes
+ok 155 - consent and list-specific delivery frequencies are validated before writes
+  ---
+  duration_ms: 19.90981
+  type: 'test'
+  ...
+# Subtest: confirmation reservations enforce the email limit under concurrent submissions
+ok 156 - confirmation reservations enforce the email limit under concurrent submissions
+  ---
+  duration_ms: 19.933471
+  type: 'test'
+  ...
+# Subtest: maintenance keeps an old pending record alive while its new request is valid
+ok 157 - maintenance keeps an old pending record alive while its new request is valid
+  ---
+  duration_ms: 16.761886
+  type: 'test'
+  ...
+# Subtest: confirmation and unsubscribe rotate management generations
+ok 158 - confirmation and unsubscribe rotate management generations
+  ---
+  duration_ms: 33.155281
+  type: 'test'
+  ...
+# Subtest: confirmation outbox drains one job at a time and skips invalidated requests
+ok 159 - confirmation outbox drains one job at a time and skips invalidated requests
+  ---
+  duration_ms: 41.372141
+  type: 'test'
+  ...
+# Subtest: confirmation outbox retries explicit temporary failures but does not retry ambiguous sends
+ok 160 - confirmation outbox retries explicit temporary failures but does not retry ambiguous sends
+  ---
+  duration_ms: 29.136043
+  type: 'test'
+  ...
+# Subtest: pilot accepts and confirms public registrations while content delivery remains restricted
+ok 161 - pilot accepts and confirms public registrations while content delivery remains restricted
+  ---
+  duration_ms: 27.134674
+  type: 'test'
+  ...
+# Subtest: normalizes subscription lists and filters with stable defaults and order
+ok 162 - normalizes subscription lists and filters with stable defaults and order
+  ---
+  duration_ms: 5.205861
+  type: 'test'
+  ...
+# Subtest: projects subscription helper values without leaking full addresses
+ok 163 - projects subscription helper values without leaking full addresses
+  ---
+  duration_ms: 1.093628
+  type: 'test'
+  ...
+# Subtest: uses the intended 14-day expiry default and clamps configured days
+ok 164 - uses the intended 14-day expiry default and clamps configured days
+  ---
+  duration_ms: 1.244057
+  type: 'test'
+  ...
+# (node:958112) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: ownership migration uses GLOB patterns within the remote D1 limit
+ok 165 - ownership migration uses GLOB patterns within the remote D1 limit
+  ---
+  duration_ms: 1.958393
+  type: 'test'
+  ...
+# Subtest: D1 unique ownership blocks both legacy/integrated orders for the same week and mode
+ok 166 - D1 unique ownership blocks both legacy/integrated orders for the same week and mode
+  ---
+  duration_ms: 3.99402
+  type: 'test'
+  ...
+# Subtest: conflicting historical issues stop migration for reconciliation
+ok 167 - conflicting historical issues stop migration for reconciliation
+  ---
+  duration_ms: 0.94553
+  type: 'test'
+  ...
+# Subtest: production readiness configuration is fail-closed and secret-free
+ok 168 - production readiness configuration is fail-closed and secret-free
+  ---
+  duration_ms: 1134.88076
+  type: 'test'
+  ...
+# Subtest: remote availability flags require valid activation watermarks
+ok 169 - remote availability flags require valid activation watermarks
+  ---
+  duration_ms: 3335.25979
+  type: 'test'
+  ...
+1..169
+# tests 169
+# suites 0
+# pass 169
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5152.841304
+
+> typecheck
+> tsc --noEmit
+
+
+> wrangler:types:check
+> wrangler types worker-configuration.d.ts --config wrangler.types.jsonc --env-interface CloudflareBindings --include-runtime=false --strict-vars=false --check
+
+
+ ⛅️ wrangler 4.123.0
+────────────────────
+✨ Types at worker-configuration.d.ts are up to date.
+
+
+> production:check
+> node scripts/check-production-readiness.mjs
+
+{"ok":true,"compatibility_date":"2026-08-17","migrations":17,"environment_isolation":true,"remote_guards":true,"secret_config_leakage":false}

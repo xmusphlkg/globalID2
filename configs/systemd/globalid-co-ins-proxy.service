@@ -1,0 +1,17 @@
+[Unit]
+Description=GlobalID INS-only HTTPS gateway through Colombia
+Requires=globalid-co-ins-egress.service
+After=globalid-co-ins-egress.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/likangguo/globalID/globalID2
+ExecStart=/usr/bin/ip netns exec gids-co-ins /usr/sbin/runuser -u likangguo -- /home/likangguo/globalID/globalID2/venv/bin/python -m src.services.ingestion.co_ins_proxy
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=15
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

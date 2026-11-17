@@ -1,0 +1,258 @@
+{
+  "monthly_2023_03.pdf": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2023/04/Notifiable-Medical-Conditions-Surveillance-System-March-2023.pdf",
+    "original_sha256": "a8379fa84c79297bb780550d5fb07b82eb9c7aff25650042054adec6af7ca5d6",
+    "excerpt_sha256": "f3f48ea612281309d207c125d2ea6accd2883dc253498e292d2e286a9fcb934b",
+    "original_page_numbers": [
+      1,
+      2,
+      9,
+      10
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2023/04/Notifiable-Medical-Conditions-Surveillance-System-March-2023.pdf",
+      "title": "NMC MONTHLY REPORT (Mar 2023)",
+      "listed_current": true,
+      "publication_date": "2023-04-26T14:14:27",
+      "modified_date": "2023-04-26T14:14:27",
+      "media_id": 45385,
+      "path": "data/raw/za/nicd_nmc_full_history/0297c6c18a75f38e7e750bf1f6da5f9182ccf8187e22e71a5a51aafea4221a5a.pdf",
+      "sha256": "a8379fa84c79297bb780550d5fb07b82eb9c7aff25650042054adec6af7ca5d6",
+      "bytes": 678411,
+      "retrieved_at": "2026-11-16T00:06:10.749617+00:00"
+    },
+    "format": "PDFium unchanged-page excerpt of official report",
+    "retrieved_date": "2026-11-16"
+  },
+  "monthly_2023_05.pdf": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2023/07/Notifiable-Medical-Conditions-Surveillance-System-May-2023_Amended.pdf",
+    "original_sha256": "c37e527ff987546e8be8fb575e8c588e6420068164020d8c7cffa925adc1ed0e",
+    "excerpt_sha256": "1ffc9da0dbc589af891920960a39ce2f1a7d2810b71b824f0927941955da4e25",
+    "original_page_numbers": [
+      1,
+      2,
+      7,
+      8
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2023/07/Notifiable-Medical-Conditions-Surveillance-System-May-2023_Amended.pdf",
+      "title": "NMC MONTHLY REPORT (MAY 2023)",
+      "listed_current": true,
+      "publication_date": "2023-07-04T13:42:28",
+      "modified_date": "2023-07-04T13:42:28",
+      "media_id": 45928,
+      "path": "data/raw/za/nicd_nmc_full_history/8b5493d85a118403440dff3a5e509ce07e86e6ab7dc56772b2fa175da6a184af.pdf",
+      "sha256": "c37e527ff987546e8be8fb575e8c588e6420068164020d8c7cffa925adc1ed0e",
+      "bytes": 708790,
+      "retrieved_at": "2026-11-16T00:06:15.797296+00:00"
+    },
+    "format": "PDFium unchanged-page excerpt of official report",
+    "retrieved_date": "2026-11-16"
+  },
+  "monthly_2023_11.pdf": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2023/12/Notifiable-Medical-Conditions-Surveillance-System-Report-Nov-2023.pdf",
+    "original_sha256": "9302e94c4c372f3a5ba865ae2d2dfc45238734f2970f4098297563cfb4509f17",
+    "excerpt_sha256": "a08ecc60de4bb567de4aaf0a2e679bbe58f9aaeb45a54b6920de2c20f8e89adf",
+    "original_page_numbers": [
+      1,
+      2,
+      7,
+      9,
+      10
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2023/12/Notifiable-Medical-Conditions-Surveillance-System-Report-Nov-2023.pdf",
+      "title": "NMC MONTHLY REPORT (November 2023)",
+      "listed_current": true,
+      "publication_date": "2023-12-14T09:07:56",
+      "modified_date": "2023-12-14T09:07:56",
+      "media_id": 47350,
+      "path": "data/raw/za/nicd_nmc_full_history/7d9f6a28c9e4f9d71ee02a11d2f371c6a7897a9425da6b5db7a1ddcf2405f3ac.pdf",
+      "sha256": "9302e94c4c372f3a5ba865ae2d2dfc45238734f2970f4098297563cfb4509f17",
+      "bytes": 1218759,
+      "retrieved_at": "2026-11-16T00:06:03.611752+00:00"
+    },
+    "format": "PDFium unchanged-page excerpt of official report",
+    "retrieved_date": "2026-11-16"
+  },
+  "monthly_2024_01.pdf": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2024/03/January_NMCSS_final_24032024.pdf",
+    "original_sha256": "1b086bac635ca788d968bd61d6629466242c046a2d90a35812aa04fc05bfbb86",
+    "excerpt_sha256": "e0a97d4c0f61d51c02ac68810e716d72053451dcf334bdbaff67a65b6ffa26a9",
+    "original_page_numbers": [
+      1,
+      2,
+      4,
+      6
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2024/03/January_NMCSS_final_24032024.pdf",
+      "title": "NMC MONTHLY REPORT (Jan 2024)",
+      "listed_current": true,
+      "publication_date": "2024-03-28T11:19:20",
+      "modified_date": "2024-03-28T11:19:20",
+      "media_id": 48040,
+      "path": "data/raw/za/nicd_nmc_full_history/bd2fdcc7d938bbc300e276621c34a8a1c7ac6888eaabe389a2c7c8e1c4f1f2de.pdf",
+      "sha256": "1b086bac635ca788d968bd61d6629466242c046a2d90a35812aa04fc05bfbb86",
+      "bytes": 1340483,
+      "retrieved_at": "2026-11-16T00:06:02.535206+00:00"
+    },
+    "format": "PDFium unchanged-page excerpt of official report",
+    "retrieved_date": "2026-11-16"
+  },
+  "monthly_2025_03.pdf": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2025/04/NMCSS_Report_March_2025.pdf",
+    "original_sha256": "29cc46666cfd2a79820d8ee555a3a60acec95e30421f4a11e7b7c20144175ce1",
+    "excerpt_sha256": "4b2ce65cfb385a34945d0f8bb7e8b66859039a18f2911be8d9d483e70f539e34",
+    "original_page_numbers": [
+      1,
+      2,
+      3,
+      6,
+      8,
+      10
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2025/04/NMCSS_Report_March_2025.pdf",
+      "title": "NMC MONTHLY REPORT (March 2025)",
+      "listed_current": true,
+      "publication_date": "2025-04-17T09:36:55",
+      "modified_date": "2025-04-17T09:36:55",
+      "media_id": 52396,
+      "path": "data/raw/za/nicd_nmc_full_history/73fa7af0f9662314085bfb2d1d928948b80e2394da1ada4d84ba4b9cbd78978f.pdf",
+      "sha256": "29cc46666cfd2a79820d8ee555a3a60acec95e30421f4a11e7b7c20144175ce1",
+      "bytes": 3217825,
+      "retrieved_at": "2026-11-16T00:05:26.312088+00:00"
+    },
+    "format": "PDFium unchanged-page excerpt of official report",
+    "retrieved_date": "2026-11-16"
+  },
+  "quarter_2026_q1.pdf": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2026/05/NMCSS_q1_-report-2026.pdf",
+    "original_sha256": "32d9dc22124444c6d3e6b00b10a73c320683b3fdf315346badbed6db65cfdfa6",
+    "excerpt_sha256": "e366885beca8d71233245ee9ab5b97aa0216e94e8c3d885d2a9ae468a0645407",
+    "original_page_numbers": [
+      1,
+      2,
+      3,
+      4,
+      7,
+      8
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2026/05/NMCSS_q1_-report-2026.pdf",
+      "title": "NMC MONTHLY REPORT (January-March 2026)",
+      "listed_current": true,
+      "publication_date": "2026-05-28T09:36:57",
+      "modified_date": "2026-05-28T09:36:57",
+      "media_id": 56595,
+      "path": "data/raw/za/nicd_nmc_full_history/8ee4237a710b12bd7cd27f81ed1f822a86185f117239a866a9db40c339449196.pdf",
+      "sha256": "32d9dc22124444c6d3e6b00b10a73c320683b3fdf315346badbed6db65cfdfa6",
+      "bytes": 1268734,
+      "retrieved_at": "2026-11-16T00:05:11.148430+00:00"
+    },
+    "format": "PDFium unchanged-page excerpt of official report",
+    "retrieved_date": "2026-11-16"
+  },
+  "monthly_2026_08.pdf": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2026/10/NMCSS_Monthly_Report_August_2026.pdf",
+    "original_sha256": "97c66caa17926099191db0e3771aa1c55a1bf7b55ddaedc05da7710af534e385",
+    "excerpt_sha256": "2cace9861439e4539aa69ec3afe8b647a3f18ada48be864a1b9d8ad91c9b6d50",
+    "original_page_numbers": [
+      1,
+      2,
+      3,
+      4,
+      8,
+      11
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2026/10/NMCSS_Monthly_Report_August_2026.pdf",
+      "title": "NMC MONTHLY REPORT (AUG 2026)",
+      "listed_current": true,
+      "publication_date": "2026-10-27T08:09:31",
+      "modified_date": "2026-10-27T08:09:31",
+      "media_id": 58693,
+      "path": "data/raw/za/nicd_nmc_full_history/e960f7edab5cd5e8e9e2e6ccae4f74106e7240b89801ac656a45eff45fe23a66.pdf",
+      "sha256": "97c66caa17926099191db0e3771aa1c55a1bf7b55ddaedc05da7710af534e385",
+      "bytes": 1652421,
+      "retrieved_at": "2026-11-16T00:05:04.161879+00:00"
+    },
+    "format": "PDFium unchanged-page excerpt of official report",
+    "retrieved_date": "2026-11-16"
+  },
+  "monthly_2026_07.pdf": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2026/09/NMCSS_Monthly_Report_July_2026.pdf",
+    "original_sha256": "2d613bfa2da8c60ae564f9187d38ed3bcc2a0187cbd8304add0f24e0d6f6492d",
+    "excerpt_sha256": "0200facf9e6b9e004fa184d80049c34052e8b0e20a26168ea460a508fdc18ea2",
+    "original_page_numbers": [
+      1,
+      2,
+      3,
+      4,
+      8,
+      10
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2026/09/NMCSS_Monthly_Report_July_2026.pdf",
+      "title": "NMC MONTHLY REPORT (Jul 2026)",
+      "listed_current": true,
+      "publication_date": "2026-09-02T13:58:39",
+      "modified_date": "2026-09-02T13:58:39",
+      "media_id": 57974,
+      "path": "data/raw/za/nicd_nmc_full_history/acdc56fe567ddeaaf19ab546ab093e3fc25505cd4a9ebd813c1f26d49f4617f6.pdf",
+      "sha256": "2d613bfa2da8c60ae564f9187d38ed3bcc2a0187cbd8304add0f24e0d6f6492d",
+      "bytes": 1426175,
+      "retrieved_at": "2026-11-16T00:05:11.653986+00:00"
+    },
+    "format": "PDFium unchanged-page excerpt of official report",
+    "retrieved_date": "2026-11-16"
+  },
+  "monthly_2023_10.docx": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2023/11/october_NMCSSreport_29112023_final.docx",
+    "original_sha256": "9055b936d6078bfe40cf7b39effb0173d89633bf64b533f7e56f1567d0b82930",
+    "excerpt_sha256": "9055b936d6078bfe40cf7b39effb0173d89633bf64b533f7e56f1567d0b82930",
+    "original_page_numbers": [
+      "complete_document"
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2023/11/october_NMCSSreport_29112023_final.docx",
+      "title": "october_NMCSSreport_29112023_final",
+      "listed_current": false,
+      "publication_date": "2023-11-29T14:31:11",
+      "modified_date": "2023-11-29T14:31:11",
+      "media_id": 47183,
+      "path": "data/raw/za/nicd_nmc_full_history/1bbcc9c97cb43134312cacdd7dc91912e933769762512bcb865a6390fdb4de43.docx",
+      "sha256": "9055b936d6078bfe40cf7b39effb0173d89633bf64b533f7e56f1567d0b82930",
+      "bytes": 1045139,
+      "retrieved_at": "2026-11-16T00:06:20.918038+00:00"
+    },
+    "format": "Unchanged complete official DOCX",
+    "retrieved_date": "2026-11-16"
+  },
+  "monthly_2025_06.pdf": {
+    "url": "https://www.nicd.ac.za/wp-content/uploads/2025/08/NMCSS-JUNE-REPORT-2025.pdf",
+    "original_sha256": "f4822e0786cd3c2005c97c62f9194978c98446c4b97f90b76e2acb164e04c710",
+    "excerpt_sha256": "c425ccb03932cd7344046b3f0c407c9eecef11127abf584fd879ff9706cb0a08",
+    "original_page_numbers": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "report": {
+      "url": "https://www.nicd.ac.za/wp-content/uploads/2025/08/NMCSS-JUNE-REPORT-2025.pdf",
+      "title": "NMC MONTHLY REPORT (June 2025)",
+      "listed_current": true,
+      "publication_date": "2025-08-04T10:41:21",
+      "modified_date": "2025-08-04T10:41:21",
+      "media_id": 53769,
+      "path": "data/raw/za/nicd_nmc_full_history/4ccba4518e786ecd1bc326258efa41b25e3507eb156b904cf924b10321acda18.pdf",
+      "sha256": "f4822e0786cd3c2005c97c62f9194978c98446c4b97f90b76e2acb164e04c710",
+      "bytes": 1617249,
+      "retrieved_at": "2026-11-16T00:05:19.307541+00:00"
+    },
+    "format": "PDFium unchanged-page excerpt of official report",
+    "retrieved_date": "2026-11-16"
+  }
+}

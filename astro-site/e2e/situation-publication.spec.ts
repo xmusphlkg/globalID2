@@ -38,7 +38,7 @@ async function mock(page: Page) {
     const key = new URL(route.request().url()).pathname.split('/').at(-1)!.replace('.json', '');
     return route.fulfill({ body: objects.get(key), contentType: 'application/json' });
   });
-  return { update() { current = publication(2); }, corrupt() { objects.set(current.manifest.files['map-data.json'].sha256, '{}'); } };
+  return { update() { current = publication(2); }, corrupt(key = 'map-data.json') { objects.set(current.manifest.files[key].sha256, '{}'); } };
 }
 
 test('Situation JSON updates map and lazy timeline without rebuilding HTML; one page pins its release', async ({ page, request }) => {
@@ -82,4 +82,32 @@ test('Situation integrity errors close reads instead of showing an older static 
   await page.goto('/situation/');
   await expect(page.locator('.sit-item')).toHaveCount(0);
   await expect(page.locator('.sit-note')).toContainText('could not be loaded');
+});
+
+test('overview entity reads stay pinned when the publication changes', async ({ page }) => {
+  const publication = await mock(page);
+  await page.goto('/situation/?disease=D038&window=all&place=situation-update');
+  await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
+  publication.update();
+  await page.locator('.sit-scope [data-scope="all"]').click();
+  await expect(page.locator('.sit-overview .sit-alert')).toHaveCount(1);
+  await expect(page.locator('.sit-overview')).toContainText('Situation release 1.');
+  await expect(page.locator('.sit-overview')).not.toContainText('Situation release 2.');
+  await page.goto('/situation/?disease=D038&window=all&timeline=all');
+  await expect(page.locator('.sit-overview .sit-alert')).toHaveCount(1);
+  await expect(page.locator('.sit-overview')).toContainText('Situation release 2.');
+});
+
+test('an invalid overview entity never falls back to unpinned static data', async ({ page }) => {
+  const publication = await mock(page);
+  publication.corrupt('by-disease/D038.json');
+  const legacyReads: string[] = [];
+  await page.route('**/situation/outbreaks/*.json', route => {
+    legacyReads.push(route.request().url());
+    return route.fulfill({ status: 500 });
+  });
+  await page.goto('/situation/?disease=D038&window=all&timeline=all');
+  await expect(page.locator('.sit-overview-error')).toContainText('could not be loaded');
+  await expect(page.locator('.sit-overview .sit-alert')).toHaveCount(0);
+  expect(legacyReads).toEqual([]);
 });

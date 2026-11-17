@@ -1,0 +1,24 @@
+........................................................................ [ 48%]
+............F........................................................... [ 96%]
+......                                                                   [100%]
+=================================== FAILURES ===================================
+_ test_complete_catalogue_has_exactly_original_ten_and_eighteen_explicit_additions _
+
+    def test_complete_catalogue_has_exactly_original_ten_and_eighteen_explicit_additions():
+        from scripts.configure_priority_country_updates import desired_jobs
+        from tests.unit.test_priority_country_updates import BASE_CHANNEL_CONTRACTS
+        who = {'ET', 'KE', 'UG', 'GH', 'TZ', 'PH', 'VN', 'LA', 'MM', 'BN', 'TL', 'PY', 'EC', 'CR', 'PA'}
+        spf = {'GP', 'MQ', 'GF'}
+        assert set(REMAINING_COUNTRIES) == who | spf
+        expected = {(code, scope, source) for code, (scope, source) in BASE_CHANNEL_CONTRACTS.items()}
+        expected.update((code, 'who_gho_annual', f'SRC_{code}_WHO_GHO') for code in who)
+        expected.update((code, 'spf_odisse_annual', f'SRC_{code}_SPF_ODISSE') for code in spf)
+        channels = load_source_channels()
+>       assert len(channels) == 28
+E       AssertionError: assert 31 == 28
+E        +  where 31 = len([{'country_code': 'NG', 'scope': 'ncdc_surveillance', 'source_id': 'SRC_NG_NCDC', 'publisher': 'Nigeria Centre for Dis...kes_profile', 'source_id': 'SRC_ID_KEMKES_PROFILE', 'publisher': 'Kementerian Kesehatan Republik Indonesia', ...}, ...])
+
+tests/unit/test_remaining_surveillance_onboarding.py:89: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_remaining_surveillance_onboarding.py::test_complete_catalogue_has_exactly_original_ten_and_eighteen_explicit_additions
+1 failed, 149 passed in 15.68s

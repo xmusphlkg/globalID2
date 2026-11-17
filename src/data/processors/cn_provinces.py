@@ -27,6 +27,39 @@ class CNProvinceImportResult:
     source_ids: tuple[str, ...]
     source_latest_date: date | None
     imported_new_data: bool
+    death_rows: int = 0
+
+
+def expand_province_metric_rows(rows: Iterable[dict[str, object]]) -> list[dict[str, object]]:
+    """Keep explicitly reported deaths in their own registered metric series."""
+    expanded: list[dict[str, object]] = []
+    for raw in rows:
+        row = dict(raw)
+        expanded.append(row)
+        if row.get("Deaths") is None or row.get("Measure") == "deaths":
+            continue
+        if row.get("SourceID") != MONTHLY_REPORT_SOURCE_ID:
+            raise ValueError("Death columns are supported only for official provincial monthly reports")
+        deaths = row["Deaths"]
+        if isinstance(deaths, bool) or not isinstance(deaths, (int, float)) or deaths < 0 or int(deaths) != deaths:
+            raise ValueError(f"Province deaths must be a non-negative integer: {deaths!r}")
+        code = str(row.get("SourceDiseaseCode") or "")
+        if not code or code.endswith("__deaths"):
+            raise ValueError("Explicit death count requires an unambiguous case disease code")
+        death = {
+            **row,
+            "SourceDiseaseCode": code + "__deaths",
+            "RawDiseaseLabel": str(row.get("RawDiseaseLabel") or code) + " [deaths]",
+            "Diseases": code + "__deaths",
+            "Measure": "deaths",
+            "Cases": int(deaths),
+            "Raw": {**dict(row.get("Raw") or {}), "metric": "deaths", "paired_source_disease_code": code},
+        }
+        # Missingness belongs to the case cell; the explicit death cell is a
+        # separate known value, including an explicitly printed zero.
+        death.pop("MissingValueStatus", None)
+        expanded.append(death)
+    return expanded
 
 
 class CNProvinceUpdater:
@@ -50,8 +83,16 @@ class CNProvinceUpdater:
         self,
         db: AsyncSession,
         rows: Iterable[dict[str, object]],
+        *,
+        expand_metrics: bool = True,
     ) -> CNProvinceImportResult:
-        materialized = list(rows)
+        """Import source rows, or already expanded case/death rows after review.
+
+        Scheduled review passes ``expand_metrics=False`` so a quarantined death
+        identity cannot reappear from the retained case row's Deaths column.
+        """
+        original = list(rows)
+        materialized = expand_province_metric_rows(original) if expand_metrics else original
         by_source: dict[str, list[dict[str, object]]] = {}
         latest: date | None = None
         for row in materialized:
@@ -104,12 +145,13 @@ class CNProvinceUpdater:
 
         return CNProvinceImportResult(
             inserted_or_updated=upserted,
-            source_rows=len(materialized),
+            source_rows=len(original),
             skipped_rows=skipped,
             source_ids=tuple(sorted(by_source)),
             source_latest_date=latest,
             imported_new_data=upserted > 0,
+            death_rows=sum(row.get("Measure") == "deaths" for row in materialized),
         )
 
 
-__all__ = ["CNProvinceImportResult", "CNProvinceUpdater"]
+__all__ = ["CNProvinceImportResult", "CNProvinceUpdater", "expand_province_metric_rows"]

@@ -1,0 +1,25 @@
+{
+  "total_count": 2,
+  "results": [
+    {
+      "annee": "2000",
+      "reglib": "Guadeloupe",
+      "libgeo": "Guadeloupe",
+      "legio": 1,
+      "taux": 0.25770207063613754,
+      "population": 388045,
+      "dep": "971",
+      "reg": "01"
+    },
+    {
+      "annee": "2004",
+      "reglib": "Guadeloupe",
+      "libgeo": "Guadeloupe",
+      "legio": 0,
+      "taux": 0.0,
+      "population": 396992,
+      "dep": "971",
+      "reg": "01"
+    }
+  ]
+}

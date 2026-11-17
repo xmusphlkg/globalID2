@@ -1,0 +1,92 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ test_success_index_migration_is_concurrent_reversible_and_covers_count ____
+
+database = (<function database.<locals>.factory at 0x7f7bbff309a0>, <sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0x7f7bbff17dd0>, {'model_id': 1, 'model_key': 'test:model'})
+
+    async def test_success_index_migration_is_concurrent_reversible_and_covers_count(
+        database,
+    ):
+        import importlib.util
+        from pathlib import Path
+    
+        from alembic.migration import MigrationContext
+        from alembic.operations import Operations
+    
+        factory, engine, _route = database
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "migrations/versions/0031_ai_success_log_index.py"
+        )
+        spec = importlib.util.spec_from_file_location("success_index_migration", path)
+        migration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        ddl = []
+    
+        @event.listens_for(engine.sync_engine, "before_cursor_execute")
+        def record_ddl(_conn, _cursor, statement, _params, _context, _many):
+            if "INDEX" in statement and migration.INDEX_NAME in statement:
+                ddl.append(statement)
+    
+        for action in (
+            migration.downgrade,
+            migration.upgrade,
+            migration.downgrade,
+            migration.upgrade,
+        ):
+            async with engine.connect() as conn:
+    
+                def run(sync):
+                    context = MigrationContext.configure(sync)
+                    with context.begin_transaction(), Operations.context(context):
+                        action()
+    
+                await conn.run_sync(run)
+        assert len(ddl) == 4
+        assert all("CONCURRENTLY" in statement for statement in ddl)
+        async with factory() as db:
+            valid = await db.scalar(
+                text(
+                    "SELECT indisvalid FROM pg_index WHERE indexrelid='idx_ai_model_call_logs_success_model'::regclass"
+                )
+            )
+            assert valid
+            await db.execute(
+                text("""
+                INSERT INTO ai_model_call_logs
+                    (request_id,model_key,model_name,provider_key,agent_name,status,latency_ms,created_at,updated_at)
+                SELECT n::text, CASE WHEN n%10=0 THEN 'test:model' ELSE 'test:other' END,
+                    'model','test','test','success',100,now(),now()
+                FROM generate_series(1,30000) n
+            """)
+            )
+        async with engine.connect() as conn:
+            conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
+            await conn.execute(text("VACUUM ANALYZE ai_model_call_logs"))
+            plan = (
+                await conn.execute(
+                    text(
+                        "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) SELECT count(*) FROM ai_model_call_logs WHERE model_key='test:model' AND status='success'"
+                    )
+                )
+            ).scalar()[0]
+    
+        def nodes(node):
+            yield node
+            for child in node.get("Plans", []):
+                yield from nodes(child)
+    
+        index_scans = [
+            node
+            for node in nodes(plan["Plan"])
+            if node.get("Index Name") == migration.INDEX_NAME
+        ]
+        assert len(index_scans) == 1
+        assert index_scans[0]["Node Type"] == "Index Only Scan"
+>       assert index_scans[0]["Heap Fetches"] == 0
+E       assert 3000 == 0
+
+tests/integration/test_postgres_model_health_sampling.py:456: AssertionError
+=========================== short test summary info ============================
+FAILED tests/integration/test_postgres_model_health_sampling.py::test_success_index_migration_is_concurrent_reversible_and_covers_count
+1 failed in 13.36s

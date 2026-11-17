@@ -22,6 +22,8 @@ from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +39,13 @@ NBS_BASE = "https://data.stats.gov.cn/dg/website/publicrelease/web/external/"
 NBS_PAGE = "https://data.stats.gov.cn/dg/website/page.html#/pc/national/fsYearData"
 IBGE_BASE = "https://apisidra.ibge.gov.br/values/"
 ABS_PAGE = "https://www.abs.gov.au/statistics/people/population/national-state-and-territory-population"
+# Stable official UF identifiers; population values and names always come from
+# the live SIDRA response. This avoids depending on a second, unrelated API.
+IBGE_UF = dict(zip(
+    "11 12 13 14 15 16 17 21 22 23 24 25 26 27 28 29 31 32 33 35 41 42 43 50 51 52 53".split(),
+    "RO AC AM RR PA AP TO MA PI CE RN PB PE AL SE BA MG ES RJ SP PR SC RS MS MT GO DF".split(),
+    strict=True,
+))
 CN_CODES = dict(
     zip(
         [
@@ -116,6 +125,12 @@ class PublicSource:
         self.output.mkdir(parents=True, exist_ok=True)
         self.session = requests.Session()
         self.session.headers["User-Agent"] = "GlobalID/2.0 official-population-refresh"
+        # NBS POSTs are read-only queries. Bounded retries cover transient TLS,
+        # transport and upstream failures without weakening certificate checks.
+        retry = Retry(total=3, connect=3, read=2, status=3, backoff_factor=0.75,
+                      status_forcelist=(429, 500, 502, 503, 504),
+                      allowed_methods=frozenset({"GET", "POST"}))
+        self.session.mount("https://", HTTPAdapter(max_retries=retry))
         self.sources = {}
 
     def fetch(self, name: str, url: str, *, body=None, params=None):
@@ -310,16 +325,21 @@ def parse_ibge(data, states, *, census=False):
 
 
 def fetch_ibge(source: PublicSource):
-    states = source.fetch(
-        "ibge_states.json",
-        "https://servicodados.ibge.gov.br/api/v1/localidades/estados",
+    estimates = source.fetch(
+        "ibge_estimates.json", IBGE_BASE + "t/6579/n1/all/n3/all/v/9324/p/all"
     ).json()
-    if len(states) != 27 or len({s["sigla"] for s in states}) != 27:
+    states = {}
+    for item in estimates[1:]:
+        if item.get("NC") != "3":
+            continue
+        ident, name = item["D1C"], item["D1N"]
+        if ident not in IBGE_UF or not name or (ident in states and states[ident]["nome"] != name):
+            raise ValueError("IBGE state registry changed")
+        states[ident] = {"id": int(ident), "sigla": IBGE_UF[ident], "nome": name}
+    if set(states) != set(IBGE_UF):
         raise ValueError("IBGE state registry changed")
-    states = {str(s["id"]): s for s in states}
-    rows = []
+    rows = list(parse_ibge(estimates, states))
     for name, query, census in [
-        ("estimates", "t/6579/n1/all/n3/all/v/9324/p/all", False),
         ("census_2022", "t/4714/n1/all/n3/all/v/93/p/2022", True),
         ("census_2000_2010", "t/202/n1/all/n3/all/v/93/p/2000,2010/c2/0/c1/0", True),
     ]:
@@ -438,7 +458,7 @@ def main():
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--export", action="store_true")
     parser.add_argument(
-        "--sources", nargs="+", choices=["CN", "AU", "BR"], default=["CN", "AU", "BR"]
+        "--sources", nargs="+", choices=["CN", "AU", "BR", "US", "JP", "SE"], default=["CN", "AU", "BR", "US", "JP", "SE"]
     )
     parser.add_argument("--start-year", type=int, default=2000)
     parser.add_argument(
@@ -466,6 +486,18 @@ def main():
         br_rows, states = fetch_ibge(source)
         rows.extend(br_rows)
         print("IBGE national and 27 states fetched", flush=True)
+    if "US" in args.sources:
+        from scripts.population_sources.us import fetch_us
+        rows.extend(fetch_us(source))
+        print("Census official state population releases fetched", flush=True)
+    if "JP" in args.sources:
+        from scripts.population_sources.jp import fetch_jp
+        rows.extend(fetch_jp(source))
+        print("Statistics Japan official prefecture population fetched", flush=True)
+    if "SE" in args.sources:
+        from scripts.population_sources.se import fetch_se
+        rows.extend(fetch_se(source))
+        print("Statistics Sweden official county population fetched", flush=True)
     rows = validate_rows(rows)
     csv_buffer = io.StringIO()
     fields = [

@@ -5,8 +5,22 @@ from __future__ import annotations
 from typing import Optional
 
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
+from src.core.remaining_country_sources import REMAINING_COUNTRIES, EXTRA_SOURCE_CONTRACTS, source_contract
 
 EXPECTED_SCOPES_BY_COUNTRY = {
+    'CL': ['cl_eno_historical'],
+    'CO': ['co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly'],
+    'MW': ['mw_phim_idsr_weekly'],
+    'ZA': ['za_nicd_nmc'],
+    'ID': ['id_kemkes_profile'],
+    'MX': ['mx_dge_annual'],
+    'NG': ['ncdc_surveillance'],
+    'KH': ['kh_camewarn_weekly'],
+    'AR': ['ar_moh_hiv_annual', 'ar_ben_weekly'],
+    'PE': ['pe_cdc_weekly'],
+    "TH": ["th_dds_weekly", "th_dds_tableau", "th_doe506_monthly", "th_id_th_history"],
+    "MY": ["my_idengue_daily", "who_flunet_weekly", "who_gho_annual", "moh_std_annual"],
+    "NL": ["rivm_virological_weekly", "rivm_respiratory_weekly", "rivm_notifiable_annual"],
     "CN": ["cdc_weekly", "nhc", "pubmed"],
     "US": ["nndss_api", "nhss_hiv"],
     "JP": ["jp_weekly"],
@@ -51,12 +65,76 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     ],
 }
 
+for _remaining_code in REMAINING_COUNTRIES:
+    EXPECTED_SCOPES_BY_COUNTRY[_remaining_code] = [source_contract(_remaining_code)["scope"]]
+
+for (_remaining_code, _scope) in EXTRA_SOURCE_CONTRACTS:
+    EXPECTED_SCOPES_BY_COUNTRY[_remaining_code].append(_scope)
+
 for _ecdc_country_code in ECDC_BASELINE_COUNTRY_CODES:
     _scopes = EXPECTED_SCOPES_BY_COUNTRY.setdefault(_ecdc_country_code, [])
     if "ecdc_atlas_annual" not in _scopes:
         _scopes.append("ecdc_atlas_annual")
 
 SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
+    "spf_odisse_annual": {"en": "SPF ODISSE Annual Notifications", "zh": "SPF ODISSÉ 年度疾病报告"},
+    'cl_eno_historical': {'en': 'Chile MINSAL ENO Historical Notifications', 'zh': '智利 MINSAL 法定报告疾病历史数据'},
+    'co_ins_sivigila_historical': {'en': 'Colombia INS SIVIGILA Historical Public Health Surveillance', 'zh': '哥伦比亚 INS SIVIGILA 历史监测数据'},
+    'co_ins_sivigila_current': {'en': 'Colombia INS SIVIGILA Successor Dataset (2023 onward)', 'zh': '哥伦比亚 INS SIVIGILA 后续数据集（2023 年起）'},
+    'co_ins_bes_weekly': {'en': 'Colombia INS BES Epidemiological Bulletins', 'zh': '哥伦比亚 INS BES 流行病学周报'},
+    'mw_phim_idsr_weekly': {'en': 'Malawi PHIM IDSR Weekly Bulletin', 'zh': '马拉维 PHIM IDSR 疾病监测周报'},
+    'za_nicd_nmc': {'en': 'South Africa NICD NMC', 'zh': '南非 NICD 法定传染病月报'},
+    'id_kemkes_profile': {'en': 'Indonesia Ministry of Health Annual Health Profile', 'zh': '印度尼西亚卫生部年度卫生概况'},
+    'mx_dge_annual': {'en': 'Mexico DGE Annual Morbidity', 'zh': '墨西哥 DGE 年度发病统计'},
+    "who_flunet_weekly": {
+        "en": "Malaysia WHO FluNet Weekly Respiratory Laboratory Surveillance",
+        "zh": "马来西亚 WHO FluNet 呼吸道实验室周监测",
+    },
+    "who_gho_annual": {
+        "en": "Malaysia WHO GHO Annual Reported Infections",
+        "zh": "马来西亚 WHO GHO 传染病年度报告指标",
+    },
+    "my_idengue_daily": {
+        "en": "Malaysia iDengue Daily Dengue Surveillance",
+        "zh": "马来西亚 iDengue 登革热每日监测",
+    },
+    "rivm_virological_weekly": {
+        "en": "Netherlands RIVM Virological Weekly Surveillance",
+        "zh": "荷兰 RIVM 多病原实验室周监测",
+    },
+    "rivm_respiratory_weekly": {
+        "en": "Netherlands RIVM Respiratory Weekly Surveillance",
+        "zh": "荷兰 RIVM 呼吸道周监测",
+    },
+    'ncdc_surveillance': {'en': 'Nigeria NCDC Surveillance', 'zh': '尼日利亚 NCDC 疾病监测'},
+    'kh_camewarn_weekly': {'en': 'Cambodia CDC CamEWARN Weekly Surveillance', 'zh': '柬埔寨 CamEWARN 疾病监测周报'},
+    'ar_ben_weekly': {'en': 'Argentina National Epidemiological Bulletin (BEN)', 'zh': '阿根廷国家流行病学周报'},
+    'ar_moh_hiv_annual': {'en': 'Argentina Ministry of Health Annual HIV Notifications', 'zh': '阿根廷卫生部 HIV 年度通知数'},
+    'pe_cdc_weekly': {'en': 'Peru CDC Epidemiological Bulletin', 'zh': '秘鲁 CDC 流行病学周报'},
+    "th_dds_tableau": {
+        "en": "Thailand DDS Tableau Weekly National Surveillance",
+        "zh": "泰国 DDS Tableau 多病种全国周监测",
+    },
+    "th_id_th_history": {
+        "en": "Thailand ID_TH Weekly Archive",
+        "zh": "泰国 ID_TH 历史周数据",
+    },
+    "th_dds_weekly": {
+        "en": "Thailand DDS Weekly National Situation",
+        "zh": "泰国 DDS 多病种全国周报",
+    },
+    "th_doe506_monthly": {
+        "en": "Thailand DOE Report 506 Monthly History",
+        "zh": "泰国 DOE 506 多病种月度历史报表",
+    },
+    "moh_std_annual": {
+        "en": "Malaysia MOH Annual STD Notifications",
+        "zh": "马来西亚卫生部性传播疾病年度报表",
+    },
+    "rivm_notifiable_annual": {
+        "en": "Netherlands RIVM Annual Notifiable Disease Notifications",
+        "zh": "荷兰 RIVM 法定传染病年度报表",
+    },
     "all": {
         "en": "All Sources",
         "zh": "全部来源",
@@ -192,7 +270,77 @@ COUNTRY_SOURCE_LABEL_OVERRIDES: dict[tuple[str, str], dict[str, str]] = {
     },
 }
 
+for _remaining_code in REMAINING_COUNTRIES:
+    _contract = source_contract(_remaining_code)
+    COUNTRY_SOURCE_LABEL_OVERRIDES[(_remaining_code, _contract["scope"])] = {
+        "en": _contract["label_en"], "zh": _contract["label_zh"]}
+
+for (_remaining_code, _scope), _extra in EXTRA_SOURCE_CONTRACTS.items():
+    COUNTRY_SOURCE_LABEL_OVERRIDES[(_remaining_code, _scope)] = {"en": _extra["label_en"], "zh": _extra["label_zh"]}
+
 _EXACT_SCOPE_BY_DATA_SOURCE = {
+    'cl_eno_historical': 'cl_eno_historical',
+    'src_cl_eno': 'cl_eno_historical',
+    'chile minsal eno historical notifications': 'cl_eno_historical',
+    'co_ins_sivigila_historical': 'co_ins_sivigila_historical',
+    'src_co_ins_sivigila': 'co_ins_sivigila_historical',
+    'colombia ins sivigila historical public health surveillance': 'co_ins_sivigila_historical',
+    'co_ins_sivigila_current': 'co_ins_sivigila_current',
+    'src_co_ins_sivigila_current': 'co_ins_sivigila_current',
+    'colombia ins sivigila current public health surveillance': 'co_ins_sivigila_current',
+    'co_ins_bes_weekly': 'co_ins_bes_weekly',
+    'src_co_ins_bes': 'co_ins_bes_weekly',
+    'colombia ins bes epidemiological bulletins': 'co_ins_bes_weekly',
+    'mw_phim_idsr_weekly': 'mw_phim_idsr_weekly',
+    'src_mw_phim_idsr': 'mw_phim_idsr_weekly',
+    'malawi phim idsr weekly bulletin': 'mw_phim_idsr_weekly',
+    'ncdc_surveillance': 'ncdc_surveillance',
+    'kh_camewarn_weekly': 'kh_camewarn_weekly',
+    'ar_ben_weekly': 'ar_ben_weekly',
+    'ar_moh_hiv_annual': 'ar_moh_hiv_annual',
+    'src_ar_moh_hiv_annual': 'ar_moh_hiv_annual',
+    'argentina ministry of health annual hiv notifications': 'ar_moh_hiv_annual',
+    'pe_cdc_weekly': 'pe_cdc_weekly',
+    'za_nicd_nmc': 'za_nicd_nmc',
+    'id_kemkes_profile': 'id_kemkes_profile',
+    'mx_dge_annual': 'mx_dge_annual',
+    'src_za_nicd_nmc': 'za_nicd_nmc',
+    'south africa nicd nmc': 'za_nicd_nmc',
+    'src_id_kemkes_profile': 'id_kemkes_profile',
+    'indonesia ministry of health annual health profile': 'id_kemkes_profile',
+    'src_mx_dge_annual': 'mx_dge_annual',
+    'mexico dge annual morbidity': 'mx_dge_annual',
+    "src_my_who_flunet": "who_flunet_weekly",
+    "malaysia who flunet weekly respiratory laboratory surveillance": "who_flunet_weekly",
+    "src_my_who_gho": "who_gho_annual",
+    "malaysia who gho annual reported infections": "who_gho_annual",
+    "src_my_idengue_daily": "my_idengue_daily",
+    "malaysia idengue daily dengue surveillance": "my_idengue_daily",
+    "src_nl_rivm_virological": "rivm_virological_weekly",
+    "netherlands rivm virological weekly surveillance": "rivm_virological_weekly",
+    "src_nl_rivm_respiratory": "rivm_respiratory_weekly",
+    "netherlands rivm respiratory weekly surveillance": "rivm_respiratory_weekly",
+    'src_ng_ncdc': 'ncdc_surveillance',
+    'nigeria ncdc surveillance': 'ncdc_surveillance',
+    'src_kh_camewarn': 'kh_camewarn_weekly',
+    'cambodia cdc camewarn weekly surveillance': 'kh_camewarn_weekly',
+    'src_ar_ben': 'ar_ben_weekly',
+    'argentina national epidemiological bulletin (ben)': 'ar_ben_weekly',
+    'src_pe_cdc': 'pe_cdc_weekly',
+    'peru cdc epidemiological bulletin': 'pe_cdc_weekly',
+    "thailand doe report 506 monthly history": "th_doe506_monthly",
+    "src_th_doe506": "th_doe506_monthly",
+    "thailand dds weekly national situation": "th_dds_weekly",
+    "src_th_dds_weekly": "th_dds_weekly",
+    "thailand id_th weekly archive": "th_id_th_history",
+    "src_th_id_th_archive": "th_id_th_history",
+    "thailand dds tableau weekly national surveillance": "th_dds_tableau",
+    "src_th_dds_tableau": "th_dds_tableau",
+    "thailand dds weekly national situation reports": "th_dds_weekly",
+    "malaysia moh annual std notifications": "moh_std_annual",
+    "netherlands rivm annual notifiable disease notifications": "rivm_notifiable_annual",
+    "src_my_moh_std": "moh_std_annual",
+    "src_nl_rivm_notifiable": "rivm_notifiable_annual",
     "china cdc: notifiable infectious diseases reports": "cdc_weekly",
     "china cdc weekly: notifiable infectious diseases reports": "cdc_weekly",
     "us cdc nndss": "nndss_api",
@@ -270,7 +418,54 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "australia nindss (location aggregated)": "all",
 }
 
+for _remaining_code in REMAINING_COUNTRIES:
+    _contract = source_contract(_remaining_code)
+    for _alias in (_contract["source_id"], _contract["label_en"], _contract["scope"]):
+        _EXACT_SCOPE_BY_DATA_SOURCE[_alias.lower()] = _contract["scope"]
+
+for (_remaining_code, _scope), _extra in EXTRA_SOURCE_CONTRACTS.items():
+    for _alias in (_extra["source_id"], _extra["label_en"], _scope):
+        _EXACT_SCOPE_BY_DATA_SOURCE[_alias.lower()] = _scope
+
 _TASK_SOURCE_ALIASES = {
+    'cl': 'cl_eno_historical',
+    'chile': 'cl_eno_historical',
+    'co': 'co_ins_sivigila_historical',
+    'colombia': 'co_ins_sivigila_historical',
+    'mw': 'mw_phim_idsr_weekly',
+    'malawi': 'mw_phim_idsr_weekly',
+    'za': 'za_nicd_nmc',
+    'south africa': 'za_nicd_nmc',
+    'za_nicd_nmc': 'za_nicd_nmc',
+    'id': 'id_kemkes_profile',
+    'indonesia': 'id_kemkes_profile',
+    'id_kemkes_profile': 'id_kemkes_profile',
+    'mx': 'mx_dge_annual',
+    'mexico': 'mx_dge_annual',
+    'mx_dge_annual': 'mx_dge_annual',
+    'ng': 'ncdc_surveillance',
+    'nigeria': 'ncdc_surveillance',
+    'ncdc_surveillance': 'ncdc_surveillance',
+    'kh': 'kh_camewarn_weekly',
+    'cambodia': 'kh_camewarn_weekly',
+    'kh_camewarn_weekly': 'kh_camewarn_weekly',
+    'ar': 'ar_moh_hiv_annual',
+    'argentina': 'ar_moh_hiv_annual',
+    'ar_hiv': 'ar_moh_hiv_annual',
+    'ar_moh_hiv_annual': 'ar_moh_hiv_annual',
+    'src_ar_moh_hiv_annual': 'ar_moh_hiv_annual',
+    'argentina ministry of health annual hiv notifications': 'ar_moh_hiv_annual',
+    'ben': 'ar_ben_weekly',
+    'src_ar_ben': 'ar_ben_weekly',
+    'argentina national epidemiological bulletin (ben)': 'ar_ben_weekly',
+    'ar_ben_weekly': 'ar_ben_weekly',
+    'pe': 'pe_cdc_weekly',
+    'peru': 'pe_cdc_weekly',
+    'pe_cdc_weekly': 'pe_cdc_weekly',
+    "doe506": "th_doe506_monthly",
+    "th_506": "th_doe506_monthly",
+    "my_moh_std": "moh_std_annual",
+    "rivm_notifiable": "rivm_notifiable_annual",
     "gov": "nhc",
     "nndss": "nndss_api",
     "nhss": "nhss_hiv",
@@ -408,7 +603,38 @@ def canonicalize_task_source(
     normalized = (source or "all").strip().lower()
     if not normalized:
         normalized = "all"
+    code = (country_code or "").strip().upper()
+    if code in REMAINING_COUNTRIES and normalized in {"all", code.lower()}:
+        return source_contract(code)["scope"]
     normalized = _TASK_SOURCE_ALIASES.get(normalized, normalized)
+
+    if normalized == 'all' and (country_code or '').strip().upper() in {'CL', 'CO', 'MW'}:
+        return EXPECTED_SCOPES_BY_COUNTRY[(country_code or '').strip().upper()][0]
+
+    if normalized == 'all' and (country_code or '').strip().upper() == 'ZA':
+        return 'za_nicd_nmc'
+
+    if normalized == 'all' and (country_code or '').strip().upper() == 'ID':
+        return 'id_kemkes_profile'
+
+    if normalized == 'all' and (country_code or '').strip().upper() == 'MX':
+        return 'mx_dge_annual'
+
+    if normalized == "all" and (country_code or "").strip().upper() == 'NG':
+        return 'ncdc_surveillance'
+    if normalized == "all" and (country_code or "").strip().upper() == 'KH':
+        return 'kh_camewarn_weekly'
+    if normalized == "all" and (country_code or "").strip().upper() == 'AR':
+        return 'ar_moh_hiv_annual'
+    if normalized == "all" and (country_code or "").strip().upper() == 'PE':
+        return 'pe_cdc_weekly'
+
+    if normalized in {"all", "th", "thailand"} and (country_code or "").strip().upper() == "TH":
+        return "th_dds_weekly"
+    if normalized in {"all", "my", "malaysia"} and (country_code or "").strip().upper() == "MY":
+        return "moh_std_annual"
+    if normalized in {"all", "nl", "netherlands"} and (country_code or "").strip().upper() == "NL":
+        return "rivm_notifiable_annual"
 
     if normalized == "local" and (country_code or "").strip().upper() == "JP":
         return "jp_weekly"
@@ -440,7 +666,7 @@ def canonicalize_task_source(
         return "cda_weekly_bulletin"
     if normalized == "all" and (
         (country_code or "").strip().upper()
-        in ECDC_BASELINE_COUNTRY_CODES - {"AT", "DE", "FI", "IE", "IS", "NO", "SE"}
+        in ECDC_BASELINE_COUNTRY_CODES - {"AT", "DE", "FI", "IE", "IS", "NL", "NO", "SE"}
     ):
         return "ecdc_atlas_annual"
 
@@ -540,7 +766,7 @@ def source_options_for_country(country_code: Optional[str]) -> list[dict[str, st
         scopes = ["all"]
 
     option_scopes = list(scopes)
-    if len(scopes) > 1 and "all" not in option_scopes and code != "IE":
+    if len(scopes) > 1 and "all" not in option_scopes and code not in {"IE", "CO", "AR"}:
         option_scopes.insert(0, "all")
 
     return [
@@ -557,7 +783,7 @@ def default_source_for_country(country_code: Optional[str]) -> str:
     """Return the preferred source value for forms and automation presets."""
     code = (country_code or "").strip().upper()
     scopes = get_expected_scopes_for_country(code)
-    if len(scopes) > 1 and code != "IE":
+    if len(scopes) > 1 and code not in {"IE", "CO", "AR"}:
         return "all"
     if scopes:
         return scopes[0]
@@ -636,8 +862,35 @@ def canonical_data_source_label(
 ) -> str:
     """Normalize persisted data_source text to a stable display label."""
     text = (data_source or "").strip().lower()
+    code = (country_code or "").strip().upper()
+    if code in REMAINING_COUNTRIES:
+        scope = _EXACT_SCOPE_BY_DATA_SOURCE.get(text)
+        if (code, scope) in EXTRA_SOURCE_CONTRACTS:
+            return source_contract(code, scope)["label_en"]
+        contract = source_contract(code)
+        if _EXACT_SCOPE_BY_DATA_SOURCE.get(text) == contract["scope"]:
+            return contract["label_en"]
+    for scope in ('cl_eno_historical', 'co_ins_sivigila_historical', 'co_ins_sivigila_current', 'co_ins_bes_weekly', 'mw_phim_idsr_weekly'):
+        if _EXACT_SCOPE_BY_DATA_SOURCE.get(text) == scope:
+            return SOURCE_SCOPE_LABELS[scope]['en']
+    if text in {'south africa nicd nmc', 'za_nicd_nmc', 'src_za_nicd_nmc'}:
+        return 'South Africa NICD NMC'
+    if text in {'indonesia ministry of health annual health profile', 'id_kemkes_profile', 'src_id_kemkes_profile'}:
+        return 'Indonesia Ministry of Health Annual Health Profile'
+    if text in {'mexico dge annual morbidity', 'mx_dge_annual', 'src_mx_dge_annual'}:
+        return 'Mexico DGE Annual Morbidity'
     if not text:
         return "Unknown"
+    if text in {'nigeria ncdc surveillance', 'ncdc_surveillance', 'src_ng_ncdc'}:
+        return 'Nigeria NCDC Surveillance'
+    if text in {'cambodia cdc camewarn weekly surveillance', 'kh_camewarn_weekly', 'src_kh_camewarn'}:
+        return 'Cambodia CDC CamEWARN Weekly Surveillance'
+    if text in {'argentina national epidemiological bulletin (ben)', 'ar_ben_weekly', 'src_ar_ben'}:
+        return 'Argentina National Epidemiological Bulletin (BEN)'
+    if text in {'argentina ministry of health annual hiv notifications', 'ar_moh_hiv_annual', 'src_ar_moh_hiv_annual'}:
+        return 'Argentina Ministry of Health Annual HIV Notifications'
+    if text in {'peru cdc epidemiological bulletin', 'pe_cdc_weekly', 'src_pe_cdc'}:
+        return 'Peru CDC Epidemiological Bulletin'
     if text in {"gov data", "nhc"}:
         return "NHC"
     if text == "australia nindss (location aggregated)":

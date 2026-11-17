@@ -170,7 +170,8 @@ def _published_country_result(
     country_data["location_type"] = metadata.get("location_type") or (
         "subdivision" if "-" in code else "country"
     )
-    country_data["parent_code"] = metadata.get("parent_country_code")
+    from src.generation.site_subdivision_maps import parent_code
+    country_data["parent_code"] = parent_code(country)
     country_data["publish_content_hash"] = publish_hash
     from src.generation.public_series_store import PROJECTION_VERSION
 

@@ -71,7 +71,7 @@ test('complete disease records, filters and yearly chart stay in sync and valida
   await library.getByText('查看各年数量', { exact: true }).click();
   await expect(library.locator('.literature-trend-table tbody')).toContainText('2026');
   await expect(library.locator('.literature-trend-table tbody td')).toHaveText('20');
-  await library.getByLabel('国家或地区', { exact: false }).selectOption('BR');
+  await library.getByRole('combobox', { name: '区域', exact: true }).selectOption('BR');
   await expect(library.locator('.literature-empty')).toContainText('没有符合条件的文献');
   await library.getByLabel('截止年份', { exact: true }).fill('2020');
   await expect(library.getByRole('alert')).toContainText('起始年份不能晚于截止年份');

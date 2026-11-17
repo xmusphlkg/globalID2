@@ -101,8 +101,9 @@ def _source_series_details(records: list[dict]) -> list[dict]:
     for record in records:
         series_code = str(record.get("series_code") or "").strip()
         if series_code:
-            dimension_key = str(record.get("dimension_key") or "all").strip() or "all"
-            dimensions = record.get("dimensions") or {}
+            reviewed_total = record.get("projection_dimension_key") == "all"
+            dimension_key = "all" if reviewed_total else (str(record.get("dimension_key") or "all").strip() or "all")
+            dimensions = {} if reviewed_total else (record.get("dimensions") or {})
             if isinstance(dimensions, str):
                 try:
                     dimensions = json.loads(dimensions)
@@ -122,6 +123,7 @@ def _source_series_details(records: list[dict]) -> list[dict]:
         "comparability_set", "projection_policy", "projection_priority",
         "series_is_active",
         "calendar",
+        "paired_case_series_code",
     )
     details: list[dict] = []
     for series_code, dimension_key, dimensions_key in sorted(by_series):
@@ -131,7 +133,8 @@ def _source_series_details(records: list[dict]) -> list[dict]:
             key=lambda item: str(item.get("date") or ""),
         )
         first = series_records[0]
-        dimensions = first.get("dimensions") or {}
+        reviewed_total = first.get("projection_dimension_key") == "all"
+        dimensions = {} if reviewed_total else (first.get("dimensions") or {})
         if isinstance(dimensions, str):
             try:
                 dimensions = json.loads(dimensions)
@@ -164,8 +167,13 @@ def _source_series_details(records: list[dict]) -> list[dict]:
                 **{field: first.get(field) for field in metadata_fields},
                 "unit": first.get("series_unit") or first.get("unit"),
                 "geography_key": first.get("geography_key"),
-                "dimension_key": first.get("dimension_key"),
+                "dimension_key": "all" if reviewed_total else first.get("dimension_key"),
                 "dimensions": dimensions if isinstance(dimensions, dict) else {},
+                **({
+                    "point_source_dimensions": [item.get("dimensions") or {} for item in dated_records],
+                    "point_source_dimension_keys": [item.get("dimension_key") for item in dated_records],
+                    "dimension_review": "source_metadata_retained_separately_from_population_strata",
+                } if reviewed_total else {}),
                 "dates": dates,
                 "values": values,
                 "incidence_rates": incidence_rates,
@@ -438,6 +446,62 @@ def _attach_legacy_supplemental_metrics(
     return context
 
 
+def _attach_registered_deaths(projected: list[dict], context: dict, records: list[dict]) -> None:
+    """Attach only explicitly paired, identical-source death observations.
+
+    A concept match alone does not establish that a death series describes
+    the selected cases. In particular an onset feed must not inherit deaths
+    from a different reporting source for an overlapping month.
+    """
+    cases = {
+        (str(row.get("series_code") or ""), str(row.get("date") or "")): row
+        for row in records
+        if is_case_count_series(row)
+        and str(row.get("dimension_key") or "all") == "all"
+    }
+    paired: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for row in records:
+        if (
+            row.get("metric_type") == "deaths"
+            and row.get("paired_case_series_code")
+            and str(row.get("dimension_key") or "all") == "all"
+            and str(row.get("series_unit") or row.get("unit") or "") == "count"
+            and row.get("mapping_relation") in {"exact", "narrower"}
+            and row.get("cases") is not None
+        ):
+            key = (str(row["paired_case_series_code"]), str(row.get("date") or ""))
+            case = cases.get(key)
+            if case is None:
+                continue
+            if any(row.get(field) != case.get(field) for field in (
+                "source_system", "geography_key", "disease_id", "definition_version",
+                "temporal_granularity", "reporting_basis", "time_basis",
+            )):
+                continue
+            paired[key].append(row)
+    attached_codes: set[str] = set()
+    attached = 0
+    for row in projected:
+        matches = paired.get((str(row.get("series_code") or ""), str(row.get("date") or "")), [])
+        if not matches:
+            continue
+        values = {_normalise_count(item["cases"]) for item in matches}
+        if len(values) != 1:
+            raise ValueError("Conflicting explicitly paired death observations")
+        row["deaths"] = next(iter(values))
+        attached_codes.update(str(item["series_code"]) for item in matches)
+        attached += 1
+    if attached:
+        context.setdefault("metric_layers", {})["deaths"] = (
+            SERIES_DATA_LAYER if attached == len(projected)
+            or not any(row.get("deaths") is not None and not paired.get(
+                (str(row.get("series_code") or ""), str(row.get("date") or ""))
+            ) for row in projected) else MIXED_DATA_LAYER
+        )
+        context["death_series_codes"] = sorted(attached_codes)
+        context["death_observation_count"] = attached
+
+
 def _semantic_value(value: object, *, granularity: bool = False) -> str:
     normalized = str(value or "").strip().lower()
     if granularity and normalized == "yearly":
@@ -628,10 +692,10 @@ def apply_series_first_projection(
             all_series[disease_id].append(record)
             if is_case_count_metric(record):
                 case_count_series[disease_id].append(record)
-                if str(record.get("dimension_key") or "all").strip().lower() == "all":
+                if str(record.get("projection_dimension_key") or record.get("dimension_key") or "all").strip().lower() == "all":
                     public_case_count_series[disease_id].append(record)
             if (
-                str(record.get("dimension_key") or "all").strip().lower() == "all"
+                str(record.get("projection_dimension_key") or record.get("dimension_key") or "all").strip().lower() == "all"
                 and _series_is_case_count(record)
             ):
                 eligible_series[disease_id].append(record)
@@ -672,6 +736,7 @@ def apply_series_first_projection(
             _attach_legacy_supplemental_metrics(
                 projected, context, compatible_legacy, period_key=period_key,
             )
+            _attach_registered_deaths(projected, context, all_series[disease_id])
             overlaid = _overlay_legacy_coverage_gaps(
                 projected, context, compatible_legacy, period_key=period_key,
             )

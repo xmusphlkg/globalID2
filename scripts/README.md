@@ -38,6 +38,7 @@ Normal application startup never requires a full data rebuild.
 | [configure_half_hour_ingestion.py](configure_half_hour_ingestion.py) | Spread enabled ingestion jobs over a 30-minute cycle. |
 | [configure_iceland_automation.py](configure_iceland_automation.py) | Idempotently configure Iceland surveillance refresh jobs. |
 | [configure_ingestion_coverage.py](configure_ingestion_coverage.py) | Idempotently add ingestion jobs for implemented but unscheduled pipelines. |
+| [configure_national_notifications.py](configure_national_notifications.py) | Preview or persist eleven 30-minute TH/MY/NL checks through the existing scheduler, retaining job IDs and changed jobs’ next runs; [contract](../docs/data-sources/NATIONAL_NOTIFICATION_AUTOMATION.md). |
 | [configure_nz_dhb_automation.py](configure_nz_dhb_automation.py) | Configure the 19 PHF Science annual DHB refresh jobs. |
 | [dashboard.sh](dashboard.sh) | Manage local API, worker, scheduler and web processes. |
 | [dashboard_web_supervisor.cjs](dashboard_web_supervisor.cjs) | Supervise the dashboard web process. |
@@ -89,6 +90,21 @@ Normal application startup never requires a full data rebuild.
 | [split_papers_bundle.py](split_papers_bundle.py) | Split Astro dist into Pages main + papers staging for R2. |
 | [split_reports_bundle.py](split_reports_bundle.py) | Move report archive pages out of Astro dist into the reports R2 bundle. |
 
+## Remaining regional source onboarding and refresh
+
+| Script | Purpose |
+| --- | --- |
+| [collect_remaining_who_annual.py](collect_remaining_who_annual.py) | Capture and replay the 15 country-specific WHO annual reported-count baselines. |
+| [collect_spf_overseas_history.py](collect_spf_overseas_history.py) | Capture SPF annual histories for GP, MQ and GF. |
+| [collect_cr_notifications.py](collect_cr_notifications.py) | Capture Costa Rica Ministry linked archives and audit verified national tables. |
+| [collect_wpro_dengue.py](collect_wpro_dengue.py) | Capture current linked WHO WPRO dengue reports for LA and VN. |
+| [onboard_remaining_surveillance.py](onboard_remaining_surveillance.py) | Bootstrap and import through leased staged ingestion, then compare every normalized field with the database. Preview unless `--apply`; import requires `--import`. |
+| [configure_priority_country_updates.py](configure_priority_country_updates.py) | Configure persistent update jobs; `--countries` limits changes and operator pauses are preserved. |
+| [rephase_nl_refreshes.py](rephase_nl_refreshes.py) | Stagger the existing NL 30-minute jobs and attest a real annual parent refresh against BQ source facts. Preview by default; preserves job settings and public gates. |
+| [commission_remaining_surveillance.py](commission_remaining_surveillance.py) | Verify actual scheduler tasks and all three completed stages. `--arm` advances selected enabled schedules; `--extras` selects the three supplementary sources. |
+| [verify_remaining_refresh_data.py](verify_remaining_refresh_data.py) | Replay artifacts from completed scheduler tasks and independently compare refreshed source facts with the database. |
+| [verify_priority_country_updates.py](verify_priority_country_updates.py) | Read-only authenticated live API verification of channels, source policies, jobs and committed observations. |
+
 ## Historical imports and population
 
 | Script | Purpose |
@@ -103,7 +119,12 @@ Normal application startup never requires a full data rebuild.
 | [import_iceland_history.py](import_iceland_history.py) | Download, parse, audit, and import Iceland's historical Excel releases. |
 | [import_jp_weekly_history.py](import_jp_weekly_history.py) | Import Japan weekly historical data into disease_records. |
 | [import_kr_history.py](import_kr_history.py) | Fetch and import Korea KDCA monthly historical data. |
+| [import_my_dengue.py](import_my_dengue.py) | Capture or replay Malaysia iDengue daily national and source-region observations through staged ingestion. |
+| [import_my_who_sources.py](import_my_who_sources.py) | Import Malaysia WHO FluNet weekly and GHO annual published history with raw artifacts and source-specific identities. |
+| [import_nl_weekly.py](import_nl_weekly.py) | Capture or replay RIVM virological and respiratory resources, retaining source week/season identities. |
 | [import_subdivision_population.py](import_subdivision_population.py) | Import official Chinese province and Australian state annual population. |
+| [import_thailand_history.py](import_thailand_history.py) | Replay downloaded Report 506 source bytes through durable staged historical ingestion; [source contract](../docs/data-sources/TH_DDS_INTEGRATION.md). |
+| [import_th_dds_weekly.py](import_th_dds_weekly.py) | Replay a validated DDS weekly raw manifest through staged ingestion; [source contract](../docs/data-sources/TH_DDS_WEEKLY.md). |
 | [import_tw_history.py](import_tw_history.py) | Fetch and import Taiwan, China CDC NIDSS monthly history. |
 | [import_us_strict_history.py](import_us_strict_history.py) | Import strict US historical weekly rows into disease_records without clearing recent US data. |
 | [import_wpp_population.py](import_wpp_population.py) | Import WPP population CSV into population_records. |
@@ -137,6 +158,7 @@ Normal application startup never requires a full data rebuild.
 | [check_research_radar_health.py](check_research_radar_health.py) | Emit a privacy-safe, read-only Research Radar health report as JSON. |
 | [check_task_runtime.py](check_task_runtime.py) | Read-only readiness check for the API, scheduler, worker, and task queue. |
 | [check_theme_publication_readiness.py](check_theme_publication_readiness.py) | Read-only readiness check for the v1 independent theme publication. |
+| [evaluate_surveillance_signals.py](evaluate_surveillance_signals.py) | Offline monthly source-series diagnostics; [pilot contract](../docs/research/SURVEILLANCE_SIGNAL_PILOT.md). |
 | [cn_data_quality_check.py](cn_data_quality_check.py) | 全面数据库数据检查 |
 | [inspect_standard_countries.py](inspect_standard_countries.py) | Print and validate countries defined in the standard country library. |
 | [release_readiness.py](release_readiness.py) | Read-only release readiness report for a reproducible deployment. |
@@ -213,6 +235,7 @@ Normal application startup never requires a full data rebuild.
 | --- | --- |
 | [backfill_task_country_ids.py](maintenance/backfill_task_country_ids.py) | Backfill tasks.country_id from input_data.country/country_code for legacy tasks. |
 | [migrate_add_revision_count.py](maintenance/migrate_add_revision_count.py) | Migration script: Add revision_count column to report_section_runs table. |
+| [migrate_cr_initial_identities.py](maintenance/migrate_cr_initial_identities.py) | Preview or reconcile only the proven 64 duplicate identities from the first CR import, with immutable source checks and a durable before-image backup. |
 | [migrate_chfl_geography.py](maintenance/migrate_chfl_geography.py) | Correct CHFL IDD observation identities without changing reported values. |
 | [migrate_country_scopes.py](maintenance/migrate_country_scopes.py) | Migrate country/scope structure to canonical countries + country_scopes. |
 | [migrate_knowledge_automation.py](maintenance/migrate_knowledge_automation.py) | Reclassify legacy knowledge review rows into the automated evidence workflow. |

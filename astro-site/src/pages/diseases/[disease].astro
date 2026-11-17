@@ -4,6 +4,8 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
 import SurveillanceDiseaseSummary from '../../components/public/SurveillanceDiseaseSummary';
 import PageAnchorNav from '../../components/PageAnchorNav.astro';
 import DiseaseResearchPanel from '../../components/research/DiseaseResearchPanel.astro';
+import PathogenResourcesPanel from '../../components/research/PathogenResourcesPanel.astro';
+import { pathogenResourceProfile } from '../../lib/pathogen-resources';
 import InternationalNoticePanel from '../../components/InternationalNoticePanel.astro';
 import CountrySeasonalityPicker from '../../components/charts/CountrySeasonalityPicker';
 import DiseaseCountryCurve from '../../components/charts/DiseaseCountryCurve';
@@ -55,6 +57,7 @@ const diseaseData: any = diseaseIndex.find(entry => String(entry.disease_id).toL
 const diseaseSummaryUrl = `/site-data/diseases/${diseaseId.toLowerCase()}-summary.json`;
 const knowledgeData: any = loadKnowledge(diseaseId);
 const diseaseDownload: any = null;
+const hasPathogenResources = pathogenResourceProfile(diseaseId) !== null;
 
 const categoryZh: Record<string, string> = {
   Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性',
@@ -478,6 +481,7 @@ const diseaseSeo = {
           { href: '#coverage', label: 'Coverage', labelZh: '覆盖范围', labelFr: 'Couverture' },
           { href: '#seasonality', label: 'Seasonality', labelZh: '季节性', labelFr: 'Saisonnalité' },
           { href: '#research', label: 'Research', labelZh: '研究证据', labelFr: 'Recherche' },
+          ...(hasPathogenResources ? [{ href: '#pathogen-resources', label: 'Pathogen resources', labelZh: '病原体资源', labelFr: 'Ressources sur le pathogène' }] : []),
           { href: '#international', label: 'International notices', labelZh: '国际通报', labelFr: 'Avis internationaux' },
           { href: '#downloads', label: 'Download & methods', labelZh: '下载与方法', labelFr: 'Téléchargement et méthodes' },
         ]} />
@@ -515,6 +519,8 @@ const diseaseSeo = {
         </section>
 
         <div id="research" class="scroll-mt-24"><DiseaseResearchPanel diseaseId={diseaseId} locale={locale} /></div>
+
+        <PathogenResourcesPanel diseaseId={diseaseId} locale={locale} />
 
         <div id="international" class="scroll-mt-24">
           <InternationalNoticePanel dataUrl={`/situation/by-disease/${diseaseId.toUpperCase()}.json`} locale={locale} contextCodes={snapshotContextCodes} mapHref={`${prefix}/situation/?disease=${encodeURIComponent(diseaseId)}`} />

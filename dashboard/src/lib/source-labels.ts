@@ -67,6 +67,120 @@ export function getConfiguredSourceOptions(
   }));
 }
 
+const REMAINING_SOURCE_LABELS: Record<string, { en: string; zh: string; scope: string }> = {
+  "ET": {
+    "en": "Ethiopia WHO GHO Annual Reported Infections",
+    "zh": "埃塞俄比亚 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "KE": {
+    "en": "Kenya WHO GHO Annual Reported Infections",
+    "zh": "肯尼亚 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "UG": {
+    "en": "Uganda WHO GHO Annual Reported Infections",
+    "zh": "乌干达 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "GH": {
+    "en": "Ghana WHO GHO Annual Reported Infections",
+    "zh": "加纳 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "TZ": {
+    "en": "Tanzania WHO GHO Annual Reported Infections",
+    "zh": "坦桑尼亚 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "PH": {
+    "en": "Philippines WHO GHO Annual Reported Infections",
+    "zh": "菲律宾 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "VN": {
+    "en": "Viet Nam WHO GHO Annual Reported Infections",
+    "zh": "越南 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "LA": {
+    "en": "Lao PDR WHO GHO Annual Reported Infections",
+    "zh": "老挝 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "MM": {
+    "en": "Myanmar WHO GHO Annual Reported Infections",
+    "zh": "缅甸 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "BN": {
+    "en": "Brunei Darussalam WHO GHO Annual Reported Infections",
+    "zh": "文莱 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "TL": {
+    "en": "Timor-Leste WHO GHO Annual Reported Infections",
+    "zh": "东帝汶 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "PY": {
+    "en": "Paraguay WHO GHO Annual Reported Infections",
+    "zh": "巴拉圭 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "EC": {
+    "en": "Ecuador WHO GHO Annual Reported Infections",
+    "zh": "厄瓜多尔 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "CR": {
+    "en": "Costa Rica WHO GHO Annual Reported Infections",
+    "zh": "哥斯达黎加 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "PA": {
+    "en": "Panama WHO GHO Annual Reported Infections",
+    "zh": "巴拿马 WHO GHO 传染病年度报告指标",
+    "scope": "who_gho_annual"
+  },
+  "GP": {
+    "en": "Guadeloupe SPF ODISSE Annual Notifications",
+    "zh": "瓜德罗普 SPF ODISSÉ 年度疾病报告",
+    "scope": "spf_odisse_annual"
+  },
+  "MQ": {
+    "en": "Martinique SPF ODISSE Annual Notifications",
+    "zh": "马提尼克 SPF ODISSÉ 年度疾病报告",
+    "scope": "spf_odisse_annual"
+  },
+  "GF": {
+    "en": "French Guiana SPF ODISSE Annual Notifications",
+    "zh": "法属圭亚那 SPF ODISSÉ 年度疾病报告",
+    "scope": "spf_odisse_annual"
+  }
+};
+
+const ADDITIONAL_SOURCE_LABELS: Record<string, Record<string, {en: string; zh: string}>> = {
+  "CR": {
+    "cr_moh_notifications": {
+      "en": "Costa Rica Ministry of Health Notification Reports",
+      "zh": "哥斯达黎加卫生部疾病报告"
+    }
+  },
+  "LA": {
+    "who_wpro_dengue": {
+      "en": "Lao PDR WHO WPRO Dengue Updates",
+      "zh": "老挝 WHO 西太区登革热监测"
+    }
+  },
+  "VN": {
+    "who_wpro_dengue": {
+      "en": "Viet Nam WHO WPRO Dengue Updates",
+      "zh": "越南 WHO 西太区登革热监测"
+    }
+  }
+};
+
 export function getSourceDisplayLabel(
   source?: string | null,
   lang: DashboardLang = "en",
@@ -74,6 +188,79 @@ export function getSourceDisplayLabel(
 ): string {
   const s = (source || "all").trim().toLowerCase();
   const cc = (countryCode || "").trim().toUpperCase();
+  const extra = ADDITIONAL_SOURCE_LABELS[cc]?.[s];
+  if (extra) return extra[lang === "zh" ? "zh" : "en"];
+  const remaining = REMAINING_SOURCE_LABELS[cc];
+  if (remaining && (s === remaining.scope || s === "all")) return remaining[lang === "zh" ? "zh" : "en"];
+  if (s === "cl_eno_historical" || (s === "all" && cc === "CL")) {
+    return lang === "zh" ? "智利 MINSAL 法定报告疾病历史数据" : "Chile MINSAL ENO Historical Notifications";
+  }
+  if (s === "co_ins_sivigila_historical") {
+    return lang === "zh" ? "哥伦比亚 INS SIVIGILA 历史监测数据" : "Colombia INS SIVIGILA Historical Public Health Surveillance";
+  }
+  if (s === "co_ins_sivigila_current") {
+    return lang === "zh" ? "哥伦比亚 INS SIVIGILA 后续数据集（2023 年起）" : "Colombia INS SIVIGILA Successor Dataset (2023 onward)";
+  }
+  if (s === "co_ins_bes_weekly") {
+    return lang === "zh" ? "哥伦比亚 INS BES 流行病学周报" : "Colombia INS BES Epidemiological Bulletins";
+  }
+  if (s === "mw_phim_idsr_weekly" || (s === "all" && cc === "MW")) {
+    return lang === "zh" ? "马拉维 PHIM IDSR 疾病监测周报" : "Malawi PHIM IDSR Weekly Bulletin";
+  }
+  if (s === "za_nicd_nmc" || (s === "all" && cc === "ZA")) {
+    return lang === "zh" ? "南非 NICD 法定传染病月报" : "South Africa NICD NMC";
+  }
+  if (s === "id_kemkes_profile" || (s === "all" && cc === "ID")) {
+    return lang === "zh" ? "印度尼西亚卫生部年度卫生概况" : "Indonesia Ministry of Health Annual Health Profile";
+  }
+  if (s === "mx_dge_annual" || (s === "all" && cc === "MX")) {
+    return lang === "zh" ? "墨西哥 DGE 年度发病统计" : "Mexico DGE Annual Morbidity";
+  }
+  if (s === "ncdc_surveillance" || (s === "all" && cc === "NG")) {
+    return lang === "zh" ? "尼日利亚 NCDC 疾病监测" : "Nigeria NCDC Surveillance";
+  }
+  if (s === "kh_camewarn_weekly" || (s === "all" && cc === "KH")) {
+    return lang === "zh" ? "柬埔寨 CamEWARN 疾病监测周报" : "Cambodia CDC CamEWARN Weekly Surveillance";
+  }
+  if (s === "ar_ben_weekly" || (s === "all" && cc === "AR")) {
+    return lang === "zh" ? "阿根廷国家流行病学周报" : "Argentina National Epidemiological Bulletin (BEN)";
+  }
+  if (s === "pe_cdc_weekly" || (s === "all" && cc === "PE")) {
+    return lang === "zh" ? "秘鲁 CDC 流行病学周报" : "Peru CDC Epidemiological Bulletin";
+  }
+  if (s === "th_dds_tableau") {
+    return lang === "zh" ? "泰国 DDS Tableau 多病种全国周监测" : "Thailand DDS Tableau Weekly National Surveillance";
+  }
+  if (s === "th_id_th_history") {
+    return lang === "zh" ? "泰国 ID_TH 历史周数据" : "Thailand ID_TH Weekly Archive";
+  }
+  if (s === "th_dds_weekly" || (s === "all" && cc === "TH")) {
+    return lang === "zh" ? "泰国 DDS 多病种全国周报" : "Thailand DDS Weekly National Situation";
+  }
+  if (s === "th_doe506_monthly" || s === "doe506") {
+    return lang === "zh" ? "泰国 DOE 506 多病种月度历史报表" : "Thailand DOE Report 506 Monthly History";
+  }
+  if (s === "my_idengue_daily") {
+    return lang === "zh" ? "马来西亚 iDengue 登革热每日监测" : "Malaysia iDengue Daily Dengue Surveillance";
+  }
+  if (s === "who_flunet_weekly") {
+    return lang === "zh" ? "马来西亚 WHO FluNet 呼吸道实验室周监测" : "Malaysia WHO FluNet Weekly Respiratory Laboratory Surveillance";
+  }
+  if (s === "who_gho_annual") {
+    return lang === "zh" ? "马来西亚 WHO GHO 传染病年度报告指标" : "Malaysia WHO GHO Annual Reported Infections";
+  }
+  if (s === "rivm_virological_weekly") {
+    return lang === "zh" ? "荷兰 RIVM 多病原实验室周监测" : "Netherlands RIVM Virological Weekly Surveillance";
+  }
+  if (s === "rivm_respiratory_weekly") {
+    return lang === "zh" ? "荷兰 RIVM 呼吸道周监测" : "Netherlands RIVM Respiratory Weekly Surveillance";
+  }
+  if (s === "moh_std_annual" || s === "my_moh_std" || (s === "all" && cc === "MY")) {
+    return lang === "zh" ? "马来西亚卫生部性传播疾病年度报表" : "Malaysia MOH Annual STD Notifications";
+  }
+  if (s === "rivm_notifiable_annual" || s === "rivm_notifiable" || (s === "all" && cc === "NL")) {
+    return lang === "zh" ? "荷兰 RIVM 法定传染病年度报表" : "Netherlands RIVM Annual Notifiable Disease Notifications";
+  }
   if (s === "nndss_api") return "US CDC NNDSS";
   if (
     s === "phac_cndss_annual" ||
@@ -231,6 +418,32 @@ export function getSourceOptionsForCountry(
   lang: DashboardLang = "en",
 ) {
   const code = countryCode.trim().toUpperCase();
+  const remaining = REMAINING_SOURCE_LABELS[code];
+  if (remaining) return [remaining.scope, ...Object.keys(ADDITIONAL_SOURCE_LABELS[code] || {})].map(value => ({ value, label: getSourceDisplayLabel(value, lang, code) }));
+  if (code === "CL") return [{ value: "cl_eno_historical", label: getSourceDisplayLabel("cl_eno_historical", lang, code) }];
+  if (code === "CO") return ["co_ins_sivigila_historical", "co_ins_sivigila_current", "co_ins_bes_weekly"].map(value => ({ value, label: getSourceDisplayLabel(value, lang, code) }));
+  if (code === "MW") return [{ value: "mw_phim_idsr_weekly", label: getSourceDisplayLabel("mw_phim_idsr_weekly", lang, code) }];
+  if (code === "ZA") return [{ value: "za_nicd_nmc", label: getSourceDisplayLabel("za_nicd_nmc", lang, code) }];
+  if (code === "ID") return [{ value: "id_kemkes_profile", label: getSourceDisplayLabel("id_kemkes_profile", lang, code) }];
+  if (code === "MX") return [{ value: "mx_dge_annual", label: getSourceDisplayLabel("mx_dge_annual", lang, code) }];
+  if (code === "NG") return [{ value: "ncdc_surveillance", label: getSourceDisplayLabel("ncdc_surveillance", lang, code) }];
+  if (code === "KH") return [{ value: "kh_camewarn_weekly", label: getSourceDisplayLabel("kh_camewarn_weekly", lang, code) }];
+  if (code === "AR") return [{ value: "ar_ben_weekly", label: getSourceDisplayLabel("ar_ben_weekly", lang, code) }];
+  if (code === "PE") return [{ value: "pe_cdc_weekly", label: getSourceDisplayLabel("pe_cdc_weekly", lang, code) }];
+  if (code === "TH") {
+    return ["th_dds_weekly", "th_dds_tableau", "th_doe506_monthly", "th_id_th_history"].map(value => ({ value, label: getSourceDisplayLabel(value, lang, code) }));
+  }
+  if (code === "MY") {
+    return ["my_idengue_daily", "who_flunet_weekly", "who_gho_annual", "moh_std_annual"].map(value => ({ value, label: getSourceDisplayLabel(value, lang, code) }));
+  }
+  if (code === "NL") {
+    return [
+      { value: "rivm_virological_weekly", label: getSourceDisplayLabel("rivm_virological_weekly", lang, code) },
+      { value: "rivm_respiratory_weekly", label: getSourceDisplayLabel("rivm_respiratory_weekly", lang, code) },
+      { value: "rivm_notifiable_annual", label: getSourceDisplayLabel("rivm_notifiable_annual", lang, code) },
+      { value: "ecdc_atlas_annual", label: getEcdcLabel(code, lang) },
+    ];
+  }
   if (code === "US") {
     return [
       { value: "all", label: lang === "zh" ? "全部来源" : "All Sources" },

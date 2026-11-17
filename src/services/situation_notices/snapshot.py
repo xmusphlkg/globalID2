@@ -72,6 +72,8 @@ async def latest_situation_snapshot(*, window_days: int = SNAPSHOT_WINDOW_DAYS) 
                 "source": latest.source_id if latest else None,
                 "risk": {},
                 "status": outbreak.status,
+                "host_type": (latest.host_type or "unknown") if latest else "unknown",
+                "host_species": latest.host_species if latest else None,
             }
         )
     return {

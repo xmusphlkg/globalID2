@@ -44,7 +44,7 @@ def test_offline_us_contract_preserves_legacy_and_series(tmp_path, monkeypatch, 
     monkeypatch.setattr(USNHSSHIVCrawler, "fetch_national_annual_rows", lambda self: (self.parse_current_workbook((FIXTURES / "nhss_2024.xlsx").read_bytes(), source_url=saved[-1].source_url), saved[-1].source_url))
     expected = USWeeklyUpdater(country_code=country).fetch_latest("all")
     monkeypatch.setattr(USNNDSSCrawler, "get", lambda *a, **kw: pytest.fail("offline parser requested a source"))
-    actual = organize(saved, updater=USWeeklyUpdater(country_code=country), source="all")
+    actual = organize(saved, updater=USWeeklyUpdater(country_code=country), source="all", archive_years=(2020,))
     assert actual.rows == expected.rows
     assert actual.series_rows == expected.series_rows
     from src.data.storage.series_observation_store import SeriesObservationStore

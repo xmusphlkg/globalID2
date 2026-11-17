@@ -12,6 +12,14 @@ pipelines from source-onboarding candidates. A country must not be presented as
 active until its crawler, normalization, disease mapping, quality checks, and
 database import have produced a verified site-data snapshot.
 
+The [reuse and publication guide](SOURCE_REUSE_PUBLICATION_REQUIREMENTS.md)
+records the 2026-11-16 operator decision to open nine jurisdictions while
+retaining their unverified source reuse status, plus the source-specific BEN
+cumulative blocker and Colombia geography/calendar blockers. Argentina's
+[Ministry HIV annual notifications](AR_HIV_ANNUAL_INTEGRATION.md) are separately
+ingested and locally accepted for 2014–2023; BEN remains excluded. It includes the
+source disclosures, ongoing evidence checklist and statistical review conditions.
+
 ## Status definitions
 
 - **Supported**: a working pipeline has imported records into GIDS and the
@@ -28,7 +36,7 @@ database import have produced a verified site-data snapshot.
 | Code | Country or region | Primary official source | Cadence | Current ingestion pattern |
 | --- | --- | --- | --- | --- |
 | AU | Australia | [Australian NNDSS](https://www.health.gov.au/topics/national-notifiable-diseases-surveillance-system-nndss) | Monthly | Microsoft Power BI data aggregated to national totals. |
-| BR | Brazil | [DATASUS / SINAN](http://siab.datasus.gov.br/DATASUS/index.php?acao=41&area=0901&item=1) | Monthly | Public DBC notification files from final and preliminary FTP collections. |
+| BR | Brazil | [DATASUS / SINAN](http://siab.datasus.gov.br/DATASUS/index.php?acao=41&area=0901&item=1) | Monthly | Public DBC notification files from final and preliminary FTP collections; [incremental refresh and cache policy](BR_SINAN_INCREMENTAL.md). |
 | CA | Canada | [Canadian Notifiable Disease Surveillance System](https://diseases.canada.ca/notifiable/extract-dataset) | Annual | National reported counts for 1924–2023 from the current PHAC CNDSS extract; the national aggregate is not an all-jurisdiction completeness claim because disease/year inclusion varies, including unavailable Manitoba data for 44 disease contracts in 2023. Null cells remain unknown and explicit zeroes are retained under the Open Government Licence – Canada. |
 | CH | Switzerland | [FOPH/BAG IDD](https://www.idd.bag.admin.ch/en/portal-data) | Weekly | Mandatory-reporting REST data normalized to national case rows. |
 | CN | China | [China CDC Weekly](https://weekly.chinacdc.cn) and [National Disease Control and Prevention Administration](https://www.ndcpa.gov.cn) | Monthly, with supplementary sources | National notifiable-disease reports plus supplementary official and literature discovery sources. |
@@ -46,7 +54,7 @@ database import have produced a verified site-data snapshot.
 | RO | Romania | [ECDC Surveillance Atlas](https://atlas.ecdc.europa.eu/public/index.aspx/) | Annual | Member-State reported closed-year counts with source availability retained verbatim. |
 | SG | Singapore | [CDA Weekly Infectious Diseases Bulletin](https://www.cda.gov.sg/resources/weekly-infectious-diseases-bulletin-2026/) | Weekly | 2012–2022 official CSV history plus 2023+ CDA annual workbooks under operator-authorized public release. |
 | TW | Taiwan, China | [CDC NIDSS](https://nidss.cdc.gov.tw/Home/Index) | Monthly | Open-data CSV files aggregated to national monthly totals. |
-| US | United States | [CDC NNDSS](https://data.cdc.gov/browse?category=NNDSS) and [CDC NHSS](https://www.cdc.gov/hiv-data/nhss/) | Weekly and annual | Weekly NNDSS U.S.-resident national values; the broader published Total is retained as a separate source aggregate. Annual HIV diagnoses come from NHSS. |
+| US | United States | [CDC NNDSS](https://data.cdc.gov/browse?category=NNDSS) and [CDC NHSS](https://www.cdc.gov/hiv-data/nhss/) | Weekly and annual | Weekly NNDSS U.S.-resident national values; the broader published Total is retained as a separate source aggregate. Annual HIV diagnoses come from NHSS. [Half-hour checks and incremental ranges](US_CDC_INCREMENTAL.md). |
 
 ## Supported ECDC regional baselines
 
@@ -106,7 +114,7 @@ notifications are not treated as United Kingdom national case counts.
 
 | Code | Country | Status | Next action |
 | --- | --- | --- | --- |
-| TH | Thailand | Source research | DOE DDS public Tableau exports expose only a current-week KPI or limited priority-disease snapshot; the national export and zero-reporting systems require login, and no explicit public reuse licence was found. Keep unpublished until a stable national API defines revisions, zeroes, missingness, and coverage. |
+| TH | Thailand | Internal source adapters; public release disabled | The [Report 506 historical contract](TH_DDS_INTEGRATION.md), [DDS weekly reports](TH_DDS_WEEKLY.md), and [ID_TH archive](TH_ID_TH_REUSE.md) retain separate source identities, reporting bases and period semantics. The archive import covers 56 disease categories in 2020–2025 with cases/deaths separated; its historical week calendar remains unverified. Missing or inconsistent reports remain audited gaps. |
 
 ## Onboarding requirements
 
@@ -125,6 +133,45 @@ For every scheduled country:
 6. Change the public status from **Scheduled** to **Supported** only after real
    database records and a generated country snapshot are available.
 
+## Official update channels
+
+Nigeria, Cambodia, Argentina, Peru, South Africa, Indonesia, Mexico, Chile,
+Colombia and Malawi have
+saved official directory URLs, discovery endpoints, publication cadence and
+revision policies in [`surveillance_channels.json`](../../configs/surveillance_channels.json).
+The operations panel exposes these links in source rows, manual collection and
+schedule forms. Daily checks retain each publication's weekly, monthly,
+quarterly or annual observation periods. Recent revision replay covers two or
+three calendar years according to the source contract; older history uses an
+explicit replay. Colombia’s 2,465,826-row historical release has passed full-row database
+verification. Its daily job checks metadata and year counts; a changed source
+version requires a new resumable full backfill and verification.
+The separate INS successor release `wns8-p38i` supplies 2023–2024: all 456,557
+rows are imported and independently reconciled, excluding its overlapping
+2022 rows. Its enabled `co_ins_sivigila_current` channel automatically
+imports and verifies the complete release when the version changes. A source
+metadata timestamp in 2026 does not establish observation coverage in 2026.
+Raw capture, numerical extraction, internal holding and public snapshots have
+separate acceptance states.
+
+| Country | Contract | Source scope |
+| --- | --- | --- |
+| NG | [NCDC weekly and situation reports](NG_NCDC_INTEGRATION.md) | `ncdc_surveillance` |
+| KH | [CamEWARN weekly reports](KH_CAMEWARN_INTEGRATION.md) | `kh_camewarn_weekly` |
+| AR | [BEN weekly bulletins](AR_BEN_INTEGRATION.md) | `ar_ben_weekly` |
+| PE | [CDC epidemiological bulletins](PE_CDC_INTEGRATION.md) | `pe_cdc_weekly` |
+| ZA | [NICD NMC monthly and quarterly reports](ZA_NICD_NMC_INTEGRATION.md) | `za_nicd_nmc` |
+| ID | [Ministry of Health annual profiles](ID_KEMKES_PROFILE_INTEGRATION.md) | `id_kemkes_profile` |
+| MX | [DGE annual morbidity and incidence](MX_DGE_ANNUAL_INTEGRATION.md) | `mx_dge_annual` |
+| CL | [MINSAL ENO historical notifications](CL_ENO_HISTORICAL.md) | `cl_eno_historical` |
+| CO | [INS SIVIGILA municipality/week history](CO_SIVIGILA_INTEGRATION.md) | `co_ins_sivigila_historical` |
+| CO | [INS SIVIGILA successor release, 2023 onward](CO_SIVIGILA_INTEGRATION.md) | `co_ins_sivigila_current` |
+| CO | [INS BES capture; awaiting exit and report contract](CO_BES_INTEGRATION.md) | `co_ins_bes_weekly` (disabled) |
+| MW | [PHIM IDSR weekly bulletins](MW_PHIM_IDSR_INTEGRATION.md) | `mw_phim_idsr_weekly` |
+
+See [daily update operations and verification](../acceptance/SEVEN_COUNTRY_DYNAMIC_UPDATES_20261116.md)
+and the [regional onboarding plan](AFRICA_SE_ASIA_LATAM_PLAN.md).
+
 ## Additional national and provincial adapters
 
 These adapters are present in the current repository. A configured adapter is
@@ -139,6 +186,11 @@ National feeds and ECDC baselines retain separate source identities.
 | IE | [HPSC](https://www.hpsc.ie/notifiablediseases/annualidstatistics/) | `hpsc_ndh`, `hpsc_weekly_archive`, `hpsc_annual` | Weekly and annual; see release conditions below |
 | IS | [Directorate of Health](https://island.is/en/smitsjukdomar-tolur) | `is_doh_annual`, `is_doh_sti`, `is_doh_respiratory`, `is_doh_history`, `is_doh_legacy_icd` | Annual, monthly and weekly by source |
 | NO | [FHI MSIS](https://allvis.fhi.no/msis/sykdomshendelser) | `fhi_msis` | Monthly |
+| NL | [RIVM annual notification overview](https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen) | `rivm_notifiable_annual` | Annual; all 56 published source categories, including separately identified outbreak counts and Caribbean Netherlands observations. Independent of ECDC; public release awaits snapshot validation. |
+| MY | [MOH annual STD notifications](https://data.gov.my/data-catalogue/std_state) | `moh_std_annual` | Annual; all five published categories, 2017–2024. This table covers sexually transmitted diseases; the remaining national notifiable-disease reports are a documented coverage gap. Public release awaits snapshot validation. |
+| TH | [DOE Report 506](http://doe1.moph.go.th/surdata/) | `th_doe506_monthly` | Monthly historical reports; all 72 reviewed directory categories are attempted, with partial coverage exposed in the audit. Public release remains disabled. |
+| TH | [DDS national weekly reports](TH_DDS_WEEKLY.md) | `th_dds_weekly` | Closed single-week official reports with verified annual calendar boundaries; cumulative options are excluded. Public release remains disabled. |
+| TH | [ID_TH user-curated archive](TH_ID_TH_REUSE.md) | `th_id_th_history` | 2020–2025 source weeks, all 56 categories and separate cases/deaths. Year-anchor timestamps are not actual weekly dates; public release remains disabled. |
 | SE | [Folkhälsomyndigheten](https://www.folkhalsomyndigheten.se/statistik-och-data/hitta-statistik-och-data/smittsamma-sjukdomar-statistik/) | `fohm_sminet` | Monthly |
 | CA-ON | [Public Health Ontario](https://www.publichealthontario.ca/en/data-and-analysis/infectious-disease/reportable-disease-trends-annually) | `pho_idto_monthly` | Monthly; Ontario only |
 
@@ -192,6 +244,24 @@ normal publication-retirement workflow.
 
 ## Related source guides
 
+- [非洲、东南亚与拉丁美洲接入计划](AFRICA_SE_ASIA_LATAM_PLAN.md)
+
+- [Thailand Report 506 historical integration](TH_DDS_INTEGRATION.md)
+- [Thailand DDS weekly report contract](TH_DDS_WEEKLY.md)
+- [Thailand DDS Tableau national weekly contract](TH_DDS_TABLEAU.md)
+- [Thailand ID_TH archive provenance and import](TH_ID_TH_REUSE.md)
+- [National notification automation](NATIONAL_NOTIFICATION_AUTOMATION.md)
+- [Malaysia MOH annual STD notifications](MY_MOH_STD_ANNUAL.md)
+- [Malaysia daily dengue](MY_IDENGUE_DAILY.md)
+- [Malaysia additional sources and WHO history](MY_ADDITIONAL_SOURCES.md)
+- [Malaysia and Netherlands current surveillance integration](MY_NL_CURRENT_SURVEILLANCE.md)
+- [Netherlands RIVM annual notifications](NL_RIVM_NOTIFIABLE_ANNUAL.md)
+- [Netherlands RIVM weekly surveillance](NL_WEEKLY_SURVEILLANCE.md)
+- [Remaining countries WHO annual baselines](WHO_REMAINING_COUNTRIES.md)
+- [SPF overseas annual notifications](SPF_OVERSEAS_INTEGRATION.md)
+- [Costa Rica Ministry notification reports](CR_MOH_NOTIFICATIONS.md)
+- [WHO WPRO dengue updates](WHO_WPRO_DENGUE.md)
+- [Remaining national source access audit](REMAINING_NATIONAL_SOURCE_AUDIT.md)
 - [Add a country](ADD_NEW_COUNTRY_GUIDE.md)
 - [China provinces](CN_PROVINCE_DATA.md)
 - [Canada high-frequency sources](CA_HIGH_FREQUENCY_SURVEILLANCE_PLAN.md)

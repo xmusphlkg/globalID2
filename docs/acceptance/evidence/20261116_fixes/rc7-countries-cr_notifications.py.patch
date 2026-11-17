@@ -1,0 +1,10 @@
+--- a/src/services/ingestion/countries/cr_notifications.py
++++ b/src/services/ingestion/countries/cr_notifications.py
+@@ -5,6 +5,7 @@
+ from datetime import datetime, timezone
+ import json
+ from pathlib import Path
++from zoneinfo import ZoneInfo
+ 
+ import requests
+ 

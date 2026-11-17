@@ -2,7 +2,7 @@ import GIDSLoader from '../GIDSLoader';
 import { useState } from 'react';
 import { situationData } from '../../lib/situation-data';
 import { weeklyDiff } from './text';
-import { alertSummary, countsLine, countryName, diseaseName, formatDay, sourceLabel, STATUS_LABELS } from './noticeLabels';
+import { alertSummary, countsLine, countryName, diseaseName, formatDay, hostLabel, sourceLabel, STATUS_LABELS } from './noticeLabels';
 import { useSituationData } from './useSituationData';
 import { pick as translate, countryLabel } from '../../lib/surveillance-presentation';
 import type { Locale, OutbreakFile, OutbreakSummary, WeeklyChange } from '../../utils/situationTypes';
@@ -29,6 +29,7 @@ function ArchiveOutbreak({ outbreak, period, locale }: { outbreak: OutbreakSumma
     {loading && <p role="status">{<GIDSLoader language={locale} compact />}</p>}
     <ul className="mt-3 space-y-3">{(file?.alerts ?? []).filter(alert => weekOfDay(alert.published_date) === period).map(alert => <li className="border-t pt-3" key={alert.alert_id}>
       <strong>{alert.admin_area ? `${alert.admin_area}, ` : ''}{countryName(alert, locale)}</strong> · {formatDay(alert.published_date, locale)} · {STATUS_LABELS[alert.status]?.[locale] ?? alert.status}
+      <p>{hostLabel(alert, locale)}</p>
       {countsLine(alert, locale) && <p>{countsLine(alert, locale)}</p>}
       {alertSummary(alert, locale) && <p className="text-sm">{alertSummary(alert, locale)}</p>}
       {alert.quote && <blockquote className="text-sm italic">{alert.quote}</blockquote>}

@@ -1,28 +1,16 @@
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 
 from scripts.automation.prepare_site_build_fixture import prepare_fixture
+from scripts.automation.isolated_site_build_fixture import copy_clean_site, fixture_build_environment
 
 
 ROOT = Path(__file__).resolve().parents[2]
 ASTRO = ROOT / "astro-site"
-
-
-def _clean_checkout_ignore(directory: str, names: list[str]) -> set[str]:
-    relative = Path(directory).resolve().relative_to(ASTRO.resolve())
-    ignored: set[str] = set()
-    if relative == Path("."):
-        ignored.update({"node_modules", "dist", ".astro"})
-    elif relative == Path("src"):
-        ignored.add("data")
-    elif relative == Path("public"):
-        ignored.add("site-data")
-    return ignored.intersection(names)
 
 
 @pytest.mark.skipif(
@@ -32,14 +20,7 @@ def _clean_checkout_ignore(directory: str, names: list[str]) -> set[str]:
 def test_missing_only_ci_fixture_supports_clean_build_and_performance_gate(
     tmp_path: Path,
 ) -> None:
-    site = tmp_path / "astro-site"
-    shutil.copytree(ASTRO, site, ignore=_clean_checkout_ignore)
-    shutil.copytree(ROOT / "shared", tmp_path / "shared")
-    source_data = site / "src" / "data"
-    source_data.mkdir(parents=True)
-    for filename in ("acknowledgements.ts", "changelog.ts"):
-        shutil.copy2(ASTRO / "src" / "data" / filename, source_data / filename)
-    (site / "node_modules").symlink_to(ASTRO / "node_modules", target_is_directory=True)
+    site = copy_clean_site(ASTRO, tmp_path / "astro-site")
 
     prepared = prepare_fixture(site, environment={"CI": "1"})
     assert prepared["created"]
@@ -49,8 +30,10 @@ def test_missing_only_ci_fixture_supports_clean_build_and_performance_gate(
         check=False,
         capture_output=True,
         text=True,
+        env=fixture_build_environment(),
         timeout=180,
     )
+    (tmp_path / "astro-build.log").write_text(completed.stdout + completed.stderr, encoding="utf-8")
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert "[performance-budget] PASS" in completed.stdout

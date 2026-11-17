@@ -176,7 +176,9 @@ async def save_series_rows(
             country_code=series_country_code,
             source_id=source_id,
             rows=source_series_rows,
-            notify=True,
+            notify=bool(getattr(updater, "mapping_notifications_enabled", True)),
+            **({"notifications_enabled": bool(updater.mapping_notifications_enabled)}
+               if hasattr(updater, "mapping_notifications_enabled") else {}),
         )
         logger.info(
             "Disease Mapping Registry discovery | country={} categories={} new={}",
@@ -261,6 +263,12 @@ async def save_series_rows(
             source_id=source_id,
             geography_key=geography_key,
             quality_policy=quality_policy,
+            history_relevant_periods_only=bool(
+                getattr(updater, "series_history_relevant_periods_only", False)
+            ),
+            reuse_upsert_rows_for_revisions=bool(
+                getattr(updater, "series_reuse_upsert_rows_for_revisions", False)
+            ),
             **({"authoritative_window_start": authoritative_window_start}
                if authoritative_window_start is not None else {}),
             **({"jp_holding_profiles": _jp_holding_profiles} if _jp_holding_profiles is not None else {}),

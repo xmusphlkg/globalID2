@@ -1,0 +1,10 @@
+{
+  "captured_at": "2026-11-16T04:22:27.376137+00:00",
+  "path": "tests/unit/test_remaining_surveillance_onboarding.py",
+  "start_sha256": "d7297598e4926f28d387b95e86626a48a914c6b48efbf1be15b788bf7b377fb3",
+  "current_sha256": "a6e8ee181ea1a7003f88bf9f02d46164b0b84d59d3adff390006ec62e34ca64c",
+  "without_appended_test_sha256": "d7297598e4926f28d387b95e86626a48a914c6b48efbf1be15b788bf7b377fb3",
+  "pure_append_verified": true,
+  "added_test": "test_refresh_acceptance_preserves_old_history_but_rejects_changed_current_facts",
+  "proof": "Remove appended function and restore original single trailing newline; SHA-256 equals pre-run file."
+}

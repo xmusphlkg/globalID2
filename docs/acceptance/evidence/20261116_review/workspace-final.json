@@ -1,0 +1,2765 @@
+{
+  "captured_at": "2026-11-16T11:29:25.307364+08:00",
+  "baseline_commit": "b86708df70b26ba11c90a8483e90905369acd0f2",
+  "head_unchanged": true,
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 2342,
+      "sha256": "ba7c1b343cf9767d898cfa433aa410fccc419c0932479798c5ad98ed7aeac6ee"
+    },
+    {
+      "path": "astro-site/package.json",
+      "bytes": 5259,
+      "sha256": "2ca31ad39e302dc4c5ffe2dba5602a4cb2865dc98f698aa68f854750c0289100"
+    },
+    {
+      "path": "astro-site/src/components/charts/ChartResultActions.tsx",
+      "bytes": 9730,
+      "sha256": "c655e820d036c38e82911879d132d18c60a26ebb3b0a69094aeee13143d92d4a"
+    },
+    {
+      "path": "astro-site/src/components/charts/CountriesMapView.tsx",
+      "bytes": 23610,
+      "sha256": "d430ac5ab02eab1dc312cf2f4209f6bd0e82bd7af1f4fa32239085ed60af2e20"
+    },
+    {
+      "path": "astro-site/src/components/charts/SubdivisionIncidenceMap.tsx",
+      "bytes": 41701,
+      "sha256": "ab658a221cb402655e568381a9cb1be2721ab24704ff1b44b9c484de7291add6"
+    },
+    {
+      "path": "astro-site/src/components/charts/subdivision-map/map.css",
+      "bytes": 8512,
+      "sha256": "53b88741e88774c46ba82fa8c217d71b5b1e2a60d9d8e5512d268fc0cc1c4c07"
+    },
+    {
+      "path": "astro-site/src/components/charts/subdivision-map/model.test.ts",
+      "bytes": 12771,
+      "sha256": "a03170414d03befa4cfb7a9406b16da055bf755c8211f2497c4e4df56070674e"
+    },
+    {
+      "path": "astro-site/src/components/charts/subdivision-map/model.ts",
+      "bytes": 19852,
+      "sha256": "246d1319f1b84e11897083caa6b94de60c5d618c134fa544bc2bae11d8074942"
+    },
+    {
+      "path": "astro-site/src/components/public/SurveillanceDirectory.tsx",
+      "bytes": 10565,
+      "sha256": "dd4ab1ee61ea1f4528ec4913b618f1255f8f35d72de3d86eeafd20abdec53aec"
+    },
+    {
+      "path": "astro-site/src/components/research/PathogenResourcesPanel.astro",
+      "bytes": 2532,
+      "sha256": "79a29eb2d81933db90c2d4733355939bbc714009dee7874d009731c6d189b5d4"
+    },
+    {
+      "path": "astro-site/src/components/situation/ActiveSituationFilters.tsx",
+      "bytes": 2523,
+      "sha256": "b79c6da12518e39b282078abac3ed4b0b32f1ed37304741bf799d9dc387ec768"
+    },
+    {
+      "path": "astro-site/src/components/situation/CountryDossier.tsx",
+      "bytes": 7123,
+      "sha256": "95677dde2835ff829628611a4a4f9ea061e6e78f68fef16b84022e6de87f465f"
+    },
+    {
+      "path": "astro-site/src/components/situation/NoticeSnapshots.tsx",
+      "bytes": 2344,
+      "sha256": "9dc7710f3539cd5d2e382adf983ab8f60eab17e2937b23de3bd212eeefbd393c"
+    },
+    {
+      "path": "astro-site/src/components/situation/RuntimeNoticePanel.tsx",
+      "bytes": 3550,
+      "sha256": "18c9135e8d504c278bca98a69b122529b8e75507fa41e37f7b3154be53d67c9f"
+    },
+    {
+      "path": "astro-site/src/components/situation/SituationArchive.tsx",
+      "bytes": 8885,
+      "sha256": "c0459c6989c2d30c16530fd807f7258e91f28712b1facbb16d23e5fb0f2520d8"
+    },
+    {
+      "path": "astro-site/src/components/situation/SituationExplorer.tsx",
+      "bytes": 33769,
+      "sha256": "734e0f8bd3164f2d31017a695aad2fdc63d0ea62f1c29d047ec0d3593e800940"
+    },
+    {
+      "path": "astro-site/src/components/situation/SituationTimeline.tsx",
+      "bytes": 6916,
+      "sha256": "fc2cd355a9aa9da55274b7a002671360c7a2336fd323ceebcf89545bb5a8971e"
+    },
+    {
+      "path": "astro-site/src/components/situation/explorer-state.ts",
+      "bytes": 3837,
+      "sha256": "770a3b6a109d11a3a3528482d3d7891f342da7959b973b87027b55d9ca3f5bac"
+    },
+    {
+      "path": "astro-site/src/components/situation/labels.ts",
+      "bytes": 12178,
+      "sha256": "24e0e86beea90373dd69202dfa08a4c1ed6d35f9033cf643ba6175ad77500427"
+    },
+    {
+      "path": "astro-site/src/components/situation/model.test.ts",
+      "bytes": 24027,
+      "sha256": "6ec3ac5bc8c8a091436ec28dcd8c7e63681340ecf7ba98a4cdf49eda23cd52b1"
+    },
+    {
+      "path": "astro-site/src/components/situation/model.ts",
+      "bytes": 16060,
+      "sha256": "a6374f8d95047e6b561a834f02fc4bea806195120774eb7469dad3723301ca0d"
+    },
+    {
+      "path": "astro-site/src/components/situation/monitoring.test.ts",
+      "bytes": 4680,
+      "sha256": "09b8ccfb935a0e5f3505d92d87881ef2d1bc1df2b2505560953a9a0772238c8a"
+    },
+    {
+      "path": "astro-site/src/components/situation/monitoring.ts",
+      "bytes": 3177,
+      "sha256": "6a3319102fac115888117100722cab833995e3624afa49d7d7961453f13c2f78"
+    },
+    {
+      "path": "astro-site/src/components/situation/noticeLabels.test.ts",
+      "bytes": 1191,
+      "sha256": "faa83e721be7161a4ceb024a29abca6ec3023caed342a5d95b3462f5258ddc9f"
+    },
+    {
+      "path": "astro-site/src/components/situation/noticeLabels.ts",
+      "bytes": 6129,
+      "sha256": "fd6b86e629076041feb238fdecbe067aeea8356af7573dc97cd9a5b5d450cd15"
+    },
+    {
+      "path": "astro-site/src/components/subscription/SituationRss.astro",
+      "bytes": 4074,
+      "sha256": "55767eb5063564b8c4c8971de02b142c16e23201d7b991e2e8d8a32e9f07c85c"
+    },
+    {
+      "path": "astro-site/src/lib/country-classifications.ts",
+      "bytes": 2945,
+      "sha256": "fa41b0b8050f4fdb015937708a4ebaf418da93340e98f43628187994a543d942"
+    },
+    {
+      "path": "astro-site/src/lib/country-coverage.ts",
+      "bytes": 22680,
+      "sha256": "d86943dc2eafcb2153b0827fbfc9b366c4097f9f69de6afeca8cdaab9d9e9161"
+    },
+    {
+      "path": "astro-site/src/lib/data/country-classifications.json",
+      "bytes": 6419,
+      "sha256": "793ea0a961034dab8a39562c03bcf4c3e15229822bfc64387303e20260b652de"
+    },
+    {
+      "path": "astro-site/src/lib/pathogen-resources.test.ts",
+      "bytes": 2406,
+      "sha256": "dc95db84279215607ee4c76d4368aa18cd12893e2edfc859dc99ee257f24f3e1"
+    },
+    {
+      "path": "astro-site/src/lib/pathogen-resources.ts",
+      "bytes": 4355,
+      "sha256": "586673952c6a9543d8701d2830454ef1062f26e0c3ae16b61327cfef6cb1a452"
+    },
+    {
+      "path": "astro-site/src/lib/situation-rss.test.ts",
+      "bytes": 1193,
+      "sha256": "66cb0ec84a16475c459b83a05edf89984e7afb881abe7718ddd69b06cd03cd55"
+    },
+    {
+      "path": "astro-site/src/lib/situation-rss.ts",
+      "bytes": 1358,
+      "sha256": "ea89802d561c2b3f58848e739c66484148143520ed00adec419f3a5215a463a5"
+    },
+    {
+      "path": "astro-site/src/lib/surveillance-coverage.ts",
+      "bytes": 1264,
+      "sha256": "68b2820f340492296d80c0707320886671801618d8e56449896069a1aa8e9cbb"
+    },
+    {
+      "path": "astro-site/src/pages/countries/[country]/diseases/[disease].astro",
+      "bytes": 10695,
+      "sha256": "46ac789a6bf6e061976ab68a354b4a88613a55e82b78719ba19138aa4922b1ba"
+    },
+    {
+      "path": "astro-site/src/pages/countries/[country]/index.astro",
+      "bytes": 18831,
+      "sha256": "4b9cffb6c2817a2b86f78897065b749ca69c57ff989d533e46d3c40c5e4e3eea"
+    },
+    {
+      "path": "astro-site/src/pages/diseases/[disease].astro",
+      "bytes": 34331,
+      "sha256": "06e5dab467794ea0186bd7cb86ac0e0f6979132c38b1bba488f91d73a92cb0ae"
+    },
+    {
+      "path": "astro-site/src/pages/subscribe.astro",
+      "bytes": 4746,
+      "sha256": "315af14254f12b78d13ab2f4f1095ad250580f9e5d166bc4b0d0d9b06b2a141e"
+    },
+    {
+      "path": "astro-site/src/utils/situationTypes.ts",
+      "bytes": 6830,
+      "sha256": "247d7567375b0f31ad3e2e0dacf705fba9267df39064a4467c6840276fcba8be"
+    },
+    {
+      "path": "cloudflare/surveillance-data/src/index.ts",
+      "bytes": 7755,
+      "sha256": "6d6c2bddef7b40b0f453a8b5a201bc61d5c68983d442db883dd004abcdb5b987"
+    },
+    {
+      "path": "cloudflare/surveillance-data/src/situation-feed-route.ts",
+      "bytes": 5481,
+      "sha256": "7b545c5cfcef209b65ba81d2f3e8ee4e48af115ae586474f6370214129bf9008"
+    },
+    {
+      "path": "cloudflare/surveillance-data/src/situation-feed.ts",
+      "bytes": 7458,
+      "sha256": "3262e6ab07bd2f10724ffd44d55300c54f39f3d9962c90118e233fedeacc36e5"
+    },
+    {
+      "path": "cloudflare/surveillance-data/tests/runtime.test.mjs",
+      "bytes": 16357,
+      "sha256": "349eeecde21ec776925a90302edf035b8450591786d8e006f2b08a614e010e6f"
+    },
+    {
+      "path": "cloudflare/surveillance-data/tests/situation-feed-runtime-cases.mjs",
+      "bytes": 3903,
+      "sha256": "eb4ff9cfc2925ef5695d2db1f7d781df9f51f1fed1ac6d48c6c6a7c3ca9357d3"
+    },
+    {
+      "path": "cloudflare/surveillance-data/tests/situation-feed.test.ts",
+      "bytes": 9703,
+      "sha256": "4f7ee60edb7e4c60523c8fa4e7098a705e3386b6e30019a5478d2d42d9715c57"
+    },
+    {
+      "path": "configs/cn_province_sources.json",
+      "bytes": 9315,
+      "sha256": "b484bcb4b28b45a18e1725c5d35d6ac877d9eb65f2855ea3eae16921f1b4cb38"
+    },
+    {
+      "path": "configs/country_bootstrap.json",
+      "bytes": 72746,
+      "sha256": "2c214feab5b9d1313ef5ab71239886316f94402a0d66afa14b244fda7af03f10"
+    },
+    {
+      "path": "configs/disease_ontology.json",
+      "bytes": 4305067,
+      "sha256": "ab5ea4800dd988086ad532def8a3351eb56ab82c31a6ecc8f780bf093d038c32"
+    },
+    {
+      "path": "configs/literature/weekly_ai_reviews.json",
+      "bytes": 5621,
+      "sha256": "2f4899b0010921c6cb685e3588441b71cfb09739ca17989c23e86d0ed777a3ff"
+    },
+    {
+      "path": "configs/surveillance_channels.json",
+      "bytes": 7020,
+      "sha256": "1d0eb4cc5531a010f95582a55b7bed26a444ad84465263fb0f77d60af68659ff"
+    },
+    {
+      "path": "dashboard/api/routers/situation_notices.py",
+      "bytes": 19972,
+      "sha256": "43859b4d7322723634f23d9273eb7a73cb5573cd97607892e8f323b3c4ee7642"
+    },
+    {
+      "path": "dashboard/api/routers/sources.py",
+      "bytes": 53006,
+      "sha256": "9b17378bc34c15e7423f5963644696745380779f0d4affe06e6f8e3834bfc074"
+    },
+    {
+      "path": "dashboard/api/schemas/sources.py",
+      "bytes": 6907,
+      "sha256": "d2753f02b22299dbb1edc2971b7692db55909b88f020109122e9282fcff5dfee"
+    },
+    {
+      "path": "dashboard/openapi.json",
+      "bytes": 887919,
+      "sha256": "31cd349e8678c7c541a2e0804c7422940348e66d721617334e01062046b43f7a"
+    },
+    {
+      "path": "dashboard/src/features/operations/automation/components/schedule-form.tsx",
+      "bytes": 23795,
+      "sha256": "dd0954bee1017fb1afca875b0ca286f33791237af4214271faaf82d2e3009fc4"
+    },
+    {
+      "path": "dashboard/src/features/operations/sources/flow/components/create-crawl-modal.tsx",
+      "bytes": 22166,
+      "sha256": "733c094bef8ed17a9f3faf7b647d7b1f09c6da387e9d201fda7e6de785bf41b6"
+    },
+    {
+      "path": "dashboard/src/features/operations/sources/flow/components/flow-row.tsx",
+      "bytes": 8133,
+      "sha256": "bd6fa30f933478b66bff8d889b9a81e1eeda93f0810007bc3b5eca81757487a3"
+    },
+    {
+      "path": "dashboard/src/features/operations/sources/source-channel-links.test.tsx",
+      "bytes": 1729,
+      "sha256": "4ff44d5b5b847bec9976d0e0d5d27f03089589fc2c83c1e7dc5d74c923110111"
+    },
+    {
+      "path": "dashboard/src/features/operations/sources/source-channel-links.tsx",
+      "bytes": 1212,
+      "sha256": "faedbf2a9fc2ec32a42d6e757319d51f2f831142ca3323224029910ca6c8a2f7"
+    },
+    {
+      "path": "dashboard/src/generated/api.d.ts",
+      "bytes": 694427,
+      "sha256": "8fe7d4150f81b139bea3d74b92a6b4a04137daab34c1aaefb497086645fe7cc5"
+    },
+    {
+      "path": "dashboard/src/lib/hooks/useSources.ts",
+      "bytes": 12446,
+      "sha256": "8fde0535ff37863dbd1aac9661dd673723f658367d758bb30c4089f06ddfeb0e"
+    },
+    {
+      "path": "dashboard/src/lib/source-labels.ts",
+      "bytes": 20051,
+      "sha256": "0efb9dbc123ec0bf6154bc6dff9572bfe5629375bfa52329474bdb2354e3cce4"
+    },
+    {
+      "path": "deploy/systemd/globalid-population-refresh.service",
+      "bytes": 552,
+      "sha256": "8884bf4236d20d8d25fdd8331081e5ea2c814e32618b53427ba06b688780c057"
+    },
+    {
+      "path": "deploy/systemd/globalid-population-refresh.timer",
+      "bytes": 265,
+      "sha256": "1f545564757225042a9272ba6e5059fecad5d6582523610bbbfda6a453be1d62"
+    },
+    {
+      "path": "docs/README.md",
+      "bytes": 7665,
+      "sha256": "6586f8d8cbbeb6c27ad6540c4c100656e7757bc23c5d35d8e7532e8109f21b0c"
+    },
+    {
+      "path": "docs/acceptance/CL_CO_MW_ONBOARDING_20261116.md",
+      "bytes": 2694,
+      "sha256": "e2c1a18de43ddb25db4cb680f5846284faba9c84aecd9ade62a4f8c6e5fa20ab"
+    },
+    {
+      "path": "docs/acceptance/CN_PROVINCE_HISTORICAL_BACKFILL_20261116.md",
+      "bytes": 4049,
+      "sha256": "d25ce155f49247ed5edaf167676ee8817e4307adb50f1122f7c5f7e1991159f9"
+    },
+    {
+      "path": "docs/acceptance/CN_PROVINCE_IMAGE_VOTING_20261116.md",
+      "bytes": 4436,
+      "sha256": "347dbfed8b9504d92e844b22581c92f93fb9b90c0a7a3ab406dfeab3af2668a1"
+    },
+    {
+      "path": "docs/acceptance/CN_PROVINCE_REPAIR_20261116.md",
+      "bytes": 10685,
+      "sha256": "9c78e4c3366b689965ab30ce5ff8e62d37a6d9f6f2f75751e38aaefb64be9f51"
+    },
+    {
+      "path": "docs/acceptance/PRIORITY_COUNTRY_ONBOARDING_20261115.md",
+      "bytes": 6523,
+      "sha256": "515dac1818de24f4d68fcaa0fc418d97008c50781dbbf58adf1c87a214c24aa8"
+    },
+    {
+      "path": "docs/acceptance/PUBLIC_FEATURE_PILOT_20261115.md",
+      "bytes": 4829,
+      "sha256": "e2f438c7a1dca4d5498a2d2a14f38c8cd7c99880f4030caeee35631ba0740e8e"
+    },
+    {
+      "path": "docs/acceptance/SEVEN_COUNTRY_DYNAMIC_UPDATES_20261116.md",
+      "bytes": 9992,
+      "sha256": "075692bae30ff5d3ec4bd09bdb7e7f62bc7e78cd4b1691d2c4dd09941a370d37"
+    },
+    {
+      "path": "docs/acceptance/SITUATION_HOST_MIGRATION_20261116.md",
+      "bytes": 2731,
+      "sha256": "380c937bd893549db7d5df6cc4b45ff4b60459707690254f489275765cc481d7"
+    },
+    {
+      "path": "docs/acceptance/SUBDIVISION_MAP_EXPANSION_20261116.md",
+      "bytes": 10499,
+      "sha256": "068f650ce3da62855b7e73c5d0329ab038f414f7d07127dca64a2e6cb740a9e5"
+    },
+    {
+      "path": "docs/acceptance/SUBDIVISION_MAP_POPULATION_AUTOMATION_20261116.md",
+      "bytes": 6258,
+      "sha256": "ecaa6389f2e12bc856ffbc96c9de9c92dd6a372d477d70957a8e771d3fdef643"
+    },
+    {
+      "path": "docs/audits/CN_PROVINCE_DATA_AUDIT_20261115.md",
+      "bytes": 24803,
+      "sha256": "1f719e0319af4b6a8f585207ca6f4b8811412db1d893d01b0178be0e5fa76811"
+    },
+    {
+      "path": "docs/audits/data/cn_province_audit_20261115.json",
+      "bytes": 490350,
+      "sha256": "085de4981fa518c12d915db972ad5be71b7fe2a1230c0fe903729ee72fa700d8"
+    },
+    {
+      "path": "docs/audits/data/cn_province_coverage_20261115.csv",
+      "bytes": 31072,
+      "sha256": "9b13810e1bd3c471dd193ce02b17a763199e68adbe4ecd1598873f32eaeb180d"
+    },
+    {
+      "path": "docs/audits/data/cn_province_coverage_20261116.csv",
+      "bytes": 42398,
+      "sha256": "d353c119b439e2b062710df11e9882fdfc91896d29228f1e4aedb3de043ebf1d"
+    },
+    {
+      "path": "docs/audits/data/cn_province_coverage_20261116_post_backfill.csv",
+      "bytes": 33988,
+      "sha256": "fac3b894dc414cb1d095472f9be39431f072968b0e2b983034608b1c30a26b14"
+    },
+    {
+      "path": "docs/data-sources/ADD_NEW_COUNTRY_GUIDE.md",
+      "bytes": 11231,
+      "sha256": "13efd4b757b65c44c785951bca949be177235c387443874316a46ec8d562e7a5"
+    },
+    {
+      "path": "docs/data-sources/AFRICA_SE_ASIA_LATAM_PLAN.md",
+      "bytes": 11899,
+      "sha256": "1045706811b19fea775c6fad5d2be52eab7b12c992e348040da98514cabbd57f"
+    },
+    {
+      "path": "docs/data-sources/AR_BEN_INTEGRATION.md",
+      "bytes": 8087,
+      "sha256": "a131926ef6f6f35a832772f4a6a9b2c089af39f24be112756d7b7fc9bd6ef579"
+    },
+    {
+      "path": "docs/data-sources/CL_ENO_HISTORICAL.md",
+      "bytes": 2990,
+      "sha256": "47ec1b2f16dc7dbf039fec13a5d01573cf384a717d1c957f357b1d1f8298dad9"
+    },
+    {
+      "path": "docs/data-sources/CN_PROVINCE_DATA.md",
+      "bytes": 16012,
+      "sha256": "e4b0437e3de5ae21c4aaea10edae5abc2e29e7cc504f7167bf821d9f3c26e228"
+    },
+    {
+      "path": "docs/data-sources/CO_SIVIGILA_INTEGRATION.md",
+      "bytes": 5597,
+      "sha256": "6dbe1518818f9acdca20d5ab269c768ded9c4d306b5617f04fd0785e4c2c6030"
+    },
+    {
+      "path": "docs/data-sources/ID_KEMKES_PROFILE_INTEGRATION.md",
+      "bytes": 7702,
+      "sha256": "d887c50781f5d3f66982b9f9374b7cad7beee870546a831599128d44d5800557"
+    },
+    {
+      "path": "docs/data-sources/KH_CAMEWARN_INTEGRATION.md",
+      "bytes": 5148,
+      "sha256": "2f24112a6c7e34f0df54048ffaa49ac72ea57cddb5e57f57f602ff8a23c27780"
+    },
+    {
+      "path": "docs/data-sources/LATAM_OFFICIAL_SOURCE_FOLLOWUP.md",
+      "bytes": 5441,
+      "sha256": "0493ecd81188dc447c29ffbe30e4c93e14dc49e5f94737396f86d87f7341b7fe"
+    },
+    {
+      "path": "docs/data-sources/MW_PHIM_IDSR_INTEGRATION.md",
+      "bytes": 4844,
+      "sha256": "bccc342442cc18f67851f1d9d4670b30e91e88273248dc144e3bad87a8c665a3"
+    },
+    {
+      "path": "docs/data-sources/MX_DGE_ANNUAL_INTEGRATION.md",
+      "bytes": 10437,
+      "sha256": "477a1777d294a05d96d7dc62916e454a98dd5f9b3a046c3a8e4ff3ea6fcc3259"
+    },
+    {
+      "path": "docs/data-sources/MY_ADDITIONAL_SOURCES.md",
+      "bytes": 13969,
+      "sha256": "c8366eaef54a6f073932e2712ee3e6bbb13ba91da9fa6c11306b9d9c3da5150c"
+    },
+    {
+      "path": "docs/data-sources/MY_IDENGUE_DAILY.md",
+      "bytes": 5081,
+      "sha256": "cb5b390421bdcd7f85d4269621c86b9ab263167ef41e008dd6750f44890913b1"
+    },
+    {
+      "path": "docs/data-sources/MY_MOH_STD_ANNUAL.md",
+      "bytes": 3478,
+      "sha256": "c3d7ac4d47d5815d8bc232974e5226a8976cd37c1a7d10ef8f44f5a5595cebc0"
+    },
+    {
+      "path": "docs/data-sources/MY_NL_CURRENT_SURVEILLANCE.md",
+      "bytes": 8290,
+      "sha256": "c2b4087f893901b4af188bfc19b61cba99081ab386529d558c196000367312ed"
+    },
+    {
+      "path": "docs/data-sources/NATIONAL_NOTIFICATION_AUTOMATION.md",
+      "bytes": 9269,
+      "sha256": "545979ff97b206ea58baae4b61576c2f688e4690a238bb1c217e35e3316bf3f0"
+    },
+    {
+      "path": "docs/data-sources/NG_NCDC_INTEGRATION.md",
+      "bytes": 10335,
+      "sha256": "ad6f3301264025a1a0059b1c12a8411bbac1fe0e3fbef982bb5ed492c482f5c9"
+    },
+    {
+      "path": "docs/data-sources/NL_RIVM_NOTIFIABLE_ANNUAL.md",
+      "bytes": 4890,
+      "sha256": "18b90cb0d94da6d6fb3bb451466e6a39cec1b278bc8edfca780bbb6c157fc456"
+    },
+    {
+      "path": "docs/data-sources/NL_WEEKLY_SURVEILLANCE.md",
+      "bytes": 6648,
+      "sha256": "7abbdb33bb47cb49fa58276f0d37c1f20d014d4bc4b04b024df7542865322b50"
+    },
+    {
+      "path": "docs/data-sources/PE_CDC_INTEGRATION.md",
+      "bytes": 8370,
+      "sha256": "09ca6fe59ef4173331430c525bd14a6a6a504ff6cb44054a2b85a0fd41ed05bf"
+    },
+    {
+      "path": "docs/data-sources/README.md",
+      "bytes": 19084,
+      "sha256": "c4ee18fabedb1237d0bda5bf4b860be5a4584448433cc281cd189b6086c6129f"
+    },
+    {
+      "path": "docs/data-sources/TH_DDS_INTEGRATION.md",
+      "bytes": 9823,
+      "sha256": "e5696b21ed16db3316ac1df6073d9267e40b1ad27d43c79eb441490fee5afded"
+    },
+    {
+      "path": "docs/data-sources/TH_DDS_TABLEAU.md",
+      "bytes": 10319,
+      "sha256": "4fea7421491549daf5068e2e9d41411a1d108f65bb9c2ab838b51c5d906d262a"
+    },
+    {
+      "path": "docs/data-sources/TH_DDS_WEEKLY.md",
+      "bytes": 5385,
+      "sha256": "e9c554729161e607cb42c90ab988a13ea4703f2970957da63bb018fe12824b4f"
+    },
+    {
+      "path": "docs/data-sources/TH_ID_TH_REUSE.md",
+      "bytes": 6776,
+      "sha256": "5118dbbac759e6d3e5a1170791c97a3f38d987d560ac7411c5e04708c54ca2c7"
+    },
+    {
+      "path": "docs/data-sources/ZA_NICD_NMC_INTEGRATION.md",
+      "bytes": 7457,
+      "sha256": "22d4848d67328e1e2d109fd5ebf9743a96bb23051dd00a33d32bbbd38046c16a"
+    },
+    {
+      "path": "docs/design/SUBNATIONAL_INCIDENCE_MAP.md",
+      "bytes": 16095,
+      "sha256": "2c510d7552dd1d0eb16a6166cc084d88433bf2249dc11d819b27101f471b917c"
+    },
+    {
+      "path": "docs/design/assets/subdivision-map/au-adm1.geojson",
+      "bytes": 479596,
+      "sha256": "d3fb0f4290a52167c29d1ef2a752e1f73586b7a871c81d73c629e2558a54a9aa"
+    },
+    {
+      "path": "docs/design/assets/subdivision-map/preview-data.json",
+      "bytes": 73112,
+      "sha256": "c14fddca5ede5b6375a05b1ca774583c9b1d351d012d1158b90863e5d412996f"
+    },
+    {
+      "path": "docs/design/assets/subdivision-map/provenance.json",
+      "bytes": 5721,
+      "sha256": "9f08d380d2aca7bba5d596cca5e59153627762b4c2902e714cbbfa7b20ba86cc"
+    },
+    {
+      "path": "docs/operations/SITUATION_ONE_HEALTH_PHASE1.md",
+      "bytes": 4862,
+      "sha256": "812bee9950904937a0587991852fcbf387e5f7583cf26556081501cf184c0836"
+    },
+    {
+      "path": "docs/operations/SITUATION_RSS_AND_SUBSCRIPTION_ACCEPTANCE.md",
+      "bytes": 6649,
+      "sha256": "22fa22b7543f7e86fd32a10731d4f1855ac165cdae5fb0513bbb75b7afdd263e"
+    },
+    {
+      "path": "docs/research/PATHOGEN_RESOURCE_LINKS.md",
+      "bytes": 3360,
+      "sha256": "f8c98889b0f90e5575b6b9e32d500ebd8b683e3b64f942a54e613a893247c6b9"
+    },
+    {
+      "path": "docs/research/SURVEILLANCE_SIGNAL_PILOT.md",
+      "bytes": 4414,
+      "sha256": "61b03fa035d958344ea1ec8ec05c9eda42d3810b4f5a878fa8eabacb54d04260"
+    },
+    {
+      "path": "external-data/subdivision-boundaries/au.json",
+      "bytes": 803483,
+      "sha256": "2b672c62348c5d910b40182923a6714fa5171b85562ddcd9461171ad019b8dbf"
+    },
+    {
+      "path": "external-data/subdivision-boundaries/br.json",
+      "bytes": 229882,
+      "sha256": "fa68f52f11a3caf93b759126a5a92171565d040b5d5449b8daed671f35c8ad60"
+    },
+    {
+      "path": "external-data/subdivision-boundaries/cn.json",
+      "bytes": 178272,
+      "sha256": "c38a168e131888e5ca3fdee074c57f7f45dd510fef960f4a0cb7b99d58103cac"
+    },
+    {
+      "path": "external-data/subdivision-boundaries/jp.json",
+      "bytes": 155948,
+      "sha256": "148d0580c099abc12f02d59b21fe0849dfc7af190222680d5efd5de1d824bef9"
+    },
+    {
+      "path": "external-data/subdivision-boundaries/manifest.json",
+      "bytes": 10205,
+      "sha256": "4422562c0288cbf76dc3a034efc1b1aaeec16697ecf2e31b84bf82323473ef52"
+    },
+    {
+      "path": "external-data/subdivision-boundaries/se.json",
+      "bytes": 165941,
+      "sha256": "6c5f4750d8dcfdcc7e429c307021fa064e11311bdb4552e0eb4b049e42226067"
+    },
+    {
+      "path": "external-data/subdivision-boundaries/us.json",
+      "bytes": 754713,
+      "sha256": "b376dc865811ffbee9420a28f161e2df28f9d79f9fc3ac4970912dc4494d6811"
+    },
+    {
+      "path": "external-data/subdivision-population/README.md",
+      "bytes": 15791,
+      "sha256": "d477fd1de170eef8537521399f27fcb088882c76dd46aa448c61d7d4a6fb6dc5"
+    },
+    {
+      "path": "main.py",
+      "bytes": 17009,
+      "sha256": "80644bfb20f2cc6dba0b21cfcc33e64887e6e838b3f2e59953156b3a70880ea9"
+    },
+    {
+      "path": "migrations/versions/0032_situation_host_metadata.py",
+      "bytes": 925,
+      "sha256": "3c729ac3f0a2bf7cac35a6069d1096c6603a6b1d4fc57baa20a227bd74661af1"
+    },
+    {
+      "path": "migrations/versions/0033_not_applicable_observations.py",
+      "bytes": 1399,
+      "sha256": "1b561d518bb0b75d114ac0482d42278ac75c0bbc73034380806a68ad730470ef"
+    },
+    {
+      "path": "output/map-boundary-source/JPN-metadata.json",
+      "bytes": 852,
+      "sha256": "56d814a3322674565564047d04f371d136c18e319054ee2840963d90aef016d7"
+    },
+    {
+      "path": "output/map-boundary-source/JPN.json",
+      "bytes": 2049885,
+      "sha256": "ed4225bbd6327a3d061e0bc822e6b4d3aa9f43998b63d23e0193333eed82b8dd"
+    },
+    {
+      "path": "output/map-boundary-source/SWE-metadata.json",
+      "bytes": 875,
+      "sha256": "56ef78850144cd4c279b429ca41945db262a195e6f95ab8655e90cd771aa129f"
+    },
+    {
+      "path": "output/map-boundary-source/SWE.json",
+      "bytes": 1298946,
+      "sha256": "a7813dd77bdf33262c6aba0e4be392fe2c41ccc84803f4a4a56f4741888424dd"
+    },
+    {
+      "path": "output/map-boundary-source/USA-metadata.json",
+      "bytes": 943,
+      "sha256": "7b7f8ad3e6b160b6196ad4c2c9a29a8087c0d61521352ae599d8311d1560b006"
+    },
+    {
+      "path": "output/map-boundary-source/USA.json",
+      "bytes": 5040571,
+      "sha256": "1257a2d579d87e7f77acdd1751940eab12feb831753b1b8fd9975150df7a663a"
+    },
+    {
+      "path": "output/map-boundary-source/case-admission.json",
+      "bytes": 1342,
+      "sha256": "ebe9d78e27fdad2aecc74b6fbdd15d71b081d7c64edd403780f0e992e1ab0892"
+    },
+    {
+      "path": "output/map-debug.png",
+      "bytes": 408586,
+      "sha256": "3a19ced23f4b59edd08dddf2d7607b4a729d9f3e31bb69d4cb71631f05044326"
+    },
+    {
+      "path": "output/population-systemd/globalid-population-refresh.service",
+      "bytes": 634,
+      "sha256": "d1b525ffb9eff81db02e5b3384934705c8c0c7281ff0560dbb1ac540ad9101b9"
+    },
+    {
+      "path": "output/population-systemd/globalid-population-refresh.timer",
+      "bytes": 265,
+      "sha256": "1f545564757225042a9272ba6e5059fecad5d6582523610bbbfda6a453be1d62"
+    },
+    {
+      "path": "output/subdivision-boundary-source/BRA.geojson",
+      "bytes": 1483651,
+      "sha256": "cf4541da2f999915e27147c68e6220b00ee2d19daa42d6eed451bfd131fd843b"
+    },
+    {
+      "path": "output/subdivision-boundary-source/CHN.geojson",
+      "bytes": 263343,
+      "sha256": "bc4afc7eacf4351ae5b3ae7a612327987ce1123cb5deb8574fb49107091c6623"
+    },
+    {
+      "path": "output/subdivision-expansion/browser.json",
+      "bytes": 5185,
+      "sha256": "7164a73977e11d14acf5b615e5744b9b2959a1f96e4738dbfd76b324f61ec621"
+    },
+    {
+      "path": "output/subdivision-expansion/comparison.csv",
+      "bytes": 35281,
+      "sha256": "3bd3f07db1271eee970547a65e52ffddd2bc84810a4e45917741ae786b6cd31a"
+    },
+    {
+      "path": "output/subdivision-expansion/jp.png",
+      "bytes": 214678,
+      "sha256": "c5940b10bf7b47e6d4f613b78204c5aaca23e14fdf294b22324a91a3a1a59291"
+    },
+    {
+      "path": "output/subdivision-expansion/mobile.png",
+      "bytes": 190016,
+      "sha256": "96fe89a4534036c9b2535ec4b956824c01147483f1f397edf0251ce8786e88aa"
+    },
+    {
+      "path": "output/subdivision-expansion/population-audit.json",
+      "bytes": 51911,
+      "sha256": "1b6ac2ad4485348dc59cb3950d9ce93addccb07be27010c2d02ef736d7fef609"
+    },
+    {
+      "path": "output/subdivision-expansion/population-audit.py",
+      "bytes": 15886,
+      "sha256": "7abf9a3a1d8634598535a0f6c30f10cb9217ab33de3453fd9973eef81ad31338"
+    },
+    {
+      "path": "output/subdivision-expansion/se.png",
+      "bytes": 196318,
+      "sha256": "1ece1245fb2c995fa8c9a24372a9147785c124120b3db2239664d23bfc2ce350"
+    },
+    {
+      "path": "output/subdivision-expansion/us.png",
+      "bytes": 214590,
+      "sha256": "be40f6e145cecfeb61a555178bb7048edd45d832d60bd34eeb39707ecc32fbb2"
+    },
+    {
+      "path": "output/subdivision-expansion/verify.mjs",
+      "bytes": 5718,
+      "sha256": "8ac33ed595a7ed6be99aab39441c9bbbc36440a29f40163d30bc578c6d1ad1b9"
+    },
+    {
+      "path": "output/subdivision-incidence-map-preview.html",
+      "bytes": 653683,
+      "sha256": "f8577c9970e8ad5e86530aee8d72ee2875e7956655ddecd7495ddac7230389ea"
+    },
+    {
+      "path": "output/subdivision-incidence-map.html",
+      "bytes": 535415,
+      "sha256": "8a26e8dec377bf06380251a165d6a175bf9c520d6290acb2512de9bd111e7926"
+    },
+    {
+      "path": "output/subdivision-map-dark.png",
+      "bytes": 108984,
+      "sha256": "371a1ab3902056f901761ec73cf1518407a36dd84a2668a0fa1c255145bfe1ab"
+    },
+    {
+      "path": "output/subdivision-map-desktop.png",
+      "bytes": 104556,
+      "sha256": "ec7061bb8b26c384be2c14041ff4cfd7ea4ce3778c00df37a0093f8130c94cb3"
+    },
+    {
+      "path": "output/subdivision-map-implemented-au.png",
+      "bytes": 161363,
+      "sha256": "000903cdef7c6e2e86f21677c77dcb4bab47aead03a9e0bcae8d77dabbb83bf8"
+    },
+    {
+      "path": "output/subdivision-map-implemented-mobile.png",
+      "bytes": 145481,
+      "sha256": "ef683d2860f9dc70d5c28ecc2900233e003949be37cbba1d615000d89b7baa4e"
+    },
+    {
+      "path": "output/subdivision-map-mobile.png",
+      "bytes": 96937,
+      "sha256": "652faecfc04b129cfadae23ea2b7e975823b13dc7b5312a6ed59bdfe41f1ec5a"
+    },
+    {
+      "path": "output/subdivision-map-ui/browser.json",
+      "bytes": 589,
+      "sha256": "abac02de1ccfd8e0c9732ff98b5cf27cd6768384d24b49c7e0d04c973fdce0d1"
+    },
+    {
+      "path": "output/subdivision-map-ui/dark.png",
+      "bytes": 116271,
+      "sha256": "e301148e4fd6316412e05552bf680741bb6844b9973823e36e6205770c0dff13"
+    },
+    {
+      "path": "output/subdivision-map-ui/filtered.csv",
+      "bytes": 79914,
+      "sha256": "094c42e13021ed3238da8e1b2b9ff0c7ee39b5cfbc7cffdd6725b29a71a0705a"
+    },
+    {
+      "path": "output/subdivision-map-ui/fullscreen.png",
+      "bytes": 100353,
+      "sha256": "6f7c6c085f7a67231cab193ea9461dcf185ccee6dcd6e9de2e54dfc596f7952e"
+    },
+    {
+      "path": "output/subdivision-map-ui/map-download.png",
+      "bytes": 99825,
+      "sha256": "ccc7936239b22cd16c4a360aba0e288902830d67a70b4e5d9948128259b78f31"
+    },
+    {
+      "path": "output/subdivision-map-ui/map.png",
+      "bytes": 93139,
+      "sha256": "5478f7faba65d57c4a5b3cf0586a2fdb714254590d2a2f21ce070187e0e313da"
+    },
+    {
+      "path": "output/subdivision-map-ui/mobile.png",
+      "bytes": 81717,
+      "sha256": "f90f9e8a3c18a4690566753a617dc51c3e7a44555e8e6b867aecc46a826eadf7"
+    },
+    {
+      "path": "output/subdivision-map-ui/trend-download.png",
+      "bytes": 100980,
+      "sha256": "00fb5727bba105fe1006fc54c2f303234a847a55a63067fa6745d8a48e1dd7fa"
+    },
+    {
+      "path": "output/subdivision-map-ui/trend.png",
+      "bytes": 78000,
+      "sha256": "90c4e2718126d692e513f58a42baf2f71a2eeab2f2be6477565867f8dfdf15a9"
+    },
+    {
+      "path": "output/subdivision-map-ui/verify.mjs",
+      "bytes": 5766,
+      "sha256": "665cfb76328933d28e5e59c7b6dffb3f52a3beb3bc2ea3d9d432068a2086bff4"
+    },
+    {
+      "path": "output/subdivision-map-verification/au-filtered.csv",
+      "bytes": 4990,
+      "sha256": "45e02a3bb4f4c4cb8f15a94d53f236c2478939e9d2d26075018d2ecf58cb9ba0"
+    },
+    {
+      "path": "output/subdivision-map-verification/browser.json",
+      "bytes": 2053,
+      "sha256": "1345a2f277d51942502672f5d412cfb114858e72caffacec5eb0e1054b4ac97f"
+    },
+    {
+      "path": "output/subdivision-map-verification/population.json",
+      "bytes": 470,
+      "sha256": "dc777d1e7a1c51d3ab6d0ebfeb227b4002e569280d51498936b38ccf93365d4d"
+    },
+    {
+      "path": "output/subdivision-map-verification/verify.mjs",
+      "bytes": 3444,
+      "sha256": "bce7cf33e7cb05963910e79cef22ce9ead170308a48b152e74a65b1a44611b4c"
+    },
+    {
+      "path": "output/us-population-live/raw/census_2000_2010_intercensal.csv",
+      "bytes": 5481291,
+      "sha256": "a83f02d9deca8bc02ba9b03d124a9b28906f4a17e831953cc42c86da2aef6a8a"
+    },
+    {
+      "path": "output/us-population-live/raw/census_2000_2010_intercensal.html",
+      "bytes": 15694,
+      "sha256": "7c6449f2ae0834aa84dfe2175808b246d926bdfda8d6dca6006f03bd89879d08"
+    },
+    {
+      "path": "output/us-population-live/raw/census_2010_2020_state_totals.csv",
+      "bytes": 81740,
+      "sha256": "6e1289c0041f42b4238dd4e4fe7975b25816a7a40de9a5b70581821e6659c75c"
+    },
+    {
+      "path": "output/us-population-live/raw/census_2010_2020_state_totals.html",
+      "bytes": 15241,
+      "sha256": "5cb00be4bc1dddf94294cf26b36365013bd4540111c212884fed13dda2e85e4e"
+    },
+    {
+      "path": "output/us-population-live/raw/census_2020_2025_state_totals.csv",
+      "bytes": 53555,
+      "sha256": "92188e29cb0a67dcf95afa7d6c47359409782f086478b70ea4128eb70e223ca9"
+    },
+    {
+      "path": "output/us-population-live/raw/census_2020_2025_state_totals.html",
+      "bytes": 15033,
+      "sha256": "1f75cf82ea8e4e7989fb71409a9e61b58c36592e065444314f8c86a0036e59a6"
+    },
+    {
+      "path": "output/us-population-live/raw/census_vintages.html",
+      "bytes": 20691,
+      "sha256": "e7eff1c71c68cc01b8fb8a333d7dca71401dcce45f6f7cfca916c1d6a3478aa7"
+    },
+    {
+      "path": "output/us-population-live/rows.json",
+      "bytes": 429336,
+      "sha256": "cb93ce776e4e946665fe27d4064213060fafc3cecd8b9f8a46eaa8439302f906"
+    },
+    {
+      "path": "output/us-population-live/sources.json",
+      "bytes": 1782,
+      "sha256": "e42c600834ae690afd51f8650fe76c270006e713a7c7bcaeff4bff6ddc6c5182"
+    },
+    {
+      "path": "requirements.in",
+      "bytes": 1379,
+      "sha256": "602d998171f3b6fbac7b2e8b9de93b50864d6b80f0915e84ac503d574e2de8f4"
+    },
+    {
+      "path": "requirements.txt",
+      "bytes": 6401,
+      "sha256": "d5d5345ee769e22b2fcefee612dcdda03d30d978385f18665da3850582f42e24"
+    },
+    {
+      "path": "scripts/README.md",
+      "bytes": 24036,
+      "sha256": "42d9ae23ba07ea016b8ec17fd7a61a308c71a25a12690117df9a343da4149b93"
+    },
+    {
+      "path": "scripts/bootstrap_next_country_sources.py",
+      "bytes": 2363,
+      "sha256": "ecae37d04cb672ecd7dbf4e84ece705ffdb2b7eb2cddd89088e9bbd6e137e314"
+    },
+    {
+      "path": "scripts/check_cn_province_health.py",
+      "bytes": 2294,
+      "sha256": "3eb5129621f216c26708d8fd5a7cffbe297cf0be6479a849b10163ada2cd04a1"
+    },
+    {
+      "path": "scripts/collect_ng_ncdc.py",
+      "bytes": 8557,
+      "sha256": "0e34c9503a3baceb8470d79eccda9572607845a2205fa338422c90bc12ab09b5"
+    },
+    {
+      "path": "scripts/collect_za_nicd_nmc.py",
+      "bytes": 6498,
+      "sha256": "6bd9e9f1c1001230e941bf58927ec2ef200c3d7ac6089437eb7d093f5703db71"
+    },
+    {
+      "path": "scripts/configure_cn_province_jobs.py",
+      "bytes": 7082,
+      "sha256": "b9a649da4202d52141837ccea2eddfaf18104dfddf5615ab9c1c7e8e56cdfafb"
+    },
+    {
+      "path": "scripts/configure_national_notifications.py",
+      "bytes": 9405,
+      "sha256": "2bb8eefc412307d38c5357b1aee4fc25d799adbefc83f803eac76716116d27d4"
+    },
+    {
+      "path": "scripts/configure_priority_country_updates.py",
+      "bytes": 4486,
+      "sha256": "60c5a76b9b6025388243901680b8f335d7349236fb20af98d83f67abc96bbaa9"
+    },
+    {
+      "path": "scripts/evaluate_surveillance_signals.py",
+      "bytes": 1754,
+      "sha256": "8ffad8eeeb09ff1aae21e644cb400cc9967ad82dfba24cb35a182d3e0309c42f"
+    },
+    {
+      "path": "scripts/export_cn_province_review.py",
+      "bytes": 4662,
+      "sha256": "314d3220e39d9b0012461fecdb4b8d83bd66e4ffc9ccf3a0a1aee9bef71001cf"
+    },
+    {
+      "path": "scripts/export_subdivision_maps.py",
+      "bytes": 1240,
+      "sha256": "fe6a911cccd5436e4b50bd75d973e0b453e2d271e6e8e684835c7ef4d9110159"
+    },
+    {
+      "path": "scripts/import_mw_history.py",
+      "bytes": 5318,
+      "sha256": "ff28dfab512885d791cea2d669f96785dba056b29cf023974770a81712091e35"
+    },
+    {
+      "path": "scripts/import_my_dengue.py",
+      "bytes": 5991,
+      "sha256": "397b2d915111a1d3031e25dbbe177e048e74ede823df613132ef713b0727e5cb"
+    },
+    {
+      "path": "scripts/import_my_who_sources.py",
+      "bytes": 4238,
+      "sha256": "92e5c804757b3dc7c9938ec3b988e7b60b9772a4ebaa8c4e17e81240af60237e"
+    },
+    {
+      "path": "scripts/import_nl_weekly.py",
+      "bytes": 5526,
+      "sha256": "6570eb3608cc44779c403579314f9abe0b1e2f02044d6d3515e3b8a9c830839f"
+    },
+    {
+      "path": "scripts/import_subdivision_population.py",
+      "bytes": 13025,
+      "sha256": "754502628de849997a3b1479d322b805e5b6536dfba05f059306042ddfdb33ba"
+    },
+    {
+      "path": "scripts/import_th_dds_weekly.py",
+      "bytes": 5444,
+      "sha256": "3559b8cfb60706d18d86af4a4a8914cd7dc139a23dd7f43dc3545e2564f7c11d"
+    },
+    {
+      "path": "scripts/import_thailand_history.py",
+      "bytes": 10912,
+      "sha256": "cfc65ec192b07084166ec81eca2043f20dc563f4dd6868e428e616c90a68ee3d"
+    },
+    {
+      "path": "scripts/import_thailand_tableau.py",
+      "bytes": 6693,
+      "sha256": "6062e1b970c9bafddcbb873a0331b4674f458346f40a636428057ea967399ca9"
+    },
+    {
+      "path": "scripts/imports/cl_eno_history.py",
+      "bytes": 2848,
+      "sha256": "6e9f4430fa2a1747a926cc332533c769d8c5b7468a1b67339351a6a3a8386bdc"
+    },
+    {
+      "path": "scripts/imports/co_sivigila_history.py",
+      "bytes": 12673,
+      "sha256": "0cc7ed4f9f55c2d29687a997e7cc6e702fc8f5df33865209322c32e7c9c1a00d"
+    },
+    {
+      "path": "scripts/imports/collect_ar_ben.py",
+      "bytes": 6966,
+      "sha256": "d7322cd74faefbe9aac7eb0e9c79c3fc9aa7f7f319d9d7ef63626f7a2cf2eb32"
+    },
+    {
+      "path": "scripts/imports/collect_mx_dge_annual.py",
+      "bytes": 8290,
+      "sha256": "66693f47c17d340ca3d25b771231d574b37bac330f58cefcce3487a57041f0fa"
+    },
+    {
+      "path": "scripts/imports/id_kemkes_history.py",
+      "bytes": 7250,
+      "sha256": "9bd031e242b757a218a832c4d5302b3e9e318daa0284672258c393c0b9142a54"
+    },
+    {
+      "path": "scripts/imports/import_surveillance_archive.py",
+      "bytes": 12009,
+      "sha256": "7c4038492dffd1d10e2fb6ca447f35680a854951f536bda429359d490ac9a5e6"
+    },
+    {
+      "path": "scripts/imports/kh_camewarn_history.py",
+      "bytes": 5139,
+      "sha256": "c3dc392de4900e07ba3d6c72320949bb4b6db95c89fa77d8733ac5cce16a5615"
+    },
+    {
+      "path": "scripts/imports/pe_cdc_history.py",
+      "bytes": 16581,
+      "sha256": "0e3306269f17ffb22446532c3f5c5d68ddc5a00b71ee565c103da1a141c8af1f"
+    },
+    {
+      "path": "scripts/imports/pe_document_identity_migration.py",
+      "bytes": 5376,
+      "sha256": "de110b01692b4c6953ce31df747ac1b043a92db27383348e17f7848bf58010c8"
+    },
+    {
+      "path": "scripts/imports/pe_w17_death_contract_correction.py",
+      "bytes": 6697,
+      "sha256": "e74225b60b8196af65d7cf5b7a89e8e617fe0ad597de01cc237f406c7b5a335c"
+    },
+    {
+      "path": "scripts/imports/verify_cl_eno_import.py",
+      "bytes": 6676,
+      "sha256": "16f861c7af881d4cabc626f2a34f527615e752020cc0c3d9e9236387b9c8bcc9"
+    },
+    {
+      "path": "scripts/imports/verify_id_kemkes_import.py",
+      "bytes": 8576,
+      "sha256": "dab6ce025c5be7fc10c7d907525406d57abab049f5b27c48d82d5db81488e2ae"
+    },
+    {
+      "path": "scripts/maintenance/migrate_cl_eno_dimensions.py",
+      "bytes": 3574,
+      "sha256": "9a4e2557bc616d2dd349a19f8e6bc76cabbbd4cded0a584ad904da253ed72298"
+    },
+    {
+      "path": "scripts/population_sources/jp.py",
+      "bytes": 17633,
+      "sha256": "0a0666027ef7a1ee809bf3f00c63a136067e7c0d3eeccb3feef24dbd746121e4"
+    },
+    {
+      "path": "scripts/population_sources/se.py",
+      "bytes": 8719,
+      "sha256": "125a4bbc42c3e0d29ac3d031fb2d37722e252d5326bc5eac00e424a68e28ca79"
+    },
+    {
+      "path": "scripts/population_sources/us.py",
+      "bytes": 8829,
+      "sha256": "dbb937d4e003e202e92a3a8ca279e78c3a1e19ff347954d38b0eeb01cbbd93a8"
+    },
+    {
+      "path": "scripts/prepare_subdivision_boundaries.py",
+      "bytes": 7172,
+      "sha256": "1fe00b45acc6514ef681889e3c0635660e7736c5fba5c8054a0b568562d41d72"
+    },
+    {
+      "path": "scripts/refresh_official_population.py",
+      "bytes": 20767,
+      "sha256": "bf7f64cf8629a9630fe9c59a200d611b37ca915e41abc4d0e27710c34ca93ce9"
+    },
+    {
+      "path": "scripts/register_cn_province_deaths.py",
+      "bytes": 6524,
+      "sha256": "1f0ae5535785b42f338699fda2ebc9aeacfae9b31b68bc9d8c598efc80c51640"
+    },
+    {
+      "path": "scripts/repair_cn_province_data.py",
+      "bytes": 26386,
+      "sha256": "67bae086f6787beae0ea52e5420352df46aac18bf3015c323393190ab08d44d8"
+    },
+    {
+      "path": "scripts/review_cn_province_images.py",
+      "bytes": 8602,
+      "sha256": "2852990185f53ca85611262678d11db481f36eecb198be9f27181f7f5c8a9017"
+    },
+    {
+      "path": "scripts/triage_cn_province_images.py",
+      "bytes": 3747,
+      "sha256": "0db797b55537089328b3ab44817307f2ced80a861a91532ed5adc365fa64cef7"
+    },
+    {
+      "path": "scripts/update_cn_provinces.py",
+      "bytes": 24105,
+      "sha256": "bbb56d2ea0b98ebe9cc6d814099b0e3c392be4f29088bc9893da6d6347d0dda4"
+    },
+    {
+      "path": "scripts/update_population_automatically.py",
+      "bytes": 8119,
+      "sha256": "5afd4309c70ea033552b6e2de84609a68c6ee9228fdb79b949fcdb99b2fb903d"
+    },
+    {
+      "path": "scripts/validate_situation_release.py",
+      "bytes": 13346,
+      "sha256": "7c127e58facf608e1a0ec771ad91ac8093e80af38ca1beb54caa192a99731307"
+    },
+    {
+      "path": "scripts/verify_cn_province_repair.py",
+      "bytes": 12657,
+      "sha256": "8a4e6d28909d837d0bf430e3ea87199a268184fe67b9dbe75f374ec2d41b3bed"
+    },
+    {
+      "path": "scripts/verify_co_sivigila_history.py",
+      "bytes": 3686,
+      "sha256": "39ba28142cbcd9c67022a6c4c428196d3f27299e6c333eafa375a39ef4c09351"
+    },
+    {
+      "path": "scripts/verify_mw_phim_idsr.py",
+      "bytes": 4687,
+      "sha256": "85859bc2c31169b9f59847b1a09179bef83c4a84dea597d57ce50c96bc7d6127"
+    },
+    {
+      "path": "scripts/verify_priority_country_updates.py",
+      "bytes": 4685,
+      "sha256": "940e66000150d938cc6afb072b321187933fe3bb62e5cf76c62cdb240fe72159"
+    },
+    {
+      "path": "scripts/verify_za_nicd_nmc.py",
+      "bytes": 10552,
+      "sha256": "7b70f91ed4e07e21f976e3944b6f800d5e7b36d66b1c3171967352ab817a80db"
+    },
+    {
+      "path": "src/ai/catalogue/routes.py",
+      "bytes": 8557,
+      "sha256": "b417d2ed1d0120d6e9514318378e5c98b64ca09a45e471ae5a16fb09a26dffdc"
+    },
+    {
+      "path": "src/ai/peer_review_completer.py",
+      "bytes": 3939,
+      "sha256": "1273ce1cc1ad8a37ed00d0011c3f0c6a2eaf03768e30e44022e4398d613da371"
+    },
+    {
+      "path": "src/control_plane/schedule_state.py",
+      "bytes": 7518,
+      "sha256": "0553b28945a1aa52d39bc4fd3e449f428a7b89b90f1dd517f813b16049aa3f06"
+    },
+    {
+      "path": "src/core/country_library.py",
+      "bytes": 83181,
+      "sha256": "9b5b88439fbdc217b2098410a18f1387a01d6be5eb5dbc7a4da22ab5fa54e01e"
+    },
+    {
+      "path": "src/core/source_channels.py",
+      "bytes": 1767,
+      "sha256": "d0b768ad282333eaaa179fa9acfe81fe00536677e450cea8c3f8c855281ca0d1"
+    },
+    {
+      "path": "src/core/source_scopes.py",
+      "bytes": 37222,
+      "sha256": "10bee5ecee551112e7964ed03d0462ab0ba923dd92f27bf07ec5415922ae6d1c"
+    },
+    {
+      "path": "src/data/crawlers/ar.py",
+      "bytes": 22674,
+      "sha256": "68f7820fdc44454e6efe3a58dfa30b35c5876409e047cdc4e2b35eaf55deefea"
+    },
+    {
+      "path": "src/data/crawlers/cl.py",
+      "bytes": 13892,
+      "sha256": "dc2d82ca2adf3bf83cdeb3cc786b8d8f3aa0b75dddc5b6edbce660a31336081f"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/anhui.py",
+      "bytes": 365,
+      "sha256": "28d56b2c50ef3fe6ec03312e64a563e2737a55f5aae860887c3bd9e466fd355e"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/base.py",
+      "bytes": 1261,
+      "sha256": "d106c849d1ed199b1d2a60d71446ae4868e3d8bba36a5afe5c2039a25701bd20"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/beijing.py",
+      "bytes": 427,
+      "sha256": "61480713cd4e4643c835fe89523e7abcb2b59963163267e2bc92578321729c14"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/guizhou.py",
+      "bytes": 286,
+      "sha256": "1949cae2b8740824dcdfa77ab9cd1eec6cb9e0832b2934a83bf06ca4777c66dd"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/hainan.py",
+      "bytes": 197,
+      "sha256": "a8f4a177f4de8db4fdb5ed99c43c815c9c87f8783ff9bf56c7d6180ae37a2f94"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/hebei.py",
+      "bytes": 321,
+      "sha256": "4830a758c704a2abfddab8664a065040ba7f6fca905573ff500dfc46add13f3e"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/heilongjiang.py",
+      "bytes": 265,
+      "sha256": "0c043cdb5bff410bcaeaa8c068f795c1879275849694581f418a3b0dbd7bc146"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/henan.py",
+      "bytes": 290,
+      "sha256": "7a229b638897c46d47b030ae2c22c5ea3047b866168ad71df8b721c2412aed46"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/inner_mongolia.py",
+      "bytes": 3285,
+      "sha256": "223be2271740ddc42b36a6b4ab224611e106ce5c434b64e9f9093accbaf7d9c3"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/jiangsu.py",
+      "bytes": 240,
+      "sha256": "8da6556aac9726b6b206045045c2035e0237b31dc8866dd1d5eae97ff025ffc7"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/jiangxi.py",
+      "bytes": 410,
+      "sha256": "fc22e290c813346275ff5ac8d94553351193076f1a1ed82b47dcd97e52589307"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/parsing/normalization.py",
+      "bytes": 15632,
+      "sha256": "4d9c5415395b1d24e69c4abb14a27e9eb8e468fda0bbf2e5c3afa58287c2e907"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/qinghai.py",
+      "bytes": 203,
+      "sha256": "294df88b8a11ca4f6ea7a29ced958196682f7a9f733f3975ed5cc3d8e800bfb6"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/shandong.py",
+      "bytes": 1278,
+      "sha256": "62010da399f852d1e8aa4cf8b7303e4107eb8098756ab42593ccf8b9c6b9fcbe"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/shanghai.py",
+      "bytes": 342,
+      "sha256": "ce33b8696ea232461290e7c0796140c76134ff049559afacddd2fe29174c6526"
+    },
+    {
+      "path": "src/data/crawlers/cn_province_adapters/xinjiang.py",
+      "bytes": 380,
+      "sha256": "7dec495407930660738ffdce397e03c7b7ea41eb6d9604a186d819923fc44eaa"
+    },
+    {
+      "path": "src/data/crawlers/cn_provinces.py",
+      "bytes": 55572,
+      "sha256": "86ba74272b77e7b3d78b63d166550e7ba5d1502a247e608e3beccedd54fb0808"
+    },
+    {
+      "path": "src/data/crawlers/co.py",
+      "bytes": 10409,
+      "sha256": "6c8c954fd532a3994a931315b78754c655bf3c9152e3e22f5f19004a8374aaaf"
+    },
+    {
+      "path": "src/data/crawlers/id.py",
+      "bytes": 25354,
+      "sha256": "a6c5cc37b904618ba528bcc10db93a57c5b26a172586a939590e0da52745a367"
+    },
+    {
+      "path": "src/data/crawlers/kh.py",
+      "bytes": 15886,
+      "sha256": "41be47f4201d9a4dc9b3fe966d36f0e28ab6b3901ce931a818e050883668d5ba"
+    },
+    {
+      "path": "src/data/crawlers/mw.py",
+      "bytes": 13124,
+      "sha256": "2337dc9edc94c9e963fc1468bdaf6c443a112a067f98b112035911afc1b084b1"
+    },
+    {
+      "path": "src/data/crawlers/mx.py",
+      "bytes": 27902,
+      "sha256": "15b2fd4752749621014803186c1fefb1625a36e3dae2e0ff2e1f5e4e4c331f2b"
+    },
+    {
+      "path": "src/data/crawlers/my_dengue.py",
+      "bytes": 9196,
+      "sha256": "569762ead777ce1996bf263774501482307f91ab6c15fedf7da8866249cd8d7e"
+    },
+    {
+      "path": "src/data/crawlers/my_notifiable.py",
+      "bytes": 5800,
+      "sha256": "4a18630a4512594628cb5ca2680bdec061a6c3dac7173733e523e0f9d23833e0"
+    },
+    {
+      "path": "src/data/crawlers/my_who_annual.py",
+      "bytes": 6600,
+      "sha256": "ccc62fa164bfa1ffa14976f8c9e1e520ad1e37570753bc3be879dbdd3eea9055"
+    },
+    {
+      "path": "src/data/crawlers/my_who_flunet.py",
+      "bytes": 6531,
+      "sha256": "2268e7196510d39df64902a56d774f127a77b278da417d9df96dbfad3c8a004a"
+    },
+    {
+      "path": "src/data/crawlers/ng.py",
+      "bytes": 55592,
+      "sha256": "8b79cfaae5f36a87dcf6fba5079e272e6df9b9e97982820a73c97161967ede27"
+    },
+    {
+      "path": "src/data/crawlers/nl_notifiable.py",
+      "bytes": 10211,
+      "sha256": "c1b29cee3b591036ec6e91a7a34b2150fcdbadd7643258cad07c17ead0e958df"
+    },
+    {
+      "path": "src/data/crawlers/nl_weekly.py",
+      "bytes": 14377,
+      "sha256": "9835d58b7fb66840042299a974c3690d9b278418534d856aebcad7411ff4604a"
+    },
+    {
+      "path": "src/data/crawlers/pe.py",
+      "bytes": 28562,
+      "sha256": "13c4cf09c389807a70dfa19c32496aa1ceaa18d009b2f8e506e033bc044164f9"
+    },
+    {
+      "path": "src/data/crawlers/th.py",
+      "bytes": 19498,
+      "sha256": "4fd0b30ff1671d45d646bf2766684c10b58946205565a8863d7781d1750cc55e"
+    },
+    {
+      "path": "src/data/crawlers/th_dds.py",
+      "bytes": 13757,
+      "sha256": "4c50b39de2e76a02f9af88d21ec563f353d4d59125ddb835df4d55cebb67c3bf"
+    },
+    {
+      "path": "src/data/crawlers/th_id_th.py",
+      "bytes": 6722,
+      "sha256": "3c5b8d8ce9800109faa252236788b1d2dfa57ee0411a966056d891d417490eb4"
+    },
+    {
+      "path": "src/data/crawlers/th_tableau.py",
+      "bytes": 19568,
+      "sha256": "4f52e0e4ae3f6bfa50f739ee668f234c9c02a1bc487e985f6517f02620b51dee"
+    },
+    {
+      "path": "src/data/crawlers/za.py",
+      "bytes": 32144,
+      "sha256": "9c053b850e8bb0a35a3ecc9f19028eae54ed443b1410ddd088252f4fd0e29126"
+    },
+    {
+      "path": "src/data/crawlers/za_cache.py",
+      "bytes": 2581,
+      "sha256": "77d73c6ca95fdfa41fc1d403f3a01e16d9014c8109c9d8b17ade43ccf19533a1"
+    },
+    {
+      "path": "src/data/processors/ar.py",
+      "bytes": 4676,
+      "sha256": "bbb449a0e48206dc62d5a1ff376be32753d0520ac3b3f83ca5b3d2fe25d7bd40"
+    },
+    {
+      "path": "src/data/processors/cl.py",
+      "bytes": 2951,
+      "sha256": "eb86cbb4fc14bfedfb138720daadfe1f60d414e10824f02d5d59bea010efbf0c"
+    },
+    {
+      "path": "src/data/processors/cn_provinces.py",
+      "bytes": 6342,
+      "sha256": "961b41f2ef3de2c3a5ca79c0e35f94cd1622eccd03c9ee4d164d818ba9df10d3"
+    },
+    {
+      "path": "src/data/processors/co.py",
+      "bytes": 2491,
+      "sha256": "84709f8e727c0210cc45d3bb4be6d826e1b9c32a69ad8ef56506670980317767"
+    },
+    {
+      "path": "src/data/processors/id.py",
+      "bytes": 2388,
+      "sha256": "325a68054e313011e93814c8e08730fba7ef85810898348004974093b494f479"
+    },
+    {
+      "path": "src/data/processors/kh.py",
+      "bytes": 2363,
+      "sha256": "91c0f476a3a5251eebe94cdcb83cad3018c3edf27b73588b4a48f9a8032235c2"
+    },
+    {
+      "path": "src/data/processors/mw.py",
+      "bytes": 4165,
+      "sha256": "0f08af9c84399cd61508b26e0bc7a9c22c20c28aeb8e2424c74f5339255ef2d8"
+    },
+    {
+      "path": "src/data/processors/mx.py",
+      "bytes": 4358,
+      "sha256": "59712b4b96a6ecd936f19b6d1a3dd75e3309472cbef19432ea11a75ecc89a93a"
+    },
+    {
+      "path": "src/data/processors/my_dengue.py",
+      "bytes": 3274,
+      "sha256": "7f9ac3ef86ec5337aa38e0101e51440cfdbc192e8762ed6e36b0f54add97caec"
+    },
+    {
+      "path": "src/data/processors/my_notifiable.py",
+      "bytes": 4691,
+      "sha256": "1dce60f05ab356a02128e600908aaec39d00738eee45bd31d793898b492064a3"
+    },
+    {
+      "path": "src/data/processors/my_who_annual.py",
+      "bytes": 4500,
+      "sha256": "aa34c47627ecf9e83b323caa9da0b92fd94e8bb2cf19b6a84395a49effadf3f6"
+    },
+    {
+      "path": "src/data/processors/my_who_flunet.py",
+      "bytes": 4506,
+      "sha256": "39207da67a46d2ebe2f74edeb9fc1b1edacbc31463fdfcc147b766090900e10a"
+    },
+    {
+      "path": "src/data/processors/ng.py",
+      "bytes": 4848,
+      "sha256": "d977e69825a1a5dae9025876a60a4209c309f98b77380fde2f035e3cf1781f4f"
+    },
+    {
+      "path": "src/data/processors/nl_notifiable.py",
+      "bytes": 3456,
+      "sha256": "fd7c6883fbc7d2196db26f4de822b83aef659070a77ca9c9d3447034ced9356a"
+    },
+    {
+      "path": "src/data/processors/nl_weekly.py",
+      "bytes": 3169,
+      "sha256": "68357d18759a3f5a3f51b8cede996b3723b9eb94bd61f12c083f55d16d238daa"
+    },
+    {
+      "path": "src/data/processors/pe.py",
+      "bytes": 2325,
+      "sha256": "1154d277d38e9a83d050671ab1cb321a3c9ac41d4010434da3a094c43f8e1d72"
+    },
+    {
+      "path": "src/data/processors/th.py",
+      "bytes": 2182,
+      "sha256": "7d76bb6718a3cffe5e7c120059efa24b9faa9da153a77461e832b94020ed2aed"
+    },
+    {
+      "path": "src/data/processors/th_dds.py",
+      "bytes": 2047,
+      "sha256": "0fec5b0236bf8102e211c65e51823d9a7a850cdd0619c93d9b16474237798fdd"
+    },
+    {
+      "path": "src/data/processors/th_id_th.py",
+      "bytes": 4530,
+      "sha256": "cab4bbde6e25a7732ba45dccd95ba891b6e28933c5f2dcf08dc9dd58f75444ca"
+    },
+    {
+      "path": "src/data/processors/th_tableau.py",
+      "bytes": 741,
+      "sha256": "df7903000df74bccffd987de66ba1f5b6f795fbfed6b6e8b1b9ee89ca15324e5"
+    },
+    {
+      "path": "src/data/processors/za.py",
+      "bytes": 4893,
+      "sha256": "245d16bb9cf91e3a2b29dab5330faf30a8a7d3915c5bab4be7efc9ae9e3c8e18"
+    },
+    {
+      "path": "src/data/storage/series_observation_store.py",
+      "bytes": 73746,
+      "sha256": "765c9a601378021c8bc14efa8c3f2d311cb615e6c8497a922ee74578fd2220dd"
+    },
+    {
+      "path": "src/domain/disease_ontology.py",
+      "bytes": 26137,
+      "sha256": "adf896fd1b624308dcb508ac1ac791e6486769d7ff2a98ddf36ae7bef12e060f"
+    },
+    {
+      "path": "src/domain/situation_notices.py",
+      "bytes": 11683,
+      "sha256": "0d964d3d3282686a9e196f140678c304b4579aca15a53e5d4fca521133fb633f"
+    },
+    {
+      "path": "src/generation/site_data_about.py",
+      "bytes": 47114,
+      "sha256": "0cca1bac708914c5a92ea3de2891ffe527923e4607f5107334dffc79b41ce20e"
+    },
+    {
+      "path": "src/generation/site_data_dependencies.py",
+      "bytes": 5324,
+      "sha256": "3631c1c72a873cf2847bc248f3855db69ae7d382501bb02096f6d050c6f21256"
+    },
+    {
+      "path": "src/generation/site_data_export.py",
+      "bytes": 89441,
+      "sha256": "f61bfc49f54ab402382e30f2343543a44df5776c1f0e1512f324ce4a1ee22ede"
+    },
+    {
+      "path": "src/generation/site_data_queries.py",
+      "bytes": 49117,
+      "sha256": "c788665481ec74d0c082b3bf9e0918525214d1fa4a51333b8b92b9593cfe1f04"
+    },
+    {
+      "path": "src/generation/site_export/countries.py",
+      "bytes": 10453,
+      "sha256": "efd7fba5bf8a5b750bfeff733475084a606ab72ed4c29b06d804052c4390c719"
+    },
+    {
+      "path": "src/generation/site_series_projection.py",
+      "bytes": 41186,
+      "sha256": "6241df37793360ef1693969dc2d9375baeeba923a8c5c5f2ba84ee7fefdcd198"
+    },
+    {
+      "path": "src/generation/site_subdivision_maps.py",
+      "bytes": 20046,
+      "sha256": "28d0bb539ede7fa7b0e197811905c8baa230f3d43ffdc1d3440a42e4c146b8a7"
+    },
+    {
+      "path": "src/generation/surveillance_data_export.py",
+      "bytes": 23623,
+      "sha256": "39c2b8de0623d99621f0a1aca724fe617687b9f2f9e75daea63dacdbf52db7e8"
+    },
+    {
+      "path": "src/services/automation_service.py",
+      "bytes": 50678,
+      "sha256": "a5ed94ec1bd9a5b60c1b592a98f6ff88a6e8ca39a333860019eddd3edef6bc4a"
+    },
+    {
+      "path": "src/services/cn_province_health.py",
+      "bytes": 32287,
+      "sha256": "dfc9f6e4bd11cc1f55e55386cc383c8c845004c365a4260a0b334cdc4ec3d663"
+    },
+    {
+      "path": "src/services/cn_province_image_review.py",
+      "bytes": 27351,
+      "sha256": "e82610d2a4a46120578cd33b6414424740223500fa50af6abcf76a6bdff2ad6b"
+    },
+    {
+      "path": "src/services/cn_province_month_quality.py",
+      "bytes": 3061,
+      "sha256": "75b83f4b5401a4d3297863cafbe8fcc3d327e34a13fe03a3a6180b862b7739ec"
+    },
+    {
+      "path": "src/services/crawl_service.py",
+      "bytes": 71283,
+      "sha256": "6d1f5083f4f2fb2530347b91a6999a513a170a4b5a0fa4242da640646869ee02"
+    },
+    {
+      "path": "src/services/disease_mapping_ai_service.py",
+      "bytes": 33680,
+      "sha256": "9a391656773e54a90a2f280d436e9a6dd07bf858921d70e35ec9fa70a2f41875"
+    },
+    {
+      "path": "src/services/disease_mapping_registry_service.py",
+      "bytes": 88916,
+      "sha256": "3ba3e8002c006b4dd9c2ad37c5c1cf5776ce816e0feb68c16f4a1aea9d488a07"
+    },
+    {
+      "path": "src/services/disease_ontology_sync_service.py",
+      "bytes": 14772,
+      "sha256": "ff4aab37c4bc0e0caa3a1d0766d8924e6837a1e082f74d3578c257347c79ac1a"
+    },
+    {
+      "path": "src/services/document_images.py",
+      "bytes": 4845,
+      "sha256": "c1731d75224f278aa0224fc36eb3765974d9d234fdc1c8a0474c8769e53d6c9d"
+    },
+    {
+      "path": "src/services/ingestion/co_update_gate.py",
+      "bytes": 5891,
+      "sha256": "ef35477cd5fc67418b33ce58aead9786766d82a26d7f4b7ef70fd9bfe4f5d59c"
+    },
+    {
+      "path": "src/services/ingestion/countries/ar.py",
+      "bytes": 3080,
+      "sha256": "e5c80ccd1ecb09a70870dfcc2620d250c7327c1852151b19670050cd06512ec3"
+    },
+    {
+      "path": "src/services/ingestion/countries/cl.py",
+      "bytes": 7788,
+      "sha256": "9dd214929d36090a780d06cbd80ed114b12ddbfdb7658964aa4b0a148cc1d0fa"
+    },
+    {
+      "path": "src/services/ingestion/countries/cn_province.py",
+      "bytes": 34387,
+      "sha256": "e42975f7b9f38840458c87dd0c8cc4fd1103ae8e93129adb741cb74ed5154382"
+    },
+    {
+      "path": "src/services/ingestion/countries/co.py",
+      "bytes": 6324,
+      "sha256": "b76207a85788bfbe4cfb357f4a6cea2fdf686b2e96b8e46b97d7f1479d471da8"
+    },
+    {
+      "path": "src/services/ingestion/countries/id.py",
+      "bytes": 14410,
+      "sha256": "712cd3a47e33e7ecb96324e3ea74ce9eda1825e13466d7cd6942aff6a0dee211"
+    },
+    {
+      "path": "src/services/ingestion/countries/kh.py",
+      "bytes": 9370,
+      "sha256": "6437909c7083af357d200e2a0298403677e7b7e2827f5e03190899f47fbb9080"
+    },
+    {
+      "path": "src/services/ingestion/countries/mw.py",
+      "bytes": 11158,
+      "sha256": "9e5b180e7196f4807f3a5e428f97e8ef597b0189c1073870a15418b3650875bc"
+    },
+    {
+      "path": "src/services/ingestion/countries/mx.py",
+      "bytes": 4969,
+      "sha256": "28dc298c4c8921defd756421843111d5fdee154e8f5c50f52b9e83d97e4dbfe7"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_dengue.py",
+      "bytes": 1606,
+      "sha256": "bb3c0cb721a5c10f4bb3ea7120cd98e3e5616ca35675aabf389aee78ab17c207"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_notifiable.py",
+      "bytes": 1370,
+      "sha256": "6635cf8d8e07bff1edf27be735e2465b5afeba7adcfb18030f03581fad6f2233"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_who_annual.py",
+      "bytes": 2483,
+      "sha256": "4e4ac9a107a6f804eab13b2c75c47e9bf0818b1f8f527e2b3b7321d15cbe1e69"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_who_common.py",
+      "bytes": 2737,
+      "sha256": "b23c048d36aa350b2eab444d058db5a00e996208ded177d9440b943abffbbe16"
+    },
+    {
+      "path": "src/services/ingestion/countries/my_who_flunet.py",
+      "bytes": 1691,
+      "sha256": "8a0eefa189ebaac3f468ccb7f2548b4b8036301b974bb7a7ee98bf9c23aa11b0"
+    },
+    {
+      "path": "src/services/ingestion/countries/ng.py",
+      "bytes": 8013,
+      "sha256": "2a3c1db694b54c0196647e27122f2ad5c672652aff0ecde536cf98a4d2f9de50"
+    },
+    {
+      "path": "src/services/ingestion/countries/nl_notifiable.py",
+      "bytes": 1853,
+      "sha256": "20657edf1f3688f788a44ed0f4b331ecd4aaa6b548ad460de3a21c2deea9c69a"
+    },
+    {
+      "path": "src/services/ingestion/countries/nl_weekly.py",
+      "bytes": 6697,
+      "sha256": "5cc48436bded082f8ed7914dcb69651a9fd696e28ada169854f54a979ebd1289"
+    },
+    {
+      "path": "src/services/ingestion/countries/pe.py",
+      "bytes": 8311,
+      "sha256": "f7d2d8db92e1111d1f8e9f5818c9c83c17dfe32d7be8a348461e9cf60ad27f15"
+    },
+    {
+      "path": "src/services/ingestion/countries/th.py",
+      "bytes": 10306,
+      "sha256": "fcdeea01010de81bdec866ba35009f0dc348a5d730ac2856e045fdf0528da4ee"
+    },
+    {
+      "path": "src/services/ingestion/countries/th_dds.py",
+      "bytes": 15022,
+      "sha256": "aaaef713507b8601cbb81dc7f3117cffec3d753a13e90a66d6434769e626519d"
+    },
+    {
+      "path": "src/services/ingestion/countries/th_id_th.py",
+      "bytes": 9297,
+      "sha256": "c8e1c156bc45331766506b3d0dec3490777f78f6f82ab6d396c07052676d38c2"
+    },
+    {
+      "path": "src/services/ingestion/countries/th_tableau.py",
+      "bytes": 13284,
+      "sha256": "89bf1b1570133760aa17734c4ca859a7c807edfd0dd4cab14c44724dcf7e2d4b"
+    },
+    {
+      "path": "src/services/ingestion/countries/za.py",
+      "bytes": 6149,
+      "sha256": "650eac98afcf96c40294b34c8cc35c02d2b1dbc64981ae4c8d0669b43104c526"
+    },
+    {
+      "path": "src/services/ingestion/foreground.py",
+      "bytes": 4877,
+      "sha256": "756852055f85bd16e6933e0c1454671670412ac06846b9e1abc6139a311f9159"
+    },
+    {
+      "path": "src/services/ingestion/series_rows.py",
+      "bytes": 13809,
+      "sha256": "2949d7f4a01adc364b92e6b45e66cf5b816cb23f42f8278263e7b2de3a26ba3b"
+    },
+    {
+      "path": "src/services/mapping_notification_service.py",
+      "bytes": 23867,
+      "sha256": "8e3b17d0b23b4c2f335ed1c04c3defad9e5305ea71537e774d5f908cf16a0074"
+    },
+    {
+      "path": "src/services/situation_notices/ai.py",
+      "bytes": 21282,
+      "sha256": "1ef5d53f95f761877bbdb1247b9cf28547e8d55b52f0b3f3c9152e476201d1cb"
+    },
+    {
+      "path": "src/services/situation_notices/export.py",
+      "bytes": 20980,
+      "sha256": "5f593c5a88dfe35d0ec29f5ba4d393b82a6106e3aa687495245db6f05536c8e9"
+    },
+    {
+      "path": "src/services/situation_notices/feed_export.py",
+      "bytes": 1761,
+      "sha256": "270e48b6dd8b256fffae5408a6b9f2ff67f8bb50ec3e6087b21897b88b5a5392"
+    },
+    {
+      "path": "src/services/situation_notices/pipeline.py",
+      "bytes": 38549,
+      "sha256": "dea9ab2f6578510b8c1e33e3c2a80860e7f9ee5459fc450f7d3938b2bc384f25"
+    },
+    {
+      "path": "src/services/situation_notices/publication.py",
+      "bytes": 5525,
+      "sha256": "3d8b6dadaf844a23d4a46ac4d373b609f244b238834d92244a22af10b91ce11b"
+    },
+    {
+      "path": "src/services/situation_notices/snapshot.py",
+      "bytes": 3522,
+      "sha256": "fee9e68df888d0c7ca130810716dd12037f8c9ae089a8d83bc8cf9020d3cfd2c"
+    },
+    {
+      "path": "src/services/surveillance_signal_pilot.py",
+      "bytes": 10673,
+      "sha256": "bbdbd33ab84c24f0518cd7620fac2eb668c3493baf74070d3a985e1e5f149afb"
+    },
+    {
+      "path": "tests/fixtures/ingestion/AR/README.md",
+      "bytes": 1340,
+      "sha256": "150287bdf2e9a9c79b00b23a3e78526b2af37e12ad2e38aefd2d8abe5792d3d2"
+    },
+    {
+      "path": "tests/fixtures/ingestion/AR/ben635_cover_eno.pdf",
+      "bytes": 780442,
+      "sha256": "3e89df93d39c71168ba265a1e9158a2dd81450532218c017d841a68036700868"
+    },
+    {
+      "path": "tests/fixtures/ingestion/AR/ben788_four_eno_tables.pdf",
+      "bytes": 395262,
+      "sha256": "eb28b49a057fefdf4fbbd4dc350c842b319658b3f84e4f0cefb3c16ccdcf7abc"
+    },
+    {
+      "path": "tests/fixtures/ingestion/AR/ben833_cover_eno.pdf",
+      "bytes": 362540,
+      "sha256": "cdd4e4ac757485b05d1c487cc29d314427ce167f19f9b6a402154c9292bef3ef"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/index.html",
+      "bytes": 50054,
+      "sha256": "aa154709943fcec1bdfd9f730541630f31cbfba88291c0909d8542791264a5cf"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/profile2017_selected_pages.pdf",
+      "bytes": 1091605,
+      "sha256": "092c45e3fa73fe5237e5099c98d3e8c2537006e69e9eed2e9b80f83e58c16b0f"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/profile2018_selected_pages.pdf",
+      "bytes": 670720,
+      "sha256": "01ca1c36179a73f530a6f9dc896e7dbe949324a108358adbdc8a861272dc0b4c"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/profile2020_selected_pages.pdf",
+      "bytes": 194331,
+      "sha256": "cf54a42703d72f675f5cc1d4de1b760c3c23dab0790e58ee09f93f70c7dee75c"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/profile2022_selected_pages.pdf",
+      "bytes": 671320,
+      "sha256": "309aaa6b3abd6164f26c1ad51095b5898bd56a6e5e3e1210bfe3d9526a4425af"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/profile2024_selected_pages.pdf",
+      "bytes": 1341819,
+      "sha256": "11c719f0a3e6eaa106df09f42aeec873c948b79b33fbee5e24bdc51a7fd7b36b"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/profile2025_share_session.js",
+      "bytes": 1547,
+      "sha256": "382df42732592dbf4d488f7574b93016a9adf1704f14ada7061fb0e16d93bdaf"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/profile2025_shortlink.json",
+      "bytes": 289,
+      "sha256": "2636e0ea9a09af34d3bebaf1d7094f26640649988ef26c5bd12ac7157206e5ce"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/profile_2024.html",
+      "bytes": 73677,
+      "sha256": "f4cc9dad33c15e3f212a3f4b7efebf28bc0ce8e2c9fcf2974a4b200cb2e6ed25"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/profile_2025.html",
+      "bytes": 75259,
+      "sha256": "a175a0e07cedc06ae612e3c3fa8a107a08d7290cecbe0ccf28a0737515fd55d3"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/provenance.json",
+      "bytes": 834,
+      "sha256": "921b24566fcaa45b7eee7700440241cf6f3a3539a571bec49bc0651ed09ee59f"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/provenance_2017.json",
+      "bytes": 414,
+      "sha256": "e3a6cc5750584af8164471cb254fa69801b6773ab0032b0f65d2ba87c6eb566e"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/provenance_2018.json",
+      "bytes": 402,
+      "sha256": "53e71a9bc7435fbf13a14b740a6166121298003f8f318f1eb0795749d5844307"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/provenance_2020.json",
+      "bytes": 350,
+      "sha256": "676c399918b81f3a76844a7b251fe17ae3246f8eee4177be80ed9c494ac2cf48"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ID/provenance_2022.json",
+      "bytes": 475,
+      "sha256": "c103897abf5ddbba1c0304c9be32257e3c3f3cbc0d44aa0797dbe9008026db07"
+    },
+    {
+      "path": "tests/fixtures/ingestion/KH/index.html",
+      "bytes": 222372,
+      "sha256": "fe73e14d15ea91adf07d60559e7589ed100b6e75bf423f236ce00b765eca85f2"
+    },
+    {
+      "path": "tests/fixtures/ingestion/KH/invalid_header_week10_2021.pdf",
+      "bytes": 451620,
+      "sha256": "572e5427cbc3dad9b16ca33dc03f218042e353447ef9f7cbc2b89b456ba99f5b"
+    },
+    {
+      "path": "tests/fixtures/ingestion/KH/week01_2015.pdf",
+      "bytes": 683380,
+      "sha256": "da955f3b3c0039c3016667b4fce26d3cd2c77ffb106d27fe49a4082e90e9200d"
+    },
+    {
+      "path": "tests/fixtures/ingestion/KH/week01_2016.pdf",
+      "bytes": 695878,
+      "sha256": "ffd51b741f15cfeee9bd0ffaa0a5807ea047cd7eb3ff43412eeb76ba50a49202"
+    },
+    {
+      "path": "tests/fixtures/ingestion/KH/week01_2017.pdf",
+      "bytes": 620704,
+      "sha256": "c5043024a02855aac7b7b906d9daef98dcc1ce5ecf816dd1ab65e3692f6bdf66"
+    },
+    {
+      "path": "tests/fixtures/ingestion/KH/week01_2018.pdf",
+      "bytes": 792193,
+      "sha256": "5de9d8ca5e9a2e67c288cb74e7ff44eeceae21d989639dc49b092765a312b2a2"
+    },
+    {
+      "path": "tests/fixtures/ingestion/KH/week43_2026.pdf",
+      "bytes": 743610,
+      "sha256": "b178fe192aa0eeade89910e84758980d49eae98f02809b50f4f771304f77eff8"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/1984_all_national_cases_age.pdf",
+      "bytes": 8654,
+      "sha256": "4ce81be9752418e98ced28668643821c0054fc0f1219df3cf9029f2057ba23c4"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/1992_all_national_cases_age.pdf",
+      "bytes": 14758,
+      "sha256": "0026fd1b9c138878d1566271c8af763745ce0e2eb7d297d8a9f70cefbbe3c0b7"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/1997_all_national_cases_age.pdf",
+      "bytes": 21844,
+      "sha256": "83f83b01f3be136e709188685bffdf843d371768c6afa9b291535a60d5eef8e0"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/1999_all_national_cases_age.pdf",
+      "bytes": 21355,
+      "sha256": "2c6a9574fae7375ffdd7a30294f69ba40d81dd8a7de248dbed9a32a1e9995621"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/2003_all_national_cases_age.pdf",
+      "bytes": 20885,
+      "sha256": "ad5baedf7c20ae3422bd1adbc910b385d47bed008f9181859b46ecd962def293"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/2004_all_national_cases_age.pdf",
+      "bytes": 164199,
+      "sha256": "84fd035e758c360123b8a0d812d57c5319a08d36ba7a3bd0eafa1eafe70f798c"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/2010_all_national_cases_age.pdf",
+      "bytes": 190444,
+      "sha256": "963e8186f6786e8995f7becd85fd7d78769ecd9777dba537e85b10a68d490979"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/2025_all_national_cases_age.pdf",
+      "bytes": 965023,
+      "sha256": "4a7513acc6e4e2a780f74e407dcf26ca44c506e86d0a96cff27f7e54eadc6e01"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/2025_all_national_incidence_age.pdf",
+      "bytes": 928080,
+      "sha256": "d5d91beb6eb9d927909e352be5a50533049d0c27b9e22b103f8d4854650c2f0f"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/2025_female_national_incidence_age.pdf",
+      "bytes": 865340,
+      "sha256": "4b49070a83c3f867df27c68fd2a467166c3d6f81a79b28d84a85cc3a77dee08a"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/incidence_index.html",
+      "bytes": 9646,
+      "sha256": "e66b32f54fef3f1fbd32d5a4185b937f7a3c7ce3379164542e6881c2d3f8d9e5"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/national_index.html",
+      "bytes": 136437,
+      "sha256": "521cd13f086997505f13e33213ddd1885bf9a0d101286ddc91024ef9756d5d1b"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MX/provenance.json",
+      "bytes": 9870,
+      "sha256": "4a1fea7a99c351ec94cb013183bc3096b9011239e6f1f2718fd5c5ab312ca719"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MY/README.md",
+      "bytes": 2001,
+      "sha256": "6b2e84700ad2ec576c6b3a35ba18ee21a02c76162596259c07ce42f2a2769d64"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MY/idengue_20261115.html",
+      "bytes": 22046,
+      "sha256": "59127fe429a4f8fa0c2a5d490cac4abf95314ee775bbad648963ea3c317ddc70"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MY/std_state.parquet",
+      "bytes": 6633,
+      "sha256": "6402d05d667883d4f53c479b3c7a05cbc077d0ab5cc1b442448ddd2e57bd307a"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MY/who_flunet_dictionary.json",
+      "bytes": 14674,
+      "sha256": "2446762ee68bfeafcd03cecf644ff05f7dc75e3a430b0436c4f28313d669dcde"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MY/who_flunet_sample.json",
+      "bytes": 5722,
+      "sha256": "7dbaed14700bf2ef23e57f07c058f851a1b025e98c2ab76e014d4b611a5b370d"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MY/who_gho_metadata.json",
+      "bytes": 2653,
+      "sha256": "7e18e364e87730b7e76efc4234d4e0e178f7eab544e03d06bd47c5bf1bf99af8"
+    },
+    {
+      "path": "tests/fixtures/ingestion/MY/who_gho_sample.json",
+      "bytes": 22881,
+      "sha256": "89eee31c1e13dea30da6a274f2a21297aa01c45b2e3de3c8be0d8623013c206e"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/README.md",
+      "bytes": 1208,
+      "sha256": "972a76aec281675f31253aadcf35cb0c00773f3b7499ad969bd7bb2100dfc4cd"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/cholera_2023_w09_pages.json",
+      "bytes": 10852,
+      "sha256": "7752ab0f0bc19a236c9bba3cd83a0df9550030c74ff086888eb8f8abdf4765e1"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/covid_0_pages.json",
+      "bytes": 26549,
+      "sha256": "755150114d2c471241dfff3d10155c85cd0e9ae6e95e91d569a3796722f80b36"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/covid_150_pages.json",
+      "bytes": 8442,
+      "sha256": "55b03dc7a3eb1bfedbb85fd4e825c25576f7cf8a9bd014168d4d89fb3a17468b"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/covid_2020_05_28_pages.json",
+      "bytes": 7158,
+      "sha256": "92fd42641b634f3eca8ee3c9e680a963f268e970401d3ede8f52204d37e8b8f2"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/covid_2020_09_01_pages.json",
+      "bytes": 8460,
+      "sha256": "c04128c8e068e5f664a23ffee68273f3b841ad592220642c282c45cc24ec0f36"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/covid_2020_10_10_pages.json",
+      "bytes": 6383,
+      "sha256": "8c61ffa1131e9194d38d916a258ebe012f8322a249d8e4c640a258505159ae5d"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/covid_2020_w53_pages.json",
+      "bytes": 18732,
+      "sha256": "5420014202dd69ec0ec4b9acb3b60d2844cf5d616a3eefddfc4ae29989a485dd"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/covid_2021_w08_pages.json",
+      "bytes": 22380,
+      "sha256": "3189b46ff5f1725b6f18e691a15732df7151122355bdab31e6aee264b9cf71d6"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/lassa_2017_w09_pages.json",
+      "bytes": 10594,
+      "sha256": "9dd7a46eacc00e16a03e33e3258cb2d365ffecde1da13465fb47582c47fc51a1"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/lassa_2019_w02_pages.json",
+      "bytes": 3144,
+      "sha256": "50024f80fc3f4e6887873037367d86d1cc946a979b2081f325bed974dad463c1"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/lassa_2020_w03_pages.json",
+      "bytes": 5125,
+      "sha256": "81a6a3c929fa8b31b512061202280ab7c5fd4a04a77ec103a63cc22f204b7060"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/lassa_2021_w29_pages.json",
+      "bytes": 4605,
+      "sha256": "760569d09bf23e34212daf9fcb5d90498cc6ac2ee3beb61c4fe2bcc41c8da463"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/lassa_2021_w35_pages.json",
+      "bytes": 6473,
+      "sha256": "18625a972738a5b2e6621b1a27f5d7250620c67930ced4f937f3c3d95ec8fb4d"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/lassa_2024_w30_pages.json",
+      "bytes": 13883,
+      "sha256": "8628d89dca192507bbba848d8905f82887f89e880203eba0dcf68ec5fcb2df21"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/mpox_2022_w51_pages.json",
+      "bytes": 9542,
+      "sha256": "9534be48a3fc4e485b6cf16790fa3aa8c603d789776e2786d6852b6fa3b362bd"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/mpox_2024_w25_28_pages.json",
+      "bytes": 6117,
+      "sha256": "5d8e19237754c3411fa4674a8e8c9dcb72df2941edb37179965cd69c478e09a2"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/mpox_2024_w40_pages.json",
+      "bytes": 6536,
+      "sha256": "fe2352d69ec96311b42080900240c78cf1e5b7cb35a516acd3cdce0dfd85c818"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/provenance.json",
+      "bytes": 8953,
+      "sha256": "d26ca6526b93765627dd8e98f2bd14e3d3e5104bf1ec144cb94f613ad67495ba"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/sitrep_category_10_pages.json",
+      "bytes": 9015,
+      "sha256": "9c10f0e1728187230973eec6ccff88ce05f43efcc9fba67d0051065e84e752ae"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/sitrep_category_11_pages.json",
+      "bytes": 8576,
+      "sha256": "5c66f361c8dbe63962f065c093af73a212dd6d4edc02cdde7f9e2e2bd8abaaef"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/sitrep_category_13_pages.json",
+      "bytes": 5536,
+      "sha256": "d9d8eba333efa80271bf0da736fd2f92d06eeb69588adb141dca5cf79c301fdf"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/sitrep_category_18_pages.json",
+      "bytes": 12353,
+      "sha256": "494e1d9df04c657186e988566074834b828962e61c5e1118506729743b3a6fd8"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/sitrep_category_19_pages.json",
+      "bytes": 11228,
+      "sha256": "cf7562ea5db7975888906b5c1d1400b4e6e6cabb1d2280465e740edd9d75bfce"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/sitrep_category_6_pages.json",
+      "bytes": 15021,
+      "sha256": "3d6b085157923d15c48e290bd4f52c8a1d86a815dbacd4f0c100766cd853c5ee"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/sitrep_category_7_pages.json",
+      "bytes": 13801,
+      "sha256": "2b3299443b0cc613ef91fada3cf746632bdc3e1c697f1a3c4932a12f91e9542d"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/sitrep_category_8_pages.json",
+      "bytes": 6379,
+      "sha256": "afc57d55678c23a9f9244f9369f8bafd3d50c433830593622e02c0207d942cfe"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/wer_2016_w36_first_page.pdf",
+      "bytes": 620225,
+      "sha256": "1be67ed2f34639f5d10d226c4959ebccc60e51ac428477712ff443b6e4715752"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/wer_2019_w01_pages.json",
+      "bytes": 13880,
+      "sha256": "174d7475bc6db68cf8c26992033036708ac21e7bc8e702c706f4a29e4d01d685"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/wer_2026_w34.pdf",
+      "bytes": 1915180,
+      "sha256": "a645ca6e54b5f66fd972d6437366e8c50e5f4c043773f72144e9adda9c846264"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NG/yf_2018_w43_pages.json",
+      "bytes": 7897,
+      "sha256": "f8715ac80b46efc81ed34b0a9904c4a1d1d9971dbdf6a5bb726a6e696d291fd4"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NL/respiratory_weekly.zip",
+      "bytes": 43439,
+      "sha256": "6921822fb4c4db268705fed72ab3c0f3f3198aa29ef1943e6277ee5575191da4"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NL/rivm_notifiable_annual.html",
+      "bytes": 17407,
+      "sha256": "3f437efea9da153dcd7a041021294ed9450c0c8f0dcea9563126767cf1956a11"
+    },
+    {
+      "path": "tests/fixtures/ingestion/NL/virological_weekly.csv",
+      "bytes": 4159,
+      "sha256": "702943055a6aa54de671b773e3a190cbdfe3fd1b128caa5fe772d50317091920"
+    },
+    {
+      "path": "tests/fixtures/ingestion/PE/2026w13_cover_summary.pdf",
+      "bytes": 5812723,
+      "sha256": "7649ed3324b07ac3ebef7e4e6ddf93fd82d35dacc2a368a3eb6780ed87fbeddd"
+    },
+    {
+      "path": "tests/fixtures/ingestion/PE/2026w13_provenance.json",
+      "bytes": 549,
+      "sha256": "beceadbdade81003e0add6586ac8ca92ee2b38a646c640433fe02352d4251893"
+    },
+    {
+      "path": "tests/fixtures/ingestion/PE/2026w17_provenance.json",
+      "bytes": 604,
+      "sha256": "3e7f8c2d1bdcb93712d25e314824229048185102e1a4b043eb93cb035e182522"
+    },
+    {
+      "path": "tests/fixtures/ingestion/PE/2026w17_summary.pdf",
+      "bytes": 198162,
+      "sha256": "309ee9ceb701fddbc2c40c0a390269aa9ef28282eb891754e4a33de789833445"
+    },
+    {
+      "path": "tests/fixtures/ingestion/PE/official_bulletins.zip",
+      "bytes": 8557778,
+      "sha256": "331aa66be1fc1043c5e404a8f2c06114330b3b7d5ee651a5c0de4beaabd5f9b5"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/README.md",
+      "bytes": 1627,
+      "sha256": "815095d135aa859a10f4584f2c741878aacce98037f26ed1ca2284c3445f0518"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/audit_2023.json",
+      "bytes": 19523,
+      "sha256": "9e5b866998f09ac3906cfa047c95a9a57199a8eb59f2fb8d3f4c6184c42eb510"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/anthrax_2026_w46.pdf",
+      "bytes": 125022,
+      "sha256": "161667e8d1db7d41376c212e6845bf11af4b9845b8d7d69e528aa7e53e30e791"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/calendar_2026.rar",
+      "bytes": 653898,
+      "sha256": "84431bf5665803e2e8c0ac31c444551f23dceed140b6a686993d1269feb89965"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/calendar_2026.xlsx",
+      "bytes": 662576,
+      "sha256": "9d1e1060112e08c0c98352586eb526bee025195613873cd5a8ea2103cf985f05"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_1.html",
+      "bytes": 419,
+      "sha256": "f99e91a46505f654901f9665b19d6d680510fea0acb723671e7a1f295ff9c44a"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_10.html",
+      "bytes": 59,
+      "sha256": "f5ff03b1adfb4b5278ccd5ff49d091f17910b3e8a1bc84d457952f2772cb98f5"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_11.html",
+      "bytes": 59,
+      "sha256": "f5ff03b1adfb4b5278ccd5ff49d091f17910b3e8a1bc84d457952f2772cb98f5"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_2.html",
+      "bytes": 59,
+      "sha256": "f5ff03b1adfb4b5278ccd5ff49d091f17910b3e8a1bc84d457952f2772cb98f5"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_3.html",
+      "bytes": 308,
+      "sha256": "160083a78583a6cfcaf293d1e738ea79d52b1695d3fe75ecf0f215569a644ede"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_4.html",
+      "bytes": 620,
+      "sha256": "f611bb5ab82fa7ff93ac53d7ebdbeb421b07e8a20d3036f8dbac5d1961fe0942"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_5.html",
+      "bytes": 829,
+      "sha256": "8fce985b8f204fcb5dec0e4c21593c5979102f9995becabba70835334e8cd78a"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_6.html",
+      "bytes": 424,
+      "sha256": "12336c71e1f07cbd63b1294cdc9af19958425b9eb4bc79c9b17b6c9ce659d6f9"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_7.html",
+      "bytes": 284,
+      "sha256": "f39cfd7db63648a87105a049d0197694e7ecfb9d2f17d91870a776aca78a8ea1"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_8.html",
+      "bytes": 879,
+      "sha256": "cfdc22d365a118f746e0f18f46b153aebd9680b9585669092b115c4a64ba290b"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/group_9.html",
+      "bytes": 878,
+      "sha256": "55e0ac86c092dc0b2a85cd3f2fcf625b9fb00614f89f4fc26f4c8bc967112a6c"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/influenza_2026_w46.pdf",
+      "bytes": 810706,
+      "sha256": "813622238a753bf8df5b9bdf243593eb7c863101cb40e180d9b3dd772d677aa7"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/national_form.html",
+      "bytes": 6099,
+      "sha256": "9e10a044b2caa85dbcce1655d668315d292059f73071c815c22438c6e2d0d5d9"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/polio_code20_2026_w46.pdf",
+      "bytes": 121077,
+      "sha256": "0f84ff565a29f4b05325c70d617ecb80b2d99423c0e4daaad050a97d5a51ea17"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/dds/week_options_15_2026.html",
+      "bytes": 370,
+      "sha256": "69e062dc2a0e390cdd93cabda7901f0c4bd8f80962dff8a14ad5913de5ed7f4e"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/legacy_samples.json",
+      "bytes": 758,
+      "sha256": "2ce29557793ff69214817c895954b864dd27a2244268b967fb875c4571d15139"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/legacy_samples.zip",
+      "bytes": 18021,
+      "sha256": "f5bac2149c80711b506cf07a710063a2e958be6089b3d6f4db60d0427fa956b3"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/mcd_Influenza_67.rtf",
+      "bytes": 109538,
+      "sha256": "8a2c48f17676724934cae4edec4885cc381db81b7460b7df13cc7ca1ef25b8a5"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/reports_2023.zip",
+      "bytes": 470227,
+      "sha256": "2df72d8600414f3268473989351e5d51f764f31ddd3e0cf95bfad50c8bd45503"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/tableau/README.md",
+      "bytes": 1286,
+      "sha256": "0d590dc57a876e0556f6023122b76f57de52d37c09ff1f3c1c611ecca2d7d7b5"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/tableau/single_week_flu_report.zip",
+      "bytes": 1829234,
+      "sha256": "99e9e0c546c178f90f2dac6ab575cc4cf64b1844815c97c658228888e0e2ce1a"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/tableau/sparse_and_zero_report.zip",
+      "bytes": 4410147,
+      "sha256": "69b93900d4a70614c9013ba0ed00b759d82ba36c5a2bfc69c54b3b033bae05d8"
+    },
+    {
+      "path": "tests/fixtures/ingestion/TH/tmcd_DHF_Total_67.rtf",
+      "bytes": 108351,
+      "sha256": "640cc281e7e3902d00c10433e6da66c04802142948fac8399b2c569ad4519a83"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/README.md",
+      "bytes": 938,
+      "sha256": "ddc9146d5fb684905d9aa62b9555d13b53e99fdc441464e01ec23e1ecab4fdc6"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/monthly_2023_03.pdf",
+      "bytes": 244414,
+      "sha256": "f3f48ea612281309d207c125d2ea6accd2883dc253498e292d2e286a9fcb934b"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/monthly_2023_05.pdf",
+      "bytes": 210868,
+      "sha256": "1ffc9da0dbc589af891920960a39ce2f1a7d2810b71b824f0927941955da4e25"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/monthly_2023_10.docx",
+      "bytes": 1045139,
+      "sha256": "9055b936d6078bfe40cf7b39effb0173d89633bf64b533f7e56f1567d0b82930"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/monthly_2023_11.pdf",
+      "bytes": 272467,
+      "sha256": "a08ecc60de4bb567de4aaf0a2e679bbe58f9aaeb45a54b6920de2c20f8e89adf"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/monthly_2024_01.pdf",
+      "bytes": 308287,
+      "sha256": "e0a97d4c0f61d51c02ac68810e716d72053451dcf334bdbaff67a65b6ffa26a9"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/monthly_2025_03.pdf",
+      "bytes": 381513,
+      "sha256": "4b2ce65cfb385a34945d0f8bb7e8b66859039a18f2911be8d9d483e70f539e34"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/monthly_2025_06.pdf",
+      "bytes": 1133479,
+      "sha256": "c425ccb03932cd7344046b3f0c407c9eecef11127abf584fd879ff9706cb0a08"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/monthly_2026_07.pdf",
+      "bytes": 883420,
+      "sha256": "0200facf9e6b9e004fa184d80049c34052e8b0e20a26168ea460a508fdc18ea2"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/monthly_2026_08.pdf",
+      "bytes": 897572,
+      "sha256": "2cace9861439e4539aa69ec3afe8b647a3f18ada48be864a1b9d8ad91c9b6d50"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/provenance.json",
+      "bytes": 11181,
+      "sha256": "d547859f383cb83afa781b36dcc9be0443fb3820af706e71d14027fa7570f925"
+    },
+    {
+      "path": "tests/fixtures/ingestion/ZA/quarter_2026_q1.pdf",
+      "bytes": 1090214,
+      "sha256": "e366885beca8d71233245ee9ab5b97aa0216e94e8c3d885d2a9ae468a0645407"
+    },
+    {
+      "path": "tests/test_my_notifiable.py",
+      "bytes": 5615,
+      "sha256": "6e6ba8cb616a88dc102e4a8a66653170c123b159d332c45f1e60a114ad68f613"
+    },
+    {
+      "path": "tests/unit/test_argentina_ben.py",
+      "bytes": 10725,
+      "sha256": "c81b32935f31b8c90c7602d59bee600b441e08a288d5abf88099c92704f37873"
+    },
+    {
+      "path": "tests/unit/test_automation_state_refresh.py",
+      "bytes": 10972,
+      "sha256": "b71c6d4ef43ce5ff3140386a0177c6f5b7935386dfd658d2716cd85ef4803708"
+    },
+    {
+      "path": "tests/unit/test_cl_eno.py",
+      "bytes": 4571,
+      "sha256": "e14bbd746c5a81bd9f2d1095f73d656bece2245a5c6bc70b70362bade49b3d77"
+    },
+    {
+      "path": "tests/unit/test_cn_inner_mongolia_deaths.py",
+      "bytes": 3261,
+      "sha256": "37ccd5ed11707d01b180d34ae6ecd6cd31783e1e854282a29d3530699cd6d0d5"
+    },
+    {
+      "path": "tests/unit/test_cn_province_backfill_state.py",
+      "bytes": 3601,
+      "sha256": "116245687e5fce630371ce1fe98fe914de4a2982c020204ff79b68e944367e15"
+    },
+    {
+      "path": "tests/unit/test_cn_province_deaths.py",
+      "bytes": 4712,
+      "sha256": "abeb0a5316262075a3bf16a4e7704d1574d57167b3a05d34592916bf7cd99cdf"
+    },
+    {
+      "path": "tests/unit/test_cn_province_discovery_repair.py",
+      "bytes": 15345,
+      "sha256": "0e333728e8b4690eca2e61a5d004e844abb2d66be1be82138761ff6868799fb7"
+    },
+    {
+      "path": "tests/unit/test_cn_province_health.py",
+      "bytes": 13227,
+      "sha256": "78cf63d55ed6c299e2dc41ad1677a42940714faeb3560dbd50576f40297f8b66"
+    },
+    {
+      "path": "tests/unit/test_cn_province_image_ingestion.py",
+      "bytes": 10691,
+      "sha256": "e39ce8d35695c5c824c5e81c4e962ce62a399d4b459a1400fc6b656149470eb6"
+    },
+    {
+      "path": "tests/unit/test_cn_province_image_mixed.py",
+      "bytes": 7796,
+      "sha256": "6682737b1b4f3a13b234cb444d5a10fa11ca33ca6bf1aac5750e4f04dbce8778"
+    },
+    {
+      "path": "tests/unit/test_cn_province_image_review.py",
+      "bytes": 22663,
+      "sha256": "e42bd1b017941173229bfc871d599b4a786c6a111e8ec287704adc60c32251b1"
+    },
+    {
+      "path": "tests/unit/test_cn_province_image_triage.py",
+      "bytes": 2632,
+      "sha256": "57226423c82a33f13746826c5942cb06b45db8cc53b3a7b8bf18d646f3d6db34"
+    },
+    {
+      "path": "tests/unit/test_cn_province_images_cli.py",
+      "bytes": 6347,
+      "sha256": "e8cda38b70e258ef41ea551cd9df126a09af59a6a7a57b65ced8af572c056475"
+    },
+    {
+      "path": "tests/unit/test_cn_province_jobs_configuration.py",
+      "bytes": 3199,
+      "sha256": "b61a933648012cf169c07b29ff06fbfd6c92e7c2a81767475ade63c269ec4354"
+    },
+    {
+      "path": "tests/unit/test_cn_province_month_quality.py",
+      "bytes": 2000,
+      "sha256": "461f9582f4a5b09614e60993f9b6b35dda87fd923d8da4720d4e012347f02607"
+    },
+    {
+      "path": "tests/unit/test_cn_province_refresh_workflow.py",
+      "bytes": 13645,
+      "sha256": "d423725cd6320bee102dfbcf635bbf076cb076f32af383f70ae6d9407a051bb2"
+    },
+    {
+      "path": "tests/unit/test_cn_province_repair_plan.py",
+      "bytes": 13707,
+      "sha256": "bd13357ebe5764ea16695ad477ba843e1938aebabd2a171a2801ae7d9eeac1cd"
+    },
+    {
+      "path": "tests/unit/test_cn_province_repair_verification.py",
+      "bytes": 3960,
+      "sha256": "f701f36e75616c5da604f4a84c6c6026ba9f5a76a34bf90957fe80e96986262b"
+    },
+    {
+      "path": "tests/unit/test_cn_province_revision_review.py",
+      "bytes": 10689,
+      "sha256": "0136e95091097482b76fec4b32939c040d6af35b7b169ec7a34a042ab7aa90ba"
+    },
+    {
+      "path": "tests/unit/test_cn_province_semantics.py",
+      "bytes": 10402,
+      "sha256": "89c7f11933d4601fc805b8ee98535096bd6dd9de5b858715ae98fd095173755a"
+    },
+    {
+      "path": "tests/unit/test_cn_province_stage_cancellation.py",
+      "bytes": 3464,
+      "sha256": "d2885a0fc5302080c2dae55e74d94fed3a542cbb5def21ecb772389f4fe58a28"
+    },
+    {
+      "path": "tests/unit/test_cn_provinces.py",
+      "bytes": 16593,
+      "sha256": "d3514aef0cd72baf7ff036e15a62a25700c7a8d0078e55c6989bdcffff33663f"
+    },
+    {
+      "path": "tests/unit/test_co_sivigila.py",
+      "bytes": 7009,
+      "sha256": "23bbfe13d57064f5ee30f02616a46e8192bcf6576e5ce65814b30f4b448bb44b"
+    },
+    {
+      "path": "tests/unit/test_co_update_gate.py",
+      "bytes": 7565,
+      "sha256": "87256efaf4b9eaf9cd87eedae68e8d91f8ba1de5033c99287f568a41f8571403"
+    },
+    {
+      "path": "tests/unit/test_document_images.py",
+      "bytes": 6544,
+      "sha256": "6c07dbaaafca6595a50ad3820368a2d40483e6d3f9864182d379d75585039c9e"
+    },
+    {
+      "path": "tests/unit/test_foreground_ingestion_lease.py",
+      "bytes": 4709,
+      "sha256": "c6e1a3845fc84c7ff4a5c86914482d8efb0c922b6ca837605d2e158cdf5f9ca5"
+    },
+    {
+      "path": "tests/unit/test_historical_country_onboarding.py",
+      "bytes": 10001,
+      "sha256": "defa4fa57a8ed620a453c42aded328427cc7f979656c14344fcfd762088abcc4"
+    },
+    {
+      "path": "tests/unit/test_id_kemkes_profile.py",
+      "bytes": 12581,
+      "sha256": "8e2d350bf1c345b37baec0b9ff7c3517de63d902e32985802e1a9482a7b90da5"
+    },
+    {
+      "path": "tests/unit/test_ingestion_mapping_notifications.py",
+      "bytes": 3589,
+      "sha256": "ccbcc23f7f0655771eebc3b12277b1d8b535c31b2fb8a37b0182a44b2f46a0cd"
+    },
+    {
+      "path": "tests/unit/test_jp_population_source.py",
+      "bytes": 10765,
+      "sha256": "25ea4b9c2acfafbc8b3abd8cb0d1d8dd204c1034b000b3baebd622ace8596f7c"
+    },
+    {
+      "path": "tests/unit/test_kh_camewarn.py",
+      "bytes": 6015,
+      "sha256": "13e9f50ccb68cf7fb2d519d30015b2fe0069c98890cba9ff2b947121a2d76c64"
+    },
+    {
+      "path": "tests/unit/test_model_center_catalogue_policy.py",
+      "bytes": 11543,
+      "sha256": "003a49a6db5e5d95833171f12e970d707c4dd03bd7c0ff1e2fab3c595036c0a3"
+    },
+    {
+      "path": "tests/unit/test_mw_phim_idsr.py",
+      "bytes": 9428,
+      "sha256": "068800b7d614c95aaa6869d0f0835562a8f3424e8c21f764f0d53e5c9238ead9"
+    },
+    {
+      "path": "tests/unit/test_mx_dge_annual.py",
+      "bytes": 12794,
+      "sha256": "189fc972be680cb6b20e9515962730cdcf834f15a54dfd0e2d00a11622473c46"
+    },
+    {
+      "path": "tests/unit/test_my_idengue.py",
+      "bytes": 6643,
+      "sha256": "e827031863a8053ad2fb9ccf85f4d90135e59713785a34b79d227f9b74a3e173"
+    },
+    {
+      "path": "tests/unit/test_my_nl_current_onboarding.py",
+      "bytes": 3723,
+      "sha256": "f96d178e63297ba6209201ddd087267bf03f3193d0ad6e640c2e8efddbeacfb6"
+    },
+    {
+      "path": "tests/unit/test_my_who_sources.py",
+      "bytes": 11675,
+      "sha256": "92be7cb1c0e5db7edbbc998327e5763790aecb10c46b23e1d96044975197e80c"
+    },
+    {
+      "path": "tests/unit/test_national_notification_schedules.py",
+      "bytes": 5604,
+      "sha256": "b19d419056d3ff086c88bfb6adc7ba07b40d15994b3bd281dd55b61d5eda2a41"
+    },
+    {
+      "path": "tests/unit/test_ng_ncdc.py",
+      "bytes": 16583,
+      "sha256": "af6cd9495365b43d07ea23c4f63e239e94a6f0cb761f5b20a91ad6beea4ec360"
+    },
+    {
+      "path": "tests/unit/test_nl_notifiable.py",
+      "bytes": 8343,
+      "sha256": "19cdf67644f3d5952a399669f3c486f44566467265a6ac4cf72390fb06522253"
+    },
+    {
+      "path": "tests/unit/test_nl_weekly.py",
+      "bytes": 8213,
+      "sha256": "95131203760d5419c03571db9c0c0cef24fd1318f545c259da3e9b03b1a35887"
+    },
+    {
+      "path": "tests/unit/test_official_population_refresh.py",
+      "bytes": 6881,
+      "sha256": "0a58989f645c40bb1837b2b5e9dd1b713f08cf272119221db57f29fb0f3b9140"
+    },
+    {
+      "path": "tests/unit/test_pe_cdc.py",
+      "bytes": 15778,
+      "sha256": "ec991c8eef55eea4b2a0bd02d6229a24053e3a1878e519850999d2249a3f58a1"
+    },
+    {
+      "path": "tests/unit/test_peer_review_routing.py",
+      "bytes": 3988,
+      "sha256": "9e26de7acdce90fde0a1af962c977ea9529797914fbc0688a7d092a86e7fa72f"
+    },
+    {
+      "path": "tests/unit/test_population_automation.py",
+      "bytes": 5532,
+      "sha256": "e3626ed23c1d7d9161a41eb071ed1e42f473cc101e3c5e9d91018a3da7dbf6d0"
+    },
+    {
+      "path": "tests/unit/test_population_incremental_store.py",
+      "bytes": 9358,
+      "sha256": "1f82837abc8aa6abf6f6037b3d7d68a2c2b0e0b12d9f6ec6e35bf3bf5f450205"
+    },
+    {
+      "path": "tests/unit/test_population_source_eligibility.py",
+      "bytes": 4732,
+      "sha256": "9779aacb665eb68def0b68138d14ee93438ab9248e06911304f8ac479142553d"
+    },
+    {
+      "path": "tests/unit/test_priority_country_updates.py",
+      "bytes": 8466,
+      "sha256": "71a6f72c4217487d8e3c6fe3b163758bab9e65eedb3960d712377fba6765d03f"
+    },
+    {
+      "path": "tests/unit/test_priority_surveillance_onboarding.py",
+      "bytes": 5709,
+      "sha256": "3499911fe0d0b13001c0a0bd5aff7b43b2f31c58afddbc884b5cfbb65db6cf82"
+    },
+    {
+      "path": "tests/unit/test_schedule_state_cas.py",
+      "bytes": 4032,
+      "sha256": "58e716831e808756232904a5f675371b4a82e950c916ec984212a1021af830f8"
+    },
+    {
+      "path": "tests/unit/test_se_population_source.py",
+      "bytes": 6489,
+      "sha256": "6492bd5dddc5015e80b4b6b74ee3968e5ce37ef9595bf6f76b34380a501f5961"
+    },
+    {
+      "path": "tests/unit/test_series_observation_store.py",
+      "bytes": 50228,
+      "sha256": "0fdc88182868e398020936136fca62aa3b70d079f899d88434e3a64c67522b89"
+    },
+    {
+      "path": "tests/unit/test_site_subdivision_maps.py",
+      "bytes": 13322,
+      "sha256": "bd1966fa76d0a434c2a387f656a39b2240ecca0fba9a8c895eafcef10acbb64e"
+    },
+    {
+      "path": "tests/unit/test_situation_feed_export.py",
+      "bytes": 2058,
+      "sha256": "8fb6e5e4845fa986991b47d0c9b26c55ae48d4de59c5f1b7aef770031db3bfcb"
+    },
+    {
+      "path": "tests/unit/test_situation_hosts.py",
+      "bytes": 8290,
+      "sha256": "4191eef6a78cb9510851fbc3fd8c353afb9d2bb27ac0effe560649942cd6c770"
+    },
+    {
+      "path": "tests/unit/test_situation_json_publication.py",
+      "bytes": 15707,
+      "sha256": "7444fb61a8b11fe621694472a9b07ba95de9a8018d05a1f192fc5c4ea8a980a7"
+    },
+    {
+      "path": "tests/unit/test_situation_release_validation.py",
+      "bytes": 12162,
+      "sha256": "790305c472a701b9ce29c87c301998254fe303154e0e1abd19b6436d6eea7af4"
+    },
+    {
+      "path": "tests/unit/test_surveillance_data_export.py",
+      "bytes": 14525,
+      "sha256": "8220d341f49e1451e7cf6d885110ed70eeb917b4bed47268a2af648edfb6fd2c"
+    },
+    {
+      "path": "tests/unit/test_surveillance_signal_pilot.py",
+      "bytes": 8870,
+      "sha256": "dbbdc66e294d46f631d7b415a43e500f9e4a38b889c9f3de34aa5091b050fd6d"
+    },
+    {
+      "path": "tests/unit/test_th_dds.py",
+      "bytes": 10730,
+      "sha256": "da0564328fc5b3b7e8ae249a615e6d9742ae54ad1db66fbe67b83048458077b0"
+    },
+    {
+      "path": "tests/unit/test_th_doe506.py",
+      "bytes": 15635,
+      "sha256": "b9f09cf1f6ffa93b3517e92652e28f2088d1353db2b7222e67885ac98c939e8a"
+    },
+    {
+      "path": "tests/unit/test_th_id_th.py",
+      "bytes": 8390,
+      "sha256": "fc3f328de1f847815620d49757aa42829088d1903c3c254633d30b0ab8083b18"
+    },
+    {
+      "path": "tests/unit/test_th_tableau.py",
+      "bytes": 10717,
+      "sha256": "6293d06c54c057fc8d44c80b20a73d282eb088dbdad608df1fd5132f87de8247"
+    },
+    {
+      "path": "tests/unit/test_us_population_source.py",
+      "bytes": 6707,
+      "sha256": "d497741ce7e492a0a754fe5a7fce461029c86afc6e4cc9dbda1093236931f1fc"
+    },
+    {
+      "path": "tests/unit/test_za_nicd_nmc.py",
+      "bytes": 12604,
+      "sha256": "37d63158258b0a6e6596439c81cbb9fba2ca34d83f8069c8b55bc45be10cda71"
+    }
+  ],
+  "changed_since_start": [
+    {
+      "path": "configs/country_bootstrap.json",
+      "before": "cfd6d905ebdccf050b663810340a8f3fa8ea0439eb94325491df25b28c17fced",
+      "after": "2c214feab5b9d1313ef5ab71239886316f94402a0d66afa14b244fda7af03f10"
+    },
+    {
+      "path": "docs/data-sources/CO_SIVIGILA_INTEGRATION.md",
+      "before": "c11a39bd412db6cd3d05a9ac0b8003d169fd9c79bc7ab71ec78df3317f25c210",
+      "after": "6dbe1518818f9acdca20d5ab269c768ded9c4d306b5617f04fd0785e4c2c6030"
+    },
+    {
+      "path": "docs/data-sources/MW_PHIM_IDSR_INTEGRATION.md",
+      "before": "95ed7d5a25a7bf393d9a183318bcc4076ecd5f959fa7822c34dcf3d8f840d827",
+      "after": "bccc342442cc18f67851f1d9d4670b30e91e88273248dc144e3bad87a8c665a3"
+    },
+    {
+      "path": "docs/data-sources/README.md",
+      "before": "5edf64dd7a44ca3d3641969481ea529f7cf1d256f786075f582de2e2e713eace",
+      "after": "c4ee18fabedb1237d0bda5bf4b860be5a4584448433cc281cd189b6086c6129f"
+    },
+    {
+      "path": "scripts/imports/co_sivigila_history.py",
+      "before": "2e5bdfed84b438bccb70508ee89083c788d24ddcefe49ead9485aaabdb7794cd",
+      "after": "0cc7ed4f9f55c2d29687a997e7cc6e702fc8f5df33865209322c32e7c9c1a00d"
+    },
+    {
+      "path": "scripts/imports/import_surveillance_archive.py",
+      "before": "6c1c9b1dac4f3e2d326c353fe8f96bffbd114b70e7099b2839fc25507160101c",
+      "after": "7c4038492dffd1d10e2fb6ca447f35680a854951f536bda429359d490ac9a5e6"
+    },
+    {
+      "path": "src/core/country_library.py",
+      "before": "dcdf3a414ea7d7dfcf6778ef1f5b330455301ed4c519ba3a33ed4773219fb549",
+      "after": "9b5b88439fbdc217b2098410a18f1387a01d6be5eb5dbc7a4da22ab5fa54e01e"
+    },
+    {
+      "path": "src/data/crawlers/mw.py",
+      "before": "ce1fc95ce0dfb412dcb816928a2dd03321b82e76458822bab4b6c2c6752bdc4a",
+      "after": "2337dc9edc94c9e963fc1468bdaf6c443a112a067f98b112035911afc1b084b1"
+    },
+    {
+      "path": "src/data/processors/co.py",
+      "before": "c21bf19c6248e5c6f46a6b4343e01aae6ef27724e7d81893afadb2e3a459c822",
+      "after": "84709f8e727c0210cc45d3bb4be6d826e1b9c32a69ad8ef56506670980317767"
+    },
+    {
+      "path": "src/data/storage/series_observation_store.py",
+      "before": "35b14b6a8a687e38988450b6c5e2b7503671fdf1be29e4b8274f8a19df41a341",
+      "after": "765c9a601378021c8bc14efa8c3f2d311cb615e6c8497a922ee74578fd2220dd"
+    },
+    {
+      "path": "src/services/crawl_service.py",
+      "before": "8b754ee1d876d304b935f032cc66f476c92a8791d22628680a68c8a5dff8f3cd",
+      "after": "6d1f5083f4f2fb2530347b91a6999a513a170a4b5a0fa4242da640646869ee02"
+    },
+    {
+      "path": "src/services/ingestion/countries/mw.py",
+      "before": "5a455dcb430323aa27b3aca85e344f7ef0914773a95751edf1d9344542bf209a",
+      "after": "9e5b180e7196f4807f3a5e428f97e8ef597b0189c1073870a15418b3650875bc"
+    },
+    {
+      "path": "src/services/ingestion/series_rows.py",
+      "before": "56792221bf19775d7d4b1d78a7f27b7d4610790818dcf148856a51dd4edd8761",
+      "after": "2949d7f4a01adc364b92e6b45e66cf5b816cb23f42f8278263e7b2de3a26ba3b"
+    },
+    {
+      "path": "tests/unit/test_co_sivigila.py",
+      "before": "5a02e7cf7b0329bdc3c63e7c1d6e878e51bb889b9ee490239f4a33c9288efbe8",
+      "after": "23bbfe13d57064f5ee30f02616a46e8192bcf6576e5ce65814b30f4b448bb44b"
+    },
+    {
+      "path": "tests/unit/test_mw_phim_idsr.py",
+      "before": "246844429a1f1a9e910f3c68aee584de1dfba3c5803b6477dc056c66c2265fe2",
+      "after": "068800b7d614c95aaa6869d0f0835562a8f3424e8c21f764f0d53e5c9238ead9"
+    }
+  ],
+  "limitation": "Original candidate paths only; no claim of an immutable publication snapshot."
+}

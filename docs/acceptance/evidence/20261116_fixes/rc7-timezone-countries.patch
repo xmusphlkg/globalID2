@@ -1,0 +1,14 @@
+--- a/src/services/ingestion/countries/cr_notifications.py
++++ b/src/services/ingestion/countries/cr_notifications.py
+@@ -85,7 +85,10 @@
+     if len(plans) != 1:
+         raise CostaRicaContractError("Exactly one captured Ministry collection plan required")
+     plan = json.loads(read_artifact(plans[0]))
+-    captured_as_of = datetime.fromisoformat(plan["captured_at"].replace("Z", "+00:00")).date()
++    captured_at = datetime.fromisoformat(plan["captured_at"].replace("Z", "+00:00"))
++    if captured_at.tzinfo is None or captured_at.utcoffset() is None:
++        raise CostaRicaContractError("Captured Ministry timestamp must include a timezone")
++    captured_as_of = captured_at.astimezone(ZoneInfo("America/Costa_Rica")).date()
+     expected = {r["url"]: r for r in plan["reports"]}
+     discovered, directories = {}, set()
+     for artifact in artifacts:

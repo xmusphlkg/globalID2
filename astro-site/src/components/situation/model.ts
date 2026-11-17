@@ -1,6 +1,7 @@
 /** Pure map logic: recency, filtering, ordering and placement. Kept free of React and Node so it is unit-testable. */
 
-import type { MapPoint, SituationAlertRecord } from '../../utils/situationTypes.ts';
+import type { HostType, MapPoint, SituationAlertRecord } from '../../utils/situationTypes.ts';
+import { resolveReportingPeriod } from './report-period.ts';
 
 type FilterablePoint = {
   alert_id: string;
@@ -9,6 +10,7 @@ type FilterablePoint = {
   source_id: string;
   disease_id?: string | null;
   disease_label: string;
+  host_type?: HostType | null;
   lat?: number;
   lng?: number;
 };
@@ -20,11 +22,12 @@ export interface Filters {
   disease: string;
   country: string;
   source: string;
+  host?: HostType | '';
   window: WindowKey;
 }
 
 /** The map opens on the last 30 days; a year of points buries what is new. */
-export const DEFAULT_FILTERS: Filters = { disease: '', country: '', source: '', window: '30' };
+export const DEFAULT_FILTERS: Filters = { disease: '', country: '', source: '', host: '', window: '30' };
 
 const DAY_MS = 86_400_000;
 
@@ -57,6 +60,7 @@ export function filterPoints<T extends FilterablePoint>(points: T[], filters: Fi
     if (filters.disease && (point.disease_id ?? point.disease_label) !== filters.disease) return false;
     if (filters.country && point.country_code !== filters.country) return false;
     if (filters.source && point.source_id !== filters.source) return false;
+    if (filters.host && (point.host_type ?? 'unknown') !== filters.host) return false;
     const age = ageDays(point.published_date, asOf);
     return Number.isFinite(age) && age >= 0 && age <= limit;
   });
@@ -72,6 +76,7 @@ export function deduplicatePoints(points: MapPoint[]): MapPoint[] {
     const key = JSON.stringify([
       point.outbreak_id || point.alert_id, point.disease_id || normalized(point.disease_label),
       point.country_code, normalized(point.admin_area), point.published_date, point.status,
+      point.host_type ?? 'unknown', normalized(point.host_species),
     ]);
     if (ids.has(point.alert_id) || seen.has(key)) return false;
     ids.add(point.alert_id);
@@ -85,12 +90,34 @@ export function visibleSituationPoints(points: MapPoint[], asOf: string, filters
   return deduplicatePoints(sortPoints(filterPoints(points, filters, asOf), asOf));
 }
 
+/** Stable outbreak/place identity, independent of the reporting channel or date. */
+export function situationPlaceKey(point: MapPoint): string {
+  return JSON.stringify([
+    point.outbreak_id || point.alert_id,
+    point.disease_id || normalized(point.disease_label),
+    point.country_code.toUpperCase(), normalized(point.admin_area),
+    point.host_type ?? 'unknown', normalized(point.host_species),
+  ]);
+}
+
+/** Filter complete history first, then draw the latest matching report of each place. */
+export function latestMatchingPlaces(points: MapPoint[], asOf: string, filters: Filters = DEFAULT_FILTERS): MapPoint[] {
+  const places = new Map<string, MapPoint>();
+  for (const point of sortPoints(filterPoints(points, filters, asOf), asOf)) {
+    const key = situationPlaceKey(point);
+    if (!places.has(key)) places.set(key, point);
+  }
+  return [...places.values()];
+}
+
 export type AlertGroup = SituationAlertRecord & { reports: SituationAlertRecord[] };
 
 /**
- * Merge repeated reports only with matching place, publication day and facts.
- * Without figures, require the same nonempty quote or report identity. Keep
- * every source for attribution, and filter before grouping so source facets work.
+ * Merge reports of the same figures and reporting period, regardless of when
+ * each feed published them. Explicit year-to-date totals may span successive
+ * cut-off dates; other figures retain their exact cut-off date. Keep every
+ * original report and use the latest one for the displayed facts. Filter before
+ * grouping so source and time facets also scope the retained report links.
  */
 export function deduplicateAlerts(alerts: SituationAlertRecord[], preferredId?: string): AlertGroup[] {
   const groups = new Map<string, AlertGroup>();
@@ -98,7 +125,14 @@ export function deduplicateAlerts(alerts: SituationAlertRecord[], preferredId?: 
   for (const alert of alerts) {
     if (ids.has(alert.alert_id)) continue;
     ids.add(alert.alert_id);
-    const evidence = alert.cases != null || alert.deaths != null
+    const hasFigures = alert.cases != null || alert.deaths != null;
+    const resolution = resolveReportingPeriod(alert);
+    const period = resolution.period;
+    const periodKey = resolution.invalid ? ['invalid-period', alert.alert_id]
+      : period?.kind === 'cumulative' ? ['cumulative', period.start]
+      : period?.kind === 'incident' ? ['incident', period.start, period.end]
+      : ['as-of', alert.as_of || alert.published_date, resolution.unresolved ?? ''];
+    const evidence = hasFigures
       ? ['figures', alert.cases, alert.deaths]
       : alert.quote?.trim()
         ? ['quote', normalized(alert.quote)]
@@ -106,15 +140,23 @@ export function deduplicateAlerts(alerts: SituationAlertRecord[], preferredId?: 
     const key = JSON.stringify([
       alert.outbreak_id || alert.notice_id || alert.alert_id,
       alert.disease_id || normalized(alert.disease_label), alert.country_code,
-      normalized(alert.admin_area), alert.published_date, alert.status,
-      alert.as_of, alert.count_basis, evidence,
+      normalized(alert.admin_area), alert.status,
+      alert.host_type ?? 'unknown', normalized(alert.host_species), alert.count_unit ?? 'unknown',
+      periodKey,
+      // Sources can describe the same annual laboratory-confirmed total as
+      // "total" or "confirmed". Suspected and probable counts stay separate.
+      hasFigures && resolution.annual && (alert.count_basis === 'total' || alert.count_basis === 'confirmed')
+        ? 'reported' : alert.count_basis,
+      evidence,
     ]);
     const existing = groups.get(key);
     if (!existing) {
       groups.set(key, { ...alert, reports: [alert] });
     } else {
       const reports = [...existing.reports, alert];
-      groups.set(key, { ...(alert.alert_id === preferredId ? alert : existing), reports });
+      const newer = alert.published_date > existing.published_date;
+      const preferredTie = alert.published_date === existing.published_date && alert.alert_id === preferredId;
+      groups.set(key, { ...(newer || preferredTie ? alert : existing), reports });
     }
   }
   return [...groups.values()];

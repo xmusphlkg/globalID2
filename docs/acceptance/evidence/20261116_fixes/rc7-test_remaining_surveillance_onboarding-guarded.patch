@@ -1,0 +1,19 @@
+--- a/tests/unit/test_remaining_surveillance_onboarding.py
++++ b/tests/unit/test_remaining_surveillance_onboarding.py
+@@ -106,8 +106,14 @@
+     expected = {(code, scope, source) for code, (scope, source) in BASE_CHANNEL_CONTRACTS.items()}
+     expected.update((code, 'who_gho_annual', f'SRC_{code}_WHO_GHO') for code in who)
+     expected.update((code, 'spf_odisse_annual', f'SRC_{code}_SPF_ODISSE') for code in spf)
+-    expected.update((code, scope, contract['source_id'])
+-                    for (code, scope), contract in EXTRA_SOURCE_CONTRACTS.items())
++    extras = {
++        ('CR', 'cr_moh_notifications'): 'SRC_CR_MOH_NOTIFICATIONS',
++        ('LA', 'who_wpro_dengue'): 'SRC_LA_WHO_WPRO_DENGUE',
++        ('VN', 'who_wpro_dengue'): 'SRC_VN_WHO_WPRO_DENGUE',
++    }
++    assert set(EXTRA_SOURCE_CONTRACTS) == set(extras)
++    assert {key: contract['source_id'] for key, contract in EXTRA_SOURCE_CONTRACTS.items()} == extras
++    expected.update((code, scope, source_id) for (code, scope), source_id in extras.items())
+     channels = load_source_channels()
+     assert len(channels) == 31
+     assert {(c['country_code'], c['scope'], c['source_id']) for c in channels} == expected

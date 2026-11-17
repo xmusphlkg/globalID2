@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "totals": {
+    "countries": 6,
+    "regions": 190,
+    "diseases_across_countries": 344,
+    "region_disease_series": 9060,
+    "published_json_files": 363,
+    "unindexed_json_files": 0,
+    "verified_population_records": 4395,
+    "verified_points_and_periods": 3132180,
+    "weekly_cross_calendar_year_periods": 38940,
+    "weekly_reporting_year_differs_from_start_year": 19627
+  },
+  "error_count": 0,
+  "error_categories": {}
+}

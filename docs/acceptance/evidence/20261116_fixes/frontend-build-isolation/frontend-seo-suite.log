@@ -1,0 +1,314 @@
+
+> globalid-report-site@0.20.0 test:seo
+> node --experimental-strip-types --test scripts/build-redirects.test.mjs scripts/check-seo-output.test.mjs src/lib/report-routes.test.ts src/lib/research-catalogue.test.ts src/lib/research-feed.test.ts src/lib/research-integrity.test.ts src/lib/research-social-card.test.ts src/lib/research-publishing.test.ts src/lib/site-social-card.test.ts src/lib/seo.test.ts src/lib/sitemap-entries.test.ts src/lib/papers.test.ts
+
+TAP version 13
+# Subtest: builds 301 rules for every published weekly digest and its month
+ok 1 - builds 301 rules for every published weekly digest and its month
+  ---
+  duration_ms: 8.85639
+  type: 'test'
+  ...
+# Subtest: no digest index means no generated redirects
+ok 2 - no digest index means no generated redirects
+  ---
+  duration_ms: 2.200675
+  type: 'test'
+  ...
+# Subtest: main-origin research drops papers-host article redirects and keeps the rest
+ok 3 - main-origin research drops papers-host article redirects and keeps the rest
+  ---
+  duration_ms: 1.256917
+  type: 'test'
+  ...
+# Subtest: appends generated redirects without changing hand-authored rules
+ok 4 - appends generated redirects without changing hand-authored rules
+  ---
+  duration_ms: 0.482309
+  type: 'test'
+  ...
+# Subtest: catalogue uniqueness checks do not retain entire HTML documents
+ok 5 - catalogue uniqueness checks do not retain entire HTML documents
+  ---
+  duration_ms: 1223.074518
+  type: 'test'
+  ...
+# Subtest: parses greater-than signs inside quoted meta content
+ok 6 - parses greater-than signs inside quoted meta content
+  ---
+  duration_ms: 1.08109
+  type: 'test'
+  ...
+# Subtest: wildcard redirect rules match by prefix and exact rules still win
+ok 7 - wildcard redirect rules match by prefix and exact rules still win
+  ---
+  duration_ms: 0.334795
+  type: 'test'
+  ...
+# Subtest: sitemap URLs on the papers host are not looked up in dist
+ok 8 - sitemap URLs on the papers host are not looked up in dist
+  ---
+  duration_ms: 3.151077
+  type: 'test'
+  ...
+# Subtest: reports directory is on the reports R2 host, outside the main Pages bundle
+ok 9 - reports directory is on the reports R2 host, outside the main Pages bundle
+  ---
+  duration_ms: 0.980099
+  type: 'test'
+  ...
+# Subtest: main-origin sitemap URLs that redirect to the papers host are reported
+ok 10 - main-origin sitemap URLs that redirect to the papers host are reported
+  ---
+  duration_ms: 1.231919
+  type: 'test'
+  ...
+# Subtest: only the declared Worker RSS endpoint bypasses static link lookup in serial and parallel audits
+ok 11 - only the declared Worker RSS endpoint bypasses static link lookup in serial and parallel audits
+  ---
+  duration_ms: 114.551867
+  type: 'test'
+  ...
+# Subtest: independent research routes are excluded while main-site links remain valid
+ok 12 - independent research routes are excluded while main-site links remain valid
+  ---
+  duration_ms: 3.129026
+  type: 'test'
+  ...
+# Subtest: links between papers pages share one host and are not flagged as redirects
+ok 13 - links between papers pages share one host and are not flagged as redirects
+  ---
+  duration_ms: 3.247515
+  type: 'test'
+  ...
+# Subtest: main-site pages linking to a papers path through the redirect are reported
+ok 14 - main-site pages linking to a papers path through the redirect are reported
+  ---
+  duration_ms: 2.718512
+  type: 'test'
+  ...
+# Subtest: main-site pages linking to the absolute papers URL are accepted
+ok 15 - main-site pages linking to the absolute papers URL are accepted
+  ---
+  duration_ms: 1.240002
+  type: 'test'
+  ...
+# Subtest: link lookup cache does not survive another audit
+ok 16 - link lookup cache does not survive another audit
+  ---
+  duration_ms: 3.362865
+  type: 'test'
+  ...
+# Subtest: parallel audit preserves global uniqueness, sitemap membership and cross-worker links
+ok 17 - parallel audit preserves global uniqueness, sitemap membership and cross-worker links
+  ---
+  duration_ms: 403.733769
+  type: 'test'
+  ...
+# Subtest: disease literature and study collections belong to Papers
+ok 18 - disease literature and study collections belong to Papers
+  ---
+  duration_ms: 3.562158
+  type: 'test'
+  ...
+# Subtest: recognizes every report_v4 marker used by report detail routes
+ok 19 - recognizes every report_v4 marker used by report detail routes
+  ---
+  duration_ms: 1.377962
+  type: 'test'
+  ...
+# Subtest: normalizes valid route segments and rejects path-breaking values
+ok 20 - normalizes valid route segments and rejects path-breaking values
+  ---
+  duration_ms: 0.43098
+  type: 'test'
+  ...
+# Subtest: takes unique, valid disease slugs only from the v4 detail document
+ok 21 - takes unique, valid disease slugs only from the v4 detail document
+  ---
+  duration_ms: 1.145958
+  type: 'test'
+  ...
+# Subtest: builds the single publishable set used by archives and report routes
+ok 22 - builds the single publishable set used by archives and report routes
+  ---
+  duration_ms: 0.934738
+  type: 'test'
+  ...
+# Subtest: compact catalogue retains every field used by client-side research filters
+ok 23 - compact catalogue retains every field used by client-side research filters
+  ---
+  duration_ms: 5.899104
+  type: 'test'
+  ...
+# Subtest: bibliographic records retain source identifiers and do not claim an evidence page
+ok 24 - bibliographic records retain source identifiers and do not claim an evidence page
+  ---
+  duration_ms: 0.738248
+  type: 'test'
+  ...
+# Subtest: builds stable feed definitions for every supported filter family
+ok 25 - builds stable feed definitions for every supported filter family
+  ---
+  duration_ms: 38.639822
+  type: 'test'
+  ...
+# Subtest: filters diseases, countries, topics, study types, reviews, and peer-review status
+ok 26 - filters diseases, countries, topics, study types, reviews, and peer-review status
+  ---
+  duration_ms: 2.959223
+  type: 'test'
+  ...
+# Subtest: renders a self-identifying, escaped, newest-first filtered RSS document
+ok 27 - renders a self-identifying, escaped, newest-first filtered RSS document
+  ---
+  duration_ms: 3.63413
+  type: 'test'
+  ...
+# Subtest: renders French feeds with localized metadata and links
+ok 28 - renders French feeds with localized metadata and links
+  ---
+  duration_ms: 3.476364
+  type: 'test'
+  ...
+# Subtest: indexed feed memberships, counts and localized XML preserve the filtering contract
+ok 29 - indexed feed memberships, counts and localized XML preserve the filtering contract
+  ---
+  duration_ms: 10.472102
+  type: 'test'
+  ...
+# Subtest: normalizes only public integrity alert types and strips private fields
+ok 30 - normalizes only public integrity alert types and strips private fields
+  ---
+  duration_ms: 5.99915
+  type: 'test'
+  ...
+# Subtest: provides bilingual labels for every integrity status
+ok 31 - provides bilingual labels for every integrity status
+  ---
+  duration_ms: 0.642234
+  type: 'test'
+  ...
+# Subtest: article-specific cards are disabled and share the main-site default image
+ok 32 - article-specific cards are disabled and share the main-site default image
+  ---
+  duration_ms: 1.141898
+  type: 'test'
+  ...
+# Subtest: wraps social-card copy deterministically and caps the line count
+ok 33 - wraps social-card copy deterministically and caps the line count
+  ---
+  duration_ms: 3.267354
+  type: 'test'
+  ...
+# Subtest: renders a safe, evidence-labelled share card without raw markup injection
+ok 34 - renders a safe, evidence-labelled share card without raw markup injection
+  ---
+  duration_ms: 0.931426
+  type: 'test'
+  ...
+# Subtest: French country disease titles retain real country suffixes within the production title limit
+ok 35 - French country disease titles retain real country suffixes within the production title limit
+  ---
+  duration_ms: 2.783322
+  type: 'test'
+  ...
+# Subtest: shortened titles for the same disease remain distinct across countries
+ok 36 - shortened titles for the same disease remain distinct across countries
+  ---
+  duration_ms: 0.931291
+  type: 'test'
+  ...
+# Subtest: normalizes legacy disease slugs in research links and leaves other hrefs alone
+ok 37 - normalizes legacy disease slugs in research links and leaves other hrefs alone
+  ---
+  duration_ms: 0.728507
+  type: 'test'
+  ...
+# Subtest: builds unique, descriptive country and disease snippets
+ok 38 - builds unique, descriptive country and disease snippets
+  ---
+  duration_ms: 0.781983
+  type: 'test'
+  ...
+# Subtest: builds absolute breadcrumb URLs including the current page
+ok 39 - builds absolute breadcrumb URLs including the current page
+  ---
+  duration_ms: 2.427082
+  type: 'test'
+  ...
+# Subtest: exposes page JSON and only the current download part
+ok 40 - exposes page JSON and only the current download part
+  ---
+  duration_ms: 0.673764
+  type: 'test'
+  ...
+# Subtest: normalizes SEO slugs, titles, descriptions, and language alternates
+ok 41 - normalizes SEO slugs, titles, descriptions, and language alternates
+  ---
+  duration_ms: 1.339465
+  type: 'test'
+  ...
+# Subtest: requires an observation or sourced published profile before indexing a disease
+ok 42 - requires an observation or sourced published profile before indexing a disease
+  ---
+  duration_ms: 0.455516
+  type: 'test'
+  ...
+# Subtest: renders a descriptive 1200 by 630 default social card
+ok 43 - renders a descriptive 1200 by 630 default social card
+  ---
+  duration_ms: 5.788539
+  type: 'test'
+  ...
+# Subtest: disease literature belongs to the Papers sitemap in all supported languages
+ok 44 - disease literature belongs to the Papers sitemap in all supported languages
+  ---
+  duration_ms: 6.167662
+  type: 'test'
+  ...
+# Subtest: isolated reports sitemap matches the full sitemap without reading country data
+ok 45 - isolated reports sitemap matches the full sitemap without reading country data
+  ---
+  duration_ms: 2.587347
+  type: 'test'
+  ...
+# Subtest: builds only publishable static, country, disease, and report URLs
+ok 46 - builds only publishable static, country, disease, and report URLs
+  ---
+  duration_ms: 1.103097
+  type: 'test'
+  ...
+# Subtest: renders absolute XML URLs and escapes XML-sensitive characters
+ok 47 - renders absolute XML URLs and escapes XML-sensitive characters
+  ---
+  duration_ms: 0.469625
+  type: 'test'
+  ...
+# Subtest: publishes latest, methodology, weekly and monthly situation URLs only after the switch
+ok 48 - publishes latest, methodology, weekly and monthly situation URLs only after the switch
+  ---
+  duration_ms: 1.576019
+  type: 'test'
+  ...
+# Subtest: publishes indexable Research Radar articles, collections, and weekly briefs
+ok 49 - publishes indexable Research Radar articles, collections, and weekly briefs
+  ---
+  duration_ms: 1.346798
+  type: 'test'
+  ...
+# Subtest: current generated data matches the Astro static-route intent
+ok 50 - current generated data matches the Astro static-route intent
+  ---
+  duration_ms: 444.774534
+  type: 'test'
+  ...
+1..50
+# tests 50
+# suites 0
+# pass 50
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1909.926372

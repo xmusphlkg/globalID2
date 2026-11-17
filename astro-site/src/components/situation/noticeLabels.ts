@@ -1,6 +1,6 @@
 /** Localised labels and number/date formatting shared by the server pages and the map island. */
 
-import type { AlertStatus, CountBasis, Locale, SituationAlertRecord } from '../../utils/situationTypes.ts';
+import type { AlertStatus, CountBasis, HostMetadata, HostType, Locale, SituationAlertRecord } from '../../utils/situationTypes.ts';
 
 const TAG: Record<Locale, string> = { en: 'en-US', zh: 'zh-CN', fr: 'fr-FR' };
 
@@ -103,12 +103,36 @@ export function basisLabel(basis: CountBasis, locale: Locale): string {
   return BASIS_LABELS[basis][locale];
 }
 
+export const HOST_LABELS: Record<HostType, Text3> = {
+  human: t('Human', '人类', 'Humain'),
+  animal: t('Animal', '动物', 'Animal'),
+  unknown: t('Host unspecified', '宿主未明确', 'Hôte non précisé'),
+};
+
+export const HOST_FILTER_LABEL = t('Affected host', '受影响宿主', 'Hôte touché');
+
+export function hostLabel(record: HostMetadata, locale: Locale): string {
+  const type = record.host_type === 'human' || record.host_type === 'animal' ? record.host_type : 'unknown';
+  const species = type === 'animal' && record.host_species ? ` · ${record.host_species}` : '';
+  return `${HOST_LABELS[type][locale]}${species}`;
+}
+
+/** Only an explicit, matching unit permits a human/animal count label. */
+export function countLabels(record: HostMetadata, locale: Locale): { cases: string; deaths: string } {
+  if (record.host_type === 'animal' && record.count_unit === 'animals') {
+    return { cases: t('affected animals', '只患病动物', 'animaux atteints')[locale], deaths: t('animal deaths', '只动物死亡', 'animaux morts')[locale] };
+  }
+  if (record.host_type === 'human' && record.count_unit === 'people') {
+    return { cases: t('human cases', '例人类病例', 'cas humains')[locale], deaths: t('human deaths', '例人类死亡', 'décès humains')[locale] };
+  }
+  return { cases: t('reported cases (unit unspecified)', '报告病例（计数单位未明确）', 'cas signalés (unité non précisée)')[locale], deaths: t('reported deaths (unit unspecified)', '报告死亡（计数单位未明确）', 'décès signalés (unité non précisée)')[locale] };
+}
+
 /** Counts exactly as the report states them: "9,704 cases (confirmed) · 4,687 deaths · as of 20 Oct 2026". */
 export function countsLine(record: SituationAlertRecord, locale: Locale): string {
   const parts: string[] = [];
   const basis = record.count_basis ? ` (${BASIS_LABELS[record.count_basis][locale]})` : '';
-  const caseWord = t('cases', '例病例', 'cas')[locale];
-  const deathWord = t('deaths', '例死亡', 'décès')[locale];
+  const { cases: caseWord, deaths: deathWord } = countLabels(record, locale);
   if (record.cases != null) {
     parts.push(locale === 'zh' ? `${formatCount(record.cases, locale)} ${caseWord}${basis}` : `${formatCount(record.cases, locale)} ${caseWord}${basis}`);
   }

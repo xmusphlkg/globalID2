@@ -1,0 +1,113 @@
+{
+  "note": "Regression specimen: reviewed Chile snapshot 2026-11-16, original narrower source counts retained; no eligible canonical national projection.",
+  "id": "D091",
+  "en": "Botulism",
+  "zh": "肉毒杆菌中毒",
+  "fr": "Botulisme",
+  "slug": "botulism",
+  "cat": "Bacterial",
+  "tc": 0,
+  "td": 0,
+  "lc": null,
+  "ld": null,
+  "x": [],
+  "c": [],
+  "w": [],
+  "d": [],
+  "coverage_status": "source_observations_only",
+  "projection_policy": "no_eligible_public_projection",
+  "source_series": [
+    {
+      "series_code": "HOLD_CL_3e5e83fdc90eaf80cd3b3cf4e83c",
+      "source_label": "Botulismo Infantil",
+      "source_system": "SRC_CL_ENO",
+      "source_series_code": "eno_botulismo_infantil_b90d3882__confirmada",
+      "dates": [
+        "2012-12-31",
+        "2013-12-31",
+        "2014-12-31",
+        "2015-12-31",
+        "2016-12-31",
+        "2017-12-31",
+        "2018-12-31"
+      ],
+      "values": [
+        1,
+        1,
+        1,
+        4,
+        3,
+        1,
+        1
+      ],
+      "mapping_relation": "narrower",
+      "aggregation_policy": "non_additive",
+      "total_value": 12,
+      "definition_version": "cl_eno_filemaker_2007_2018_confirmada_v1",
+      "metric_type": "confirmed_case_notifications",
+      "reporting_basis": "validated_notification_by_notification_year"
+    },
+    {
+      "series_code": "HOLD_CL_3f161a724a39e5ef0833e7050ef8",
+      "source_label": "Botulismo Adulto",
+      "source_system": "SRC_CL_ENO",
+      "source_series_code": "eno_botulismo_adulto_6e468682__confirmada",
+      "dates": [
+        "2024-12-31"
+      ],
+      "values": [
+        2
+      ],
+      "mapping_relation": "narrower",
+      "aggregation_policy": "non_additive",
+      "total_value": 2,
+      "definition_version": "cl_eno_epivigila_2019_onward_confirmada_v1",
+      "metric_type": "confirmed_case_notifications",
+      "reporting_basis": "validated_notification_by_notification_year"
+    },
+    {
+      "series_code": "HOLD_CL_838bfc160e58d905acace579aaad",
+      "source_label": "Botulismo Adulto",
+      "source_system": "SRC_CL_ENO",
+      "source_series_code": "eno_botulismo_adulto_6e468682__confirmada",
+      "dates": [
+        "2011-12-31",
+        "2014-12-31",
+        "2017-12-31"
+      ],
+      "values": [
+        2,
+        1,
+        1
+      ],
+      "mapping_relation": "narrower",
+      "aggregation_policy": "non_additive",
+      "total_value": 4,
+      "definition_version": "cl_eno_filemaker_2007_2018_confirmada_v1",
+      "metric_type": "confirmed_case_notifications",
+      "reporting_basis": "validated_notification_by_notification_year"
+    },
+    {
+      "series_code": "HOLD_CL_8967e841a2c5ad883bbde33d63b1",
+      "source_label": "Botulismo Infantil",
+      "source_system": "SRC_CL_ENO",
+      "source_series_code": "eno_botulismo_infantil_b90d3882__confirmada",
+      "dates": [
+        "2019-12-31",
+        "2021-12-31",
+        "2022-12-31"
+      ],
+      "values": [
+        2,
+        1,
+        5
+      ],
+      "mapping_relation": "narrower",
+      "aggregation_policy": "non_additive",
+      "total_value": 8,
+      "definition_version": "cl_eno_epivigila_2019_onward_confirmada_v1",
+      "metric_type": "confirmed_case_notifications",
+      "reporting_basis": "validated_notification_by_notification_year"
+    }
+  ]
+}

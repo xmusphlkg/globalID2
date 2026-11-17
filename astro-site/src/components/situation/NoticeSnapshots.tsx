@@ -4,7 +4,7 @@ import { latestSnapshot } from '../../lib/surveillance-snapshot';
 import type { Locale, SituationAlertRecord } from '../../utils/situationTypes';
 
 export default function NoticeSnapshots({ alert, contextCodes, locale }: { alert: SituationAlertRecord; contextCodes: string[]; locale: Locale }) {
-  const { data, version } = useSurveillanceSummary(alert.disease_id && /^D\d+$/i.test(alert.disease_id) ? `/site-data/diseases/${alert.disease_id.toLowerCase()}-summary.json` : undefined);
+  const { data, version } = useSurveillanceSummary(alert.host_type === 'human' && alert.disease_id && /^D\d+$/i.test(alert.disease_id) ? `/site-data/diseases/${alert.disease_id.toLowerCase()}-summary.json` : undefined);
   if (!data) return null;
   const rows: Summary[] = data.reporting_countries ?? [];
   const recent = [...rows].sort((a, b) => String(b.dates_tail?.at(-1) ?? '').localeCompare(String(a.dates_tail?.at(-1) ?? ''))).slice(0, 3).map(row => row.code);

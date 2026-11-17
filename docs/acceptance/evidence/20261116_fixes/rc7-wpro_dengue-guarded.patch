@@ -1,0 +1,19 @@
+--- a/src/data/crawlers/wpro_dengue.py
++++ b/src/data/crawlers/wpro_dengue.py
+@@ -9,7 +9,6 @@
+ from html import unescape
+ import json
+ import re
+-from threading import RLock
+ from urllib.parse import urlsplit
+ import pypdfium2 as pdfium
+ from .base import BaseCrawler
+@@ -23,7 +22,7 @@
+ HISTORY_START_YEAR = 2015
+ # PDFium is process-global and not thread safe. Normal organization runs in
+ # executor threads, so serialize all native extraction in this connector.
+-_PDFIUM_LOCK = RLock()
++from src.services.situation_notices.documents import _PDFIUM_LOCK
+ 
+ 
+ def country_contract(country_code):

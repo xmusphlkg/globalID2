@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { spawnSync } from 'node:child_process';
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { auditSeoParallel } from './seo-audit-workers.mjs';
 
-import { auditSeoOutput, redirectFor, tags } from './check-seo-output.mjs';
+import { auditSeoOutput, redirectFor, tags, WORKER_DYNAMIC_LINK_PATHS } from './check-seo-output.mjs';
 
 test('catalogue uniqueness checks do not retain entire HTML documents', () => {
   const dist = mkdtempSync(join(tmpdir(), 'seo-bounded-heap-'));
@@ -99,6 +99,26 @@ function pageDist(pages) {
 }
 
 const linkErrors = errors => errors.filter(error => /redirect|broken internal link/.test(error));
+
+test('only the declared Worker RSS endpoint bypasses static link lookup in serial and parallel audits', async () => {
+  const workerRoot = new URL('../../cloudflare/surveillance-data/src/', import.meta.url);
+  const feed = readFileSync(new URL('situation-feed.ts', workerRoot), 'utf8');
+  const router = readFileSync(new URL('index.ts', workerRoot), 'utf8');
+  const routes = JSON.parse(readFileSync(new URL('pages-routes.json', workerRoot), 'utf8'));
+  assert.deepEqual(WORKER_DYNAMIC_LINK_PATHS, [feed.match(/export const SITUATION_FEED_PATH = '([^']+)'/)[1]]);
+  assert.match(router, /pathname === SITUATION_FEED_PATH/);
+  assert.ok(routes.include.includes('/site-data/situation/*'));
+  const valid = ['en', 'zh', 'fr'].map(lang => `<a href="/site-data/situation/rss.xml?lang=${lang}">RSS</a>`).join('');
+  const unknown = ['/site-data/situation/rss.xml/', '/site-data/situation/typo.xml', '/site-data/unknown.json', '/missing/'];
+  const dist = pageDist({ subscribe: valid, 'zh/subscribe': valid, 'fr/subscribe': unknown.map(path => `<a href="${path}">broken</a>`).join('') });
+  try {
+    const serial = linkErrors(auditSeoOutput(dist).errors);
+    const parallel = linkErrors((await auditSeoParallel(dist, { workers: 2 })).errors);
+    assert.equal(serial.length, unknown.length);
+    for (const path of unknown) assert.ok(serial.some(error => error.endsWith(`broken internal link ${path}`)));
+    assert.deepEqual(parallel, serial);
+  } finally { rmSync(dist, { recursive: true, force: true }); }
+});
 
 test('independent research routes are excluded while main-site links remain valid', () => {
   const dist = pageDist({

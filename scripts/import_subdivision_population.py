@@ -49,11 +49,11 @@ class SubdivisionPopulation:
 
 
 def validate_rows(rows: list[SubdivisionPopulation]) -> list[SubdivisionPopulation]:
+    from src.core.country_library import get_country_bootstrap_config
     seen = set()
     for row in rows:
-        if row.country_code not in {"CN", "BR"} and not row.country_code.startswith(
-            ("CN-", "AU-", "BR-")
-        ):
+        parent = get_country_bootstrap_config(row.country_code).get("parent_country_code")
+        if row.country_code not in {"CN", "BR"} and parent not in {"CN", "AU", "BR", "US", "JP", "SE"}:
             raise ValueError(f"Not a supported subdivision: {row.country_code}")
         if not math.isfinite(row.population) or row.population <= 0:
             raise ValueError(f"Invalid population: {row.country_code}/{row.year}")

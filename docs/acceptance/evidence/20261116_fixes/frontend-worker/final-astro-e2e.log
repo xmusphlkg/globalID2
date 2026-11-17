@@ -1,0 +1,303 @@
+
+> globalid-report-site@0.19.4 test:e2e
+> playwright test --reporter=line
+
+[WebServer] (node:960864) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:960864) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+
+
+Running 505 tests using 2 workers
+
+(node:961961) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:961960) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/505] [chromium-360] › e2e/changelog.spec.ts:32:1 › the same runtime history supplies all three languages and update counts
+[2/505] [chromium-360] › e2e/changelog.spec.ts:10:1 › new version records appear without rebuilding or reloading the page
+  1) [chromium-360] › e2e/changelog.spec.ts:32:1 › the same runtime history supplies all three languages and update counts 
+
+    Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:4322/zh/changelog/
+    Call log:
+      - navigating to "http://127.0.0.1:4322/zh/changelog/", waiting until "load"
+
+
+      35 |   await page.route('**/site-data/updates/latest.json', route => route.fulfill({ json: { schema_version: 1, months: [] } }));
+      36 |   for (const [prefix, title] of [['', 'Current release'], ['/zh', '当前发布'], ['/fr', 'Version actuelle']]) {
+    > 37 |     await page.goto(`${prefix}/changelog/`);
+         |                ^
+      38 |     await expect(page.locator('.changelog-release h2')).toHaveText(title);
+      39 |     await expect(page.locator('footer.site-footer')).toHaveCount(1);
+      40 |   }
+        at /home/likangguo/globalID/globalID2/astro-site/e2e/changelog.spec.ts:37:16
+
+    Error Context: test-results/changelog-the-same-runtime-c3ac8-languages-and-update-counts-chromium-360/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/changelog-the-same-runtime-c3ac8-languages-and-update-counts-chromium-360/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/changelog-the-same-runtime-c3ac8-languages-and-update-counts-chromium-360/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:963377) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/505] [chromium-360] › e2e/data-updates.spec.ts:8:1 › footer links to the localized updates page and header stays clear
+[4/505] [chromium-360] › e2e/data-updates.spec.ts:40:1 › shows real published events, filters channels, and loads monthly archives
+[5/505] [chromium-360] › e2e/data-updates.spec.ts:84:1 › unavailable feed does not show invented data
+  2) [chromium-360] › e2e/changelog.spec.ts:10:1 › new version records appear without rebuilding or reloading the page 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '重试', exact: true })
+        - locator resolved to <button type="button" class="focus-ring">重试</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is not stable
+        - retrying click action
+        - waiting 20ms
+        - waiting for element to be visible, enabled and stable
+        - element is not stable
+      - retrying click action
+        - waiting 100ms
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+        - done scrolling
+        - element is outside of the viewport
+      - retrying click action
+        - waiting 100ms
+        - waiting for element to be visible, enabled and stable
+        - element is not stable
+      - retrying click action
+        - waiting 500ms
+        - waiting for "http://127.0.0.1:4322/zh/changelog/" navigation to finish...
+        - navigated to "http://127.0.0.1:4322/zh/changelog/#v89.0.0"
+        - waiting for element to be visible, enabled and stable
+      - element was detached from the DOM, retrying
+
+
+      26 |   await expect(page.locator('.changelog-release')).toHaveCount(3);
+      27 |   available = true;
+    > 28 |   await page.getByRole('button', { name: '重试', exact: true }).click();
+         |                                                               ^
+      29 |   await expect(page.getByRole('button', { name: '重试', exact: true })).toHaveCount(0);
+      30 | });
+      31 |
+        at /home/likangguo/globalID/globalID2/astro-site/e2e/changelog.spec.ts:28:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/changelog-new-version-reco-538a1-lding-or-reloading-the-page-chromium-360/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/changelog-new-version-reco-538a1-lding-or-reloading-the-page-chromium-360/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/changelog-new-version-reco-538a1-lding-or-reloading-the-page-chromium-360/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/changelog-new-version-reco-538a1-lding-or-reloading-the-page-chromium-360/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[6/505] [chromium-360] › e2e/data-updates.spec.ts:118:1 › index errors survive a successful archive read and recover on the next poll
+(node:964520) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/505] [chromium-360] › e2e/data-updates.spec.ts:96:1 › changing month hides old events until the selected archive arrives
+[8/505] [chromium-360] › e2e/data-updates.spec.ts:143:1 › monthly failures retain known events and malformed records cannot crash the page
+[9/505] [chromium-360] › e2e/data-updates.spec.ts:170:1 › UTC range filtering and daily counts include offset timestamps on the correct day
+[10/505] [chromium-360] › e2e/data-updates.spec.ts:193:1 › incomplete, reversed and oversized date ranges explain how to recover
+[11/505] [chromium-360] › e2e/data-updates.spec.ts:215:1 › a missing month never becomes a zero-count daily chart
+[12/505] [chromium-360] › e2e/disease-literature-hosting.spec.ts:5:1 › the deployed library and its complete catalogue use Papers while shared navigation uses the main site
+[13/505] [chromium-360] › e2e/disease-literature.spec.ts:30:1 › disease links open a dedicated literature page with transparent database queries
+[14/505] [chromium-360] › e2e/disease-literature.spec.ts:48:1 › complete disease records, filters and yearly chart stay in sync and validate year bounds
+  3) [chromium-360] › e2e/disease-literature.spec.ts:30:1 › disease links open a dedicated literature page with transparent database queries 
+
+    TimeoutError: page.goto: Timeout 60000ms exceeded.
+    Call log:
+      - navigating to "http://127.0.0.1:4322/zh/diseases/influenza/", waiting until "load"
+
+
+      30 | test('disease links open a dedicated literature page with transparent database queries', async ({ page }) => {
+      31 |   test.setTimeout(90_000);
+    > 32 |   await page.goto('/zh/diseases/influenza/', { timeout: 60_000 });
+         |              ^
+      33 |   const allLiterature = page.locator('.disease-research-panel a').filter({ hasText: /查看全部.*篇文献/ });
+      34 |   await expect(allLiterature).toHaveAttribute('href', '/zh/research/diseases/influenza/');
+      35 |   await allLiterature.click();
+        at /home/likangguo/globalID/globalID2/astro-site/e2e/disease-literature.spec.ts:32:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/disease-literature-disease-c513e-ransparent-database-queries-chromium-360/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/disease-literature-disease-c513e-ransparent-database-queries-chromium-360/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/disease-literature-disease-c513e-ransparent-database-queries-chromium-360/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/disease-literature-disease-c513e-ransparent-database-queries-chromium-360/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:976106) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[15/505] [chromium-360] › e2e/disease-literature.spec.ts:87:1 › page failures hide old cards and can be retried without downloading the whole library
+[16/505] [chromium-360] › e2e/disease-literature.spec.ts:102:1 › focused Ask loads only catalogue chunks matching its scope
+[17/505] [chromium-360] › e2e/disease-literature.spec.ts:124:1 › generic Ask shows complete-catalogue progress, bounds requests and ignores an older search finishing late
+  4) [chromium-360] › e2e/disease-literature.spec.ts:48:1 › complete disease records, filters and yearly chart stay in sync and validate year bounds 
+
+    Test timeout of 90000ms exceeded.
+
+    Error: locator.selectOption: Test timeout of 90000ms exceeded.
+    Call log:
+      - waiting for locator('[data-literature-explorer]').getByLabel('国家或地区')
+
+
+      72 |   await expect(library.locator('.literature-trend-table tbody')).toContainText('2026');
+      73 |   await expect(library.locator('.literature-trend-table tbody td')).toHaveText('20');
+    > 74 |   await library.getByLabel('国家或地区', { exact: false }).selectOption('BR');
+         |                                                       ^
+      75 |   await expect(library.locator('.literature-empty')).toContainText('没有符合条件的文献');
+      76 |   await library.getByLabel('截止年份', { exact: true }).fill('2020');
+      77 |   await expect(library.getByRole('alert')).toContainText('起始年份不能晚于截止年份');
+        at /home/likangguo/globalID/globalID2/astro-site/e2e/disease-literature.spec.ts:74:55
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/disease-literature-complet-04a2a-nc-and-validate-year-bounds-chromium-360/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/disease-literature-complet-04a2a-nc-and-validate-year-bounds-chromium-360/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/disease-literature-complet-04a2a-nc-and-validate-year-bounds-chromium-360/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/disease-literature-complet-04a2a-nc-and-validate-year-bounds-chromium-360/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:978178) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[18/505] [chromium-360] › e2e/download-dialog.spec.ts:10:1 › downloads stay compact and lazy, refresh without HTML changes, and save the selected file
+[19/505] [chromium-360] › e2e/download-dialog.spec.ts:50:1 › a failed catalogue can be retried inside the French disease dialog
+[20/505] [chromium-360] › e2e/public-experience.spec.ts:30:1 › subscription links preselect filters and keep diseases selected across searches
+  5) [chromium-360] › e2e/download-dialog.spec.ts:10:1 › downloads stay compact and lazy, refresh without HTML changes, and save the selected file 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "e9169eb07ef3c7906a34df53e65f9a8ce9504bdac407a97809127534358f5fb8"
+    Received: "4e8074d9609e2e002e8d5efbd098c78372c6a617fee3f59702fca9ce59f06e11"
+
+      43 |   await expect(dialog.locator('a[href="https://files.example.test/v2/0.csv"]')).toHaveCount(1);
+      44 |   expect(reads).toBe(2);
+    > 45 |   expect(await htmlHash()).toBe(before);
+         |                            ^
+      46 |   await dialog.getByRole('button', { name: '关闭', exact: true }).click();
+      47 |   await expect(dialog).not.toBeVisible();
+      48 | });
+        at /home/likangguo/globalID/globalID2/astro-site/e2e/download-dialog.spec.ts:45:28
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/download-dialog-downloads--227ce--and-save-the-selected-file-chromium-360/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/download-dialog-downloads--227ce--and-save-the-selected-file-chromium-360/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/download-dialog-downloads--227ce--and-save-the-selected-file-chromium-360/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/download-dialog-downloads--227ce--and-save-the-selected-file-chromium-360/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+(node:979153) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[21/505] [chromium-360] › e2e/public-experience.spec.ts:94:1 › a failed confirmation email preserves the form and does not claim success
+  6) [chromium-360] › e2e/public-experience.spec.ts:94:1 › a failed confirmation email preserves the form and does not claim success 
+
+    Test was interrupted.
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/public-experience-a-failed-d21fe--and-does-not-claim-success-chromium-360/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/public-experience-a-failed-d21fe--and-does-not-claim-success-chromium-360/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/public-experience-a-failed-d21fe--and-does-not-claim-success-chromium-360/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  7) [chromium-360] › e2e/public-experience.spec.ts:30:1 › subscription links preselect filters and keep diseases selected across searches 
+
+    Test was interrupted.
+
+    Error: page.goto: net::ERR_ABORTED; maybe frame was detached?
+    Call log:
+      - navigating to "http://127.0.0.1:4322/subscribe/?country=CN-BJ", waiting until "load"
+
+
+      67 |   await page.goto('/diseases/measles/');
+      68 |   await expect(page.getByRole('link', { name: 'Follow this disease' })).toHaveAttribute('href', '/subscribe/?disease=measles');
+    > 69 |   await page.goto('/subscribe/?country=CN-BJ');
+         |              ^
+      70 |   await expect(page.locator('input[name="countries"][value="CN"]')).toBeChecked();
+      71 |   await expect(page.locator('#subscription-status')).toContainText('parent area');
+      72 |   await page.goto('/subscribe/?country=CA&disease=measles');
+        at /home/likangguo/globalID/globalID2/astro-site/e2e/public-experience.spec.ts:69:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/public-experience-subscrip-caadc-es-selected-across-searches-chromium-360/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/public-experience-subscrip-caadc-es-selected-across-searches-chromium-360/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/public-experience-subscrip-caadc-es-selected-across-searches-chromium-360/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/public-experience-subscrip-caadc-es-selected-across-searches-chromium-360/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  5 failed
+    [chromium-360] › e2e/changelog.spec.ts:10:1 › new version records appear without rebuilding or reloading the page 
+    [chromium-360] › e2e/changelog.spec.ts:32:1 › the same runtime history supplies all three languages and update counts 
+    [chromium-360] › e2e/disease-literature.spec.ts:30:1 › disease links open a dedicated literature page with transparent database queries 
+    [chromium-360] › e2e/disease-literature.spec.ts:48:1 › complete disease records, filters and yearly chart stay in sync and validate year bounds 
+    [chromium-360] › e2e/download-dialog.spec.ts:10:1 › downloads stay compact and lazy, refresh without HTML changes, and save the selected file 
+  2 interrupted
+    [chromium-360] › e2e/public-experience.spec.ts:30:1 › subscription links preselect filters and keep diseases selected across searches 
+    [chromium-360] › e2e/public-experience.spec.ts:94:1 › a failed confirmation email preserves the form and does not claim success 
+  1 skipped
+  484 did not run
+  13 passed (2.8m)

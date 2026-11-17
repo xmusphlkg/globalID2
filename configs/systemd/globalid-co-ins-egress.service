@@ -1,0 +1,16 @@
+[Unit]
+Description=GlobalID isolated Colombia INS WireGuard exit
+Wants=network-online.target
+After=network-online.target
+Before=globalid-co-ins-proxy.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/likangguo/globalID/globalID2
+ExecStart=/usr/bin/python3 /home/likangguo/globalID/globalID2/scripts/co_ins_wireguard.py up --config-path /home/likangguo/globalID/globalID2/.env.GIDS-CH-CO-2.conf
+ExecStop=/usr/bin/python3 /home/likangguo/globalID/globalID2/scripts/co_ins_wireguard.py down
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -2,6 +2,10 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
 const SITE_ORIGIN = 'https://globalinfectiousdisease.com';
+// Exact public endpoint implemented by surveillance-data's Situation feed
+// handler. Do not exempt the broad Worker route prefix: typos must still fail.
+export const WORKER_DYNAMIC_LINK_PATHS = Object.freeze(['/site-data/situation/rss.xml']);
+const workerDynamicLinks = new Set(WORKER_DYNAMIC_LINK_PATHS);
 export const isIndependentResearchRoute = pathname => /^\/(?:(?:zh|fr)\/)?research(?:\/|$)/.test(pathname);
 // Mirrors PAPERS_PATH in src/lib/papers.ts: paths published on the papers host.
 const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases)\/|^\/research\/catalogue\/diseases\/|^\/research\/cards\/|^\/site-data\/research\//;
@@ -96,6 +100,7 @@ export function auditSeoOutput(distDirectory, { files, partial = false, catalogu
   const redirectSources = new Map();
   const hasTarget = pathname => {
     if (independentResearch && isIndependentResearchRoute(pathname)) return true;
+    if (workerDynamicLinks.has(pathname)) return true;
     if (!targets.has(pathname)) targets.set(pathname, targetExists(pathname, dist));
     return targets.get(pathname);
   };

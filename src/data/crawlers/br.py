@@ -9,26 +9,28 @@ microdata rows to the project's national monthly grain.
 from __future__ import annotations
 
 import csv
-import json
+import fcntl
 import hashlib
+import json
 import re
 import tempfile
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 from urllib.request import urlopen
-from urllib.error import HTTPError, URLError
 
 from src.core import get_logger
 from src.core.country_library import get_country_bootstrap_config
 
 from .base import BaseCrawler, CrawlerResult
+from .br_cache import SINANContentCache
 
 logger = get_logger(__name__)
 
@@ -37,6 +39,7 @@ DEFAULT_FINAL_URL = "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/FINA
 DEFAULT_PRELIM_URL = "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/"
 DEFAULT_HISTORY_START_YEAR = 2000
 NTRA_AGGREGATION_VERSION = "ntra-field-sums-v1"
+NATIONAL_PARSER_VERSION = "national-monthly-v1"
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CACHE_DIR = ROOT / "data" / "cache" / "br" / "sinan_monthly_aggregates"
 
@@ -354,6 +357,8 @@ class BrazilSINANCrawler(BaseCrawler):
         self.save_raw = save_raw
         self.raw_dir = Path(raw_dir) if raw_dir else Path("data/raw/br")
         self.cache_dir = Path(cache_dir) if cache_dir is not None else DEFAULT_CACHE_DIR
+        self.download_revalidate_seconds = max(0, int(crawler_cfg.get("download_revalidate_seconds", 30 * 86400)))
+        self.force_refresh = False
         self._file_index: Optional[List[SINANFile]] = None
 
     def _history_months(self, *, start_year: Optional[int] = None, end_date: Optional[date] = None) -> List[Tuple[int, int]]:
@@ -628,7 +633,7 @@ class BrazilSINANCrawler(BaseCrawler):
         if self._file_index is not None:
             return _deduplicate_sinan_file_aliases(self._file_index)
 
-        cached_index = self._read_cached_file_index()
+        cached_index = self._read_cached_file_index() if not self.force_refresh else None
         if cached_index is not None:
             self._file_index = sorted(
                 _deduplicate_sinan_file_aliases(cached_index),
@@ -642,6 +647,7 @@ class BrazilSINANCrawler(BaseCrawler):
         stale_index = self._read_cached_file_index(ignore_ttl=True)
         all_files: List[SINANFile] = []
         failed_listings: List[str] = []
+        failed_statuses: Set[str] = set()
         for url, status in (
             (self.final_url, "final"),
             (self.prelim_url, "preliminary"),
@@ -650,14 +656,18 @@ class BrazilSINANCrawler(BaseCrawler):
                 listing_text = self._fetch_listing_text(url)
             except Exception as exc:
                 failed_listings.append(url)
+                failed_statuses.add(status)
                 logger.warning(f"[BR-SINAN] listing fetch failed | url={url} error={exc}")
                 continue
             all_files.extend(
                 parse_ftp_listing(listing_text, base_url=url, dataset_status=status)
             )
 
+        live_files_found = bool(all_files)
+        if failed_listings and self.force_refresh:
+            raise RuntimeError("[BR-SINAN] Unable to refresh official file listings")
         if failed_listings and stale_index:
-            all_files.extend(stale_index)
+            all_files.extend(item for item in stale_index if item.dataset_status in failed_statuses)
             logger.warning(
                 f"[BR-SINAN] using cached index entries after listing failure | "
                 f"failed={len(failed_listings)} cached_files={len(stale_index)}"
@@ -686,36 +696,44 @@ class BrazilSINANCrawler(BaseCrawler):
         )
         logger.info(f"[BR-SINAN] Index complete | files={len(files)}")
         self._file_index = files
-        self._write_cached_file_index(files)
+        # A failed check must not renew the TTL of an old directory snapshot.
+        if not failed_listings and live_files_found:
+            self._write_cached_file_index(files)
         return files
+
+    def download_cache_dir(self, item: SINANFile) -> Path:
+        """Share downloads across national, state and historical ingestion runs."""
+        source_key = hashlib.sha256(item.url.encode("utf-8")).hexdigest()[:16]
+        return self.cache_dir / "downloads" / item.dataset_status / str(item.year) / source_key / self._file_cache_signature(item)
 
     def _download_file(self, sinan_file: SINANFile, target_dir: Path) -> Path:
         target_dir.mkdir(parents=True, exist_ok=True)
+        # Both concurrent Dashboard tasks and separate state refresh processes
+        # can request this file. Recheck after acquiring the cross-process lock.
+        with (target_dir / (sinan_file.filename + ".lock")).open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            return self._download_file_locked(sinan_file, target_dir)
+
+    def _download_file_locked(self, sinan_file: SINANFile, target_dir: Path) -> Path:
         target_path = target_dir / sinan_file.filename
         metadata_path = target_path.with_suffix(target_path.suffix + ".metadata.json")
         expected_signature = self._file_cache_signature(sinan_file)
-        if target_path.exists() and target_path.stat().st_size == sinan_file.size_bytes:
-            cached_signature = None
-            if metadata_path.exists():
-                try:
-                    cached_signature = json.loads(metadata_path.read_text(encoding="utf-8")).get(
-                        "signature"
-                    )
-                except Exception:
-                    cached_signature = None
-            if cached_signature in {None, expected_signature}:
-                if cached_signature is None:
-                    metadata_path.write_text(
-                        json.dumps(
-                            {
-                                "signature": expected_signature,
-                                "source_url": sinan_file.url,
-                                "verified_at": datetime.now(timezone.utc).isoformat(),
-                            },
-                            ensure_ascii=False,
-                        ),
-                        encoding="utf-8",
-                    )
+        if not self.force_refresh and sinan_file.modified_at is not None and sinan_file.size_bytes > 0:
+            try:
+                metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                info = target_path.stat()
+                age = time.time() - datetime.fromisoformat(metadata["verified_at"]).timestamp()
+                reusable = (
+                    metadata["signature"] == expected_signature
+                    and metadata["source_url"] == sinan_file.url
+                    and info.st_size == sinan_file.size_bytes
+                    and info.st_mtime_ns == metadata["local_mtime_ns"]
+                    and 0 <= age < self.download_revalidate_seconds
+                )
+            except (OSError, ValueError, KeyError, TypeError):
+                reusable = False
+            if reusable:
+                logger.info(f"[BR-SINAN] download cache hit | file={sinan_file.filename}")
                 return target_path
 
         tmp_path = target_path.with_suffix(target_path.suffix + ".tmp")
@@ -739,6 +757,7 @@ class BrazilSINANCrawler(BaseCrawler):
                     "signature": expected_signature,
                     "source_url": sinan_file.url,
                     "verified_at": datetime.now(timezone.utc).isoformat(),
+                    "local_mtime_ns": target_path.stat().st_mtime_ns,
                 },
                 ensure_ascii=False,
             ),
@@ -759,8 +778,23 @@ class BrazilSINANCrawler(BaseCrawler):
         months: Optional[Set[Tuple[int, int]]] = None,
         working_dir: Optional[Path] = None,
         collected_path: Optional[Path] = None,
+        collected_sha256: Optional[str] = None,
+        use_content_cache: bool = True,
     ) -> List[Dict[str, str]]:
         """Download, decompress, and aggregate one SINAN file to monthly rows."""
+        content_cache = None
+        if collected_path is not None:
+            if collected_sha256 is None:
+                with collected_path.open("rb") as stream:
+                    collected_sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
+            content_cache = SINANContentCache(
+                self.cache_dir / "content", sinan_file, collected_sha256,
+                version=NATIONAL_PARSER_VERSION,
+            )
+            cached = content_cache.read() if use_content_cache else None
+            if cached is not None:
+                logger.info(f"[BR-SINAN] content parse cache hit | file={sinan_file.filename}")
+                return [row for row in cached["rows"] if months is None or (int(row["Year"]), int(row["Month"])) in months]
         cached_metrics = self._load_cached_metrics(sinan_file, months=months) if collected_path is None else None
         if cached_metrics is not None:
             cached_counts, cached_persons_examined = cached_metrics
@@ -777,12 +811,7 @@ class BrazilSINANCrawler(BaseCrawler):
             elif self.save_raw:
                 dbc_path = self._download_file(sinan_file, local_raw_dir)
             else:
-                download_cache_dir = (
-                    self.cache_dir
-                    / "downloads"
-                    / sinan_file.dataset_status
-                    / str(sinan_file.year)
-                )
+                download_cache_dir = self.download_cache_dir(sinan_file)
                 dbc_path = self._download_file(sinan_file, download_cache_dir)
 
             dbf_parent = Path(working_dir) if working_dir is not None else dbc_path.parent
@@ -820,7 +849,7 @@ class BrazilSINANCrawler(BaseCrawler):
 
         rows: List[Dict[str, str]] = []
         for year, month in sorted(monthly_counts):
-            if months is not None and (year, month) not in months:
+            if content_cache is None and months is not None and (year, month) not in months:
                 continue
             row = {
                 "Date": date(year, month, 1).isoformat(),
@@ -840,6 +869,9 @@ class BrazilSINANCrawler(BaseCrawler):
                     monthly_persons_examined[(year, month)]
                 )
             rows.append(row)
+        if content_cache is not None:
+            content_cache.write({"rows": rows})
+            return [row for row in rows if months is None or (int(row["Year"]), int(row["Month"])) in months]
         return rows
 
     def crawl_monthly_national(
@@ -851,6 +883,8 @@ class BrazilSINANCrawler(BaseCrawler):
         write_csv: bool = True,
         file_index: Optional[List[SINANFile]] = None,
         collected_files: Optional[Dict[str, Path]] = None,
+        collected_digests: Optional[Dict[str, str]] = None,
+        use_content_cache: bool = True,
     ) -> BRFetchSummary:
         target_months = (
             set(months) if months is not None else _last_n_months(self.refresh_recent_months)
@@ -896,6 +930,8 @@ class BrazilSINANCrawler(BaseCrawler):
                         months=target_months,
                         working_dir=working_dir,
                         **({"collected_path": collected_files[item.url]} if collected_files is not None else {}),
+                        **({"collected_sha256": collected_digests[item.url]} if collected_digests is not None else {}),
+                        **({"use_content_cache": False} if not use_content_cache else {}),
                     ): item.filename
                     for item in candidate_files
                 }
