@@ -270,7 +270,7 @@ export default function SituationMapCanvas({
   if (!geo) return <p className="sit-note" role="status">{copy.mapLoading}</p>;
 
   return (
-    <div className="sit-canvas" style={{ background: palette.bg }} role="img" aria-label={copy.mapLabel}>
+    <div className="sit-canvas" style={{ backgroundColor: palette.bg }} role="img" aria-label={copy.mapLabel}>
       <ReactEChartsCore
         echarts={echarts}
         option={option}

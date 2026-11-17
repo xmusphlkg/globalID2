@@ -25,9 +25,9 @@ const generatedAt = about.generated_at
   : zh ? '暂无' : fr ? 'Non disponible' : 'Not available';
 
 const copy = zh ? {
-  eyebrow: '方法与关于',
-  title: '每条证据都可以追溯到来源',
-  lead: 'GIDS 整理公共卫生机构发布的传染病监测记录，在保留原始报告语境的同时，让数据更容易查找、理解和复核。',
+  eyebrow: '关于 GIDS · 数据来源与方法',
+  title: '让全球传染病数据更易获取、更易理解、更易使用。',
+  lead: 'GIDS 是一个独立的公益性项目，致力于整合、连接并开放全球传染病监测数据。通过汇集官方数据来源、监测报告与科学研究，GIDS 为公共卫生研究、数据探索和循证理解提供更透明的数据基础。',
   updated: `公开数据快照更新于 ${generatedAt}。各来源的覆盖和发布时间不同。`,
   audience: {
     report: '统计报告',
@@ -65,9 +65,9 @@ const copy = zh ? {
     email: '直接邮件联系我',
   },
   data: {
-    kicker: '数据与方法',
-    title: '数据如何进入网站',
-    lead: '网站只发布已通过基本来源、完整性和一致性检查的公开记录。以下数字描述当前快照，不代表全球传染病的完整负担。',
+    kicker: '数据来源与方法',
+    title: '来源透明，方法清晰，证据可溯。',
+    lead: '可靠的公共卫生信息始于透明的数据来源、规范的数据处理和审慎的科学解读。网站只发布已通过基本来源、完整性和一致性检查的公开记录；以下数字描述当前快照，不代表全球传染病的完整负担。',
     metrics: [
       ['地理区域', summary.total_countries ?? 0],
       ['收录疾病', summary.total_diseases ?? 0],
@@ -103,9 +103,9 @@ const copy = zh ? {
     correction: '提交数据纠错',
   },
 } : {
-  eyebrow: 'Methods & About',
-  title: 'Evidence you can trace back to its source',
-  lead: 'GIDS organizes infectious disease surveillance records published by public health authorities, making them easier to find, understand, and verify while preserving the context of the original reports.',
+  eyebrow: 'About GIDS · Sources & Methods',
+  title: 'Making global infectious disease data more accessible',
+  lead: 'GIDS is an independent public-interest project dedicated to organizing, connecting, and making infectious disease surveillance data more accessible. By bringing together official data sources, surveillance reports, and scientific research, GIDS supports public health research, data exploration, and evidence-informed understanding.',
   updated: `Public data snapshot updated ${generatedAt}. Coverage and publication schedules vary by source.`,
   audience: {
     report: 'Audience report',
@@ -143,9 +143,9 @@ const copy = zh ? {
     email: 'Email me directly',
   },
   data: {
-    kicker: 'Data & methods',
-    title: 'How data reaches the site',
-    lead: 'Only public records that pass basic provenance, completeness, and consistency checks are published. These figures describe the current snapshot, not the full global burden of infectious disease.',
+    kicker: 'Sources & methods',
+    title: 'Built on sources. Guided by evidence.',
+    lead: 'Reliable public health intelligence starts with transparent data provenance, rigorous methods, and responsible interpretation. Only public records that pass basic provenance, completeness, and consistency checks are published; these figures describe the current snapshot, not the full global burden of infectious disease.',
     metrics: [
       ['Geographic areas', summary.total_countries ?? 0],
       ['Diseases tracked', summary.total_diseases ?? 0],
@@ -184,14 +184,14 @@ const copy = zh ? {
 
 if (fr) {
   Object.assign(copy, {
-    eyebrow: 'Méthodes et à propos', title: 'Chaque preuve remonte à sa source',
-    lead: 'GIDS organise les données de surveillance des maladies infectieuses publiées par les autorités de santé, afin de les rendre plus faciles à trouver, comprendre et vérifier tout en préservant le contexte des rapports originaux.',
+    eyebrow: 'À propos de GIDS · Sources et méthodes', title: 'Rendre les données mondiales sur les maladies infectieuses plus accessibles',
+    lead: 'GIDS est un projet indépendant d’intérêt général qui vise à organiser, relier et faciliter l’accès aux données de surveillance des maladies infectieuses. En réunissant des sources officielles, des rapports de surveillance et des publications scientifiques, GIDS entend soutenir la recherche en santé publique, l’exploration des données et une meilleure compréhension fondée sur les preuves.',
     updated: `Instantané public mis à jour le ${generatedAt}. La couverture et les calendriers de publication varient selon les sources.`,
     audience: { report: 'Rapport d’audience', metrics: ['5 dernières min', 'Lecteurs', 'Visites', 'Automatiques'] },
     onPage: 'Sur cette page', nav: ['Projet et responsable', 'Données et méthodes', 'Utilisation responsable', 'Remerciements'],
     story: { ...copy.story, kicker: 'Projet et responsable', title: 'D’un relevé personnel à un projet mondial de surveillance', lead: 'GIDS est né en 2021 pour conserver des données de surveillance qui évoluaient et disparaissaient dans des pages web et feuilles de calcul dispersées. Cette archive personnelle est devenue le projet public que je maintiens aujourd’hui.', paperLabel: 'Lire l’article de 2024', current: 'Période actuelle' },
     maintainer: { ...copy.maintainer, label: 'Responsable', role: 'Doctorant, École de santé publique, Université de Xiamen', bio: 'Je prépare un doctorat en épidémiologie et statistiques de santé, avec une diplomation prévue en 2027. GIDS me permet de réunir questions de santé publique, données réelles, ingénierie logicielle et chaîne de preuves vérifiable.', focus: ['Épidémiologie', 'Statistiques de santé', 'Recherche en vie réelle', 'Données de santé', 'Ingénierie des données', 'IA en santé'], opportunityTitle: 'Je recherche sincèrement un stage et de futures opportunités', opportunityIntro: 'Je recherche activement un stage dès maintenant et j\'envisage aussi un emploi à long terme après mon doctorat. Si votre équipe peut me donner l\'occasion de contribuer à des projets concrets, de continuer à apprendre et de prendre des responsabilités, je serais très heureux d\'en discuter, qu\'il s\'agisse d\'une entreprise pharmaceutique ou biotechnologique ou d\'un organisme de recherche.', opportunityNowLabel: 'Maintenant · Stages', opportunityNow: 'Je souhaite sincèrement effectuer un stage dans une entreprise pharmaceutique ou biotechnologique, ou dans un organisme de recherche. L\'épidémiologie, les statistiques de santé, la recherche en vie réelle, les plateformes de données de santé et l\'IA en santé sont les domaines que je connais le mieux et que je souhaite approfondir. Je reste également ouvert à d\'autres intitulés ou missions lorsque mes compétences peuvent être utiles, et je suis prêt à apprendre rapidement et à m\'investir avec sérieux.', opportunityFutureLabel: 'Après le doctorat · Emploi à long terme', opportunityFuture: 'Après mon doctorat, prévu en 2027, je souhaiterais construire une carrière à long terme dans une entreprise pharmaceutique ou biotechnologique, ou dans un organisme de recherche. J\'étudierai aussi sérieusement les possibilités de postdoctorat lorsque le sujet et l\'équipe correspondent bien. J\'accorderais une valeur particulière à un stage susceptible de devenir une collaboration durable.', opportunityCommitment: 'Je sais que les diplômes et les projets ne sont qu\'un point de départ : la confiance se gagne par le travail concret. Je suis prêt à commencer par des tâches fondamentales et minutieuses, à respecter les méthodes et le rythme de l\'équipe, et à tenir mes engagements avec fiabilité. Face à un sujet nouveau, j\'apprendrai activement et je serai honnête sur les limites de mon expérience actuelle. Que vous ayez un poste, une place de stage ou simplement l\'envie d\'échanger sur une collaboration possible, je vous serais reconnaissant de me contacter. Je lirai chaque message avec attention et répondrai dès que possible. Les dates et modalités du stage sont flexibles ; je peux travailler à distance dans le monde entier ou sur site en Chine continentale ou à Hong Kong.', profile: 'Visiter mon site personnel', email: 'M\'écrire directement' },
-    data: { ...copy.data, kicker: 'Données et méthodes', title: 'Comment les données arrivent sur le site', lead: 'Seuls les enregistrements publics qui passent les contrôles de provenance, complétude et cohérence sont publiés. Ces chiffres décrivent l’instantané actuel, pas la charge mondiale complète des maladies infectieuses.', metrics: [['Zones géographiques', summary.total_countries ?? 0], ['Maladies suivies', summary.total_diseases ?? 0], ['Enregistrements publiés', summary.total_cases ?? 0], ['Dernière date de déclaration', summary.coverage_end ?? 'Non disponible']], coverage: `Période couverte ${summary.coverage_start ?? '—'} – ${summary.coverage_end ?? '—'}`, steps: [['Collecter', 'Récupérer les nouveaux enregistrements publiés par les autorités sanitaires officielles configurées.'], ['Standardiser', 'Harmoniser noms, lieux, dates et mesures tout en conservant le niveau de détail d’origine.'], ['Vérifier', 'Contrôler complétude, cohérence, provenance et conditions de publication avant diffusion.'], ['Publier', 'Actualiser pages et téléchargements en conservant sources, limites et voies de correction.']], notes: [['Sources officielles', 'Chaque jeu de données conserve l’autorité responsable, le lien source et la période couverte.'], ['Contexte conservé', 'Les systèmes de déclaration ne sont pas supposés directement comparables ; définitions et granularité restent visibles.'], ['Manquant ne signifie pas zéro', 'Les champs indisponibles et périodes non déclarées restent manquants.']] },
+    data: { ...copy.data, kicker: 'Sources et méthodes', title: 'Des sources transparentes. Des méthodes rigoureuses. Des données traçables.', lead: 'Une information fiable en santé publique repose sur la transparence des sources, la rigueur des méthodes et une interprétation prudente des données. Seuls les enregistrements publics qui passent les contrôles de provenance, complétude et cohérence sont publiés ; ces chiffres décrivent l’instantané actuel, pas la charge mondiale complète des maladies infectieuses.', metrics: [['Zones géographiques', summary.total_countries ?? 0], ['Maladies suivies', summary.total_diseases ?? 0], ['Enregistrements publiés', summary.total_cases ?? 0], ['Dernière date de déclaration', summary.coverage_end ?? 'Non disponible']], coverage: `Période couverte ${summary.coverage_start ?? '—'} – ${summary.coverage_end ?? '—'}`, steps: [['Collecter', 'Récupérer les nouveaux enregistrements publiés par les autorités sanitaires officielles configurées.'], ['Standardiser', 'Harmoniser noms, lieux, dates et mesures tout en conservant le niveau de détail d’origine.'], ['Vérifier', 'Contrôler complétude, cohérence, provenance et conditions de publication avant diffusion.'], ['Publier', 'Actualiser pages et téléchargements en conservant sources, limites et voies de correction.']], notes: [['Sources officielles', 'Chaque jeu de données conserve l’autorité responsable, le lien source et la période couverte.'], ['Contexte conservé', 'Les systèmes de déclaration ne sont pas supposés directement comparables ; définitions et granularité restent visibles.'], ['Manquant ne signifie pas zéro', 'Les champs indisponibles et périodes non déclarées restent manquants.']] },
     responsibility: { ...copy.responsibility, kicker: 'Utilisation responsable', title: 'Utiliser GIDS de manière responsable', lead: 'Ces données servent à la surveillance, à la recherche et à l’orientation vers les preuves, mais doivent rester interprétées dans leur système de déclaration d’origine.', items: [['Ni outil clinique ni déclaration d’épidémie', 'GIDS ne remplace pas les autorités sanitaires et ne doit pas servir au diagnostic ou aux décisions de risque personnels.'], ['Les chiffres évoluent et les systèmes diffèrent', 'Définitions de cas, populations couvertes, délais et granularité varient ; lisez les notes sources avant toute comparaison.'], ['L’automatisation exige des corrections publiques', 'La collecte, la standardisation et une partie des synthèses sont assistées par logiciel ; signalez les problèmes avec leur source officielle.'], ['Indépendance et réutilisation', 'GIDS est un projet indépendant d’intérêt public et ne représente pas les institutions liées ; chaque code, donnée ou source suit ses propres règles.']], downloads: 'Explorer les données téléchargeables', reuse: 'Lire les règles de réutilisation', repository: 'Voir le code source', correction: 'Signaler une correction' },
   });
 }

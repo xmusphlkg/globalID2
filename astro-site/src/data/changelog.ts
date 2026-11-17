@@ -3,6 +3,27 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.1', date: '2026-11-17',
+    titleEn: 'A clearer GIDS public template',
+    titleZh: '更清晰的 GIDS 公开站模板',
+    titleFr: 'Un modèle public GIDS plus clair',
+    summaryEn: 'Refresh the public site around the new GIDS positioning and improve the Situation map surface for clearer exploration.',
+    summaryZh: '围绕新的 GIDS 定位更新公开站模板，并优化态势地图界面，让探索更清晰。',
+    summaryFr: 'Actualisez le modèle public autour du nouveau positionnement de GIDS et améliorez la surface de la carte de situation pour une exploration plus claire.',
+    sections: [{
+      kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations',
+      items: [{
+        en: 'The homepage, navigation, About and Methods page, search prompts, footer, and SEO descriptions now use the same evidence-focused English, Chinese, and French brand language.',
+        zh: '首页、导航、关于与方法、搜索提示、页脚和 SEO 描述统一使用新的中英法循证品牌语言。',
+        fr: 'La page d’accueil, la navigation, la page À propos et méthodes, la recherche, le pied de page et les descriptions SEO utilisent désormais le même langage de marque fondé sur les preuves dans les trois langues.',
+      }, {
+        en: 'The Situation map has a softer visual surface, clearer floating controls, and visible keyboard focus states while keeping recency signals distinct from outbreak declarations.',
+        zh: '态势地图采用更柔和的视觉背景、更清晰的浮动控件和可见的键盘焦点状态，同时继续区分时间信号与官方疫情确认。',
+        fr: 'La carte de situation bénéficie d’un fond plus doux, de contrôles flottants plus lisibles et d’un focus clavier visible, tout en distinguant les signaux temporels des déclarations officielles d’épidémie.',
+      }],
+    }],
+  },
+  {
     version: '0.19.5', date: '2026-11-15',
     titleEn: 'Lighter pages and current update times',
     titleZh: '更轻的页面与当前更新时间',

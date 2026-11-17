@@ -3,13 +3,25 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicHomeRedesign from '../components/public/PublicHomeRedesign.astro';
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
+const pageTitle = zh
+  ? '全球传染病监测平台'
+  : fr
+    ? 'Global Infectious Disease Surveillance'
+    : 'Global Infectious Disease Surveillance';
+const pageDescription = zh
+  ? '洞察疫情动态，追溯科学证据。探索全球传染病监测数据、公共卫生事件、趋势与研究，查找官方来源并下载开放数据。'
+  : fr
+    ? 'Détecter les signaux. Comprendre les données. Explorez les données mondiales de surveillance des maladies infectieuses, les événements de santé publique, les tendances et les recherches à partir de sources officielles.'
+    : 'See the signals. Understand the evidence. Explore infectious disease surveillance data, public health events, trends, and research from official sources.';
+const seoTitle = `${pageTitle} | GIDS`;
 ---
 
 <BaseLayout
-  title={zh ? '全球传染病监测' : 'Global Infectious Disease Surveillance'}
-  description={zh ? '浏览官方来源的传染病监测数据、当前态势报告、趋势和可下载数据集。' : 'Explore official-source infectious disease surveillance data, current situation reports, trends, and downloadable datasets.'}
+  title={pageTitle}
+  description={pageDescription}
   initialLanguage={locale}
-  seo={{ title: zh ? '全球传染病监测 | GIDS' : locale === 'fr' ? 'Surveillance mondiale des maladies infectieuses | GIDS' : 'Global Infectious Disease Surveillance | GIDS', description: zh ? '浏览官方来源的传染病监测数据、当前态势报告、趋势和可下载数据集。' : locale === 'fr' ? 'Explorez les données officielles de surveillance, les tendances et les jeux de données téléchargeables.' : 'Explore official-source infectious disease surveillance data, current situation reports, trends, and downloadable datasets.', locale, canonicalPath: zh ? '/zh/' : locale === 'fr' ? '/fr/' : '/', alternatePaths: { en: '/', zh: '/zh/', fr: '/fr/' } }}
+  seo={{ title: seoTitle, description: pageDescription, locale, canonicalPath: zh ? '/zh/' : fr ? '/fr/' : '/', alternatePaths: { en: '/', zh: '/zh/', fr: '/fr/' } }}
 >
   <PublicHomeRedesign locale={locale} />
 </BaseLayout>
