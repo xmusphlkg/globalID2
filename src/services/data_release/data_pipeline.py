@@ -161,7 +161,7 @@ async def execute_data_release(service, task, *, runtime) -> dict:
             if not rebuild_all:
                 if await asyncio.to_thread(completed_generation, state, public) is None:
                     raise ValueError(
-                        "Surveillance incremental baseline is missing, invalid, or from a different projection version; "
+                        "Surveillance incremental baseline is missing or invalid; "
                         "restore the published baseline before retrying"
                     )
                 if downloads:
