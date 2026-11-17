@@ -133,7 +133,8 @@ def freeze_literature_json(source: Path, destination: Path, *, release_id: str,
                 raise ValueError(f"Missing or unsafe literature artifact: {name}")
             # A symlink in any ancestor can escape the private snapshot or be
             # retargeted while a generation is being frozen.
-            if any(parent.is_symlink() for parent in (path, *path.parents) if parent != source.parent):
+            if any(parent.is_symlink() for parent in (path, *path.parents)
+                   if parent == source or parent.is_relative_to(source)):
                 raise ValueError("Literature publication does not accept symlinks")
             paths.append(path)
     if any(path.is_symlink() for path in paths):
