@@ -805,8 +805,16 @@ async def collect_site_export_context(
         disease_scopes: dict[str, set[str]] = {}
         country_baselines: dict[str, dict] = {}
         if surveillance_only and incremental and publication_changes:
+            from .surveillance_data_export import _generation_version, country_projection_versions
+            generation = _read_json_file(output_dir / "completed-generation.json", {})
+            prior_versions = country_projection_versions(generation)
+            writer_version = _generation_version()
             for country in countries_to_refresh:
                 code = country["code"]
+                # A previous writer's private inputs cannot attest a partial
+                # disease merge under today's rules. Refresh this country only.
+                if prior_versions.get(code) != writer_version:
+                    continue
                 baseline = _read_json_file(output_dir / "countries" / f"{code.lower()}.json", {})
                 scope = _precise_disease_scope(code, publication_changes, baseline, set(diseases_by_id))
                 if scope is not None:
@@ -1125,7 +1133,7 @@ async def collect_site_export_context(
             all_source_records_by_country
         )
         affected_disease_ids: set[str] = set()
-        dependency_receipt = _load_dependency_receipt(output_dir)
+        dependency_receipt = _load_dependency_receipt(output_dir, allow_previous_version=surveillance_only)
         country_dependency_inputs: dict[str, dict] = {}
         country_disease_changes: dict[str, list[str]] = {}
         affected_country_codes = set(incremental_codes if incremental else curve_refresh_codes or ())
@@ -1453,6 +1461,7 @@ async def collect_site_export_context(
         "country_disease_changes": country_disease_changes,
         "country_dependency_inputs": country_dependency_inputs,
         "partial_country_codes": partial_country_codes,
+        "surveillance_only": surveillance_only,
         "static_content_only": static_content_only,
         "static_coverage_receipt": static_coverage_receipt,
         "publish_hashes": (

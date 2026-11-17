@@ -119,7 +119,7 @@ def test_unchanged_curves_refresh_downloads_and_freeze_the_compact_directory(tmp
     "core/reporting_period.py", "core/disease_cutover.py",
     "generation/surveillance_download_index.py",
 ])
-def test_projection_rule_change_invalidates_completed_baseline(tmp_path, monkeypatch, relative):
+def test_projection_rule_change_preserves_attested_baseline_lineage(tmp_path, monkeypatch, relative):
     state, public = tmp_path / "private", tmp_path / "public"
     context = _context()
     logical = dynamic.write_surveillance_artifacts(context, state, public)
@@ -134,8 +134,11 @@ def test_projection_rule_change_invalidates_completed_baseline(tmp_path, monkeyp
         content = original_read(path)
         return content + b"\n# changed projection rule\n" if path == target else content
 
+    before = dynamic.completed_generation(state, public)
     monkeypatch.setattr(Path, "read_bytes", changed_source)
-    assert dynamic.completed_generation(state, public) is None
+    after = dynamic.completed_generation(state, public)
+    assert after == before
+    assert dynamic._generation_version() != after["country_projection_versions"]["CA"]
 
 
 @pytest.mark.parametrize("with_downloads", [False, True])
@@ -316,3 +319,45 @@ def test_home_updates_only_changed_country_and_removes_retired_series(tmp_path, 
     context["retired_country_codes"] = ["CN"]
     dynamic.write_surveillance_artifacts(context, state, public)
     assert set(original_read(public / "home-influenza.json")["series"]) == {"JP"}
+
+
+def test_scoped_writer_preserves_other_country_lineage(tmp_path, monkeypatch):
+    state, public = tmp_path / "private", tmp_path / "public"
+    context = _context()
+    logical = dynamic.write_surveillance_artifacts(context, state, public)
+    for code in ["AR", "BR", "CL", "CO", "CR", "DE", "EC", "MX"]:
+        (state / "countries" / f"{code.lower()}.json").write_text("{}")
+    manifest = dynamic.freeze_public_generation(public, state, logical, release_id="before", generated_at=context["generated_at"])
+    monkeypatch.setattr(dynamic, "_generation_version", lambda: "old-writer")
+    dynamic._complete_generation(state, public, logical, manifest)
+    previous = dynamic.completed_generation(state, public)
+    # Exercise legacy schema-1 migration without changing its old writer claim.
+    previous.pop("country_projection_versions")
+    previous["schema_version"] = 1
+    selected = ["AR", "BR", "CL", "CO", "CR", "DE", "EC", "MX"]
+    monkeypatch.setattr(dynamic, "_generation_version", lambda: "new-writer")
+    dynamic._complete_generation(state, public, logical, manifest,
+        context={"incremental": True, "incremental_country_codes": selected}, previous=previous)
+    receipt = dynamic.completed_generation(state, public)
+    assert receipt["country_projection_versions"] == {"CA": "old-writer", **{code: "new-writer" for code in selected}}
+    (state / "countries/ca.json").write_text("tampered")
+    assert dynamic.completed_generation(state, public) is None
+
+
+def test_surveillance_dependencies_preserve_unselected_old_writer_inputs(tmp_path, monkeypatch):
+    from src.generation import site_data_dependencies as dependencies
+    state, public = tmp_path / "private", tmp_path / "public"
+    state.mkdir()
+    old = {"schema_version": 1, "version": "old", "countries": {
+        "CA": {"series": {"D001": "old-ca"}}, "MX": {"series": {"D001": "old-mx"}},
+    }, "diseases": {}}
+    (state / dependencies.RECEIPT_NAME).write_text(json.dumps(old))
+    monkeypatch.setattr(dependencies, "dependency_version", lambda: "new")
+    assert dependencies.load_receipt(state)["countries"] == {}
+    assert dependencies.load_receipt(state, allow_previous_version=True)["countries"] == old["countries"]
+    dependencies.save_receipt({"surveillance_only": True, "country_dependency_inputs": {
+        "MX": {"series": {"D001": "new-mx"}},
+    }, "disease_exports": []}, state, public)
+    receipt = dependencies.load_receipt(state)
+    assert receipt["countries"]["CA"] == old["countries"]["CA"]
+    assert receipt["country_dependency_versions"] == {"CA": "old", "MX": "new"}
