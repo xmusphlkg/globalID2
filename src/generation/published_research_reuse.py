@@ -136,9 +136,18 @@ def install_published_research(root: Path, output: Path, public: Path, *, expect
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 stage = Path(tempfile.mkdtemp(prefix=".research-stage-", dir=dest.parent))
                 staged.append(stage)
-                # GNU cp uses copy-on-write when the filesystem supports it.
+                # The published snapshot is immutable for the duration of a
+                # template build.  Keep the staging operation cheap on the
+                # same filesystem by hard-linking files first; this avoids a
+                # multi-gigabyte byte-for-byte copy that can exceed the
+                # release command timeout.  Fall back to the previous
+                # reflink/regular copy path for filesystems that disallow
+                # hard links (for example, a cross-device workspace).
                 import subprocess
-                subprocess.run(["cp", "-a", "--reflink=auto", str(source) + "/.", str(stage)], check=True)
+                try:
+                    subprocess.run(["cp", "-a", "-l", str(source) + "/.", str(stage)], check=True)
+                except (OSError, subprocess.CalledProcessError):
+                    subprocess.run(["cp", "-a", "--reflink=auto", str(source) + "/.", str(stage)], check=True)
             if expected_manifest is not None:
                 _validate_private_articles(staged[0], article_receipt['articles'])
                 require_public_research_matches(staged[1], expected_manifest)
