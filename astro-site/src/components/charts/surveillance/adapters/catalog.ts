@@ -414,7 +414,7 @@ export function adaptCatalog(
             source.dates ?? [],
             false,
           );
-          const key = `${encodeURIComponent(entityId)}::${encodeURIComponent(source.series_code)}::incidence_rates`;
+          const key = `${encodeURIComponent(entityId)}::${encodeURIComponent(sourceIdentity(source))}::incidence_rates`;
           catalog.series[key].provenance.denominatorMethod =
             rates?.method ?? "published";
         }

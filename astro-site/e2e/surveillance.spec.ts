@@ -69,7 +69,7 @@ async function fixture(page: Page) {
     }),
   );
   await page.goto("/diseases/dengue/", { waitUntil: "domcontentloaded" });
-  await page.locator("#trends").scrollIntoViewIfNeeded();
+  await page.locator("#main-trend, #trends").scrollIntoViewIfNeeded();
   const curve = page.getByTestId("surveillance-explorer");
   await expect(curve).toBeVisible();
   return curve;
@@ -94,9 +94,11 @@ test("selection can be cleared and the table stays empty", async ({ page }) => {
   const curve = await fixture(page);
   await curve.getByRole("button", { name: "Clear selection", exact: true }).click();
   await expect(curve.getByText("Choose a series to view data.", { exact: true })).toBeVisible();
+  await expect(curve.getByRole("button", { name: "Download PNG", exact: true })).toBeDisabled();
   await curve.getByRole("tab", { name: "Data", exact: true }).click();
   await expect(curve.getByTestId("surveillance-data").locator("tbody tr")).toHaveCount(0);
-  await expect(curve.getByRole("button", { name: /Download/ })).toHaveCount(0);
+  await expect(curve.getByRole("button", { name: "Download PNG", exact: true })).toBeDisabled();
+  await expect(curve.getByRole("button", { name: "Download data", exact: true })).toBeEnabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 });
 
@@ -124,7 +126,7 @@ test("many comparable series are paged as separate panels", async ({ page }) => 
     }),
   );
   await page.goto("/diseases/dengue/", { waitUntil: "domcontentloaded" });
-  await page.locator("#trends").scrollIntoViewIfNeeded();
+  await page.locator("#main-trend, #trends").scrollIntoViewIfNeeded();
   const curve = page.getByTestId("surveillance-explorer");
   await expect(curve).toBeVisible();
   const choices = await picker(curve);
@@ -162,13 +164,17 @@ test("surveillance applies the time window in data and restores a shared query",
     "2024-",
   );
   await expect(curve.getByTestId("surveillance-data")).not.toContainText("2024-01-01");
+  await expect(curve.getByRole("button", { name: "Download PNG", exact: true })).toBeDisabled();
+  await expect(curve.getByRole("button", { name: "Download data", exact: true })).toBeEnabled();
+  await curve.getByRole("tab", { name: "Chart", exact: true }).click();
+  await expect(curve.getByRole("button", { name: "Download PNG", exact: true })).toBeEnabled();
   await expect(page.locator("#downloads")).toBeVisible();
   await curve
     .getByRole("button", { name: "Share configuration", exact: true })
     .click();
   const link = await curve.locator(".surveillance-share input").inputValue();
   await page.goto(link, { waitUntil: "domcontentloaded" });
-  await page.locator("#trends").scrollIntoViewIfNeeded();
+  await page.locator("#main-trend, #trends").scrollIntoViewIfNeeded();
   await expect(
     page
       .getByTestId("surveillance-explorer")
@@ -359,7 +365,7 @@ test("published country and disease datasets produce a usable default result", a
     ["/diseases/dengue/", null],
   ] as const) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
-    await page.locator("#trends").scrollIntoViewIfNeeded();
+    await page.locator("#main-trend, #trends").scrollIntoViewIfNeeded();
     const curve = page.getByTestId("surveillance-explorer");
     await expect(curve).toBeVisible({ timeout: 15_000 });
     if (defaultSelection) {

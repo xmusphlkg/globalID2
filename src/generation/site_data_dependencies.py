@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from .site_data_writer import write_pretty_json
+from src.ontology import ontology_document_paths
 
 
 RECEIPT_NAME = "curve-dependencies.json"
@@ -46,12 +47,16 @@ def dependency_version() -> str:
         "services/disease_series_policy.py",
         "services/surveillance_onboarding_review.py", "services/annual_source_mapping_review.py",
         "services/national_source_mapping_review.py", "services/disease_mapping_config.py",
+        "ontology/documents.py", "ontology/disease.py",
     ):
         digest.update((root / "src" / name).read_bytes())
-    for name in ("standard_diseases.csv", "disease_ontology.json", "disease_cutover.json", "country_bootstrap.json"):
+    for name in ("standard_diseases.csv", "disease_cutover.json", "country_bootstrap.json"):
         path = root / "configs" / name
         if path.is_file():
             digest.update(path.read_bytes())
+    for path in ontology_document_paths(root / "configs/disease_ontology.json"):
+        digest.update(path.relative_to(root).as_posix().encode())
+        digest.update(path.read_bytes())
     for path in sorted((root / "external-data/subdivision-boundaries").glob("*.json")):
         digest.update(path.read_bytes())
     for path in sorted((root / "configs/mapping").rglob("*.csv")):

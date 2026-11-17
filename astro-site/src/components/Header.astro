@@ -71,8 +71,8 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
           <span id="theme-toggle-label" class="sr-only">Dark</span>
         </button>
         {!hideLanguageToggle && <details class="site-language-selector">
-          <summary class="site-toggle-btn focus-ring" aria-label={languageMenuLabel}>
-            <span data-language-current aria-hidden="true">{currentLanguage === 'zh' ? '中文' : currentLanguage.toUpperCase()}</span><span class="site-language-summary-label">{languageMenuLabel}</span><span class="site-language-chevron" aria-hidden="true">⌄</span>
+          <summary class="site-toggle-btn focus-ring" aria-label={`${currentLanguage === 'zh' ? '中文' : currentLanguage.toUpperCase()} ${languageMenuLabel}`}>
+            <span data-language-current aria-hidden="true">{currentLanguage === 'zh' ? '中文' : currentLanguage.toUpperCase()}</span>{' '}<span class="site-language-summary-label">{languageMenuLabel}</span><span class="site-language-chevron" aria-hidden="true">⌄</span>
           </summary>
           <div class="site-language-popover" role="menu" aria-label={languageMenuLabel}>
             {languageOptions.map(option => <a class:list={['site-language-option', option.code === currentLanguage && 'is-current']} href={`${pathFor(option.code)}${Astro.url.search}`} hreflang={option.bcp47} role="menuitem" aria-current={option.code === currentLanguage ? 'page' : undefined}>
@@ -222,6 +222,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 
 <script>
   import { isPapersPath, isReportsPath, siteHref } from '../lib/papers';
+  import { loadSiteSearchEntries } from '../lib/site-search-client';
   import { searchSiteEntries, searchTitle, searchSummary, type SiteSearchEntry, type SearchLocale } from '../lib/site-search';
   const language = document.documentElement.lang;
   const isChinese = language.startsWith('zh');
@@ -233,7 +234,6 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   const mainOrigin = 'https://globalinfectiousdisease.com';
   const papersOrigin = 'https://papers.globalinfectiousdisease.com';
   const reportsOrigin = 'https://reports.globalinfectiousdisease.com';
-  const mainBase = [papersOrigin, reportsOrigin].includes(location.origin) ? mainOrigin : '';
   const siteUrl = (href: string) => {
     if (typeof href !== 'string' || !href.startsWith('/')) return href;
     if (import.meta.env.DEV && ![mainOrigin, papersOrigin, reportsOrigin].includes(location.origin)) return href;
@@ -296,22 +296,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
     renderSearch();
     searchRequest = (async () => {
       try {
-        const response = await fetch(`${mainBase}/site-data/search-index.json`);
-        if (!response.ok) throw new Error('Search index unavailable');
-        const payload = await response.json();
-        if (!Array.isArray(payload.entries)) throw new Error('Invalid search index');
-        searchEntries = payload.entries;
-        if (import.meta.env.PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN === '1') {
-          searchEntries = searchEntries.filter(entry => entry.kind !== 'research');
-          try {
-            const path = siteHref('/research/search-index.json');
-            const researchResponse = await fetch(path.startsWith('/') ? `${mainBase}${path}` : path);
-            if (!researchResponse.ok) throw new Error('Research search index unavailable');
-            const research = await researchResponse.json();
-            if (!Array.isArray(research.entries)) throw new Error('Invalid research search index');
-            searchEntries = [...searchEntries, ...research.entries];
-          } catch (error) { console.error('Research search unavailable', error); }
-        }
+        searchEntries = await loadSiteSearchEntries(import.meta.env.PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN === '1');
         searchState = 'ready';
       } catch {
         searchState = 'error';
@@ -414,6 +399,12 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   }
   searchInput?.addEventListener('input', renderSearch);
   searchInput?.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.isComposing) {
+      event.preventDefault();
+      const query = searchInput.value.trim();
+      if (query.length >= 2) location.assign(siteUrl(`${languagePrefix}/search/?q=${encodeURIComponent(query)}`));
+      return;
+    }
     if (event.key !== 'ArrowDown') return;
     const firstResult = searchResults?.querySelector('.site-search-result');
     if (firstResult instanceof HTMLElement) { event.preventDefault(); firstResult.focus(); }

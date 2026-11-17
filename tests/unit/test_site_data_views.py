@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import math
+
+import pytest
+
 from scripts import generate_site_data as legacy_api
 from src.core.reporting_period import infer_display_cadence
 from src.generation import site_data_views as views
@@ -264,6 +268,50 @@ def test_country_curve_does_not_treat_raw_as_provisional() -> None:
     )
 
     assert country["disease_series"]["D_TEST"]["provisional_from"] == "2024-03-01"
+
+
+@pytest.mark.parametrize("published", [False, True])
+def test_country_heatmap_preserves_missing_months_and_observed_zero(published: bool) -> None:
+    observations = {
+        "D_TEST": [
+            ("2024-01-07", 0),
+            ("2024-02-04", None),
+            ("2024-04-07", 4),
+            ("2024-04-14", None),
+            ("2024-04-21", 5),
+            ("2024-05-05", None),
+            ("2024-05-12", 0),
+        ],
+        "D_OTHER": [("2024-03-03", 3)],
+    }
+    diseases = {did: {"name_en": did, "name_zh": did} for did in observations}
+    if published:
+        country = views.build_country_data_from_published_series(
+            "XX", "Testland", [
+                {"disease_id": did, "granularity": "weekly",
+                 "period_starts": [when for when, _ in points],
+                 "cases": [cases for _, cases in points]}
+                for did, points in observations.items()
+            ], diseases,
+        )
+    else:
+        records = [
+            {**_record(when, cases or 0, disease_id=did, granularity="weekly"), "cases": cases}
+            for did, points in observations.items() for when, cases in points
+        ]
+        country = views.build_country_data("XX", "Testland", records, diseases)
+
+    heatmap = country["heatmap"]
+    assert heatmap["months"] == ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05"]
+    rows = dict(zip(heatmap["diseases"], heatmap["z"]))
+    # January is a reported zero; February is all missing; March is absent.
+    # Missing weekly values do not erase observed counts elsewhere in a month.
+    assert rows["D_TEST"] == [0, None, None, 1, 0]
+    assert rows["D_OTHER"] == [None, None, math.log10(4), None, None]
+    compact = views.build_country_site_data(country)["heatmap"]
+    compact_rows = dict(zip(compact["disease_ids"], compact["z"]))
+    assert compact_rows["D_TEST"] == [0, None, None, 1, 0]
+    assert compact_rows["D_OTHER"] == [None, None, round(math.log10(4), 4), None, None]
 
 
 def test_country_builder_preserves_annual_and_weekly_period_semantics() -> None:

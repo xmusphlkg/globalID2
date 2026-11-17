@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { diseaseSearchAliases, matchesDiseaseSearch } from './disease-search.ts';
 import { searchSiteEntries, type SiteSearchEntry } from './site-search.ts';
+import { loadSiteSearchEntries } from './site-search-client.ts';
 
 const influenza = { disease_id: 'D038', slug: 'influenza', name_en: 'Influenza', name_zh: '流行性感冒', name_fr: 'Grippe' };
 const entry = (id: string, kind: string, en: string, zh: string, aliases: string[] = []): SiteSearchEntry => ({ id, kind, title: { en, zh }, href: { en: `/${id}/` }, aliases });
@@ -32,4 +33,41 @@ test('the full count is retained when a result preview is capped', () => {
   const result = searchSiteEntries(entries, '流感', 'zh', 1);
   assert.equal(result.entries.length, 1);
   assert.equal(result.total, 2);
+});
+
+test('independent research publication is included without retaining stale main-index research', async () => {
+  const research = entry('research:flu', 'research', 'Influenza study', '流感研究');
+  const requests: string[] = [];
+  const fetcher: typeof fetch = async input => {
+    requests.push(String(input));
+    return Response.json({ entries: String(input).includes('/site-data/') ? [...entries, { ...research, id: 'research:stale' }] : [research] });
+  };
+  assert.deepEqual(await loadSiteSearchEntries(true, fetcher), [...entries, research]);
+  assert.deepEqual(requests.sort(), ['/research/search-index.json', '/site-data/search-index.json']);
+});
+
+test('legacy publications retain research in the main index without a second request', async () => {
+  const research = entry('research:flu', 'research', 'Influenza study', '流感研究');
+  const requests: string[] = [];
+  const fetcher: typeof fetch = async input => {
+    requests.push(String(input));
+    return Response.json({ entries: [...entries, research] });
+  };
+  assert.deepEqual(await loadSiteSearchEntries(false, fetcher), [...entries, research]);
+  assert.deepEqual(requests, ['/site-data/search-index.json']);
+});
+
+test('a missing or malformed main index remains a retryable error', async () => {
+  for (const response of [new Response('', { status: 503 }), Response.json({})]) {
+    await assert.rejects(loadSiteSearchEntries(false, async () => response));
+  }
+});
+
+test('a missing or malformed independent research index remains a retryable error', async () => {
+  for (const response of [new Response('', { status: 503 }), Response.json({})]) {
+    const fetcher: typeof fetch = async input => String(input).includes('/site-data/')
+      ? Response.json({ entries })
+      : response;
+    await assert.rejects(loadSiteSearchEntries(true, fetcher));
+  }
 });

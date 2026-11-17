@@ -135,6 +135,7 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
         await acknowledge_global_selection(db, dirty_ids, line='literature', task_uuid=task.task_uuid)
         stage_timing['acknowledge_seconds'] = round(time.monotonic() - ack_started, 3)
         result = {'data_only': True, 'data_line': 'literature', 'release_id': release_id,
+            'subscription_dispatch_suppressed': bool(data.get('suppress_subscription_dispatch')),
             'publish_dirty_count': len(dirty_ids), 'papers': published['papers'], 'json': published['json'],
             'projection': published.get('projection'),
             'build_scope': build.get('scope', 'full'),
@@ -153,7 +154,8 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
                 stored.output_data = result
         await db.commit()
     receipt = {'schema': 1, 'task_uuid': task.task_uuid, 'release_id': release_id,
-        'papers_generation_sha256': published['papers']['generation_sha256']}
+        'papers_generation_sha256': published['papers']['generation_sha256'],
+        'subscription_dispatch_suppressed': result['subscription_dispatch_suppressed']}
     await asyncio.to_thread(_atomic_write, root / 'exports/research-current-receipt.json',
                             json.dumps(receipt, separators=(',', ':')).encode())
     await runtime.task_manager.add_workbook_entry(task.task_uuid, entry_type='info', title='Literature Published',

@@ -9,6 +9,7 @@ export function useSituationOverview(enabled: boolean, points: MapPoint[], filte
   const legacyPaths = useMemo(() => overviewPaths(points, filters, asOf, false), [points, filters, asOf]);
   const scope = JSON.stringify([paths, legacyPaths]);
   const [state, setState] = useState({ scope: '', alerts: [] as SituationAlertRecord[], loading: false, failed: 0 });
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
@@ -33,6 +34,7 @@ export function useSituationOverview(enabled: boolean, points: MapPoint[], filte
     return () => controller.abort();
     // Identical shard sets reuse their pinned responses while filters update the view.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, scope]);
-  return state.scope === scope ? state : { alerts: [], failed: 0, loading: enabled && paths.length > 0 };
+  }, [enabled, scope, attempt]);
+  return { ...(state.scope === scope ? state : { alerts: [], failed: 0, loading: enabled && paths.length > 0 }),
+    retry: () => setAttempt(value => value + 1) };
 }

@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
+import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const siteUrl = process.env.GLOBALID_SITE_URL || process.env.SITE_URL || 'https://globalinfectiousdisease.com';
@@ -17,8 +18,13 @@ if (!Number.isInteger(renderWorkers) || renderWorkers < 0 || renderWorkers > 32)
 if ([process.env.GIDS_RESEARCH_BUILD_DIR, process.env.GIDS_REPORTS_BUILD_DIR, process.env.GIDS_COUNTRY_BUILD_DIR, process.env.GIDS_CODE_BUILD_DIR].filter(Boolean).length > 1) {
   throw new Error('Research, reports and country builds require separate workspaces');
 }
-const isolatedBuildDir = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_REPORTS_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR || process.env.GIDS_CODE_BUILD_DIR;
-const privateRoot = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR || process.env.GIDS_CODE_BUILD_DIR;
+const configuredBuildDir = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_REPORTS_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR || process.env.GIDS_CODE_BUILD_DIR;
+// Vite resolves module IDs through symlinks. Astro's page-to-asset graph must
+// use the same physical root or it silently omits the page's CSS references.
+// Production release checkouts share exports through a symlinked ancestor.
+const isolatedBuildDir = configuredBuildDir ? realpathSync(configuredBuildDir) : undefined;
+const privateRoot = (process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR || process.env.GIDS_CODE_BUILD_DIR)
+  ? isolatedBuildDir : undefined;
 export default defineConfig({
   ...(privateRoot ? { root: resolve(privateRoot) } : {}),
   experimental: { parallelPrerender: renderWorkers ? { workers: renderWorkers } : false },

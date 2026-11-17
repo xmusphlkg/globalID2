@@ -497,12 +497,23 @@ def build_country_source_info(
     """Build structured source metadata for downloads and UI badges."""
     normalized_code = (country_code or "").strip().upper()
     cfg = dict(get_country_bootstrap_config(normalized_code))
+    bootstrap_notes = cfg.get("notes")
     database_config = database_config or {}
     for field in ("data_source_url", "data_source_type", "notes"):
         if database_config.get(field):
             cfg[field] = database_config[field]
+    legacy_brazil_registration = (
+        normalized_code.startswith("BR-")
+        and cfg.get("notes") == "Official IBGE population available; disease ingestion not enabled."
+        and database_config.get("crawler_config") == {}
+        and "sinan_datasus" in (cfg.get("crawler_config") or {}).get("sources", [])
+    )
     for field in ("crawler_config", "parser_config"):
         if isinstance(database_config.get(field), dict):
+            # The population bootstrap stored empty adapters. They are not a
+            # source override for states now covered by the SINAN registry.
+            if legacy_brazil_registration and not database_config[field]:
+                continue
             cfg[field] = database_config[field]
     metadata = (
         database_config.get("metadata")
@@ -520,6 +531,16 @@ def build_country_source_info(
     crawler_cfg = cfg.get("crawler_config", {})
     public_details = cfg.get("public_source_details") or {}
     source_scopes = list(crawler_cfg.get("sources") or ["all"])
+    # Population registration predates the Brazilian state disease adapters.
+    # Once SINAN is configured, its current provenance supersedes that exact
+    # placeholder; preserve operator-authored notes and population-only feeds.
+    if (
+        normalized_code.startswith("BR-")
+        and "sinan_datasus" in source_scopes
+        and cfg.get("notes") == "Official IBGE population available; disease ingestion not enabled."
+        and bootstrap_notes
+    ):
+        cfg["notes"] = bootstrap_notes
     public_scopes = cfg.get("public_source_scopes")
     if public_scopes is not None:
         # A database country record may still list private ingestion feeds or

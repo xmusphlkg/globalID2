@@ -84,10 +84,25 @@ def organize(artifacts, *, updater, source=MONTHLY_SCOPE, **options):
             failures.append({"url":artifact.source_url,"stage":"parse","error":str(exc)});continue
         rows.extend(parsed);reports.append(audit)
     failed_count=len(failures)+sum(r["failed_count"] for r in reports)
-    audit={"scope":scope,"status":"partial" if failed_count else "parsed",
+    from src.services.mx_high_frequency_review import mx_source_label_icd_conflict
+    source_conflicts = {}
+    for row in rows:
+        conflict = mx_source_label_icd_conflict(row["RawDiseaseLabel"], row["SourceICDCode"])
+        if conflict:
+            key = (row["RawDiseaseLabel"], row["SourceICDCode"])
+            entry = source_conflicts.setdefault(key, {**conflict, "observations": 0, "originals": []})
+            entry["observations"] += 1
+            evidence = {"source_url": row["SourceURL"], "sha256": row["RawSHA256"], "page": row["SourcePage"]}
+            if evidence not in entry["originals"]:
+                entry["originals"].append(evidence)
+    excluded_cells=[{**cell,'source_url':report['source_url']}
+                    for report in reports for cell in report.get('excluded_source_cells',[])]
+    audit={"scope":scope,"status":"partial" if failed_count or excluded_cells else "parsed",
            "discovered_tables":len(refs),"archived_tables":len(pdfs),"parsed_tables":len(reports),
            "rows":len(rows),"numeric_rows":sum(bool(r["Cases"]) for r in rows),
            "reports":reports,"failures":failures,"failed_count":failed_count,
-           "coverage_complete":not failed_count and len(pdfs)==len(refs),
-           "requested_start_year":plan["requested_start_year"],"requested_end_year":plan["requested_end_year"]}
+           "coverage_complete":not failed_count and not excluded_cells and len(pdfs)==len(refs),
+           "excluded_source_cells":excluded_cells,
+           "requested_start_year":plan["requested_start_year"],"requested_end_year":plan["requested_end_year"],
+           "source_label_icd_conflicts":list(source_conflicts.values())}
     return updater.prepare_rows(rows,source=scope,source_audit=audit,**options)

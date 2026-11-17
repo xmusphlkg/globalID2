@@ -1,12 +1,15 @@
 import GIDSLoader from '../GIDSLoader';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSurveillanceSummary } from './useSurveillanceSummary';
 import { COUNTRY_COVERAGE } from '../../lib/country-coverage.ts';
 import { getFlagAssetPath } from '../../lib/country-flag';
 import { COUNTRY_CLASSIFICATION_METADATA, getCountryClassification, WHO_REGION_LABELS, WORLD_BANK_REGION_LABELS, INCOME_GROUP_LABELS } from '../../lib/country-classifications.ts';
 
-import { countryLabel, cadence, safeUrl, sourceEntries } from '../../lib/surveillance-presentation.ts';
+import { countryLabel } from '../../lib/surveillance-presentation.ts';
+import GeographicAreaCards from './GeographicAreaCards';
+import DirectoryPagination from './DirectoryPagination';
 import { hasData, subdivisionRows, parentAreaCode } from '../../lib/surveillance-coverage';
+import { directoryPage, directoryPageFromSearch, syncDirectoryPage } from '../../lib/directory-pagination';
 import './surveillance-directory.css';
 type Language = 'en' | 'zh' | 'fr';
 type Row = Record<string, any>;
@@ -26,6 +29,9 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
   const [wb, setWb] = useState(initial.get('wb') ?? '');
   const [income, setIncome] = useState(initial.get('income') ?? '');
   const [status, setStatus] = useState(initial.get('status') ?? '');
+  const pageScope = JSON.stringify([parentCode, query, who, wb, income, status]);
+  const [pagination, setPagination] = useState(() => ({ scope: pageScope, page: directoryPageFromSearch(initial.toString()) }));
+  const grid = useRef<HTMLDivElement>(null);
   const pick = (en: string, zh: string, fr: string) => language === 'zh' ? zh : language === 'fr' ? fr : en;
   const prefix = language === 'en' ? '' : `/${language}`;
   const rows = useMemo<Row[]>(() => {
@@ -48,6 +54,13 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
       && (!income || row.classification?.income_group === income)
       && (!status || (status === 'supported' ? active : !active));
   }), [rows, query, who, wb, income, status]);
+  const page = directoryPage(filtered, pagination.scope === pageScope ? pagination.page : 1);
+  useEffect(() => { setPagination(previous => previous.scope === pageScope ? previous : { scope: pageScope, page: 1 }); }, [pageScope]);
+  useEffect(() => { if (publication.data) syncDirectoryPage(page.page); }, [page.page, publication.data]);
+  const changePage = (number: number) => {
+    setPagination({ scope: pageScope, page: number });
+    grid.current?.scrollIntoView({ block: 'start' });
+  };
   useEffect(() => {
     if (parentCode || !publication.data) return;
     const codes = filtered.map(row => row.code);
@@ -55,9 +68,14 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
     window.dispatchEvent(new CustomEvent('globalid:country-filter', { detail: { codes } }));
     const url = new URL(window.location.href);
     for (const [key, value] of Object.entries({ q: query, who, wb, income, status })) value ? url.searchParams.set(key, value) : url.searchParams.delete(key);
-    window.history.replaceState({}, '', url);
+    window.history.replaceState(window.history.state, '', url);
   }, [filtered, query, who, wb, income, status, parentCode, publication.data]);
-  if (!publication.data) return <p role="status" className="figure-caption">{publication.error ? pick('Current coverage is unavailable.', '当前覆盖数据暂不可用。', 'La couverture actuelle est indisponible.') : <GIDSLoader language={language} />}</p>;
+  if (!publication.data) return <div role="status" className="surveillance-directory">
+    {publication.error ? <>
+      <p className="figure-caption">{pick('Current coverage is unavailable.', '当前覆盖数据暂不可用。', 'La couverture actuelle est indisponible.')}</p>
+      <button type="button" className="directory-reset" onClick={publication.retry}>{pick('Retry', '重试', 'Réessayer')}</button>
+    </> : <GIDSLoader language={language} />}
+  </div>;
   const regional = subdivisionRows(publication.data).map((row: Row) => ({ ...row, parent_code: parentAreaCode(row) }));
   const parents = [...new Set(regional.map((row: Row) => String(row.parent_code)))].map(code => ({
     ...((publication.data?.countries ?? []).find((row: Row) => row.code === code) || { code }),
@@ -111,30 +129,8 @@ export default function SurveillanceDirectory({ language = 'en', parentCode }: {
     {!parentCode && !!activeFilters.length && <div className="directory-active-filters" aria-label={pick('Active filters', '已选筛选条件', 'Filtres actifs')}>
       {activeFilters.map(filter => <button key={filter.key} type="button" onClick={filter.clear} aria-label={`${pick('Remove filter', '移除筛选条件', 'Supprimer le filtre')}: ${filter.label}`}><span>{filter.label}</span><DirectoryIcon kind="close" /></button>)}
     </div>}
-    <div className="directory-grid">
-      {filtered.map(row => { const active = hasData(row);
-        const name = countryLabel(row, language);
-        const source = sourceEntries(row.source_info)[0];
-        const sourceLabel = source?.label || row.source_name;
-        const sourceCadence = source?.cadence || row.cadence;
-        const sourceUrl = safeUrl(source?.url || row.source_url);
-        const content = <>
-          <div className="directory-card-top"><span className="directory-card-code"><img src={getFlagAssetPath(row.code)} alt="" width="28" height="21" loading="lazy" />{row.code}</span>
-            <span className={`directory-card-status${active ? ' is-active' : ''}`}>{active ? pick('Supported', '已支持', 'Disponible') : row.publication_pending ? pick('Pending', '待发布', 'En attente') : row.status === 'Supported' ? pick('Unavailable', '暂不可用', 'Indisponible') : pick('Planned', '规划中', 'Prévu')}</span>
-          </div>
-          <h3>{name}</h3>
-          {active ? <div className="directory-card-metrics"><p><strong>{Number(row.disease_count ?? 0).toLocaleString()}</strong> {pick('diseases', '种疾病', 'maladies')}</p>
-            <p className="directory-card-dates">{[row.date_range?.start, row.date_range?.end].filter(Boolean).join(' → ') || pick('Coverage dates unavailable', '暂无覆盖时间', 'Période indisponible')}</p>
-            {sourceLabel && <p className="directory-card-source" title={sourceLabel}>{sourceLabel}{sourceCadence ? ` · ${cadence(sourceCadence, language)}` : ''}</p>}
-            <DirectoryIcon kind="arrow" />
-          </div> : <p className="directory-card-note">{row.publication_pending ? pick('Data publication pending', '数据待发布', 'Publication des données en attente') : row.status === 'Supported' ? pick('Data temporarily unavailable', '数据暂不可用', 'Données temporairement indisponibles') : pick('Planned source', '规划中的数据源', 'Source prévue')}</p>}
-        </>;
-        return active ? <a key={row.code} className="directory-card" href={`${prefix}/countries/${String(row.code).toLowerCase()}/`}>{content}</a> : <div key={row.code} className="directory-card is-unavailable">{content}
-          {sourceCadence && <p className="directory-card-note">{pick('Reporting cadence', '报告频率', 'Fréquence de déclaration')}: {cadence(sourceCadence, language)}</p>}
-          {sourceUrl && <a className="directory-source-link" href={sourceUrl} target="_blank" rel="noopener noreferrer">{pick('Official source', '官方数据源', 'Source officielle')}: {sourceLabel || sourceUrl}</a>}
-        </div>;
-      })}
-    </div>
+    <GeographicAreaCards rows={page.rows} language={language} gridRef={grid} />
+    <DirectoryPagination page={page} language={language} onPage={changePage} />
     {!filtered.length && <div className="directory-empty"><DirectoryIcon kind="search" /><h3>{pick('No matching areas', '没有符合条件的区域', 'Aucune zone correspondante')}</h3><p>{pick('Try another name or remove a filter to broaden your search.', '试试其他名称，或移除部分筛选条件以扩大搜索范围。', 'Essayez un autre nom ou supprimez un filtre pour élargir la recherche.')}</p><button type="button" className="directory-reset" onClick={reset}>{pick('Clear all filters', '清除全部筛选', 'Effacer tous les filtres')}</button></div>}
     {!parentCode && <p className="directory-provenance">{pick(`WHO regions and World Bank FY${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} regions/income groups; catalogue updated ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}.`, `WHO 区域及世界银行 ${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} 财年区域／收入组；分类目录更新于 ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}。`, `Régions OMS et régions/groupes de revenu Banque mondiale, exercice ${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} ; catalogue mis à jour le ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}.`)}</p>}
   </div>;

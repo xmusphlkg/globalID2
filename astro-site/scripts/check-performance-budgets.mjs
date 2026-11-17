@@ -10,12 +10,12 @@ import { isIndependentResearchRoute } from './check-seo-output.mjs';
 export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxJavaScriptChunkBytes: 350_000,
   // Disease pages carry the surveillance explorer plus a coverage map and a
-  // seasonality heatmap. The 2026-10-23 release build measured that route at
-  // 381,198 gzip bytes. The 2026-11-17 country page, measured on
-  // /countries/au/index.html, is 436,760 gzip bytes: one ECharts core, the
-  // subdivision map, the heatmap, and the explorer. 448KB still rejects a
-  // second ECharts core, because zrender alone is about 62KB gzip.
-  maxRouteCompressedAssetsBytes: 448_000,
+  // seasonality heatmap. The repaired 2026-11-17 AU page includes its complete
+  // CSS and measures 448,052 gzip bytes. The user-approved 512KB ceiling adds
+  // bounded headroom for the shared chart UI; per-chunk and ordinary-route
+  // budgets continue to apply. Catalogue growth belongs in paged JSON/UI,
+  // rather than requiring this code-asset ceiling to grow with each dataset.
+  maxRouteCompressedAssetsBytes: 512_000,
   maxOrdinaryRouteCompressedAssetsBytes: 300_000,
   // Raised from 100KB (2026-08-23): the multilingual Research Radar graph page
   // carries enough static graph metadata to sit just over the old cap.

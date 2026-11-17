@@ -127,6 +127,7 @@ def parse_monthly_pdf(payload, *, reference, source_url=None, retrieved_at=None)
         raise MexicoDGEContractError("DGE monthly original is not PDF")
     year = int(reference["year"]); sex = reference["sex"]
     digest = hashlib.sha256(payload).hexdigest(); rows = []; failures = []; seen = set(); pages = []
+    excluded_summary_rows = []
     with pdfplumber.open(io.BytesIO(payload)) as document:
         for page_no, original in enumerate(document.pages, 1):
             page = original.dedupe_chars(tolerance=.7, extra_attrs=())
@@ -167,6 +168,26 @@ def parse_monthly_pdf(payload, *, reference, source_url=None, retrieved_at=None)
                         prefix = [w for w in body if y0 <= w["top"] < y1 and w["x1"] < bounds[0]]
                         label = _words_text([w for w in prefix if w["x0"] < split]); icd = _words_text([w for w in prefix if w["x0"] >= split])
                         if _fold(label).startswith(("total","fuente")) and not icd:continue
+                        if (not label and not icd and page_no == len(document.pages)
+                            and i == len(anchors)-1 and not failures and len(seen) > 1
+                            and rows and all(r["Cases"] for r in rows)):
+                            # The 2025 female edition omits the label on its final
+                            # grand-total row. Recognize it only after all thirteen
+                            # printed columns independently match the parsed edition.
+                            # An arbitrary unnamed disease row must remain a failure.
+                            summary_values = [_number(c["text"], rate=False) for c in cells]
+                            monthly_sums = [sum(int(r["Cases"]) for r in rows if int(r["Month"]) == m)
+                                            for m in range(1, 13)]
+                            expected_summary = [sum(monthly_sums), *monthly_sums]
+                            if (all(v for v, _ in summary_values) and expected_summary[0] > 0
+                                and [int(v) for v, _ in summary_values] == expected_summary):
+                                excluded_summary_rows.append({
+                                    "page": page_no, "y": round(y, 2),
+                                    "reason": "unlabelled_edition_total_reconciled",
+                                    "verified_columns": 13, "disease_categories": len(seen),
+                                    "annual_total": expected_summary[0], "monthly_totals": monthly_sums,
+                                })
+                                continue
                         if not label or not icd: raise MexicoDGEContractError("Monthly source label/ICD missing")
                         values = [_number(c["text"], rate=False) for c in cells]
                         if all(v for v,_ in values) and sum(int(v) for v,_ in values[1:]) != int(values[0][0]): raise MexicoDGEContractError("Monthly cells do not reconcile with explicit annual total")
@@ -185,7 +206,7 @@ def parse_monthly_pdf(payload, *, reference, source_url=None, retrieved_at=None)
             except MexicoDGEContractError as exc:
                 failures.append({"page":page_no,"error":str(exc)})
     if not rows: raise MexicoDGEContractError("No validated DGE monthly facts: " + json.dumps(failures,ensure_ascii=False))
-    return rows,{"status":"partial" if failures else "parsed","sha256":digest,"source_url":source_url or reference["url"],"rows":len(rows),"pages":pages,"failures":failures,"failed_count":len(failures)}
+    return rows,{"status":"partial" if failures else "parsed","sha256":digest,"source_url":source_url or reference["url"],"rows":len(rows),"pages":pages,"failures":failures,"failed_count":len(failures),"excluded_summary_rows":excluded_summary_rows}
 
 
 def _issue_period(text, reference):
@@ -210,7 +231,13 @@ def _table_period(title, label, *, issue_year, issue_week, issue_start, issue_en
     week=int(main[1]);year=int(main[2])
     for clause in folded.split(";")[1:]:
         override=re.search(r"(.+?)\s+hasta\s+la(?:\s+semana(?:\s+epidemiologica)?)?\s+(\d{1,2})\s+del?\s+(20\d{2})",clause)
-        if override and _fold(label).rstrip("§* ").replace(" ","") in override[1].replace(" ",""):
+        aliases={re.sub(r'[^a-z0-9]','',_fold(label).strip('§*& '))}
+        aliases.update(re.sub(r'[^a-z0-9]','',_fold(v)) for v in re.findall(r'\(([A-Z]{2,})\)',label))
+        # This abbreviation is printed in the verified table caption; the
+        # disease heading spells out "primaria". No fuzzy name matching.
+        if re.sub(r'[^a-z0-9]','',_fold(label))=='meningoencefalitisamebianaprimaria':
+            aliases.add('meningoencefalitisamebianap')
+        if override and re.sub(r'[^a-z0-9]','',override[1]) in aliases:
             week=int(override[2]);year=int(override[3])
     if year!=issue_year or not 1<=week<=issue_week: raise MexicoDGEContractError("Table cutoff outside verified bulletin calendar")
     delta=timedelta(weeks=issue_week-week)
@@ -278,6 +305,16 @@ def parse_weekly_pdf(payload, *, reference, source_url=None, retrieved_at=None, 
                 common={"source_page":index+1,"source_table":table_no,"bulletin_issue_year":year,"bulletin_issue_week":issue_week,"source_footnotes":_words_text([w for w in words if w["top"]>=foot]),"dash_semantics":"reported_zero" if zero_dash else "source_missing","dash_legend_pages":legend_pages}
                 if caption_evidence:common['source_caption_ocr']=caption_evidence
                 before=len(rows)
+                if entidad and caption_evidence:
+                    from .mx_weekly_tables import parse_national_total
+                    parsed = parse_national_total(words,caption_evidence=caption_evidence,
+                        issue_year=year,issue_week=issue_week,issue_start=issue_start,issue_end=issue_end,
+                        page_number=index+1,source_url=source_url or reference['url'],digest=digest,
+                        retrieved_at=retrieved_at,legend_pages=legend_pages)
+                    rows.extend(parsed)
+                    pages.append({'page':index+1,'source_table':table_no,'rows':len(parsed),
+                        'excluded_source_cells':[cell for r in parsed for cell in json.loads(r['SourceProvenance']).get('excluded_source_cells',[])]})
+                    continue
                 if not entidad:
                     # Table 1/2: current weekly, current cumulative, historical
                     # median, previous weekly/cumulative. Only current facts.
@@ -341,11 +378,25 @@ def parse_weekly_pdf(payload, *, reference, source_url=None, retrieved_at=None, 
             except (MexicoDGEContractError,ValueError,IndexError) as exc:
                 # Roll back the page to avoid partial/conflicting header use.
                 rows=[r for r in rows if r["SourcePage"]!=str(index+1)]
+                if any(w['text']=='ENTIDAD' for w in words) and not ocr_captions.get(index+1):
+                    from .mx_weekly_tables import parse_national_total
+                    try:
+                        parsed=parse_national_total(words,caption_evidence=None,
+                            issue_year=year,issue_week=issue_week,issue_start=issue_start,issue_end=issue_end,
+                            page_number=index+1,source_url=source_url or reference['url'],digest=digest,
+                            retrieved_at=retrieved_at,legend_pages=legend_pages)
+                        rows.extend(parsed)
+                        pages.append({'page':index+1,'rows':len(parsed),'layout':'verified_mixed_columns',
+                            'excluded_source_cells':[cell for r in parsed for cell in json.loads(r['SourceProvenance']).get('excluded_source_cells',[])]})
+                        continue
+                    except (MexicoDGEContractError,ValueError,IndexError) as fallback_exc:
+                        exc=fallback_exc
                 failures.append({"page":index+1,"error":str(exc)})
     rows,conflicts=deduplicate_rows(rows)
     failures.extend(conflicts)
     if not rows:raise MexicoDGEContractError("No verified DGE weekly national observations: "+json.dumps(failures,ensure_ascii=False))
-    return rows,{"status":"partial" if failures else "parsed","sha256":digest,"source_url":source_url or reference["url"],"issue_year":year,"issue_week":issue_week,"rows":len(rows),"pages":pages,"failures":failures,"failed_count":len(failures),"excluded_tables":"Narratives, charts, nonstandard tables, state rows, medians and previous-year comparison columns remain archived; only reviewed current-year national facts are emitted."}
+    excluded_cells=[cell for page in pages for cell in page.get('excluded_source_cells',[])]
+    return rows,{"status":"partial" if failures or excluded_cells else "parsed","sha256":digest,"source_url":source_url or reference["url"],"issue_year":year,"issue_week":issue_week,"rows":len(rows),"pages":pages,"failures":failures,"failed_count":len(failures),'excluded_source_cells':excluded_cells,"excluded_tables":"Narratives, charts, nonstandard tables, state rows, medians and previous-year comparison columns remain archived; only reviewed current-year national facts are emitted."}
 
 
 def deduplicate_rows(rows):
@@ -358,7 +409,12 @@ def deduplicate_rows(rows):
         if old and (old["Cases"],old["MissingValueStatus"])!=(row["Cases"],row["MissingValueStatus"]):
             result.pop(key);conflicting.add(key);failures.append({"identity":list(key),"error":"Conflicting national source facts quarantined"});continue
         if old:
-            provenance=json.loads(old["SourceProvenance"]);provenance.setdefault("equivalent_source_pages",[provenance["source_page"]]).append(int(row["SourcePage"]));old["SourceProvenance"]=json.dumps(provenance,ensure_ascii=False,sort_keys=True)
+            provenance=json.loads(old["SourceProvenance"])
+            provenance.setdefault("equivalent_source_pages",[provenance["source_page"]]).append(int(row["SourcePage"]))
+            for excluded in json.loads(row['SourceProvenance']).get('excluded_source_cells',[]):
+                if excluded not in provenance.setdefault('excluded_source_cells',[]):
+                    provenance['excluded_source_cells'].append(excluded)
+            old["SourceProvenance"]=json.dumps(provenance,ensure_ascii=False,sort_keys=True)
         else:result[key]=row
     return list(result.values()),failures
 
@@ -408,9 +464,15 @@ class MexicoDGEHighFrequencyCrawler(BaseCrawler):
         parser=parse_monthly_pdf if self.source_scope==MONTHLY_SCOPE else parse_weekly_pdf
         for ref in refs:
             try:
-                payload,meta=self.download(ref,force=force);parsed,audit=parser(payload,reference=ref,retrieved_at=meta.get("retrieved_at"));rows.extend(parsed);reports.append(audit)
+                payload,meta=self.download(ref,force=force)
+                kwargs={}
+                if self.source_scope==WEEKLY_SCOPE:
+                    from .mx_title_ocr import capture_summary_captions
+                    kwargs['title_ocr']=capture_summary_captions(payload)
+                parsed,audit=parser(payload,reference=ref,retrieved_at=meta.get("retrieved_at"),**kwargs)
+                rows.extend(parsed);reports.append(audit)
             except Exception as exc:failures.append({"url":ref["url"],"error":str(exc)})
-        self.last_audit={"discovered_tables":len(refs),"reports":reports,"failures":failures,"coverage_complete":not failures and all(not a["failed_count"] for a in reports)}
+        self.last_audit={"discovered_tables":len(refs),"reports":reports,"failures":failures,"coverage_complete":not failures and all(not a["failed_count"] and not a.get('excluded_source_cells') for a in reports)}
         if not rows:raise MexicoDGEContractError("No source observations; inspect source audit")
         return rows
 

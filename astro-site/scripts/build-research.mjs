@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, relative, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { researchTemplateFingerprint, researchInputs, planResearchArticles, readResearchCache, restoreResearchArticles, saveResearchCache } from './research-isolated-cache.mjs';
+import { auditBuildAssets } from './check-build-assets.mjs';
 
 export function prepareResearchWorkspace({ site, snapshot, work }) {
   site = resolve(site); snapshot = resolve(snapshot); work = resolve(work);
@@ -41,8 +42,9 @@ export function prepareResearchWorkspace({ site, snapshot, work }) {
     // change the candidate during rendering. Large unrelated trees are not
     // generated or published by this workspace.
     const from = resolve(site, 'src/data', entry.name), to = resolve(data, entry.name);
-    if (entry.isFile()) cpSync(from, to);
-    else symlinkSync(from, to, 'dir');
+    if (entry.isFile()) {
+      if (entry.name !== 'meta.json') cpSync(from, to);
+    } else symlinkSync(from, to, 'dir');
   }
   symlinkSync(resolve(snapshot, 'build/research'), resolve(data, 'research'), 'dir');
   for (const path of ['research', 'zh/research', 'fr/research']) {
@@ -155,6 +157,11 @@ export function buildResearch({ site, project, snapshot, destination, work, cach
       render();
     }
   }
+  // A successful Astro process can still omit stylesheet references when its
+  // page metadata uses a different physical root. Reject that output before
+  // it enters the article cache or becomes a reusable projection shell.
+  const assets = auditBuildAssets(prepared.output);
+  if (!assets.passed) throw new Error(`Research build assets invalid: ${assets.errors.slice(0, 10).join('; ')}`);
   const cacheVersion = scope === 'full' && inputs ? saveResearchCache({ cache: cacheDir, inputs, output: prepared.output }) : null;
   // The sharded public snapshot is a build input only. Browser queries use
   // the rendered research catalogue; do not copy the old data into releases.

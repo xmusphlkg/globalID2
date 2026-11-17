@@ -62,6 +62,7 @@ const summaryCount = articles.filter(row => row.detail_available !== false).leng
   });
 </script>
 <style>
+  .disease-literature-page { width: min(var(--page-reading-width), calc(100% - var(--page-gutter))); margin: 0 auto; padding: var(--page-block-space) 0 3rem; }
   .literature-hero h1 { margin-top: .5rem; color: rgb(var(--text-strong)); font: 600 clamp(2rem, 4vw, 3rem)/1.2 'IBM Plex Sans', sans-serif; }
   .literature-lead { margin-top: 1.2rem; max-width: 58rem; color: rgb(var(--text-muted)); font-size: 1rem; line-height: 1.8; }
   .literature-hero-links, .literature-database-links { display: flex; flex-wrap: wrap; gap: .65rem 1.5rem; margin-top: 1rem; }
@@ -81,5 +82,5 @@ const summaryCount = articles.filter(row => row.detail_available !== false).leng
   .literature-query-block textarea { display: block; width: 100%; margin-top: .5rem; padding: .7rem; resize: vertical; min-height: 5rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised)); color: rgb(var(--text)); font: .78rem/1.6 ui-monospace, monospace; }
   .literature-query-block button { min-height: 44px; padding: .5rem .7rem; color: rgb(var(--color-teal)); font-size: .8rem; text-decoration: underline; }
   .literature-strategy-help a { text-decoration: underline; text-underline-offset: 3px; }
-  @media (max-width: 640px) { .literature-hero-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; } }
+  @media (max-width: 640px) { .disease-literature-page { padding-top: 1rem; } .literature-hero-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; } }
 </style>

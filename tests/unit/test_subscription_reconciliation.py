@@ -148,3 +148,58 @@ async def test_research_digest_uses_the_independent_published_snapshot(tmp_path,
     monkeypatch.setattr(reconcile.research_subscription, 'dispatch_after_release', dispatch)
     result = await reconcile.reconcile_once(service, root=tmp_path, astro_dir=tmp_path / 'astro-site')
     assert result['research']['status'] == 'completed'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('retained_inputs', [False, True])
+async def test_maintenance_literature_receipt_suppresses_repeated_background_dispatch(tmp_path, monkeypatch, retained_inputs):
+    task_uuid = 'maintenance-research'
+    snapshot = tmp_path / f'exports/research-runs/{task_uuid}/snapshot/build/research'
+    stage = tmp_path / f'exports/research-stage-{task_uuid}'
+    receipt_path = tmp_path / 'exports/research-current-receipt.json'
+    receipt_path.parent.mkdir()
+    identity = {'schema': 1, 'task_uuid': task_uuid, 'release_id': f'literature-{task_uuid}',
+                'papers_generation_sha256': 'a' * 64, 'subscription_dispatch_suppressed': True}
+    receipt_path.write_text(json.dumps(identity))
+    if retained_inputs:
+        snapshot.mkdir(parents=True)
+        stage.mkdir()
+    service = SimpleNamespace(
+        _env_value=lambda name, default='': 'true' if name == 'SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED' else default,
+        _config=lambda: SimpleNamespace(literature_json_enabled=True))
+    dispatched = []
+    def dispatch(**kwargs):
+        dispatched.append(kwargs['identity']['release_id'])
+        return {'status': 'completed'}
+    monkeypatch.setattr(reconcile.research_subscription, 'dispatch_after_release', dispatch)
+    for _ in range(2):
+        result = await reconcile.reconcile_once(service, root=tmp_path, astro_dir=tmp_path / 'astro-site')
+        assert result['research'] == {'status': 'suppressed', 'reason': 'maintenance_release',
+                                      'release_id': f'literature-{task_uuid}'}
+    assert dispatched == []
+    # Suppression belongs to this publication, not to all future releases.
+    snapshot.mkdir(parents=True, exist_ok=True)
+    stage.mkdir(exist_ok=True)
+    identity['subscription_dispatch_suppressed'] = False
+    receipt_path.write_text(json.dumps(identity))
+    result = await reconcile.reconcile_once(service, root=tmp_path, astro_dir=tmp_path / 'astro-site')
+    assert result['research']['status'] == 'completed'
+    assert dispatched == [f'literature-{task_uuid}']
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('invalid_flag', ['true', 1, None])
+async def test_invalid_literature_suppression_flag_cannot_dispatch(tmp_path, monkeypatch, invalid_flag):
+    receipt = tmp_path / 'exports/research-current-receipt.json'
+    receipt.parent.mkdir()
+    receipt.write_text(json.dumps({'schema': 1, 'task_uuid': 'research-1', 'release_id': 'literature-research-1',
+                                  'papers_generation_sha256': 'a' * 64,
+                                  'subscription_dispatch_suppressed': invalid_flag}))
+    service = SimpleNamespace(
+        _env_value=lambda name, default='': 'true' if name == 'SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED' else default,
+        _config=lambda: SimpleNamespace(literature_json_enabled=True))
+    dispatched = []
+    monkeypatch.setattr(reconcile.research_subscription, 'dispatch_after_release', lambda **kwargs: dispatched.append(kwargs))
+    result = await reconcile.reconcile_once(service, root=tmp_path, astro_dir=tmp_path / 'astro-site')
+    assert result['research']['error_code'] == 'research_publication_receipt_unavailable'
+    assert dispatched == []

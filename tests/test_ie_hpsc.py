@@ -243,9 +243,8 @@ def test_ie_registry_mapping_and_permission_gate_are_complete() -> None:
     hpsc_mapping_rows = [
         row for row in mapping_rows if row["source_id"] == "SRC_IE_HPSC_NDH"
     ]
-    ontology = json.loads(
-        (root / "configs/disease_ontology.json").read_text(encoding="utf-8")
-    )
+    from src.ontology import read_ontology_document
+    ontology = read_ontology_document(root / "configs/disease_ontology.json")
     source_series = [
         item
         for item in ontology["source_series"]

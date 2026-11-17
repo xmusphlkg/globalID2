@@ -12,10 +12,12 @@ from src.generation.literature_publication import freeze_literature_json, select
 from src.services.data_release import literature_projection
 from src.services.data_release.literature_artifacts import build_research_papers_manifest
 from src.services.data_release.literature_publish import PREFIX as RESEARCH_PREFIX, publish_literature_candidate
+from src.services.data_release.papers_bundle import build_papers_manifest
 from src.services.data_release.papers_content import prepare_papers_content_from_manifest, publish_papers_content
 from src.services.data_release.papers_immutable import ImmutablePapersError
 from src.services.data_release.papers_projection import (
     PREFIX, _read_object, assert_v3_candidate, load_projection_candidate, prepare_full_snapshot_candidate,
+    prepare_projection_candidate,
     verify_projected_publication,
 )
 from src.services.data_release.surveillance_publish import capture_surveillance_baseline
@@ -376,6 +378,78 @@ def write_shell_fixture(stage, build, slug='paper-a'):
                  shell_slug=slug, template_fingerprint='b' * 64)
     Path(f'{stage}.inputs.json').write_text(json.dumps(build))
     return build
+
+
+@pytest.mark.parametrize('fresh_shells', [False, True])
+def test_full_snapshot_resources_follow_the_selected_shells_without_mutating_the_baseline(tmp_path, fresh_shells):
+    root = tmp_path / 'base'
+    old_resources = {
+        '_astro/old.css': '.skip-link{position:fixed}.evidence-page{display:grid}@font-face{src:url(old.woff2)}',
+        '_astro/old.js': 'import "./shared.abc123.js";',
+        '_astro/old.woff2': 'old font',
+        '_astro/shared.abc123.js': 'export const shared = true;',
+    }
+    for relative, body in old_resources.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body)
+    for locale, prefix in (('en', ''), ('zh', 'zh/'), ('fr', 'fr/')):
+        path = root / f'{prefix}research/articles/paper-a/index.html'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(shell_html('paper-a', locale).replace('shell.abc123.css', 'old.css')
+            .replace('</head>', '<script type="module" src="/_astro/old.js"></script></head>')
+            .replace('<body>', '<body><a class="skip-link">Skip</a>'))
+    legacy = prepare_papers_content_from_manifest(root, build_papers_manifest(root, papers_origin='https://papers.example'),
+        papers_origin='https://papers.example', release_id='old', template_dir=tmp_path / 'v2')
+    base = prepare_projection_candidate(legacy, articles=[article('paper-a')], directory=tmp_path / 'v3',
+        release_id='old', migration=True)[0]
+    before = {path.relative_to(root): hashlib.sha256(path.read_bytes()).hexdigest()
+              for path in root.rglob('*') if path.is_file()}
+    _, stage, build, _ = snapshot_and_collections(tmp_path / 'new', [article('paper-a')])
+    new_resources = {'_astro/shared.abc123.js': old_resources['_astro/shared.abc123.js']}
+    shells = None
+    if fresh_shells:
+        write_shell_fixture(stage, build)
+        new_resources.update({
+            '_astro/shell.abc123.css': '.skip-link{position:fixed}.evidence-page{display:grid}@font-face{src:url(new.woff2)}',
+            '_astro/new.js': 'import "./shared.abc123.js";',
+            '_astro/new.woff2': 'new font',
+        })
+        for relative in build['pages']:
+            if '/articles/' not in relative:
+                continue
+            path = stage / relative
+            path.write_text(path.read_text().replace('<body>', '<body><a class="skip-link">Skip</a>')
+                .replace('</head>', '<script type="module" src="/_astro/new.js"></script></head>'))
+            build['pages'][relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+        shells = literature_projection.compile_locale_shells(stage, 'paper-a')
+    for relative, body in new_resources.items():
+        path = stage / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body)
+    static = prepare_papers_content_from_manifest(stage, build_research_papers_manifest(stage, origin=base.origin, build=build),
+        papers_origin=base.origin, release_id='next')
+    candidate, _ = prepare_full_snapshot_candidate(base, articles=[article('paper-a')], static=static,
+        directory=tmp_path / 'next', release_id='next', locale_shells=shells)
+    paths = {entry['path'] for entry in candidate.entries}
+    retired = set(old_resources) - new_resources.keys()
+    assert (paths & retired) == (set() if fresh_shells else retired)
+    assert set(new_resources) <= paths
+    descriptor = next(entry['paper_template'] for entry in candidate.entries if 'paper_template' in entry)
+    manifest = _read_object(candidate, f'{PREFIX}/assets/{descriptor["assets_sha256"]}.json')
+    asset_paths = {entry['path'] for entry in manifest['items']}
+    assert (asset_paths & retired) == (set() if fresh_shells else retired)
+    assert all((stage / path).exists() == (not fresh_shells) for path in retired)
+    assert {path.relative_to(root): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in root.rglob('*') if path.is_file()} == before
+    # Even a complete shell replacement cannot redefine an existing hashed
+    # resource path: the old and new publication identities remain immutable.
+    (stage / '_astro/shared.abc123.js').write_text('changed under the same asset name')
+    changed = prepare_papers_content_from_manifest(stage, build_research_papers_manifest(stage, origin=base.origin, build=build),
+        papers_origin=base.origin, release_id='next')
+    with pytest.raises(ValueError, match='immutable asset collision'):
+        prepare_full_snapshot_candidate(base, articles=[article('paper-a')], static=changed,
+            directory=tmp_path / 'collision', release_id='next', locale_shells=shells)
 
 
 def test_shell_update_retargets_every_published_paper_without_rewriting_records(tmp_path, monkeypatch):

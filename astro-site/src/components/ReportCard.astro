@@ -2,6 +2,8 @@
 // src/components/ReportCard.astro
 import CountryFlag from './CountryFlag.astro';
 import { siteHref } from '../lib/papers';
+import { loadReportDetail } from '../lib/report-data';
+import { localizedReportText } from '../lib/report-routes';
 
 interface Props {
   id: number;
@@ -36,11 +38,17 @@ const {
 
 const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
 const href = siteHref(`${prefix}/countries/${(countryCode ?? 'cn').toLowerCase()}/reports/${id}/`);
-const displayTitle = locale === 'fr' ? (titleFr ?? 'Titre français en attente.') : title;
-const displaySummary = locale === 'fr' ? (summaryFr ?? (summary ? 'Résumé français en attente.' : null)) : summary;
+const report = loadReportDetail(String(id));
+const displayTitle = localizedReportText(report, 'title', locale)
+  ?? (locale === 'fr' ? (titleFr ?? 'Titre français en attente.') : title);
+const displaySummary = localizedReportText(report, 'summary', locale)
+  ?? (locale === 'fr' ? (summaryFr ?? (summary ? 'Résumé français en attente.' : null)) : summary);
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString(locale === 'zh' ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString(locale === 'zh' ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en-US', {
+    year: 'numeric', month: 'short', day: 'numeric',
+    ...(/^\d{4}-\d{2}-\d{2}$/.test(d) ? { timeZone: 'UTC' } : {}),
+  });
 }
 
 const typeLabels: Record<string, string> = {

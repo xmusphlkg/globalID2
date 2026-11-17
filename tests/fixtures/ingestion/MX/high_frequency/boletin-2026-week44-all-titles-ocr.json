@@ -1,0 +1,2084 @@
+{
+  "pdf_sha256": "c6b328e4a88c293cbd9b912403b14f8e8a27ab54b780566fc51537b03b52d1a3",
+  "captions": [
+    {
+      "page": 4,
+      "table": "1",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 1. Casos nuevos de enfermedades de notificación inmediata hasta la semana 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 1. Casos nuevos de enfermedades de notificación inmediata hasta la semana 44 del 2026",
+        "CUADRO 1. Casos nuevos de enfermedades de notificación inmediata hasta la semana 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        94
+      ],
+      "rendered_crop_sha256": [
+        "0eb07bba804301839dbc07317fbd48ac890681bcc12d94eedc3938d88f5a3e0d",
+        "2dcb1d9e46479f701492abed484ca126f1d29c8254db8a6bebd727dc25dd05fa"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 5,
+      "table": "2",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 2. Casos nuevos de enfermedades de vigilancia convencional hasta la semana 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 2. Casos nuevos de enfermedades de vigilancia convencional hasta la semana 43 del 2026",
+        "CUADRO 2. Casos nuevos de enfermedades de vigilancia convencional hasta la semana 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        94
+      ],
+      "rendered_crop_sha256": [
+        "cc87bb5a5963793684b81d26b6a1900829d5a21f83e12ed9cf7b3c3f40fd2a1d",
+        "fcff14bb83dc19461156d8976be3cf2396f062a1486e069a40d2c6c71e959833"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 6,
+      "table": "3",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 3. Casos por entidad federativa de Enfermedades Prevenibles por Vacunación\nhasta la semana epidemiológica 43 del 2026; Meningitis Tuberculosa hasta la 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 3. Casos por entidad federativa de Enfermedades Prevenibles por Vacunación\nhasta la semana epidemiológica 43 del 2026; Meningitis Tuberculosa hasta la 44 del 2026",
+        "CUADRO 3. Casos por entidad federativa de Enfermedades Prevenibles por Vacunación\nhasta la semana epidemiológica 43 del 2026; Meningitis Tuberculosa hasta la 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "7056c480801be4835a99025a3c041baf52814421a3510f29b91d7561707b6ded",
+        "c24e913878e6c055994483a03ba0aafe8c9ad07cfcebc035bbdf6824dbb37a2b"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 7,
+      "table": "3.1",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 3.1 Casos por entidad federativa de Enfermedades Prevenibles\npor Vacunación hasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 3.1 Casos por entidad federativa de Enfermedades Prevenibles\npor Vacunación hasta la semana epidemiológica 44 del 2026",
+        "CUADRO 3.1 Casos por entidad federativa de Enfermedades Prevenibles\npor Vacunación hasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "d079e6155112a9164bc3e3cbd86669dae9558ff5c82a1829440db76c3d8e3628",
+        "57f46c3f549f6b77228ffd57e6ec69c6471d3e4dfae16b61661a6662388c710c"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 8,
+      "table": "3.2",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 3.2 Casos por entidad federativa de Enfermedades Prevenibles por\nVacunación hasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 3.2 Casos por entidad federativa de Enfermedades Prevenibles por\nVacunación hasta la semana epidemiológica 44 del 2026",
+        "CUADRO 3.2 Casos por entidad federativa de Enfermedades Prevenibles por\nVacunación hasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "16ec091b4f855c16438d4435dfea31404b1da4d257b28c0c5337c7731ad36b16",
+        "937c1ca7857c9709efc47e9d9059abb229767070137b20faf01888658721a4a0"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 9,
+      "table": "3.3",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 3.3 Casos por entidad federativa de Enfermedades Prevenibles\npor Vacunación hasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 3.3 Casos por entidad federativa de Enfermedades Prevenibles\npor Vacunación hasta la semana epidemiológica 44 del 2026",
+        "CUADRO 3.3 Casos por entidad federativa de Enfermedades Prevenibles\npor Vacunación hasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "96b167aa8da4bec0e675c06a014c936292489f1ca7c719703a607b1349b551db",
+        "a8accc45de3473c5521c0b37adf6ab933d759712a8c7b04fb80d016d4e72ac96"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 10,
+      "table": "3.4",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 3.4 Casos por entidad federativa de Enfermedades Prevenibles por Vacunación\nhasta la semana epidemiológica 44 del 2026; Varicela hasta la semana 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 3.4 Casos por entidad federativa de Enfermedades Prevenibles por Vacunación\nhasta la semana epidemiológica 44 del 2026; Varicela hasta la semana 43 del 2026",
+        "CUADRO 3.4 Casos por entidad federativa de Enfermedades Prevenibles por Vacunación\nhasta la semana epidemiológica 44 del 2026; Varicela hasta la semana 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "01ab7428b5f4eefeda194d118326c31879f247406aa34bb75b3a884a2910d30d",
+        "5a9b1b41bedc0653132bc7b1ca9de24a213c5cb7d77c727bf2c7dd19e2e1ccf1"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 11,
+      "table": "3.5",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 3.5 Casos por entidad federativa de Enfermedades Prevenibles\npor Vacunación hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 3.5 Casos por entidad federativa de Enfermedades Prevenibles\npor Vacunación hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 3.5 Casos por entidad federativa de Enfermedades Prevenibles\npor Vacunación hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "2c4fe80687e0ba5cc4a82410bc151e91c99117321cecb66bf79a540fafbb3f49",
+        "2a27c73daf53dc610b494032fe92b2359309c4fa061febd637a77a244f239086"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 12,
+      "table": "3.6",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 3.6 Casos por entidad federativa de Enfermedades Prevenibles por\nVacunación hasta la semana epidemiológica 43 del 2026; Influenza hasta la 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 3.6 Casos por entidad federativa de Enfermedades Prevenibles por\nVacunación hasta la semana epidemiológica 43 del 2026; Influenza hasta la 44 del 2026",
+        "CUADRO 3.6 Casos por entidad federativa de Enfermedades Prevenibles por\nVacunación hasta la semana epidemiológica 43 del 2026; Influenza hasta la 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "f2be43d1da40198426ae10e1c62e01fbff2d203aecda044db382ee5a43816626",
+        "0fba863243caa0f612dfc91a068503c007476e4daf357cb48a4b7bc0a1282853"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 13,
+      "table": "3.7",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 3.7 Casos por entidad federativa Enfermedades Prevenibles por Vacunación\nhasta la semana epidemiológica 43 del 2026; Síndrome de Rubeóla Congénita hasta la 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 3.7 Casos por entidad federativa Enfermedades Prevenibles por Vacunación\nhasta la semana epidemiológica 43 del 2026; Síndrome de Rubeóla Congénita hasta la 44 del 2026",
+        "CUADRO 3.7 Casos por entidad federativa Enfermedades Prevenibles por Vacunación\nhasta la semana epidemiológica 43 del 2026; Síndrome de Rubeóla Congénita hasta la 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "38707b66073baddebd8d0d8da220a6bf97adc0e4737ca9885a840fb67b8054fe",
+        "696a436c75e10ded14c6a3a254b95d21fc553ef752e544eec1168a7ae32451bd"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 14,
+      "table": "4",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 4. Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias del\nAparato Digestivo hasta la semana epidemiológica 43 del 2026; Cólera hasta la 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 4. Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias del\nAparato Digestivo hasta la semana epidemiológica 43 del 2026; Cólera hasta la 44 del 2026",
+        "CUADRO 4. Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias del\nAparato Digestivo hasta la semana epidemiológica 43 del 2026; Cólera hasta la 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "4fa540a71ac60940372e463c1cd6d135c5ff5b46769c0d94f605b63a1a3f31e1",
+        "486b05679e2f074b3fd0a9ffc5588d709958b0b4bc2e9acbe3005bf713b9cd64"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 15,
+      "table": "4.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 4.1 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias del\nAparato Digestivo hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 4.1 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias del\nAparato Digestivo hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 4.1 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias del\nAparato Digestivo hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "3eebd520a700b821c85e0ac24bbe84929ebacdd81dec6181b8dc45ffe59901c2",
+        "3af6204289b4913ae3381809e3eb227205731f38ad5a385ae5bf80f8cf09c4b1"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 16,
+      "table": "4.2",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 4.2 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 4.2 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 4.2 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "c141a5eb3739c54bc2a381ec3856a6a47ca20338024e9b99d43bb56dcea55dcc",
+        "ce15eb5bf0f7640cf083a4e29748230062458a14f216fd23e3f414341c00de95"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 17,
+      "table": "4.3",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 4.3 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 4.3 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 4.3 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "b63249f8cee40b467f08fa0f51358f5e8534640224b8966eb7335af79d570c00",
+        "5924e170d86beaf93b037097c5dab9bb127d285bdfa57d1810df8a7bbcdbf6e4"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 18,
+      "table": "4.4",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 4.4 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 4.4 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 4.4 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "ae627529cb7f197c002962479abcf5c6fb58f8fc73ee91e588a760b825bc17ac",
+        "15712d6579182c9ac9fe262ae5adda1ab410412ef5583aa81f1b16135e15b8e5"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 19,
+      "table": "4.5",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 4.5 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 4.5 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 4.5 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "22510f252ec22795643844a5b9d9a96d7dd316665ce4127a806d46da9593ddc1",
+        "85176af20dbcf3cda7cdea177ac135a49cf7815e41943a44d3413d6167be1ed7"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 20,
+      "table": "4.6",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 4.6 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 4.6 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 4.6 Casos por entidad federativa de Enfermedades Infecciosas y Parasitarias\ndel Aparato Digestivo hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "2b7f95e544cbff5d601ba2a8b4baca306c62ae0f14d23fe8ca39a17e6be9d511",
+        "eb3caed4fa59fcaf3adefe2e948e8075753af0f4f9f3f0278efd9cc19910eff8"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 21,
+      "table": "5",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 5. Casos por entidad federativa de Enfermedades Infecciosas del aparato Respiratorio\nhasta la semana epidemiológica 43 del 2026; Tuberculosis Respiratoria hasta la semana 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 5. Casos por entidad federativa de Enfermedades Infecciosas del aparato Respiratorio\nhasta la semana epidemiológica 43 del 2026; Tuberculosis Respiratoria hasta la semana 44 del 2026",
+        "CUADRO 5. Casos por entidad federativa de Enfermedades Infecciosas del aparato Respiratorio\nhasta la semana epidemiológica 43 del 2026; Tuberculosis Respiratoria hasta la semana 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "c416b016225e590c42330bd2cf43c31264eec32f2f7a6df70950a08ab6e486d4",
+        "978ad0678bbc19ba4e802336cfead2b2bbe6ab863a1e3de5c7296036aa8b1216"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 22,
+      "table": "5.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 5.1 Casos por entidad federativa de Enfermedades Infecciosas\ndel Aparato Respiratorio hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 5.1 Casos por entidad federativa de Enfermedades Infecciosas\ndel Aparato Respiratorio hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 5.1 Casos por entidad federativa de Enfermedades Infecciosas\ndel Aparato Respiratorio hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "3271ff9e489e76532bda4eed28613e1810239ae420c7f41ebca4402e06ce938f",
+        "a606a8e98290e3237cc6b48a4c40f17d86ba2ee11883ce10d7017483baa8e82a"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 23,
+      "table": "5.2",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 5.2 Casos por entidad federativa de Enfermedades Infecciosas\ndel Aparato Respiratorio hasta la semana epidemiológica 43 del 2026; Covid 19 hasta la 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 5.2 Casos por entidad federativa de Enfermedades Infecciosas\ndel Aparato Respiratorio hasta la semana epidemiológica 43 del 2026; Covid 19 hasta la 44 del 2026",
+        "CUADRO 5.2 Casos por entidad federativa de Enfermedades Infecciosas\ndel Aparato Respiratorio hasta la semana epidemiológica 43 del 2026; Covid 19 hasta la 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "948ae718fea2a26903ab6f2b5dd7a8727fde554273a312681654b6ed5d1363f1",
+        "c47f7cc5d6034794924943ae342b1892c551ee089c57725e48374f371798adee"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 24,
+      "table": "6",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 6. Casos por entidad federativa de Enfermedades de Transmisión Sexual\nhasta la semana epidemiológica 43 del 2026; Sífilis Congénita hasta la semana 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 6. Casos por entidad federativa de Enfermedades de Transmisión Sexual\nhasta la semana epidemiológica 43 del 2026; Sífilis Congénita hasta la semana 44 del 2026",
+        "CUADRO 6. Casos por entidad federativa de Enfermedades de Transmisión Sexual\nhasta la semana epidemiológica 43 del 2026; Sífilis Congénita hasta la semana 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "806ec043f2bb3998d8a2a04e331cc06d39a5f4afbad0195e71db48c98b40c83d",
+        "acbb541af0bac2cfddcb2135d8f1b65a35a171fe8b79729c5b1917f17c6979d9"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 25,
+      "table": "6.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 6.1 Casos por entidad federativa de Enfermedades de\nTransmisión Sexual hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 6.1 Casos por entidad federativa de Enfermedades de\nTransmisión Sexual hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 6.1 Casos por entidad federativa de Enfermedades de\nTransmisión Sexual hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "fd15e4606e32dfe68706e1c784e704898492646ff4e9ce59067bb47dc9abe2db",
+        "64bd255d7f787aa34762e512ab22e103c575c8aef84150978616c6193ea234f8"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 26,
+      "table": "6.2",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 6.2 Casos por entidad federativa de Enfermedades de\nTransmisión Sexual hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 6.2 Casos por entidad federativa de Enfermedades de\nTransmisión Sexual hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 6.2 Casos por entidad federativa de Enfermedades de\nTransmisión Sexual hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "00f61e444f95645a71cfd7f15915bf3578b986160496a0f0de0733da2d84694b",
+        "9f264657683594385a4d42b6d7273e04633b68f70145c30a8209d318c110807d"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 27,
+      "table": "6.3",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 6.3 Casos por entidad federativa de Enfermedades de Transmisión Sexual\nInfección por el Virus de la Inmunodeficiencia Humana hasta la semana 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 6.3 Casos por entidad federativa de Enfermedades de Transmisión Sexual\nInfección por el Virus de la Inmunodeficiencia Humana hasta la semana 44 del 2026",
+        "CUADRO 6.3 Casos por entidad federativa de Enfermedades de Transmisión Sexual\nInfección por el Virus de la Inmunodeficiencia Humana hasta la semana 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "5b175cf2a50430dae9972e65bc1b248bb81cc7ff21839d157c043d9c250ec57b",
+        "5c73e5ddc11264fce6b783a11215c183a50f77b5e892bea3282a18fb02f2d98e"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 28,
+      "table": "6.4",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 6.4 Casos por entidad federativa de Enfermedades de Transmisión\nSexual hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 6.4 Casos por entidad federativa de Enfermedades de Transmisión\nSexual hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 6.4 Casos por entidad federativa de Enfermedades de Transmisión\nSexual hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "9b10705d30380a81ee9fb80c7ae9aeb364d65ddb969fe09e844da63dff779afe",
+        "6a3b5d784d9e367aef721db456f65e731489eed757997c086ffa21862fdd698c"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 29,
+      "table": "7",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 7. Casos por entidad federativa de Enfermedades Transmitidas\npor Vector hasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 7. Casos por entidad federativa de Enfermedades Transmitidas\npor Vector hasta la semana epidemiológica 44 del 2026",
+        "CUADRO 7. Casos por entidad federativa de Enfermedades Transmitidas\npor Vector hasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "74bc6457acada864a5791404085503649fcd4249bee9bb0e9cd4ff3b58dac175",
+        "c5de8c7680abb96befb5498d349ccb7ffcbdd181f4269d04d12d455153f46721"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 30,
+      "table": "7.1",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 7.1 Casos por entidad federativa de Enfermedades Transmitidas\npor Vector hasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 7.1 Casos por entidad federativa de Enfermedades Transmitidas\npor Vector hasta la semana epidemiológica 44 del 2026",
+        "CUADRO 7.1 Casos por entidad federativa de Enfermedades Transmitidas\npor Vector hasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "8b8bd6db83c0f0b8423e42f0bcf90beaa51412350a0748636388f6bdda7ebe62",
+        "af7675186b8a98feaf3866724ab047956cb6280b13adaea3fbd66b7ceb970aa0"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 31,
+      "table": "7.2",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 7.2 Casos por entidad federativa de Enfermedades Transmitidas por Vector\nhasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 7.2 Casos por entidad federativa de Enfermedades Transmitidas por Vector\nhasta la semana epidemiológica 44 del 2026",
+        "CUADRO 7.2 Casos por entidad federativa de Enfermedades Transmitidas por Vector\nhasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "c24613d6f6c36cade929291295a11d5fde44396e1f1d5edf36a5694a14d46876",
+        "cd0ecab4c672d1d80bf73cc68e93d2cac705fe369bf2848d5e6e0d89d7413af1"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 32,
+      "table": "7.3",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 7.3 Casos por entidad federativa de Enfermedades Transmitidas por Vector\nhasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 7.3 Casos por entidad federativa de Enfermedades Transmitidas por Vector\nhasta la semana epidemiológica 44 del 2026",
+        "CUADRO 7.3 Casos por entidad federativa de Enfermedades Transmitidas por Vector\nhasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "91645bb6e120c336a0a5dd2800620583259999bd0153958ef36c406b1dae1b7b",
+        "084e3d833280240d9c77240229a47fcda5cc669d776330db136040dc6a488570"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 33,
+      "table": "7.4",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 7.4 Casos por entidad federativa de Enfermedades\nTransmitidas por Vector hasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 7.4 Casos por entidad federativa de Enfermedades\nTransmitidas por Vector hasta la semana epidemiológica 44 del 2026",
+        "CUADRO 7.4 Casos por entidad federativa de Enfermedades\nTransmitidas por Vector hasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "a17b53aee0873d2a74653cc4540d48216d7fe6a0cc0e7d16160bd741f7e1bdb4",
+        "08bc300c43ed2c8bb125f0b46e64e840e2cd7744de17d0705b1708653fb8eb93"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 34,
+      "table": "8",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 8. Casos por entidad federativa de Zoonosis hasta\nla semana epidemiológica 43 del 2026.",
+      "independent_ocr_texts": [
+        "CUADRO 8. Casos por entidad federativa de Zoonosis hasta\nla semana epidemiológica 43 del 2026.",
+        "CUADRO 8. Casos por entidad federativa de Zoonosis hasta\nla semana epidemiológica 43 del 2026."
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "e3604ff2f9a92cba45163d9771c382f02ec4494bb0be9baa133d721e3a42354f",
+        "29ef0deab251915d876dfe5661db33923735213ce4e55f60e07735c0870c4d85"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 35,
+      "table": "8.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 8.1 Casos por entidad federativa de Zoonosis hasta\nla semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 8.1 Casos por entidad federativa de Zoonosis hasta\nla semana epidemiológica 43 del 2026",
+        "CUADRO 8.1 Casos por entidad federativa de Zoonosis hasta\nla semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "4b957b9d720d9739d04d5fde5a6827adcf0b2fcf82c976736a6be1cd13e63a97",
+        "1ec2d7d1df2c2baeed4ee19465990b4fb1811896a9019f1a63ed833feacaaafc"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 36,
+      "table": "8.2",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 8.2 Casos por entidad federativa de Zoonosis hasta\nla semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 8.2 Casos por entidad federativa de Zoonosis hasta\nla semana epidemiológica 44 del 2026",
+        "CUADRO 8.2 Casos por entidad federativa de Zoonosis hasta\nla semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "b22a5284c98cfeb9511391686242931ce5b4cd8aac1f5463888c676ba1e4451b",
+        "b58eafd0c044e4d864b80d8dc7f7ff6f05e71ac71b8284e94869dff08cba4ede"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 37,
+      "table": "9",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 9. Casos por entidad federativa de Otras Enfermedades Exantemáticas\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 9. Casos por entidad federativa de Otras Enfermedades Exantemáticas\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 9. Casos por entidad federativa de Otras Enfermedades Exantemáticas\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "0e7b12587163848fe2b6e19af2a0405edc5c4cfdbebf3f8bb25404091238dfdd",
+        "40b389a287c8a19b1770dcd5ab9aa47e272adb829200e60b6c3149059b24dd15"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 38,
+      "table": "10",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 10. Casos por entidad federativa de Otras Enfermedades Transmisibles hasta\nla semana epidemiológica 44 del 2026; Mal del Pinto hasta la semana 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 10. Casos por entidad federativa de Otras Enfermedades Transmisibles hasta\nla semana epidemiológica 44 del 2026; Mal del Pinto hasta la semana 43 del 2026",
+        "CUADRO 10. Casos por entidad federativa de Otras Enfermedades Transmisibles hasta\nla semana epidemiológica 44 del 2026; Mal del Pinto hasta la semana 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "f7da6114d7b6824aedac9d5d0aefe8f133b713777c8ece97919a30c95d861982",
+        "b2190b2c2cb3157899dca5a4b42e70ab5dc4cd8474829cfd352ffac9d32fce5e"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 39,
+      "table": "10.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 10.1 Casos por entidad federativa de Otras Enfermedades Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 10.1 Casos por entidad federativa de Otras Enfermedades Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 10.1 Casos por entidad federativa de Otras Enfermedades Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "b233a6d90f9d699aa15d1fd0f62ac172882108c104537e3839d25adcebafd24f",
+        "e23f081b526cd0411fc55c48b315c35d3da260eb1b7ac9db4564edc5cf79b907"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 40,
+      "table": "10.2",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 10.2 Casos por entidad federativa de Otras Enfermedades Transmisibles\nhasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 10.2 Casos por entidad federativa de Otras Enfermedades Transmisibles\nhasta la semana epidemiológica 44 del 2026",
+        "CUADRO 10.2 Casos por entidad federativa de Otras Enfermedades Transmisibles\nhasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "6005641da4223d5fcbb9b23d2eabbc75628c1d78ae9302ee54beab3674802c3c",
+        "08cded31ada249669a5521dc155cf6e23370aa454e896fffdd254c155e5328a4"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 41,
+      "table": "10.3",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 10.3 Casos por entidad federativa de Otras Enfermedades Transmisibles hasta la\nsemana epidemiológica 43 del 2026; Meningoencefalitis Amebiana P. hasta la 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 10.3 Casos por entidad federativa de Otras Enfermedades Transmisibles hasta la\nsemana epidemiológica 43 del 2026; Meningoencefalitis Amebiana P. hasta la 44 del 2026",
+        "CUADRO 10.3 Casos por entidad federativa de Otras Enfermedades Transmisibles hasta la\nsemana epidemiológica 43 del 2026; Meningoencefalitis Amebiana P. hasta la 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "b03ff49fd3770e1e3861e40f8f8e7ee42aa58f189bd4bba92d49bd2eddd27983",
+        "e867a3c49e895ca2e54dae60503f2a50e4efb8cc9b3bdf0815afee2fb87e4a13"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 42,
+      "table": "10.4",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 10.4 Casos por entidad federativa de Otras Enfermedades Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 10.4 Casos por entidad federativa de Otras Enfermedades Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 10.4 Casos por entidad federativa de Otras Enfermedades Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "e73a2a010293049c376f6a8ba62eff52f3ff36b83b892f911dc9293b6d6ce6ae",
+        "15b4f878276bc2a0297e86fc3f840def307c0c7d486c60e0de80d764004eab07"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 43,
+      "table": "11",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 11. Casos por entidad federativa de Enfermedades de Interés Local,\nRegional o Institucional hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 11. Casos por entidad federativa de Enfermedades de Interés Local,\nRegional o Institucional hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 11. Casos por entidad federativa de Enfermedades de Interés Local,\nRegional o Institucional hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "6406e8b3ff777481f3a923393c22f27bd69e4799b7223e8b943f5ffcefea12a8",
+        "c412bf4173540a97389e31c00af7f72f0ef5ae6f59b7a4cb64a91a66a366d53c"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 44,
+      "table": "11.1",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 11.1 Casos por entidad federativa de Enfermedades de Interés Local,\nRegional o Institucional hasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 11.1 Casos por entidad federativa de Enfermedades de Interés Local,\nRegional o Institucional hasta la semana epidemiológica 44 del 2026",
+        "CUADRO 11.1 Casos por entidad federativa de Enfermedades de Interés Local,\nRegional o Institucional hasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "5181aa1b8fe0f194b34b12d5da6de36832a543a65386776d8f3c55279306a543",
+        "749f0f50f7b760cdf70c956d855f6363eb99ee9044725ce932048af72924c557"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 45,
+      "table": "12",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 12. Casos por entidad federativa de Enfermedades bajo Vigilancia\nSindromática hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 12. Casos por entidad federativa de Enfermedades bajo Vigilancia\nSindromática hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 12. Casos por entidad federativa de Enfermedades bajo Vigilancia\nSindromática hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "3093e33c5ff7a5f8a31f6732717d60e24f0c65258a6c606f8ab2a8c53c0a9f0e",
+        "abd22dc0fc5de6974d50e4c7884609e86117a4ea8e96f50bbad5de9a74b94a32"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 46,
+      "table": "12.1",
+      "source_epi_week": 44,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 12.1 Casos por entidad federativa de Enfermedades bajo Vigilancia Sindromática\nhasta la semana epidemiológica 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 12.1 Casos por entidad federativa de Enfermedades bajo Vigilancia Sindromática\nhasta la semana epidemiológica 44 del 2026",
+        "CUADRO 12.1 Casos por entidad federativa de Enfermedades bajo Vigilancia Sindromática\nhasta la semana epidemiológica 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "d2fac26ba161a0d8e3e6443a5874ff5c7972d299e2d11f8f2a03a4303ed27d6d",
+        "d8a69c6289b5d209798e32f01a5d3f8883eab1596eb22d3fde5f01b41ac6b1e1"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 47,
+      "table": "13",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13. Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13. Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13. Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "1fe2404345a661042c0dac9d1e6284f1a1eb3bd6071d4c2eae7b9b2e2f2b0e27",
+        "0d2cb633d060f1259ca2b800f98d05d86d22d6f6a052bd02a66fe70c964a2c34"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 48,
+      "table": "13.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.1 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.1 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.1 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "263fbde3e5dae38232e77ec1a3aebd67d00e7b242fac4c435a33f5a115393f17",
+        "30e1567b825efd8d68fa3590ba303bd0eba089b13ee8273a3ab919387a5e7751"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 49,
+      "table": "13.2",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.2 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.2 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.2 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "d92dbffefe79a4cbe65902d1c0cef7c58eb331bfe5f3740301185231cabf4b42",
+        "8fc9c9d002b69a6068d8e8173eacf765c6abe1c50ff57048cbf63b3d17a3a3ac"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 50,
+      "table": "13.3",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.3 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.3 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.3 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "a77082077cb0d41a682365da598f410f4d77f7e933184d9d8972192d7f1eb8b7",
+        "f9de7eabff819f83e9dfba095ec42594a359166310a090bda3ebdcda5a4ee84c"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 51,
+      "table": "13.4",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.4 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.4 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.4 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "2d0936322978c7e2d9593fab8d7111e567e011479927963ad80165e33510abd9",
+        "791ee67506d419c23aa692829a5b7d0fa1828994d6591a353c266ae5f7a183ed"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 52,
+      "table": "13.5",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.5 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.5 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.5 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "fb2bb0b87e5d55f142484a78486d498031f7d4b1beb0f08bdf9c11767a3c62c7",
+        "98cc074965935f471c8da8af579054be81817c2d271419787d9e6b3b155e0e9f"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 53,
+      "table": "13.6",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.6 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.6 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.6 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "7041fca7802f1529fdd4be9de6462d51c0d8ea23acadb01d9f93c64894df3d8a",
+        "bf75e354e2caf36919ca8f2fb749e7935108cecbae864f69aa14a1aae59d3f2b"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 54,
+      "table": "13.7",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.7 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.7 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.7 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "98b2d3518b7329dceb73bd36e37eb113d1fda8fc764b95c4aff60894dfdb3f7d",
+        "03f5c604ac176f947d1053e60a70c9f88d6d5bea1d92e6f394a2b909046ec3c6"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 55,
+      "table": "13.8",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.8 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.8 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.8 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "3336ec493766ccfb85a5b2393005e5f3463bcea14c50e7db4d7008d225f81f67",
+        "0f82c5f8a72cf01c3b1f0b92114101f669277346fa8760ea830b591587bfb5e2"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 56,
+      "table": "13.9",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.9 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.9 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.9 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "bbd6485e09a599b569a68540fc12e2451d466c5c159e0681e49912ed9ef6b8c5",
+        "325e16badf6d56a76b9dae8da5ce64688492795b3b4682a3f86f7168e3cac087"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 57,
+      "table": "13.10",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.10 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026; ESAVI hasta la semana 44 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.10 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026; ESAVI hasta la semana 44 del 2026",
+        "CUADRO 13.10 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026; ESAVI hasta la semana 44 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "4f836fb4c161e2bf9ad20ebee2ae0035962af89c452f686a731bfaff1332a209",
+        "73439e797c979a55408c3b2248ee4621c0b4b6314b8b44d439f90e5757083897"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 58,
+      "table": "13.11",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 13.11 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 13.11 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 13.11 Casos por entidad federativa de Enfermedades No Transmisibles\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "01f6a0c625120b750df76f1cd6c8adf1231a5e0a57ca9b675dc535956dde9c50",
+        "47e196ca79b6bfa81ca4c90a766c67c81f4d2ccb4a99c77fe63acbb29f18025e"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 59,
+      "table": "14",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 14. Casos por entidad federativa de Transtornos de la Nutrición\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 14. Casos por entidad federativa de Transtornos de la Nutrición\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 14. Casos por entidad federativa de Transtornos de la Nutrición\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "1d4129227fa2704a3257740ba2349fb94347a927922121383c368349da6ebb5e",
+        "9db1ce6e3ab03ffa990f46a2da4e9b6648be29b16c3c17d1b207a83348bf9190"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 60,
+      "table": "14.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 14.1 Casos por entidad federativa de Transtornos de la Nutrición\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 14.1 Casos por entidad federativa de Transtornos de la Nutrición\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 14.1 Casos por entidad federativa de Transtornos de la Nutrición\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "e87d63934a02051c4e31ac7127b15968674e7320a043647a0116ddcfd598c0cf",
+        "e89c56b5a5ea13a8f8f2bad217892e64d0a4c8e9efffeb8da942381471f34c66"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 61,
+      "table": "15",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 15. Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 15. Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 15. Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "ddcfa36542d94ea81eaf0d35e8d2c232f19da2301cc1cdd899b1628aa093f6e0",
+        "4e49feb2d6f77cbea6d918078346f479c9216171d2f8e4cab9b1d8c31ee96887"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 62,
+      "table": "15.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 15.1 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 15.1 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 15.1 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "cca77b5aea6a7fb284e2ee3b234375957468744a4436011d5f0c005ccb9bc2d9",
+        "19600235f201d09571ba3c7e3b4ed7913a0aabd87f0d881be3be9791f3e8e0b7"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 63,
+      "table": "15.2",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 15.2 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 15.2 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 15.2 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "99af6b2733fd444ae96e8bbafae94db1ac10c53b2245073c560d6fe178022e33",
+        "0d01aaddd389ae8c8d3d2689a38a7fd3d79e6db79fb913bd8caced98e1ac74db"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 64,
+      "table": "15.3",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 15.3 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 15.3 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 15.3 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "71e516e89c595cf060ca379c1e608428f9538a9354b325d679d037fcf304b0fd",
+        "c549d2e5aef7fa2dc7f8c83977558a1d1ec29c204d0fbdcf6a7535309c5885f7"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 65,
+      "table": "15.4",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 15.4 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 15.4 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 15.4 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "7d3f19c9ff0e83a8e56ea79057e7f33390d056d143adaad47f2016167c4e8eb6",
+        "b0f9219cca59f9e213d1ec247fec4905ff04b0d2830f8409e6837a3e9ed8dbc5"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 66,
+      "table": "15.5",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 15.5 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 15.5 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 15.5 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "c7521be50fdd826c17e4d3dcc2ddbeddd309c5deba99b64f0da5b019f5177414",
+        "129effd30230aefde8ada34175ef6f1e246868baf7281b5e3abd4b0240f6929c"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 67,
+      "table": "15.6",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 15.6 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 15.6 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 15.6 Casos por entidad federativa de Displasias y Neoplasias\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "7c7d2461ca549c4e29b3ff17b5f53ff8f166e45b23f8ba235c55ffe2cffa36a7",
+        "a87bbf7072d23d79ab9bce13428e443139c09b38969b1c4fc8e5ff4726bc37eb"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 68,
+      "table": "16",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 16. Casos por entidad federativa de Defectos al Nacimiento\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 16. Casos por entidad federativa de Defectos al Nacimiento\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 16. Casos por entidad federativa de Defectos al Nacimiento\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "60bdda9093e958cd1405c043f961bee705b1323c8297f2f5a940f9518d78a4a2",
+        "069514551f31f84a8fa17af5d3284fec60e3fd9dcc40dd64243bc84ada1533f4"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 69,
+      "table": "16.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 16.1 Casos por entidad federativa de Defectos al Nacimiento\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 16.1 Casos por entidad federativa de Defectos al Nacimiento\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 16.1 Casos por entidad federativa de Defectos al Nacimiento\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "d0fa26f8ad24c6f51bf1a264fe12077ea1834e10157d3b2be16736ba97189ac5",
+        "5e477343920c459c8b382dbf79380a0bc4646326c253a869fd9b79ba7d6cf4d8"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 70,
+      "table": "17",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 17. Casos por entidad federativa de Enfermedades Neurológicas y de Salud\nMental hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 17. Casos por entidad federativa de Enfermedades Neurológicas y de Salud\nMental hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 17. Casos por entidad federativa de Enfermedades Neurológicas y de Salud\nMental hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "b3d5392cf05953d13473fab369b6d9ac11d4832bc66affd7faa0cf8edafddbbf",
+        "1f0f30822383067975b811848f426fdbfd397a7b0b6bf218ccf85bd1b8ffcd8c"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 71,
+      "table": "17.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 17.1 Casos por entidad federativa de Enfermedades Neurológicas y de Salud\nMental hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 17.1 Casos por entidad federativa de Enfermedades Neurológicas y de Salud\nMental hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 17.1 Casos por entidad federativa de Enfermedades Neurológicas y de Salud\nMental hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "659ca745498a40a6129a0e7197817573d3a11487a38ebe51faf77434a2afbe33",
+        "ea6679def5886de1138e7724bad53cf5869914809fc1d8e7521548d0df6af185"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 72,
+      "table": "17.2",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 17.2 Casos por entidad federativa de Enfermedades Neurológicas y de Salud\nMental hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 17.2 Casos por entidad federativa de Enfermedades Neurológicas y de Salud\nMental hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 17.2 Casos por entidad federativa de Enfermedades Neurológicas y de Salud\nMental hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "83a30943b79c8e54061afa39c1fc69d6576dcfca5c67b4bf85bd1d3e522a1c3d",
+        "a3f62e9ca91342d17e916d07155aff50ef76723e5e9efe52f29c7031ded576d2"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 73,
+      "table": "17.3",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 17.3 Casos por entidad federativa de Enfermedades Neurológicas y de\nSalud Mental hasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 17.3 Casos por entidad federativa de Enfermedades Neurológicas y de\nSalud Mental hasta la semana epidemiológica 43 del 2026",
+        "CUADRO 17.3 Casos por entidad federativa de Enfermedades Neurológicas y de\nSalud Mental hasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "46a503516468b990d1d43cf5795583b77484be5bfed9e8437b65628151189afb",
+        "7d7d52b050e7287b2ef938b507fd58306c6c92abe75967c3cc6efa1e31d9889e"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 74,
+      "table": "18",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 18. Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 18. Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 18. Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "bcbd98d3929452ffff9d8cdfc61a3cb94d9193a62bf7e8ac50d178e2f3e4aafd",
+        "1649f99dd4f1c23534d4775d6c5daedf4be485b410264a278d6cfdfd2b973e4a"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 75,
+      "table": "18.1",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 18.1 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 18.1 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 18.1 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "e97a2a33356f57df2be8dc691aff6e6cd78dbf649785864e83c0246a47775da9",
+        "784467e16c00f37068d85f6e740472194cbb8c9b8cffff067df001e79c61a5fd"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 76,
+      "table": "18.2",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 18.2 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 18.2 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 18.2 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "7a6c1659ba26a0b0f0fbc3ba967ed63c363ffbbef6b1d423088346ef7fc0dd5d",
+        "3483612723486fc07d136e212e30852db5ad529271e596cecde3ee454c3c0bd9"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 77,
+      "table": "18.3",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 18.3 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 18.3 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 18.3 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "ab35d229730aec62ba36613b8862c085134007a520ae242ea67bc80a61e162b6",
+        "2f6fd0472a4fcd33f6f2d17f15b7c21ff383a8579f7afe3b893181834dff0b52"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 78,
+      "table": "18.4",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 18.4 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 18.4 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 18.4 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "027ad98e8a44c473b0cec4a7a685b3d06b5cc81de9ffc4bc6be13ae4f7e3c5f8",
+        "f87c58bcbafb4ce79f22c1597926e6152a8f3ff9e97a5e483370dd3177acbfee"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 79,
+      "table": "18.5",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 18.5 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 18.5 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 18.5 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "79e132f1b9ec3919b004e98472246886d15b2808d52a6fa4bfcaca7309aac4eb",
+        "11d0fe05c64c45f89209bca6376ad5a5b85ef60e2e2debca71ff5959ed020fbe"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    },
+    {
+      "page": 80,
+      "table": "18.6",
+      "source_epi_week": 43,
+      "source_epi_year": 2026,
+      "caption": "CUADRO 18.6 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+      "independent_ocr_texts": [
+        "CUADRO 18.6 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026",
+        "CUADRO 18.6 Casos por entidad federativa de Accidentes\nhasta la semana epidemiológica 43 del 2026"
+      ],
+      "render_scales": [
+        3,
+        4
+      ],
+      "crop_points": [
+        0,
+        60,
+        540,
+        104
+      ],
+      "rendered_crop_sha256": [
+        "cd22a520096951ad457742200cfda3f16407329d31590b46397bca37e6455137",
+        "4296c10cf122cfde0f0a791d304f3cf87c24db2e6bc02d23887240cdb2e81823"
+      ],
+      "method": "tesseract_spa_two_scale_exact_caption_agreement",
+      "engine_version": "tesseract 5.5.0"
+    }
+  ]
+}

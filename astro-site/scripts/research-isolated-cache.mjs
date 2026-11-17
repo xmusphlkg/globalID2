@@ -19,11 +19,12 @@ export function researchTemplateFingerprint({ site, project }) {
     ...sourceFiles(resolve(site, 'src')).filter(path => !(path.startsWith(generatedRoot) && path.endsWith('.json'))),
     ...sourceFiles(resolve(site, 'public')).filter(path => !path.startsWith(publicData)),
     ...sourceFiles(resolve(project, 'shared')),
-    // These small non-article exports can enter the shared shell/navigation.
-    ...['meta.json', 'diseases/index.json', 'reports/index.json'].map(path => resolve(site, 'src/data', path)),
+    // These non-article exports can enter the shared shell/navigation.
+    ...['diseases/index.json', 'reports/index.json'].map(path => resolve(site, 'src/data', path)),
     ...['package.json', 'package-lock.json', 'astro.config.mjs', 'tsconfig.json',
       'tailwind.config.mjs', 'postcss.config.mjs', 'scripts/build-research.mjs',
       'scripts/research-isolated-cache.mjs', 'scripts/research-build-cache.mjs',
+      'scripts/check-build-assets.mjs', 'scripts/check-seo-output.mjs',
       'scripts/source-dependencies.mjs', 'scripts/public-build-inputs.mjs'].map(path => resolve(site, path)),
   ];
   const digest = createHash('sha256').update('research-template-v1\n');
@@ -59,7 +60,7 @@ export function researchInputs({ site, project, snapshot }) {
   const graph = createSourceDependencyFingerprinter({ siteRoot: site, projectRoot: project });
   const templates = graph(['src/pages/research/articles/[slug].astro', 'src/pages/fr/research/articles/[slug].astro',
     'src/pages/zh/research/articles/[slug].astro', 'src/pages/research/cards/[slug].png.ts']);
-  const supporting = ['src/data/meta.json', 'src/data/diseases/index.json', 'src/data/reports/index.json']
+  const supporting = ['src/data/diseases/index.json', 'src/data/reports/index.json']
     .map(path => { const file = resolve(site, path); return existsSync(file) ? hash(readFileSync(file)) : ''; });
   const ownCode = hash(readFileSync(import.meta.filename)) + hash(readFileSync(resolve(site, 'scripts/build-research.mjs')));
   return { schema: 1, shared: hash(JSON.stringify([sharedFingerprint(), templates, routes.diseases ?? [], supporting, ownCode,

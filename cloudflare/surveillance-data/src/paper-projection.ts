@@ -2,7 +2,7 @@ import { groupResearchSignals } from '../../../astro-site/src/lib/research-signa
 
 /** Versioned renderer for public structured paper records; no private fields or raw HTML. */
 // Bump on any renderer behavior change so deployed response caches cannot reuse old HTML.
-export const PROJECTION_RENDERER_REVISION = 'gids-evidence-v1.20261113.1';
+export const PROJECTION_RENDERER_REVISION = 'gids-evidence-v1.20261117.1';
 export type ProjectedPaper = { schema: 3; slug: string; article_id: string; content: Record<string, unknown> };
 export type ProjectionTemplate = {
   schema: 3; content_schema: 3; renderer: 'gids-evidence-v1'; locale: 'en' | 'zh' | 'fr';
@@ -34,7 +34,12 @@ export function projectionFragments(template: ProjectionTemplate, record: Projec
       || !record.article_id || typeof record.article_id !== 'string' || !object(record.content)
       || !/^[a-f0-9]{64}$/.test(recordSha)) throw new Error('Invalid paper projection contract');
   const data = record.content, locale = template.locale, text = labels[locale];
-  if (typeof data.title !== 'string' || !data.title.trim() || data.editorial_status !== 'published') throw new Error('Paper projection is not public');
+  // Match project_article's legacy-public contract. These frozen historical
+  // records predate editorial_status; an explicit draft must still fail closed.
+  const historicalPublic = data.editorial_status == null && data.historical_baseline === true
+    && data.indexable === true && record.article_id.startsWith('lit_hist_');
+  if (typeof data.title !== 'string' || !data.title.trim()
+      || (data.editorial_status !== 'published' && !historicalPublic)) throw new Error('Paper projection is not public');
   const summaryMap = object(data.summary) ? data.summary : {};
   const summary = object(summaryMap[locale]) ? summaryMap[locale] : {};
   const provenance = object(summary.provenance) ? summary.provenance : {};

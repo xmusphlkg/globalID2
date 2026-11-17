@@ -201,12 +201,15 @@ def main():
     finally:
         crawler.session.close()
     # NTRA is a survey aggregate, SDTA counts outbreak rows, not individual cases.
+    requested_prefixes = {prefix.upper() for prefix in (args.prefixes or [])}
+    if "PFA" in requested_prefixes:
+        requested_prefixes.add("PFAN")
     items = [
         i
         for i in index
         if start <= i.year <= today.year
         and i.prefix not in {"NTRA", "SDTA"}
-        and (not args.prefixes or i.prefix in args.prefixes)
+        and (not requested_prefixes or i.prefix in requested_prefixes)
     ]
     if not items:
         raise ValueError("No official files match the requested period")

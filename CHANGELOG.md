@@ -4,6 +4,17 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-11-17
+
+### Fixed
+
+- Restore directory pagination, geographic navigation, keyboard search, and recovery from failed catalogue requests across the public site.
+- Correct chart fullscreen layouts, missing-value heatmaps, subdivision selection, surveillance controls, and Situation history and accessibility.
+- Use localized report titles and descriptions, consistent disease names, and current Research catalogue links across English, Chinese and French pages.
+- Resolve isolated build roots consistently and reject generated pages or paper templates with missing CSS or assets before publication.
+- Align historical public paper rendering with the exporter, invalidate stale renderer caches, and check ordinary and historical article samples after publication.
+- Correct SARS/COVID-19 and animal-name geographic classification, preserve publication receipts and subscription reconciliation, and strengthen Brazil and Mexico source handling. Stored data corrections remain subject to their independent publication workflow.
+
 ## [0.20.1] - 2026-11-17
 
 ### Improved

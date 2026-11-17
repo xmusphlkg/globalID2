@@ -27,7 +27,8 @@ def main(args):
     from src.ontology.disease import DiseaseOntology
     from src.data.storage.series_observation_store import SeriesObservationStore
 
-    document = json.loads((ROOT / "configs/disease_ontology.json").read_bytes())
+    from src.ontology import read_ontology_document
+    document = read_ontology_document(ROOT / "configs/disease_ontology.json")
     patch = json.loads((ROOT / "configs/high_frequency_europe_ontology.json").read_bytes())
     for key, rows in patch.items():
         index = {r["id"]: r for r in document[key]}; index.update({r["id"]: r for r in rows})

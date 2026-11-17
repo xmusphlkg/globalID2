@@ -69,12 +69,13 @@ def verified_research_commit(root: Path, *, task_uuid: str, release_id: str,
                 or verification.get("generation") != generation):
             return None
         canaries = verification["canaries"]
-        if not isinstance(canaries, list) or len(canaries) != 3:
+        if not isinstance(canaries, list) or len(canaries) < 3:
             return None
         locales = set()
+        urls = set()
         for canary in canaries:
             locale = canary["locale"]
-            if locale not in {"en", "zh", "fr"} or locale in locales:
+            if locale not in {"en", "zh", "fr"} or canary["url"] in urls:
                 return None
             prefix = "" if locale == "en" else locale + "/"
             canonical = re.escape(papers_origin.rstrip("/") + "/" + prefix + "research/articles/")
@@ -82,6 +83,11 @@ def verified_research_commit(root: Path, *, task_uuid: str, release_id: str,
                     or not SHA256.fullmatch(canary["html_sha256"])):
                 return None
             locales.add(locale)
+            urls.add(canary["url"])
+        # The publisher probes both ordinary and historical records. Multiple
+        # distinct pages per locale are evidence, while all locales remain required.
+        if locales != {"en", "zh", "fr"}:
+            return None
         return {"task_uuid": task_uuid, "release_id": release_id, "manifest_sha256": digest,
                 "papers_generation_sha256": generation, "committed_at": committed.isoformat(),
                 "public_verified": True, "publication_kind": "site" if site else "literature"}

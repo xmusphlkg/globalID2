@@ -164,10 +164,8 @@ def test_bounded_request_still_rewrites_a_full_authoritative_snapshot(
 
 
 def test_empty_lab_influenza_contract_is_not_marked_available() -> None:
-    ontology = json.loads(
-        (Path(__file__).resolve().parents[1] / "configs/disease_ontology.json")
-        .read_text(encoding="utf-8")
-    )
+    from src.ontology import read_ontology_document
+    ontology = read_ontology_document(Path(__file__).resolve().parents[1] / "configs/disease_ontology.json")
     assertion = next(
         item
         for item in ontology["availability"]

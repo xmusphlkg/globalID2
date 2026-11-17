@@ -12,12 +12,13 @@ crawlers, audits, command-line tools, and application startup code alike.
 from __future__ import annotations
 
 import copy
-import json
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from datetime import date
 from pathlib import Path
 from typing import Any
+
+from .documents import OntologyValidationError, read_ontology_document
 
 
 DEFAULT_ONTOLOGY_PATH = (
@@ -59,10 +60,6 @@ _MISSING_VALUE_POLICIES = frozenset(
 )
 
 
-class OntologyValidationError(ValueError):
-    """Raised when an ontology document is structurally or semantically invalid."""
-
-
 class DiseaseOntology:
     """Validated, immutable-by-copy view of a disease ontology JSON document."""
 
@@ -77,16 +74,7 @@ class DiseaseOntology:
     def from_file(cls, path: str | Path = DEFAULT_ONTOLOGY_PATH) -> DiseaseOntology:
         """Load and validate an ontology from a UTF-8 JSON file."""
 
-        resolved_path = Path(path)
-        try:
-            with resolved_path.open(encoding="utf-8") as handle:
-                document = json.load(handle)
-        except json.JSONDecodeError as exc:
-            raise OntologyValidationError(
-                f"invalid ontology JSON at {resolved_path}: {exc.msg} "
-                f"(line {exc.lineno}, column {exc.colno})"
-            ) from exc
-        return cls(document)
+        return cls(read_ontology_document(path))
 
     @classmethod
     def from_dict(cls, document: Mapping[str, Any]) -> DiseaseOntology:
@@ -887,8 +875,7 @@ def load_disease_ontology(
     """Load the default registry or a caller-supplied JSON registry path."""
 
     registry_path = Path(DEFAULT_ONTOLOGY_PATH if path is None else path)
-    with registry_path.open("r", encoding="utf-8") as handle:
-        document = json.load(handle)
+    document = read_ontology_document(registry_path)
 
     # A source may reuse a large reviewed source vocabulary while retaining a
     # distinct source identity, frequency, validity window, and provenance.

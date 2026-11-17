@@ -183,6 +183,58 @@ test("point quality overrides stale provisional boundaries and nulls stay null",
   assert.deepEqual(points.map((point) => point.quality), [[], [], ["provisional"]]);
   assert.deepEqual(points.map((point) => point.value), [4, 5, null]);
 });
+test("source incidence rates retain each demographic selection and its denominator", () => {
+  const catalog = adaptCatalog({
+    CN: entry({ source_series: [
+      {
+        series_code: "REGISTRY",
+        selection_key: "REGISTRY::sex:female::1",
+        metric_type: "case_notifications",
+        dimension_key: "sex:female",
+        dimensions: { sex: "female" },
+        temporal_granularity: "monthly",
+        dates: ["2024-01-01", "2024-02-01"],
+        values: [40, null],
+        population_values: [200_000, 200_000],
+      },
+      {
+        series_code: "REGISTRY",
+        metric_type: "case_notifications",
+        dimension_key: "sex:male",
+        dimensions: { sex: "male" },
+        temporal_granularity: "monthly",
+        dates: ["2024-01-01", "2024-02-01"],
+        values: [60, 90],
+        incidence_rates: [30, 45],
+      },
+      {
+        series_code: "REGISTRY",
+        selection_key: "REGISTRY::age:child::2",
+        metric_type: "case_notifications",
+        dimension_key: "age:child",
+        dimensions: { age: "child" },
+        has_incidence_rates: true,
+      },
+    ] }),
+  }, context);
+  const rates = Object.values(catalog.series).filter(
+    (series) => series.measure === "incidence_rates" && !catalog.selections[series.selectionId].isDefault,
+  );
+  assert.equal(rates.length, 3);
+  const female = rates.find((series) => series.dimensions.sex === "female")!;
+  const male = rates.find((series) => series.dimensions.sex === "male")!;
+  const child = rates.find((series) => series.dimensions.age === "child")!;
+  assert.deepEqual(female.observations.map((point) => point.value), [20, null]);
+  assert.equal(female.provenance.denominatorMethod, "explicit_population");
+  assert.deepEqual(male.observations.map((point) => point.value), [30, 45]);
+  assert.equal(male.provenance.denominatorMethod, "published");
+  assert.equal(child.loading, "unloaded");
+  assert.equal(child.provenance.denominatorMethod, "published");
+  assert.notEqual(female.selectionId, male.selectionId);
+  for (const series of rates) {
+    assert.ok(catalog.selections[series.selectionId].seriesIds.includes(series.id));
+  }
+});
 test("report snapshot adapter accepts complete frozen series and rejects incomplete archives", () => {
   const snapshot = {
     schema_version: "report_surveillance.v1",
@@ -573,6 +625,18 @@ test("default query selects the first populated metric when cases are unavailabl
   const config = initialConfig(catalog);
   assert.deepEqual(config.measures, ["deaths"]);
   assert.deepEqual(config.selectionIds, ["CN::published"]);
+});
+test("a preferred disease defaults to its own populated measure", () => {
+  const catalog = adaptCatalog({
+    D_CASES: entry(),
+    D_DEATHS: entry({ cases: [null, null], deaths: [2, 4], incidence_rates: [null, null] }),
+  }, { id: "country:CL", kind: "country", geographyId: "CL" });
+  const config = initialConfig(catalog, "trend", ["D_DEATHS::published"]);
+  assert.deepEqual(config.selectionIds, ["D_DEATHS::published"]);
+  assert.deepEqual(config.measures, ["deaths"]);
+  const result = analyze(catalog, config);
+  assert.equal(result.lines.length, 1);
+  assert.deepEqual(result.lines[0].points.map((point) => point.value), [2, 4]);
 });
 test("specific sources retain their own identity and non-case metric semantics", () => {
   const catalog = adaptCatalog(

@@ -54,7 +54,8 @@ def test_independent_patch_loads_with_existing_ontology_and_mapping_csvs(tmp_pat
     from src.ontology.disease import DiseaseOntology
     from src.services.disease_mapping_config import load_reviewed_source_category_mappings
     root = Path(__file__).resolve().parents[2]
-    original = json.loads((root / "configs/disease_ontology.json").read_text())
+    from src.ontology import read_ontology_document
+    original = read_ontology_document(root / "configs/disease_ontology.json")
     patch = json.loads((root / "configs/high_frequency_europe_ontology.json").read_text())
     for key, items in patch.items():
         index = {r["id"]: r for r in original[key]}

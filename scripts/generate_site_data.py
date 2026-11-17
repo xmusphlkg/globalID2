@@ -252,6 +252,7 @@ def main() -> None:
                     publication_changes=(json.loads(args.surveillance_changes_file.read_text())
                         if args.surveillance_changes_file else None),
                     country_workers=args.surveillance_workers or default_country_workers(),
+                    downloads_manifest=args.direct_download_output / "manifest.json",
                     download_candidate=args.surveillance_downloads,
                     download_output=args.direct_download_output,
                     download_url_base=args.direct_download_url_base,

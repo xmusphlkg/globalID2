@@ -40,6 +40,12 @@
 .directory-active-filters span { overflow-wrap: anywhere; }
 .directory-active-filters svg { flex: none; color: rgb(var(--directory-accent)); }
 .directory-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .85rem; }
+.directory-grid { scroll-margin-top: 6rem; }
+.directory-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .75rem; }
+.directory-pagination > div { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.directory-pagination button { min-height: 2.75rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); color: rgb(var(--directory-accent)); padding: .45rem .8rem; cursor: pointer; }
+.directory-pagination button:disabled { opacity: .5; cursor: default; }
+.directory-pagination button:focus-visible { outline: 2px solid rgb(var(--directory-accent)); outline-offset: 3px; }
 .directory-card { display: flex; min-width: 0; flex-direction: column; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); color: rgb(var(--text-strong)); padding: 1rem; text-decoration: none; transition: border-color .15s, background-color .15s, box-shadow .15s; }
 a.directory-card:hover { border-color: rgb(var(--directory-accent) / .75); background: rgb(var(--directory-accent) / .025); box-shadow: 0 3px 12px rgb(var(--directory-accent) / .07); }
 .directory-card-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }

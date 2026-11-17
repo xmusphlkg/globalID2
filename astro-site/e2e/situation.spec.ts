@@ -105,8 +105,11 @@ test('timeline shares filters, merges duplicates and keeps all report links', as
   await selectFilter(page, 'Source', '');
   await selectFilter(page, 'Time window', 'all');
   await selectFilter(page, 'Area', 'KE');
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+  await page.locator('.sit-item').first().click();
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toHaveAttribute('data-country', 'KE');
+  await openPlaceList(page);
   await page.locator('.sit-reset').click();
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
   await selectFilter(page, 'Area', 'KE');
@@ -199,7 +202,7 @@ test('situation page: filtering recentres the map without errors', async ({ page
 });
 
 
-test('typing filters opens a timeline, scopes monitoring cards and restores cancelled searches', async ({ page }) => {
+test('typing filters keeps place selection explicit, scopes monitoring cards and restores cancelled searches', async ({ page }) => {
   await mockSituation(page);
   await page.goto('/situation/');
   await openPlaceList(page);
@@ -208,17 +211,19 @@ test('typing filters opens a timeline, scopes monitoring cards and restores canc
   await disease.fill('d050');
   await expect(page.getByRole('option', { name: /Ebola/ })).toBeVisible();
   await disease.press('Enter');
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+  expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+  await page.locator('.sit-item').first().click();
   await expect(page.locator('.sit-alert')).toHaveCount(1);
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
-  if ((page.viewportSize()?.width ?? 0) < 900) {
-    await page.locator('.sit-view-timeline').click();
-    await expect(page.locator('.sit-detail.is-open')).toBeVisible();
-    await page.locator('.sit-bar-links button').click();
-  }
+  await openPlaceList(page);
   await expect(page.locator('.sit-monitor-count')).toHaveText('2');
   await selectFilter(page, 'Area', 'KE');
   await expect(page.locator('.sit-monitor-card')).toHaveCount(1);
   await expect(page.locator('.sit-monitor-card')).toContainText('Ebola monitoring in Kenya');
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+  await page.locator('.sit-item').first().click();
+  await openPlaceList(page);
   await expect(page.locator('.sit-alert')).toHaveCount(1);
   await disease.fill('unmatched query');
   await expect(page.getByRole('option')).toHaveCount(0);
@@ -263,3 +268,26 @@ test('MERS shared link groups identical cumulative figures across channels and d
   if (await legend.isVisible()) expect(await legend.locator('ul').evaluate(node => getComputedStyle(node).overflow)).toBe('visible');
   await page.screenshot({ path: testInfo.outputPath('mers-grouped.png') });
 });
+
+for (const prefix of ['', '/zh', '/fr']) {
+  test(`disease-only links never select a place on load or reload in ${prefix || 'en'}`, async ({ page }) => {
+    await mockSituation(page);
+    const outbreakRequests: string[] = [];
+    page.on('request', request => { if (request.url().includes('/outbreaks/')) outbreakRequests.push(request.url()); });
+    await page.goto(`${prefix}/situation/?disease=D050&window=all`, { waitUntil: 'domcontentloaded' });
+    await openPlaceList(page);
+    await expect(page.locator('.sit-item')).toHaveCount(3);
+    await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+    expect(new URL(page.url()).searchParams.has('country')).toBe(false);
+    expect(outbreakRequests).toEqual([]);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await openPlaceList(page);
+    await expect(page.locator('.sit-item')).toHaveCount(3);
+    await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+    await page.locator('.sit-item').first().click();
+    await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+    await expect.poll(() => new URL(page.url()).searchParams.has('place')).toBe(true);
+  });
+}

@@ -6,8 +6,8 @@
 
 | 来源 | 原始文件与实际数值覆盖 | 结果 |
 |---|---|---|
-| [DGE 全国年度目录](https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html) 下的按月新增病例分布表 | 动态发现 69 个年份／性别版本；本次实际捕获 **2025 general / female / male 三份 PDF** | 6,648 条月观测：general 2,256，female 2,232，male 2,160；最新月锚 2025-12-01。female 一行缺少可安全识别的病名／ICD，隔离并记录；不宣称全部历史版本均已入库。 |
-| [DGE 2026 周报目录](https://www.gob.mx/salud/documentos/boletinepidemiologico-sistema-nacional-de-vigilancia-epidemiologica-sistema-unico-de-informacion-417103) | 冻结目录实际链接及其原 PDF；本次捕获第 43 和第 44 期 | 第 43 期 607 条全国观测，69 张可识别表，8 张特殊布局被隔离。第 44 期以冻结的双尺度西语 OCR 证据补两张全国汇总表标题，154 条观测；其他 75 张表标题不可读，明确 **parser_blocked**。合计 761 条来源观测，最新源锚 2026-11-01；没有推定未读取表的数值周期。 |
+| [DGE 全国年度目录](https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html) 下的按月新增病例分布表 | 动态发现 69 个年份／性别版本；本次实际捕获 **2025 general / female / male 三份 PDF** | 6,648 条月观测：general 2,256，female 2,232，male 2,160；最新月锚 2025-12-01。female 原先报错的末行已逐列核实为未标文字的全表合计，13 列均与 186 个病种之和相符，排除后无病种缺行、无数值变更；不宣称全部历史版本均已入库。 |
+| [DGE 2026 周报目录](https://www.gob.mx/salud/documentos/boletinepidemiologico-sistema-nacional-de-vigilancia-epidemiologica-sistema-unico-de-informacion-417103) | 冻结目录实际链接及其原 PDF；本次捕获第 43 和第 44 期 | 追加修复后第 43 期 **637 条**、第 44 期 **635 条**全国观测，两期各 77 张表均完成受支持单元提取，原 83 项标题／布局解析失败降为 0。合计 **1,272 条**来源观测，最新源锚 2026-11-01；两期 HIV 临床分期共 16 个未明确时间口径的单元继续列为排除项，不伪装成累计病例。 |
 
 2026 第 43 期封面为 2026-10-25 至 2026-10-31。其特殊确认监测总表按第 43 周统计，例如脑膜结核 8 例、累计 465；常规监测总表按第 42 周（2026-10-18 至 24 日）统计，例如水痘 1,014 例、累计 46,571。两者不得按封面统一重标为第 43 周。目录在本次核验过程中新增第 44 期（2026-11-01 至 7 日），不能把第 43 期观测冒称最新第 44 期。第 44 期 Cuadro 1 标题双尺度 OCR 均明确第 44 周，Cuadro 2 均明确第 43 周；两张表的数字均直接来自原 PDF 文本层。原文第 44 期未检出明确的破折号零值图例，因此其破折号保留未知。
 
@@ -42,4 +42,6 @@ venv/bin/python scripts/import_mx_high_frequency.py --source mx_dge_weekly --dir
 
 去掉 `--latest-reports` 会采集所请求年份实际链接的全部周报；三份月表和两期周报是本次已核验的实际覆盖，不能代表所有链接历史报告均已解析。重放只读取清单、原文件与冻结计划。版本控制内的真实原文回归 fixtures 位于 `tests/fixtures/ingestion/MX/high_frequency`，包含逐文件来源 URL、SHA-256 与大小收据。
 
-已知数值缺口：2025 female 月表 1 行，第 43 期特殊表页 31、32、45、57、62、66、67、68，以及第 44 期其余 75 张表的标题图形。第 44 期两张已核验汇总表内的破折号仍是未知，不能依据前期图例补零。未来应针对真实原件补充标题 OCR／特殊布局合同，不能因解析失败补零或推定病例定义。
+原第 43 期 8 张特殊表与第 44 期 75 张图形标题表已完成解析修复，详见 [周报追加验收](../acceptance/MX_WEEKLY_REPAIR_20261117.md)。第 44 期所有表内的破折号仍保留未知，不能依据前期图例补零。两期各 8 个 HIV 临床分期／性别单元未明确标注累计口径，继续保留原件并记录在 `excluded_source_cells`；该表明确的当周全国合计已读取，与全国摘要重印合并。
+
+女性月表复核及原始编码冲突的处理见 [2026-11-17 追加验收](../acceptance/MX_MONTHLY_REPAIR_20261117.md)。无标签合计仅在末页末行、原有病种均完整解析且所有 13 列精确对账时排除。黄热病与委内瑞拉马脑炎的原件编码冲突在 `source_label_icd_conflicts` 审计中保留原文、应有编码和原件页码；没有官方勘误或独立同周证据时不解除标准病种投影阻断。

@@ -6,6 +6,43 @@ import { resolve } from 'node:path';
 import { researchTemplateFingerprint } from './research-isolated-cache.mjs';
 import { buildResearch, prepareResearchWorkspace } from './build-research.mjs';
 
+test('research builds reject missing styles before saving a cache or publication output', () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'gids-research-assets-'));
+  try {
+    const site = resolve(root, 'site'), snapshot = resolve(root, 'snapshot');
+    const work = resolve(root, 'work'), cacheDir = resolve(root, 'article-cache');
+    for (const path of ['shared', 'site/src/pages/research', 'site/src/data', 'site/public',
+      'snapshot/build/research', 'snapshot/public/research', 'article-cache'])
+      mkdirSync(resolve(root, path), { recursive: true });
+    writeFileSync(resolve(site, 'src/pages/research/index.astro'), 'template');
+    writeFileSync(resolve(snapshot, 'build/research/routes.json'), '{"articles":[{"slug":"paper-a"}]}');
+    writeFileSync(resolve(snapshot, 'build/research/index.json'), '{}');
+    writeFileSync(resolve(snapshot, 'public/research/index.json'), '{}');
+    writeFileSync(resolve(cacheDir, 'current.json'), 'previous verified cache');
+    const html = '<a class="skip-link" href="#main-content">Skip</a><main id="main-content">Paper</main>';
+    for (const scope of ['full', 'collections', 'shell']) {
+      const destination = resolve(root, `output-${scope}`);
+      assert.throws(() => buildResearch({ site, project: root, snapshot, work, destination, cacheDir, scope,
+        run: (_cmd, _args, opts) => {
+          mkdirSync(resolve(opts.cwd, 'dist/research'), { recursive: true });
+          writeFileSync(resolve(opts.cwd, 'dist/research/index.html'), html);
+          return { status: 0 };
+        } }), /Research build assets invalid:.*missing bundled global layout CSS/);
+      assert.equal(existsSync(destination), false);
+      assert.equal(existsSync(`${destination}.inputs.json`), false);
+      assert.equal(readFileSync(resolve(cacheDir, 'current.json'), 'utf8'), 'previous verified cache');
+    }
+    const destination = resolve(root, 'styled');
+    buildResearch({ site, project: root, snapshot, work, destination, scope: 'shell',
+      run: (_cmd, _args, opts) => {
+        mkdirSync(resolve(opts.cwd, 'dist/research'), { recursive: true });
+        writeFileSync(resolve(opts.cwd, 'dist/research/index.html'), '<style>.skip-link{position:fixed}</style>' + html);
+        return { status: 0 };
+      } });
+    assert.equal(existsSync(`${destination}.inputs.json`), true);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test('isolated research build reads its own snapshot without writing main site data', () => {
   const root = mkdtempSync(resolve(tmpdir(), 'gids-research-build-'));
   try {

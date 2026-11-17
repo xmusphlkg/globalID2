@@ -22,6 +22,7 @@ const canonicalPath = zh ? '/zh/search/' : locale === 'fr' ? '/fr/search/' : '/s
 
 <script>
   import { normalizeSearchText } from '../lib/disease-search';
+  import { loadSiteSearchEntries } from '../lib/site-search-client';
   import { searchSiteEntries, searchTitle, searchSummary, type SiteSearchEntry, type SearchLocale } from '../lib/site-search';
   const locale: SearchLocale = document.documentElement.lang.startsWith('zh') ? 'zh' : document.documentElement.lang.startsWith('fr') ? 'fr' : 'en';
   const zh = locale === 'zh';
@@ -55,11 +56,8 @@ const canonicalPath = zh ? '/zh/search/' : locale === 'fr' ? '/fr/search/' : '/s
     if (status) status.textContent = zh ? '正在准备搜索…' : fr ? 'Chargement de la recherche…' : 'Loading search…';
     root?.replaceChildren();
     try {
-      const response = await fetch('/site-data/search-index.json');
-      if (!response.ok) throw new Error('Search index unavailable');
-      const payload = await response.json();
-      if (!Array.isArray(payload.entries)) throw new Error('Invalid search index');
-      entries = payload.entries; loaded = true; render(input?.value || '');
+      entries = await loadSiteSearchEntries(import.meta.env.PUBLIC_GIDS_RESEARCH_MAIN_ORIGIN === '1');
+      loaded = true; render(input?.value || '');
     } catch {
       loaded = false;
       if (status) {

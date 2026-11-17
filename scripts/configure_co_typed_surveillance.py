@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from src.ontology import read_ontology_document, write_ontology_document
 from src.data.crawlers.co_bes_weekly import ingestion_rows
 from src.services.co_surveillance_review import TARGETS
 from src.services.global_high_frequency_review import FLUNET_TARGETS
@@ -29,7 +30,7 @@ def configure():
         for row in rows:
             contracts.setdefault((source_id, row["SourceDiseaseCode"]), row)
     ontology_path = ROOT / "configs/disease_ontology.json"
-    ontology = json.loads(ontology_path.read_text())
+    ontology = read_ontology_document(ontology_path)
     if not any(s["id"] == "SRC_CO_WHO_FLUNET" for s in ontology["sources"]):
         ontology["sources"].append({"id": "SRC_CO_WHO_FLUNET", "country_code": "CO",
             "labels": {"en": "Colombia WHO FluNet Weekly Respiratory Laboratory Surveillance"},
@@ -72,7 +73,7 @@ def configure():
             "definition_version": row["DefinitionVersion"], "notes": note})
     ontology["source_series"] = list(series_by_id.values())
     ontology["availability"] = list(availability.values())
-    ontology_path.write_text(json.dumps(ontology, ensure_ascii=False, indent=2) + "\n")
+    write_ontology_document(ontology_path, ontology)
     mapping_path = ROOT / "configs/mapping/reviewed/co.csv"
     mapping_path.parent.mkdir(parents=True, exist_ok=True)
     existing = []

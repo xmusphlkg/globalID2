@@ -1,7 +1,7 @@
 ---
 import ReportLayout from '../layouts/ReportLayout.astro';
 import CountryFlag from './CountryFlag.astro';
-import { reportArchiveCountries } from '../lib/report-routes';
+import { localizedReportText, reportArchiveCountries } from '../lib/report-routes';
 import { loadCountry } from '../lib/seo-page-data';
 import { readPublishableReports } from '../lib/report-data';
 import { REPORTS_ORIGIN, siteHref } from '../lib/papers';
@@ -74,7 +74,7 @@ const countLabel = zh ? '份报告' : fr ? 'rapports' : 'reports';
                 <span class="border border-[rgb(var(--border))] bg-[rgb(var(--surface-raised))] px-2.5 py-1 text-xs font-medium text-[rgb(var(--text-muted))]">{typeLabel(latestType)}</span>
               </div>
               <a class="block text-sm font-medium text-[rgb(var(--text-strong))] hover:underline transition-colors" href={href(`/countries/${code}/reports/`)}>
-                {latest?.summary.title ?? (zh ? '浏览区域报告' : fr ? 'Voir les rapports' : 'Browse area reports')}
+                {localizedReportText(latest?.detail, 'title', locale) ?? latest?.summary.title ?? (zh ? '浏览区域报告' : fr ? 'Voir les rapports' : 'Browse area reports')}
               </a>
               <p class="mt-2 text-xs text-[rgb(var(--text-muted))]">{latest?.summary.period_start} – {latest?.summary.period_end}</p>
               <a class="mt-4 inline-flex text-sm font-semibold text-[rgb(var(--text-strong))] underline decoration-[rgb(var(--border-soft))] underline-offset-4 hover:decoration-current transition-colors" href={href(`/countries/${code}/reports/`)}>

@@ -15,6 +15,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.core.high_frequency_sources import HIGH_FREQUENCY_SOURCES, preferred_source
+from src.ontology import read_ontology_document, write_ontology_document
 from src.core.country_library import get_country_profile
 
 
@@ -176,7 +177,7 @@ def merge_reviewed_mappings(patches):
             combined.extend(updates.values())
             path.parent.mkdir(parents=True, exist_ok=True)
             with path.open("w", encoding="utf-8", newline="") as stream:
-                writer = csv.DictWriter(stream, fieldnames=fields); writer.writeheader(); writer.writerows(combined)
+                writer = csv.DictWriter(stream, fieldnames=fields, lineterminator="\n"); writer.writeheader(); writer.writerows(combined)
             changes[code] = changes.get(code, 0) + len(additions)
     return changes
 
@@ -198,11 +199,11 @@ def main():
         if args.patch:
             patches = [json.loads(path.read_text()) for path in args.patch]
             ontology_path = ROOT / "configs/disease_ontology.json"
-            ontology = json.loads(ontology_path.read_text())
+            ontology = read_ontology_document(ontology_path)
             result["ontology"] = merge_ontology(ontology, patches, replace_reviewed=args.replace_reviewed_definitions)
             from src.ontology import DiseaseOntology
             DiseaseOntology.from_dict(ontology)
-            ontology_path.write_text(json.dumps(ontology, ensure_ascii=False, indent=2) + "\n")
+            write_ontology_document(ontology_path, ontology)
             result["reviewed_mappings"] = merge_reviewed_mappings(patches)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

@@ -94,11 +94,11 @@ export function initialConfig(
       (key) => catalog.series[key].cadence === "annual",
     ),
   );
-  const firstCandidateSeries = candidates[0]?.seriesIds.map((id) => catalog.series[id]) ?? [];
+  const firstSelectedSeries = catalog.selections[selectionIds[0]]?.seriesIds.map((id) => catalog.series[id]) ?? [];
   const initialMeasure = MEASURES.find((measure) =>
-    firstCandidateSeries.some((series) => series.measure === measure &&
+    firstSelectedSeries.some((series) => series.measure === measure &&
       series.observations.some((point) => point.value !== null)),
-  ) ?? firstCandidateSeries[0]?.measure ?? "cases";
+  ) ?? firstSelectedSeries[0]?.measure ?? "cases";
   return {
     schemaVersion: 3,
     task,

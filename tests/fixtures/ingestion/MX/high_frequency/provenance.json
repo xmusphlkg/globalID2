@@ -17,15 +17,21 @@
     "fixture": "boletin-2026.html",
     "source_url": "https://www.gob.mx/salud/documentos/boletinepidemiologico-sistema-nacional-de-vigilancia-epidemiologica-sistema-unico-de-informacion-417103",
     "retrieved_on": "2026-11-17",
-    "sha256": "25185b0df43b4259f435ca83ba2bc3700227dca36bb81cda020bb00f32c2f730",
-    "byte_size": 88343
+    "sha256": "9fb4a6307e4e049c60338b15d25d4b36e45dec368e6b5d12a7974c596e2a4d5f",
+    "byte_size": 88294,
+    "original_sha256": "25185b0df43b4259f435ca83ba2bc3700227dca36bb81cda020bb00f32c2f730",
+    "original_byte_size": 88343,
+    "derivation": "Official captured HTML with line endings and trailing whitespace normalized in the fixture; source bytes retained by original_sha256 and original_byte_size."
   },
   {
     "fixture": "dge-national-menu.html",
     "source_url": "https://epidemiologia.salud.gob.mx/anuario/html/morbilidad_nacional.html",
     "retrieved_on": "2026-11-17",
-    "sha256": "be4a750f0787b29e79b85fdfd71fd0007140d111b9c3240b2ef459ce1f086720",
-    "byte_size": 137044
+    "sha256": "221fd1a20d306395031b3570750374ebaa43ca7cdb09ce0288bc4d158e4d6b7b",
+    "byte_size": 135092,
+    "original_sha256": "be4a750f0787b29e79b85fdfd71fd0007140d111b9c3240b2ef459ce1f086720",
+    "original_byte_size": 137044,
+    "derivation": "Official captured HTML with line endings and trailing whitespace normalized in the fixture; source bytes retained by original_sha256 and original_byte_size."
   },
   {
     "fixture": "boletin-2026-week44.pdf",
@@ -42,5 +48,13 @@
     "sha256": "9a41d2d5a755d51104cefd597d06bbc70346499f636379e4f3148d6b9bd5e8cf",
     "byte_size": 1540,
     "derivation": "Frozen local two-scale OCR of source title region; numerical cells excluded"
+  },
+  {
+    "fixture": "boletin-2026-week44-all-titles-ocr.json",
+    "source_url": "https://www.gob.mx/cms/uploads/attachment/file/1116659/Boletin-4426.pdf",
+    "retrieved_on": "2026-11-17",
+    "sha256": "0a163be276a77c31b5b34c80f263c378665ab9385a2a84cf22915723659734a6",
+    "byte_size": 78507,
+    "derivation": "Full captions on all 77 national tables, two-scale Spanish OCR agreement; source PDF and deterministic crop hashes retained."
   }
 ]

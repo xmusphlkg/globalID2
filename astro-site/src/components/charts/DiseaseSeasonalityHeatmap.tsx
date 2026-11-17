@@ -67,7 +67,7 @@ export default function DiseaseSeasonalityHeatmap({ data, dataUrl, language = 'e
     url.searchParams.set('season_span', showAllYears ? 'all' : 'recent');
     return url.toString();
   };
-  return <div className="disease-seasonality panel-fullscreen" ref={shell}>
+  return <div className="disease-seasonality panel-fullscreen chart-fullscreen-fill" ref={shell}>
     <div className="chart-result-row">
       <div className="disease-trend-controls">{(['cases', 'deaths'] as const).filter(item => item === 'cases' || data.deaths.some(value => value != null)).map(item => <button type="button" key={item} aria-pressed={metric === item} onClick={() => setMetric(item)}>{t[item]}</button>)}{allYears.length > 10 && <button type="button" aria-pressed={showAllYears} onClick={() => setShowAllYears(value => !value)}>{showAllYears ? t.recentYears : t.allYears}</button>}</div>
       <ChartResultActions
@@ -80,7 +80,7 @@ export default function DiseaseSeasonalityHeatmap({ data, dataUrl, language = 'e
       />
     </div>
     <p className="disease-trend-note">{t.note}</p>
-    {cells.length ? ready ? <div ref={plot}><EChartsReact ref={chart} echarts={echarts} option={option} notMerge style={{ height: Math.max(280, years.length * 27 + 80), width: '100%' }} /></div> : <div className="disease-seasonality-fallback"><table aria-label={t.cases}><thead><tr><th></th>{months.map(month => <th key={month}>{month}</th>)}</tr></thead><tbody>{years.map((year, yearIndex) => <tr key={year}><th>{year}</th>{months.map((month, monthIndex) => { const value = cells.find(cell => cell[0] === monthIndex && cell[1] === yearIndex)?.[2]; return <td key={month} style={{ background: value == null ? 'transparent' : `rgba(15,118,110,${.12 + .78 * value / max})` }} title={value == null ? '—' : `${year}-${String(monthIndex + 1).padStart(2, '0')}: ${value.toLocaleString(language)}`}>{value == null ? '—' : <span className="sr-only">{value.toLocaleString(language)}</span>}</td>; })}</tr>)}</tbody></table></div> : <p className="disease-trend-empty">{t.empty}</p>}
+    {cells.length ? ready ? <div ref={plot} className="chart-fullscreen-plot"><EChartsReact ref={chart} echarts={echarts} option={option} notMerge style={{ height: Math.max(280, years.length * 27 + 80), width: '100%' }} /></div> : <div className="disease-seasonality-fallback"><table aria-label={t.cases}><thead><tr><th></th>{months.map(month => <th key={month}>{month}</th>)}</tr></thead><tbody>{years.map((year, yearIndex) => <tr key={year}><th>{year}</th>{months.map((month, monthIndex) => { const value = cells.find(cell => cell[0] === monthIndex && cell[1] === yearIndex)?.[2]; return <td key={month} style={{ background: value == null ? 'transparent' : `rgba(15,118,110,${.12 + .78 * value / max})` }} title={value == null ? '—' : `${year}-${String(monthIndex + 1).padStart(2, '0')}: ${value.toLocaleString(language)}`}>{value == null ? '—' : <span className="sr-only">{value.toLocaleString(language)}</span>}</td>; })}</tr>)}</tbody></table></div> : <p className="disease-trend-empty">{t.empty}</p>}
     {cells.length > 0 && <div className="disease-seasonality-scale"><span>{t.low} · 0</span><i aria-hidden="true" /><span>{t.high} · {max.toLocaleString(language)}</span></div>}
     {dataUrl && <RuntimeChartSource dataUrl={dataUrl} language={language} />}
   </div>;

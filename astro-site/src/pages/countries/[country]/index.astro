@@ -3,7 +3,7 @@
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import SurveillanceCountryContext from '../../../components/public/SurveillanceCountryContext';
 import SurveillanceSummary from '../../../components/public/SurveillanceSummary';
-import SurveillanceDirectory from '../../../components/public/SurveillanceDirectory';
+import SubdivisionDirectory from '../../../components/public/SubdivisionDirectory';
 import ReportCard from '../../../components/ReportCard.astro';
 import CountryFlag from '../../../components/CountryFlag.astro';
 import PageAnchorNav from '../../../components/PageAnchorNav.astro';
@@ -12,7 +12,7 @@ import EpidemicCurve from '../../../components/charts/EpidemicCurve';
 import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
 import ComparisonTable from '../../../components/charts/ComparisonTable';
 import SubdivisionIncidenceMap from '../../../components/charts/SubdivisionIncidenceMap';
-import { reportIndex, countryDiseaseRouteIdentities } from '../../../lib/seo-page-data';
+import { countryPageNavigation } from '../../../lib/seo-page-data';
 import {
   buildCountryMetaDescription,
   buildDatasetDistributions,
@@ -62,12 +62,8 @@ const countryData: any = {
   country_name_fr: countryMetadata?.name_fr,
 };
 const countrySummaryUrl = `/site-data/countries/${country}-summary.json`;
-const reports: any[] = (reportIndex as any[])
-  .filter(r => r.country_code?.toLowerCase() === country)
-  .slice(0, 6);
+const { reports, reportCount, diseaseRoutes } = countryPageNavigation(country, prefix);
 const countryDownload: any = null;
-const diseaseRoutes = Object.fromEntries(countryDiseaseRouteIdentities().filter(row => row.code === country).map(row => [row.slug, localeHref(`/countries/${country}/diseases/${row.slug}/`)]));
-const reportCount = (reportIndex as any[]).filter(row => row.country_code?.toLowerCase() === country).length;
 
 const countryName = countryData?.country_name_en ?? countryData?.country_name ?? fallbackCountryCode;
 const countryNameZh = countryData?.country_name_zh ?? countryDownload?.name_zh ?? countryName;
@@ -230,7 +226,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
           {zh ? `${countryNameZh}下级行政单位数据` : fr ? `Jeux de données des subdivisions de ${countryNameFr}` : `${countryName} subdivision datasets`}
         </h2>
         <p class="figure-caption mt-2">{zh ? '下级行政单位序列独立展示，不与上级区域序列叠加，也不进入上级区域排行和全球汇总。' : fr ? 'Les séries des subdivisions restent séparées des séries des zones parentes, des classements et des totaux mondiaux.' : 'Subdivision series remain separate from parent-area series, rankings and global totals.'}</p>
-        <div class="mt-5"><SurveillanceDirectory client:visible language={locale} parentCode={fallbackCountryCode} /></div>
+        <div class="mt-5"><SubdivisionDirectory client:visible language={locale} parentCode={fallbackCountryCode} /></div>
       </section>
     )}
 

@@ -141,6 +141,29 @@ def test_site_receipt_cannot_be_adopted_under_another_task(tmp_path):
         papers_origin=SETTINGS.r2_papers_public_base_url, site=True) is None
 
 
+@pytest.mark.parametrize("site", [False, True])
+def test_receipt_accepts_normal_and_historical_canaries_but_requires_unique_urls_and_all_locales(tmp_path, site):
+    run, fields, _ = receipt(tmp_path, site=site)
+    path = run / "published.json"
+    value = json.loads(path.read_text())
+    samples = value["public_verification"]["canaries"]
+    samples.extend([{**item, "url": item["url"].replace("paper-a/", "historical-paper/")}
+                    for item in list(samples)])
+    path.write_text(json.dumps(value))
+    assert verified_research_commit(tmp_path, **fields,
+        papers_origin=SETTINGS.r2_papers_public_base_url, site=site)["public_verified"] is True
+
+    samples.append(dict(samples[0]))
+    path.write_text(json.dumps(value))
+    assert verified_research_commit(tmp_path, **fields,
+        papers_origin=SETTINGS.r2_papers_public_base_url, site=site) is None
+
+    value["public_verification"]["canaries"] = [item for item in samples[:-1] if item["locale"] != "fr"]
+    path.write_text(json.dumps(value))
+    assert verified_research_commit(tmp_path, **fields,
+        papers_origin=SETTINGS.r2_papers_public_base_url, site=site) is None
+
+
 @pytest.mark.asyncio
 async def test_literature_schedule_uses_independent_task_creation_and_preserves_pending_age(tmp_path):
     last_created = NOW - timedelta(hours=2)

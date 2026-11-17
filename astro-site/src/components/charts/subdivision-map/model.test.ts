@@ -151,6 +151,23 @@ test('an entirely missing week also invalidates annual trend aggregation instead
 });
 
 
+test('sparse weekly reports default to an actual complete source week when no month is complete', () => {
+  const local = weeklyDataset();
+  const source = local.regions[region.code];
+  source.points = [['2025-01-12', 0, 'observed'], ['2025-02-23', 10, 'provisional']];
+  source.periods = [
+    { start: '2025-01-06', end_exclusive: '2025-01-13', reporting_year: 2025 },
+    { start: '2025-02-17', end_exclusive: '2025-02-24', reporting_year: 2025 },
+  ];
+  const range = defaultWindow(catalog, prepareMapDataset(local), populations);
+  assert.deepEqual(range, { from: '2025-02-17', to: '2025-02-23', metric: 'rate', view: 'weekly' });
+  close(resultsFor(catalog, local, populations, range)[0].rate, 5);
+  const missingPopulation = { ...populations, regions: {} };
+  const casesRange = defaultWindow(catalog, local, missingPopulation);
+  assert.equal(casesRange.metric, 'cases');
+  assert.equal(resultsFor(catalog, local, missingPopulation, casesRange)[0].cases, 10);
+});
+
 test('a sparse source defaults to a complete recent quarter or month instead of inventing a full year', () => {
   const chosen = defaultWindow(catalog, dataset, populations);
   assert.equal(chosen.from, '2025-02-01'); assert.equal(chosen.to, '2025-02-28');
@@ -253,4 +270,31 @@ test('shared continuous scales are stable across years and grouping and never do
   const revised = structuredClone(populations);
   revised.regions[region.code]['2024'] = pop(2024, 400000);
   assert.notDeepEqual(sharedScale(catalog, data, revised, window), breaks);
+});
+
+test('a complete month across regions takes precedence over a year available in only one region', () => {
+  const local = structuredClone(dataset);
+  local.years = [2025];
+  const second = { code: 'AU-VIC', name_en: 'Victoria' };
+  local.regions[region.code].points = Array.from({ length: 12 }, (_, index) => [`2025-${String(index + 1).padStart(2, '0')}-01`, 10, 'observed']);
+  local.regions[second.code] = { ...structuredClone(local.regions[region.code]), points: [['2025-02-01', 0, 'observed']] };
+  const geo = { ...catalog, regions: [region, second] };
+  const population = structuredClone(populations);
+  population.regions[second.code] = { '2025': pop(2025, 100000) };
+  const range = defaultWindow(geo, prepareMapDataset(local), population);
+  assert.equal(range.from, '2025-02-01');
+  assert.equal(range.to, '2025-02-28');
+  assert.deepEqual(resultsFor(geo, local, population, range).map(row => row.value), [5, 0]);
+});
+
+test('sparse defaults stay in the latest year with rates instead of jumping back to broader old coverage', () => {
+  const local = structuredClone(dataset);
+  const second = { code: 'AU-VIC', name_en: 'Victoria' };
+  local.regions[second.code] = { ...structuredClone(local.regions[region.code]), points: [['2024-02-01', 10, 'observed']] };
+  const geo = { ...catalog, regions: [region, second] };
+  const population = structuredClone(populations);
+  population.regions[second.code] = { '2024': pop(2024, 100000) };
+  const range = defaultWindow(geo, prepareMapDataset(local), population);
+  assert.equal(range.from, '2025-02-01');
+  assert.equal(range.metric, 'rate');
 });

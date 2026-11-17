@@ -14,8 +14,9 @@ from tests.unit.test_release_dirty_selection import release_db
 
 @pytest.mark.parametrize('planned', [False, True])
 @pytest.mark.parametrize('lost_build_receipt', [False, True])
+@pytest.mark.parametrize('suppress_dispatch', [False, True])
 async def test_literature_release_retries_frozen_candidate_and_acks_only_selected_ids(
-    release_db, tmp_path, monkeypatch, planned, lost_build_receipt,
+    release_db, tmp_path, monkeypatch, planned, lost_build_receipt, suppress_dispatch,
 ):
     maker, service, _ = release_db
     async with maker() as db:
@@ -38,6 +39,7 @@ async def test_literature_release_retries_frozen_candidate_and_acks_only_selecte
         download_publish_timeout_seconds=60,
         task_manager=SimpleNamespace(update_task_progress=AsyncMock(), add_workbook_entry=AsyncMock()))
     task = SimpleNamespace(task_uuid='research-test', input_data={'data_only': True, 'data_line': 'literature',
+                                                                  'suppress_subscription_dispatch': suppress_dispatch,
                                                                   'publish_dirty_ids': [ids[0]]})
     if planned:
         task.input_data['publication_plan'] = {'plan_id': 'plan', 'plan_digest': 'digest'}
@@ -92,6 +94,9 @@ async def test_literature_release_retries_frozen_candidate_and_acks_only_selecte
         assert (await db.get(PublishDirty, ids[0])).published_at is None
     result = await data_pipeline.execute_data_release(service, task, runtime=runtime)
     assert result['release_id'] == 'literature-research-test'
+    assert result['subscription_dispatch_suppressed'] is suppress_dispatch
+    receipt = json.loads((tmp_path / 'exports/research-current-receipt.json').read_bytes())
+    assert receipt['subscription_dispatch_suppressed'] is suppress_dispatch
     assert result['stage_timing']['publish_seconds'] >= 0
     assert result['stage_timing']['acknowledge_seconds'] >= 0
     assert len(snapshots) == 1
