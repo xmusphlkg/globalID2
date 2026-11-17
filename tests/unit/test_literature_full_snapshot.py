@@ -3,6 +3,7 @@ from dataclasses import replace
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -253,6 +254,30 @@ def test_empty_snapshot_remains_composable_for_a_later_site_release(tmp_path, mo
     assert not any('paper_template' in item for item in composed.entries)
     assert len([item for item in composed.entries if item['key'].startswith(f'{PREFIX}/templates/')]) == 3
     assert len([item for item in composed.entries if item['key'].startswith(f'{PREFIX}/assets/')]) == 1
+
+
+def test_local_candidate_allows_shared_exports_symlink_but_stays_inside_it(tmp_path, monkeypatch):
+    from src.services.data_release import site_research_baseline
+
+    root = tmp_path / 'release-root'
+    shared_exports = tmp_path / 'shared-exports'
+    root.mkdir()
+    candidate_path = shared_exports / 'site-research-runs/old/site-prior/projection-v3/candidate.json'
+    candidate_path.parent.mkdir(parents=True)
+    candidate_path.write_text('{}')
+    (root / 'exports').symlink_to(shared_exports, target_is_directory=True)
+    candidate = SimpleNamespace(release_id='site-prior', origin='https://papers.example',
+        generation='a' * 64, manifest=b'captured-manifest')
+    monkeypatch.setattr(site_research_baseline, 'load_projection_candidate', lambda _path: candidate)
+    monkeypatch.setattr(site_research_baseline, 'assert_v3_candidate', lambda _candidate: None)
+    previous = {'release_id': 'site-prior', 'papers': {
+        'papers_generation_sha256': candidate.generation,
+        'papers_manifest_sha256': hashlib.sha256(candidate.manifest).hexdigest(),
+    }}
+
+    assert site_research_baseline._local_candidate(
+        root / 'exports/site-research-runs/current/site-current', previous, candidate.origin,
+    ) is candidate
 
 
 def test_full_snapshot_rejects_a_baseline_with_one_missing_article_locale(tmp_path):
