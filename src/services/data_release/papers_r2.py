@@ -11,6 +11,7 @@ import io
 import json
 import re
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -192,10 +193,10 @@ class R2S3Client:
     ) -> None:
         self.config = config
         self.manifest_key = config.manifest_key
-        self._http = None if opener else httpx.Client(
-            limits=httpx.Limits(max_connections=96, max_keepalive_connections=96, keepalive_expiry=30.0),
-            follow_redirects=False,
-        )
+        self._http_local = threading.local()
+        self._http_clients: list[httpx.Client] = []
+        self._http_clients_lock = threading.Lock()
+        self._http_closed = False
         self._opener = opener or self._pooled_open
         self.timeout_seconds = timeout_seconds
         self.region = "auto"
@@ -203,14 +204,36 @@ class R2S3Client:
 
     @contextmanager
     def _pooled_open(self, request: Request, timeout: float):
-        """Reuse TLS connections across the bounded upload worker threads."""
-        assert self._http is not None
-        with _http_open(self._http, request, timeout) as response:
+        """Reuse each worker's TLS connections without a shared pool lock."""
+        client = getattr(self._http_local, "client", None)
+        if client is None:
+            client = httpx.Client(
+                limits=httpx.Limits(max_connections=2, max_keepalive_connections=2, keepalive_expiry=30.0),
+                follow_redirects=False,
+            )
+            with self._http_clients_lock:
+                closed = self._http_closed
+                if not closed:
+                    self._http_clients.append(client)
+                    self._http_local.client = client
+            if closed:
+                client.close()
+                raise RuntimeError("Cannot send a request, as the client has been closed.")
+        with _http_open(client, request, timeout) as response:
             yield response
 
     def close(self) -> None:
-        if self._http is not None:
-            self._http.close()
+        with self._http_clients_lock:
+            self._http_closed = True
+            clients, self._http_clients = self._http_clients, []
+        error = None
+        for client in clients:
+            try:
+                client.close()
+            except Exception as exc:
+                error = error or exc
+        if error is not None:
+            raise error
 
     def _host(self) -> str:
         return urllib.parse.urlparse(self.config.s3_endpoint).netloc
