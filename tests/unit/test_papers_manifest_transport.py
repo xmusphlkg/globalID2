@@ -72,17 +72,18 @@ def test_compressed_manifest_signs_encoded_payload_and_decodes_legacy_transports
     assert client.get_object(MANIFEST_KEY) == body
 
 
-def test_httpx_manifest_is_not_decoded_twice():
+def test_httpx_manifest_is_not_decoded_twice(monkeypatch):
     body = b'{"files":[]}'
-    client = R2S3Client(CONFIG)
-    client._http.close()
-    client._http = httpx.Client(
+    original_client = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda **kwargs: original_client(
         transport=httpx.MockTransport(
             lambda request: httpx.Response(
                 200, content=gzip.compress(body), headers={"Content-Encoding": "gzip"}
             )
-        )
-    )
+        ),
+        **kwargs,
+    ))
+    client = R2S3Client(CONFIG)
     try:
         assert client.get_object(MANIFEST_KEY) == body
     finally:
