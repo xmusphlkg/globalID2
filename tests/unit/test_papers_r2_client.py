@@ -151,13 +151,16 @@ def test_inventory_paginates_and_encodes_continuation_token():
     assert "continuation-token=a%2Bb%2F%3D&list-type=2" in calls[1]
 
 
-def test_pooled_http_transport_preserves_body_and_status():
+def test_pooled_http_transport_preserves_body_and_status(monkeypatch):
     import httpx
-    client = R2S3Client(CONFIG)
-    client._http.close()
-    client._http = httpx.Client(transport=httpx.MockTransport(
-        lambda request: httpx.Response(200, content=b"payload")
+    original_client = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda **kwargs: original_client(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, content=b"payload")
+        ),
+        **kwargs,
     ))
+    client = R2S3Client(CONFIG)
     try:
         assert client.get_object("test") == b"payload"
     finally:
