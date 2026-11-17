@@ -5,3 +5,5 @@ docs/acceptance/evidence/**/*.diff -whitespace
 # Keep captured upstream bytes and their provenance hashes intact.
 tests/fixtures/ingestion/** -whitespace
 tests/fixtures/ingestion/**/*.pdf binary
+# Captured HTML is hashed as bytes; checkout must preserve its line endings.
+tests/fixtures/ingestion/**/*.html -text

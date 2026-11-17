@@ -149,6 +149,9 @@ Configuration, worker roles and systemd commands are in
 [Development and local operations](docs/operations/DEVELOPMENT.md).
 Run the checks appropriate to your changes; `make check` combines the repository,
 Python, dashboard, public-site and subscription checks and requires their dependencies.
+GitHub runs these checks once in `Project quality gates`. The `Control Center`
+workflow is a manual screenshot preview (`Actions → Control Center → Run workflow`);
+it does not repeat the automatic dashboard checks.
 
 ## Source and data repositories
 

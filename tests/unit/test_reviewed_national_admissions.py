@@ -5,6 +5,7 @@ import json
 import pytest
 
 from src.core import country_library
+from src.core.high_frequency_sources import sources_for_country
 from src.core.reviewed_national_admissions import (
     OPERATOR_AUTHORIZED_NATIONAL_COUNTRIES, REUSE_STATUS,
     reviewed_national_admission_config,
@@ -20,7 +21,16 @@ def test_runtime_registry_and_fallback_admit_only_explicit_sources(code, monkeyp
     config = country_library.get_country_bootstrap_config(code)
     assert len(OPERATOR_AUTHORIZED_NATIONAL_COUNTRIES) == 9
     for key in ("public_release_enabled", "public_legacy_enabled", "public_source_systems", "public_source_scopes", "public_source_details"):
-        assert config[key] == registry[code][key] == expected[key]
+        assert config[key] == registry[code][key]
+        if key in ("public_source_systems", "public_source_scopes"):
+            supplements = sources_for_country(code)
+            added = {source.source_id if key == "public_source_systems" else source.scope
+                     for source in supplements}
+            assert set(config[key]) == set(expected[key]) | added
+        elif key == "public_source_details":
+            assert expected[key].items() <= config[key].items()
+        else:
+            assert config[key] == expected[key]
     monkeypatch.setattr(country_library, "_load_country_bootstrap_registry", lambda: {})
     fallback = country_library.get_country_bootstrap_config(code)
     for key in ("public_release_enabled", "public_legacy_enabled", "public_source_systems", "public_source_scopes", "public_source_details"):
@@ -42,9 +52,11 @@ def test_public_provenance_survives_stale_database_and_discloses_terms(code):
         "notes": "unreviewed ingestion text", "data_source_url": "https://stale.test/",
         "crawler_config": {"sources": ["private-feed"]},
     })
-    assert [item["scope"] for item in result["sources"]] == expected["public_source_scopes"]
+    sources = {item["scope"]: item for item in result["sources"]}
+    assert set(expected["public_source_scopes"]) <= sources.keys()
     assert "unreviewed ingestion text" not in result["notes"]
-    for source in result["sources"]:
+    for scope in expected["public_source_scopes"]:
+        source = sources[scope]
         assert source["source_id"] in expected["public_source_systems"]
         assert source["publisher"] in source["required_attribution"]
         assert source["url"].startswith("https://") and "stale.test" not in source["url"]
@@ -75,13 +87,19 @@ def test_bq_shared_collector_does_not_open_netherlands_native_feed():
     assert config["crawler_config"]["geography_key"] == "country:BQ:national"
     assert config["crawler_config"]["collection_country_code"] == "NL"
     assert config["crawler_config"]["sources"] == []
-    assert country_library.get_country_bootstrap_config("NL")["public_source_systems"] == ["SRC_NL_ECDC_ATLAS"]
+    assert country_library.get_country_bootstrap_config("NL")["public_source_systems"] == ["SRC_NL_ECDC_ATLAS", "SRC_NL_ECDC_RESPIRATORY"]
 
 
 @pytest.mark.parametrize("code", ["CO"])
-def test_statistically_blocked_countries_are_not_opened(code):
+def test_colombia_typed_admission_is_independent_of_national_overlay(code):
     assert reviewed_national_admission_config(code) == {}
-    assert country_library.get_country_bootstrap_config(code)["public_release_enabled"] is False
+    config = country_library.get_country_bootstrap_config(code)
+    assert config["public_release_enabled"] is True
+    assert config["public_legacy_enabled"] is False
+    assert set(config["public_source_systems"]) == {"SRC_CO_INS_BES", "SRC_CO_WHO_FLUNET"}
+    policies = config["crawler_config"]["source_policies"]
+    assert policies["co_ins_bes_weekly"]["public_release_enabled"] is True
+    assert policies["co_ins_sivigila_current"]["public_release_enabled"] is False
 
 
 def test_admission_overlays_do_not_share_mutable_policy_state():

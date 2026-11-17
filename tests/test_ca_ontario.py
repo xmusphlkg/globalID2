@@ -1152,8 +1152,8 @@ def test_ontario_connector_does_not_replace_canada_national_defaults() -> None:
     assert get_country_bootstrap_config("CA").get("data_source_url") == (
         "https://diseases.canada.ca/notifiable/extract-dataset"
     )
-    assert get_expected_scopes_for_country("CA") == ["phac_cndss_annual"]
-    assert default_source_for_country("CA") == "phac_cndss_annual"
+    assert get_expected_scopes_for_country("CA") == ["ca_phac_respiratory_weekly", "phac_cndss_annual"]
+    assert default_source_for_country("CA") == "ca_phac_respiratory_weekly"
     assert source_scope_label(
         "phac_cndss_annual", country_code="CA"
     ) == "Canada PHAC CNDSS Annual"

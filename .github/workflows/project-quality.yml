@@ -67,11 +67,12 @@ jobs:
           venv/bin/python scripts/full_rebuild_database.py --mode mappings --yes --checkpoint-file /tmp/globalid-ci-rebuild.json
           venv/bin/python scripts/automation/seed_ci_database_fixtures.py
       - name: Run complete offline Python suite
-        run: PYTHONUNBUFFERED=1 PYTHON_BIN=venv/bin/python ./tests/run_tests.sh --type all --verbose
-      - name: Regenerate and verify API/schema contracts
-        run: |
-          PYTHONPATH=. venv/bin/python scripts/export_dashboard_openapi.py
-          venv/bin/python scripts/automation/check_contract_drift.py
+        env:
+          PYTEST_ADDOPTS: --tb=short
+        run: PYTHONUNBUFFERED=1 PYTHON_BIN=venv/bin/python ./tests/run_tests.sh --type all
+      - name: Verify API schema and generated TypeScript contract
+        run: npm run openapi:check
+        working-directory: dashboard
       - name: Reject whitespace-corrupted patches
         run: git diff --check
 

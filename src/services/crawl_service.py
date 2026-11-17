@@ -1641,10 +1641,10 @@ class CrawlService:
         updater,
     ) -> CrawlResult:
         """Run Iceland's mixed annual/monthly/weekly surveillance pipeline."""
-        from src.core.source_scopes import canonicalize_task_source, validate_iceland_crawl_options
+        from src.core.source_scopes import validate_iceland_crawl_options
         from src.services.ingestion.runner import run_surveillance
         from src.services.ingestion.countries import is_ as connector
-        normalized = canonicalize_task_source(source, country_code="IS")
+        normalized = connector.normalize_native_source(source)
         start_year = (task.input_data or {}).get("start_year")
         validate_iceland_crawl_options(country_code="IS", source=normalized, fill_missing=fill_missing, start_year=start_year)
         strategy = connector.IcelandCurrentCommitStrategy()

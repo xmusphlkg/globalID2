@@ -75,12 +75,13 @@ def test_ireland_public_sources_retain_operator_decision_and_ecdc_provenance() -
     assert ireland["crawler_config"]["source_policies"]["ecdc_atlas_annual"]["public_release_enabled"] is True
     assert austria["crawler_config"]["sources"] == [
         "ages_radar",
+        "ecdc_respiratory_weekly",
         "ecdc_atlas_annual",
     ]
     assert ireland["crawler_config"]["sources"][-1] == "ecdc_atlas_annual"
-    assert austria["public_source_systems"] == ["SRC_AT_ECDC_ATLAS"]
+    assert austria["public_source_systems"] == ["SRC_AT_ECDC_ATLAS", "SRC_AT_ECDC_RESPIRATORY", "SRC_AT_AGES_RADAR"]
     assert set(ireland["public_source_systems"]) == {
-        "SRC_IE_ECDC_ATLAS", "SRC_IE_HPSC_NDH", "SRC_IE_HPSC_ANNUAL", "SRC_IE_HPSC_WEEKLY_ARCHIVE"
+        "SRC_IE_ECDC_ATLAS", "SRC_IE_HPSC_NDH", "SRC_IE_HPSC_ANNUAL", "SRC_IE_HPSC_WEEKLY_ARCHIVE", "SRC_IE_ECDC_RESPIRATORY"
     }
     assert austria["public_legacy_enabled"] is False
     assert ireland["public_legacy_enabled"] is False

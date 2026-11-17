@@ -84,10 +84,16 @@ async def fetch(operation, *args, **kwargs):
         raise SourceUnavailable(str(exc)) from exc
 
 
+def normalize_native_source(source):
+    """Keep native `all` independent of the country's preferred task source."""
+    value = str(source or "all").strip().lower() or "all"
+    return value if value == "all" else canonicalize_task_source(value, country_code="IS")
+
+
 async def collect(
     writer, *, source, history_csv=None, fill_missing=False, start_year=None, **options
 ):
-    normalized = canonicalize_task_source(source, country_code="IS")
+    normalized = normalize_native_source(source)
     validate_iceland_crawl_options(
         country_code="IS",
         source=normalized,
@@ -212,7 +218,7 @@ async def collect_history(writer, *, source):
 
 
 def organize(artifacts, *, updater, source, start_year=None, **options):
-    normalized = canonicalize_task_source(source, country_code="IS")
+    normalized = normalize_native_source(source)
     if normalized in HISTORY_SOURCES:
         return organize_history(artifacts, updater=updater)
     scopes = processor_module._source_scopes(normalized)
