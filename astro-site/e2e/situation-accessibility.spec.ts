@@ -31,13 +31,15 @@ test('searchable filters keep keyboard focus and expose the scrollable listbox a
   const nextValue = await next.getAttribute('data-value');
   await expect(disease).toHaveAttribute('aria-activedescendant', await next.getAttribute('id') as string);
   await disease.press('Enter');
-  await expect(disease).toBeFocused();
+  if ((page.viewportSize()?.width ?? 0) >= 900) await expect(disease).toBeFocused();
   await expect(listbox).toHaveCount(0);
   await expect.poll(() => new URL(page.url()).searchParams.get('disease')).toBe(nextValue);
 
+  if (await listToggle.getAttribute('aria-pressed') === 'false') await listToggle.click();
   await disease.fill('D049');
   await disease.press('Enter');
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+  if (await listToggle.getAttribute('aria-pressed') === 'false') await listToggle.click();
   await disease.fill('unmatched search');
   await expect(page.getByRole('option')).toHaveCount(0);
   await disease.press('Escape');

@@ -124,8 +124,12 @@ export default function SituationExplorer({
         setGeneratedAt(payload.generated_at || initialGeneratedAt);
         const deep = applyDeepLinks(nextPoints, site, nextAsOf, payload.monitoring ?? [], indexed);
         setFilters(deep.filters);
-        setSelection(deep.selection);
-        setTimelineScope(new URLSearchParams(window.location.search).get('timeline') === 'all' ? 'all' : 'place');
+        const params = new URLSearchParams(window.location.search);
+        const diseaseOverview = Boolean(deep.filters.disease
+          && !params.get('place') && !params.get('outbreak') && !deep.filters.country);
+        setSelection(diseaseOverview ? null : deep.selection);
+        const showOverview = params.get('timeline') === 'all' || diseaseOverview;
+        setTimelineScope(showOverview ? 'all' : 'place');
         setDataState('ready');
       })
       .catch(() => {
@@ -273,6 +277,15 @@ export default function SituationExplorer({
   const closeListOnNarrow = () => {
     if (window.matchMedia('(max-width: 899px)').matches) setListMode('closed');
   };
+  const selectDisease = (value: string) => {
+    applyFilters({ ...filters, disease: value });
+    if (value) {
+      // A disease spans places; open its full timeline without picking a marker.
+      setSelection(null);
+      setTimelineScope('all');
+      closeListOnNarrow();
+    }
+  };
   const selectPlace = (id: string) => {
     setTimelineScope('place');
     setSelection({ kind: 'place', id });
@@ -344,7 +357,7 @@ export default function SituationExplorer({
 
   const filterControls = (
     <div className="sit-filter-grid">
-      <SearchableFilter label={copy.disease} value={filters.disease} options={diseases} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('disease', value)} />
+      <SearchableFilter label={copy.disease} value={filters.disease} options={diseases} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={selectDisease} />
       <SearchableFilter label={copy.country} value={filters.country} options={countries} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('country', value)} />
       <SearchableFilter label={copy.source} value={filters.source} options={sources} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('source', value)} />
       <SearchableFilter label={HOST_FILTER_LABEL[locale]} value={filters.host || ''} options={hosts} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('host', value as HostType | '')} />

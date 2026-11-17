@@ -7,6 +7,7 @@ test.setTimeout(60_000);
 
 async function mockSituation(page: Page) {
   await page.route('**/astro/runtime/client/dev-toolbar/entrypoint.js', route => route.fulfill({ body: '', contentType: 'application/javascript' }));
+  await page.route('**/site-data/**', route => route.fulfill({ status: 404 }));
   const alert = (id: string, published: string, country: string, extra = {}): SituationAlertRecord => ({
     alert_id: id, outbreak_id: 'OB-test', notice_id: `notice-${id}`,
     source_id: 'feed-one', source_label_en: 'Feed one', source_label_zh: null,
@@ -199,7 +200,7 @@ test('situation page: filtering recentres the map without errors', async ({ page
 });
 
 
-test('typing filters opens a timeline, scopes monitoring cards and restores cancelled searches', async ({ page }) => {
+test('committing a disease opens its timeline, scopes monitoring cards and restores cancelled searches', async ({ page }) => {
   await mockSituation(page);
   await page.goto('/situation/');
   await openPlaceList(page);
@@ -207,19 +208,24 @@ test('typing filters opens a timeline, scopes monitoring cards and restores canc
   const disease = page.getByRole('combobox', { name: 'Disease', exact: true });
   await disease.fill('d050');
   await expect(page.getByRole('option', { name: /Ebola/ })).toBeVisible();
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
   await disease.press('Enter');
-  await expect(page.locator('.sit-alert')).toHaveCount(1);
+  await expect(page.locator('.sit-detail.is-open')).toBeVisible();
+  await expect(page.locator('.sit-overview .sit-alert')).toHaveCount(2);
+  expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+  expect(new URL(page.url()).searchParams.get('timeline')).toBe('all');
+  await openPlaceList(page);
+  await page.locator('.sit-item').first().click();
+  await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
-  if ((page.viewportSize()?.width ?? 0) < 900) {
-    await page.locator('.sit-view-timeline').click();
-    await expect(page.locator('.sit-detail.is-open')).toBeVisible();
-    await page.locator('.sit-bar-links button').click();
-  }
+  await openPlaceList(page);
   await expect(page.locator('.sit-monitor-count')).toHaveText('2');
   await selectFilter(page, 'Area', 'KE');
   await expect(page.locator('.sit-monitor-card')).toHaveCount(1);
   await expect(page.locator('.sit-monitor-card')).toContainText('Ebola monitoring in Kenya');
-  await expect(page.locator('.sit-alert')).toHaveCount(1);
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+  await openPlaceList(page);
+  await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
   await disease.fill('unmatched query');
   await expect(page.getByRole('option')).toHaveCount(0);
   await disease.press('Escape');
@@ -263,3 +269,26 @@ test('MERS shared link groups identical cumulative figures across channels and d
   if (await legend.isVisible()) expect(await legend.locator('ul').evaluate(node => getComputedStyle(node).overflow)).toBe('visible');
   await page.screenshot({ path: testInfo.outputPath('mers-grouped.png') });
 });
+
+for (const prefix of ['', '/zh', '/fr']) {
+  test(`disease-only links open the full timeline on load and reload in ${prefix || 'en'}`, async ({ page }) => {
+    await mockSituation(page);
+    await page.goto(`${prefix}/situation/?disease=D050&window=all`, { waitUntil: 'domcontentloaded' });
+    await openPlaceList(page);
+    await expect(page.locator('.sit-item')).toHaveCount(3);
+    await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+    await expect(page.locator('.sit-overview .sit-alert')).toHaveCount(3);
+    expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+    expect(new URL(page.url()).searchParams.has('country')).toBe(false);
+    expect(new URL(page.url()).searchParams.get('timeline')).toBe('all');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await openPlaceList(page);
+    await expect(page.locator('.sit-item')).toHaveCount(3);
+    await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+    await expect(page.locator('.sit-overview .sit-alert')).toHaveCount(3);
+    expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+    await page.locator('.sit-item').first().click();
+    await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+    await expect.poll(() => new URL(page.url()).searchParams.has('place')).toBe(true);
+  });
+}

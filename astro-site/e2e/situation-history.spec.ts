@@ -67,9 +67,9 @@ async function showFilters(page: Page) {
   await expect(page.locator('.sit-list')).toBeVisible();
 }
 
-async function selectFilter(page: Page, index: number, value: string) {
+async function selectFilter(page: Page, name: 'Disease' | 'Source' | 'Time window', value: string) {
   await showFilters(page);
-  await page.locator('.sit-list [role="combobox"]').nth(index).click();
+  await page.locator('.sit-list').getByRole('combobox', { name, exact: true }).click();
   await page.locator(`.sit-list [role="option"][data-value="${value}"]`).click();
 }
 
@@ -79,11 +79,43 @@ async function showResults(page: Page) {
   await expect(page.locator('.sit-detail.is-open')).toBeVisible();
 }
 
+test('disease selection opens all places, reopens after closing and shows an empty timeline when no reports match', async ({ page }) => {
+  await mockHistory(page);
+  await page.goto('/situation/');
+  await selectFilter(page, 'Disease', 'D049');
+  const detail = page.locator('.sit-detail.is-open');
+  const overview = page.locator('.sit-overview');
+  await expect(detail).toBeVisible();
+  await expect(overview.locator('.sit-alert')).toHaveCount(2);
+  await expect(overview.locator('.sit-alert-disease')).toHaveText(['MERS', 'MERS']);
+  expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+
+  await detail.locator('.sit-close').click();
+  await expect(detail).toHaveCount(0);
+  await selectFilter(page, 'Disease', 'D049');
+  await expect(detail).toBeVisible();
+  await expect(overview.locator('.sit-alert')).toHaveCount(2);
+
+  await showFilters(page);
+  await page.locator('.sit-item').first().click();
+  await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
+  await selectFilter(page, 'Disease', 'D038');
+  await expect(detail).toBeVisible();
+  await expect(overview).toBeVisible();
+  await expect(overview).toHaveAttribute('aria-busy', 'false');
+  await expect(overview.locator('.sit-alert')).toHaveCount(0);
+  await expect(overview).toContainText('No alerts match these filters.');
+  expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+  await showFilters(page);
+  await page.locator('.sit-reset').click();
+  await expect(detail).toHaveCount(0);
+});
+
 test('a historical source remains selectable when the latest marker came from another channel', async ({ page }) => {
   await mockHistory(page);
   await page.goto('/situation/?disease=D049');
   await expect(page.locator('.sit-item')).toHaveCount(2);
-  await selectFilter(page, 2, 'older-feed');
+  await selectFilter(page, 'Source', 'older-feed');
   await expect(page.locator('.sit-item')).toHaveCount(1);
   await expect(page.locator('.sit-item')).toContainText('Saudi Arabia');
   await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
@@ -110,7 +142,7 @@ test('structured monitoring coverage matches a generic report title and chips re
   await page.locator('.sit-filter-chip[data-filter="country"]').click();
   await expect(page.locator('.sit-filter-chip')).toHaveCount(0);
   await expect(page.locator('.sit-monitor-card')).toHaveCount(2);
-  await selectFilter(page, 3, '7');
+  await selectFilter(page, 'Time window', '7');
   await expect(page.locator('.sit-filter-chip[data-filter="window"]')).toBeVisible();
   await page.locator('.sit-reset').click();
   await expect(page.locator('.sit-filter-chip')).toHaveCount(0);
