@@ -109,8 +109,14 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_r
         elif source.is_dir():
             copy_tree(source, target)
     # Dependencies are used only for compilation; no install runs here.
-    for source, target in ((original / "node_modules", site / "node_modules"),
-                           (root / worker / "node_modules", work / worker / "node_modules")):
+    astro_modules = original / "node_modules"
+    worker_modules = root / worker / "node_modules"
+    if not (worker_modules / "esbuild/package.json").is_file():
+        # Minimal release checkouts may not have installed the Pages Worker's
+        # own dependencies. Astro already installs a compatible esbuild copy.
+        worker_modules = astro_modules
+    for source, target in ((astro_modules, site / "node_modules"),
+                           (worker_modules, work / worker / "node_modules")):
         if source.is_dir():
             target.parent.mkdir(parents=True, exist_ok=True)
             target.symlink_to(source.resolve(), target_is_directory=True)

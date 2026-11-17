@@ -10,7 +10,7 @@ if (!Number.isInteger(buildConcurrency) || buildConcurrency < 1 || buildConcurre
 
 // Each parallel prerender worker has its own module cache and parses the full
 // research corpus. Keep a single shared cache unless explicitly configured.
-const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 0);
+const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 4);
 if (!Number.isInteger(renderWorkers) || renderWorkers < 0 || renderWorkers > 32) {
   throw new Error('GIDS_ASTRO_RENDER_WORKERS must be an integer from 0 to 32');
 }
