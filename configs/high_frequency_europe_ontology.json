@@ -36959,7 +36959,7 @@
     {
       "id": "SER_CZ_NATIONAL_MONTHLY_DF9FB39360923BB0E3C3A4EF",
       "source_id": "SRC_CZ_SZU_MONTHLY",
-      "concept_id": "D067",
+      "concept_id": "D007",
       "local_codes": [
         "monthly_df9fb39360923bb0e3c3a4ef"
       ],
@@ -38571,7 +38571,7 @@
     {
       "id": "SER_EE_NATIONAL_MONTHLY_A098C91EDACE73F53092C594",
       "source_id": "SRC_EE_TERVISEAMET_MONTHLY",
-      "concept_id": "D067",
+      "concept_id": "D007",
       "local_codes": [
         "monthly_a098c91edace73f53092c594"
       ],

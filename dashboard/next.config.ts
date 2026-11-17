@@ -7,8 +7,10 @@ const allowedDevOrigins = (process.env.GLOBALID_DASHBOARD_ALLOWED_DEV_ORIGINS ||
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
-  // Report chart option builders are shared with the public Astro site.
-  turbopack: { root: path.resolve(__dirname, "..") },
+  // Report chart option builders are shared with the public Astro site. Use
+  // the stable deployment parent as the project root so release workspaces
+  // can safely reuse the shared node_modules symlink from the active checkout.
+  turbopack: { root: path.resolve(__dirname, "../..") },
   output: "standalone",
   distDir: process.env.GLOBALID_NEXT_DIST_DIR || ".next",
   poweredByHeader: false,

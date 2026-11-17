@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,6 +12,10 @@ from src.ontology import DiseaseOntology, load_disease_ontology
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MAPPING_DIR = ROOT / "configs" / "mapping"
+REVIEW_ONTOLOGY_PATCHES = (
+    "high_frequency_global_ontology.json", "high_frequency_europe_ontology.json",
+    "high_frequency_mexico_ontology.json", "high_frequency_at_ontology.json",
+)
 
 _TARGET_KINDS = {"concept", "group"}
 _RELATIONS = {"exact", "narrower", "broader", "aggregate", "related", "ambiguous", "unmapped"}
@@ -67,6 +72,30 @@ def _display_path(path: Path) -> str:
         return str(path)
 
 
+def load_reviewed_mapping_ontology() -> DiseaseOntology:
+    """Validate reviewed mappings against the base and registered feed overlays.
+
+    Operational source registration is independent from publication admission;
+    a pending source identity may validate CSV rows without enabling its data.
+    """
+    document = load_disease_ontology().to_dict()
+    for name in REVIEW_ONTOLOGY_PATCHES:
+        patch = json.loads((ROOT / "configs" / name).read_bytes())
+        for collection in ("sources", "source_series", "availability"):
+            rows = {row["id"]: row for row in document.get(collection, [])}
+            rows.update({row["id"]: row for row in patch.get(collection, [])})
+            document[collection] = list(rows.values())
+    from src.core.high_frequency_sources import HIGH_FREQUENCY_SOURCES
+    sources = {row["id"]: row for row in document["sources"]}
+    for spec in HIGH_FREQUENCY_SOURCES.values():
+        sources.setdefault(spec.source_id, {
+            "id": spec.source_id, "country_code": spec.country_code,
+            "labels": {"en": spec.label_en}, "legacy_data_sources": [spec.label_en],
+        })
+    document["sources"] = list(sources.values())
+    return DiseaseOntology.from_dict(document)
+
+
 def load_reviewed_source_category_mappings(
     mapping_dir: Path = DEFAULT_MAPPING_DIR,
     *,
@@ -79,7 +108,7 @@ def load_reviewed_source_category_mappings(
     reviewed no-projection group target.
     """
 
-    registry = ontology or load_disease_ontology()
+    registry = ontology or load_reviewed_mapping_ontology()
     document = registry.to_dict()
     concepts = set(registry.concept_ids)
     groups = set(registry.group_ids)
@@ -229,5 +258,6 @@ __all__ = [
     "DEFAULT_MAPPING_DIR",
     "DiseaseMappingConfigError",
     "ReviewedSourceCategoryMapping",
+    "load_reviewed_mapping_ontology",
     "load_reviewed_source_category_mappings",
 ]

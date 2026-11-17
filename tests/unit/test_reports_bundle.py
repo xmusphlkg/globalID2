@@ -8,6 +8,7 @@ from src.services.data_release.reports_bundle import (
     MANIFEST_KEY,
     split_reports_bundle,
 )
+from src.services.data_release.site_research_collections import verify_collection_build
 
 
 def test_split_moves_report_pages_rewrites_shared_links_and_adds_redirects(tmp_path: Path):
@@ -88,6 +89,35 @@ def test_split_moves_report_pages_rewrites_shared_links_and_adds_redirects(tmp_p
     assert (reports / "site-data/reports/index.json").is_file()
     assert next(row for row in manifest["files"] if row["path"] == "site-data/reports/50.json")["url"] == "https://reports.globalinfectiousdisease.com/site-data/reports/50.json"
     assert MANIFEST_KEY == "reports-manifest.json"
+
+
+def test_reports_rewrite_is_bound_to_research_collection_receipt(tmp_path: Path):
+    dist = tmp_path / "dist"
+    reports = tmp_path / "reports-site"
+    (dist / "fr/research/countries/ad").mkdir(parents=True)
+    (dist / "fr/research/countries/ad/index.html").write_text(
+        '<a href="/fr/reports/">Reports</a>', encoding="utf-8",
+    )
+    (dist / "fr/research/index.html").write_text("<html>Research</html>", encoding="utf-8")
+    page = dist / "fr/research/countries/ad/index.html"
+    original = hashlib.sha256(page.read_bytes()).hexdigest()
+    receipt_path = dist / "research-collections-build.json"
+    receipt_path.write_text(json.dumps({
+        "schema": 1, "scope": "collections", "article_pages_rendered": 0,
+        "research_index_sha256": "a" * 64,
+        "pages": {"fr/research/countries/ad/index.html": original},
+    }), encoding="utf-8")
+
+    split_reports_bundle(dist, reports_dir=reports)
+
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    rewrite = receipt["post_build_rewrites"]["fr/research/countries/ad/index.html"][0]
+    assert rewrite["source_sha256"] == original
+    assert rewrite["sha256"] == hashlib.sha256(page.read_bytes()).hexdigest()
+    verified = verify_collection_build(
+        receipt_path, bundle=dist, index_sha256="a" * 64,
+    )
+    assert verified["pages"]["fr/research/countries/ad/index.html"] == rewrite["sha256"]
 
 
 def test_report_asset_mime_types_allow_module_hydration():
