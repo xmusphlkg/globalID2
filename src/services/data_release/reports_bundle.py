@@ -125,6 +125,14 @@ def _rewrite_main_report_directory_links(dist_dir: Path, reports_origin: str) ->
         'href="/zh/reports/"': f'href="{origin}/zh/reports/"',
         'href="/fr/reports/"': f'href="{origin}/fr/reports/"',
     }
+    receipt_path = dist_dir / "research-collections-build.json"
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        receipt = None
+    collection_pages = receipt.get("pages", {}) if isinstance(receipt, dict) else {}
+    rewrites = receipt.setdefault("post_build_rewrites", {}) if isinstance(receipt, dict) else {}
+    changed_receipt = False
     for path in dist_dir.rglob("*.html"):
         body = path.read_text(encoding="utf-8")
         rewritten = body
@@ -132,6 +140,18 @@ def _rewrite_main_report_directory_links(dist_dir: Path, reports_origin: str) ->
             rewritten = rewritten.replace(source, target)
         if rewritten != body:
             path.write_text(rewritten, encoding="utf-8")
+            relative = path.relative_to(dist_dir).as_posix()
+            if relative in collection_pages:
+                chain = rewrites.setdefault(relative, [])
+                chain.append({
+                    "source_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+                    "sha256": hashlib.sha256(rewritten.encode("utf-8")).hexdigest(),
+                })
+                changed_receipt = True
+    if changed_receipt:
+        temporary = receipt_path.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(receipt, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        temporary.replace(receipt_path)
 
 
 def _reports_redirect_rules(report_paths: list[str], reports_origin: str) -> list[str]:

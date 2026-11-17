@@ -28,10 +28,25 @@ def verify_collection_build(path: Path, *, bundle: Path, index_sha256: str, rewr
         except ImmutablePapersError as error:
             raise ValueError(f'Rendered Research collection missing or unsafe: {relative}') from error
         actual = hashlib.sha256(source.read_bytes()).hexdigest()
-        # Papers partitioning rewrites origin references. Its build manifest
-        # binds the renderer's original bytes to the final rewritten bytes.
-        rewrite = (rewritten or {}).get(relative, {})
-        if actual != digest and not (rewrite.get('source_sha256') == digest and rewrite.get('sha256') == actual):
+        # Reports and Papers partitioning can intentionally rewrite links after
+        # collection rendering. Accept only transformations bound by their
+        # source and result hashes, in the order they were applied.
+        expected = digest
+        rewrite_receipts = receipt.get('post_build_rewrites', {})
+        if not isinstance(rewrite_receipts, dict):
+            raise ValueError('Invalid rendered Research collection rewrite receipt')
+        chain = rewrite_receipts.get(relative, [])
+        if not isinstance(chain, list):
+            raise ValueError('Invalid rendered Research collection rewrite receipt')
+        for rewrite in [*chain, (rewritten or {}).get(relative, {})]:
+            if not rewrite:
+                continue
+            if (not isinstance(rewrite, dict) or rewrite.get('source_sha256') != expected
+                    or not isinstance(rewrite.get('sha256'), str)
+                    or not re.fullmatch(r'[a-f0-9]{64}', rewrite['sha256'])):
+                raise ValueError(f'Invalid rendered Research collection rewrite chain: {relative}')
+            expected = rewrite['sha256']
+        if actual != expected:
             raise ValueError(f'Rendered Research collection missing or changed: {relative}')
         verified_pages[relative] = actual
-    return {**receipt, 'pages': verified_pages}
+    return {**receipt, 'pages': verified_pages, 'post_build_rewrites': {}}

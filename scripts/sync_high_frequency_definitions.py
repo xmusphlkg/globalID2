@@ -16,12 +16,12 @@ from src.core.database import get_db, dispose_database
 from src.core.disease_mutation_lock import acquire_country_data_mutation_lock
 from src.core.high_frequency_sources import HIGH_FREQUENCY_SOURCES
 from src.domain import DiseaseSurveillanceSeries
-from src.ontology import load_disease_ontology
+from src.services.disease_mapping_config import load_reviewed_mapping_ontology
 from src.services.disease_ontology_sync_service import build_disease_ontology_sync_payload
 
 
 async def run(*, apply=False):
-    registry = load_disease_ontology()
+    registry = load_reviewed_mapping_ontology()
     source_ids = {item.source_id for item in HIGH_FREQUENCY_SOURCES.values()} | {"SRC_AT_AGES_RADAR"}
     definitions = [row for row in build_disease_ontology_sync_payload(registry).surveillance_series
                    if row["source_system"] in source_ids]

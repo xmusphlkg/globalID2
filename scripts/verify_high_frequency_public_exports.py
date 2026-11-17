@@ -303,16 +303,19 @@ async def verify(args):
     engine = create_async_engine(get_config().database.url)
     releases = set()
     try:
-        for country in sorted({s["country"] for s in specs}):
-            source_specs = [s for s in specs if s["country"] == country]
-            source_ids = {s["source"] for s in source_specs}
-            item = {"country_code": country, "sources": [], "pass": False}
-            try:
-                async with AsyncSession(engine) as db:
-                    await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
-                    await db.execute(text("SET LOCAL statement_timeout = '180s'"))
-                    release = (await db.execute(text("SELECT release_code,checksum FROM disease_mapping_releases_v3 WHERE status='active'"))).mappings().one()
-                    releases.add((release["release_code"], release["checksum"]))
+        # Keep every country inside one repeatable-read transaction.  A new
+        # session per country could observe different active mapping releases
+        # while the background publisher is advancing them.
+        async with AsyncSession(engine) as db:
+            await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
+            await db.execute(text("SET LOCAL statement_timeout = '180s'"))
+            release = (await db.execute(text("SELECT release_code,checksum FROM disease_mapping_releases_v3 WHERE status='active'"))).mappings().one()
+            releases.add((release["release_code"], release["checksum"]))
+            for country in sorted({s["country"] for s in specs}):
+                source_specs = [s for s in specs if s["country"] == country]
+                source_ids = {s["source"] for s in source_specs}
+                item = {"country_code": country, "sources": [], "pass": False}
+                try:
                     query = text("""SELECT s.source_system,s.series_code,s.source_series_code,s.definition_version,
                         s.metric_type,s.reporting_basis,s.temporal_granularity,s.unit,o.unit AS observation_unit,
                         o.time,o.value,o.geography_key,o.dimensions,o.raw_data,o.metadata AS observation_metadata,
@@ -322,48 +325,47 @@ async def verify(args):
                     ledger = [dict(r) for r in (await db.execute(query, {"country": country,"sources": sorted(source_ids)})).mappings()]
                     projected, exported = await fetch_disease_export_layers(db, country, False)
                     exported = [r for r in exported if r.get("source_system") in source_ids]
-                    await db.rollback()
-                expected, excluded, errors = expected_points(country, ledger, series, mappings)
-                # Public projected rows omit per-point source identifiers;
-                # verify contamination through their selected source context.
-                bad_projection = []
-                for source in source_ids:
-                    for row in projected_rows_for_source(projected, exported, source):
-                        if row.get("metric_type") not in CASE_METRICS:
-                            bad_projection.append((source, row.get("disease_id"), row.get("date")))
-                for spec in source_specs:
-                    source = spec["source"]
-                    stored = [r for r in ledger if r["source_system"] == source]
-                    wanted = [r for r in expected if r["source_system"] == source]
-                    found = [r for r in exported if r["source_system"] == source]
-                    selected = projected_rows_for_source(projected, exported, source)
-                    check = compare_points(wanted, found)
-                    source_errors = [e for e in errors if e["source"] == source]
-                    _, source_excluded, _ = expected_points(country, stored, series, mappings)
-                    pending = country == "CO" and (not stored or not wanted or not check["pass"])
-                    status = ("pending_external_integration" if pending else "source_not_ingested" if not stored else
-                              "no_reviewed_numeric_export_expected" if not wanted else "verified" if check["pass"] and not source_errors else "failed")
-                    must_project = source in {"SRC_MX_DGE_WEEKLY", "SRC_MX_DGE_MONTHLY", "SRC_CZ_SZU_MONTHLY", "SRC_EE_TERVISEAMET_MONTHLY", "SRC_AT_AGES_RADAR"}
-                    projection_ok = bool(selected) if must_project else not selected
-                    source_pass = bool(wanted) and check["pass"] and not source_errors and projection_ok
-                    item["sources"].append({**spec, "status": status, "pass": source_pass,
-                        "pending_external_integration": pending, "coverage": coverage(stored),
-                        "export_acceptance": check, "excluded_observations": source_excluded,
-                        "contract_error_count": len(source_errors), "contract_error_sample": source_errors[:3],
-                        "projected_case_points": len(selected), "case_projection_policy_pass": projection_ok})
-                item["projection_contamination_count"] = len(bad_projection)
-                item["projection_contamination_sample"] = bad_projection[:3]
-                item["pass"] = all(s["pass"] or s["pending_external_integration"] for s in item["sources"]) and not bad_projection
-                if args.public_dir:
-                    item["public_json"] = verify_public_files(args.public_dir, country, exported, projected, source_ids)
-                    item["pass"] = item["pass"] and item["public_json"]["pass"]
-            except Exception as exc:
-                item["error"] = f"{type(exc).__name__}: {exc}"
-            report["countries"].append(item)
-            args.receipt.parent.mkdir(parents=True, exist_ok=True)
-            args.receipt.write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str)+"\n")
-            print(json.dumps({"country": country,"pass": item["pass"],"error": item.get("error"),
-                              "sources": [{"source": s["source"],"status": s["status"],"expected": s["export_acceptance"]["expected_points"],"actual": s["export_acceptance"]["actual_points"]} for s in item["sources"]]},ensure_ascii=False),flush=True)
+                    expected, excluded, errors = expected_points(country, ledger, series, mappings)
+                    # Public projected rows omit per-point source identifiers;
+                    # verify contamination through their selected source context.
+                    bad_projection = []
+                    for source in source_ids:
+                        for row in projected_rows_for_source(projected, exported, source):
+                            if row.get("metric_type") not in CASE_METRICS:
+                                bad_projection.append((source, row.get("disease_id"), row.get("date")))
+                    for spec in source_specs:
+                        source = spec["source"]
+                        stored = [r for r in ledger if r["source_system"] == source]
+                        wanted = [r for r in expected if r["source_system"] == source]
+                        found = [r for r in exported if r["source_system"] == source]
+                        selected = projected_rows_for_source(projected, exported, source)
+                        check = compare_points(wanted, found)
+                        source_errors = [e for e in errors if e["source"] == source]
+                        _, source_excluded, _ = expected_points(country, stored, series, mappings)
+                        pending = country == "CO" and (not stored or not wanted or not check["pass"])
+                        status = ("pending_external_integration" if pending else "source_not_ingested" if not stored else
+                                  "no_reviewed_numeric_export_expected" if not wanted else "verified" if check["pass"] and not source_errors else "failed")
+                        must_project = source in {"SRC_MX_DGE_WEEKLY", "SRC_MX_DGE_MONTHLY", "SRC_CZ_SZU_MONTHLY", "SRC_EE_TERVISEAMET_MONTHLY", "SRC_AT_AGES_RADAR"}
+                        projection_ok = bool(selected) if must_project else not selected
+                        source_pass = bool(wanted) and check["pass"] and not source_errors and projection_ok
+                        item["sources"].append({**spec, "status": status, "pass": source_pass,
+                            "pending_external_integration": pending, "coverage": coverage(stored),
+                            "export_acceptance": check, "excluded_observations": source_excluded,
+                            "contract_error_count": len(source_errors), "contract_error_sample": source_errors[:3],
+                            "projected_case_points": len(selected), "case_projection_policy_pass": projection_ok})
+                    item["projection_contamination_count"] = len(bad_projection)
+                    item["projection_contamination_sample"] = bad_projection[:3]
+                    item["pass"] = all(s["pass"] or s["pending_external_integration"] for s in item["sources"]) and not bad_projection
+                    if args.public_dir:
+                        item["public_json"] = verify_public_files(args.public_dir, country, exported, projected, source_ids)
+                        item["pass"] = item["pass"] and item["public_json"]["pass"]
+                except Exception as exc:
+                    item["error"] = f"{type(exc).__name__}: {exc}"
+                report["countries"].append(item)
+                args.receipt.parent.mkdir(parents=True, exist_ok=True)
+                args.receipt.write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str)+"\n")
+                print(json.dumps({"country": country,"pass": item["pass"],"error": item.get("error"),
+                                  "sources": [{"source": s["source"],"status": s["status"],"expected": s["export_acceptance"]["expected_points"],"actual": s["export_acceptance"]["actual_points"]} for s in item["sources"]]},ensure_ascii=False),flush=True)
     finally:
         await engine.dispose()
     report["mapping_releases"] = sorted(releases)
