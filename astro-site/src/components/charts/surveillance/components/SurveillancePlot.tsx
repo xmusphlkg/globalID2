@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import EChartsReact from "../../../../lib/echartsReact";
 import echarts from "../../../../lib/echartsSurveillance";
 import { useChartTheme } from "../../chartPreferences";
@@ -63,6 +63,7 @@ interface Props {
   catalog: Catalog;
   lang: Language;
   panelPage: number;
+  fullscreen?: boolean;
   onWindow: (window: DateWindow) => void;
 }
 export default function SurveillancePlot({
@@ -70,12 +71,18 @@ export default function SurveillancePlot({
   catalog,
   lang,
   panelPage,
+  fullscreen = false,
   onWindow,
 }: Props) {
   const theme = useChartTheme();
   const ref = useRef<any>(null);
   const plotRef = useRef<HTMLDivElement>(null);
+  const [plotHeight, setPlotHeight] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const panels = [...new Set(result.lines.map((line) => line.panelId))];
+  const visiblePanels = panels.slice(panelPage * 4, panelPage * 4 + 4);
+  const visible = result.lines.filter((line) => visiblePanels.includes(line.panelId));
+  const hasVisibleLines = visible.length > 0;
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current);
@@ -88,7 +95,10 @@ export default function SurveillancePlot({
     let frame = 0;
     const resize = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => ref.current?.getEchartsInstance?.()?.resize());
+      frame = requestAnimationFrame(() => {
+        setPlotHeight(plot.clientHeight);
+        ref.current?.getEchartsInstance?.()?.resize();
+      });
     };
     const observer = new ResizeObserver(resize);
     observer.observe(plot);
@@ -98,11 +108,9 @@ export default function SurveillancePlot({
       document.removeEventListener("fullscreenchange", resize);
       cancelAnimationFrame(frame);
     };
-  }, []);
-  const panels = [...new Set(result.lines.map((line) => line.panelId))];
-  const visiblePanels = panels.slice(panelPage * 4, panelPage * 4 + 4);
-  const visible = result.lines.filter((line) => visiblePanels.includes(line.panelId));
-  const height = Math.max(360, visiblePanels.length * 205 + 90);
+  }, [hasVisibleLines]);
+  const minHeight = Math.max(360, visiblePanels.length * 205 + 90);
+  const height = fullscreen ? Math.max(minHeight, plotHeight) : minHeight;
   const option = useMemo(() => {
     const dark = theme === "dark";
     const ink = dark ? "#a4b1c1" : "#556070",
@@ -309,7 +317,7 @@ export default function SurveillancePlot({
             ],
       series,
     };
-  }, [result, catalog, lang, theme, panelPage]);
+  }, [result, catalog, lang, theme, panelPage, height]);
   const events = useMemo(
     () => ({
       datazoom: () => {
@@ -361,6 +369,7 @@ export default function SurveillancePlot({
     <div
       ref={plotRef}
       className="surveillance-plot"
+      style={{ height: fullscreen ? undefined : minHeight, minHeight }}
       data-testid="surveillance-plot"
       aria-label={label("chart", lang)}
     >
@@ -370,7 +379,7 @@ export default function SurveillancePlot({
         option={option}
         notMerge
         onEvents={events}
-        style={{ height, width: "100%" }}
+        style={{ height: "100%", width: "100%" }}
         opts={{ renderer: "canvas" }}
       />
     </div>

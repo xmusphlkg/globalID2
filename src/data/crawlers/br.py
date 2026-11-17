@@ -17,7 +17,7 @@ import tempfile
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -85,6 +85,7 @@ SINAN_DISEASE_PREFIXES: Dict[str, str] = {
     "NTRA": "Trachoma survey positive cases",
     "PAIR": "Noise-induced hearing loss",
     "PEST": "Plague",
+    "PFA": "Acute flaccid paralysis",
     "PFAN": "Acute flaccid paralysis",
     "PNEU": "Pneumoconiosis",
     "RAIV": "Rabies",
@@ -209,20 +210,53 @@ def parse_ftp_listing(
     return files
 
 
-def _deduplicate_sinan_file_aliases(files: Iterable[SINANFile]) -> List[SINANFile]:
-    """Prefer the current ``LERD`` filename when its legacy ``LER`` alias exists.
+class SINANAliasConflictError(ValueError):
+    """Official alias chronology is ambiguous; a cached snapshot cannot resolve it."""
 
-    DATASUS can expose both names for the same annual work-related repetitive
-    strain injury extract.  Keeping both would download and count that file
-    twice.  Years that only publish the legacy name are left untouched.
+
+def _deduplicate_sinan_file_aliases(files: Iterable[SINANFile]) -> List[SINANFile]:
+    """Select one annual extract for verified filename aliases.
+
+    PFA/PFAN are overlapping revisions of acute-flaccid-paralysis notifications,
+    not two additive sources or confirmed polio counts. Preserve PFAN's category
+    identity and the selected original filename/URL. Final files outrank
+    preliminary copies; otherwise official modification times select a revision.
     """
     materialized = list(files)
     lerd_years = {item.year for item in materialized if item.prefix == "LERD"}
-    return [
-        item
-        for item in materialized
-        if not (item.prefix == "LER" and item.year in lerd_years)
-    ]
+    paralysis_by_year: Dict[int, List[SINANFile]] = defaultdict(list)
+    for item in materialized:
+        if item.prefix in {"PFA", "PFAN"}:
+            paralysis_by_year[item.year].append(item)
+    selected = {}
+    for year, candidates in paralysis_by_year.items():
+        candidates = list(dict.fromkeys(candidates))
+        final = [item for item in candidates if item.dataset_status == "final"]
+        eligible = final or candidates
+        if len(eligible) > 1:
+            if any(item.modified_at is None for item in eligible):
+                raise SINANAliasConflictError(f"PFA/PFAN {year}: official modification time is required")
+            latest = max(item.modified_at for item in eligible)
+            eligible = [item for item in eligible if item.modified_at == latest]
+            if len(eligible) != 1:
+                raise SINANAliasConflictError(f"PFA/PFAN {year}: conflicting files share the latest modification time")
+        selected[year] = eligible[0]
+    result = []
+    seen_paralysis_years = set()
+    for item in materialized:
+        if item.prefix == "LER" and item.year in lerd_years:
+            continue
+        if item.prefix in {"PFA", "PFAN"}:
+            if item.year in seen_paralysis_years:
+                continue
+            seen_paralysis_years.add(item.year)
+            result.append(replace(
+                selected[item.year], prefix="PFAN",
+                disease_name=SINAN_DISEASE_PREFIXES["PFAN"],
+            ))
+        else:
+            result.append(item)
+    return result
 
 
 def _parse_record_date(value: object) -> Optional[date]:
@@ -905,6 +939,8 @@ class BrazilSINANCrawler(BaseCrawler):
         }
         if "LER" in requested_prefixes:
             requested_prefixes.add("LERD")
+        if "PFA" in requested_prefixes:
+            requested_prefixes.add("PFAN")
 
         candidate_files = [
             item

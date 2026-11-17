@@ -90,9 +90,8 @@ async def test_scoped_sync_preserves_existing_standard_definition() -> None:
 
 
 def _current_series_rows() -> list[dict[str, str]]:
-    ontology = json.loads(
-        (ROOT / "configs" / "disease_ontology.json").read_text(encoding="utf-8")
-    )
+    from src.ontology import read_ontology_document
+    ontology = read_ontology_document(ROOT / "configs" / "disease_ontology.json")
     return [
         {
             "series_code": row["id"],

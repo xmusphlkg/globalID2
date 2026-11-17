@@ -41,7 +41,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
       </div>
 
       <div class="coverage-map-toolbar">
-        <div class="coverage-legend" role="list" aria-label={pick('Map legend', '地图图例')}>
+        <div class="coverage-legend" role="list" tabindex="0" aria-label={pick('Map legend', '地图图例')}>
           <span class="coverage-legend-item" role="listitem">
             <span class="coverage-legend-dot coverage-legend-supported"></span>
             <span>{pick('Top-level area supported', '上级区域已支持')}</span>
@@ -250,6 +250,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
   gap: .35rem 1rem;
 }
 
+.coverage-legend:focus-visible { outline: 2px solid rgb(var(--text-strong)); outline-offset: 4px; }
 .coverage-legend-item {
   display: inline-flex;
   align-items: center;

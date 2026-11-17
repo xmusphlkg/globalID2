@@ -305,15 +305,15 @@ def build_country_data(
 
     heatmap_z = []
     for did in heatmap_diseases:
-        month_totals: dict[str, int] = defaultdict(int)
+        month_totals: dict[str, int | float] = defaultdict(int)
         for rec in heatmap_records_by_disease[did]:
             ym = rec.get("year_month")
-            if ym:
-                month_totals[ym] += rec.get("cases") or 0
+            if ym and rec.get("cases") is not None:
+                month_totals[ym] += rec["cases"]
         row_z = []
         for month in all_months:
-            cases = month_totals.get(month, 0)
-            row_z.append(math.log10(cases + 1))  # log scale
+            cases = month_totals.get(month)
+            row_z.append(math.log10(cases + 1) if cases is not None else None)
         heatmap_z.append(row_z)
 
     heatmap_labels = [disease_series[d]["name_en"] for d in heatmap_diseases]
@@ -486,12 +486,15 @@ def _heatmap_from_published_series(disease_series: dict[str, dict]) -> dict:
     heatmap_z = []
     for disease_id in diseases:
         series = eligible[disease_id]
-        month_totals: dict[str, int] = defaultdict(int)
+        month_totals: dict[str, int | float] = defaultdict(int)
         for value_date, cases in zip(series.get("dates") or [], series.get("cases") or []):
-            if not value_date:
+            if not value_date or cases is None:
                 continue
-            month_totals[str(value_date)[:7]] += cases or 0
-        heatmap_z.append([math.log10(month_totals.get(month, 0) + 1) for month in months])
+            month_totals[str(value_date)[:7]] += cases
+        heatmap_z.append([
+            math.log10(month_totals[month] + 1) if month in month_totals else None
+            for month in months
+        ])
     return {
         "diseases": diseases,
         "disease_labels": [eligible[disease_id].get("name_en") for disease_id in diseases],

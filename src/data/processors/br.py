@@ -24,6 +24,7 @@ from src.data.crawlers.br import (
     DEFAULT_HISTORY_START_YEAR,
     BRFetchSummary,
     BrazilSINANCrawler,
+    SINANAliasConflictError,
 )
 from src.data.processors.mapping_lookup import (
     load_country_mapping_dict,
@@ -88,6 +89,17 @@ def _parse_date(row: Dict[str, str]) -> Optional[date]:
     if year is not None and month is not None and 1 <= month <= 12:
         return date(year, month, 1)
     return None
+
+
+def discard_superseded_paralysis_snapshot_rows(prior, live):
+    """A verified current PFAN row replaces the cached PFA filename alias too.
+
+    Uncovered cached dates remain available for explicit recovery. This never
+    combines notifications from overlapping releases or fabricates missing dates.
+    """
+    current_dates = {row.get("Date") for row in live if row.get("DiseaseCode") == "PFAN"}
+    return [row for row in prior
+            if not (row.get("DiseaseCode") == "PFA" and row.get("Date") in current_dates)]
 
 
 class BRMonthlyUpdater:
@@ -286,6 +298,8 @@ class BRMonthlyUpdater:
             else:
                 source_rows = []
             live_rows = self._filter_rows_for_months(source_rows, requested_months)
+        except SINANAliasConflictError:
+            raise
         except Exception as exc:
             live_error = exc
             logs.append(f"[crawler] live fetch failed: {type(exc).__name__}: {exc}")
@@ -295,20 +309,24 @@ class BRMonthlyUpdater:
             requested_months,
         )
 
-        candidates: List[Tuple[str, List[Dict[str, str]], int]] = []
-        if live_rows:
-            candidates.append(("live fetch", live_rows, 1))
-        if prior_candidate:
-            candidates.append(("previous CSV snapshot", prior_candidate, 0))
-
-        if not candidates:
+        if not live_rows and not prior_candidate:
             if live_error is not None:
                 raise live_error
             raise RuntimeError("BR crawler produced no usable rows")
 
-        selected_label, rows, _ = max(candidates, key=lambda item: (len(item[1]), item[2]))
-        if selected_label != "live fetch":
-            logs.append(f"[recovery] using {selected_label} with {len(rows)} rows")
+        from src.services.ingestion.snapshot_merge import merge_snapshot_rows
+
+        prior_candidate = discard_superseded_paralysis_snapshot_rows(prior_candidate, live_rows)
+        if prior_candidate:
+            rows, merge_audit = merge_snapshot_rows(live_rows, prior_candidate)
+        else:
+            # Preserve the live-source contract when there is no snapshot to
+            # merge; source quality validation remains the importer's job.
+            rows = live_rows
+            merge_audit = {"policy": "live_source_without_snapshot_merge",
+                           "live_rows": len(rows), "prior_rows": 0}
+        if not live_rows:
+            logs.append(f"[recovery] using previous CSV snapshot with {len(rows)} rows")
             if prior_latest is not None and prior_months_covered < len(requested_months):
                 logs.append(
                     f"[recovery] previous CSV covers {prior_months_covered}/{len(requested_months)} "
@@ -320,6 +338,7 @@ class BRMonthlyUpdater:
             source_latest_date=self._latest_row_date(rows),
             source_csv=self.output_csv,
             script_logs=logs,
+            source_audit=[merge_audit],
         )
 
     def _write_rows_to_output_csv(self, rows: List[Dict[str, str]]) -> None:

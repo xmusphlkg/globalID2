@@ -10,7 +10,7 @@ test('searchable filters keep keyboard focus and expose the scrollable listbox a
   await page.route('**/situation/map-data.json', route => route.fulfill({ json: map }));
   await page.route('**/situation/outbreaks/**', route => route.fulfill({ json: outbreak }));
   await page.goto('/situation/?disease=D049&window=all');
-  await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
   const listToggle = page.locator('.sit-bar-links button');
   if (await listToggle.getAttribute('aria-pressed') === 'false') await listToggle.click();
 
@@ -37,12 +37,12 @@ test('searchable filters keep keyboard focus and expose the scrollable listbox a
 
   await disease.fill('D049');
   await disease.press('Enter');
-  await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
   await disease.fill('unmatched search');
   await expect(page.getByRole('option')).toHaveCount(0);
   await disease.press('Escape');
   await expect(disease).toHaveAttribute('aria-expanded', 'false');
   await expect(disease).toBeFocused();
-  await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
   await expect.poll(() => new URL(page.url()).searchParams.get('disease')).toBe('D049');
 });

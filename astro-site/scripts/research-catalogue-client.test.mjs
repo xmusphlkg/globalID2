@@ -171,3 +171,143 @@ test('Ask skips bibliography-only chunks while the full catalogue and legacy chu
     assert.deepEqual((await loadResearchCatalogue({includeBibliographic:true})).map(x=>x.article_id),['reviewed','bibliographic','legacy']);
   } finally { globalThis.fetch=originalFetch; }
 });
+
+const nextTurn = () => new Promise(resolve => setImmediate(resolve));
+function deferred() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+test('cancelled callers stop before fetching or while waiting for a shared manifest', async () => {
+  const { loadResearchCatalogue } = await import('../src/lib/research-catalogue-client.ts?abort-manifest');
+  const originalFetch = globalThis.fetch, requests = [], manifest = deferred();
+  const chunks = [{ path: '/after-manifest.json', count: 1 }];
+  globalThis.fetch = async path => {
+    requests.push(path);
+    if (path === '/research/catalogue/manifest.json') return manifest.promise;
+    return { ok: true, json: async () => ({ articles: [{ article_id: path }] }) };
+  };
+  try {
+    const before = new AbortController(); before.abort();
+    await assert.rejects(loadResearchCatalogue({ signal: before.signal }), { name: 'AbortError' });
+    assert.deepEqual(requests, []);
+    const during = new AbortController();
+    const old = loadResearchCatalogue({ signal: during.signal });
+    const rejected = assert.rejects(old, { name: 'AbortError' });
+    const current = loadResearchCatalogue();
+    during.abort();
+    await rejected;
+    assert.deepEqual(requests, ['/research/catalogue/manifest.json']);
+    manifest.resolve({ ok: true, json: async () => ({ chunks }) });
+    assert.deepEqual((await current).map(row => row.article_id), ['/after-manifest.json']);
+    assert.equal(requests.length, 2, 'cancelling the manifest waiter does not invalidate the shared fetch');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('changing filters abandons the old catalogue after its current batch and lets the new filter finish', async () => {
+  const { loadResearchCatalogue, researchCatalogueConcurrency } = await import('../src/lib/research-catalogue-client.ts?abort-filter');
+  const originalFetch = globalThis.fetch, requests = [], progress = [], gates = new Map();
+  const chunks = Array.from({ length: 14 }, (_, index) => ({ path: `/abort-filter-${index}.json`, count: 1, facets: { country: [index < 12 ? 'old' : 'new'] } }));
+  globalThis.fetch = async (path, options) => {
+    if (path.endsWith('manifest.json')) return { ok: true, json: async () => ({ chunks }) };
+    assert.equal(options?.signal, undefined, 'shared chunk fetches do not receive a caller signal');
+    requests.push(path);
+    if (chunks.findIndex(chunk => chunk.path === path) < 12) {
+      const gate = deferred(); gates.set(path, gate); await gate.promise;
+    }
+    return { ok: true, json: async () => ({ articles: [{ article_id: path }] }) };
+  };
+  try {
+    const controller = new AbortController();
+    const old = loadResearchCatalogue({ facets: { country: 'old' }, signal: controller.signal, onProgress: event => progress.push(event) });
+    const rejected = assert.rejects(old, { name: 'AbortError' });
+    await nextTurn();
+    assert.equal(requests.length, researchCatalogueConcurrency);
+    controller.abort();
+    await rejected; // Cancellation is immediate even when shared requests are still pending.
+    const current = loadResearchCatalogue({ facets: { country: 'new' } });
+    for (const gate of gates.values()) gate.resolve();
+    assert.deepEqual((await current).map(row => row.article_id), chunks.slice(12).map(chunk => chunk.path));
+    await nextTurn();
+    assert.equal(requests.filter(path => chunks.slice(0, 12).some(chunk => chunk.path === path)).length, researchCatalogueConcurrency);
+    assert.deepEqual(progress.map(event => event.completed), [0], 'abandoned calls emit no later progress');
+  } finally { for (const gate of gates.values()) gate.resolve(); globalThis.fetch = originalFetch; }
+});
+
+test('cancelling one overlapping caller preserves shared chunks for the caller still using them', async () => {
+  const { loadResearchCatalogue } = await import('../src/lib/research-catalogue-client.ts?abort-shared');
+  const originalFetch = globalThis.fetch, requests = [], firstBatch = deferred();
+  const chunks = Array.from({ length: 10 }, (_, index) => ({ path: `/abort-shared-${index}.json`, count: 1 }));
+  globalThis.fetch = async path => {
+    if (path.endsWith('manifest.json')) return { ok: true, json: async () => ({ chunks }) };
+    requests.push(path);
+    if (chunks.findIndex(chunk => chunk.path === path) < 4) await firstBatch.promise;
+    return { ok: true, json: async () => ({ articles: [{ article_id: path }] }) };
+  };
+  try {
+    const controller = new AbortController();
+    const old = loadResearchCatalogue({ signal: controller.signal });
+    const rejected = assert.rejects(old, { name: 'AbortError' });
+    const current = loadResearchCatalogue();
+    await nextTurn();
+    assert.equal(requests.length, 4);
+    controller.abort(); await rejected;
+    firstBatch.resolve();
+    assert.deepEqual((await current).map(row => row.article_id), chunks.map(chunk => chunk.path));
+    assert.equal(requests.length, chunks.length, 'the surviving caller never refetches shared chunks');
+    assert.equal(new Set(requests).size, chunks.length);
+  } finally { firstBatch.resolve(); globalThis.fetch = originalFetch; }
+});
+
+test('a failed chunk stops sibling workers from scanning the remaining catalogue and permits retry', async () => {
+  const { loadResearchCatalogue } = await import('../src/lib/research-catalogue-client.ts?fail-stop');
+  const originalFetch = globalThis.fetch, requests = [], gates = new Map(), progress = [];
+  const chunks = Array.from({ length: 13 }, (_, index) => ({ path: `/fail-stop-${index}.json`, count: 1 }));
+  let firstAttempt = true;
+  globalThis.fetch = async path => {
+    if (path.endsWith('manifest.json')) return { ok: true, json: async () => ({ chunks }) };
+    requests.push(path);
+    if (firstAttempt) {
+      const gate = deferred(); gates.set(path, gate);
+      await gate.promise;
+      if (path === chunks[0].path) return { ok: false, status: 503 };
+    }
+    return { ok: true, json: async () => ({ articles: [{ article_id: path }] }) };
+  };
+  try {
+    const failed = assert.rejects(loadResearchCatalogue({ onProgress: event => progress.push(event) }), /503/);
+    await nextTurn();
+    assert.equal(requests.length, 4);
+    gates.get(chunks[0].path).resolve();
+    await failed;
+    for (const gate of gates.values()) gate.resolve();
+    await nextTurn();
+    assert.equal(requests.length, 4, 'a failed call never schedules the rest of the catalogue');
+    assert.deepEqual(progress.map(event => event.completed), [0]);
+    firstAttempt = false;
+    assert.deepEqual((await loadResearchCatalogue()).map(row => row.article_id), chunks.map(chunk => chunk.path));
+    assert.equal(requests.length, chunks.length + 1, 'retry reuses successful chunks and retries the failed chunk');
+  } finally { for (const gate of gates.values()) gate.resolve(); globalThis.fetch = originalFetch; }
+});
+
+test('Ask forwards cancellation to catalogue scanning without loading the remaining chunks', async () => {
+  const { loadResearchQuestionCatalogue } = await import('../src/lib/research-catalogue-client.ts?abort-question');
+  const originalFetch = globalThis.fetch, requests = [], firstBatch = deferred();
+  const chunks = Array.from({ length: 9 }, (_, index) => ({ path: `/abort-question-${index}.json`, count: 1 }));
+  globalThis.fetch = async path => {
+    if (path.endsWith('entities.json')) return { ok: true, json: async () => ({ entities: [] }) };
+    if (path.endsWith('manifest.json')) return { ok: true, json: async () => ({ chunks }) };
+    requests.push(path); await firstBatch.promise;
+    return { ok: true, json: async () => ({ articles: [{ article_id: path }] }) };
+  };
+  try {
+    const controller = new AbortController();
+    const rejected = assert.rejects(loadResearchQuestionCatalogue('unknown query', { signal: controller.signal }), { name: 'AbortError' });
+    await nextTurn();
+    assert.equal(requests.length, 4);
+    controller.abort(); await rejected;
+    firstBatch.resolve(); await nextTurn();
+    assert.equal(requests.length, 4);
+  } finally { firstBatch.resolve(); globalThis.fetch = originalFetch; }
+});

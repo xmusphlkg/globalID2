@@ -48,6 +48,16 @@ function reportDocument(report: unknown): Record<string, unknown> | null {
   return value.report_document_v4 ?? value.metadata?.report_document_v4 ?? value;
 }
 
+/** Use the existing localized report text on cards as well as detail pages. */
+export function localizedReportText(report: unknown, field: 'title' | 'summary', locale: 'en' | 'zh' | 'fr'): string | null {
+  const document = reportDocument(report);
+  const value = document?.[field];
+  const localized = value && typeof value === 'object' ? (value as Record<string, unknown>)[locale] : undefined;
+  if (typeof localized === 'string' && localized.trim()) return localized;
+  const direct = report && typeof report === 'object' ? (report as Record<string, unknown>)[`${field}_${locale}`] : undefined;
+  return typeof direct === 'string' && direct.trim() ? direct : null;
+}
+
 export function reportDiseaseSlugs(report: unknown): string[] {
   const document = reportDocument(report);
   const directory = Array.isArray(document?.disease_directory)

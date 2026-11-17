@@ -289,7 +289,7 @@ def build_country_site_data(country_data: dict) -> dict:
             "months": heatmap.get("months") or [],
             "disease_ids": heatmap.get("diseases") or [],
             "z": [
-                [round(float(value), 4) for value in row]
+                [round(float(value), 4) if value is not None else None for value in row]
                 for row in (heatmap.get("z") or [])
             ],
         },

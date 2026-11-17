@@ -3,7 +3,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.literature.reclassification import _automatic_relation, candidate_from_stored_article
+from src.literature.reclassification import (
+    _automatic_relation,
+    candidate_from_stored_article,
+)
 
 
 def test_automatic_signal_relation_upgrades_when_reclassification_adds_signal_country():
@@ -43,8 +46,10 @@ def test_stored_article_candidate_preserves_source_evidence_and_normalizes_utc()
 
 async def _maintenance_database():
     from contextlib import asynccontextmanager
-    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
     from sqlalchemy.pool import StaticPool
+
     from src.domain import Base
     engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
     async with engine.begin() as connection:
@@ -65,13 +70,128 @@ async def _maintenance_database():
     return engine, database
 
 
+async def test_scoped_sars_repair_reports_removals_and_dry_run_preserves_published_record(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from sqlalchemy import select
+
+    from src.core.config import LiteratureSettings
+    from src.domain import LiteratureArticle, LiteratureDiseaseLink
+    from src.literature import reclassification as service
+    from src.literature.classification import CLASSIFICATION_VERSION
+
+    engine, database = await _maintenance_database()
+    doi = "10.1016/j.cmi.2022.01.033"
+    async with database() as db:
+        db.add(LiteratureArticle(
+            id=1, article_id="covid-study", slug="covid-study", doi=doi,
+            title="Length of hospital stay among COVID-19 patients in Norway",
+            abstract_text="We analyzed SARS-CoV-2-positive patients.",
+            publication_status="published",
+            source_payload={"europe_pmc": {"keywordList": {"keyword": ["SARS-CoV-2"]}}},
+            metadata_={"classification_version": CLASSIFICATION_VERSION - 1, "editorial_locked": True},
+        ))
+        for disease in ("D003", "D004"):
+            db.add(LiteratureDiseaseLink(article_id="covid-study", disease_id=disease, confidence=0.98))
+    monkeypatch.setattr(service, "get_db", database)
+    monkeypatch.setattr(service, "get_config", lambda: SimpleNamespace(literature=LiteratureSettings()))
+    monkeypatch.setattr(service.LiteraturePipeline, "_classification_catalogues", AsyncMock(return_value=([
+        {"disease_id": "D003", "name_en": "SARS"},
+        {"disease_id": "D004", "name_en": "COVID-19", "aliases": ["SARS-CoV-2"]},
+    ], [])))
+    monkeypatch.setattr(service, "_load_json", lambda path: {})
+    try:
+        dry_run = await service.reclassify_existing_literature(dry_run=True, dois=[doi])
+        assert dry_run["examined"] == dry_run["changed"] == dry_run["diseases_removed"] == 1
+        assert dry_run["diseases_added"] == 0
+        async with database() as db:
+            links = (await db.execute(select(LiteratureDiseaseLink))).scalars().all()
+            assert {link.disease_id for link in links} == {"D003", "D004"}
+            article = (await db.execute(select(LiteratureArticle))).scalar_one()
+            assert article.metadata_["classification_version"] == CLASSIFICATION_VERSION - 1
+
+        applied = await service.reclassify_existing_literature(dois=[doi])
+        assert applied["diseases_removed"] == 1
+        async with database() as db:
+            links = (await db.execute(select(LiteratureDiseaseLink))).scalars().all()
+            assert {link.disease_id for link in links} == {"D004"}
+            article = (await db.execute(select(LiteratureArticle))).scalar_one()
+            assert article.metadata_["classification_version"] == CLASSIFICATION_VERSION
+            assert article.publication_status == "published"
+            assert article.metadata_["editorial_locked"] is True
+            assert article.abstract_text == "We analyzed SARS-CoV-2-positive patients."
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.parametrize("parallel", [False, True])
+async def test_published_stale_batches_skip_current_and_private_records(monkeypatch, parallel):
+    from concurrent.futures import ThreadPoolExecutor
+    from unittest.mock import AsyncMock
+
+    from sqlalchemy import select
+
+    from src.core.config import LiteratureSettings
+    from src.domain import LiteratureArticle
+    from src.literature import reclassification as service
+    from src.literature.classification import CLASSIFICATION_VERSION
+
+    engine, database = await _maintenance_database()
+    async with database() as db:
+        for number, status, version in [(1, "published", 5), (2, "review", 5),
+                                        (3, "published", CLASSIFICATION_VERSION), (4, "published", None)]:
+            db.add(LiteratureArticle(id=number, article_id=f"paper-{number}", slug=f"paper-{number}",
+                title="COVID-19 study", publication_status=status, source_payload={},
+                metadata_={"classification_version": version, "editorial_locked": True}))
+    monkeypatch.setattr(service, "get_db", database)
+    monkeypatch.setattr(service, "get_config", lambda: SimpleNamespace(literature=LiteratureSettings()))
+    monkeypatch.setattr(service.LiteraturePipeline, "_classification_catalogues", AsyncMock(return_value=([
+        {"disease_id": "D004", "name_en": "COVID-19"},
+    ], [])))
+    monkeypatch.setattr(service, "_load_json", lambda path: {})
+    reconcile = AsyncMock()
+    monkeypatch.setattr(service, "reconcile_automatic_signal_links", reconcile)
+    executor = ThreadPoolExecutor(max_workers=2) if parallel else None
+    try:
+        dry = await service.reclassify_existing_literature(dry_run=True, published_only=True, stale_only=True, limit=1, executor=executor)
+        assert dry["examined"] == 1 and dry["next_after_id"] == 1
+        first = await service.reclassify_existing_literature(published_only=True, stale_only=True, limit=1, executor=executor)
+        assert first["examined"] == 1 and first["next_after_id"] == 1
+        second = await service.reclassify_existing_literature(published_only=True, stale_only=True, after_id=1, limit=1, executor=executor)
+        assert second["examined"] == 1 and second["next_after_id"] == 4
+        empty = await service.reclassify_existing_literature(published_only=True, stale_only=True, after_id=4, limit=1)
+        assert empty["examined"] == 0
+        reconcile.assert_not_awaited()
+        async with database() as db:
+            rows = (await db.execute(select(LiteratureArticle).order_by(LiteratureArticle.id))).scalars().all()
+            assert [row.metadata_["classification_version"] for row in rows] == [CLASSIFICATION_VERSION, 5, CLASSIFICATION_VERSION, CLASSIFICATION_VERSION]
+            assert [row.publication_status for row in rows] == ["published", "review", "published", "published"]
+            assert all(row.metadata_["editorial_locked"] for row in rows)
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            await service.reclassify_existing_literature(published_only=True, excluded_only=True)
+    finally:
+        if executor:
+            executor.shutdown()
+        await engine.dispose()
+
+
 @pytest.mark.parametrize("operation", ["classification", "signal_links"])
 @pytest.mark.parametrize("fail_marker", [False, True])
 async def test_reclassification_public_writes_and_marker_share_transaction(monkeypatch, operation, fail_marker):
     from unittest.mock import AsyncMock
+
     from sqlalchemy import select
+
     from src.core.config import LiteratureSettings
-    from src.domain import LiteratureArticle, LiteratureEvidenceGap, LiteratureSignalArticleLink, LiteratureDiseaseLink, LiteratureCountryLink, LiteratureTopicLink, Task
+    from src.domain import (
+        LiteratureArticle,
+        LiteratureCountryLink,
+        LiteratureDiseaseLink,
+        LiteratureEvidenceGap,
+        LiteratureSignalArticleLink,
+        LiteratureTopicLink,
+        Task,
+    )
     from src.domain.collection import PublishDirty, RunStage
     from src.literature import reclassification as service
     from src.literature.types import Classification, Match

@@ -432,6 +432,8 @@
   width: 100%;
 }
 .surveillance-explorer.is-fullscreen {
+  display: flex;
+  flex-direction: column;
   width: 100vw;
   height: 100vh;
   max-width: none;
@@ -440,11 +442,37 @@
   padding: clamp(16px, 2vw, 32px);
   background: rgb(var(--bg));
 }
+.surveillance-explorer.is-fullscreen > * {
+  flex: 0 0 auto;
+}
+.surveillance-explorer.is-fullscreen > .surveillance-workspace {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: stretch;
+}
+.surveillance-explorer.is-fullscreen .surveillance-result,
+.surveillance-explorer.is-fullscreen .surveillance-result > [role="tabpanel"] {
+  display: flex;
+  flex-direction: column;
+}
+.surveillance-explorer.is-fullscreen .surveillance-result > *,
+.surveillance-explorer.is-fullscreen .surveillance-result > [role="tabpanel"] > :not(.surveillance-plot) {
+  flex: 0 0 auto;
+}
+.surveillance-explorer.is-fullscreen .surveillance-result > [role="tabpanel"] {
+  flex: 1 0 auto;
+}
 .surveillance-explorer.is-fullscreen .surveillance-picker-desktop {
   max-height: calc(100vh - 260px);
 }
 .surveillance-explorer.is-fullscreen .surveillance-plot {
-  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+.surveillance-explorer.is-fullscreen .surveillance-plot > .echarts-for-react {
+  flex: 1 1 0;
+  min-height: 0;
 }
 .surveillance-picker-dialog {
   width: min(92vw, 480px);

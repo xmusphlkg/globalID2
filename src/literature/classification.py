@@ -9,23 +9,37 @@ why a relationship was created.
 
 from __future__ import annotations
 
+import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
-import re
-from typing import Any, Iterable
+from typing import Any
 
 import pycountry
 
 from .types import ArticleCandidate, Classification, Match
 
-
-CLASSIFICATION_VERSION = 5
+CLASSIFICATION_VERSION = 6
 _NON_CONCEPT_DISEASE_IDS = {"D999"}
 _NON_CONCEPT_DISEASE_NAMES = {"all", "other", "total", "unknown", "unspecified"}
 _AMBIGUOUS_COUNTRY_TERMS = {"congo", "korea"}
 _SPACE_RE = re.compile(r"\s+")
 _CJK_RE = re.compile(r"[\u3400-\u9fff\uf900-\ufaff]")
+# These names contain another entity's alias but do not establish that entity.
+# Mask only the longer name, so independent SARS or country mentions survive.
+_DISEASE_EXCLUDED_MENTIONS = {
+    "D003": re.compile(
+        r"\b(?:sars[\s\-\u2010-\u2015]*cov|sars[\s\-\u2010-\u2015]+coronavirus|"
+        r"severe\s+acute\s+respiratory\s+syndrome[\s\-\u2010-\u2015]+coronavirus)"
+        r"[\s\-\u2010-\u2015]*2\b",
+        re.IGNORECASE,
+    ),
+}
+_COUNTRY_EXCLUDED_MENTIONS = {
+    "NO": re.compile(r"\bnorway[\s\-]+rats?\b", re.IGNORECASE),
+    "GN": re.compile(r"\bguinea[\s\-]+pigs?\b", re.IGNORECASE),
+}
 _SEMANTIC_MIN_SCORES = {
     "europe_pmc.mesh": 0.0,
     "europe_pmc.keyword": 0.0,
@@ -74,9 +88,17 @@ class _EvidenceHit:
 
 
 def _compact(value: Any, *, limit: int = 180) -> str:
-    return _SPACE_RE.sub(" ", str(value or "")).strip()[:limit]
+    return _compact_string(str(value or ""), limit)
 
 
+@lru_cache(maxsize=32768)
+def _compact_string(value: str, limit: int) -> str:
+    # Catalogue aliases and provider subject labels are reused thousands of
+    # times within a batch. Cache the pure normalization, with bounded memory.
+    return _SPACE_RE.sub(" ", value).strip()[:limit]
+
+
+@lru_cache(maxsize=32768)
 def _is_short_acronym(term: str) -> bool:
     letters = re.sub(r"[^A-Za-z0-9]", "", term)
     return 2 <= len(letters) <= 3 and letters.isupper()
@@ -85,6 +107,11 @@ def _is_short_acronym(term: str) -> bool:
 @lru_cache(maxsize=32768)
 def _term_pattern(term: str, flags: int) -> re.Pattern[str]:
     return re.compile(rf"(?<![A-Za-z0-9]){re.escape(term)}(?![A-Za-z0-9])", flags)
+
+
+@lru_cache(maxsize=8192)
+def _ascii_lower(value: str) -> str:
+    return value.lower()
 
 
 def _contains(text: str, term: str) -> bool:
@@ -97,6 +124,11 @@ def _contains(text: str, term: str) -> bool:
 
     normalized = _compact(term)
     if not normalized:
+        return False
+    # For ASCII inputs an absent case-folded literal cannot satisfy the regex.
+    # Avoid thousands of failed regex scans of provider subjects per article.
+    # Non-ASCII inputs retain Python's full Unicode IGNORECASE semantics.
+    if normalized.isascii() and text.isascii() and _ascii_lower(normalized) not in _ascii_lower(text):
         return False
     if _is_short_acronym(normalized):
         return _term_pattern(normalized, 0).search(text) is not None
@@ -282,6 +314,7 @@ def _semantic_hits(
     terms: Iterable[str],
     *,
     exact: bool = False,
+    excluded_mentions: re.Pattern[str] | None = None,
 ) -> list[_EvidenceHit]:
     hits: list[_EvidenceHit] = []
     normalized_terms = list(dict.fromkeys(_compact(term) for term in terms if _compact(term)))
@@ -289,18 +322,22 @@ def _semantic_hits(
         minimum = _SEMANTIC_MIN_SCORES.get(metadata_term.source, 1.0)
         if metadata_term.score < minimum:
             continue
+        value = (
+            excluded_mentions.sub(" ", metadata_term.value).strip()
+            if excluded_mentions else metadata_term.value
+        )
         matched = (
             [
                 term
                 for term in normalized_terms
                 if (
-                    metadata_term.value == term
+                    value == term
                     if _is_short_acronym(term)
-                    else metadata_term.value.casefold() == term.casefold()
+                    else value.casefold() == term.casefold()
                 )
             ]
             if exact
-            else _term_matches(metadata_term.value, normalized_terms)
+            else _term_matches(value, normalized_terms)
         )
         for term in matched:
             base = _SEMANTIC_CONFIDENCE_BASE[metadata_term.source]
@@ -447,6 +484,25 @@ def _drop_unsupported_influenza_match(
     return [match for match in matches if match.key != "D038"]
 
 
+def _drop_unsupported_coronavirus_topic_matches(matches: list[Match]) -> list[Match]:
+    """A broad OpenAlex coronavirus topic cannot establish the other disease.
+
+    The SARS-CoV-2/COVID-19 topic also indexes original 2003 SARS research.
+    Retain independent lexical, MeSH or keyword evidence for comparisons.
+    """
+    by_id = {match.key: match for match in matches}
+    unsupported: set[str] = set()
+    for disease_id, other_id in (("D003", "D004"), ("D004", "D003")):
+        match, other = by_id.get(disease_id), by_id.get(other_id)
+        if (
+            match and other and match.terms
+            and all(term.startswith("semantic:openalex.topic") for term in match.terms)
+            and any(term.startswith("lexical:") for term in other.terms)
+        ):
+            unsupported.add(disease_id)
+    return [match for match in matches if match.key not in unsupported]
+
+
 def classify_candidate(
     candidate: ArticleCandidate,
     *,
@@ -472,9 +528,14 @@ def classify_candidate(
             str(disease.get("name_zh") or ""),
             *[str(value) for value in disease.get("aliases") or []],
         ]
+        excluded_mentions = _DISEASE_EXCLUDED_MENTIONS.get(disease_id)
         hits = [
-            *_lexical_hits(title_text, body_text, terms),
-            *_semantic_hits(semantic_terms, terms),
+            *_lexical_hits(
+                excluded_mentions.sub(" ", title_text) if excluded_mentions else title_text,
+                excluded_mentions.sub(" ", body_text) if excluded_mentions else body_text,
+                terms,
+            ),
+            *_semantic_hits(semantic_terms, terms, excluded_mentions=excluded_mentions),
         ]
         if not hits:
             continue
@@ -486,12 +547,18 @@ def classify_candidate(
         ))
 
     disease_matches = _drop_unsupported_influenza_match(disease_matches, body_text, diseases)
+    disease_matches = _drop_unsupported_coronavirus_topic_matches(disease_matches)
 
     country_matches: list[Match] = []
     for country in countries:
         terms = _country_terms(country, taxonomy)
+        excluded_mentions = _COUNTRY_EXCLUDED_MENTIONS.get(str(country["code"]).upper())
         hits = [
-            *_lexical_hits(title_text, body_text, terms),
+            *_lexical_hits(
+                excluded_mentions.sub(" ", title_text) if excluded_mentions else title_text,
+                excluded_mentions.sub(" ", body_text) if excluded_mentions else body_text,
+                terms,
+            ),
             *_semantic_hits(semantic_terms, terms, exact=True),
         ]
         if not hits:

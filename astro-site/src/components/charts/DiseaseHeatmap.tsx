@@ -33,7 +33,10 @@ interface Props {
   initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
-function fromLogValue(value: number) {
+function fromLogValue(value: number): number;
+function fromLogValue(value: number | null): number | null;
+function fromLogValue(value: number | null) {
+  if (value == null || !Number.isFinite(value)) return null;
   return Math.round(Math.pow(10, value) - 1);
 }
 
@@ -117,6 +120,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     if (series && Object.keys(series).length > 0) {
       const diseaseEntries = Object.values(series)
         .filter((entry) => entry && entry.category !== 'Summary')
+        .filter((entry) => !['annual', 'yearly', 'quarterly'].includes((entry.period_granularity ?? '').toLowerCase()))
         .sort((a, b) => {
           const totalGap = (b.total_cases ?? 0) - (a.total_cases ?? 0);
           if (totalGap !== 0) return totalGap;
@@ -142,9 +146,11 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
           entry.dates.forEach((date, index) => {
             const monthKey = normaliseMonthKey(date);
             if (!monthKey) return;
-            monthTotals.set(monthKey, (monthTotals.get(monthKey) ?? 0) + (entry.cases[index] ?? 0));
+            const value = entry.cases[index];
+            if (value == null || !Number.isFinite(value)) return;
+            monthTotals.set(monthKey, (monthTotals.get(monthKey) ?? 0) + value);
           });
-          return months.map((month) => Math.log10((monthTotals.get(month) ?? 0) + 1));
+          return months.map((month) => monthTotals.has(month) ? Math.log10(monthTotals.get(month)! + 1) : null);
         }),
       };
     }
@@ -158,6 +164,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     const result: [number, number, number][] = [];
     activeData.z.forEach((row, rowIdx) => {
       row.forEach((logValue, colIdx) => {
+        if (logValue == null || !Number.isFinite(logValue)) return;
         result.push([colIdx, rowIdx, logValue]);
       });
     });
@@ -168,6 +175,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     let best: { value: number; row: number; col: number } | null = null;
     activeData.z.forEach((row, rowIdx) => {
       row.forEach((logValue, colIdx) => {
+        if (logValue == null || !Number.isFinite(logValue)) return;
         if (!best || logValue > best.value) best = { value: logValue, row: rowIdx, col: colIdx };
       });
     });
@@ -186,7 +194,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     [activeData.disease_labels]
   );
   const maxLogValue = useMemo(
-    () => Math.max(0, ...activeData.z.flat().filter((value) => Number.isFinite(value))),
+    () => Math.max(0, ...activeData.z.flat().filter((value): value is number => value != null && Number.isFinite(value))),
     [activeData.z]
   );
 
@@ -498,8 +506,10 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     <>
       <div className="data-preview-meta">
         {lang === 'zh'
-          ? `原始数据预览，当前表格已包含全部 ${previewRows.length} 种疾病的月度病例数。`
-          : `Raw data preview covering all ${previewRows.length} diseases with monthly case totals.`}
+          ? `原始数据预览，当前表格已包含全部 ${previewRows.length} 种疾病的月度病例数。“—”表示数据缺失，0 表示报告零病例。`
+          : lang === 'fr'
+            ? `Aperçu des totaux mensuels pour ${previewRows.length} maladies. « — » indique une donnée absente ; 0 indique zéro cas déclaré.`
+            : `Raw data preview covering all ${previewRows.length} diseases with monthly case totals. “—” means missing data; 0 means zero reported cases.`}
       </div>
       <table className="data-preview-table">
         <thead>
@@ -515,7 +525,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
             <tr key={row.label}>
               <td className="is-sticky">{row.label}</td>
               {row.values.map((value, index) => (
-                <td key={`${row.label}-${activeData.months[index]}`}>{value.toLocaleString()}</td>
+                <td key={`${row.label}-${activeData.months[index]}`}>{value == null ? '—' : value.toLocaleString(lang)}</td>
               ))}
             </tr>
           ))}

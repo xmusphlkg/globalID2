@@ -169,6 +169,53 @@ def test_public_verifier_rejects_wrong_record_even_with_success_status(tmp_path)
         verify_projected_publication(candidate, opener=lambda request, **kwargs: Response(request.full_url))
 
 
+@pytest.mark.parametrize('changed_slug', ['paper-a', 'paper-b'])
+def test_public_verifier_checks_historical_and_normal_records_in_every_locale(tmp_path, changed_slug):
+    from src.services.data_release.papers_projection import verify_projected_publication
+    base = make_template_candidate(tmp_path / 'site', tmp_path / 'templates')
+    historical = {**article('paper-b'), 'article_id': 'lit_hist_paper-b',
+                  'editorial_status': None, 'historical_baseline': True, 'indexable': True}
+    candidate = prepare_projection_candidate(base, articles=[article('paper-a'), historical],
+        directory=tmp_path / 'v3', release_id='candidate', migration=True)[0]
+    # An unchanged historical article must still be checked during a normal
+    # article update, and a historical update must also retain normal canaries.
+    candidate = replace(candidate, verification_keys=tuple(entry['logical_key'] for entry in candidate.entries
+        if entry.get('paper_template', {}).get('slug') == changed_slug))
+    by_url = {candidate.origin + '/' + entry['logical_key']: entry for entry in candidate.entries}
+    seen = []
+
+    class Response:
+        def __init__(self, url, historical_status):
+            self.url = url
+            descriptor = by_url[url]['paper_template']
+            self.status = historical_status if descriptor['slug'] == 'paper-b' else 200
+            self.headers = {'X-GIDS-Paper-Mode': 'projection-v3', 'X-GIDS-Research-Release': candidate.release_id,
+                'X-GIDS-Paper-Content-SHA256': descriptor['record_sha256'],
+                'X-GIDS-Paper-Template-SHA256': descriptor['template_sha256'],
+                'X-GIDS-Paper-Assets-SHA256': descriptor['assets_sha256']}
+            self.body = f'<article data-research-article-sha256="{descriptor["record_sha256"]}">'.encode()
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def geturl(self): return self.url
+        def read(self, limit): return self.body[:limit]
+
+    def open_url(request, *, historical_status=200, **kwargs):
+        seen.append(request.full_url)
+        return Response(request.full_url, historical_status)
+
+    result = verify_projected_publication(candidate, opener=open_url)
+    expected = {candidate.origin + '/' + entry['logical_key'] for entry in candidate.entries
+                if 'paper_template' in entry}
+    assert set(seen) == expected and len(seen) == 6
+    assert {item['url'] for item in result['canaries']} == expected
+
+    seen.clear()
+    with pytest.raises(ValueError, match='not served directly'):
+        verify_projected_publication(candidate,
+            opener=lambda request, **kwargs: open_url(request, historical_status=503, **kwargs))
+    assert any('/articles/paper-b/' in url for url in seen)
+
+
 def test_projected_candidate_rejects_legacy_html_receipt_before_any_commit(tmp_path):
     papers = initial(tmp_path)
     store = Store()

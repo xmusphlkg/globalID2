@@ -3,6 +3,31 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.2', date: '2026-11-17',
+    titleEn: 'Reliable navigation, charts and research pages',
+    titleZh: '修复导航、图表与文献页面',
+    titleFr: 'Navigation, graphiques et pages de recherche fiables',
+    summaryEn: 'Repair public directories, search, charts and research presentation across English, Chinese and French.',
+    summaryZh: '修复中英法公开页面的目录、搜索、图表与文献展示问题。',
+    summaryFr: 'Corrigez les répertoires, la recherche, les graphiques et la présentation des publications en anglais, chinois et français.',
+    sections: [{
+      kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections',
+      items: [{
+        en: 'Directories support pagination and recover after failed requests. Geographic navigation and keyboard search keep the selected context.',
+        zh: '目录支持分页与请求失败后的恢复；完善区域导航和键盘搜索，保持当前选择。',
+        fr: 'Les répertoires proposent une pagination et se rétablissent après un échec de requête. La navigation géographique et la recherche au clavier conservent la sélection.',
+      }, {
+        en: 'Charts fit fullscreen views, heatmaps distinguish missing observations, and map selectors and Situation history behave consistently.',
+        zh: '图表适配全屏显示，热力图区分缺失观测，地图选择器与态势历史保持一致的交互行为。',
+        fr: 'Les graphiques s’adaptent au plein écran, les cartes thermiques distinguent les observations manquantes, et les sélecteurs cartographiques et l’historique de situation fonctionnent de manière cohérente.',
+      }, {
+        en: 'Report cards use localized text. Research links, historical article access and page styles are checked during publication.',
+        zh: '报告卡片使用对应语言的文本；发布时校验文献链接、历史文章访问与页面样式。',
+        fr: 'Les cartes de rapport utilisent les textes traduits. Les liens de recherche, l’accès aux articles historiques et les styles sont vérifiés lors de la publication.',
+      }],
+    }],
+  },
+  {
     version: '0.20.1', date: '2026-11-17',
     titleEn: 'A clearer GIDS public template',
     titleZh: '更清晰的 GIDS 公开站模板',

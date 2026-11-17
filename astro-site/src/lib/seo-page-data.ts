@@ -8,12 +8,14 @@ import { buildPublishableReports } from './report-routes';
 import { toSeoSlug } from './seo';
 import { selectDirectoryCandidates, hydrateDirectoryCandidates } from './directory-facts';
 import { createSiteDataLoaders } from './site-data-loaders';
+import { createCountryPageNavigation } from './country-page-navigation';
 
 const DATA_ROOT = resolve('./src/data');
 let indexableDiseaseCache: Array<Record<string, any>> | null = null;
 const countryDiseaseCandidateCache = new Map<number, CountryDiseaseCandidate[]>();
 let publishableReportCache: ReturnType<typeof buildPublishableReports> | null = null;
 let countryDiseaseRouteCache: Array<{ code: string; slug: string }> | null = null;
+let countryNavigationCache: ReturnType<typeof createCountryPageNavigation> | null = null;
 
 export const siteMeta = metaRaw as Record<string, any>;
 export const diseaseIndex = diseasesRaw as Array<Record<string, any>>;
@@ -45,6 +47,11 @@ export function countryDiseaseCandidates(limit = 50): CountryDiseaseCandidate[] 
 export function countryDiseaseRouteIdentities() {
   return countryDiseaseRouteCache ??= selectDirectoryCandidates(siteMeta.countries ?? [], loadCountryFacts, 50)
     .map(({ code, slug }) => ({ code, slug }));
+}
+
+export function countryPageNavigation(country: string, prefix = '') {
+  countryNavigationCache ??= createCountryPageNavigation(reportIndex, countryDiseaseRouteIdentities());
+  return countryNavigationCache(country, prefix);
 }
 
 export function publishableReports() {

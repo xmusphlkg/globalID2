@@ -66,6 +66,7 @@ export default function SituationExplorer({
   const [sourcesOk, setSourcesOk] = useState(0);
   const [sourceCount, setSourceCount] = useState(0);
   const [dataState, setDataState] = useState<DataState>('loading');
+  const [dataAttempt, setDataAttempt] = useState(0);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selection, setSelection] = useState<Selection>(null);
   const currentMeta = useSurveillanceSummary('/site-data/meta.json');
@@ -77,6 +78,7 @@ export default function SituationExplorer({
   const [listMode, setListMode] = useState<ListMode>('auto');
   const [wide, setWide] = useState(true);
   const [outbreaks, setOutbreaks] = useState<Record<string, Remote>>({});
+  const [outbreakAttempt, setOutbreakAttempt] = useState(0);
   const [timelineShown, setTimelineShown] = useState<Record<string, number>>({});
   const [Canvas, setCanvas] = useState<ComponentType<CanvasProps> | null>(null);
   const [canvasFailed, setCanvasFailed] = useState(false);
@@ -138,7 +140,7 @@ export default function SituationExplorer({
     // Resolve the current geography catalogue before validating shared links.
     // Disease summary responses must not reapply the reader's initial filters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataUrl, currentMeta.data, currentMeta.error]);
+  }, [dataUrl, currentMeta.data, currentMeta.error, dataAttempt]);
 
   useEffect(() => {
     if (skipWrite.current) {
@@ -191,7 +193,7 @@ export default function SituationExplorer({
   const diseases = useMemo(() => {
     const options = new Map(tally(facetPoints, point => point.disease_id ?? point.disease_label, point => diseaseName(point, locale)).map(option => [option.id, option]));
     for (const [id, disease] of Object.entries(site.diseases)) {
-      if (!options.has(id)) options.set(id, { id, label: diseaseName({ disease_label: disease.name_en, disease_name_en: disease.name_en, disease_name_zh: disease.name_zh }, locale), count: 0 });
+      if (!options.has(id)) options.set(id, { id, label: diseaseName({ disease_id: id, disease_slug: disease.slug, disease_label: disease.name_en, disease_name_en: disease.name_en, disease_name_zh: disease.name_zh }, locale), count: 0 });
     }
     return [...options.values()];
   }, [facetPoints, site.diseases, locale]);
@@ -220,7 +222,7 @@ export default function SituationExplorer({
     situationData.read<OutbreakFile>(OUTBREAK_URL(outbreakId))
       .then(file => setOutbreaks(state => ({ ...state, [outbreakId]: file })))
       .catch(() => setOutbreaks(state => ({ ...state, [outbreakId]: 'error' })));
-  }, [outbreakId]);
+  }, [outbreakId, outbreakAttempt]);
 
   const remote = outbreakId ? outbreaks[outbreakId] : undefined;
   const file = remote && typeof remote === 'object' ? remote : null;
@@ -263,9 +265,11 @@ export default function SituationExplorer({
     const candidates = completeIndex ? latestMatchingPlaces(points, asOf, next) : visibleSituationPoints(points, asOf, next);
     const target = candidates.find(point => point.alert_id === selectedMarker?.alert_id)
       ?? candidates.find(point => point.outbreak_id === selected?.outbreak_id
-        && point.country_code === selected?.country_code && point.admin_area === selected?.admin_area)
-      ?? candidates[0];
-    setSelection(active && target ? { kind: 'place', id: target.alert_id } : null);
+        && point.country_code === selected?.country_code && point.admin_area === selected?.admin_area);
+    setSelection(!active ? null
+      : target ? { kind: 'place', id: target.alert_id }
+      : selection?.kind === 'country' && (!next.country || next.country === selection.code) ? selection
+      : null);
     setFocusedAlert(null);
     if (!active) setTimelineScope('place');
   };
@@ -378,7 +382,7 @@ export default function SituationExplorer({
       <div className="sit-map-wrap">
         <section className="sit-map" aria-label={copy.mapLabel}>
           {dataState === 'error' ? (
-            <p className="sit-note" role="status">{copy.dataFailed}</p>
+            <div className="sit-note"><p role="status">{copy.dataFailed} <button type="button" className="sit-text-btn focus-ring" onClick={() => setDataAttempt(value => value + 1)}>{copy.retry}</button></p></div>
           ) : dataState !== 'ready' ? (
             <div className="sit-note"><GIDSLoader language={locale} label={copy.mapLoading} /></div>
           ) : Canvas ? (
@@ -461,7 +465,7 @@ export default function SituationExplorer({
             <button type="button" className="sit-text-btn" data-scope="all" aria-pressed={timelineScope === 'all'} onClick={() => setTimelineScope('all')}>{copy.allMatchingEvents}</button>
           </div>
           <div hidden={timelineScope !== 'all'}>
-            <TimelineOverview locale={locale} alerts={overview.alerts} filters={filters} asOf={asOf} loading={overview.loading} failed={overview.failed} onSelect={alert => { setFocusedAlert(alert); selectPlace(alert.alert_id); }} />
+            <TimelineOverview locale={locale} alerts={overview.alerts} filters={filters} asOf={asOf} loading={overview.loading} failed={overview.failed} onRetry={overview.retry} onSelect={alert => { setFocusedAlert(alert); selectPlace(alert.alert_id); }} />
           </div>
           <div className="sit-current-place" hidden={timelineScope !== 'place'}>
             {!selection && <p className="sit-muted">{copy.pickHint}</p>}
@@ -515,7 +519,10 @@ export default function SituationExplorer({
                   </details>
                 )}
                 {remote === 'loading' && <GIDSLoader language={locale} compact label={copy.mapLoading} />}
-                {remote === 'error' && <p className="sit-muted" role="status">{copy.timelineFailed}</p>}
+                {remote === 'error' && <p className="sit-muted" role="status">{copy.timelineFailed} <button type="button" className="sit-text-btn focus-ring" onClick={() => {
+                  if (outbreakId) requested.current.delete(outbreakId);
+                  setOutbreakAttempt(value => value + 1);
+                }}>{copy.retry}</button></p>}
                 {file && (
                   <section className="sit-timeline-wrap" aria-labelledby="sit-timeline-heading">
                     <h3 id="sit-timeline-heading">{copy.detailHeading} <small>{copy.alertsCount(timeline.length)}</small></h3>

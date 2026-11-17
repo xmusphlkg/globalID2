@@ -1,0 +1,8 @@
+{
+  "fixture": "dge-monthly-2025-female.pdf",
+  "source_url": "https://epidemiologia.salud.gob.mx/anuario/20250/morbilidad/nacional/distribucion_casos_nuevos_enfermedad_mes.pdf",
+  "retrieved_on": "2026-11-17",
+  "sha256": "2d1905295f583bc98fe6b8290627acb5c806db6f77750d348cdd662622d7e293",
+  "byte_size": 900517,
+  "derivation": "Unmodified official complete PDF; final unlabeled row on page 4 reconciles to all 186 categories across thirteen columns."
+}

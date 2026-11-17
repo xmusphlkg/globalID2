@@ -393,6 +393,7 @@ const itemList = {
 
   <script>
   import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
+  import { normalizeSearchText } from '../../lib/disease-search';
     import { siteHref } from '../../lib/papers';
     import { readResearchFilterValues, writeResearchFilterValues, type ResearchFilterValues } from '../../lib/research-filter-url';
     const search = document.querySelector<HTMLInputElement>('#research-search');
@@ -417,6 +418,7 @@ const itemList = {
     const loadError = document.querySelector<HTMLElement>('#research-load-error');
     const retry = document.querySelector<HTMLButtonElement>('#research-retry');
     let requestVersion = 0;
+    let activeRequest: AbortController | undefined;
     const initialVisible = Number(list?.dataset.initialVisible ?? 60);
     const totalArticles = Number(list?.dataset.total ?? 0);
     const parseMap = (value: string | undefined) => {
@@ -483,18 +485,18 @@ const itemList = {
       return label || formatDate(article.published_at, lang);
     };
     const articleTokens = (article: any) => ({
-      diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase(),
+      diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''} ${frenchDiseaseName(item)}`).join(' ').toLowerCase(),
       diseaseIds: (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean).join(' '),
-      countryText: (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase(),
+      countryText: (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''} ${regionName(item)}`).join(' ').toLowerCase(),
       countryCodes: (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase()).filter(Boolean).join(' '),
-      topicText: (article.topics ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
+      topicText: (article.topics ?? []).map((item: any) => `${item.name} ${topicNameMap[item.name] ?? ''}`).join(' ').toLowerCase(),
       topicSlugs: (article.topics ?? []).map((item: any) => slugifyTopic(item.name)).filter(Boolean).join(' '),
       pathogenTypeIds: (article.pathogen_types ?? []).map((item: any) => String(item.id ?? '').toLowerCase()).filter(Boolean).join(' '),
       pathogenText: (article.pathogens ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
       populationIds: (article.populations ?? []).map((item: any) => String(item.id ?? '').toLowerCase()).filter(Boolean).join(' '),
       populationText: (article.populations ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     });
-    const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText} ${tokens.pathogenText} ${tokens.populationText}`.toLowerCase();
+    const articleSearchText = (article: any, tokens = articleTokens(article)) => normalizeSearchText(`${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText} ${tokens.pathogenText} ${tokens.populationText}`);
     const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
       const element = document.createElement(tag);
       if (className) element.className = className;
@@ -680,7 +682,7 @@ const itemList = {
       history.replaceState(history.state, '', `${location.pathname}${search ? `?${search}` : ''}${location.hash}`);
     };
     const matchesFilters = (article: any) => {
-      const query = search?.value.trim().toLowerCase() ?? '';
+      const query = normalizeSearchText(search?.value);
       const tokens = articleTokens(article);
       return (!query || articleSearchText(article, tokens).includes(query))
         && (!disease?.value || hasToken(tokens.diseaseIds, disease.value))
@@ -709,6 +711,8 @@ const itemList = {
     };
     const applyFilters = async (requireCatalogue = filtersAreActive() || visibleLimit > initialVisible) => {
       const version = ++requestVersion;
+      activeRequest?.abort();
+      activeRequest = undefined;
       if (loadError) loadError.hidden = true;
       if (!requireCatalogue) {
         if (loading) loading.hidden = true;
@@ -729,9 +733,12 @@ const itemList = {
       empty?.classList.add('hidden');
       if (loadMore) loadMore.hidden = true;
       let loadingActive = true;
+      const controller = new AbortController();
+      activeRequest = controller;
       try {
         const activeFilters = filtersAreActive();
         const articles = await loadResearchCatalogue({
+          signal: controller.signal,
           limit: activeFilters ? undefined : visibleLimit,
           includeBibliographic: true,
           facets: { disease: disease?.value, country: country?.value, topic: topic?.value, study: study?.value },
@@ -755,6 +762,7 @@ const itemList = {
       } finally {
         loadingActive = false;
         if (version === requestVersion) {
+          activeRequest = undefined;
           if (loading) loading.hidden = true;
           list?.setAttribute('aria-busy', 'false');
         }

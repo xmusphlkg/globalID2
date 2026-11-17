@@ -99,7 +99,7 @@ export interface CountryDatasetHeatmap {
   diseases: string[];
   disease_labels: string[];
   months: string[];
-  z: number[][];
+  z: (number | null)[][];
 }
 
 export interface CountryDataset {
@@ -178,7 +178,7 @@ interface CompactCountryDataset {
   heatmap?: {
     months: string[];
     disease_ids: string[];
-    z: number[][];
+    z: (number | null)[][];
   } | null;
 }
 

@@ -222,7 +222,8 @@ def _load_title_disease_aliases() -> dict[str, list[str]]:
             if isinstance(terms, list):
                 merged[str(disease_id)].update(str(term).strip() for term in terms if str(term).strip())
     try:
-        ontology = json.loads((ROOT / "configs" / "disease_ontology.json").read_text(encoding="utf-8"))
+        from src.ontology import read_ontology_document
+        ontology = read_ontology_document(ROOT / "configs" / "disease_ontology.json")
     except (OSError, json.JSONDecodeError):
         ontology = {}
     for concept in ontology.get("concepts", []) if isinstance(ontology, dict) else []:

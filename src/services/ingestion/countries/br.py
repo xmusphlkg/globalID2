@@ -11,10 +11,13 @@ from types import SimpleNamespace
 from src.data.crawlers.br import (
     BrazilSINANCrawler,
     SINANFile,
+    SINANAliasConflictError,
     _deduplicate_sinan_file_aliases,
 )
 from src.data.crawlers.br_cache import SINANContentCache
-from src.data.processors.br import BRMonthlyUpdater, BRUpdateFetchResult
+from src.data.processors.br import (
+    BRMonthlyUpdater, BRUpdateFetchResult, discard_superseded_paralysis_snapshot_rows,
+)
 from src.data.processors.br_subdivisions import (
     EXCLUDED_STATE_PREFIXES,
     STATE_CODES,
@@ -44,6 +47,8 @@ async def collect(writer, *, source, months, history_csv, start_year=None, count
         with capture_writer(writer):
             try:
                 index = await asyncio.to_thread(crawler.fetch_file_index)
+            except SINANAliasConflictError:
+                raise
             except Exception:
                 if force:
                     raise
@@ -54,6 +59,8 @@ async def collect(writer, *, source, months, history_csv, start_year=None, count
         requested = set(prefixes) if prefixes is not None else {item.prefix for item in index}
         if "LER" in requested:
             requested.add("LERD")
+        if "PFA" in requested:
+            requested.add("PFAN")
         selected = [item for item in _deduplicate_sinan_file_aliases(index) if item.year in target_years and item.prefix in requested]
         if subdivision:
             selected = [item for item in selected if item.prefix not in EXCLUDED_STATE_PREFIXES]
@@ -144,10 +151,13 @@ def organize(artifacts, *, updater, source, months, history_csv, start_year=None
                 try:
                     summary = crawler.crawl_monthly_national(root / "output.csv", months=months, prefixes=updater._prefixes_from_source(source), write_csv=False, file_index=files, collected_files=paths, collected_digests=digests, use_content_cache=not force)
                     live = updater._filter_rows_for_months(summary.rows, months)
+                except SINANAliasConflictError:
+                    raise
                 except Exception as exc:
                     live_error = exc
                     logs.append(f"[crawler] live parsing failed: {type(exc).__name__}: {exc}")
             prior, _, _ = updater._prior_rows_candidate(prior, months)
+            prior = discard_superseded_paralysis_snapshot_rows(prior, live)
             rows, source_audit = merge_snapshot_rows(live, prior)
             if not rows:
                 if live_error is not None:
@@ -168,14 +178,25 @@ def _organize_subdivision(artifacts, *, updater, months, history_csv, country_co
     crawler = BrazilSINANCrawler()
     cache_dir = crawler.cache_dir / "content"
     crawler.session.close()
+    captured = []
+    for artifact in artifacts:
+        if artifact.kind == "sinan_dbc":
+            metadata = dict(artifact.metadata_["file"])
+            metadata["modified_at"] = datetime.fromisoformat(metadata["modified_at"]) if metadata.get("modified_at") else None
+            captured.append(SINANFile(**metadata))
+    selected = {item.url: item for item in _deduplicate_sinan_file_aliases(captured)}
     with tempfile.TemporaryDirectory(prefix="globalid-sinan-state-organize-") as temporary:
         root = Path(temporary)
         for index, artifact in enumerate(artifacts):
             if artifact.kind != "sinan_dbc":
                 continue
-            metadata = dict(artifact.metadata_["file"])
-            metadata["modified_at"] = datetime.fromisoformat(metadata["modified_at"]) if metadata.get("modified_at") else None
-            item = SINANFile(**metadata)
+            # Verify even an obsolete alias before excluding it from replay.
+            payload = read_artifact(artifact)
+            item = selected.get(artifact.metadata_["file"]["url"])
+            if item is None:
+                audit.append({"file": artifact.metadata_["file"]["filename"],
+                              "excluded": "superseded annual filename alias"})
+                continue
             if item.prefix in EXCLUDED_STATE_PREFIXES:
                 logs.append(f"[excluded] {item.filename}: not an individual-case residence dataset")
                 audit.append({"file": item.filename, "excluded": "not an individual-case residence dataset"})
@@ -183,7 +204,6 @@ def _organize_subdivision(artifacts, *, updater, months, history_csv, country_co
             dbc = root / f"{index}.dbc"
             dbf = root / f"{index}.dbf"
             # Always verify captured bytes before accepting a derived cache.
-            payload = read_artifact(artifact)
             cache = SINANContentCache(cache_dir, item, artifact.sha256,
                                       version=STATE_PARSER_VERSION, scope=sorted(set(months)))
             result = cache.read() if not force else None

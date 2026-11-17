@@ -130,7 +130,8 @@ class _OntologySeriesGate:
     """Require exact checked-in Registry coverage before rows can escape."""
 
     def __init__(self, ontology_path: Path) -> None:
-        document = json.loads(ontology_path.read_text(encoding="utf-8"))
+        from src.ontology import read_ontology_document
+        document = read_ontology_document(ontology_path)
         self.series = {str(item.get("id")): item for item in document.get("source_series", [])}
 
     def validate(self, row: Mapping[str, Any]) -> str | None:

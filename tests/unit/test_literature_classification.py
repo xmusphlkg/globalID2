@@ -1,7 +1,10 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from src.literature.classification import (
+    _contains,
     apply_surveillance_relation,
     classify_candidate,
     surveillance_relation_score_for_level,
@@ -9,11 +12,26 @@ from src.literature.classification import (
 from src.literature.pipeline import _global_country_catalogue
 from src.literature.types import ArticleCandidate
 
-
 ROOT = Path(__file__).resolve().parents[2]
 TAXONOMY = json.loads(
     (ROOT / "configs/literature/taxonomy.json").read_text(encoding="utf-8")
 )
+
+
+@pytest.mark.parametrize("text,term,expected", [
+    ("COVID-19 incidence", "cholera", False),
+    ("DENGUE incidence", "dengue", True),
+    ("nonDengue incidence", "dengue", False),
+    ("in the US", "US", True),
+    ("tell us", "US", False),
+    ("İnfluenza", "influenza", True),
+    ("ımmunization", "immunization", True),
+    ("Klebsiella", "Klebsiella", True),
+    ("ſyndrome", "syndrome", True),
+    ("登革热流行", "登革热", True),
+])
+def test_literal_prefilter_preserves_boundaries_acronyms_and_unicode(text, term, expected):
+    assert _contains(text, term) is expected
 
 
 def test_global_research_country_catalogue_does_not_depend_on_local_surveillance_rows():
@@ -89,6 +107,87 @@ def test_new_controlled_aliases_recover_virus_studies_without_full_disease_name(
         result = classify_candidate(_candidate(title), diseases=diseases, countries=[], taxonomy={})
         assert expected in {match.key for match in result.diseases}
         assert result.publication_status == "review"
+
+
+CORONAVIRUS_DISEASES = [
+    {"disease_id": "D003", "name_en": "SARS", "aliases": ["severe acute respiratory syndrome", "SARS coronavirus"]},
+    {"disease_id": "D004", "name_en": "COVID-19", "aliases": ["SARS-CoV-2"]},
+]
+
+
+@pytest.mark.parametrize("pathogen", [
+    "SARS-CoV-2", "Sars-cov-2", "SARS‑CoV‑2", "SARS CoV 2",
+    "SARS coronavirus 2", "severe acute respiratory syndrome coronavirus 2",
+])
+def test_covid_pathogen_name_does_not_classify_original_sars(pathogen):
+    # PMID 35219807 was assigned SARS from the pathogen name in its abstract,
+    # Europe PMC MeSH/keywords, and OpenAlex topics/keywords.
+    result = classify_candidate(
+        _candidate(
+            "Length of hospital stay among COVID-19 patients in Norway",
+            abstract=f"We analyzed {pathogen}-positive patients hospitalized in Norway.",
+            source_payload={
+                "europe_pmc": {
+                    "meshHeadingList": {"meshHeading": [{"descriptorName": pathogen}]},
+                    "keywordList": {"keyword": [pathogen]},
+                },
+                "openalex": {
+                    "topics": [{"display_name": f"{pathogen} and COVID-19 Research", "score": 0.95}],
+                    "keywords": [{"display_name": pathogen, "score": 0.95}],
+                },
+            },
+        ),
+        diseases=CORONAVIRUS_DISEASES, countries=[], taxonomy=TAXONOMY,
+    )
+    assert {match.key for match in result.diseases} == {"D004"}
+
+
+@pytest.mark.parametrize("independent_evidence", ["title", "abstract", "mesh"])
+def test_sars_and_covid_comparisons_keep_independent_sars_evidence(independent_evidence):
+    result = classify_candidate(
+        _candidate(
+            "SARS and SARS-CoV-2 compared" if independent_evidence == "title" else "COVID-19 study",
+            abstract="The SARS outbreak in 2003 preceded SARS-CoV-2." if independent_evidence == "abstract" else None,
+            source_payload={"europe_pmc": {"meshHeadingList": {"meshHeading": [
+                {"descriptorName": "Severe Acute Respiratory Syndrome"},
+            ]}}} if independent_evidence == "mesh" else {},
+        ),
+        diseases=CORONAVIRUS_DISEASES, countries=[], taxonomy=TAXONOMY,
+    )
+    assert {match.key for match in result.diseases} == {"D003", "D004"}
+
+
+@pytest.mark.parametrize("title,topic,expected", [
+    ("The Genome Sequence of the SARS-Associated Coronavirus", "SARS-CoV-2 and COVID-19 Research", "D003"),
+    ("COVID-19 vaccine effectiveness", "Severe acute respiratory syndrome research", "D004"),
+])
+def test_broad_openalex_topic_does_not_cross_classify_sars_and_covid(title, topic, expected):
+    result = classify_candidate(
+        _candidate(title, source_payload={"openalex": {"topics": [{"display_name": topic, "score": 0.96}]}}),
+        diseases=CORONAVIRUS_DISEASES, countries=[], taxonomy=TAXONOMY,
+    )
+    assert {match.key for match in result.diseases} == {expected}
+
+
+@pytest.mark.parametrize("animal,country", [("Norway rats", "NO"), ("guinea pigs", "GN")])
+def test_animal_names_do_not_create_country_links(animal, country):
+    countries = [
+        {"code": "NO", "name_en": "Norway"},
+        {"code": "GN", "name_en": "Guinea"},
+        {"code": "CN", "name_en": "China"},
+    ]
+    result = classify_candidate(
+        _candidate(f"Vaccine responses in {animal} in China"),
+        diseases=DISEASES, countries=countries, taxonomy=TAXONOMY,
+    )
+    assert {match.key for match in result.countries} == {"CN"}
+
+    country_name = next(row["name_en"] for row in countries if row["code"] == country)
+    independent = classify_candidate(
+        _candidate(f"Vaccine responses in {animal} in {country_name}"),
+        diseases=DISEASES, countries=countries, taxonomy=TAXONOMY,
+    )
+    assert {match.key for match in independent.countries} == {country}
 
 
 def test_stage_two_uses_controlled_europe_pmc_metadata_with_traceable_evidence():

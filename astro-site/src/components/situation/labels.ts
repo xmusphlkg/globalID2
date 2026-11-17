@@ -43,6 +43,7 @@ export interface SituationCopy {
   mapFailed: string;
   dataFailed: string;
   timelineFailed: string;
+  retry: string;
   mapLabel: string;
   stageTitle: string;
   updated: string;
@@ -117,8 +118,9 @@ export const COPY: Record<Locale, SituationCopy> = {
     unplaced: 'Not drawn on the map',
     mapLoading: 'Loading map…',
     mapFailed: 'The map could not be loaded. The list and timeline still work.',
-    dataFailed: 'The situation markers could not be loaded. Refresh the page to try again.',
+    dataFailed: 'The situation markers could not be loaded.',
     timelineFailed: 'The alert timeline could not be loaded.',
+    retry: 'Retry',
     mapLabel: 'World map of places with recent outbreak reports',
     stageTitle: 'Situation map',
     updated: 'Updated',
@@ -191,8 +193,9 @@ export const COPY: Record<Locale, SituationCopy> = {
     unplaced: '未能画在地图上',
     mapLoading: '正在加载地图…',
     mapFailed: '地图加载失败，列表和时间线仍可使用。',
-    dataFailed: '态势点位无法加载。请刷新页面重试。',
+    dataFailed: '态势点位无法加载。',
     timelineFailed: '警报时间线加载失败。',
+    retry: '重试',
     mapLabel: '近期有疫情报告的地点世界地图',
     stageTitle: '态势地图',
     updated: '更新于',
@@ -265,8 +268,9 @@ export const COPY: Record<Locale, SituationCopy> = {
     unplaced: 'Non placés sur la carte',
     mapLoading: 'Chargement de la carte…',
     mapFailed: 'La carte n’a pas pu être chargée. La liste et la chronologie restent disponibles.',
-    dataFailed: 'Les marqueurs de situation n’ont pas pu être chargés. Actualisez la page pour réessayer.',
+    dataFailed: 'Les marqueurs de situation n’ont pas pu être chargés.',
     timelineFailed: 'La chronologie des alertes n’a pas pu être chargée.',
+    retry: 'Réessayer',
     mapLabel: 'Carte du monde des lieux avec des rapports récents de flambée',
     stageTitle: 'Carte de situation',
     updated: 'Mis à jour',

@@ -31,7 +31,7 @@ function CompareResultChart({ id, title, names, option, lang, share, dataHref, r
   const shell = useRef<HTMLElement>(null);
   const plot = useRef<HTMLDivElement>(null);
   return (
-    <section ref={shell} className="compare-chart panel-fullscreen" data-chart-title={title} data-disease-names={names ? JSON.stringify(names) : undefined}>
+    <section ref={shell} className="compare-chart panel-fullscreen chart-fullscreen-fill" data-chart-title={title} data-disease-names={names ? JSON.stringify(names) : undefined}>
       <div className="compare-chart-heading">
         <h3 className="figure-title">{title}</h3>
         <ChartResultActions
@@ -44,7 +44,7 @@ function CompareResultChart({ id, title, names, option, lang, share, dataHref, r
           getPng={() => (plot.current ? pngFromCanvases(plot.current) : null)}
         />
       </div>
-      <div className="compare-chart-plot" ref={plot}>
+      <div className="compare-chart-plot chart-fullscreen-plot" ref={plot}>
         <EChartsReact ref={register} echarts={echarts} option={option} notMerge style={{ height: 380, width: '100%' }} />
       </div>
     </section>

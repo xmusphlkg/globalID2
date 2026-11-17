@@ -121114,5 +121114,8 @@
       "missing_value_policy": "missing_is_unknown",
       "valid_from": "1930-01-01"
     }
+  ],
+  "source_documents": [
+    "ontology/sources/mx_dge_high_frequency.json"
   ]
 }

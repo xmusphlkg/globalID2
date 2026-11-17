@@ -41,11 +41,12 @@ interface Props {
   asOf: string;
   loading: boolean;
   failed: number;
+  onRetry: () => void;
   onSelect: (alert: SituationAlertRecord) => void;
 }
 
 /** Full filter scope, explicitly separate from the currently selected place. */
-export default function TimelineOverview({ locale, alerts, filters, asOf, loading, failed, onSelect }: Props) {
+export default function TimelineOverview({ locale, alerts, filters, asOf, loading, failed, onRetry, onSelect }: Props) {
   const text = TEXT[locale];
   const copy = COPY[locale];
   const groups = useMemo(() => deduplicateAlerts(filterPoints(alerts.filter(alert => alert.status !== 'routine'), filters, asOf)), [alerts, filters, asOf]);
@@ -62,7 +63,7 @@ export default function TimelineOverview({ locale, alerts, filters, asOf, loadin
         <p className="sit-muted sit-overview-count" aria-live="polite">{text.counts(formatCount(groups.length, locale), formatCount(reportCount, locale))}</p>
       </div>
       {loading && <p className="sit-muted" role="status">{text.loading}</p>}
-      {failed > 0 && <p className="sit-overview-error" role="status">{text.failed(formatCount(failed, locale))}</p>}
+      {failed > 0 && <p className="sit-overview-error" role="status">{text.failed(formatCount(failed, locale))} <button type="button" className="sit-text-btn focus-ring" onClick={onRetry} disabled={loading}>{copy.retry}</button></p>}
       {!loading && !failed && !rows.length && <p className="sit-muted" role="status">{text.empty}</p>}
       {graph.lanes.length > 1 && (
         <ul className="sit-lanes">

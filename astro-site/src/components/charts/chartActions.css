@@ -108,3 +108,28 @@ a.chart-link-btn {
 .compare-chart-plot {
   min-width: 0;
 }
+
+/* Let single-chart panels use the space left by their controls and captions.
+   Flex sizing overrides the chart's normal inline pixel height, and the
+   ECharts container observer resizes its canvas on entry, exit and resize. */
+.chart-fullscreen-fill:fullscreen {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.chart-fullscreen-fill:fullscreen > * {
+  flex: 0 0 auto;
+}
+
+.chart-fullscreen-fill:fullscreen > .chart-fullscreen-plot {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 280px;
+  min-width: 0;
+}
+
+.chart-fullscreen-fill:fullscreen > .chart-fullscreen-plot > .echarts-for-react {
+  flex: 1 1 0;
+  min-height: 0;
+}

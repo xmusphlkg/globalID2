@@ -24,6 +24,7 @@ export function researchTemplateFingerprint({ site, project }) {
     ...['package.json', 'package-lock.json', 'astro.config.mjs', 'tsconfig.json',
       'tailwind.config.mjs', 'postcss.config.mjs', 'scripts/build-research.mjs',
       'scripts/research-isolated-cache.mjs', 'scripts/research-build-cache.mjs',
+      'scripts/check-build-assets.mjs', 'scripts/check-seo-output.mjs',
       'scripts/source-dependencies.mjs', 'scripts/public-build-inputs.mjs'].map(path => resolve(site, path)),
   ];
   const digest = createHash('sha256').update('research-template-v1\n');

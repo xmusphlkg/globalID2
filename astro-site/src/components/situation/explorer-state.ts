@@ -56,9 +56,7 @@ export function applyDeepLinks(
       ? { kind: 'place', id: selected.alert_id }
       : country
         ? { kind: 'country', code: country }
-        : candidates.length && (disease || filters.source || host || windowParam)
-          ? { kind: 'place', id: candidates[0].alert_id }
-          : null,
+        : null,
   };
 }
 

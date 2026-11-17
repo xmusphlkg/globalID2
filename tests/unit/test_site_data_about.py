@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 from scripts import generate_site_data as legacy_api
 from src.generation import site_data_about as about
 
@@ -112,6 +114,34 @@ def test_province_source_info_uses_database_adapter_metadata() -> None:
         "monthly",
     ]
     assert result["sources"][1]["url"] == "https://wsjkw.sh.gov.cn/yqxx/index.html"
+
+
+@pytest.mark.parametrize("code", ["BR-SP", "BR-AC"])
+@pytest.mark.parametrize("crawler_config", [{}, {"sources": ["sinan_datasus"], "cadence": "monthly"}])
+def test_brazil_state_disease_provenance_replaces_population_registration_placeholder(code: str, crawler_config: dict) -> None:
+    result = about.build_country_source_info(code, database_config={
+        "notes": "Official IBGE population available; disease ingestion not enabled.",
+        "crawler_config": crawler_config,
+        **({"parser_config": {}} if not crawler_config else {}),
+    })
+    assert result["primary_scope"] == "sinan_datasus"
+    assert result["parser_primary"] == "br_sinan_datasus_dbc_monthly"
+    assert result["sources"][0]["cadence"] == "monthly"
+    assert "SINAN/DATASUS monthly notification" in result["notes"]
+    assert "disease ingestion not enabled" not in result["sources"][0]["description"]
+    assert result["sources"][0]["description"] == result["notes"]
+
+
+def test_brazil_state_provenance_preserves_operator_notes_and_population_only_sources() -> None:
+    notes = "SINAN data are provisional; recent monthly counts may be revised."
+    result = about.build_country_source_info("BR-SP", database_config={"notes": notes})
+    assert result["notes"] == notes
+    placeholder = "Official IBGE population available; disease ingestion not enabled."
+    population = about.build_country_source_info("BR-SP", database_config={
+        "notes": placeholder, "crawler_config": {"sources": ["ibge_population"]},
+    })
+    assert population["notes"] == placeholder
+    assert population["sources"][0]["description"] == placeholder
 
 
 def test_ireland_public_source_metadata_discloses_hpsc_permission_status() -> None:
