@@ -44,7 +44,7 @@ def completed_generation(state_dir: Path, public_dir: Path) -> dict | None:
     """Return an attested local baseline, rejecting partial or edited outputs."""
     try:
         receipt = _read(state_dir / COMPLETED_GENERATION)
-        if receipt.get("schema_version") != 1 or receipt.get("projection_version") != _generation_version():
+        if receipt.get("schema_version") not in (1, 2) or not receipt.get("projection_version"):
             return None
         current = (public_dir / "current.json").read_bytes()
         if hashlib.sha256(current).hexdigest() != receipt["manifest_sha256"]:
@@ -60,17 +60,45 @@ def completed_generation(state_dir: Path, public_dir: Path) -> dict | None:
                 path = Path(relative)
                 if path.is_absolute() or ".." in path.parts or not identity or file_identity(root / path) != identity:
                     return None
+        if receipt.get("schema_version") == 2:
+            versions = receipt.get("country_projection_versions")
+            codes = {Path(name).stem.upper() for name in receipt["state_files"]
+                     if Path(name).parent == Path("countries")}
+            if not isinstance(versions, dict) or set(versions) != codes or any(
+                not isinstance(version, str) or not version for version in versions.values()
+            ):
+                return None
         return receipt
     except (OSError, KeyError, ValueError, TypeError, AttributeError):
         return None
 
 
-def _complete_generation(state_dir: Path, public_dir: Path, logical: list[str], manifest: dict) -> None:
+def country_projection_versions(receipt: dict) -> dict[str, str]:
+    """Legacy receipts attest every country with their original writer."""
+    versions = receipt.get("country_projection_versions")
+    if isinstance(versions, dict):
+        return dict(versions)
+    return {Path(name).stem.upper(): receipt["projection_version"]
+            for name in receipt.get("state_files", {})
+            if Path(name).parent == Path("countries")}
+
+
+def _complete_generation(state_dir: Path, public_dir: Path, logical: list[str], manifest: dict,
+                         *, context: dict | None = None, previous: dict | None = None) -> None:
     state_names = ["meta.json", RECEIPT_NAME]
     state_names.extend(str(path.relative_to(state_dir)) for group in ("countries", "diseases") for path in sorted((state_dir / group).glob("*.json")))
     object_names = {f"objects/{entry['sha256']}.json" for entry in manifest["files"].values()}
+    writer_version = _generation_version()
+    versions = country_projection_versions(previous) if previous else {}
+    present = {Path(name).stem.upper() for name in state_names if Path(name).parent == Path("countries")}
+    refreshed = set(context["incremental_country_codes"]) if context and context.get("incremental") else present
+    versions = {code: version for code, version in versions.items() if code in present}
+    versions.update({code: writer_version for code in refreshed if code in present})
+    if set(versions) != present:
+        raise ValueError("Surveillance generation is missing country projection lineage")
     receipt = {
-        "schema_version": 1, "projection_version": _generation_version(), "release_id": manifest["release_id"],
+        "schema_version": 2, "projection_version": writer_version, "release_id": manifest["release_id"],
+        "country_projection_versions": versions,
         "manifest_sha256": hashlib.sha256((public_dir / "current.json").read_bytes()).hexdigest(),
         "state_files": {name: file_identity(state_dir / name) for name in state_names},
         "public_files": {name: file_identity(public_dir / name) for name in sorted({*logical, "current.json", *object_names})},
@@ -347,7 +375,8 @@ async def _export_surveillance_data_unlocked(
 
     if not str(release_id).strip():
         raise ValueError("A surveillance data release requires release_id")
-    if (incremental or incremental_country_codes) and completed_generation(state_dir, public_dir) is None:
+    previous = completed_generation(state_dir, public_dir)
+    if (incremental or incremental_country_codes) and previous is None:
         raise ValueError("Incremental surveillance export requires an attested completed generation; initialize with a full export")
     projection_version = _generation_version()
     started = time.perf_counter()
@@ -385,7 +414,7 @@ async def _export_surveillance_data_unlocked(
     manifest = freeze_public_generation(public_dir, state_dir, logical, release_id=release_id, generated_at=context["generated_at"], public_url_base=public_url_base)
     if projection_version != _generation_version():
         raise ValueError("Surveillance projection implementation changed while freezing outputs; retry")
-    _complete_generation(state_dir, public_dir, logical, manifest)
+    _complete_generation(state_dir, public_dir, logical, manifest, context=context, previous=previous)
     print(f"  Surveillance JSON export completed in {time.perf_counter() - started:.1f}s", flush=True)
     return manifest
 

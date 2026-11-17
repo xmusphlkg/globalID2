@@ -157,12 +157,20 @@ async def execute_data_release(service, task, *, runtime) -> dict:
             metadata={"event": "surveillance_json_publish", "operation": "capture_baseline"},
             timeout_seconds=runtime.download_publish_timeout_seconds)
         async with surveillance_output_lock(state, public):
-            full = rebuild_all or await asyncio.to_thread(completed_generation, state, public) is None
-            if downloads:
-                from src.generation.surveillance_downloads import downloads_initialized
-                # First coupled publication catches up the old standalone
-                # archive, including countries outside this batch's dirty IDs.
-                full = full or not downloads_initialized(root / "exports/site-downloads")
+            full = rebuild_all
+            if not rebuild_all:
+                if await asyncio.to_thread(completed_generation, state, public) is None:
+                    raise ValueError(
+                        "Surveillance incremental baseline is missing or invalid; "
+                        "restore the published baseline before retrying"
+                    )
+                if downloads:
+                    from src.generation.surveillance_downloads import downloads_initialized
+                    if not downloads_initialized(root / "exports/site-downloads"):
+                        raise ValueError(
+                            "Surveillance incremental download baseline is missing or invalid; "
+                            "restore the published baseline before retrying"
+                        )
             cmd = [str(python), "scripts/generate_site_data.py", "--data-only",
                 "--surveillance-state", str(state), "--surveillance-output", str(public),
                 "--data-release-id", f"data-{task.task_uuid}", "--exact-country-scopes"]
