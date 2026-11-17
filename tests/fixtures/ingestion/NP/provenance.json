@@ -1,0 +1,24 @@
+{
+  "verified_on": "2026-11-17",
+  "source_access": "public_unauthenticated_aggregate_api",
+  "artifacts": [
+    {
+      "file": "weeks.json",
+      "url": "https://analysis.edcd.gov.np/sormas-public-rest/public/v1/bulletin/weeks",
+      "sha256": "4b9a54aeddca1fa5e102fd419b6f2397374ba89226eef528bb306ab674174684",
+      "bytes": 871
+    },
+    {
+      "file": "bulletin-2026-19.json",
+      "url": "https://analysis.edcd.gov.np/sormas-public-rest/public/v1/bulletin/2026/19",
+      "sha256": "5a3bc7abde15fb2a3537887f727e4630a4e2913f65394de9122eb611f312c130",
+      "bytes": 2202622
+    },
+    {
+      "file": "bulletin-2026-45.json",
+      "url": "https://analysis.edcd.gov.np/sormas-public-rest/public/v1/bulletin/2026/45",
+      "sha256": "20454af87603282613a0063a7c216065b7a78a229c8124476f79b963b53dee02",
+      "bytes": 1810124
+    }
+  ]
+}

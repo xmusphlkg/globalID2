@@ -1,0 +1,4130 @@
+{
+  "checked_at": "2026-11-17T01:47:46.078622+00:00",
+  "country": "AF",
+  "scope": "af_who_outbreaks_weekly",
+  "manifest": "data/raw/af/who-outbreaks-20261117/manifest.json",
+  "source_csv": "data/current/af/afghanistan_who_outbreaks_weekly.csv",
+  "source_csv_sha256": "8bd7b0298da9b01747e13f1b9450957f105c8e148286b54bd61576c31eeafe46",
+  "source_latest_date": "2025-12-13",
+  "source_audit": {
+    "status": "partial",
+    "coverage_complete": false,
+    "numerical_contract_live_verified": true,
+    "discovered_reports": 50,
+    "captured_reports": 50,
+    "reports": [
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-50-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 50,
+        "period_start": "2025-12-07",
+        "period_end": "2025-12-13",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-47-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 47,
+        "period_start": "2025-11-16",
+        "period_end": "2025-11-22",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-49-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 49,
+        "period_start": "2025-11-30",
+        "period_end": "2025-12-06",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-48-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 48,
+        "period_start": "2025-11-23",
+        "period_end": "2025-11-29",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-45-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 45,
+        "period_start": "2025-11-02",
+        "period_end": "2025-11-08",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-46-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 46,
+        "period_start": "2025-11-09",
+        "period_end": "2025-11-15",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-43-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 43,
+        "period_start": "2025-10-19",
+        "period_end": "2025-10-25",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 5,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "measure": "cases",
+            "status": "ambiguous_matrix_cells"
+          },
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 11,
+            "table": 6,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-44-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 44,
+        "period_start": "2025-10-26",
+        "period_end": "2025-11-01",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 5,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "measure": "cases",
+            "status": "ambiguous_matrix_cells"
+          },
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 11,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-39-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 39,
+        "period_start": "2025-09-21",
+        "period_end": "2025-09-27",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-41-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 41,
+        "period_start": "2025-10-05",
+        "period_end": "2025-10-11",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-40-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 40,
+        "period_start": "2025-09-28",
+        "period_end": "2025-10-04",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-42-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 42,
+        "period_start": "2025-10-12",
+        "period_end": "2025-10-18",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 5,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "measure": "cases",
+            "status": "ambiguous_matrix_cells"
+          },
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 11,
+            "table": 6,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-38-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 38,
+        "period_start": "2025-09-14",
+        "period_end": "2025-09-20",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-35-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 35,
+        "period_start": "2025-08-24",
+        "period_end": "2025-08-30",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-36-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 36,
+        "period_start": "2025-08-31",
+        "period_end": "2025-09-06",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-37-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 37,
+        "period_start": "2025-09-07",
+        "period_end": "2025-09-13",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-33-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 33,
+        "period_start": "2025-08-10",
+        "period_end": "2025-08-16",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 12,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-34-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 34,
+        "period_start": "2025-08-17",
+        "period_end": "2025-08-23",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-31-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 31,
+        "period_start": "2025-07-27",
+        "period_end": "2025-08-02",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 12,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-32-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 32,
+        "period_start": "2025-08-03",
+        "period_end": "2025-08-09",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 12,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-30-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 30,
+        "period_start": "2025-07-20",
+        "period_end": "2025-07-26",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-27-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 27,
+        "period_start": "2025-06-29",
+        "period_end": "2025-07-05",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-28-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 28,
+        "period_start": "2025-07-06",
+        "period_end": "2025-07-12",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-29-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 29,
+        "period_start": "2025-07-13",
+        "period_end": "2025-07-19",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-25-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 25,
+        "period_start": "2025-06-15",
+        "period_end": "2025-06-21",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-23-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 23,
+        "period_start": "2025-06-01",
+        "period_end": "2025-06-07",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 5,
+            "table": 4,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-24-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 24,
+        "period_start": "2025-06-08",
+        "period_end": "2025-06-14",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 4,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-26-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 26,
+        "period_start": "2025-06-22",
+        "period_end": "2025-06-28",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-22-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 22,
+        "period_start": "2025-05-25",
+        "period_end": "2025-05-31",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 12,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 4,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Afghanistan-Outbreaks-Situation-report-week-21-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 21,
+        "period_start": "2025-05-18",
+        "period_end": "2025-05-24",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 4,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "malaria",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-19-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 19,
+        "period_start": "2025-05-04",
+        "period_end": "2025-05-10",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-20-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 20,
+        "period_start": "2025-05-11",
+        "period_end": "2025-05-17",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-18-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 18,
+        "period_start": "2025-04-27",
+        "period_end": "2025-05-03",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-17-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 17,
+        "period_start": "2025-04-20",
+        "period_end": "2025-04-26",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-16-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 16,
+        "period_start": "2025-04-13",
+        "period_end": "2025-04-19",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-15-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 15,
+        "period_start": "2025-04-06",
+        "period_end": "2025-04-12",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-12-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 12,
+        "period_start": "2025-03-16",
+        "period_end": "2025-03-22",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 5,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-11-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 11,
+        "period_start": "2025-03-09",
+        "period_end": "2025-03-15",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-14-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 14,
+        "period_start": "2025-03-30",
+        "period_end": "2025-04-05",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-13-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 13,
+        "period_start": "2025-03-23",
+        "period_end": "2025-03-29",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-07-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 7,
+        "period_start": "2025-02-09",
+        "period_end": "2025-02-15",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-09-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 9,
+        "period_start": "2025-02-23",
+        "period_end": "2025-03-01",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-10-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 10,
+        "period_start": "2025-03-02",
+        "period_end": "2025-03-08",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-08-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 8,
+        "period_start": "2025-02-16",
+        "period_end": "2025-02-22",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-04-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 4,
+        "period_start": "2025-01-19",
+        "period_end": "2025-01-25",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-06-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 6,
+        "period_start": "2025-02-02",
+        "period_end": "2025-02-08",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 12,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-05-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 5,
+        "period_start": "2025-01-26",
+        "period_end": "2025-02-01",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-03-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 3,
+        "period_start": "2025-01-12",
+        "period_end": "2025-01-18",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-01-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 1,
+        "period_start": "2024-12-29",
+        "period_end": "2025-01-04",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-02-2025.pdf",
+        "status": "parsed",
+        "year": 2025,
+        "week": 2,
+        "period_start": "2025-01-05",
+        "period_end": "2025-01-11",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 14,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "category": "malaria",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      }
+    ],
+    "failures": [],
+    "conflicts": [],
+    "observations": 497,
+    "coverage_note": "Current-week exact matrix cells only. Unreadable/rotated tables, historical columns and revision notes, charts, cumulative counts, province/district breakdowns and narratives remain explicit coverage gaps.",
+    "captured_at": "2026-11-17T01:45:34.516892+00:00",
+    "requested_start_year": 2025,
+    "requested_end_year": 2026
+  },
+  "database_mutated": false,
+  "replayed_at": "2026-11-17T01:52:04.705009+00:00",
+  "network_forbidden_during_replay": true
+}

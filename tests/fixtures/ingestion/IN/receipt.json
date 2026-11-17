@@ -1,0 +1,45 @@
+{
+  "sources": [
+    {
+      "file": "ncdc_weekly_outbreaks.html",
+      "url": "https://ncdc.mohfw.gov.in/includes/WeeklyOutbreaks.php",
+      "retrieved_on": "2026-11-17",
+      "http_status": 200,
+      "bytes": 284157,
+      "sha256": "f8f2241bc02c5a9d3d75e748e988b40900394bd1da4dfeadc901685f84968200"
+    },
+    {
+      "file": "ncdc_2026_week37.pdf",
+      "url": "https://ncdc.mohfw.gov.in/uploads/weekly_outbreaks/2026/week37_1794379575.pdf",
+      "retrieved_on": "2026-11-17",
+      "http_status": 200,
+      "bytes": 1156244,
+      "sha256": "e78417de7d3e14f4bf091a06295b207ed0e80f302babd5871433f64d10871fdb"
+    },
+    {
+      "file": "ncdc_2020_week20.pdf",
+      "url": "https://ncdc.mohfw.gov.in/uploads/weekly_outbreaks/2020/week20.pdf",
+      "retrieved_on": "2026-11-17",
+      "http_status": 200,
+      "bytes": 333901,
+      "sha256": "7a9f308eab8dece05c3fa6e835dcb1c3b55f7e467350abd792ab7df657485762"
+    },
+    {
+      "file": "ncdc_2015_week20.pdf",
+      "url": "https://ncdc.mohfw.gov.in/uploads/weekly_outbreaks/2015/week20.pdf",
+      "retrieved_on": "2026-11-17",
+      "http_status": 200,
+      "bytes": 659024,
+      "sha256": "8bbf3a5cb3f8cfb6a08ca496ae75cbd50e88d4dc920a976cc7ea38043dc375e6"
+    },
+    {
+      "file": "ncdc_2009_week25.pdf",
+      "url": "https://ncdc.mohfw.gov.in/uploads/weekly_outbreaks/2009/week25.pdf",
+      "retrieved_on": "2026-11-17",
+      "http_status": 200,
+      "bytes": 225749,
+      "sha256": "9225b2c62c1422821eb13f8468c13e1261fb09075252105a070fb2e9fa9b6fcb"
+    }
+  ],
+  "public_release_enabled": false
+}

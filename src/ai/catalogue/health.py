@@ -141,7 +141,12 @@ def _mark_payload_rate_limited(
         current_count = int(state.get("rate_limit_count") or 0)
     except (TypeError, ValueError):
         current_count = 0
-    state["cooldown_until"] = cooldown_until.isoformat()
+    previous_until = _parse_datetime(state.get("cooldown_until"))
+    # Requests already in flight can report an ordinary 429 after a longer
+    # quota cooldown was persisted. Their shorter window must not reopen it.
+    state["cooldown_until"] = max(
+        cooldown_until, previous_until or cooldown_until
+    ).isoformat()
     state["last_rate_limit_at"] = occurred_at.isoformat()
     state["rate_limit_count"] = current_count + 1
     state["rate_limit_streak"] = streak + 1

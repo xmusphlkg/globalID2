@@ -1,0 +1,493 @@
+{
+  "verified_date": "2026-11-17",
+  "country_code": "BD",
+  "scope": "bd_dghs_dengue_daily",
+  "source_id": "SRC_BD_DGHS_DENGUE",
+  "manifest": "data/raw/bd/20261117T013609Z-60d7bb44/manifest.json",
+  "artifacts": 74,
+  "bytes": 76372685,
+  "directory_reports": 72,
+  "captured_reports": 72,
+  "parsed_reports": 72,
+  "download_failures": [],
+  "parse_failures": [],
+  "observations": 1268,
+  "first_report_date": "2026-09-04",
+  "last_report_date": "2026-11-15",
+  "format_counts": {
+    "division_summary": 21,
+    "english_dashboard": 51
+  },
+  "metric_observation_counts": {
+    "hospital_admissions": 650,
+    "deaths": 240,
+    "cumulative_hospital_admissions": 189,
+    "cumulative_deaths": 189
+  },
+  "distinct_geography_keys": [
+    "country:BD:national",
+    "country:BD:source_region:dhaka_out_of_city_corporations",
+    "country:BD:source_region:dncc",
+    "country:BD:source_region:dscc",
+    "country:BD:subdivision:BD-A",
+    "country:BD:subdivision:BD-B",
+    "country:BD:subdivision:BD-C",
+    "country:BD:subdivision:BD-D",
+    "country:BD:subdivision:BD-E",
+    "country:BD:subdivision:BD-F",
+    "country:BD:subdivision:BD-G",
+    "country:BD:subdivision:BD-H"
+  ],
+  "repaired_duplicate_comma_dates": [
+    "2026-09-30",
+    "2026-09-29"
+  ],
+  "current_directory_replayed_completely": true,
+  "all_history_coverage_verified": false,
+  "missing_directory_dates": [
+    "2026-09-18"
+  ],
+  "iedcr_nisb_status": "unverified_TLScertificate_validation_failure",
+  "database_writes": false,
+  "public_release_enabled": false,
+  "notes": [
+    "Hospital admissions are not general population incidence.",
+    "Repeated comma glyphs accepted only with agreement of explicit regional totals and age/sex grand total; originals retained.",
+    "Some PDF charts omit zero categories; those regions remain unknown.",
+    "No report exists for September 18 in this directory snapshot; no observation synthesized."
+  ],
+  "reports": [
+    {
+      "date": "2026-11-15",
+      "publication_date": "2026-11-15",
+      "sha256": "9e438e1ba05b2f7ddb9868f30fc54ec342e1d6f2f919d740f8c61dac5e39ab31",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/76c9bf79-729b-4156-b5ea-3a51d628fbaa.pdf"
+    },
+    {
+      "date": "2026-11-14",
+      "publication_date": "2026-11-14",
+      "sha256": "ad2e17833ff2f5d08e1b073798bfc57c41ccf592367bb5584c02c7f2ac884dbf",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/55748434-e2c4-4653-b8c9-8f428af2a7a1.pdf"
+    },
+    {
+      "date": "2026-11-13",
+      "publication_date": "2026-11-13",
+      "sha256": "881f9cb139d5cc946f52f3fe1174bc8e94f141ea02a0ddac3ab3ecd191bf887e",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/f2a13e0f-e1a8-4fff-a358-83f462f6e434.pdf"
+    },
+    {
+      "date": "2026-11-12",
+      "publication_date": "2026-11-12",
+      "sha256": "cf037e866c95d21cb5faac34188e171a2399058ff435518dde54cc95b4c97df1",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/7eddb1d9-6a51-4b82-bb78-22c2bfef1d5c.pdf"
+    },
+    {
+      "date": "2026-11-11",
+      "publication_date": "2026-11-11",
+      "sha256": "ca9dcc93bafbc519a558c410a10a7bf8c302062b21989abe64b5fa698041a9b5",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/9fe81654-6232-46bc-a6a6-4b7e4d921116.pdf"
+    },
+    {
+      "date": "2026-11-10",
+      "publication_date": "2026-11-10",
+      "sha256": "74aa7ef956b52629d58e76d2cb1f9d91a7c3a8c9bb4eff9dca3b9b9776e66e45",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/98ff15cf-f26d-4a21-b389-f353c1916fb1.pdf"
+    },
+    {
+      "date": "2026-11-09",
+      "publication_date": "2026-11-09",
+      "sha256": "3897911db978b593953a8d42d27fc7d973939bc9425ada954abfa05ca47bd24d",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/58314313-3232-4d53-93f8-77670cc9d724.pdf"
+    },
+    {
+      "date": "2026-11-08",
+      "publication_date": "2026-11-08",
+      "sha256": "831226a3764482e5c243f3a71274227fd379234f3c0ca1fe92c69766df65e43e",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/7968a71e-6b40-4ed6-a8ba-c0b47436d516.pdf"
+    },
+    {
+      "date": "2026-11-07",
+      "publication_date": "2026-11-07",
+      "sha256": "4c8c166584751d2de8e118bced02e3c83bdab4483251ee6998c55963ca666c6a",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/709dcc8c-a53d-462a-9e95-275d79048afd.pdf"
+    },
+    {
+      "date": "2026-11-06",
+      "publication_date": "2026-11-06",
+      "sha256": "c2604db213be76bf25e605d2d09be254d4f295d0f86803c9947557c4ceb7ade3",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/353e7c20-af61-43c3-8567-bf06e8371de7.pdf"
+    },
+    {
+      "date": "2026-11-05",
+      "publication_date": "2026-11-05",
+      "sha256": "8e8779e068d6be5f91747a6927df5c24b853617d8aabf0d49b7948639f5ec7d2",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/7174f8c2-5d65-469b-bad1-a2f41695da27.pdf"
+    },
+    {
+      "date": "2026-11-04",
+      "publication_date": "2026-11-04",
+      "sha256": "0d4c958d64672d205442918fbc164c754cd876152c5c2e191e7d77c7043f1e35",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/07a4733a-396f-4df3-8a9a-47e32a1dc697.pdf"
+    },
+    {
+      "date": "2026-11-03",
+      "publication_date": "2026-11-03",
+      "sha256": "068f4c416d2e0233b635fa59b2b2318fca03ed8dea110f2bf40db630e5a90956",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/0df48732-90d2-42fd-b8f3-04f4bf3698ad.pdf"
+    },
+    {
+      "date": "2026-11-02",
+      "publication_date": "2026-11-03",
+      "sha256": "c636b2d0cdd06d4306ac8c5b492062fac341b627514a21399b15e0df2fc62471",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/97450925-4a9f-472c-b860-341165d72c25.pdf"
+    },
+    {
+      "date": "2026-11-01",
+      "publication_date": "2026-11-01",
+      "sha256": "0e069322c5e0ea3aa328ab552b75fe5877ccec408c17c90af806e127c15a160c",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/10/13c5b69b-a038-4ef6-b36d-027c0448d387.pdf"
+    },
+    {
+      "date": "2026-10-31",
+      "publication_date": "2026-10-31",
+      "sha256": "193d80c29392484e90cb1cfcb457693475b63c60b7fda8b069cb049463b9de3f",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/0c49cad0-f42f-47e3-a460-0a6818d6590f.pdf"
+    },
+    {
+      "date": "2026-10-30",
+      "publication_date": "2026-10-30",
+      "sha256": "03509bc64db3e9f73ff9ef570d668ab18a52d9c30da2cbc8fe7ad4620ccb0c43",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/8bb3211e-5010-4ae4-af13-84fe6d68409b.pdf"
+    },
+    {
+      "date": "2026-10-29",
+      "publication_date": "2026-10-29",
+      "sha256": "ed315adfa8df523a4ff75006fce8c0ba937e17098df434e6e48ca20a8e4d520c",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/85cedf7c-d3d3-47d3-b229-9adfd22f7135.pdf"
+    },
+    {
+      "date": "2026-10-28",
+      "publication_date": "2026-10-28",
+      "sha256": "80884ecbd472f27dffc48f55abf097da420e7a5e0fd0a1eaf5f9d45d105245d7",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/ae41a3ef-e2d0-4c57-a72f-24eb4e049dcc.pdf"
+    },
+    {
+      "date": "2026-10-27",
+      "publication_date": "2026-10-27",
+      "sha256": "de95413d502fe5394be1e496f83966297f1a5f54581b793cd2bd206d5f99cb65",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/e805a958-1a9b-44b2-b047-97f35f58c516.pdf"
+    },
+    {
+      "date": "2026-10-26",
+      "publication_date": "2026-10-26",
+      "sha256": "184b60bcdfc91260cb41d2bb37c6266e34490fc8cde47593686314d8f0ffcf4e",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/b7f77d0d-3942-4a5d-b284-28bc71457805.pdf"
+    },
+    {
+      "date": "2026-10-25",
+      "publication_date": "2026-10-25",
+      "sha256": "33f3f8ed6a23ec5dc15825cb4171177e06ca3e8332a6a300d009cab5486d69e1",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/794a1b84-9239-4b73-a685-69594eef050f.pdf"
+    },
+    {
+      "date": "2026-10-24",
+      "publication_date": "2026-10-24",
+      "sha256": "91ec1b26c8a0a8e3229807c3530f3ff75844abcadae8ae385438a3fe9e7205f4",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/a88e8de7-045d-4730-9216-d46a3fb2851e.pdf"
+    },
+    {
+      "date": "2026-10-23",
+      "publication_date": "2026-10-23",
+      "sha256": "b553bd21875f843f6ae1f655ac9144a79cb5686e4d31288dbf3308e6126ced21",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/c7397dc6-7458-4fb5-acbb-6fd27fec9762.pdf"
+    },
+    {
+      "date": "2026-10-22",
+      "publication_date": "2026-10-22",
+      "sha256": "1ba14a2a7fafee856c3ed99dc2532de40e56e04f402c57e231b3922ed0fc0dbc",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/95c9e645-175f-4ddd-94bb-1d05180532f8.pdf"
+    },
+    {
+      "date": "2026-10-21",
+      "publication_date": "2026-10-21",
+      "sha256": "8cf1d84c32a1f87e3dc4fef75ad900986a467ec340d53c1875a10747e3d53364",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/06f2b6a4-f837-445e-9046-bd2b889019c7.pdf"
+    },
+    {
+      "date": "2026-10-20",
+      "publication_date": "2026-10-20",
+      "sha256": "5dfca2b623d85b3bb4ad30dbe065f064517113a314e77f413ed702dadcae905b",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/e6e276f2-8939-48c9-ba93-06ea049dbf0c.pdf"
+    },
+    {
+      "date": "2026-10-19",
+      "publication_date": "2026-10-19",
+      "sha256": "0ed410a8907df63021a51c6efaa2aadce4e80784c2b71d811fd396fe36fec5d8",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/6f2ce5cf-461b-424c-8210-87b6a3ed6170.pdf"
+    },
+    {
+      "date": "2026-10-18",
+      "publication_date": "2026-10-18",
+      "sha256": "be58ea3552b88c378bedec1f9ed396e6865c529a4ba46d7312452cffe2ab617b",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/a99cdf43-ffa2-404c-a3e8-169122e082f5.pdf"
+    },
+    {
+      "date": "2026-10-17",
+      "publication_date": "2026-10-17",
+      "sha256": "901780e79707a44a8e6b1f0e55de3259e7f9b6b8904cacbdd2d1c05cc81c3448",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/77f877af-abb4-4c2c-9829-3357423cdea5.pdf"
+    },
+    {
+      "date": "2026-10-16",
+      "publication_date": "2026-10-16",
+      "sha256": "69c7268942bb22ca54f5bae858568106508d2f83d3e8f42780802aa624dbb858",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/32a9155b-152d-4c44-a96e-7fcd74a49b35.pdf"
+    },
+    {
+      "date": "2026-10-15",
+      "publication_date": "2026-10-15",
+      "sha256": "d6d77f6ad7a6b828883a4c6ced654b923f2d7de1d3410bddd042f84f524c3fd0",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/3241ae93-7bce-4ee6-a835-7f1394f1a2a7.pdf"
+    },
+    {
+      "date": "2026-10-14",
+      "publication_date": "2026-10-14",
+      "sha256": "4e618fcb1c6ace42eb83af0557963e0470e4d5d7755b69cdff66c71084f391ec",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/88245374-39bd-48fe-9cdc-b8e72ec6ab20.pdf"
+    },
+    {
+      "date": "2026-10-13",
+      "publication_date": "2026-10-13",
+      "sha256": "39a4da5699bcf1055009c53191cfa0bb0f3f34c9ea77bcdd727b1b0b0055ffb1",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/e5715e08-3ce0-411f-adcf-d061656c45ab.pdf"
+    },
+    {
+      "date": "2026-10-12",
+      "publication_date": "2026-10-12",
+      "sha256": "5099d7a42ac22a8b42d0ce1d8256e5e1e74e9f84cf3b723f0744d458201aa20f",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/0463c3fc-fddd-4aee-83c3-efb3447e5fdc.pdf"
+    },
+    {
+      "date": "2026-10-11",
+      "publication_date": "2026-10-11",
+      "sha256": "dcd90068d5e8827db44a17a705d1d0e9cac320e08d2c9ed07f330dcd787bc0d0",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/2ed6b32f-2650-4ed0-b0a0-82d95651e4b2.pdf"
+    },
+    {
+      "date": "2026-10-10",
+      "publication_date": "2026-10-10",
+      "sha256": "fe2899fab0f6389cd581b44de0dabb8c533a5faefe398c39d1d5a5f556042000",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/84b44004-8e94-4680-bef0-03967fe44d24.pdf"
+    },
+    {
+      "date": "2026-10-09",
+      "publication_date": "2026-10-09",
+      "sha256": "2aab24785416daea65c646af2225a6d279acfb0da0a335d50ed4f43f81efd875",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/c5772fa4-d079-427c-8fab-b4c481f8d112.pdf"
+    },
+    {
+      "date": "2026-10-08",
+      "publication_date": "2026-10-08",
+      "sha256": "014a046827234cdd27cf18a783f60abb2dfa7709f2068aac765d209d1213d148",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/283317b9-5863-48fe-9cb5-6621c87178f5.pdf"
+    },
+    {
+      "date": "2026-10-07",
+      "publication_date": "2026-10-07",
+      "sha256": "8b6125068be45fb09df21acd4139be6a34f82467a265b6305ffda934a0b966e1",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/49e9c962-7f15-447d-8cc1-2c1b484e97e7.pdf"
+    },
+    {
+      "date": "2026-10-06",
+      "publication_date": "2026-10-06",
+      "sha256": "12c44c45346c946ab2c1012d996727c6d75d969fd15263545286361284e67163",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/80906fea-4b3b-4086-bc46-3eb35412a167.pdf"
+    },
+    {
+      "date": "2026-10-05",
+      "publication_date": "2026-10-05",
+      "sha256": "22701220069e2c5401ba55116e71f779f03f69f1ebcbe007e03087c9340c228d",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/808075b9-4505-47d0-a901-976883dafcd7.pdf"
+    },
+    {
+      "date": "2026-10-04",
+      "publication_date": "2026-10-04",
+      "sha256": "69266b45d3462fe2e459f7f7af7465bd87ec4e25fc5d2ac55bfcfdd1a21c93e5",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/7479c2d4-d4f2-46fe-8896-21f420de8395.pdf"
+    },
+    {
+      "date": "2026-10-03",
+      "publication_date": "2026-10-03",
+      "sha256": "19f59c7c5160c76ddad5847576be40cd24d1da340ee2218e00e1f0343fbdad67",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/aa0a35cb-b5e2-4869-a9ca-46afa23199d5.pdf"
+    },
+    {
+      "date": "2026-10-02",
+      "publication_date": "2026-10-02",
+      "sha256": "8792688513dfc9e4caef0bb060d0ad75d2853b6ba814f9d0b4f191112904675c",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/ab7a85a6-c257-4056-ad01-9b4acc0004e6.pdf"
+    },
+    {
+      "date": "2026-10-01",
+      "publication_date": "2026-10-01",
+      "sha256": "4dcd5106ad655056a8dffaf19a37f7c2cfe0f4c7a35181356a93d35a5d13d571",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/c3b9337c-6fa1-45dc-beb4-a4141e10c71d.pdf"
+    },
+    {
+      "date": "2026-09-30",
+      "publication_date": "2026-09-30",
+      "sha256": "3572822c58b8c96605a723d4025388dde831cc689c13f850d20bcb38d6f84c0e",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/9/eb331128-b2b1-4041-8a84-0b1ee97be8fc.pdf"
+    },
+    {
+      "date": "2026-09-29",
+      "publication_date": "2026-09-29",
+      "sha256": "39dbf8d15d0fb4375a48efd8b3012182c361f14ddd97ac1d2131287c82fcc1a0",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/576b341e-a2f1-4503-b43c-ae7a549a8cf3.pdf"
+    },
+    {
+      "date": "2026-09-28",
+      "publication_date": "2026-09-28",
+      "sha256": "fa911cc41f3bb66916cffcd6ffaa4c357058afd37122740afdbf516ce105640c",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/da6aed92-9cc0-4fd4-95b7-3bb95b127099.pdf"
+    },
+    {
+      "date": "2026-09-27",
+      "publication_date": "2026-09-27",
+      "sha256": "a4a93152689834f5908ebc9c6ee508fd3339b77151fe2625a77d0a3d4173b16c",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/2557a2ef-33cc-43f0-b972-512cb056cd8b.pdf"
+    },
+    {
+      "date": "2026-09-26",
+      "publication_date": "2026-09-26",
+      "sha256": "c83ef785525f99da77222e2ad8fdd832d36e2b0353151794237c21e6a906aa3f",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/5f8e83b8-0660-4b3e-8589-838bbc4c92c9.pdf"
+    },
+    {
+      "date": "2026-09-25",
+      "publication_date": "2026-09-25",
+      "sha256": "92b7a5def5dc6ad5a2a2e037c2a539c243fb9109d7a0805d0fda9cf01677bd44",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/01a5c20f-7274-4dec-9b0d-ef93c6f07607.pdf"
+    },
+    {
+      "date": "2026-09-24",
+      "publication_date": "2026-09-24",
+      "sha256": "90554218988b1454533c36accecd375411ed8b6733a4577f11680963f0708331",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/13e111ec-10b8-4d1e-a30c-12f1be5f5b35.pdf"
+    },
+    {
+      "date": "2026-09-23",
+      "publication_date": "2026-09-23",
+      "sha256": "19bc6f8ffc69e2f6c2c1f154091c3da0d42caa890fe66bccc8eece1b70fdca57",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/38711725-37f0-4ddb-b6ec-8de5eb23f39c.pdf"
+    },
+    {
+      "date": "2026-09-22",
+      "publication_date": "2026-09-22",
+      "sha256": "6cd83e78e1e336fda79aac7b2045a94b4d4ff9099a69b1b11b121feb51a65644",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/7d30b24f-558a-4174-95dd-42e1e140aa98.pdf"
+    },
+    {
+      "date": "2026-09-21",
+      "publication_date": "2026-09-21",
+      "sha256": "82fcf5175a34496036cbbc2733ac94db941f66587d42cec90f97c546cf8b7839",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/9d01eb47-1265-4c85-9fa8-60cba3a7c0c2.pdf"
+    },
+    {
+      "date": "2026-09-20",
+      "publication_date": "2026-09-20",
+      "sha256": "e7b8a5b9c60e1969e4f80e0cb841754cd66cdca00275143ad45e3e22f4e92a89",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/b098cd3d-0674-48f6-95c9-818b38ecd6c6.pdf"
+    },
+    {
+      "date": "2026-09-19",
+      "publication_date": "2026-09-19",
+      "sha256": "acda4f8ec5034c7cb59e0dc6ef36ce767c3697b2476b49868b94df83d46bc628",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/8cb9fd36-df69-4430-a738-7c489bf2d6fc.pdf"
+    },
+    {
+      "date": "2026-09-17",
+      "publication_date": "2026-09-17",
+      "sha256": "2f55f1d5063ef719cce6cec1a21b4c36219492be71c0656b939fd34129e41495",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/e446904c-a1cf-43df-86c3-1bc203446ec4.pdf"
+    },
+    {
+      "date": "2026-09-16",
+      "publication_date": "2026-09-16",
+      "sha256": "fa51547f9f32bac1a97a01da108d1bed2f3a760271155ef4481e553a352e3d70",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/b7a89f22-24a1-45b7-96e5-5b617e3f8427.pdf"
+    },
+    {
+      "date": "2026-09-15",
+      "publication_date": "2026-09-15",
+      "sha256": "8f9ea1f958337d9ff29b4c01e6bd0c7bbdaf14b074c3e46a9b842a25873cda36",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/5dfb8678-e8ec-4bae-8811-d3da23f0e376.pdf"
+    },
+    {
+      "date": "2026-09-14",
+      "publication_date": "2026-09-14",
+      "sha256": "42fe8f4dca0100904b9f54d929311adcdd4a4de17a25fc8024cbb89654e6dfc2",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/5b5dba13-aec5-4452-9e1f-689cd7d2df81.pdf"
+    },
+    {
+      "date": "2026-09-13",
+      "publication_date": "2026-09-13",
+      "sha256": "52877b3ef069e59561a68e13760e434688d9ae8cdfa9360bd877b174ee2e5507",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/300dbe24-19c6-4cab-981d-d79240ac1c66.pdf"
+    },
+    {
+      "date": "2026-09-12",
+      "publication_date": "2026-09-12",
+      "sha256": "69aad8a341cfe440eab933080be19b45515f220ddf60f3a1594e7fa6c66c409a",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/76990672-e566-412d-b7ad-d3e43bcc68cf.pdf"
+    },
+    {
+      "date": "2026-09-11",
+      "publication_date": "2026-09-11",
+      "sha256": "d28167e7742ff9f65e959f983f441a5124495dd20003ceaba9645790958b6716",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/fb839dab-9abe-42f0-b0bd-0b9a21dfa865.pdf"
+    },
+    {
+      "date": "2026-09-10",
+      "publication_date": "2026-09-10",
+      "sha256": "35e066878b417d5b88921e85176a956870de9523adb1f9fe139f07596d4d1e66",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/1879d40c-393e-420e-b9b4-54fe72bb60d0.pdf"
+    },
+    {
+      "date": "2026-09-09",
+      "publication_date": "2026-09-09",
+      "sha256": "91ef94aee219a4e32632415a871fa21ed930e146030d7d446cf1a3948cffc098",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/d38b77ef-2309-45a7-98fe-5dec27f20e20.pdf"
+    },
+    {
+      "date": "2026-09-08",
+      "publication_date": "2026-09-08",
+      "sha256": "3e61aa5e176d900e7dcff0b114a9ff168dfcb8a90548e87087f641e07130dbd7",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/a03a61a2-bd3f-4351-8404-85fb35f20013.pdf"
+    },
+    {
+      "date": "2026-09-07",
+      "publication_date": "2026-09-07",
+      "sha256": "68f59fecf4e099d5f8130094fa349b8584d625b9adabe972acddf83a1c7fbbb3",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/6774bce2-9ca7-4a1e-b53c-99407f91b27b.pdf"
+    },
+    {
+      "date": "2026-09-06",
+      "publication_date": "2026-09-06",
+      "sha256": "75661497f30c11a825b8e5ef584a0e4cde675ee6bd711fd26eb1e1e18aec70d1",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/1f197ff3-f9dd-4eaf-8cb4-95a32dbb3047.pdf"
+    },
+    {
+      "date": "2026-09-05",
+      "publication_date": "2026-09-05",
+      "sha256": "3c63bfaddcf568ec99aacba32c5d97e990092caa73d6d62f4d6310d801c0fca8",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/07fefe21-5ffa-4ce9-91ea-e628300a1a45.pdf"
+    },
+    {
+      "date": "2026-09-04",
+      "publication_date": "2026-09-04",
+      "sha256": "090acc748d9ad8c7d1c003c7956184eda97bec76a179fb3dc9144169f322cf34",
+      "url": "https://objectstorage.ap-dcc-gazipur-1.oraclecloud15.com/n/axvjbnqprylg/b/V2Ministry/o/office-dghs/2026/8/652f9ac1-2c6d-4f1a-a9c6-21e99261ee8f.pdf"
+    }
+  ]
+}

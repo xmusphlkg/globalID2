@@ -40,6 +40,17 @@ def test_export_rejects_unknown_and_unmigrated_deprecated_fact_ids() -> None:
         )
 
 
+def test_deprecated_exact_duplicate_publishes_as_its_successor() -> None:
+    from src.generation.site_data_catalogue import use_public_concept
+
+    rewritten = use_public_concept({"disease_id": "D067", "cases": 21})
+    unchanged = use_public_concept({"disease_id": "D007", "cases": 4})
+
+    assert rewritten["disease_id"] == "D007"
+    assert rewritten["cases"] == 21
+    assert unchanged["disease_id"] == "D007"
+
+
 def test_export_allows_non_public_total_rows_to_be_ignored() -> None:
     validate_record_catalogue_coverage(
         [{"disease_id": "D999"}],

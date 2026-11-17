@@ -1,3 +1,5 @@
+import { continuousScale, prettyBreaks } from './scale.ts';
+
 export type Language = 'en' | 'zh' | 'fr';
 export type Metric = 'rate' | 'cases';
 export type Cadence = 'weekly' | 'monthly' | 'quarterly' | 'annual';
@@ -296,18 +298,18 @@ export function defaultWindow(catalog: MapCatalog, dataset: DiseaseDataset, popu
 export function sharedCeiling(catalog: MapCatalog, dataset: DiseaseDataset, populations: PopulationDataset, window: MapWindow, comparison?: MapWindow | null): number {
   let maximum = 0;
   const fromYear = Number(window.from.slice(0, 4));
-  const windows = dataset.years.map(year => shiftWindowYear(window, year - fromYear));
-  if (comparison) windows.push(comparison);
-  // The normalized set also shares the scale across selected years. Trend
-  // grouping changes neither totals nor the scale and is deliberately absent.
-  const key = [...new Set(windows.map(rangeKey))].sort().join(';');
+  // Deduplicate exact current, shifted and comparison windows before pooling.
+  const windows = [...new Map([window, ...dataset.years.map(year => shiftWindowYear(window, year - fromYear)), ...(comparison ? [comparison] : [])].map(range => [rangeKey(range), range])).values()];
+  const key = windows.map(rangeKey).sort().join(';');
   const cache = projectionCache(catalog, dataset, populations)?.ceilings;
   const cached = cache?.get(key);
   if (cached !== undefined) return cached;
   for (const range of windows) for (const row of resultsFor(catalog, dataset, populations, range)) maximum = Math.max(maximum, row.value ?? 0);
-  const power = maximum > 0 ? 10 ** Math.floor(Math.log10(maximum)) : 1;
-  const ceiling = maximum > 0 ? Math.ceil(maximum / power) * power : 1;
+  const ceiling = prettyBreaks(maximum).at(-1)!;
   return cache ? remember(cache, key, ceiling) : ceiling;
+}
+export function sharedScale(catalog: MapCatalog, dataset: DiseaseDataset, populations: PopulationDataset, window: MapWindow, comparison?: MapWindow | null) {
+  return continuousScale(sharedCeiling(catalog, dataset, populations, window, comparison));
 }
 export function restoreWindow(query: URLSearchParams, defaults: MapWindow, years: number[], bounds?: { from: string; to: string }): MapWindow {
   let from = query.get('mapFrom'), to = query.get('mapTo');

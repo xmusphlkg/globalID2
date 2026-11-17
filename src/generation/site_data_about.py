@@ -562,7 +562,7 @@ def build_country_source_info(
                 or crawler_cfg.get("cadence")
                 or fallback_cadence,
                 "description": details.get("description") or cfg.get("notes"),
-                **{key: details[key] for key in ("description_zh", "description_fr") if details.get(key)},
+                **{key: details[key] for key in ("label_zh", "description_zh", "description_fr") if details.get(key)},
                 **{
                     key: details[key]
                     for key in (
@@ -570,6 +570,7 @@ def build_country_source_info(
                         "attribution_required", "required_attribution",
                         "attribution_template", "review_status",
                         "original_dataset_modification_authorized",
+                        "coverage_years", "source_role",
                     )
                     if key in details
                 },
@@ -724,9 +725,9 @@ def build_about_snapshot(
                     "country_name_en": country_name_en,
                     "country_name_zh": country_name_zh,
                     "label_en": label_en,
-                    "label_zh": ABOUT_SOURCE_LABELS_ZH.get((code, scope), label_en),
+                    "label_zh": source.get("label_zh") or ABOUT_SOURCE_LABELS_ZH.get((code, scope), label_en),
                     "description_en": description_en,
-                    "description_zh": ABOUT_SOURCE_DESCRIPTIONS_ZH.get(
+                    "description_zh": source.get("description_zh") or ABOUT_SOURCE_DESCRIPTIONS_ZH.get(
                         (code, scope), description_en
                     ),
                     "url": source.get("url"),

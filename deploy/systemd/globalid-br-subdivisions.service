@@ -1,5 +1,5 @@
 [Unit]
-Description=Refresh Brazil SINAN residence-state cases and site exports
+Description=Refresh Brazil SINAN residence-state facts and publication dirty scopes
 After=globalid-docker.service
 Wants=globalid-docker.service
 
@@ -9,5 +9,5 @@ User=__RUN_AS_USER__
 Group=__RUN_AS_GROUP__
 WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=-__PROJECT_DIR__/.env
-ExecStart=/usr/bin/flock __PROJECT_DIR__/data/official-subdivision-refresh.lock __PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/update_br_subdivisions.py --recent-years 2 --apply --export
+ExecStart=/usr/bin/flock __PROJECT_DIR__/data/official-subdivision-refresh.lock __PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/update_br_subdivisions.py --recent-years 2 --apply --output-dir __PROJECT_DIR__/reports/ingestion/br-subdivisions/latest
 TimeoutStartSec=10800

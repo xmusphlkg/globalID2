@@ -13,7 +13,7 @@ import hashlib
 import re
 import time
 import weakref
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -673,10 +673,26 @@ async def test_route_connection(
         }
 
 
-async def update_model_check_result(model_id: int, status: str, message: str) -> None:
+async def update_model_check_result(
+    model_id: int,
+    status: str,
+    message: str,
+    *,
+    probe_started_at: datetime | None = None,
+) -> None:
     async with get_db() as db:
         model = await db.get(AIModelConfig, model_id, with_for_update=True)
         if model is None:
+            return
+        last_limit_at = health._rate_limit_state(model.extra_params)["last_rate_limit_at"]
+        if (
+            status == "available"
+            and probe_started_at is not None
+            and last_limit_at is not None
+            and last_limit_at > probe_started_at
+        ):
+            # A probe that was already in flight when quota ran out cannot
+            # prove recovery of the newer rate-limit generation.
             return
         # A failed probe is not a configuration verdict. Preserve any prior
         # hard-unavailable finding until a success proves recovery or an
@@ -759,6 +775,13 @@ async def mark_route_rate_limited(
                 model.extra_params if model is not None else None, now
             )
             cooldown_seconds = health._escalating_rate_limit_cooldown(streak, ceiling)
+        if errors.is_account_quota_exhausted(message):
+            # Empty account credit does not refill after a 10-second request
+            # window. Park this route, while the activity can promptly fail
+            # over to other routes through the dispatcher's ordinary retry.
+            cooldown_seconds = max(
+                cooldown_seconds, errors.ACCOUNT_QUOTA_COOLDOWN_SECONDS
+            )
         cooldown_until = now + timedelta(seconds=max(1, int(cooldown_seconds)))
 
         if model is not None:
@@ -1112,6 +1135,7 @@ async def check_model_by_id(
             "max_tokens": model.max_tokens,
         }
 
+    probe_started_at = health._utcnow()
     check_started_at = time.perf_counter()
     result = await test_route_connection(route, structured=structured)
     check_error = (
@@ -1137,7 +1161,10 @@ async def check_model_by_id(
             result["message"],
             retry_after_seconds=result.get("retry_after_seconds"),
         )
-    await update_model_check_result(model_id, result["status"], result["message"])
+    await update_model_check_result(
+        model_id, result["status"], result["message"],
+        probe_started_at=probe_started_at,
+    )
     if result.get("success"):
         await _refresh_native_files_probe(model_id, route)
         await update_provider_check_result(
@@ -1257,6 +1284,7 @@ async def check_all_models(*, structured: bool = True) -> list[dict[str, Any]]:
                 "model_name": route.get("model_name"),
             }
         async with semaphores[provider_id]:
+            probe_started_at = health._utcnow()
             result = await test_route_connection(route, structured=structured)
             if result["status"] == "rate_limited":
                 await mark_route_rate_limited(
@@ -1265,7 +1293,8 @@ async def check_all_models(*, structured: bool = True) -> list[dict[str, Any]]:
                     retry_after_seconds=result.get("retry_after_seconds"),
                 )
             await update_model_check_result(
-                route["model_id"], result["status"], result["message"]
+                route["model_id"], result["status"], result["message"],
+                probe_started_at=probe_started_at,
             )
             result.update(
                 {

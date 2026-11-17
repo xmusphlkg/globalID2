@@ -1,0 +1,168 @@
+{
+  "recorded_on": "2026-11-17",
+  "status": "local_source_probe_not_publication_acceptance",
+  "bes_weekly_notifications": {
+    "parser_version": "co-ins-bes-national-last-week-notifications-v1",
+    "manifest_sha256": "900a0f9915b8dc46a5ff2ffdf395f1668c19517b10b7efb8db2cb7c8d870e1f3",
+    "parsed_reports": 79,
+    "failed_reports": 18,
+    "points": 553,
+    "event_codes": [
+      "217",
+      "320",
+      "420",
+      "430",
+      "450",
+      "580",
+      "895"
+    ],
+    "csv_sha256": "d02bf67aef69e2cb1ee45af2857db279effc6fe02d24eeaa930b87f5cc981452",
+    "database_imported": false,
+    "public_release_enabled": false
+  },
+  "bes_gap_summary": {
+    "Exactly one verified national last-week table required": 7,
+    "Unreviewed event in national last-week table": 3,
+    "National last-week table is incomplete or changed": 8
+  },
+  "bes_gaps": [
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_1.pdf",
+      "reason": "Exactly one verified national last-week table required",
+      "sha256": "08b3ae7f8fb285fa18fbea71d260cee2512780d8489f39189774948a18ef910c"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_3.pdf",
+      "reason": "Exactly one verified national last-week table required",
+      "sha256": "a8611f28473f1d38a17158335d357196946b0cd85b0831149059a52fb9cfa75e"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_7.pdf",
+      "reason": "Exactly one verified national last-week table required",
+      "sha256": "e82210efba8b836e2f6edb96f1a684794e413215594048574686caedb367405b"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_2.pdf",
+      "reason": "Exactly one verified national last-week table required",
+      "sha256": "50829e947b91e05f2f50ce883f9a82089a5e1fd01c1a26eebde5a9d3d9fd23ab"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_5.pdf",
+      "reason": "Exactly one verified national last-week table required",
+      "sha256": "eac99e18c26e6cae884d1b49c11b2b951575a2fe790549eebcaa0f3235789e7a"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_4.pdf",
+      "reason": "Exactly one verified national last-week table required",
+      "sha256": "75379dd3eb2796230c940b171608ddfa7fdd6345596c1e0b7a697bfc2aaaa730"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_6.pdf",
+      "reason": "Exactly one verified national last-week table required",
+      "sha256": "269fbc41498541708d0e96650f03cbba6edb90f829451657076d7a21d5d390f7"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_8.pdf",
+      "reason": "Unreviewed event in national last-week table",
+      "sha256": "eef5bbd4134c931edaec2d55306562debf94dbdac0b3169a6bcf20b421f969ee"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_15.pdf",
+      "reason": "National last-week table is incomplete or changed",
+      "sha256": "ca99c090a8ceb79c6da34b9db2ced34fdafa8e1447a3a1c78b80e7482de6acb3"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_9.pdf",
+      "reason": "Unreviewed event in national last-week table",
+      "sha256": "58223119e14283e70d66ff2e6800b99d92d77807479a644ac43a0533d5ce8634"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_30.pdf",
+      "reason": "National last-week table is incomplete or changed",
+      "sha256": "cb2a012f9e7f0c8f7f8b8335667dc62c41b434e231d83d6f4f8345c4eacfa09e"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_34.pdf",
+      "reason": "National last-week table is incomplete or changed",
+      "sha256": "6ed03ee922c81373b4b2463aae37bcebee7374e162722d5033a152e8a837a1ec"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_42.pdf",
+      "reason": "National last-week table is incomplete or changed",
+      "sha256": "02d51925bc88212ae14e1cca8e55d3d132173dfeb52febaa9401b0891f24e918"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2025_Boletin_epidemiologico_semana_46.pdf",
+      "reason": "National last-week table is incomplete or changed",
+      "sha256": "30807fa15d50bdfca4c125d626a8b52c70b55c2116474abaee2e5b2ea1b08dca"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2026_Boletin_epidemiologico_semana_4.pdf",
+      "reason": "Unreviewed event in national last-week table",
+      "sha256": "efd1c69c4508f11edcd3de1b1f2278eef600bd7ba0d4d45168e87decd2c79ac5"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2026_Boletin_epidemiologico_semana_21.pdf",
+      "reason": "National last-week table is incomplete or changed",
+      "sha256": "09e885099e3495829effc6bee90050d790fb489c59026a4096904b567cbbc723"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2026_Boletin_epidemiologico_semana_39.pdf",
+      "reason": "National last-week table is incomplete or changed",
+      "sha256": "dee8871e466f889415e0e89e48b49beedd05993ecfe864c9a46abe3722ec836a"
+    },
+    {
+      "source_url": "https://www.ins.gov.co/buscador-eventos/BoletinEpidemiologico/2026_Boletin_epidemiologico_semana_40.pdf",
+      "reason": "National last-week table is incomplete or changed",
+      "sha256": "bc982649f86babd065543435ba125582446092355ccbf8f596ce213201b2dadb"
+    }
+  ],
+  "flunet": {
+    "official_request_url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27COL%27+and+ISO_YEAR+ge+2025&%24orderby=ISOYW+desc&%24top=12&%24format=json",
+    "response_sha256": "72415e8a2498f88f8ce0b0c18ffcd31d63ec7abb15e7b8c1898b6d2d6de31f3c",
+    "sampled_rows": 12,
+    "latest_iso_year": 2026,
+    "latest_iso_week": 45,
+    "latest_samples": [
+      {
+        "COUNTRY_CODE": "COL",
+        "ISO2": "CO",
+        "ISO_YEAR": 2026,
+        "ISO_WEEK": 45,
+        "ISO_WEEKSTARTDATE": "2026-11-02",
+        "ORIGIN_SOURCE": "NONSENTINEL",
+        "INF_ALL": 125,
+        "INF_A": 75,
+        "INF_B": 50,
+        "RSV": 55,
+        "SPEC_PROCESSED_NB": 2232
+      },
+      {
+        "COUNTRY_CODE": "COL",
+        "ISO2": "CO",
+        "ISO_YEAR": 2026,
+        "ISO_WEEK": 45,
+        "ISO_WEEKSTARTDATE": "2026-11-02",
+        "ORIGIN_SOURCE": "SENTINEL",
+        "INF_ALL": 51,
+        "INF_A": 25,
+        "INF_B": 26,
+        "RSV": 28,
+        "SPEC_PROCESSED_NB": 687
+      }
+    ],
+    "measure": "laboratory_detections_not_population_cases",
+    "full_history_verified": false
+  },
+  "microdata_independent_verification": {
+    "verified": true,
+    "method": "independent_original_zip_xml_week_counts_vs_csv_strata_sums",
+    "verified_individual_workbooks": 69,
+    "event_week_totals": 3201,
+    "notification_records": 889556,
+    "csv_sha256": "70e942ce11e1d47211d2bfd85c0012d57de30a4c92ff246ef11aa109750c3a4a",
+    "quarantined_workbooks": 3,
+    "quarantines_are_not_case_counts": true,
+    "public_release_enabled": false
+  }
+}

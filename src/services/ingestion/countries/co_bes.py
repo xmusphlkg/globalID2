@@ -461,7 +461,18 @@ def organize(artifacts, *, updater, source=DEFAULT_SCOPE, start_year=HISTORY_STA
         if identity in identities:
             raise BESContractError("Duplicate INS BES source record across reports")
         identities.add(identity)
-    rows.sort(key=lambda row: (row["Date"], row["SourceRecordID"]))
+    # Reuse the same immutable PDF capture for the independent body-table
+    # contract. A failed weekly table never changes an annex value into a case.
+    from src.data.crawlers.co_bes_weekly import ingestion_rows, parse_weekly_notifications
+    weekly_audits, weekly_gaps = [], []
+    for report, payload in documents:
+        try:
+            points, detail = parse_weekly_notifications(payload, report)
+            rows.extend(ingestion_rows(points))
+            weekly_audits.append(detail)
+        except BESContractError as exc:
+            weekly_gaps.append({"source_url": report.pdf_url, "reason": str(exc)})
+    rows.sort(key=lambda row: (row["Date"], row.get("SourceRecordID", row["SourceDiseaseCode"])))
     output = Path(updater.output_csv)
     if rows:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -481,7 +492,7 @@ def organize(artifacts, *, updater, source=DEFAULT_SCOPE, start_year=HISTORY_STA
                 temporary.unlink(missing_ok=True)
     gaps = [gap | {"report_url": detail["source_url"]}
             for detail in parsed for gap in detail["gaps"]]
-    ambiguous_rows = sum(bool(row["SourceLabelAmbiguous"]) for row in rows)
+    ambiguous_rows = sum(bool(row.get("SourceLabelAmbiguous")) for row in rows)
     fixed_annex_complete = not failures and not gaps and len(parsed) == len(expected)
     audit = {
         "status": "parsed_with_gaps" if failures or gaps else "parsed_source_native",
@@ -506,9 +517,16 @@ def organize(artifacts, *, updater, source=DEFAULT_SCOPE, start_year=HISTORY_STA
                           for detail in parsed],
         "period_type": "source_epi_year_to_date_at_week",
         "weekly_incidence_derived": False,
+        "weekly_incidence_coverage_complete": False,
+        "comparison_values_used_as_weekly_counts": False,
+        "cumulative_differencing_enabled": False,
+        "chart_only_weekly_values_extracted": False,
         "national_aggregate_derived": False,
         "public_release_enabled": False,
         "source_csv": str(output),
+        "weekly_notification_reports": len(weekly_audits),
+        "weekly_notification_points": 7 * len(weekly_audits),
+        "weekly_notification_gaps": weekly_gaps,
     }
     return ColombiaFetchResult(
         rows, max((date.fromisoformat(row["Date"]) for row in rows), default=None), output,

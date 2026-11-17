@@ -26,6 +26,8 @@ from src.services.automation_service import automation_service
 def refresh_note(channel):
     strategy = channel['refresh_strategy']
     if channel.get('integration_status') == 'automated_managed_runtime':
+        if channel.get('scope') != 'co_ins_bes_weekly':
+            return f"Managed by {channel.get('automation_owner')}. {channel.get('integration_note', '')} "
         return ('Automatic updates are active via globalid-co-bes-refresh.timer: '
                 'hourly at :45 America/Bogota; new/revised report hashes only, '
                 'bounded model-center retries and deferred-report retries. '
@@ -64,7 +66,7 @@ def desired_jobs():
     return {
         f"{channel['country_code'].lower()}-{channel['scope'].replace('_', '-')}-daily": {
             'name': (f"{channel['country_code']} INS BES Automatic Updates (managed hourly)"
-                     if channel.get('integration_status') == 'automated_managed_runtime'
+                     if channel.get('integration_status') == 'automated_managed_runtime' and channel['scope'] == 'co_ins_bes_weekly'
                      else f"{channel['country_code']} Official Surveillance Publication Check"),
             'country_code': channel['country_code'], 'source': channel['scope'],
             'enabled': channel.get('enabled_by_default', True), 'priority': 'normal', 'process': True, 'save_raw': True,

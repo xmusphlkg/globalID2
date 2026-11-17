@@ -21,6 +21,8 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+from src.core.south_asia_sources import SOUTH_ASIA_SOURCES, SOUTH_ASIA_ALL_SOURCES, south_asia_source
+
 COUNTRIES = {
     'CL': ('ChileENOHistoricalUpdater', 'cl_eno_historical'),
     'CO': ('ColombiaINSSivigilaUpdater', 'co_ins_sivigila_historical'),
@@ -33,6 +35,8 @@ COUNTRIES = {
     'AR': ('ArgentinaBENUpdater', 'ar_ben_weekly'),
     'PE': ('PeruCDCWeeklyUpdater', 'pe_cdc_weekly'),
 }
+COUNTRIES.update({code: (south_asia_source(code)["updater"], south_asia_source(code)["scope"]) for code in SOUTH_ASIA_SOURCES})
+
 SOURCE_OVERRIDES = {
     ('AR', 'ar_moh_hiv_annual'):
         ('ArgentinaHIVAnnualUpdater', 'ar_hiv'),
@@ -40,7 +44,13 @@ SOURCE_OVERRIDES = {
         ('ColombiaINSSivigilaCurrentUpdater', 'co_current'),
     ('CO', 'co_ins_bes_weekly'):
         ('ColombiaINSBESUpdater', 'co_bes'),
+    ('CO', 'who_flunet_weekly'):
+        ('WHOFluNetUpdater', 'who_flunet'),
+    ('CO', 'co_ins_sivigila_microdatos'):
+        ('ColombiaINSMicrodataUpdater', 'co_microdatos'),
 }
+
+SOURCE_OVERRIDES.update({key: (spec["updater"], spec["module"]) for key, spec in SOUTH_ASIA_ALL_SOURCES.items()})
 
 
 def load_archive_manifest(path: Path, country: str):
@@ -138,13 +148,14 @@ async def import_archive(country, manifest, *, apply=False, start_year=None,
     default_updater, default_source = COUNTRIES[country]
     source = source or default_source
     if source == default_source:
-        updater_name, module = default_updater, country.lower()
+        updater_name, module = default_updater, south_asia_source(country, source)["module"] if country in SOUTH_ASIA_SOURCES else country.lower()
     else:
         try:
             updater_name, module = SOURCE_OVERRIDES[(country, source)]
         except KeyError as exc:
             raise ValueError(f'Unsupported archive source for {country}: {source}') from exc
-    updater = getattr(import_module(f'src.data.processors.{module}'), updater_name)()
+    updater_type = getattr(import_module(f'src.data.processors.{module}'), updater_name)
+    updater = updater_type(country_code=country) if module == 'who_flunet' else updater_type()
     connector = import_module(f'src.services.ingestion.countries.{module}')
     artifacts = await asyncio.to_thread(load_archive_manifest, Path(manifest), country)
     options = {'start_year': int(start_year or updater.full_history_start_year)}
@@ -158,6 +169,9 @@ async def import_archive(country, manifest, *, apply=False, start_year=None,
         options['parse_cache_directory'] = ROOT / 'data/cache/pe/bulletin-parses'
     elif country == 'ID':
         options['parse_cache_directory'] = ROOT / 'data/cache/id/kemkes-parses'
+    elif country == 'IN':
+        options['parse_cache_directory'] = ROOT / 'data/cache/in/idsp-parses'
+        options.setdefault('parse_workers', 4)
     receipt_path = Path(receipt_path) if receipt_path else ROOT / 'data/current' / country.lower() / 'database_import_receipt.json'
     try:
         if not apply:
@@ -193,9 +207,13 @@ async def import_archive(country, manifest, *, apply=False, start_year=None,
         heartbeat = asyncio.create_task(maintain_lease(task_uuid, owner))
         try:
             async def replay():
+                strategy = None
+                if country == 'CO' and source == 'who_flunet_weekly':
+                    from src.services.ingestion.co_flunet_commit import ColombiaFluNetCommitStrategy
+                    strategy = ColombiaFluNetCommitStrategy(options['start_year'])
                 return await run_surveillance(CrawlService(), task=task, updater=updater,
                     connector=ArchiveReplayConnector(artifacts, connector), source=source,
-                    force=True, process=True, connector_options=options)
+                    force=True, process=True, connector_options=options, strategy=strategy)
 
             if source == 'co_ins_bes_weekly':
                 from src.ai.runtime import task_context

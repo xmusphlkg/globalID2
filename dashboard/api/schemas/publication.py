@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class PublicationChannelOut(BaseModel):
@@ -38,6 +38,15 @@ class PublicationPlanCreate(BaseModel):
     kind: Literal["auto", "theme", "content", "full", "template"] = "auto"
     channel: Literal["surveillance", "situation", "literature"] | None = None
     suppress_subscription_dispatch: bool = False
+    surveillance_rebuild_all: bool = False
+
+    @model_validator(mode="after")
+    def validate_surveillance_rebuild(self):
+        if self.surveillance_rebuild_all and (
+            self.kind != "content" or self.channel != "surveillance"
+        ):
+            raise ValueError("surveillance_rebuild_all requires content/surveillance")
+        return self
 
 
 class PublicationRollbackPlanCreate(BaseModel):
@@ -82,6 +91,8 @@ class PublicationPlanOut(BaseModel):
     blocked_reason: str | None = None
     rollback_of: str | None = None
     suppress_subscription_dispatch: bool = False
+    surveillance_rebuild_all: bool = False
+    country_codes: list[str] = Field(default_factory=list)
 
 
 class PublicationServiceUsageOut(BaseModel):

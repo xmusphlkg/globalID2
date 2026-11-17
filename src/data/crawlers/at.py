@@ -9,6 +9,7 @@ column is an observation.
 from __future__ import annotations
 
 import csv
+from calendar import monthrange
 import hashlib
 import io
 import json
@@ -35,6 +36,23 @@ ONTOLOGY_SOURCE_ID = "SRC_AT_AGES_RADAR"
 DEFAULT_LANDING_URL = "https://www.ages.at/en/human/disease/ages-radar-for-infectious-diseases"
 HISTORY_START_YEAR = 2025
 NATIONAL_GEOGRAPHY_KEY = "country:AT:national"
+DEFINITION_VERSION = "AT_AGES_RADAR_source_native"
+
+
+def monthly_contract(month: date) -> dict:
+    """Use the existing holding identity; metadata must not fork stored facts."""
+    return {"Frequency": "monthly", "PeriodType": "monthly", "Measure": "case_notifications",
+            "Unit": "count", "DefinitionVersion": DEFINITION_VERSION,
+            "SourceContractVersion": "at_ages_radar_calendar_month_notifications_v1",
+            "ReportingBasis": "national_notifiable_disease_radar", "TimeBasis": "calendar_month_notification",
+            "Calendar": "Gregorian", "PeriodStart": month.isoformat(),
+            "PeriodEnd": month.replace(day=monthrange(month.year, month.month)[1]).isoformat(),
+            "Geography": "Austria", "GeographyKey": NATIONAL_GEOGRAPHY_KEY,
+            "AggregationPolicy": "non_additive"}
+
+
+def category_code(row: dict) -> str:
+    return json.loads(row["Dimensions"])["source_disease_code"]
 
 _MONTHS = {
     **{name.casefold(): number for number, name in enumerate(("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"), 1)},
@@ -110,20 +128,20 @@ def parse_ages_csv(
         raise ATAGESContractError("AGES CSV does not have a disease and monthly column")
     disease_field = reader.fieldnames[0]
     month = _month_from_headers(reader.fieldnames[1:])
+    if month != issue.report_month:
+        raise ATAGESContractError("AGES issue metadata disagrees with the CSV reporting month")
     month_field = next(field for field in reader.fieldnames[1:] if _MONTH_RE.search(_text(field)) and "-" not in _text(field) and "median" not in _text(field).casefold())
     output: List[Dict[str, str]] = []
     seen: set[str] = set()
     for index, raw in enumerate(reader, start=2):
         label = _text(raw.get(disease_field))
         value = _text(raw.get(month_field)).replace(" ", "")
-        if not label or not value or value in {"-", "—", "NA", "N/A"}:
+        if not label:
             continue
-        try:
-            cases = int(value)
-        except ValueError as exc:
-            raise ATAGESContractError(f"AGES CSV row {index} has invalid count {value!r}") from exc
-        if cases < 0:
-            raise ATAGESContractError(f"AGES CSV row {index} has negative count")
+        missing = not value or value in {"-", "—", "NA", "N/A"}
+        if not missing and not re.fullmatch(r"\d+", value):
+            raise ATAGESContractError(f"AGES CSV row {index} has invalid nonnegative integer count {value!r}")
+        cases = "" if missing else str(int(value))
         source_code = _slug(label)
         if source_code in seen:
             raise ATAGESContractError(f"AGES CSV has duplicate disease row {label!r}")
@@ -133,19 +151,21 @@ def parse_ages_csv(
         # silently discarding that fact.
         output.append({
             "Date": month.isoformat(), "Year": str(month.year), "Month": str(month.month),
-            "RawDiseaseLabel": label, "SourceDiseaseCode": source_code,
-            "DiseaseCode": "__source_native__", "Cases": str(cases),
+            **monthly_contract(month),
+            "RawDiseaseLabel": label, "SourceDiseaseCode": "__source_native__", "SourceCategoryCode": source_code,
+            "DiseaseCode": "__source_native__", "Cases": cases,
+            "MissingValueStatus": "source_missing" if missing else "reported",
             "PeriodType": "monthly", "Geography": "Austria", "GeographyKey": NATIONAL_GEOGRAPHY_KEY,
             "DatasetStatus": "closed_revisable", "IsProvisional": "false",
             "RevisionSemantics": "authoritative_revision", "AuthoritativeRevision": "true",
             "Dimensions": json.dumps({"source_disease_code": source_code, "source_disease_label": label}, ensure_ascii=False, sort_keys=True),
             "Source": DEFAULT_SOURCE_NAME, "SourceURL": issue.detail_url, "DownloadURL": issue.csv_url,
             "RetrievedAt": issue.retrieved_at.isoformat().replace("+00:00", "Z"),
-            "RawSHA256": _sha256(content), "License": "not_specified_by_AGES", "PublicReleaseEnabled": "false", "LicenseReviewStatus": "pending",
+            "RawSHA256": _sha256(content), "License": "not_specified_by_AGES", "PublicReleaseEnabled": "true", "LicenseReviewStatus": "operator_authorized_public_release",
         })
     if not output:
         raise ATAGESContractError("AGES CSV contains no monthly disease rows")
-    return sorted(output, key=lambda row: (row["Date"], row["SourceDiseaseCode"]))
+    return sorted(output, key=lambda row: (row["Date"], category_code(row)))
 
 
 class AustriaAGESRadarCrawler(BaseCrawler):
@@ -165,7 +185,7 @@ class AustriaAGESRadarCrawler(BaseCrawler):
         csv_path = folder / f"{stem}.csv"
         meta_path = folder / f"{stem}.json"
         csv_path.write_bytes(content)
-        meta_path.write_text(json.dumps({"source_url": issue.detail_url, "download_url": issue.csv_url, "report_month": issue.report_month.isoformat(), "retrieved_at": issue.retrieved_at.isoformat(), "sha256": _sha256(content), "public_release_enabled": False, "license_review_status": "pending"}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        meta_path.write_text(json.dumps({"source_url": issue.detail_url, "download_url": issue.csv_url, "report_month": issue.report_month.isoformat(), "retrieved_at": issue.retrieved_at.isoformat(), "sha256": _sha256(content), "public_release_enabled": True, "license_review_status": "operator_authorized_public_release"}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     def discover_issues(self) -> List[AGESIssue]:
         landing = self.get(self.landing_url)
@@ -225,12 +245,12 @@ class AustriaAGESRadarCrawler(BaseCrawler):
         if output_csv.exists():
             with output_csv.open("r", encoding="utf-8-sig", newline="") as handle:
                 for cached in csv.DictReader(handle):
-                    key = (_text(cached.get("Date")), _text(cached.get("SourceDiseaseCode")))
+                    key = (_text(cached.get("Date")), category_code(cached))
                     if all(key):
                         merged[key] = {name: _text(value) for name, value in cached.items()}
         for row in rows:
-            merged[(row["Date"], row["SourceDiseaseCode"])] = row
-        rows = sorted(merged.values(), key=lambda row: (row["Date"], row["SourceDiseaseCode"]))
+            merged[(row["Date"], category_code(row))] = row
+        rows = sorted(merged.values(), key=lambda row: (row["Date"], category_code(row)))
         fieldnames = sorted({key for row in rows for key in row})
         output_csv.parent.mkdir(parents=True, exist_ok=True)
         temporary = output_csv.with_suffix(output_csv.suffix + ".tmp")

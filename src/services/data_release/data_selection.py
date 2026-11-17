@@ -10,7 +10,8 @@ from .planning import plan_changes
 from .global_selection import read_selected_batch, selection_batches
 
 
-async def validate_data_selection(db, *, country_codes: list[str], dirty_ids: list[int], expected_task_uuid: str | None = None) -> dict:
+async def validate_data_selection(db, *, country_codes: list[str], dirty_ids: list[int], expected_task_uuid: str | None = None,
+                                  surveillance_rebuild_all: bool = False) -> dict:
     """Return the exact plan only when IDs and country scopes agree with the DB.
 
     Published markers remain readable for their own task: a successful pointer switch
@@ -49,10 +50,13 @@ async def validate_data_selection(db, *, country_codes: list[str], dirty_ids: li
     if plan["dirty_ids"] != sorted(dirty_ids):
         excluded = sorted(set(dirty_ids) - set(plan["dirty_ids"]))
         raise ValueError(f"Selected JSON changes have disabled, unavailable or unknown country scopes: {excluded}")
-    if plan["country_codes"] != sorted(country_codes):
+    expected_codes = sorted(available) if surveillance_rebuild_all else plan["country_codes"]
+    if expected_codes != sorted(country_codes):
         raise ValueError(
             "Selected JSON country scopes do not match the database changes: "
-            f"expected {plan['country_codes']}, received {sorted(country_codes)}"
+            f"expected {expected_codes}, received {sorted(country_codes)}"
         )
+    if surveillance_rebuild_all:
+        plan["country_codes"] = expected_codes
     plan["available_country_codes"] = sorted(available)
     return plan

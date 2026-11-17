@@ -91,7 +91,9 @@ def test_refresh_marks_only_complete_reports_applied(tmp_path, monkeypatch, fact
     monkeypatch.setattr(refresh_co_bes, "verify", fake_verify)
     state_path = tmp_path / "data/current/co/state.json"
     state = {"schema": 1, "source": refresh_co_bes.DEFAULT_SCOPE,
-             "applied_reports": {url_gap: "a" * 64}}
+             "applied_reports": {url_gap: "a" * 64},
+             "contract_versions": {"annex": refresh_co_bes.ANNEX_VERSION,
+                                   "weekly_notifications": refresh_co_bes.WEEKLY_VERSION}}
     args = SimpleNamespace(state_path=state_path, cache_directory=tmp_path,
                            download_workers=1, parse_workers=1)
     result = asyncio.run(refresh_co_bes.refresh_once(args, state))

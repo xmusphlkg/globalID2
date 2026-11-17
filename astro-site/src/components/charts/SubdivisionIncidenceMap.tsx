@@ -2,15 +2,17 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import EChartsReact from '../../lib/echartsReact';
 import echarts from '../../lib/echartsMap';
 import '../../lib/echartsSurveillance';
-import { LegendComponent } from 'echarts/components';
+import { GraphicComponent, LegendComponent } from 'echarts/components';
 import { surveillanceData } from '../../lib/surveillance-data';
 import { useChartTheme } from './chartPreferences';
 import ChartResultActions from './ChartResultActions';
-import { prepareMapDataset, resultsFor, defaultWindow, sharedCeiling, restoreWindow, csvFor, validWindow, comparisonWindow, presetWindow, shiftWindowYear, trendFor, dateBounds, cadenceRank, type MapCatalog, type PopulationDataset, type DiseaseDataset, type Language, type MapWindow, type MissingReason, type RegionResult, type Cadence, type Comparison } from './subdivision-map/model';
+import { prepareMapDataset, resultsFor, defaultWindow, sharedScale, restoreWindow, csvFor, validWindow, comparisonWindow, presetWindow, shiftWindowYear, trendFor, dateBounds, cadenceRank, type MapCatalog, type PopulationDataset, type DiseaseDataset, type Language, type MapWindow, type MissingReason, type RegionResult, type Cadence, type Comparison } from './subdivision-map/model';
 import './surveillance/components/surveillance.css';
 import './subdivision-map/map.css';
+import RegionList from './subdivision-map/RegionList';
+import { continuousScale, scaleGraphic, scaleValue } from './subdivision-map/scale';
 
-echarts.use([LegendComponent]);
+echarts.use([GraphicComponent, LegendComponent]);
 
 type Geometry = Parameters<typeof echarts.registerMap>[1];
 interface Props { countryCode: string; diseaseId?: string; language?: Language; }
@@ -143,30 +145,32 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const rows = useMemo(() => catalog && dataset && population && window && rangeValid ? resultsFor(catalog, dataset, population, window) : [], [catalog, dataset, population, window?.from, window?.to, window?.metric, rangeValid]);
   const compareRows = useMemo(() => catalog && dataset && population && compareWindow ? resultsFor(catalog, dataset, population, compareWindow) : [], [catalog, dataset, population, compareWindow?.from, compareWindow?.to, compareWindow?.metric]);
   const compareByCode = useMemo(() => new Map(compareRows.map(row => [row.region.code, row])), [compareRows]);
-  const ceiling = useMemo(() => catalog && dataset && population && window && rangeValid ? sharedCeiling(catalog, dataset, population, window, compareWindow) : 1, [catalog, dataset, population, window?.from, window?.to, window?.metric, rangeValid, compareWindow?.from, compareWindow?.to, compareWindow?.metric]);
+  const scale = useMemo(() => catalog && dataset && population && window && rangeValid ? sharedScale(catalog, dataset, population, window, compareWindow) : continuousScale(0), [catalog, dataset, population, window?.from, window?.to, window?.metric, rangeValid, compareWindow?.from, compareWindow?.to, compareWindow?.metric]);
   const rowByCode = useMemo(() => new Map(rows.map(row => [row.region.code, row])), [rows]);
   const active = rowByCode.get(selected);
   const dark = theme === 'dark';
   const colors = dark ? ['#284f53', '#326d74', '#44989f', '#75c4cb', '#b7e9e9'] : ['#e0f0f1', '#afd4d8', '#75b4bd', '#398293', '#15566d'];
   const text = dark ? '#e2eaf0' : '#18344a', muted = dark ? '#a5b9c9' : '#536c80';
+  const missingColor = dark ? '#45505e' : '#d1d7df';
   const chartOption = useMemo(() => ({
     animation: false,
     tooltip: { trigger: 'item', renderMode: 'richText', confine: true, formatter: (param: { name: string }) => {
       const row = rowByCode.get(param.name);
       return row ? `${name(row.region)}\n${window?.metric === 'rate' ? t.rate : t.cases}: ${number(row.value)}\n${row.value === null ? reason(row) : row.annual.length > 1 ? `${t.annualPopulations}: ${row.annual.map(item => item.year).join(', ')}` : `${t.population}: ${number(row.population?.value, 0)}`}` : reasonLabels[lang].not_covered;
     } },
-    visualMap: { min: 0, max: ceiling, orient: 'horizontal', left: 'center', bottom: 3, itemWidth: 12, itemHeight: 130, calculable: false, inRange: { color: colors }, text: [number(ceiling), '0'], textStyle: { color: muted }, seriesIndex: 0 },
+    visualMap: { type: 'continuous', show: false, min: 0, max: scaleValue(scale.maximum), calculable: false, inRange: { color: colors }, outOfRange: { color: missingColor }, seriesIndex: 0 },
+    graphic: scaleGraphic(scale, colors, muted, dark ? '#8097a8' : '#94a7b6', missingColor, t.missing, value => value.toLocaleString(lang, { maximumFractionDigits: 0 })),
     series: [{ type: 'map', map: mapName, roam: true,
-      ...(mapFocused && code === 'US' ? { boundingCoords: [[-126, 50], [-66, 24]] } : mapFocused && code === 'JP' ? { boundingCoords: [[128, 46], [146, 30]] } : {}), layoutCenter: ['50%', '44%'], layoutSize: '95%', selectedMode: false,
+      ...(mapFocused && code === 'US' ? { boundingCoords: [[-126, 50], [-66, 24]] } : mapFocused && code === 'JP' ? { boundingCoords: [[128, 46], [146, 30]] } : {}), layoutCenter: ['54%', '43%'], layoutSize: '87%', selectedMode: false,
       itemStyle: { areaColor: dark ? '#354553' : '#e0e5e9', borderColor: dark ? '#10212e' : '#ffffff', borderWidth: .7 },
       emphasis: { label: { show: false }, itemStyle: { borderColor: '#e5a545', borderWidth: 2 } },
-      data: rows.map(row => ({ name: row.region.code, value: row.value ?? undefined,
+      data: rows.map(row => ({ name: row.region.code, value: row.value === null ? -1 : scaleValue(row.value),
         itemStyle: {
           ...(row.region.code === selected ? { borderColor: dark ? '#ffffff' : '#172d3c', borderWidth: 2 } : {}),
-          ...(row.value === null ? { areaColor: dark ? '#354553' : '#e0e5e9', decal: row.reasons.includes('suppressed') ? { symbol: 'rect', dashArrayX: [1, 0], dashArrayY: [2, 5], rotation: -Math.PI / 4, color: dark ? '#8097a8' : '#94a7b6' } : undefined } : {}),
+          ...(row.value === null ? { areaColor: dark ? '#45505e' : '#d1d7df', decal: row.reasons.includes('suppressed') ? { symbol: 'rect', dashArrayX: [1, 0], dashArrayY: [2, 5], rotation: -Math.PI / 4, color: dark ? '#8097a8' : '#94a7b6' } : undefined } : {}),
         } })),
     }],
-  }), [rows, mapName, selected, ceiling, dark, lang, window?.metric, mapFocused, code]);
+  }), [rows, mapName, selected, scale, dark, lang, window?.metric, mapFocused, code]);
   const trend = useMemo(() => active && dataset && population && window && rangeValid ? trendFor(active.region, dataset, population, window) : [], [active, dataset, population, window, rangeValid]);
   const compareTrend = useMemo(() => active && dataset && population && compareWindow ? trendFor(active.region, dataset, population, compareWindow) : [], [active, dataset, population, compareWindow]);
   const trendOption = useMemo(() => ({
@@ -180,7 +184,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
 
   if (status === 'absent') return null;
   if (status === 'loading') return <section id="regional-distribution" data-subdivision-country={code} className="figure-panel subdivision-map scroll-mt-24" aria-label={t.title}><p role="status">{t.loading}</p></section>;
-  if (status === 'error' || !catalog) return <section className="figure-panel subdivision-map"><h2 className="figure-title">{t.title}</h2><p role="status" className="figure-caption">{t.unavailable}</p></section>;
+  if (status === 'error' || !catalog) return <section id="regional-distribution" className="figure-panel subdivision-map scroll-mt-24"><h2 className="figure-title">{t.title}</h2><p role="status" className="figure-caption">{t.unavailable}</p></section>;
   const setRange = (patch: Partial<MapWindow>) => setWindow(previous => previous ? { ...previous, ...patch } : null);
   const share = () => {
     const url = new URL(globalThis.window.location.href);
@@ -210,7 +214,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const populationSources = [...new Set(rows.flatMap(row => row.annual.flatMap(item => item.population ? [item.population.source] : [])))];
   const selectedSource = dataset?.regions[selected];
   const tabs = ['map', 'trend', 'table'] as const;
-  const detail = active && window && <aside className="subdivision-map-detail" aria-live="polite">
+  const detail = active && window && <div className="subdivision-map-detail" aria-live="polite">
     <h3>{name(active.region)}{active.provisional && <span className="subdivision-map-badge">{t.provisional}</span>}</h3>
     <div className="subdivision-map-value">{number(active.value)}<span>{metricLabel}</span></div>
     {active.value === null && <p className="surveillance-note">{reason(active)}</p>}
@@ -220,33 +224,33 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       <div><dt>{t.observed}</dt><dd>{active.observed}/{active.expected}</dd></div>
     </dl>
     <p className="subdivision-map-source">{active.population ? <a href={active.population.source_url} target="_blank" rel="noopener noreferrer">{active.population.source} ↗</a> : ui.methods}{window.metric === 'rate' && <> · {ui.shortRate}</>}</p>
-  </aside>;
+  </div>;
   return <section id="regional-distribution" className="figure-panel subdivision-map scroll-mt-24" data-subdivision-country={code}>
-    <h2 className="figure-title">{t.title}</h2>
     <div ref={shell} className={`surveillance-explorer panel-fullscreen subdivision-map-workspace ${fullscreen ? 'is-fullscreen' : ''}`}
       data-chart-title={`${code} · ${t.title} · ${diseaseLabel} · ${metricLabel}${tab === 'trend' && active ? ` · ${name(active.region)}` : ''}`}
       data-disease-names={dataset ? JSON.stringify(dataset.labels) : undefined}
       data-source-label={`${caseSource} · ${populationSources.join(' / ')} · ${catalog.boundary.source} (${catalog.boundary.license})`}
       data-source-coverage={window ? `${window.from} – ${window.to}${tab === 'trend' && compareWindow ? ` · ${t.previous}: ${compareWindow.from} – ${compareWindow.to}` : ''}${window.metric === 'rate' ? ` · ${ui.shortRate}` : ''}` : undefined}>
-      <div className="surveillance-heading">
-        <div className="surveillance-actions">
+      <h2 className="figure-title">{t.title}</h2>
+      <div className="subdivision-map-toolbar">
+        <div className="subdivision-map-controls">
+          <label htmlFor={`${uid}-disease`}>{t.disease}<select id={`${uid}-disease`} aria-label={t.disease} value={selectedDisease} onChange={event => setSelectedDisease(event.target.value)}>
+            {diseaseId && !selectedDisease && <option value="">—</option>}
+            {catalog.diseases.map(disease => <option key={disease.id} value={disease.id}>{disease.labels[lang] || disease.labels.en}</option>)}
+          </select></label>
+          {window && dataset && <>
+            <label htmlFor={`${uid}-metric`}>{t.metric}<select id={`${uid}-metric`} aria-label={t.metric} value={window.metric} onChange={event => setRange({ metric: event.target.value as MapWindow['metric'] })}><option value="rate">{t.rate}</option><option value="cases">{t.cases}</option></select></label>
+            <label htmlFor={`${uid}-year`}>{t.year}<select id={`${uid}-year`} aria-label={t.year} value={presetYear} onChange={event => { const year = Number(event.target.value); setWindow(validWindow(window) ? shiftWindowYear(window, year - Number(window.from.slice(0, 4))) : presetWindow(window, year, 'year')); }}>{calendarYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label>
+            <label htmlFor={`${uid}-view`}>{t.view}<select id={`${uid}-view`} aria-label={t.view} value={window.view} onChange={event => setRange({ view: event.target.value as Cadence })}>{(Object.keys(cadenceRank) as Cadence[]).map(cadence => <option key={cadence} value={cadence} disabled={cadenceRank[cadence] < cadenceRank[dataset.cadence]}>{cadenceLabels[lang][cadence]}</option>)}</select></label>
+          </>}
+        </div>
+        <div className="subdivision-map-actions">
           <ChartResultActions lang={lang} shellRef={shell} onShare={share}
             pngFilename={`${code}-${selectedDisease}-${window?.from}-${window?.to}-${tab}.png`}
             pngSelector={tab === 'trend' ? '.subdivision-map-trend' : '.subdivision-map-plot'}
             pngDisabled={!rangeValid || !dataset || tab === 'table'}
             onData={download} dataDisabled={!rangeValid || !dataset} />
         </div>
-      </div>
-      <div className="subdivision-map-controls">
-        <label htmlFor={`${uid}-disease`}>{t.disease}<select id={`${uid}-disease`} aria-label={t.disease} value={selectedDisease} onChange={event => setSelectedDisease(event.target.value)}>
-          {diseaseId && !selectedDisease && <option value="">—</option>}
-          {catalog.diseases.map(disease => <option key={disease.id} value={disease.id}>{disease.labels[lang] || disease.labels.en}</option>)}
-        </select></label>
-        {window && dataset && <>
-          <label htmlFor={`${uid}-metric`}>{t.metric}<select id={`${uid}-metric`} aria-label={t.metric} value={window.metric} onChange={event => setRange({ metric: event.target.value as MapWindow['metric'] })}><option value="rate">{t.rate}</option><option value="cases">{t.cases}</option></select></label>
-          <label htmlFor={`${uid}-year`}>{t.year}<select id={`${uid}-year`} aria-label={t.year} value={presetYear} onChange={event => { const year = Number(event.target.value); setWindow(validWindow(window) ? shiftWindowYear(window, year - Number(window.from.slice(0, 4))) : presetWindow(window, year, 'year')); }}>{calendarYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label>
-          <label htmlFor={`${uid}-view`}>{t.view}<select id={`${uid}-view`} aria-label={t.view} value={window.view} onChange={event => setRange({ view: event.target.value as Cadence })}>{(Object.keys(cadenceRank) as Cadence[]).map(cadence => <option key={cadence} value={cadence} disabled={cadenceRank[cadence] < cadenceRank[dataset.cadence]}>{cadenceLabels[lang][cadence]}</option>)}</select></label>
-        </>}
       </div>
       {!selectedDisease ? <p className="surveillance-note" role="status">{t.noDisease}</p> : !dataset || !window ? <p role="status">{failed ? t.unavailable : t.loading}</p> : <>
         <div className="subdivision-map-range surveillance-time">
@@ -278,8 +282,8 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
         <p className="subdivision-map-status" aria-live="polite">{rows.filter(row => row.value !== null).length}/{catalog.expected_regions} {ui.available} · {cadenceLabels[lang][dataset.cadence]}{compareWindow && expected?.expected !== comparedExpected?.expected && <> · {ui.periodDifference}</>}</p>
         <div role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-${tab}`}>
           {tab === 'map' && <div className="subdivision-map-content">
-            <div className="subdivision-map-plot"><div className="subdivision-map-canvas"><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%' }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /></div><span className="subdivision-map-missing">▧ {t.missing}</span></div>
-            {detail}
+            <div className="subdivision-map-plot"><div className="subdivision-map-canvas" role="img" aria-label={`${t.title} · ${metricLabel}. ${scale.ticks.map(tick => tick.value.toLocaleString(lang, { maximumFractionDigits: 0 })).join('; ')}; ${t.missing}`}><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%' }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /></div></div>
+            <RegionList rows={rows} previous={compareByCode} comparison={!!compareWindow} lang={lang} selected={selected} onSelect={setSelected} metricLabel={metricLabel} number={number} reason={reason}>{detail}</RegionList>
           </div>}
           {tab === 'trend' && active && <>
             <div className="subdivision-map-trend"><EChartsReact echarts={echarts} option={trendOption} notMerge style={{ height: fullscreen ? '55vh' : 300, minHeight: 240, width: '100%' }} /></div>
@@ -298,6 +302,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
           {expected?.from && <p>{t.actual}: {expected.from} – {expected.to} ({expected.expected}){comparedExpected?.from && <> · {t.previous}: {comparedExpected.from} – {comparedExpected.to} ({comparedExpected.expected})</>}</p>}
           {compareWindow && expected?.expected !== comparedExpected?.expected && <p>{t.equalDuration}</p>}
           <p>{t.formula} {t.scale}</p>
+          <p>{lang === 'zh' ? '颜色使用连续对数色阶，图例刻度参考 R pretty 取整数，按实际对应数值定位。原始病例数和报告率不取整，缺失值单独标记。' : lang === 'fr' ? 'Échelle logarithmique continue avec graduations entières inspirées de R pretty, positionnées selon leur valeur réelle. Les cas et taux sources ne sont pas arrondis ; les données manquantes sont distinctes.' : 'Continuous logarithmic colours use integer ticks inspired by R pretty, positioned at their actual values. Source counts and rates are not rounded; missing values are marked separately.'}</p>
           {compareWindow && <p>{t.alignment}</p>}
           {dataset.cadence === 'weekly' && window.view !== 'weekly' && <p>{t.weeklyGrouping}</p>}
           {active?.reasons.includes('missing_population') && <p>{t.noPopulation}</p>}

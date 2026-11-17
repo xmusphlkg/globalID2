@@ -26,6 +26,8 @@ from scripts.imports.import_surveillance_archive import import_archive
 from scripts.imports.kh_camewarn_history import FileSnapshotWriter
 from scripts.verify_co_bes_history import verify
 from src.data.crawlers.co_bes import DEFAULT_SCOPE, BESContractError
+from src.data.crawlers.co_bes import PARSER_VERSION as ANNEX_VERSION
+from src.data.crawlers.co_bes_weekly import PARSER_VERSION as WEEKLY_VERSION
 from src.services.ingestion.countries.co_bes import collect
 
 STATE_PATH = ROOT / "data/current/co/bes-refresh-state.json"
@@ -205,6 +207,12 @@ async def _ensure_no_other_bes_task() -> None:
 
 async def refresh_once(args, state: dict) -> dict:
     await _ensure_no_other_bes_task()
+    versions = {"annex": ANNEX_VERSION, "weekly_notifications": WEEKLY_VERSION}
+    if state.get("contract_versions") != versions:
+        # Source bytes alone cannot prove the new parser has been applied.
+        # Replay once on a contract change, then resume hash-based deltas.
+        state["applied_reports"] = {}
+        state["contract_versions"] = versions
     old_pending = set(state.get("pending_reports", []))
     old_failed = {item["url"]: item for item in state.get("failed_downloads", [])}
     state.pop("error_type", None)

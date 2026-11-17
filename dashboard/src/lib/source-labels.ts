@@ -2,6 +2,52 @@ import type { CountrySourceConfig, SourceOption } from "@/lib/hooks/useSources";
 
 export type DashboardLang = "en" | "zh";
 
+const SOUTH_ASIA_SOURCE_LABELS: Record<string, { scope: string; en: string; zh: string }> = {
+  "BD": {
+    "scope": "bd_dghs_dengue_daily",
+    "en": "Bangladesh DGHS Daily Dengue Surveillance",
+    "zh": "孟加拉国 DGHS 登革热每日住院与死亡监测"
+  },
+  "BT": {
+    "scope": "bt_rcdc_publications",
+    "en": "Bhutan RCDC Publications and Sentinel Surveillance",
+    "zh": "不丹 RCDC 出版物与哨点监测"
+  },
+  "MV": {
+    "scope": "mv_hpa_communicable",
+    "en": "Maldives HPA Communicable Disease Reports",
+    "zh": "马尔代夫 HPA 传染病报告"
+  },
+  "AF": {
+    "scope": "af_ndsr_weekly",
+    "en": "Afghanistan MoPH NDSR Weekly Epidemiological Report",
+    "zh": "阿富汗卫生部 NDSR 流行病学周报"
+  }
+};
+
+Object.assign(SOUTH_ASIA_SOURCE_LABELS, {
+  "IN": {
+    "scope": "in_idsp_weekly",
+    "en": "India NCDC IDSP Weekly Outbreak Reports",
+    "zh": "印度 IDSP 疫情暴发周报"
+  },
+  "PK": {
+    "scope": "pk_nih_idsr_weekly",
+    "en": "Pakistan NIH IDSR Weekly Bulletin",
+    "zh": "巴基斯坦 NIH IDSR 监测周报"
+  },
+  "NP": {
+    "scope": "np_sormas_weekly",
+    "en": "Nepal EDCD SORMAS Public Weekly Bulletin",
+    "zh": "尼泊尔 EDCD SORMAS 公共监测周报"
+  },
+  "LK": {
+    "scope": "lk_epid_wer_weekly",
+    "en": "Sri Lanka Epidemiology Unit Weekly Epidemiological Report",
+    "zh": "斯里兰卡流行病学处疾病周报"
+  }
+});
+
 const ECDC_COUNTRY_LABELS: Record<string, { en: string; zh: string }> = {
   AT: { en: "Austria", zh: "奥地利" },
   BE: { en: "Belgium", zh: "比利时" },
@@ -188,6 +234,8 @@ export function getSourceDisplayLabel(
 ): string {
   const s = (source || "all").trim().toLowerCase();
   const cc = (countryCode || "").trim().toUpperCase();
+  const south = Object.values(SOUTH_ASIA_SOURCE_LABELS).find(value => value.scope === s) || (s === "all" ? SOUTH_ASIA_SOURCE_LABELS[cc] : undefined);
+  if (south) return south[lang === "zh" ? "zh" : "en"];
   const extra = ADDITIONAL_SOURCE_LABELS[cc]?.[s];
   if (extra) return extra[lang === "zh" ? "zh" : "en"];
   const remaining = REMAINING_SOURCE_LABELS[cc];
@@ -418,6 +466,8 @@ export function getSourceOptionsForCountry(
   lang: DashboardLang = "en",
 ) {
   const code = countryCode.trim().toUpperCase();
+  const south = SOUTH_ASIA_SOURCE_LABELS[code];
+  if (south) return [{ value: south.scope, label: south[lang === "zh" ? "zh" : "en"] }];
   const remaining = REMAINING_SOURCE_LABELS[code];
   if (remaining) return [remaining.scope, ...Object.keys(ADDITIONAL_SOURCE_LABELS[code] || {})].map(value => ({ value, label: getSourceDisplayLabel(value, lang, code) }));
   if (code === "CL") return [{ value: "cl_eno_historical", label: getSourceDisplayLabel("cl_eno_historical", lang, code) }];

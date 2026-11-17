@@ -255,3 +255,71 @@ def test_state_script_revalidation_detects_replacement_with_same_metadata(tmp_pa
     assert next(row for row in first["rows"] if row["CountryCode"] == "BR-SP")["Cases"] == "1"
     assert next(row for row in updated["rows"] if row["CountryCode"] == "BR-SP")["Cases"] == "0"
     assert next(row for row in updated["rows"] if row["CountryCode"] == "BR-RJ")["Cases"] == "1"
+
+
+def test_state_script_does_not_make_zeroes_for_unknown_only_month(tmp_path, monkeypatch):
+    dbf = tmp_path / "unknown-month.dbf"
+    write_dbf(dbf, [("SG_UF", "C", 2), ("DT_NOTIFIC", "D", 8)], [
+        (False, {"SG_UF": "35", "DT_NOTIFIC": "20260101"}),
+        (False, {"SG_UF": "99", "DT_NOTIFIC": "20260201"}),
+        (False, {"SG_UF": "35", "DT_NOTIFIC": ""}),
+    ])
+    crawler = BrazilSINANCrawler()
+    monkeypatch.setattr(crawler, "_download_file", lambda *args: dbf)
+    monkeypatch.setattr(crawler, "_decompress_to_dbf", shutil.copyfile)
+    result = state_script._aggregate_file(crawler, ITEM)
+    assert len(result["rows"]) == 27
+    assert {r["Date"] for r in result["rows"]} == {"2026-01-01"}
+    assert result["assigned_count"] == 1
+    assert result["unknown_residence_count"] == 1
+    assert result["undated_count"] == 1
+    assert result["record_count"] == 3
+    assert not any(r.get("AuthoritativeRevision") for r in result["rows"])
+
+
+def test_state_script_unknown_only_file_keeps_audit_without_zeroes(tmp_path, monkeypatch):
+    dbf = tmp_path / "unknown.dbf"
+    write_dbf(dbf, [("SG_UF", "C", 2), ("DT_NOTIFIC", "D", 8)], [
+        (False, {"SG_UF": "99", "DT_NOTIFIC": "20260101"}),
+    ])
+    crawler = BrazilSINANCrawler()
+    monkeypatch.setattr(crawler, "_download_file", lambda *args: dbf)
+    monkeypatch.setattr(crawler, "_decompress_to_dbf", shutil.copyfile)
+    result = state_script._aggregate_file(crawler, ITEM)
+    assert result["rows"] == []
+    assert result["unknown_residence_count"] == result["record_count"] == 1
+    assert result["sha256"] == hashlib.sha256(dbf.read_bytes()).hexdigest()
+
+
+def test_state_script_rejection_keeps_isolated_report_and_never_exports(tmp_path, monkeypatch):
+    from src.data.storage.series.quality import (
+        SeriesObservationQualityReport,
+        SeriesObservationQuarantinedError,
+    )
+    output = tmp_path / "candidate"
+    monkeypatch.setattr(BrazilSINANCrawler, "fetch_file_index", lambda self: [ITEM])
+    monkeypatch.setattr(state_script, "ROOT", tmp_path)
+    monkeypatch.setattr(state_script, "ProcessPoolExecutor", ThreadPoolExecutor)
+    monkeypatch.setattr(sys, "argv", [
+        "update_br_subdivisions.py", "--apply", "--export", "--output-dir", str(output),
+    ])
+    row = {
+        "CountryCode": "BR-SP", "Date": "2026-01-01", "Year": "2026",
+        "DiseaseCode": "COQU", "Cases": "0", "SourceFiles": ITEM.filename,
+        "SourceURLs": ITEM.url, "DatasetStatus": ITEM.dataset_status,
+    }
+    monkeypatch.setattr(state_script, "aggregate_file", lambda *args, **kwargs: {
+        "file": ITEM.filename, "sha256": "a" * 64, "rows": [row],
+    })
+    report = SeriesObservationQualityReport(country_code="BR", source_row_count=1, analyzed_observations=1, history_observations=1)
+    async def rejected(rows):
+        raise SeriesObservationQuarantinedError(report)
+    monkeypatch.setattr(state_script, "apply", rejected)
+    with pytest.raises(SeriesObservationQuarantinedError):
+        state_script.main()
+    saved = json.loads((output / "import_report.json").read_text())
+    assert saved["applied"] is False
+    assert saved["quality_report"] == report.to_dict()
+    assert saved["files"][0]["sha256"] == "a" * 64
+    assert (output / "state_monthly.csv").exists()
+    assert not (tmp_path / "data/processed/br/subdivisions").exists()

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Colombia WHO FluNet daily with complete revision replay
+
+[Timer]
+OnCalendar=*-*-* 08:30:00 America/Bogota
+RandomizedDelaySec=60
+Persistent=true
+Unit=globalid-co-flunet-refresh.service
+
+[Install]
+WantedBy=timers.target

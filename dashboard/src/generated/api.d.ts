@@ -6310,6 +6310,11 @@ export interface components {
              * @default false
              */
             suppress_subscription_dispatch: boolean;
+            /**
+             * Surveillance Rebuild All
+             * @default false
+             */
+            surveillance_rebuild_all: boolean;
         };
         /** PublicationPlanOut */
         PublicationPlanOut: {
@@ -6330,6 +6335,8 @@ export interface components {
              * @enum {string}
              */
             cost_estimate_confidence: "unknown" | "low" | "high";
+            /** Country Codes */
+            country_codes?: string[];
             /**
              * Created At
              * Format: date-time
@@ -6388,6 +6395,11 @@ export interface components {
              * @default false
              */
             suppress_subscription_dispatch: boolean;
+            /**
+             * Surveillance Rebuild All
+             * @default false
+             */
+            surveillance_rebuild_all: boolean;
             /** Validation Scope */
             validation_scope: string[];
             /** Warnings */

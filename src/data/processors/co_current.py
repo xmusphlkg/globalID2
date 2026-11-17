@@ -1,4 +1,4 @@
-"""Source-native updater for INS SIVIGILA's 2023 onward dataset."""
+"""INS successor table: ingest 2023+; the checked release stops at 2024."""
 from __future__ import annotations
 
 from pathlib import Path

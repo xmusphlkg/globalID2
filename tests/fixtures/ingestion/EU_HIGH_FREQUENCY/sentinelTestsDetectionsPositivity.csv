@@ -1,0 +1,20 @@
+survtype,countryname,yearweek,pathogen,pathogentype,pathogensubtype,indicator,age,value
+primary care sentinel,Austria,2026-W45,Influenza,Influenza,total,detections,total,4
+primary care sentinel,Austria,2026-W45,Influenza,Influenza,total,positivity,total,3.9
+primary care sentinel,Austria,2026-W45,Influenza,Influenza,total,tests,total,102
+primary care sentinel,Austria,2026-W45,Influenza,Influenza A,A (unknown),detections,total,1
+primary care sentinel,Austria,2026-W45,Influenza,Influenza A,A(H1)pdm09,detections,total,2
+primary care sentinel,Austria,2026-W45,Influenza,Influenza B,B/Vic,detections,total,1
+primary care sentinel,Austria,2026-W44,Influenza,Influenza,total,detections,total,1
+primary care sentinel,Austria,2026-W44,Influenza,Influenza,total,positivity,total,1.4
+primary care sentinel,Austria,2026-W44,Influenza,Influenza,total,tests,total,73
+primary care sentinel,Austria,2026-W44,Influenza,Influenza A,A(H1)pdm09,detections,total,1
+primary care sentinel,Austria,2026-W43,Influenza,Influenza,total,detections,total,4
+primary care sentinel,Austria,2026-W43,Influenza,Influenza,total,positivity,total,3.2
+primary care sentinel,Austria,2023-W01,Influenza,Influenza,total,detections,total,56
+primary care sentinel,Austria,2023-W01,Influenza,Influenza,total,positivity,total,44.8
+primary care sentinel,Austria,2023-W01,Influenza,Influenza,total,tests,total,125
+primary care sentinel,Austria,2023-W01,Influenza,Influenza A,A (unknown),detections,total,1
+primary care sentinel,Austria,2023-W01,Influenza,Influenza A,A(H3),detections,total,51
+primary care sentinel,Austria,2023-W01,Influenza,Influenza B,B (unknown),detections,total,2
+primary care sentinel,Austria,2023-W01,Influenza,Influenza B,B/Vic,detections,total,2

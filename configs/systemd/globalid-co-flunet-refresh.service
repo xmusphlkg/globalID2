@@ -1,0 +1,15 @@
+[Unit]
+Description=Refresh Colombia WHO FluNet typed laboratory detections
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=likangguo
+Group=likangguo
+WorkingDirectory=/home/likangguo/globalID/globalID2/data/runtime/co-bes/current
+EnvironmentFile=-/home/likangguo/globalID/globalID2/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/likangguo/globalID/globalID2/venv/bin/python scripts/refresh_co_flunet.py --apply
+TimeoutStartSec=1800
+UMask=0077

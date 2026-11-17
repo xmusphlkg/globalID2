@@ -181,3 +181,21 @@ async def test_last_batch_cannot_hide_invalid_selection(selection_db, last_chang
                 await data_selection.validate_data_selection(db, **kwargs)
         else:
             assert (await data_selection.validate_data_selection(db, **kwargs))["dirty_ids"] == kwargs["dirty_ids"]
+
+
+async def test_explicit_rebuild_selects_all_eligible_countries_but_only_original_markers(selection_db):
+    async with selection_db() as db:
+        selected = await marker(db, "US")
+        later = await marker(db, "JP")
+        plan = await data_selection.validate_data_selection(db, country_codes=["JP", "US", "US-AK"],
+            dirty_ids=[selected.id], surveillance_rebuild_all=True)
+        assert plan["dirty_ids"] == [selected.id]
+        assert later.id not in plan["dirty_ids"]
+        assert plan["country_codes"] == ["JP", "US", "US-AK"]
+        for invalid in (["US"], ["AR", "JP", "US", "US-AK"]):
+            with pytest.raises(ValueError, match="country scopes do not match"):
+                await data_selection.validate_data_selection(db, country_codes=invalid,
+                    dirty_ids=[selected.id], surveillance_rebuild_all=True)
+        with pytest.raises(ValueError, match="unique positive dirty IDs"):
+            await data_selection.validate_data_selection(db, country_codes=plan["country_codes"],
+                dirty_ids=[], surveillance_rebuild_all=True)

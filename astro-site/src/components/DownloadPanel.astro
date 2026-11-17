@@ -9,10 +9,13 @@ interface SourceSummary {
   country_name?: string;
   scope?: string;
   label?: string;
+  label_zh?: string;
   url?: string;
   type?: string;
   cadence?: string;
   description?: string;
+  description_zh?: string;
+  description_fr?: string;
 }
 
 interface SourceInfoGroup {
@@ -149,17 +152,17 @@ const SOURCE_DESCRIPTION_FR: Record<string, string> = {
 };
 
 function sourceZhLabel(source: SourceSummary) {
-  return SOURCE_LABEL_ZH[source.scope ?? ''] ?? source.label ?? source.scope ?? '未知来源';
+  return source.label_zh ?? SOURCE_LABEL_ZH[source.scope ?? ''] ?? source.label ?? source.scope ?? '未知来源';
 }
 
 function sourceZhDescription(source: SourceSummary) {
-  return SOURCE_DESCRIPTION_ZH[source.scope ?? ''] ?? source.description ?? '';
+  return source.description_zh ?? SOURCE_DESCRIPTION_ZH[source.scope ?? ''] ?? source.description ?? '';
 }
 function sourceFrLabel(source: SourceSummary) {
   return SOURCE_LABEL_FR[source.scope ?? ''] ?? source.label ?? source.scope ?? 'Source inconnue';
 }
 function sourceFrDescription(source: SourceSummary) {
-  return SOURCE_DESCRIPTION_FR[source.scope ?? ''] ?? source.description ?? '';
+  return source.description_fr ?? SOURCE_DESCRIPTION_FR[source.scope ?? ''] ?? source.description ?? '';
 }
 
 const rawSourceInfo = entry?.source_info;

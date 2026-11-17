@@ -1,0 +1,160 @@
+{
+  "checked_at": "2026-11-17T01:35:46.436909+00:00",
+  "source": "np_sormas_weekly",
+  "database_registered": false,
+  "database_imported": false,
+  "public_release_enabled": false,
+  "manifest": "data/raw/np/source-probe-7b9763b5d6d04bf29d5791bfb6c229ef/manifest.json",
+  "artifact_count": 17,
+  "artifact_bytes": 14450194,
+  "observations": 1080,
+  "categories": 9,
+  "source_weeks": [
+    13,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    26,
+    27,
+    28,
+    29,
+    31,
+    35,
+    45
+  ],
+  "source_audit": {
+    "status": "captured_selected_weeks",
+    "reports": [
+      {
+        "year": 2026,
+        "week": 45,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 35,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 31,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 29,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 28,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 27,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 26,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 24,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 23,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 22,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 21,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 20,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 19,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 18,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      },
+      {
+        "year": 2026,
+        "week": 13,
+        "observations": 72,
+        "categories": 9,
+        "calendar_status": "source_week_boundaries_unverified",
+        "storage_date_role": "source_year_anchor_only"
+      }
+    ],
+    "expected_reports": 15,
+    "failed_reports": [],
+    "authoritative_window": false,
+    "calendar_status": "unverified_source_week_boundaries",
+    "coverage_note": "Published source weeks only; national reporting-network aggregate and provinces remain separate. No inferred weeks, deaths, cumulative totals or case classification.",
+    "observations": 1080
+  }
+}

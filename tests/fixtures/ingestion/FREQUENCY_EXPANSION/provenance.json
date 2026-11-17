@@ -1,0 +1,2037 @@
+{
+  "flunet-et.json": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/et/who_flunet_weekly/0001-cc29ed18f77c11ba053313c4259a7fd789e833c47afe75a64e74aa7afbfa039f.bin",
+        "sha256": "cc29ed18f77c11ba053313c4259a7fd789e833c47afe75a64e74aa7afbfa039f",
+        "byte_size": 694311,
+        "source_url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27ETH%27&%24format=json",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "who_odata_page",
+          "dataset": "flunet_et",
+          "page_number": 0,
+          "requested_url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27ETH%27&%24format=json",
+          "retrieved_at": "2026-11-17T01:25:36.458085+00:00"
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "flunet-dictionary.json": {
+    "source_artifact": {
+      "relative_path": "data/raw/frequency-expansion/20261117T012534Z/et/who_flunet_weekly/0000-2446762ee68bfeafcd03cecf644ff05f7dc75e3a430b0436c4f28313d669dcde.bin",
+      "sha256": "2446762ee68bfeafcd03cecf644ff05f7dc75e3a430b0436c4f28313d669dcde",
+      "byte_size": 14674,
+      "source_url": "https://xmart-api-public.who.int/FLUMART/VIW_FLU_METADATA?%24format=json&%24filter=contains%28DatasetName%2C+%27FluNet%27%29",
+      "kind": "archive_json",
+      "metadata_": {
+        "endpoint": "who_odata_page",
+        "dataset": "flunet_dictionary",
+        "page_number": 0,
+        "requested_url": "https://xmart-api-public.who.int/FLUMART/VIW_FLU_METADATA?%24format=json&%24filter=contains%28DatasetName%2C+%27FluNet%27%29",
+        "retrieved_at": "2026-11-17T01:25:36.458085+00:00"
+      }
+    },
+    "excerpt": false
+  },
+  "flunet-bn.json": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/bn/who_flunet_weekly/0001-f6805815cec114f5c3b9954a920aa158a9a610c32bac7317b351d4ae7b5140ca.bin",
+        "sha256": "f6805815cec114f5c3b9954a920aa158a9a610c32bac7317b351d4ae7b5140ca",
+        "byte_size": 530155,
+        "source_url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27BRN%27&%24format=json",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "who_odata_page",
+          "dataset": "flunet_bn",
+          "page_number": 0,
+          "requested_url": "https://xmart-api-public.who.int/FLUMART/VIW_FNT?%24filter=COUNTRY_CODE+eq+%27BRN%27&%24format=json",
+          "retrieved_at": "2026-11-17T01:25:48.869477+00:00"
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "ca-landing.html": {
+    "source_artifact": {
+      "relative_path": "data/raw/frequency-expansion/20261117T012534Z/ca/ca_phac_respiratory_weekly/0000-4e8064320bd3ef4ce607ecfae820dd38179d789f7d0760e07b0114692ac27188.bin",
+      "sha256": "4e8064320bd3ef4ce607ecfae820dd38179d789f7d0760e07b0114692ac27188",
+      "byte_size": 67991,
+      "source_url": "https://health-infobase.canada.ca/respiratory-virus-surveillance/",
+      "kind": "archive_json",
+      "metadata_": {
+        "endpoint": "phac_landing",
+        "requested_url": "https://health-infobase.canada.ca/respiratory-virus-surveillance/",
+        "retrieved_at": "2026-11-17T01:25:36.370222+00:00"
+      }
+    },
+    "excerpt": false
+  },
+  "ca-binding.js": {
+    "source_artifact": {
+      "relative_path": "data/raw/frequency-expansion/20261117T012534Z/ca/ca_phac_respiratory_weekly/0001-9d525dfb7afa0fd1caa678a2bec92ca1e0911eefb0b18dd07f67c9f9aa261d77.bin",
+      "sha256": "9d525dfb7afa0fd1caa678a2bec92ca1e0911eefb0b18dd07f67c9f9aa261d77",
+      "byte_size": 140644,
+      "source_url": "https://health-infobase.canada.ca/src/js/respiratory-virus-surveillance/rvdss-figure1.js",
+      "kind": "archive_json",
+      "metadata_": {
+        "endpoint": "phac_script",
+        "requested_url": "https://health-infobase.canada.ca/src/js/respiratory-virus-surveillance/rvdss-figure1.js",
+        "retrieved_at": "2026-11-17T01:25:36.370222+00:00"
+      }
+    },
+    "excerpt": false
+  },
+  "ca-weekly.csv": {
+    "source_artifact": {
+      "relative_path": "data/raw/frequency-expansion/20261117T012534Z/ca/ca_phac_respiratory_weekly/0002-ef43beb5bc93b90ff8be54a52bd233021aabf1599bdc824c08634aa4c7ddd5fa.bin",
+      "sha256": "ef43beb5bc93b90ff8be54a52bd233021aabf1599bdc824c08634aa4c7ddd5fa",
+      "byte_size": 49680,
+      "source_url": "https://health-infobase.canada.ca/src/data/respiratory-virus-detections/RVD_WeeklyData.csv",
+      "kind": "historical_csv",
+      "metadata_": {
+        "endpoint": "phac_csv",
+        "requested_url": "https://health-infobase.canada.ca/src/data/respiratory-virus-detections/RVD_WeeklyData.csv",
+        "retrieved_at": "2026-11-17T01:25:36.370222+00:00"
+      }
+    },
+    "excerpt": false
+  },
+  "spf-gp-grippe-passages-urgences-et-actes-sos-medecin_reg": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0001-f288fd50d9e6608ebd7bf3b9442a7b032b2b0d73a51952add626c50007916406.bin",
+        "sha256": "f288fd50d9e6608ebd7bf3b9442a7b032b2b0d73a51952add626c50007916406",
+        "byte_size": 22943,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 0
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0002-65acb48828d073da19eebd2142389056e77948a75142b989013bc32854a92239.bin",
+        "sha256": "65acb48828d073da19eebd2142389056e77948a75142b989013bc32854a92239",
+        "byte_size": 22938,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0003-d0d26e1400e80a4cfd9ab0da792ea2586ac0e9f91304fc49ab77f9013a8372d2.bin",
+        "sha256": "d0d26e1400e80a4cfd9ab0da792ea2586ac0e9f91304fc49ab77f9013a8372d2",
+        "byte_size": 22921,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0004-fcc9f71dab4ac6d462f86ff268053e8583f4239372d1cc3349865317ac8cfaef.bin",
+        "sha256": "fcc9f71dab4ac6d462f86ff268053e8583f4239372d1cc3349865317ac8cfaef",
+        "byte_size": 22976,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0005-a29ad5079336c7b684b60df2530508051f6a9e97f62d1748ecaaa6c34f63004c.bin",
+        "sha256": "a29ad5079336c7b684b60df2530508051f6a9e97f62d1748ecaaa6c34f63004c",
+        "byte_size": 23443,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0006-904df2f245e5db2ecf8621bf43fe1c4b7d580a8f6086780307c0ec975486b91e.bin",
+        "sha256": "904df2f245e5db2ecf8621bf43fe1c4b7d580a8f6086780307c0ec975486b91e",
+        "byte_size": 23311,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0007-29dbe3c7d96ef29621712702c20aff008e6b03919f96ee8daf7683554bd58e08.bin",
+        "sha256": "29dbe3c7d96ef29621712702c20aff008e6b03919f96ee8daf7683554bd58e08",
+        "byte_size": 24184,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0008-7ad09a49d81613833356799392a71975d4b9ff3328fe908a767726aeaa97f863.bin",
+        "sha256": "7ad09a49d81613833356799392a71975d4b9ff3328fe908a767726aeaa97f863",
+        "byte_size": 23460,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0009-61093ad60216508e8192150a1235dc90bbaedfe468bcdf30ef6ae3c787137818.bin",
+        "sha256": "61093ad60216508e8192150a1235dc90bbaedfe468bcdf30ef6ae3c787137818",
+        "byte_size": 23382,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 800
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0010-29d3ece647553056504bf745dfee47b1e5754a47de3d892e5a7246074f10df1e.bin",
+        "sha256": "29d3ece647553056504bf745dfee47b1e5754a47de3d892e5a7246074f10df1e",
+        "byte_size": 24245,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 900
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0011-53199d46a37488904b23b87c713155f9580a1deb3076119ddd6fb029e4e1bd1b.bin",
+        "sha256": "53199d46a37488904b23b87c713155f9580a1deb3076119ddd6fb029e4e1bd1b",
+        "byte_size": 23671,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1000
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0012-f73c4e331724e7a256596eff9a842e5a63339df256e152d72b5fad72e3c7909f.bin",
+        "sha256": "f73c4e331724e7a256596eff9a842e5a63339df256e152d72b5fad72e3c7909f",
+        "byte_size": 23317,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0013-4d8b1a4862747effd4fa8db07bc084e0dad5fdc6618ef3c258000c47f1818427.bin",
+        "sha256": "4d8b1a4862747effd4fa8db07bc084e0dad5fdc6618ef3c258000c47f1818427",
+        "byte_size": 24048,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0014-7b7a62821de70c809050686fe39fdc37799e76eaffa37751605523fab33b0c4a.bin",
+        "sha256": "7b7a62821de70c809050686fe39fdc37799e76eaffa37751605523fab33b0c4a",
+        "byte_size": 23914,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0015-fe1cb83110c0fbc0ed454e49a7bcbc40cb6131fc401d3ae8f979741f70aa345a.bin",
+        "sha256": "fe1cb83110c0fbc0ed454e49a7bcbc40cb6131fc401d3ae8f979741f70aa345a",
+        "byte_size": 23544,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0016-85d9dba4db232bac272680660ec62c58ad793adb77dcae89bfdf40b3c6985cfe.bin",
+        "sha256": "85d9dba4db232bac272680660ec62c58ad793adb77dcae89bfdf40b3c6985cfe",
+        "byte_size": 24122,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0017-b0693fda00617590260deed1c6dd3601fbb0b3f4235c104f3daf00c59c96b614.bin",
+        "sha256": "b0693fda00617590260deed1c6dd3601fbb0b3f4235c104f3daf00c59c96b614",
+        "byte_size": 23684,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0018-12073ecb79cfa3e994a84c2042d80a169b15e737d44d39e0bf2f780f338b06fc.bin",
+        "sha256": "12073ecb79cfa3e994a84c2042d80a169b15e737d44d39e0bf2f780f338b06fc",
+        "byte_size": 23395,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0019-64cfff5ea5b0cde9379cfbe475f6dcb44dce119b9f3411eae9a19870bcb7af37.bin",
+        "sha256": "64cfff5ea5b0cde9379cfbe475f6dcb44dce119b9f3411eae9a19870bcb7af37",
+        "byte_size": 7026,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2201%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1800
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "spf-gp-bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0022-a4c783566d84ccf3f82275773c17716b8dd325b76b9c3e6655adf635c8710d80.bin",
+        "sha256": "a4c783566d84ccf3f82275773c17716b8dd325b76b9c3e6655adf635c8710d80",
+        "byte_size": 23987,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 0
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0023-2adf69079191fc58e536752248a7ba93d94bbb4800b057965d73854c58f4b994.bin",
+        "sha256": "2adf69079191fc58e536752248a7ba93d94bbb4800b057965d73854c58f4b994",
+        "byte_size": 24264,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0024-3b27c152b5414b94ac15694cc83b8d4defc9a26ec219c6fbe252daf535b15fc3.bin",
+        "sha256": "3b27c152b5414b94ac15694cc83b8d4defc9a26ec219c6fbe252daf535b15fc3",
+        "byte_size": 24150,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0025-5b897867be61737352a64daf2582a617fccb59aa2ec43d8853f30806b4d29b50.bin",
+        "sha256": "5b897867be61737352a64daf2582a617fccb59aa2ec43d8853f30806b4d29b50",
+        "byte_size": 13885,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 300
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "spf-gp-covid-19-passages-aux-urgences-et-actes-sos-medecins-region": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0028-87b47a3fcdc53ff96311fb67ff831c52933efb0acbfaba8b5b1ad2cd4a8511c3.bin",
+        "sha256": "87b47a3fcdc53ff96311fb67ff831c52933efb0acbfaba8b5b1ad2cd4a8511c3",
+        "byte_size": 23480,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 0
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0029-48b0fd583fa2e3bf212e5802cb4e0d1174cfef57f8682d28382d8fb56eeb0a4a.bin",
+        "sha256": "48b0fd583fa2e3bf212e5802cb4e0d1174cfef57f8682d28382d8fb56eeb0a4a",
+        "byte_size": 23734,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0030-32d521f63acc1156295630081678a6a6d9a1866cb0384cad42564960db84b105.bin",
+        "sha256": "32d521f63acc1156295630081678a6a6d9a1866cb0384cad42564960db84b105",
+        "byte_size": 23754,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0031-0f58ec76ecb812753c9dce9514c6f0bf3b9443244501ca4c9d0a7a967ae2627c.bin",
+        "sha256": "0f58ec76ecb812753c9dce9514c6f0bf3b9443244501ca4c9d0a7a967ae2627c",
+        "byte_size": 23991,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0032-be36638740109a57844b31344ade8d34b1f4e0583f1e681107c7c4f7d7de7371.bin",
+        "sha256": "be36638740109a57844b31344ade8d34b1f4e0583f1e681107c7c4f7d7de7371",
+        "byte_size": 24035,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0033-49a67648eddda36e7abba278d7145a08a12f48c032319c9686884456707566e5.bin",
+        "sha256": "49a67648eddda36e7abba278d7145a08a12f48c032319c9686884456707566e5",
+        "byte_size": 23707,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0034-f6bebc0a93d9f49661f93586c854cf55b926cda6218824196f18773b3f8f58bd.bin",
+        "sha256": "f6bebc0a93d9f49661f93586c854cf55b926cda6218824196f18773b3f8f58bd",
+        "byte_size": 23406,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0035-19e2ac5a5271155878ebc2491060dede971531736de01d7cc82b47e7a8e9ed9b.bin",
+        "sha256": "19e2ac5a5271155878ebc2491060dede971531736de01d7cc82b47e7a8e9ed9b",
+        "byte_size": 23610,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0036-f2acc4da5ecd7bc4eea2628a0c39038288a381736304390c332c8f4816b5ac29.bin",
+        "sha256": "f2acc4da5ecd7bc4eea2628a0c39038288a381736304390c332c8f4816b5ac29",
+        "byte_size": 23361,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 800
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0037-737c2269feb69e8b478f31b9f2a7d7654d818f6f8b66764b124772c2f929a54a.bin",
+        "sha256": "737c2269feb69e8b478f31b9f2a7d7654d818f6f8b66764b124772c2f929a54a",
+        "byte_size": 23435,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 900
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0038-aa0cf62083074d95fa3afd59797bbe52495ea1520d93ba1ff2b07077b71f6f54.bin",
+        "sha256": "aa0cf62083074d95fa3afd59797bbe52495ea1520d93ba1ff2b07077b71f6f54",
+        "byte_size": 23274,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1000
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0039-f93d7f66744b9c09a1beaee9ab8afc7e7cbd147e29d936c3a315b4a07ba292a3.bin",
+        "sha256": "f93d7f66744b9c09a1beaee9ab8afc7e7cbd147e29d936c3a315b4a07ba292a3",
+        "byte_size": 23559,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0040-3513089ed29868404f5b18e3bc5407d495704914f9d9b1c0df821d2fa2593bef.bin",
+        "sha256": "3513089ed29868404f5b18e3bc5407d495704914f9d9b1c0df821d2fa2593bef",
+        "byte_size": 23041,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0041-df0f721b74a36e2c33449797123822bfd60ca82a90e41af06cc50e017d540d94.bin",
+        "sha256": "df0f721b74a36e2c33449797123822bfd60ca82a90e41af06cc50e017d540d94",
+        "byte_size": 23452,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0042-e0074285d7f8726c14d849df9102c0298b92eca444092974ecb0e5ee05394a56.bin",
+        "sha256": "e0074285d7f8726c14d849df9102c0298b92eca444092974ecb0e5ee05394a56",
+        "byte_size": 23464,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0043-ca4161a37f7ca87e625b7f50f70c2039b86a897ce51bcb04af4da9012a58f8d1.bin",
+        "sha256": "ca4161a37f7ca87e625b7f50f70c2039b86a897ce51bcb04af4da9012a58f8d1",
+        "byte_size": 22940,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0044-089c557eb0da8762f1c171d796f66b2c73adbb0dc9f79d164f72011940d7e4e2.bin",
+        "sha256": "089c557eb0da8762f1c171d796f66b2c73adbb0dc9f79d164f72011940d7e4e2",
+        "byte_size": 22632,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0045-8096284277c2ec89ce6da4203b6ec050c79fbfb2317f64e168d966833b52d6e1.bin",
+        "sha256": "8096284277c2ec89ce6da4203b6ec050c79fbfb2317f64e168d966833b52d6e1",
+        "byte_size": 22738,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gp/spf_odisse_weekly/0046-e71f0b5b413b81a6a7acd195a34fedadc6666f87c4b9c4e3306f41026e9d4100.bin",
+        "sha256": "e71f0b5b413b81a6a7acd195a34fedadc6666f87c4b9c4e3306f41026e9d4100",
+        "byte_size": 6846,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GP",
+          "retrieved_at": "2026-11-17T01:25:36.573982+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2201%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1800
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "spf-mq-grippe-passages-urgences-et-actes-sos-medecin_reg": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0001-665ce3541c732c827725f2d4d3c499a7f33da33aa17673549620783e91ca8478.bin",
+        "sha256": "665ce3541c732c827725f2d4d3c499a7f33da33aa17673549620783e91ca8478",
+        "byte_size": 23072,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 0
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0002-56e04f294bb22eee5adc243d554524d90e4572cd3db71d250d8a0353c1fb7d0f.bin",
+        "sha256": "56e04f294bb22eee5adc243d554524d90e4572cd3db71d250d8a0353c1fb7d0f",
+        "byte_size": 22984,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0003-de1071cb50647ccdeb52c029800b36fec8a5fd99e4ccd62042b2a127d9936b42.bin",
+        "sha256": "de1071cb50647ccdeb52c029800b36fec8a5fd99e4ccd62042b2a127d9936b42",
+        "byte_size": 22978,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0004-4e89a9aa15f674b882a1c5186b46eb409afd8e5d0250ab218048b5772b0a9445.bin",
+        "sha256": "4e89a9aa15f674b882a1c5186b46eb409afd8e5d0250ab218048b5772b0a9445",
+        "byte_size": 23277,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0005-0e1df552a5edfc12cbdd63e170ddd19273fcd8dbc38e97d28a6da99ef70cba42.bin",
+        "sha256": "0e1df552a5edfc12cbdd63e170ddd19273fcd8dbc38e97d28a6da99ef70cba42",
+        "byte_size": 23570,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0006-74d89edb01bbae3adab24fad4f53e888ff4c329f2d679dd56a8310b33d40691d.bin",
+        "sha256": "74d89edb01bbae3adab24fad4f53e888ff4c329f2d679dd56a8310b33d40691d",
+        "byte_size": 23725,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0007-55bcb587154835132b00a1b1bd207d8aa6a4882ebdbee219c474422971d181a1.bin",
+        "sha256": "55bcb587154835132b00a1b1bd207d8aa6a4882ebdbee219c474422971d181a1",
+        "byte_size": 23752,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0008-da65ca26fc13b39203c04b880ce9942963e950cd905dec6476a2e3aa95d63959.bin",
+        "sha256": "da65ca26fc13b39203c04b880ce9942963e950cd905dec6476a2e3aa95d63959",
+        "byte_size": 23911,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0009-9996ad2d879fd2dd069ffd8dcae26fd28d6f4fcc027601352747009131fb4e04.bin",
+        "sha256": "9996ad2d879fd2dd069ffd8dcae26fd28d6f4fcc027601352747009131fb4e04",
+        "byte_size": 23626,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 800
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0010-673f3645fda31e6d10800dd8037f75271de523e13d57cd9be24fdfd6acf2f91d.bin",
+        "sha256": "673f3645fda31e6d10800dd8037f75271de523e13d57cd9be24fdfd6acf2f91d",
+        "byte_size": 24577,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 900
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0011-8c818670416dc91e83ce93a6c6af0c4ef354465105b3eb45585358df39d22141.bin",
+        "sha256": "8c818670416dc91e83ce93a6c6af0c4ef354465105b3eb45585358df39d22141",
+        "byte_size": 24082,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1000
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0012-975ff2ebc40361b274c28706b84ea7f19cdf9fa3eee88deb86b2b80666576d1d.bin",
+        "sha256": "975ff2ebc40361b274c28706b84ea7f19cdf9fa3eee88deb86b2b80666576d1d",
+        "byte_size": 23680,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0013-bfb3c179b528b276fe7c47a6cddf43952b85e209b474d8eefd1366c5a4e091f0.bin",
+        "sha256": "bfb3c179b528b276fe7c47a6cddf43952b85e209b474d8eefd1366c5a4e091f0",
+        "byte_size": 24629,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0014-8f389f9b5f1bb6c3f4608d235a1b1eba7166780a7ed4cf86185dd1b13270cbce.bin",
+        "sha256": "8f389f9b5f1bb6c3f4608d235a1b1eba7166780a7ed4cf86185dd1b13270cbce",
+        "byte_size": 24463,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0015-af284238c2ab9b082510b2aa653352b944074097324addd96d3bdaef0f5c1b73.bin",
+        "sha256": "af284238c2ab9b082510b2aa653352b944074097324addd96d3bdaef0f5c1b73",
+        "byte_size": 23687,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0016-fa149159c90ad75d53f6129604ebe2a45b1ba120ceb08373891c6d81eaedec50.bin",
+        "sha256": "fa149159c90ad75d53f6129604ebe2a45b1ba120ceb08373891c6d81eaedec50",
+        "byte_size": 24782,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0017-6e8b7425c361cada14d5f66b21d3e5b90611f97a32d12b01b9d9a9277c71ae91.bin",
+        "sha256": "6e8b7425c361cada14d5f66b21d3e5b90611f97a32d12b01b9d9a9277c71ae91",
+        "byte_size": 24214,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0018-bda50fdb6f88162f7d838aa1873b478719f3a7d6e22a7a5757a01246da968a1b.bin",
+        "sha256": "bda50fdb6f88162f7d838aa1873b478719f3a7d6e22a7a5757a01246da968a1b",
+        "byte_size": 23702,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0019-ac54b23bbae241d787c67eae15c76f00b7154e1ba77958194c8ce835ae4a175f.bin",
+        "sha256": "ac54b23bbae241d787c67eae15c76f00b7154e1ba77958194c8ce835ae4a175f",
+        "byte_size": 7260,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2202%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1800
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "spf-mq-bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0022-2622b552bc8779c465f1afcc361705a5eb3aede404fa9be39e7431b55531d605.bin",
+        "sha256": "2622b552bc8779c465f1afcc361705a5eb3aede404fa9be39e7431b55531d605",
+        "byte_size": 23070,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 0
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0023-f709687a54c6b0f7b28c424d37b97a5d34974910cb299f1401ad64b8d35e71b9.bin",
+        "sha256": "f709687a54c6b0f7b28c424d37b97a5d34974910cb299f1401ad64b8d35e71b9",
+        "byte_size": 23517,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0024-c4985ab877e81b774d50044405a40b2c7dd353a39edc661df84c4023dcb07df3.bin",
+        "sha256": "c4985ab877e81b774d50044405a40b2c7dd353a39edc661df84c4023dcb07df3",
+        "byte_size": 24479,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0025-c73a5b0c34a0475a6b2d8e21899ae27833abeaa2dbc66047cbfc407529df7045.bin",
+        "sha256": "c73a5b0c34a0475a6b2d8e21899ae27833abeaa2dbc66047cbfc407529df7045",
+        "byte_size": 13919,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 300
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "spf-mq-covid-19-passages-aux-urgences-et-actes-sos-medecins-region": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0028-c2723948e8bcaa503ee4a28072591a1da62c313a664b55b3979d8afc1cba0b9c.bin",
+        "sha256": "c2723948e8bcaa503ee4a28072591a1da62c313a664b55b3979d8afc1cba0b9c",
+        "byte_size": 23261,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 0
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0029-69e20e42d1a13af73ab309b872b5c42bbe6baae8154ef1a449cf03f26b08fd7e.bin",
+        "sha256": "69e20e42d1a13af73ab309b872b5c42bbe6baae8154ef1a449cf03f26b08fd7e",
+        "byte_size": 23327,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0030-4db873d5602c16c4a9083973d87d86fba87a2092f6932f6be1148a938698b864.bin",
+        "sha256": "4db873d5602c16c4a9083973d87d86fba87a2092f6932f6be1148a938698b864",
+        "byte_size": 23422,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0031-902b169c1594eec22103534f4a30c63fe9cd4a4bc99ae325cc4d0aad48d3f26e.bin",
+        "sha256": "902b169c1594eec22103534f4a30c63fe9cd4a4bc99ae325cc4d0aad48d3f26e",
+        "byte_size": 23392,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0032-547ed99f9ad84c3994d06f797231884d4b9a3579367b2b657d3783e939338325.bin",
+        "sha256": "547ed99f9ad84c3994d06f797231884d4b9a3579367b2b657d3783e939338325",
+        "byte_size": 23447,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0033-45fe88a13bdaf45b1945e01fa4c66c4ac9a6f70af048d9d376d34503379f1023.bin",
+        "sha256": "45fe88a13bdaf45b1945e01fa4c66c4ac9a6f70af048d9d376d34503379f1023",
+        "byte_size": 23377,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0034-90e92e43b41e91b2260f022fc82ccb864f278fc0a3422395170b6b491d310188.bin",
+        "sha256": "90e92e43b41e91b2260f022fc82ccb864f278fc0a3422395170b6b491d310188",
+        "byte_size": 23317,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0035-964815efc8e121f897a501f06a63151832fb26f9d925f28c58abcbd61df027a4.bin",
+        "sha256": "964815efc8e121f897a501f06a63151832fb26f9d925f28c58abcbd61df027a4",
+        "byte_size": 23689,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0036-5f9d9dc9a70bc197b2d0f3964d7fd705153dd5bd64e55e6a4f0e831d26476a9d.bin",
+        "sha256": "5f9d9dc9a70bc197b2d0f3964d7fd705153dd5bd64e55e6a4f0e831d26476a9d",
+        "byte_size": 24255,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 800
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0037-7c28b3dd3036bb383c6ef52b83c2e70479284e51c4c5cec03ee1cd671aca6280.bin",
+        "sha256": "7c28b3dd3036bb383c6ef52b83c2e70479284e51c4c5cec03ee1cd671aca6280",
+        "byte_size": 23844,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 900
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0038-d7558adbe5a64050138fc2ff9de034116ef4a781876647fa592d7399e86ec896.bin",
+        "sha256": "d7558adbe5a64050138fc2ff9de034116ef4a781876647fa592d7399e86ec896",
+        "byte_size": 23773,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1000
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0039-912255cb9fb6ea0c8dff90989ba1dbb986ed3181fc46aaca0b4be4be296cb8e6.bin",
+        "sha256": "912255cb9fb6ea0c8dff90989ba1dbb986ed3181fc46aaca0b4be4be296cb8e6",
+        "byte_size": 24224,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0040-1a98a67454a7bfa144f8802547c6599a2ca0157de959dad4f777a042c2dc4194.bin",
+        "sha256": "1a98a67454a7bfa144f8802547c6599a2ca0157de959dad4f777a042c2dc4194",
+        "byte_size": 23281,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0041-003a4f2bfbfa3a088f3bd86d67b768cf70050209032785bb17318fe5807ec475.bin",
+        "sha256": "003a4f2bfbfa3a088f3bd86d67b768cf70050209032785bb17318fe5807ec475",
+        "byte_size": 23798,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0042-99f5cf9371f8035fc10e3afe4bb5736fd06886f3b66fe145fcafd942e8feb7d0.bin",
+        "sha256": "99f5cf9371f8035fc10e3afe4bb5736fd06886f3b66fe145fcafd942e8feb7d0",
+        "byte_size": 23838,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0043-d2588da1f5335adf58b5fe8cc90883c0571cccec83b55f38af891d6cf559bc16.bin",
+        "sha256": "d2588da1f5335adf58b5fe8cc90883c0571cccec83b55f38af891d6cf559bc16",
+        "byte_size": 23338,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0044-fa8143293a1bb2711d4a6e33e7d7bffd115a0b2f681fb40f969cecdaa6778619.bin",
+        "sha256": "fa8143293a1bb2711d4a6e33e7d7bffd115a0b2f681fb40f969cecdaa6778619",
+        "byte_size": 22795,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0045-1de807dcf28f21fed04b9135c1d44aba9e301228f4f59f71e948742ee8f762d4.bin",
+        "sha256": "1de807dcf28f21fed04b9135c1d44aba9e301228f4f59f71e948742ee8f762d4",
+        "byte_size": 22927,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/mq/spf_odisse_weekly/0046-3de7abdea547d04ab738578190f58b003524f1db66452b2efcdb8a091f53c8f7.bin",
+        "sha256": "3de7abdea547d04ab738578190f58b003524f1db66452b2efcdb8a091f53c8f7",
+        "byte_size": 7014,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "MQ",
+          "retrieved_at": "2026-11-17T01:25:36.576066+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2202%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1800
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "spf-gf-grippe-passages-urgences-et-actes-sos-medecin_reg": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0001-e897ea62047f139f751434df2ec5f08ae80c545a0bc71909ea5b28ba46d771f7.bin",
+        "sha256": "e897ea62047f139f751434df2ec5f08ae80c545a0bc71909ea5b28ba46d771f7",
+        "byte_size": 22866,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 0
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0002-1716aba80e04f8e9dc7ca2a2f50abe2689f6e6991d4b7093075dc1954698cfa1.bin",
+        "sha256": "1716aba80e04f8e9dc7ca2a2f50abe2689f6e6991d4b7093075dc1954698cfa1",
+        "byte_size": 22857,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0003-5b757520f361d5fe23b33887f72dbb0ce8e5cf0d4f503e7d502d4ccc1f6e0563.bin",
+        "sha256": "5b757520f361d5fe23b33887f72dbb0ce8e5cf0d4f503e7d502d4ccc1f6e0563",
+        "byte_size": 22966,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0004-29c9ed5683f544a6037cb2df38d12c6c596030417a66f86053860ef68b8b00cd.bin",
+        "sha256": "29c9ed5683f544a6037cb2df38d12c6c596030417a66f86053860ef68b8b00cd",
+        "byte_size": 23393,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0005-629d560459fab33442f775f86f14db3b3979259fe1bec532a2d865616f0a3aff.bin",
+        "sha256": "629d560459fab33442f775f86f14db3b3979259fe1bec532a2d865616f0a3aff",
+        "byte_size": 23350,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0006-5a85ea91fbf4d13ff05a16f001f9f6ed9323ff33466782cfd09f7744cdfc300b.bin",
+        "sha256": "5a85ea91fbf4d13ff05a16f001f9f6ed9323ff33466782cfd09f7744cdfc300b",
+        "byte_size": 23158,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0007-f65725f71f2706b22b9397a5c023c3bce238fa76e025aeca9cc4c41733140403.bin",
+        "sha256": "f65725f71f2706b22b9397a5c023c3bce238fa76e025aeca9cc4c41733140403",
+        "byte_size": 23628,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0008-dd4c8c0258232f646ab04f11f784bf4b3cf9b36d4ec2ce9d291fa61821a16c4e.bin",
+        "sha256": "dd4c8c0258232f646ab04f11f784bf4b3cf9b36d4ec2ce9d291fa61821a16c4e",
+        "byte_size": 23117,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0009-39610861307b791468c084f783d8b480d775523385e9b417a0718b70318b4e34.bin",
+        "sha256": "39610861307b791468c084f783d8b480d775523385e9b417a0718b70318b4e34",
+        "byte_size": 23015,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 800
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0010-f63e4b7156727d438ecefd4dd1c1939ee35d2845918c7894e5b5a4c2cc3cc83d.bin",
+        "sha256": "f63e4b7156727d438ecefd4dd1c1939ee35d2845918c7894e5b5a4c2cc3cc83d",
+        "byte_size": 23714,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 900
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0011-c81d8be341f9e1989e8ecaa6af0938cb1ee5968196ff8f4ecd72592ce3091734.bin",
+        "sha256": "c81d8be341f9e1989e8ecaa6af0938cb1ee5968196ff8f4ecd72592ce3091734",
+        "byte_size": 23574,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1000
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0012-32c57c0ffc43b535358e6bda20905aeda772acb250f16d2c1061ef55a532f6f0.bin",
+        "sha256": "32c57c0ffc43b535358e6bda20905aeda772acb250f16d2c1061ef55a532f6f0",
+        "byte_size": 23363,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0013-af6b4854f9f928d63b9198d0086c3bda081ece359b7ca639dd5fb7d72c0af4b9.bin",
+        "sha256": "af6b4854f9f928d63b9198d0086c3bda081ece359b7ca639dd5fb7d72c0af4b9",
+        "byte_size": 23774,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0014-dcafd301844694aca4b13b8a1781bab6245dcc81358efea58920e23ca62a9e4e.bin",
+        "sha256": "dcafd301844694aca4b13b8a1781bab6245dcc81358efea58920e23ca62a9e4e",
+        "byte_size": 23761,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0015-da65bb4fa004c60ff02da355cb6dcf2937a17655fb2e8b478baaa2219486d688.bin",
+        "sha256": "da65bb4fa004c60ff02da355cb6dcf2937a17655fb2e8b478baaa2219486d688",
+        "byte_size": 23500,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0016-64164b98bebf66e88fd3a936c927181cf6cc428ff50403751a76f3c3515bd987.bin",
+        "sha256": "64164b98bebf66e88fd3a936c927181cf6cc428ff50403751a76f3c3515bd987",
+        "byte_size": 23910,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0017-5155e43a3d7b6fb101d4b690e89715a940abbabba5e16b8552432006705ca082.bin",
+        "sha256": "5155e43a3d7b6fb101d4b690e89715a940abbabba5e16b8552432006705ca082",
+        "byte_size": 23632,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0018-a202e4104bbc0e3025f1e23e9f9e3bdbaa42c67358ef5734afa359c257e2f8f9.bin",
+        "sha256": "a202e4104bbc0e3025f1e23e9f9e3bdbaa42c67358ef5734afa359c257e2f8f9",
+        "byte_size": 23578,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0019-25b902be7a549dd911d6f0c7b32c70347cd100d2a99dba671c4d226ed552d5da.bin",
+        "sha256": "25b902be7a549dd911d6f0c7b32c70347cd100d2a99dba671c4d226ed552d5da",
+        "byte_size": 7087,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "grippe-passages-urgences-et-actes-sos-medecin_reg",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/grippe-passages-urgences-et-actes-sos-medecin_reg/records?where=region%3D%2203%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1800
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "spf-gf-bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0022-05edadb30abb86d5a8430b7b689df920daf6998c0ef84b4720ed40351daab2d8.bin",
+        "sha256": "05edadb30abb86d5a8430b7b689df920daf6998c0ef84b4720ed40351daab2d8",
+        "byte_size": 23656,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 0
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0023-31890e3a0f2159549d0c0c8f7f737df9b74e5635f3d6e49e367bfb578ff9d84d.bin",
+        "sha256": "31890e3a0f2159549d0c0c8f7f737df9b74e5635f3d6e49e367bfb578ff9d84d",
+        "byte_size": 23934,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0024-d3ec4efe4c4db529691694247d9809b281120446578ba6284d8d4cb6e92154f6.bin",
+        "sha256": "d3ec4efe4c4db529691694247d9809b281120446578ba6284d8d4cb6e92154f6",
+        "byte_size": 23944,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0025-fc1ad45d6603ef997b45584e2fda6ac016eae1213de174d63389a9b3176475e3.bin",
+        "sha256": "fc1ad45d6603ef997b45584e2fda6ac016eae1213de174d63389a9b3176475e3",
+        "byte_size": 13650,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/bronchiolite-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 300
+        }
+      }
+    ],
+    "excerpt": true
+  },
+  "spf-gf-covid-19-passages-aux-urgences-et-actes-sos-medecins-region": {
+    "source_artifacts": [
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0028-a994e2b9bd0c453fd243ae18f6894c3baa75580cf111f665e84108ce049490d8.bin",
+        "sha256": "a994e2b9bd0c453fd243ae18f6894c3baa75580cf111f665e84108ce049490d8",
+        "byte_size": 23040,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=0&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 0
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0029-94b606c8ad6aa6efd5278964558aecf5eec159daf9f2fd90479cf25ea12f2eae.bin",
+        "sha256": "94b606c8ad6aa6efd5278964558aecf5eec159daf9f2fd90479cf25ea12f2eae",
+        "byte_size": 23378,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0030-c1acb1d317777a850d06f727523d962b354d10afa01c6e6cabe4352e38830069.bin",
+        "sha256": "c1acb1d317777a850d06f727523d962b354d10afa01c6e6cabe4352e38830069",
+        "byte_size": 23485,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0031-7bafd4953a4adadfabae81e92db624c6dffa59d86ad7ef821d8c481fc76c9faf.bin",
+        "sha256": "7bafd4953a4adadfabae81e92db624c6dffa59d86ad7ef821d8c481fc76c9faf",
+        "byte_size": 23372,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0032-304a2a35689ef025f8993dbbb42678106fbf4633c1e8b15aaaa660a68adcef62.bin",
+        "sha256": "304a2a35689ef025f8993dbbb42678106fbf4633c1e8b15aaaa660a68adcef62",
+        "byte_size": 23521,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0033-87fdbadf478eff993ad30dfc0f92a862fa9f96959d91f88838c2a4661235e4fc.bin",
+        "sha256": "87fdbadf478eff993ad30dfc0f92a862fa9f96959d91f88838c2a4661235e4fc",
+        "byte_size": 23003,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0034-9f62bedb6e3ae0af8a74275ccfa14421702f11e40b3a2353fa42954aaa40c009.bin",
+        "sha256": "9f62bedb6e3ae0af8a74275ccfa14421702f11e40b3a2353fa42954aaa40c009",
+        "byte_size": 22726,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0035-58607561e125a404a7c97704e39788234f09af11701bb679643b4efac52ce61b.bin",
+        "sha256": "58607561e125a404a7c97704e39788234f09af11701bb679643b4efac52ce61b",
+        "byte_size": 22927,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0036-d72b05d887c09e328785c163a0c70ad3d8274d6a6fc25d42469ae9ab19ec1ce6.bin",
+        "sha256": "d72b05d887c09e328785c163a0c70ad3d8274d6a6fc25d42469ae9ab19ec1ce6",
+        "byte_size": 22398,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 800
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0037-81d5b7301cac7857288385d8bfcf0ff886261a293d171f970862effd314dca7f.bin",
+        "sha256": "81d5b7301cac7857288385d8bfcf0ff886261a293d171f970862effd314dca7f",
+        "byte_size": 22859,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=900&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 900
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0038-7d6b0a03e91c273f740188a0c0e8f094c3aaf17b908a9ba38f119b9e3ed79ace.bin",
+        "sha256": "7d6b0a03e91c273f740188a0c0e8f094c3aaf17b908a9ba38f119b9e3ed79ace",
+        "byte_size": 22343,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1000&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1000
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0039-fb4901b2b20e3d4ae6e6ba07bfd0b970aad1943217e149daf8000287c8074566.bin",
+        "sha256": "fb4901b2b20e3d4ae6e6ba07bfd0b970aad1943217e149daf8000287c8074566",
+        "byte_size": 22470,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1100&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1100
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0040-e9c053bda46a12620d80a23652f7a39ded796538adeea4e9e45abee82c672b69.bin",
+        "sha256": "e9c053bda46a12620d80a23652f7a39ded796538adeea4e9e45abee82c672b69",
+        "byte_size": 22487,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1200&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1200
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0041-3d233e13b3a38e577716e342e162a1217ffe693d7c8210d403adbd2d2a6f84af.bin",
+        "sha256": "3d233e13b3a38e577716e342e162a1217ffe693d7c8210d403adbd2d2a6f84af",
+        "byte_size": 22592,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1300&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1300
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0042-f1984a69feebd858c4dc20d6530b657367e4224b09902c1708d14914bc1f3565.bin",
+        "sha256": "f1984a69feebd858c4dc20d6530b657367e4224b09902c1708d14914bc1f3565",
+        "byte_size": 22627,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1400&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1400
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0043-c34ddcc45474c4aecdfa9f05116e4ea65a0ef1e2d5b8884a43e9b73ddd6f10c2.bin",
+        "sha256": "c34ddcc45474c4aecdfa9f05116e4ea65a0ef1e2d5b8884a43e9b73ddd6f10c2",
+        "byte_size": 22165,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1500&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1500
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0044-0b2caf098a6e2a45b1a886a157d9c424329d4b6d68a10db2cb02f120860c483c.bin",
+        "sha256": "0b2caf098a6e2a45b1a886a157d9c424329d4b6d68a10db2cb02f120860c483c",
+        "byte_size": 22345,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1600&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1600
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0045-d4e49881f08bd65cd184ec4f1c5e2f0397d2f305b106b166c1fa074b1a4fde1c.bin",
+        "sha256": "d4e49881f08bd65cd184ec4f1c5e2f0397d2f305b106b166c1fa074b1a4fde1c",
+        "byte_size": 22592,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1700&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1700
+        }
+      },
+      {
+        "relative_path": "data/raw/frequency-expansion/20261117T012534Z/gf/spf_odisse_weekly/0046-d2e92e0438b425ad834e020a2f35e3fb9fc05e2af2cf84f33cb1fcdf940e6021.bin",
+        "sha256": "d2e92e0438b425ad834e020a2f35e3fb9fc05e2af2cf84f33cb1fcdf940e6021",
+        "byte_size": 6762,
+        "source_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+        "kind": "archive_json",
+        "metadata_": {
+          "endpoint": "spf_weekly_records",
+          "dataset": "covid-19-passages-aux-urgences-et-actes-sos-medecins-region",
+          "country_code": "GF",
+          "retrieved_at": "2026-11-17T01:25:36.576942+00:00",
+          "requested_url": "https://odisse.santepubliquefrance.fr/api/explore/v2.1/catalog/datasets/covid-19-passages-aux-urgences-et-actes-sos-medecins-region/records?where=region%3D%2203%22&limit=100&offset=1800&order_by=date_complet%2Csursaud_cl_age_gene",
+          "offset": 1800
+        }
+      }
+    ],
+    "excerpt": true
+  }
+}

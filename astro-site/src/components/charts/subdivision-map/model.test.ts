@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { sharedScale } from './model.ts';
 import { prepareMapDataset, resultsFor, aggregateRegion, sharedCeiling, restoreWindow, csvFor, addDays, expectedPeriods, comparisonWindow, presetWindow, trendFor, dateBounds, defaultWindow, type DiseaseDataset, type MapCatalog, type PopulationDataset, type MapWindow, type Population } from './model.ts';
 
 const region = { code: 'AU-NSW', name_en: 'New South Wales' };
@@ -229,13 +230,27 @@ test('changing dates, years and trend grouping never rescans a prepared source h
     const selected = { ...range, view };
     assert.deepEqual(resultsFor(catalog, data, populations, selected), expected);
     sharedCeiling(catalog, data, populations, selected);
+    sharedScale(catalog, data, populations, selected);
     trendFor(region, data, populations, selected);
   }
   for (let year = 2000; year < 2080; year++) {
     const selected = { ...range, from: `${year}-01-01`, to: `${year}-01-31` };
     resultsFor(catalog, data, populations, selected);
     sharedCeiling(catalog, data, populations, selected);
+    sharedScale(catalog, data, populations, selected);
   }
   assert.deepEqual(resultsFor(catalog, data, populations, range), expected);
   assert.equal(reads, 0, 'interaction should use the prepared period index, including after range-cache eviction');
+});
+
+test('shared continuous scales are stable across years and grouping and never double-weight a comparison', () => {
+  const data = prepareMapDataset(structuredClone(dataset));
+  const breaks = sharedScale(catalog, data, populations, window);
+  const next = { ...window, from: '2025-01-01', to: '2025-02-28' };
+  assert.deepEqual(sharedScale(catalog, data, populations, next), breaks);
+  assert.deepEqual(sharedScale(catalog, data, populations, window, next), breaks);
+  assert.deepEqual(sharedScale(catalog, data, populations, { ...window, view: 'annual' }), breaks);
+  const revised = structuredClone(populations);
+  revised.regions[region.code]['2024'] = pop(2024, 400000);
+  assert.notDeepEqual(sharedScale(catalog, data, revised, window), breaks);
 });

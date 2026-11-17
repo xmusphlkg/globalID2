@@ -1,8 +1,4 @@
-"""Private source-native updater for the INS BES bulletin channel.
-
-The connector deliberately refuses numerical organization until complete
-official reports establish the table and reporting-period contract.
-"""
+"""Source-native BES cumulative snapshots, separate from weekly incidence."""
 from __future__ import annotations
 
 from pathlib import Path

@@ -32,16 +32,21 @@ async def test_country_task_roundtrip_uses_canonical_archive_connector(monkeypat
     from src.services.ingestion import runner
     run = AsyncMock(return_value=object())
     monkeypatch.setattr(runner, 'run_surveillance', run)
-    assert canonicalize_task_source('all', country_code=country) == ('ar_moh_hiv_annual' if country == 'AR' else scope)
+    expected_default = (
+        'ar_moh_hiv_annual' if country == 'AR'
+        else 'co_ins_bes_weekly' if country == 'CO'
+        else scope
+    )
+    assert canonicalize_task_source('all', country_code=country) == expected_default
     assert scope_from_data_source(label) == scope
     assert scope_from_data_source(scope) == scope
     assert canonical_data_source_label(scope, country_code=country) == label
-    expected_options = {scope, 'co_ins_sivigila_current', 'co_ins_bes_weekly'} if country == 'CO' else {scope}
+    expected_options = {scope, 'co_ins_sivigila_current', 'co_ins_bes_weekly', 'co_ins_sivigila_microdatos', 'who_flunet_weekly'} if country == 'CO' else {scope}
     if country == 'AR':
         expected_options.add('ar_moh_hiv_annual')
     assert {option['value'] for option in source_options_for_country(country)} == expected_options
     config = get_country_bootstrap_config(country)
-    assert config['public_release_enabled'] is (country != 'CO')
+    assert config['public_release_enabled'] is True
     updater = CrawlService._make_updater(updater_name, country)
     value = await CrawlService().execute(
         task=SimpleNamespace(input_data={'start_year': max(2020, updater.full_history_start_year)}), country_code=country,

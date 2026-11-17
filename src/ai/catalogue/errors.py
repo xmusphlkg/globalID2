@@ -18,6 +18,7 @@ from typing import Any, Literal
 
 _ROUTE_CHANNEL_FAILURE_CODES = {"get_channel_failed"}
 _EDGE_BLOCK_RETRY_SECONDS = 60
+ACCOUNT_QUOTA_COOLDOWN_SECONDS = 15 * 60
 
 
 class FailureKind(str, Enum):
@@ -58,7 +59,7 @@ def classify_failure(error: Any) -> ProviderFailure:
         )
     if is_model_channel_failure(error):
         return ProviderFailure(FailureKind.CHANNEL_UNAVAILABLE, True, "model")
-    if is_rate_limit_error(error):
+    if is_account_quota_exhausted(error) or is_rate_limit_error(error):
         return ProviderFailure(
             FailureKind.RATE_LIMIT, True, "model", extract_retry_after_seconds(error)
         )
@@ -115,6 +116,29 @@ def _is_cloudflare_edge_block(error: Any) -> bool:
         or (
             re.search(r"<title[^>]*>\s*just a moment[.!\s]*</title>", page)
             and ("/cdn-cgi/challenge-platform/" in page or "cf-chl-" in page)
+        )
+    )
+
+
+def is_account_quota_exhausted(error: Any) -> bool:
+    """Recognize exhausted account credit separately from short request limits.
+
+    Keep recovery model scoped: gateways may pool credentials, so a failure on
+    one route does not establish that every sibling route is out of credit.
+    """
+    if is_provider_authentication_error(error):
+        return False
+    if set(_extract_error_codes(error)) & {"insufficient_user_quota", "insufficient_quota"}:
+        return True
+    message = str(error or "").lower()
+    return any(
+        marker in message
+        for marker in (
+            "insufficient user quota",
+            "insufficient_user_quota",
+            "insufficient_quota",
+            "insufficient account balance",
+            "account balance is insufficient",
         )
     )
 

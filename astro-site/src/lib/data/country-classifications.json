@@ -89,15 +89,18 @@
     "PK": { "who_region": "EMR", "wb_region": "MEA", "income_group": "LMC" },
     "BD": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "LMC" },
     "NP": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "LMC" },
-    "LK": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "UMC" }
+    "LK": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "UMC" },
+    "AF": { "who_region": "EMR", "wb_region": "MEA", "income_group": "LIC" },
+    "BT": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "LMC" },
+    "MV": { "who_region": "SEAR", "wb_region": "SAS", "income_group": "UMC" }
   },
   "classification_notes": {
     "new_entries_checked_at": "2026-11-15",
     "remaining_country_entries_checked_at": "2026-11-16",
     "remaining_country_codes": ["TZ", "MM", "BN", "TL", "CR", "PA"],
     "south_asia_entries_checked_at": "2026-11-16",
-    "south_asia_country_codes": ["IN", "PK", "BD", "NP", "LK"],
-    "south_asia_note": "WHO Country Dimension and the current World Bank country API were checked. Pakistan is WHO EMR and World Bank MEA; Sri Lanka is upper middle income in this snapshot.",
+    "south_asia_country_codes": ["IN", "PK", "BD", "NP", "LK", "BT", "MV"],
+    "south_asia_note": "WHO Country Dimension and the current World Bank country API were checked. Pakistan and Afghanistan are WHO EMR / World Bank MEA; Sri Lanka and Maldives are upper middle income in this snapshot.",
     "existing_entries_checked_at": "2026-08-29",
     "unclassified_world_bank_areas": [
       "BQ",

@@ -66,6 +66,38 @@ def fingerprint(row: dict) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _canonical_csv_value(value):
+    """Normalize CSV strings to the types emitted by the organizer.
+
+    The materialized BES CSV is intentionally flat and therefore turns every
+    field into text on readback.  Verification should compare its meaning,
+    while keeping the strict typed fingerprint for database reconciliation.
+    """
+    if not isinstance(value, str):
+        return value
+    text = value.strip()
+    if text == "":
+        return ""
+    if text.casefold() == "true":
+        return True
+    if text.casefold() == "false":
+        return False
+    if text[:1] in "[{":
+        try:
+            return _canonical_csv_value(json.loads(text))
+        except json.JSONDecodeError:
+            pass
+    try:
+        number = float(text)
+    except ValueError:
+        return text
+    return int(number) if number.is_integer() else number
+
+
+def _canonical_csv_row(row: dict) -> dict:
+    return {key: _canonical_csv_value(value) for key, value in row.items()}
+
+
 def _dimensions(row: dict) -> dict:
     value = row.get("Dimensions")
     result = json.loads(value) if isinstance(value, str) else value
@@ -129,6 +161,7 @@ class SourceSnapshot:
     source_missing_cells: int = 0
     ambiguous_source_label_cells: int = 0
     original_cell_checks: tuple = ()
+    weekly_rows: tuple = ()
 
 
 def _normalized_label(value):
@@ -160,6 +193,8 @@ def check_original_cells(rows):
 
 
 def build_snapshot(artifacts, rows, *, start_year, end_year, source_audit=None):
+    weekly_rows = tuple(row for row in rows if row.get("DefinitionVersion") == "co_bes_explicit_weekly_notifications_v1")
+    rows = [row for row in rows if row.get("DefinitionVersion") != "co_bes_explicit_weekly_notifications_v1"]
     original_cells = check_original_cells(rows)
     plans = [a for a in artifacts if a.metadata_.get("endpoint") == "collection_plan"]
     if len(plans) != 1:
@@ -211,7 +246,7 @@ def build_snapshot(artifacts, rows, *, start_year, end_year, source_audit=None):
     captured_files = {(a.sha256, unquote(a.source_url)) for a in pdfs}
     return SourceSnapshot(records, dict(counts), source_audit or {}, capture_complete,
                           represented_files == captured_files, len(pdfs), len(represented_files),
-                          source_missing, ambiguous_labels, original_cells)
+                          source_missing, ambiguous_labels, original_cells, weekly_rows)
 
 
 def load_source(manifest, *, start_year, end_year, parse_workers, source_csv=None):
@@ -226,12 +261,26 @@ def load_source(manifest, *, start_year, end_year, parse_workers, source_csv=Non
             csv_rows = list(csv.DictReader(stream))
         csv_records = {}
         for row in csv_rows:
+            if row.get("DefinitionVersion") == "co_bes_explicit_weekly_notifications_v1":
+                continue
             record_id = row.get("SourceRecordID")
             if not record_id or record_id in csv_records:
                 raise ValueError("BES materialized CSV has missing or duplicate source identities")
-            csv_records[record_id] = fingerprint(row)
-        expected = {key: record[1][0] for key, record in snapshot.records.items()}
-        if csv_records != expected:
+            csv_records[record_id] = _canonical_csv_row(row)
+        expected = {
+            row["SourceRecordID"]: _canonical_csv_row(row)
+            for row in fetched.rows
+            if row.get("DefinitionVersion") != "co_bes_explicit_weekly_notifications_v1"
+        }
+        # The ingestion materializer may append typed-only columns (period
+        # boundaries, calendar and observation kind).  Compare the original
+        # organizer fields and allow those derived columns to coexist.
+        projected_csv = {
+            key: {field: values.get(field) for field in expected[key]}
+            for key, values in csv_records.items()
+            if key in expected
+        }
+        if projected_csv != expected or set(csv_records) != set(expected):
             raise ValueError("BES materialized CSV differs from frozen original organization")
     return snapshot
 
@@ -253,6 +302,7 @@ async def compare_database(snapshot, *, start_year, end_year, report_urls=None):
         FROM disease_series_observations obs
         JOIN disease_surveillance_series series USING (series_code)
         WHERE series.country_code='CO' AND series.source_system=:source_id
+          AND series.metric_type='source_reported_ytd_event_count'
     """
     parameters = {"source_id": ONTOLOGY_SOURCE_ID}
     if report_urls is not None:
@@ -380,11 +430,44 @@ async def verify(manifest, *, start_year=2025, end_year=2026, parse_workers=8, s
         report_urls = [item["source_url"] for item in snapshot.source_audit["report_audits"]]
     report = await compare_database(snapshot, start_year=start_year, end_year=end_year,
                                     report_urls=report_urls)
+    if snapshot.weekly_rows:
+        weekly = await compare_weekly_rows(snapshot.weekly_rows)
+        report["weekly_notifications"] = weekly
+        report["facts_match"] = report["facts_match"] and weekly["facts_match"]
     if manifest.read_bytes() != frozen:
         raise ValueError("BES manifest changed during verification; rerun a frozen snapshot")
     report["source_manifest"] = str(manifest.resolve())
     report["source_manifest_sha256"] = hashlib.sha256(frozen).hexdigest()
     return report
+
+
+async def compare_weekly_rows(rows):
+    """Reconcile the body table separately, including source-omitted nulls."""
+    def identity(row):
+        return row["SourceURL"], row["SourceDiseaseCode"]
+    expected = {identity(row): row for row in rows}
+    urls = sorted({row["SourceURL"] for row in rows})
+    statement = text("""SELECT o.raw_data, o.value, s.metric_type, o.geography_key
+        FROM disease_series_observations o JOIN disease_surveillance_series s USING(series_code)
+        WHERE s.country_code='CO' AND s.source_system='SRC_CO_INS_BES'
+          AND s.definition_version='co_bes_explicit_weekly_notifications_v1'
+          AND o.raw_data->>'SourceURL' IN :urls""").bindparams(bindparam("urls", expanding=True))
+    matched, mismatches = set(), []
+    try:
+        async with get_db() as db:
+            for raw, value, metric, geography in (await db.execute(statement, {"urls": urls})).all():
+                key = identity(raw)
+                original = expected.get(key)
+                if (key in matched or original is None or fingerprint(raw) != fingerprint(original)
+                        or value != (float(original["Cases"]) if original["Cases"] != "" else None)
+                        or metric != original["Measure"] or geography != "country:CO:national"):
+                    mismatches.append(key)
+                matched.add(key)
+    finally:
+        await dispose_database()
+    return {"expected_rows": len(expected), "matched_rows": len(matched),
+            "missing_rows": len(expected.keys() - matched), "mismatched_rows": len(mismatches),
+            "facts_match": matched == expected.keys() and not mismatches}
 
 
 def main():

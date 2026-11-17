@@ -111,6 +111,24 @@ def test_empty_dimension_fast_path_preserves_nonobject_json_identity():
     assert len(_source_series_details([empty, nonobject])) == 2
 
 
+def test_explicit_source_weeks_stay_separate_when_stored_dates_share_an_iso_week():
+    first = _series("D001", "SER_PE", "2016-06-13", 3, temporal_granularity="weekly")
+    second = _series("D001", "SER_PE", "2016-06-18", 7, temporal_granularity="weekly")
+    # Reviewed national totals keep one series even when each point carries
+    # its own source epi week. The stored dates both fall in ISO 2016-W24.
+    first["projection_dimension_key"] = "all"
+    second["projection_dimension_key"] = "all"
+    first["dimensions"] = {"source_reporting_year": 2016, "source_reporting_week": 23}
+    second["dimensions"] = {"source_reporting_year": 2016, "source_reporting_week": 24}
+
+    projected = apply_series_first_projection([], [first, second])
+
+    assert [(row["date"], row["cases"]) for row in projected] == [
+        ("2016-06-06", 3),
+        ("2016-06-18", 7),
+    ]
+
+
 def test_eligible_selection_error_precedes_malformed_hidden_source():
     eligible = [_series("D001", "SER_TOTAL", "2026-01-01", 1), _series("D001", "SER_TOTAL", "2026-02-01", 2)]
     eligible[0]["dimensions"] = {"definition": "first"}

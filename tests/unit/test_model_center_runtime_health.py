@@ -1,5 +1,8 @@
+from contextlib import asynccontextmanager
 from datetime import timedelta
 from types import SimpleNamespace
+
+import pytest
 
 from src.ai import model_center
 from src.ai.catalogue.errors import _runtime_failure_kind
@@ -14,6 +17,141 @@ from src.ai.catalogue.health import (
     _write_runtime_failure,
     _write_runtime_success,
 )
+
+
+@pytest.mark.parametrize("message,retry_after,expected", [
+    ("Insufficient user quota, remaining quota: -0.000516", None, 900),
+    ("{'error': {'code': 'insufficient_user_quota'}}", 10, 900),
+    ("insufficient_quota", 1800, 1800),
+    ("Too many requests", None, 10),
+    ("Per-minute quota exceeded", 60, 60),
+])
+async def test_account_credit_exhaustion_parks_only_affected_model(
+    monkeypatch, message, retry_after, expected
+):
+    now = _utcnow()
+    model = SimpleNamespace(extra_params={}, last_check_status="available")
+    sibling = SimpleNamespace(extra_params={}, last_check_status="available")
+
+    class DB:
+        async def get(self, entity, model_id, *, with_for_update):
+            assert model_id == 173 and with_for_update
+            return model
+
+        async def commit(self):
+            pass
+
+    @asynccontextmanager
+    async def database():
+        yield DB()
+
+    monkeypatch.setattr(model_center, "get_db", database)
+    monkeypatch.setattr(model_center.health, "_utcnow", lambda: now)
+    result = await model_center.mark_route_rate_limited(
+        {"model_id": 173, "extra_params": {"rate_limit_cooldown_seconds": 10}},
+        message,
+        retry_after_seconds=retry_after,
+    )
+    assert result["cooldown_seconds"] == expected
+    assert sibling.last_check_status == "available"
+    assert sibling.extra_params == {}
+    state = model_center.health._rate_limit_state
+    assert state(model.extra_params, now)["rate_limit_remaining_seconds"] == expected
+    assert not state(model.extra_params, now + timedelta(seconds=expected + 1))[
+        "rate_limit_active"
+    ]
+    model.last_check_status = "available"
+    model.extra_params = model_center.health._clear_payload_rate_limit(
+        model.extra_params, now + timedelta(seconds=1)
+    )
+    assert not state(model.extra_params, now + timedelta(seconds=1))["rate_limit_active"]
+
+
+@pytest.mark.parametrize("probe_offset,recovered", [(-1, False), (1, True)])
+async def test_probe_started_before_new_limit_cannot_erase_its_cooldown(
+    monkeypatch, probe_offset, recovered
+):
+    limited_at = _utcnow()
+    now = limited_at + timedelta(seconds=3)
+    payload = model_center.health._mark_payload_rate_limited(
+        {}, limited_at + timedelta(seconds=900), limited_at
+    )
+    model = SimpleNamespace(
+        extra_params=payload,
+        last_check_status="rate_limited",
+        last_check_message="Insufficient user quota",
+        last_checked_at=limited_at,
+    )
+
+    class DB:
+        async def get(self, entity, model_id, *, with_for_update):
+            assert model_id == 173 and with_for_update
+            return model
+
+        async def commit(self):
+            pass
+
+    @asynccontextmanager
+    async def database():
+        yield DB()
+
+    monkeypatch.setattr(model_center, "get_db", database)
+    monkeypatch.setattr(model_center.health, "_utcnow", lambda: now)
+    await model_center.update_model_check_result(
+        173, "available", "Successful probe",
+        probe_started_at=limited_at + timedelta(seconds=probe_offset),
+    )
+    state = model_center.health._rate_limit_state(model.extra_params, now)
+    assert state["rate_limit_active"] == (not recovered)
+    assert model.last_check_status == ("available" if recovered else "rate_limited")
+    if not recovered:
+        assert model.last_check_message == "Insufficient user quota"
+        assert model.extra_params == payload
+
+
+def test_runtime_success_does_not_clear_account_quota_cooldown():
+    now = _utcnow()
+    payload = model_center.health._mark_payload_rate_limited(
+        {}, now + timedelta(seconds=900), now
+    )
+    success = _write_runtime_success(
+        payload, occurred_at=now + timedelta(seconds=1), duration_seconds=1,
+    )
+    assert model_center.health._rate_limit_state(success, now)["rate_limit_active"]
+    assert success["routing_state"]["cooldown_until"] == payload["routing_state"]["cooldown_until"]
+
+
+async def test_inflight_success_cannot_clear_newer_quota_generation(monkeypatch):
+    now = _utcnow()
+    previous = model_center.health._mark_payload_rate_limited(
+        {}, now, now - timedelta(seconds=10)
+    )
+    current = model_center.health._mark_payload_rate_limited(
+        previous, now + timedelta(seconds=900), now
+    )
+
+    class DB:
+        async def execute(self, statement):
+            return SimpleNamespace(one_or_none=lambda: (current, "rate_limited"))
+
+        async def scalar(self, statement):
+            pytest.fail("A stale success must be rejected before locking the model")
+
+        async def commit(self):
+            pytest.fail("A stale success must not clear the new cooldown")
+
+    @asynccontextmanager
+    async def database():
+        yield DB()
+
+    monkeypatch.setattr(model_center, "get_db", database)
+    monkeypatch.setattr(model_center.health, "_utcnow", lambda: now)
+    await model_center.clear_route_rate_limit({
+        "model_id": 173,
+        "last_check_status": "rate_limited",
+        "extra_params": previous,
+    })
+    assert model_center.health._rate_limit_state(current, now)["rate_limit_remaining_seconds"] == 900
 
 
 def test_success_sampling_recovers_failures_but_rejects_older_successes():

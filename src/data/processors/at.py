@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Sequence, Set
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.data.crawlers.at import DEFAULT_SCOPE, DEFAULT_SOURCE_NAME, HISTORY_START_YEAR, ONTOLOGY_SOURCE_ID, AustriaAGESRadarCrawler
+from src.data.crawlers.at import DEFAULT_SCOPE, DEFAULT_SOURCE_NAME, HISTORY_START_YEAR, ONTOLOGY_SOURCE_ID, AustriaAGESRadarCrawler, monthly_contract, category_code
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/at/austria_ages_radar_monthly.csv"
@@ -63,8 +63,9 @@ class ATMonthlyUpdater:
     series_registered_rows_only = True
     series_registry_coverage = "required"
     series_geography_key = "country:AT:national"
-    public_release_enabled = False
-    license_review_status = "pending"
+    public_release_enabled = True
+    license_review_status = "operator_authorized_public_release"
+    mapping_notifications_enabled = False
 
     def __init__(self, *, output_csv: Path = DEFAULT_OUTPUT_CSV, refresh_recent_months: int = 3, crawler_type=AustriaAGESRadarCrawler) -> None:
         self.output_csv = Path(output_csv)
@@ -87,7 +88,26 @@ class ATMonthlyUpdater:
         return self.parse_source_csv(path.read_bytes())
 
     def parse_source_csv(self, payload: bytes, **kwargs) -> List[Dict[str, str]]:
-        return [{key: _text(value) for key, value in row.items()} for row in csv.DictReader(io.StringIO(payload.decode("utf-8-sig"))) if _parse_date(row) and _parse_cases(row) is not None]
+        output = []
+        for raw in csv.DictReader(io.StringIO(payload.decode("utf-8-sig"))):
+            row = {key: _text(value) for key, value in raw.items()}
+            month = _parse_date(row)
+            if month is None or month.day != 1:
+                raise ValueError("AGES normalized row requires a calendar-month start")
+            missing = row.get("MissingValueStatus") == "source_missing" and not row.get("Cases")
+            if not missing and _parse_cases(row) is None:
+                raise ValueError("AGES normalized row requires a nonnegative count or explicit missing value")
+            for key, value in monthly_contract(month).items():
+                if row.get(key) and row[key] != value:
+                    raise ValueError(f"AGES normalized {key} contradicts the national monthly source contract")
+                row[key] = value
+            row["MissingValueStatus"] = "source_missing" if missing else "reported"
+            row["SourceCategoryCode"] = category_code(row)
+            row["SourceDiseaseCode"] = "__source_native__"
+            row["PublicReleaseEnabled"] = "true"
+            row["LicenseReviewStatus"] = self.license_review_status
+            output.append(row)
+        return output
 
     def refresh_source(self, *, source: str = DEFAULT_SCOPE, run_external: bool = False, force: bool = False, months: Optional[Sequence[tuple[int, int]]] = None, save_raw: bool = False, raw_dir: Optional[Path] = None, **kwargs) -> ATUpdateFetchResult:
         del run_external, kwargs
@@ -103,7 +123,7 @@ class ATMonthlyUpdater:
             rows = [row for row in rows if (parsed := _parse_date(row)) and (parsed.year, parsed.month) in wanted]
         script_logs = [
             f"[crawler] prepared {summary.row_count} AGES source-native rows across {summary.months_fetched} issue(s)",
-            "[gate] public release disabled pending AGES license review",
+            "[gate] operator-authorized publication; retain source license status and exact reviewed categories",
         ]
         if summary.months_fetched == 0:
             requested = ", ".join(f"{year:04d}-{month:02d}" for year, month in targets)

@@ -22,6 +22,7 @@ from src.core.country_library import get_country_bootstrap_config
 from src.services.surveillance_onboarding_review import (
     REVIEWED_COLLECTION_COUNTRIES, collection_country, reviewed_public_record,
 )
+from src.generation.site_data_catalogue import use_public_concept
 from src.generation.site_series_projection import (
     _normalise_count,
     apply_disease_cutover_projection,
@@ -448,7 +449,7 @@ async def fetch_disease_records_direct(
             record.get("incidence_rate_source") or "missing_population"
         )
         record["mortality_rate"] = safe_float(record["mortality_rate"])
-        result.append(record)
+        result.append(use_public_concept(record))
     return result
 
 
@@ -459,6 +460,8 @@ async def fetch_disease_series_records(
     *,
     recorded_at_as_of: datetime | None = None,
     disease_ids: set[str] | None = None,
+    _reviewed_source_systems: set[str] | None = None,
+    _excluded_source_systems: set[str] | None = None,
 ) -> list[dict]:
     """Read registry facts, optionally reconstructing an ingestion-time version.
 
@@ -467,6 +470,18 @@ async def fetch_disease_series_records(
     """
     if disease_ids is not None and not disease_ids:
         return []
+    if country_code == "AT" and _reviewed_source_systems is None and _excluded_source_systems is None:
+        # AGES uses a category-bearing native holding series. Its reviewed
+        # categories require v3 resolution; retain the established direct
+        # registry path for independent Austrian sources such as annual ECDC.
+        options = {"recorded_at_as_of": recorded_at_as_of, "disease_ids": disease_ids}
+        previous = await fetch_disease_series_records(
+            session, country_code, use_population_table, **options,
+            _excluded_source_systems={"SRC_AT_AGES_RADAR"})
+        monthly = await fetch_disease_series_records(
+            session, country_code, use_population_table, **options,
+            _reviewed_source_systems={"SRC_AT_AGES_RADAR"})
+        return previous + monthly
     # Subdivision observations use a local geography key, while their source
     # series belongs to the parent country's registry.
     series_country_code = collection_country(country_code)
@@ -474,7 +489,7 @@ async def fetch_disease_series_records(
     # series.disease_id is neither complete nor an authoritative review
     # decision; the active v3 release decides which observations may appear
     # on a standard disease page.
-    use_reviewed_mapping = series_country_code in (
+    use_reviewed_mapping = _reviewed_source_systems is not None or series_country_code in (
         {"JP", "SE", "DE", "CH", "US", "NZ"} | REVIEWED_COLLECTION_COUNTRIES
     )
     disease_id_expr = "mapping.target_code" if use_reviewed_mapping else "dss.disease_id"
@@ -704,6 +719,12 @@ async def fetch_disease_series_records(
             WITH export_observations AS MATERIALIZED (
                 SELECT dso.time, dso.series_code, dso.geography_key,
                        dso.dimension_key, dso.dimensions, dso.metadata,
+                       jsonb_build_object(
+                           'PeriodStart', dso.raw_data::jsonb->>'PeriodStart',
+                           'PeriodEnd', dso.raw_data::jsonb->>'PeriodEnd',
+                           'Calendar', dso.raw_data::jsonb->>'Calendar',
+                           'ObservationKind', dso.raw_data::jsonb->>'ObservationKind'
+                       ) AS raw_data,
                        dso.value, dso.unit, dso.quality_status, dso.suppressed,
                        {category_code_sql('export_series')} AS effective_source_code,
                        lower(btrim(COALESCE(
@@ -819,6 +840,11 @@ async def fetch_disease_series_records(
         observation_relation = "requested_observations AS dso"
 
     disease_filter = f" AND {disease_id_expr} IN :disease_ids" if disease_ids is not None else ""
+    source_filter = ""
+    if _reviewed_source_systems is not None:
+        source_filter += " AND dss.source_system IN :reviewed_sources"
+    if _excluded_source_systems:
+        source_filter += " AND dss.source_system NOT IN :excluded_sources"
     statement = text(f"""
             {candidate_prefix}
             SELECT
@@ -832,17 +858,21 @@ async def fetch_disease_series_records(
                 {incidence_source_expr} AS incidence_rate_source,
                 {population_expr} AS population,
                 {population_source_expr} AS population_source,
-                NULLIF(dso.metadata::jsonb ->> 'period_start', '') AS period_start,
-                NULLIF(dso.metadata::jsonb ->> 'period_end_exclusive', '') AS period_end_exclusive,
-                NULLIF(dss.metadata::jsonb ->> 'calendar', '') AS calendar,
+                COALESCE(NULLIF(dso.metadata::jsonb ->> 'period_start', ''),
+                    NULLIF(dso.raw_data::jsonb ->> 'PeriodStart', '')) AS period_start,
+                COALESCE(NULLIF(dso.metadata::jsonb ->> 'period_end_exclusive', ''),
+                    ((NULLIF(dso.raw_data::jsonb ->> 'PeriodEnd', ''))::date + 1)::text) AS period_end_exclusive,
+                COALESCE(NULLIF(dss.metadata::jsonb ->> 'calendar', ''),
+                    NULLIF(dso.raw_data::jsonb ->> 'Calendar', '')) AS calendar,
+                NULLIF(dso.raw_data::jsonb ->> 'ObservationKind', '') AS observation_kind,
                 NULL::double precision AS mortality_rate,
                 dso.quality_status AS data_quality,
                 dso.series_code,
                 dss.source_system,
                 dss.source_series_code,
                 dss.source_label,
-                {"category.source_code" if use_reviewed_mapping else "NULL::text"} AS reviewed_source_code,
-                {"category.canonical_source_label" if use_reviewed_mapping else "NULL::text"} AS reviewed_source_label,
+                {"category.source_code" if use_reviewed_mapping else category_code_sql('dss')} AS reviewed_source_code,
+                {"category.canonical_source_label" if use_reviewed_mapping else "COALESCE(NULLIF(dso.metadata->>'local_label', ''), dss.source_label)"} AS reviewed_source_label,
                 dss.definition_version,
                 dss.case_definition,
                 dss.case_definition_uri,
@@ -893,9 +923,12 @@ async def fetch_disease_series_records(
             WHERE dss.country_code = :code
               AND {disease_id_expr} IS NOT NULL
               {disease_filter}
+              {source_filter}
               AND dso.geography_key = :geography_key
               AND dso.suppressed IS FALSE
-              AND dso.value IS NOT NULL
+              AND (dso.value IS NOT NULL OR (
+                  dss.country_code = 'CO'
+                  AND dso.raw_data::jsonb ->> 'MissingValueStatus' = 'source_missing'))
               AND dso.unit = dss.unit
               AND dso.quality_status <> 'rejected'
             ORDER BY dss.disease_id, dso.series_code,
@@ -904,6 +937,12 @@ async def fetch_disease_series_records(
     if disease_ids is not None:
         statement = statement.bindparams(bindparam("disease_ids", expanding=True))
         query_params["disease_ids"] = sorted(disease_ids)
+    if _reviewed_source_systems is not None:
+        statement = statement.bindparams(bindparam("reviewed_sources", expanding=True))
+        query_params["reviewed_sources"] = sorted(_reviewed_source_systems)
+    if _excluded_source_systems:
+        statement = statement.bindparams(bindparam("excluded_sources", expanding=True))
+        query_params["excluded_sources"] = sorted(_excluded_source_systems)
     rows = _iter_query_rows(
         session,
         statement,
@@ -949,7 +988,7 @@ async def fetch_disease_series_records(
         for field in ("valid_from", "valid_to"):
             value = record.get(field)
             record[field] = value.isoformat() if value else None
-        result.append(record)
+        result.append(use_public_concept(record))
     return result
 
 

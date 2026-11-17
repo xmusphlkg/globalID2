@@ -1,0 +1,71 @@
+{
+  "checked_at": "2026-11-17T01:45:03.297575+00:00",
+  "country": "LK",
+  "scope": "lk_epid_wer_weekly",
+  "public_proxy_list_sources": [
+    "https://proxylist.geonode.com/api/proxy-list?limit=20&page=1&sort_by=lastChecked&sort_type=desc&protocols=http%2Chttps",
+    "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/http/data.txt"
+  ],
+  "candidate_proxies_tested": 44,
+  "proxy_https_target_responses": [
+    {
+      "proxy": "http://43.155.62.157:443",
+      "status": 500,
+      "seconds": 3.69,
+      "bytes": 7309,
+      "sha256": "a8a284f377cb9f21c53e5553234ecb693dc4c2c38f3306b6cde4aead5e05e913",
+      "bandwidth_limit": true,
+      "egress": "43.155.62.157"
+    },
+    {
+      "proxy": "http://1.10.185.111:443",
+      "status": 500,
+      "seconds": 4.38,
+      "bytes": 7309,
+      "sha256": "a8a284f377cb9f21c53e5553234ecb693dc4c2c38f3306b6cde4aead5e05e913",
+      "bandwidth_limit": true,
+      "egress_check_error": "ConnectionError"
+    }
+  ],
+  "comparison": [
+    {
+      "route": "direct",
+      "target_url": "https://www.epid.gov.lk/epid/public/weekly-epidemiological-report",
+      "tls_verification_enabled": true,
+      "status": 500,
+      "body_title": "509 Bandwidth Limit Exceeded",
+      "bytes": 7309,
+      "sha256": "a8a284f377cb9f21c53e5553234ecb693dc4c2c38f3306b6cde4aead5e05e913",
+      "raw_path": "data/raw/lk/access-probe-20261117/direct-error.html",
+      "server": "nginx",
+      "egress_ip": "210.61.187.237"
+    },
+    {
+      "route": "proxy",
+      "target_url": "https://www.epid.gov.lk/epid/public/weekly-epidemiological-report",
+      "tls_verification_enabled": true,
+      "proxy_url": "http://43.155.62.157:443",
+      "status": 500,
+      "body_title": "509 Bandwidth Limit Exceeded",
+      "bytes": 7309,
+      "sha256": "a8a284f377cb9f21c53e5553234ecb693dc4c2c38f3306b6cde4aead5e05e913",
+      "raw_path": "data/raw/lk/access-probe-20261117/proxy-error.html",
+      "server": "nginx",
+      "egress_ip": "43.155.62.157"
+    }
+  ],
+  "current_database_check": {
+    "countries": [
+      "IN",
+      "PK",
+      "NP",
+      "LK"
+    ],
+    "query": "SELECT s.country_code,s.source_system,count(*) FROM disease_series_observations o JOIN disease_surveillance_series s USING(series_code) WHERE s.country_code IN ('IN','PK','NP','LK') GROUP BY s.country_code,s.source_system",
+    "rows": [],
+    "interpretation": "No observations are stored for these countries in the checked application database."
+  },
+  "conclusion": "A verified different proxy egress and another TLS-connected public proxy returned the same official bandwidth-limit error body as the current route; evidence favors server/account bandwidth quota rather than a block of only the current source IP. This does not exclude every form of geographic policy.",
+  "production_proxy_configuration_changed": false,
+  "backfill_started": false
+}

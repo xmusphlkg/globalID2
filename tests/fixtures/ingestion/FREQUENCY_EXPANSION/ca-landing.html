@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en" dir="ltr">
+
+<head>
+    <!-- Fill metadata before launch and edit title at line 32-->
+    <meta content="width=device-width,initial-scale=1" name="viewport" charset="utf-8">
+    <link rel="schema.dcterms" href="http://purl.org/dc/terms/">
+    <meta name="description" content="Weekly summary of respiratory virus data submitted by laboratories across Canada.">
+    <meta name="keywords" content="">
+    <meta name="author" content="Public Health Agency of Canada">
+    <meta name="dcterms.title" content="Snapshot: Canadian respiratory virus surveillance report (FluWatch+) — Canada.ca">
+    <meta name="dcterms.description" content="Weekly summary of respiratory virus data submitted by laboratories across Canada.">
+    <meta name="dcterms.creator" content="Public Health Agency of Canada">
+    <meta name="dcterms.language" title="ISO639-2/T" content="eng">
+    <meta name="dcterms.issued" title="W3CDTF" content="2024-10-04">
+    <meta name="dcterms.modified" title="W3CDTF" content="2025-01-03">
+    <meta name="dcterms.spatial" content="Canada">
+    <meta name="dcterms.type" content="datasets;statistics;education and awareness">
+    <meta name="dcterms.identifier" content="Public_Health_Agency_of_Canada">
+
+    <link href="/src/GCWeb/assets/favicon.ico" rel="icon" type="image/x-icon">
+    <!--<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css" integrity="sha384-REHJTs1r2ErKBuJB0fCK99gCYsVjwxHrSU0N7I1zl9vZbggVJXRMsv/sLlOAGb4M" crossorigin="anonymous">-->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="/src/GCWeb2/css/theme.min.css">
+    <link rel="stylesheet" href="/src/css/global.css">
+    <link rel="stylesheet" href="/src/css/covid-19/wastewater/main.css">
+    <!--<link rel="stylesheet" href="./style/style.css">-->
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
+
+    <!-- Link to your custom css stylesheet, edit path below -->
+    <link rel="stylesheet" href="/src/css/respiratory-virus-surveillance/index.css" />
+    <link rel="stylesheet" href="/src/css/respiratory-virus-surveillance/RVS.css" />
+
+    <!-- NoUISlider stylesheet -->
+    <link rel="stylesheet" href="/src/js/noUiSlider-15.5.1/dist/nouislider.css">
+
+    <!-- DataTables styling -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.22/css/jquery.dataTables.min.css">
+
+    <noscript>
+        <link rel="stylesheet" href="/src/wet-boew/css/noscript.min.css" />
+    </noscript>
+
+    <title>Snapshot: Canadian respiratory virus surveillance report (FluWatch+) — Canada.ca</title>
+    <style>
+        /* moved to separate CSS file */
+    </style>
+</head>
+
+<body vocab="http://schema.org/" typeof="WebPage">
+    <!-- Google Tag Manager DO NOT REMOVE OR MODIFY - NE PAS SUPPRIMER OU MODIFIER -->
+    <script>
+        dataLayer1 = [];
+    </script>
+    <script>
+        dataLayer = [];
+    </script>
+    <!-- End Google Tag Manager -->
+    <!-- Google Tag Manager -->
+    <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-TN3RPZ" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <script>
+        (function(w, d, s, l, i) {
+            w[l] = w[l] || [];
+            w[l].push({
+                'gtm.start': new Date().getTime(),
+                event: 'gtm.js'
+            });
+            var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s),
+                dl = l != 'dataLayer' ? '&l=' + l : '';
+            j.async = true;
+            j.src =
+                '//www.googletagmanager.com/gtm.js?id=' + i + dl;
+            f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-TN3RPZ');
+    </script>
+    <!-- End Google Tag Manager -->
+    <!-- Google Tag Manager DO NOT REMOVE OR MODIFY - NE PAS SUPPRIMER OU MODIFIER -->
+    <noscript><iframe title="Google Tag Manager" src="//www.googletagmanager.com/ns.html?id=GTM-TLGQ9K" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <script>
+        (function(w, d, s, l, i) {
+            w[l] = w[l] || [];
+            w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+            var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s),
+                dl = l != 'dataLayer1' ? '&l=' + l : '';
+            j.async = true;
+            j.src = '//www.googletagmanager.com/gtm.js?id=' + i + dl;
+            f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer1', 'GTM-TLGQ9K');
+    </script>
+    <!-- End Google Tag Manager -->
+
+    <ul id="wb-tphp">
+        <li class="wb-slc">
+            <a class="wb-sl" href="#wb-cont">Skip to main content</a>
+        </li>
+        <li class="wb-slc">
+            <a class="wb-sl" href="#wb-info">Skip to "About government"</a>
+        </li>
+    </ul>
+    <header class="navbar navbar-default" id="navbar" style="background-color: white !important; margin-bottom: 0px;">
+        <div id="wb-bnr" class="container">
+            <section id="wb-lng" class="text-right">
+                <h2 class="wb-inv">Language selection</h2>
+                <ul class="list-inline margin-bottom-none">
+                    <li><a lang="fr" href="https://sante-infobase.canada.ca/surveillance-virus-respiratoires/">Français</a></li>
+                </ul>
+            </section>
+            <div class="row">
+                <div class="brand col-xs-5 col-md-4">
+                    <a href="https://www.canada.ca/en.html"><img src="/src/GCWeb/assets/sig-blk-en.svg" alt=""><span class="wb-inv"> Government of Canada / <span lang="fr">Gouvernement du Canada</span></span></a>
+                </div>
+                <section id="wb-srch" class="col-lg-8 text-right">
+                    <h2>Search</h2>
+                    <form action="https://www.canada.ca/en/sr/srb.html" method="get" name="cse-search-box" role="search" class="form-inline">
+                        <div class="form-group">
+                            <label for="wb-srch-q" class="wb-inv">Search Canada.ca</label>
+                            <input id="wb-srch-q" list="wb-srch-q-ac" class="wb-srch-q form-control" name="q" type="search" value="" size="34" maxlength="170" placeholder="Search Canada.ca">
+                            <datalist id="wb-srch-q-ac">
+                            </datalist>
+                        </div>
+                        <div class="form-group submit">
+                            <button type="submit" id="wb-srch-sub" class="btn btn-primary btn-small" name="wb-srch-sub"><span class="glyphicon-search glyphicon"></span><span class="wb-inv">Search</span></button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </div>
+        <nav id="wb-bc" property="breadcrumb" aria-labelledby="breadcrumbTitle">
+            <h2 id="breadcrumbTitle">You are here:</h2>
+            <div class="container">
+                <ol class="breadcrumb">
+                    <li><a href="https://www.canada.ca/en.html">Canada.ca</a></li>
+                    <li><a href="https://www.canada.ca/en/services/health.html">Health</a></li>
+                    <li><a href="https://www.canada.ca/en/public-health/services/diseases.html">Diseases and conditions</a></li>
+                    <!--<li><a href="https://www.canada.ca/en/public-health/services/diseases/flu-influenza/influenza-surveillance/weekly-influenza-reports/integrated-approach-national-surveillance-respiratory-viruses.html">Integrated approach for national surveillance of respiratory viruses</a></li>-->
+                    <li><a href="https://www.canada.ca/en/public-health/services/diseases/flu-influenza/influenza-surveillance/about-fluwatch.html">Respiratory virus monitoring in Canada</a></li>
+                </ol>
+            </div>
+        </nav>
+    </header>
+    <main property="mainContentOfPage" id="main">
+        <section class="blue-header well well-sm brdr-0 mrgn-bttm-0 mrgn-tp-0">
+            <div class="container mrgn-tp-sm">
+                <h1 class="mrgn-tp-md" property="name" id="wb-cont" dir="ltr"><span class="stacked"><span>Canadian respiratory virus surveillance report</span>: <span>Snapshot</span></span></h1> <!-- <a class="app-name" href="https://health-infobase.canada.ca/">Health Infobase</a> -->
+                <p>Overview of key trends in the activity of respiratory viruses, such as influenza (flu), COVID-19, and respiratory syncytial virus (RSV) in Canada.</p>
+                <ul class="list-inline small mrgn-bttm-sm" style="line-height:1.65em" id="list-inline-desktop-only">
+                    <li class="mrgn-rght-lg"> Last updated: <span class="last_updated_date">2024-10-11</span></li>
+                    <!--<li> <a class="pdf" href="/covid-19/post-covid-condition/COVID-19-longer-term-symptoms-among-Canadian-adults.pdf"><i class="fa fa-download" aria-hidden="true"></i> <span class="wb-invisible">Download page in </span>PDF<span class="wb-invisible"> format</span></a></li>-->
+                    <!--<li> <a class="pdf" href="#"><i class="fa fa-download" aria-hidden="true"></i> <span class="wb-invisible">Download data in </span>CSV<span class="wb-invisible"> format</span></a></li>-->
+					<li class="mrgn-rght-lg"> <a style="color: white;" href="https://www.canada.ca/en/public-health/services/diseases/flu-influenza/influenza-surveillance/subscribe.html"><i class="fa-solid fa-bell" aria-hidden="true"></i> Subscribe for weekly <span class="wb-invisible">FluWatch+ </span>report notifications (Canada.ca)</a></li>
+				</ul>
+            </div>
+        </section>
+
+        <section class="well well-sm brdr-0 mrgn-bttm-25 mrgn-tp-0 tabNav" style="padding:0px;">
+            <div class="container">
+                <nav>
+                    <ul class="list-inline hidden-xs hidden-sm mrgn-bttm-0">
+                        <li><a class="btn btn-tabs" id="tab0" role="button" href="about.html">About this report</a></li>
+                        <!--<li><a class="active btn btn-tabs" id="active-tab1" role="button" href="./">Summary</a></li>-->
+                        <li><a class="active btn btn-tabs" id="active-tab1" role="button" href="./">Snapshot</a></li>
+                        <!--<li><a class="btn btn-tabs" id="tab1" role="button" href="laboratory.html">Laboratory data</a></li>-->
+                        <li><a class="btn btn-tabs" id="tab2" role="button" href="covid-19.html" style="white-space:nowrap;">COVID-19</a></li>
+                        <li><a class="btn btn-tabs" id="tab3" role="button" href="influenza.html">Influenza</a></li>
+                        <li><a class="btn btn-tabs" id="tab4" role="button" href="rsv.html">Respiratory syncytial virus</a></li>
+                        <li><a class="btn btn-tabs" id="tab5" role="button" href="explore.html">Explore the data</a></li>
+                        <!--<li><a class="btn btn-tabs" id="tab6" role="button" href="internal.html">Internal report</a></li>-->
+                        <!--<li><a class="btn btn-tabs" id="tab4" role="button" href="data-notes.html">Data notes</a></li>-->
+                    </ul>
+
+                    <ul class="list-unstyled hidden-md hidden-lg">
+                        <li><a class="btn btn-tabs-mobile" id="tab0" role="button" href="about.html">About this report</a></li>
+                        <li><a class="active btn btn-tabs-mobile" style="padding:10px 0px;" id="active-tab1" role="button" href="./">Snapshot</a></li>
+                        <!--<li><a class="btn btn-tabs-mobile" id="tab1" role="button" href="laboratory.html">Laboratory data</a></li>-->
+                        <li><a class="btn btn-tabs-mobile" id="tab2" role="button" href="covid-19.html" style="white-space:nowrap;">COVID-19</a></li>
+                        <li><a class="btn btn-tabs-mobile" id="tab3" role="button" href="influenza.html">Influenza</a></li>
+                        <li><a class="btn btn-tabs-mobile" id="tab4" role="button" href="rsv.html">Respiratory syncytial virus</a></li>
+                        <li><a class="btn btn-tabs-mobile" id="tab5" role="button" href="explore.html">Explore the data</a></li>
+                        <!--<li><a class="btn btn-tabs-mobile" id="tab6" role="button" href="internal.html">Internal report</a></li>-->
+                        <!--<li><a class="btn btn-tabs-mobile" id="tab4" role="button" href="data-notes.html">Data notes</a></li>-->
+                    </ul>
+                </nav>
+            </div>
+        </section>
+
+
+        <div class="container">
+
+
+      <!--      <div style="background-color:#d7faff; border-radius: 6px; border-left: #31313d 5px solid; margin: 10px 0px 15px;" class="mwsgeneric-base-html parbase section">-->
+    		<!--	<section style="background-color:#d7faff !important; padding: 15px; box-shadow: none; border: none;" class="gc-archv wb-inview modal-content show-none bar-demo" data-inview="top-bar" id="wb-auto-4" data-inviewstate="all">-->
+    		<!--		<div style="background-color:#d7faff; width:100% !important;" class="container">-->
+    					<!--<h2 class="h3">Summer update schedule</h2>-->
+    		<!--			<p>The next Canadian respiratory virus surveillance report will be published on September 4, 2026. In the meantime, you can find weekly updates on laboratory detections of respiratory viruses by downloading the laboratory data file under the <a href="explore.html">Explore the data</a> tab.</p>-->
+    		<!--		</div>-->
+    		<!--	</section>-->
+    		<!--	<section style="background-color:#d7faff !important; padding: 15px; box-shadow: none;" aria-hidden="true" class="gc-archv wb-overlay modal-content overlay-def wb-bar-t outside-off" id="top-bar">-->
+    		<!--		<div style="background-color:#d7faff;" class="container">-->
+    					<!--<p><strong>Summer update schedule</strong>: The next Canadian respiratory virus surveillance report will be published on May 29, 2026. In the meantime, you can find weekly updates on laboratory detections of respiratory viruses by downloading the laboratory data file under the <a href="explore.html">Explore the data</a> tab.</p>-->
+    		<!--			<p>The next Canadian respiratory virus surveillance report will be published on September 4, 2026. In the meantime, you can find weekly updates on laboratory detections of respiratory viruses by downloading the laboratory data file under the <a href="explore.html">Explore the data</a> tab.</p>-->
+    		<!--		</div>-->
+    		<!--		<button class="mfp-close overlay-close" title="Close overlay" type="button"> ×-->
+    		<!--			<span class="wb-inv">-->
+    		<!--				Close overlay-->
+    		<!--			</span>-->
+    		<!--		</button>-->
+    		<!--	</section>-->
+    		<!--</div>-->
+
+            <p><strong>Update schedule</strong>: This page was last updated on
+            <span style="font-weight:bold;" id="update_dateTime">...</span>,
+            with data up to and including <span class="last_data_date">...</span>
+            (surveillance week <span class="last_data_week">...</span>).</p>
+
+
+            <!--<div style="background-color:#d7faff; border-radius: 6px; border-left: #31313d 5px solid;" class="mwsgeneric-base-html parbase section">-->
+    		<!--	<section style="background-color:#d7faff !important; padding: 15px; box-shadow: none; border: none;" class="gc-archv wb-inview modal-content show-none bar-demo" data-inview="top-bar" id="wb-auto-4" data-inviewstate="all">-->
+    		<!--		<div style="background-color:#d7faff; width:100% !important;" class="container">-->
+    		<!--			<h2 class="h3">Holiday update schedule</h2>-->
+    		<!--			<p>The next full update to this report will be on January 9, 2026, with data up to and including January 3, 2026 (surveillance week 53).</p>-->
+    					<!--<p>A brief summary will be posted to this report on December 30, 2025, containing information on laboratory and syndromic trends for surveillance week 51 (week ending December 20, 2025).</p>-->
+    		<!--			<p>A brief summary has been posted to the <a href="#holiday-update">Snapshot tab</a>, containing information on laboratory and syndromic trends for surveillance week 51 (week ending December 20, 2025).</p>-->
+    		<!--		</div>-->
+    		<!--	</section>-->
+    		<!--	<section style="background-color:#d7faff !important; padding: 15px; box-shadow: none;" aria-hidden="true" class="gc-archv wb-overlay modal-content overlay-def wb-bar-t outside-off" id="top-bar">-->
+    		<!--		<div style="background-color:#d7faff;" class="container">-->
+    		<!--			<p><strong>Holiday update schedule</strong>: The next full update to this report will be on January 9, 2026, with data up to and including January 3, 2026 (surveillance week 53).</p>-->
+    		<!--			<p>A brief summary has been posted to the <a href="#holiday-update">Snapshot tab</a>, containing information on laboratory and syndromic trends for surveillance week 51 (week ending December 20, 2025).</p>-->
+    					<!--<p>A <a href="#holiday-update-div">brief summary</a>.</p>-->
+    		<!--		</div>-->
+    		<!--		<button class="mfp-close overlay-close" title="Close overlay" type="button"> ×-->
+    		<!--			<span class="wb-inv">-->
+    		<!--				Close overlay-->
+    		<!--			</span>-->
+    		<!--		</button>-->
+    		<!--	</section>-->
+    		<!--</div>-->
+
+    		<!--<div id="holiday-update" class="alert alert-info">-->
+      <!--          <h2 class="h3">Note on data changes</h2>-->
+    		<!--	<p>Our laboratory surveillance system has undergone updates that increased weekly testing and detection counts, resulting in revisions to historical percent positivity values. Despite these changes, the overall trends remain consistent.</p>-->
+
+      <!--      </div>-->
+
+    		<!--<div id="holiday-update" class="alert alert-info">-->
+      <!--          <p style="font-weight:bold;">Holiday update:</p>-->
+
+      <!--          <p>In week 51 (week ending December 20, 2025):</p>-->
+      <!--          <ul>-->
+      <!--              <li>The percentage of tests positive for <strong>influenza</strong> increased to 32.4% (from 28% in week 50). The weekly increase was smaller compared to previous weeks. In the our syndromic surveillance indicator, <a href="https://www.canada.ca/en/public-health/services/diseases/flu-influenza/fluwatcher.html">FluWatchers</a>, the percentage of participants reporting cough and fever increased to 4.8% (from 4.1% in week 50). This also reflected a smaller increase compared to previous weeks.</li>-->
+      <!--              <li>The percentage of tests positive for <strong>COVID-19</strong> was stable.</li>-->
+      <!--              <li>The percentage of tests positive for <strong>RSV</strong> was stable.</li>-->
+      <!--          </ul>-->
+
+      <!--      </div>-->
+
+
+            <p>This summary tab provides high level trends for COVID-19, influenza,
+            RSV, and other seasonal respiratory viruses. For more detailed trends
+            on each virus, refer to the individual virus tabs at the top of the page.</p>
+
+
+            <h2 id="onThisPage">On this page</h2>
+
+            <ul>
+                <li><a href="#summary">Highlights</a></li>
+                <li><a href="#activity">Activity levels</a></li>
+                <li><a href="#laboratory">Laboratory-confirmed detections</a></li>
+                <li><a href="#syndromic">Syndromic</a></li>
+                <li><a href="#outbreaks">Outbreaks</a></li>
+                <li><a href="#severeOutcomes">Severe outcomes</a></li>
+                <li><a href="#otherViruses">Other seasonal respiratory viruses</a></li>
+            </ul>
+
+<!--<div style="border:2px lightblue solid;border-radius:15px;padding:10px;">-->
+            <h2 id="summary">Highlights<small>&nbsp; for the week ending <span class="last_data_date"></span> (week <span class="last_data_week"></span>)</small></h2>
+
+            <!--<h3>For the week ending <span class="last_data_date"></span> (week <span class="last_data_week"></span>)</h3>-->
+
+            <div id="virusSummary1">
+            </div>
+
+            <div class="clearfix"></div>
+
+
+            <div id="virusSummaryFW"></div>
+
+            <div class="clearfix"></div>
+
+
+            <div id="summaryContent">
+
+            </div>
+<!--</div>-->
+
+            <h2 id="activity">Activity levels</h2>
+
+            <h3>Figure 1: Map of <select class="titleDD activityLevelsMapDD" id="activityLevelsMapDD1"></select> activity levels
+            <!--by province and territory in Canada, week <span class="mostRecentWeek"></span> (week ending <span class="mostRecentDate"></span>)</h3>-->
+            by province and territory in Canada, week <span class="last_data_week"></span> (week ending <span class="last_data_date"></span>)</h3>
+
+            <div id="activityLevelsMap" class="col-sm-9">
+                <svg id="activityLevelsMapSVG"></svg>
+            </div>
+
+            <div class="col-sm-3">
+                <hr>
+                <div id="activityLevelsMapDynamicText">
+                    <p>Hover over the map to explore the respiratory virus activity levels in each province and territory.</p>
+                </div>
+                <hr>
+            </div>
+
+            <div class="clearfix"></div>
+            <!--* Activity level cut-points are standardized for national reporting and may differ from activity levels reported by individual provinces and territories (PTs).-->
+            <div style="background-color:#edeceb; padding:5px 10px; border-radius: 20px; margin-bottom: 10px;">
+                <p><strong>Data note:</strong> Activity levels are generated with a method adapted from the
+                Moving Epidemic Method (MEM) using laboratory percent-positivity data. <strong>Cut-points are calculated
+                separately for each province and territory based on their own historical data (2022-23 to 2025-26) and vary by
+                jurisdiction</strong>. To view the cut-points used for a specific jurisdiction, hover over the map.</p>
+                <p><strong>* Important:</strong> Activity levels used in this report were designed to support
+                comparability across jurisdictions and viruses. They may differ from levels reported by provinces
+                and territories, which may use methods tailored to their local surveillance data, epidemiology,
+                and response needs. <strong>Differences between federal and provincial/territorial activity levels are
+                expected</strong> and should be interpreted in the context of the distinct methodologies and objectives
+                used to assess respiratory virus activity. For details on the federal activity levels methodology, see
+                <a href="about.html#activity">Activity level methods</a>.</p>
+            </div>
+
+            <details>
+                <summary>Figure 1: Text description</summary>
+                <div id="activityLevelsMapTable"></div>
+            </details>
+
+            <div class="clearfix"></div>
+
+
+            <h2 id="laboratory">Laboratory-confirmed detections</h2>
+
+            <div id="laboratoryText">
+
+            </div>
+
+            <h3>Figure 2: Percentage of tests positive by virus and report week, Canada, 2026-2027 surveillance period</h3>
+
+            <!--<div id="labPercentDet-html-legend"></div>-->
+
+            <div id="labPercentDetDiv">
+                <svg id="labPercentDetSVG" class="linegraphSVG"></svg>
+            </div>
+
+            <div id="labPercentDetTooltip" class="tooltipDiv"></div>
+
+            <details>
+                <summary>Figure 2: Text description</summary>
+                <div id="labPercentDetTable"></div>
+            </details>
+
+            <h3>Figure 3: Number of detections by virus and report week, Canada, 2026-2027 surveillance period</h3>
+
+            <div id="labNumberDet1-html-legend"></div>
+
+            <div id="labNumberDet1Div">
+                <svg id="labNumberDet1SVG"></svg>
+            </div>
+
+            <div id="labNumberDet1Tooltip" class="tooltipDiv"></div>
+
+            <details>
+                <summary>Figure 3: Text description</summary>
+                <div id="labNumberDet1Table"></div>
+            </details>
+
+            <h3>Figure 4: Cumulative proportion of detections by age group and virus, Canada, 2026-2027 surveillance period</h3>
+
+            <div id="labCumulProp-html-legend"></div>
+
+            <div id="labCumulPropDiv">
+                <svg id="labCumulPropSVG"></svg>
+            </div>
+
+            <div id="labCumulPropTooltip" class="tooltipDiv"></div>
+
+            <details>
+                <summary>Figure 4: Text description</summary>
+                <div id="labCumulPropTable"></div>
+            </details>
+
+
+            <h2 id="syndromic">Syndromic</h2>
+
+            <h3>FluWatchers</h3>
+
+            <div id="syndromicText">
+                <!--<p>Placeholder text for dynamically filled text content (updates each week)</p>-->
+            </div>
+
+            <!-- May need to add here a lead in to the "See what is happening in your neighbourhood..." as below's commented out line -->
+
+            <!--<p><span id="weeklySummaryPoint2"></span>-->
+            <p>
+                See what is happening in your <a href="https://cnphi.canada.ca/fluWatcher/rapid">neighbourhood</a>!
+                <!--Downloadable datasets are also available on <a href="https://open.canada.ca/data/en/dataset/4f7b8e7e-e52b-464f-bea0-9f3de9712941">Open Maps</a>.-->
+                The FluWatchers program is always looking for more volunteers:
+                <a href="https://www.canada.ca/en/public-health/services/diseases/flu-influenza/fluwatcher.html">Sign up to be a FluWatcher</a>.
+            </p>
+
+            <!--<p>The percentage of FluWatchers reporting cough and fever generally -->
+            <!--follow the trends in our laboratory testing data. For more details on -->
+            <!--laboratory trends, see the <a href="laboratory.html">Laboratory data</a> -->
+            <!--tab within this report.</p>-->
+
+
+            <h3>Figure 5: Percentage of FluWatchers reporting cough
+                and fever in Canada, 2026-2027 surveillance period, compared to previous seasons</h3>
+
+            <div id="fwHistoricalButtons">
+                <label>Select seasons:</label>
+            </div>
+
+            <div id="fwHistorical"></div>
+
+            <details>
+                <summary>Figure 5: Text description</summary>
+                <div id="fwHistoricalTable"></div>
+            </details>
+
+            <div class="tooltipDiv" id="fwHistoricalTooltip"></div>
+
+
+
+            <h3>Figure 6: Percentage of tests positive for COVID-19, influenza, and
+                RSV compared to the percentage of FluWatchers reporting cough and fever
+                in Canada, 2026-2027 surveillance period</h3>
+
+            <div class="col-sm-3" id="fwLegendDiv"></div>
+
+            <div class="col-sm-9" id="fwAndVirusSelectAllDiv">
+                <label>Select viruses:</label>
+            </div>
+
+            <div id="fwAndVirus"></div>
+
+            <details>
+                <summary>Figure 6: Text description</summary>
+                <!--<div class="table-responsive"></div>-->
+
+                <div id="fwAndVirusTable"></div>
+            </details>
+
+            <div class="tooltipDiv" id="fwAndVirusTooltip"></div>
+
+
+
+
+            <h2 id="outbreaks">Outbreaks</h2>
+
+            <div id="outbreaksText">
+                <!--<p>Placeholder text for dynamically filled text content (updates each week)</p>-->
+            </div>
+
+            <div class="clearfix"></div>
+
+            <h3>Figure 7: Number of respiratory viral outbreaks by report week,
+            <select class="outbreaksByWeekDD" id="outbreaksByWeekDD1"></select>, Canada, 2026-2027 surveillance period</h3>
+
+            <div class="col-xs-10" id="outbreaksByWeekDiv">
+                <svg id="outbreaksByWeekSVG"></svg>
+            </div>
+            <div class="col-xs-2" style="line-height:1em; padding:0;" id="outbreaksByWeekLegend"></div>
+
+            <div class="clearfix"></div>
+
+            <div class="tooltipDiv" id="outbreaksByWeekTooltip"></div>
+
+            <details class="tdTableContainer">
+                <summary>Figure 7: Text description</summary>
+                <div id="outbreaksByWeekTable"></div>
+            </details>
+
+
+            <h2 id="severeOutcomes">Severe outcomes</h2>
+
+            <h3>Provincial and territorial hospitalizations</h3>
+
+            <p>Among reporting provinces and territories, some do not provide data on all severe outcomes
+            (hospitalizations, ICU admissions, and deaths) and some do not provide age data. For
+            additional information about the current reporting situation, please refer to the
+            <a href="about.html#data-sources">data sources and coverage section in the About this report tab</a>.</p>
+
+            <div id="severityText">
+
+            </div>
+
+
+            <h3>Figure 8: Number and crude rate of respiratory hospitalizations (from participating provinces and territories)
+            by report week, Canada, 2026-2027 surveillance period</h3>
+
+            <!--RENAME ALL THE IDs/CLASSES AS NECCESARY TO IMPROVE WHEN COPYING AND TAILORING CODE TO NEW GRAPH VARIANT-->
+            <div class="optionButtons" id="ptsosHospButtons" style="display:inline;">
+
+                <!--<div id="ptsosHospCounts" style="display:inline;">-->
+                    <!--<label>Select COVID-19 detection count:</label>-->
+                <!--</div>-->
+                <!--<div id="ptsosHospPercents" style="display:inline;">-->
+                    <!--<label>Select COVID-19 positive test percentages:</label>-->
+                <!--</div>-->
+            </div>
+
+            <div class="scaleOptions">
+                <label>Scale <abbr title="Use the scale buttons to select whether the figure's scale is set according to historical seasons' data (fixed) or fit to the current season's data (dynamic)."><i class="fas fa-info-circle"></i></abbr>:</label>
+                <div class="btn-group optionButtons" id="ptsosHospScaleBtns">
+                    <button id="ptsosHospScaleBtn-fixed" class="btn btn-default selectedBtn" name="scaleFixedBtn" value="fixed" title="Scale graphs by past seasons' maximum values.">Fixed</button>
+                    <button id="ptsosHospScaleBtn-dynamic" class="btn btn-default" name="scaleDynamicBtn" value="dynamic" title="Scale graphs by the maximum value that appears in the data.">Dynamic</button>
+                </div>
+            </div>
+
+            <div id="ptsosHosp">
+                <!--<svg id="fig2"></svg>-->
+            </div>
+
+            <div class="tooltipDiv" id="ptsosHospTooltip"></div>
+
+            <details class="tdTableContainer">
+                <summary>Figure 8: Text description</summary>
+                <div id="ptsosHospTable"></div>
+            </details>
+
+
+
+            <!--<h3>Sentinel hospitalizations (hospital-based)</h3>-->
+            <h3>Sentinel hospitalizations (pediatrics)</h3>
+            <!--<h3>Pediatrics: Sentinel hospitalizations</h3>-->
+
+            <!--<p><strong>Pediatrics</strong></p>-->
+
+            <p>Pediatric (less than 18 years of age) COVID-19, influenza, and RSV-associated
+            severe outcomes data are reported by the Surveillance Program for Rapid
+            Identification and Tracking of Infectious Diseases in kids
+                <!--<a href="https://cumming.ucalgary.ca/project/sprint-kids/home">(SPRINT-KIDS) Network</a>.</p>-->
+                <a href="https://cumming.ucalgary.ca/project/sprint-kids/home">(SPRINT-KIDS)</a>.</p>
+
+            <div id="sentinelHospitalizationsText">
+
+            </div>
+
+
+
+            <h3>Figure 9: Number of pediatric hospitalizations, by virus and report week,
+            reported by the SPRINT-KIDS, 2026-2027 surveillance period</h3>
+
+            <div id="sentinelHospBarHTMLLegend"></div>
+
+            <div id="sentinelHospBarDiv">
+                <svg id="sentinelHospBarSVG"></svg>
+            </div>
+
+            <div class="tooltipDiv" id="sentinelHospBarTooltip"></div>
+
+            <!--<p><small>Note:</small></p>-->
+            <ul class="list-unstyled"><small>
+                <li>*: Preliminary data are shaded in grey.</li>
+            </small></ul>
+
+            <details class="tdTableContainer">
+                <summary>Figure 9: Text description</summary>
+                <div id="sentinelHospBarTable"></div>
+            </details>
+
+
+            <!-- Bar graph replacing the above commented line graph -->
+            <h3>Figure 10: Proportion of pediatric respiratory hospitalizations
+            <!--by age group -->
+            by <select class="sentinelHospAgeGroupProportionsDD" id="sentinelHospAgeGroupProportionsDD1"></select>
+            reported by the SPRINT-KIDS, 2026-2027 surveillance period</h3>
+
+            <div id="sentinelHospAgeGroupProportionsDiv">
+                <svg id="sentinelHospAgeGroupProportionsSVG"></svg>
+            </div>
+
+            <div class="tooltipDiv" id="sentinelHospAgeGroupProportionsTooltip"></div>
+
+            <details class="tdTableContainer">
+                <summary>Figure 10: Text description</summary>
+                <div id="sentinelHospAgeGroupProportionsTable"></div>
+            </details>
+
+            <div class="clearfix"></div>
+
+
+            <h3>Figure 11: Weekly proportion of COVID-19, influenza, and RSV-associated
+            pediatric <select class="sentinelHospProportionsDD" id="sentinelHospProportionsDD1"></select>,
+            reported by the SPRINT-KIDS, 2026-2027 surveillance period</h3>
+
+            <div id="sentinelHospProportionsHTMLLegend"></div>
+
+            <div id="sentinelHospProportionsDiv">
+                <svg id="sentinelHospProportionsSVG"></svg>
+            </div>
+
+            <div class="tooltipDiv" id="sentinelHospProportionsTooltip"></div>
+
+            <details class="tdTableContainer">
+                <summary>Figure 11: Text description</summary>
+                <div id="sentinelHospProportionsTable"></div>
+            </details>
+
+
+            <h2 id="otherViruses">Other seasonal respiratory viruses</h2>
+
+            <div class="clearfix"></div>
+
+            <div id="virusSummary2">
+                <div id="virusSummary2Tile">
+                </div>
+            </div>
+
+            <div class="clearfix"></div>
+
+            <!--<p id="summary_text"></p>-->
+            <div id="summary_category_content"></div>
+
+            <div class="clearfix"></div>
+
+            <h3 style="line-height:40px; margin-bottom:0px;">Figure 12: <select name="fig1measureDD" id="fig1measureDD"></select> in
+                <select name="fig1provinceDD" id="fig1provinceDD">
+                    <option id="fig1VB_Canada" value="Canada">Canada</option>
+                    <option id="fig1VB_Atlantic" value="Atlantic">Atlantic</option>
+                    <!--<option id="fig1VB_Newfoundland_and Labrador" value="Newfoundland and Labrador">&nbsp;&nbsp;&nbsp;&nbsp;Newfoundland and Labrador</option>-->
+                    <!--<option id="fig1VB_Prince_Edward Island" value="Prince Edward Island">&nbsp;&nbsp;&nbsp;&nbsp;Prince Edward Island</option>-->
+                    <!--<option id="fig1VB_Nova_Scotia" value="Nova Scotia">&nbsp;&nbsp;&nbsp;&nbsp;Nova Scotia</option>-->
+                    <!--<option id="fig1VB_New_Brunswick" value="New Brunswick">&nbsp;&nbsp;&nbsp;&nbsp;New Brunswick</option>-->
+                    <option id="fig1VB_Quebec" value="Quebec">Quebec</option>
+                    <option id="fig1VB_Ontario" value="Ontario">Ontario</option>
+                    <option id="fig1VB_Prairies" value="Prairies">Prairies</option>
+                    <!--<option id="fig1VB_Manitoba" value="Manitoba">&nbsp;&nbsp;&nbsp;&nbsp;Manitoba</option>-->
+                    <!--<option id="fig1VB_Saskatchewan" value="Saskatchewan">&nbsp;&nbsp;&nbsp;&nbsp;Saskatchewan</option>-->
+                    <!--<option id="fig1VB_Alberta" value="Alberta">&nbsp;&nbsp;&nbsp;&nbsp;Alberta</option>-->
+                    <option id="fig1VB_British_Columbia" value="British Columbia">British Columbia</option>
+                    <!--<option id="fig1VB_Territories" value="Territories">Territories</option>-->
+                    <!--<option id="fig1VB_Yukon" value="Yukon">&nbsp;&nbsp;&nbsp;&nbsp;Yukon</option>-->
+                    <!--<option id="fig1VB_Northwest_Territories" value="Northwest Territories">&nbsp;&nbsp;&nbsp;&nbsp;Northwest Territories</option>-->
+                    <!--<option id="fig1VB_Nunavut" value="Nunavut">&nbsp;&nbsp;&nbsp;&nbsp;Nunavut</option>-->
+                </select> by surveillance week, <span class="currentSeason"></span>
+                season
+            </h3>
+
+            <div class="control_box_basic" id="fig1_control_box">
+                <label style="margin-bottom:0px;">Select viruses:</label>
+                <div class="virus_buttons_div" style="display:inline;" id="fig1_virus_buttons_div">
+                    <!--<button id="fig1VB_SARS-CoV-2" class="btn btn-default selectedBtn virus_btn" name="COVIDBtn" value="SARS-CoV-2"><abbr title="Severe acute respiratory syndrome coronavirus 2 (SARS-CoV-2)">SARS-CoV-2</abbr></button>-->
+                    <!--<button id="fig1VB_Influenza" style="background-color: rgb(255, 127, 14);" class="btn btn-default selectedBtn virus_btn notCov" name="FLUBtn" value="Influenza">Influenza</button>-->
+                    <!--<button id="fig1VB_Influenza_A" class="btn btn-default virus_btn notCov" name="FLUABtn" value="Influenza A">Influenza A</button>-->
+                    <!--<button id="fig1VB_Influenza_B" class="btn btn-default virus_btn notCov" name="FLUBBtn" value="Influenza B">Influenza B</button>-->
+                    <!--<button id="fig1VB_RSV" style="background-color: rgb(148, 103, 189);" class="btn btn-default selectedBtn virus_btn notCov" name="RSVBtn" value="RSV"><abbr title="Respiratory syncytial virus (RSV)">RSV</abbr></button>-->
+
+                    <!--<button id="fig1VB_EV-RV" style="background-color: rgb(140, 86, 75);" class="btn btn-default virus_btn notCov" name="ENTERORHINOBtn" value="EV/RV"><abbr title="Enterovirus/rhinovirus (EV/RV)">EV/RV</abbr></button>-->
+                    <!--<button id="fig1VB_HPIV" style="background-color: rgb(227, 119, 194);" class="btn btn-default virus_btn notCov" name="PARABtn" value="HPIV"><abbr title="Human parainfluenza virus (HPIV)">HPIV</abbr></button>-->
+                    <!--<button id="fig1VB_ADV" style="background-color: rgb(23, 190, 207);" class="btn btn-default virus_btn notCov" name="ADENOBtn" value="ADV"><abbr title="Adenovirus (ADV)">ADV</abbr></button>-->
+                    <!--<button id="fig1VB_EV-RV" class="btn btn-default virus_btn notCov selectedBtn" name="ENTERORHINOBtn" value="EV/RV"><abbr title="Enterovirus/rhinovirus (EV/RV)">EV/RV</abbr></button>-->
+                    <button id="fig1VB_HPIV" style="background-color: rgb(227, 119, 194);" class="btn btn-default virus_btn notCov selectedBtn" name="PARABtn" value="HPIV"><abbr title="Human parainfluenza virus (HPIV)">HPIV</abbr></button>
+                    <button id="fig1VB_ADV" style="background-color: rgb(23, 190, 207);" class="btn btn-default virus_btn notCov selectedBtn" name="ADENOBtn" value="ADV"><abbr title="Adenovirus (ADV)">ADV</abbr></button>
+                    <button id="fig1VB_HMPV" style="background-color: rgb(127, 127, 127);" class="btn btn-default virus_btn notCov selectedBtn" name="HMPVBtn" value="HMPV"><abbr title="Human metapneumovirus (HMPV)">HMPV</abbr></button>
+                    <button id="fig1VB_EV-RV" style="background-color: rgb(140, 86, 75);"  class="btn btn-default virus_btn notCov selectedBtn" name="ENTERORHINOBtn" value="EV/RV"><abbr title="Enterovirus/rhinovirus (EV/RV)">EV/RV</abbr></button>
+                    <button id="fig1VB_HCoV" style="background-color: rgb(111, 0, 0);"  class="btn btn-default virus_btn notCov selectedBtn" name="HCOVBtn" value="HCoV"><abbr title="Human coronavirus (HCoV)">HCoV</abbr></button>
+
+                    <!--<button id="fig1VB_SARS-CoV-2" class="btn btn-default virus_btn" name="COVIDBtn" value="SARS-CoV-2"><abbr title="Severe acute respiratory syndrome coronavirus 2 (SARS-CoV-2)">SARS-CoV-2</abbr></button>-->
+                    <!--<button id="fig1VB_Influenza" class="btn btn-default virus_btn notCov" name="FLUBtn" value="Influenza">Influenza</button>-->
+                    <!--<button id="fig1VB_Influenza_A" class="btn btn-default virus_btn notCov" name="FLUABtn" value="Influenza A">Influenza A</button>-->
+                    <!--<button id="fig1VB_Influenza_B" class="btn btn-default virus_btn notCov" name="FLUBBtn" value="Influenza B">Influenza B</button>-->
+                    <!--<button id="fig1VB_RSV" class="btn btn-default virus_btn notCov" name="RSVBtn" value="RSV"><abbr title="Respiratory syncytial virus (RSV)">RSV</abbr></button>-->
+                </div>
+
+            </div>
+            <div id="fig1_controls_selected_timeframe">
+                <div class="fig1leftSliderValueHolder">
+                    <div class="timeframeFromToInner">
+                        <span class="sliderDateLabel">From</span>
+                    </div>
+                    <div class="timeframeFromToInner">
+                        <details class="fig1TimeframeDropdown" id="fig1TimeframeDropdownFromDetails">
+                            <summary class="timeframe_slider_summary" id="fig1TimeframeDropdownFromSummary"></summary>
+                            <input class="form-control" type="text" id="fig1_from_dd_search" name="fig1_from_dd_search" size="25" maxlength="10" placeholder="Filter dates">
+                            <div class="slider_to_dates" id="fig1_from_dates"></div>
+                        </details>
+                    </div>
+                </div>
+                <div class="fig1rightSliderValueHolder">
+                    <div class="timeframeFromToInner">
+                        <span class="sliderDateLabel">To</span>
+                    </div>
+                    <div class="timeframeFromToInner">
+                        <details class="fig1TimeframeDropdown" id="fig1TimeframeDropdownToDetails">
+                            <summary class="timeframe_slider_summary" id="fig1TimeframeDropdownToSummary"></summary>
+                            <input class="form-control" type="text" id="fig1_to_dd_search" name="fig1_to_dd_search" size="25" maxlength="10" placeholder="Filter dates">
+                            <div class="slider_to_dates" id="fig1_to_dates"></div>
+                        </details>
+                    </div>
+                </div>
+                <div class="clearfix"></div>
+                <div class="container row timeframeSliderDiv">
+                    <div class="timeframe_slider_div col-md-12" id="fig1TimeframeSlider"></div>
+                </div>
+
+            </div>
+
+            <div id="fig1">
+
+            </div>
+
+            <div id="fig1Tooltip">
+
+            </div>
+
+            <div class="clearfix"></div>
+
+            <details id="fig1TextDescDD">
+                <summary>Figure 12: Text description</summary>
+
+                <div class="tdTableContainer">
+                    <div id="fig1TextDesc">
+
+                    </div>
+                </div>
+
+            </details>
+
+            <details>
+                <summary>Figure 12: Data guide</summary>
+                <ul>
+                    <li>Use the controls to select an area of Canada and a
+                        measure of respiratory virus activity to display. Select
+                        viruses to compare trends within the area across the
+                        current respiratory virus season. Hover over or tap the
+                        figure to display weekly values and dates.</li>
+                </ul>
+            </details>
+
+            <details>
+                <summary>Figure 12: Data notes</summary>
+                <ul>
+                    <li>Different provinces and territories may use different testing
+                    practices which can affect indicators such as percentage of tests positive. Interpret with caution.</li>
+                    <li>Respiratory viruses other than SARS-CoV-2 are only
+                        shown at the regional and national levels. Note that
+                        some regions do not test for/report on all RVDSS viruses.</li>
+                    <!--<li>Weekly percent positivity estimates are suppressed-->
+                    <!--    (not shown) for the Northwest Territories when the-->
+                    <!--    number of weekly COVID-19 tests reported is under 45.-->
+                    <!--    For small counts such as this, it is difficult to-->
+                    <!--    provide an accurate weekly percent positivity estimate.</li>-->
+                </ul>
+            </details>
+
+
+
+            <h3>Figure 13: Number of detections by virus and report week, Canada, 2026-2027 surveillance period</h3>
+
+            <div id="labNumberDet2-html-legend"></div>
+
+            <div id="labNumberDet2Div">
+                <svg id="labNumberDet2SVG"></svg>
+            </div>
+
+            <div id="labNumberDet2Tooltip" class="tooltipDiv"></div>
+
+            <details>
+                <summary>Figure 13: Text description</summary>
+                <div id="labNumberDet2Table"></div>
+            </details>
+
+
+            <div id="toolBox">
+
+                <div id="toolBoxInner">
+
+                    <div style="margin-bottom:7px;">
+                        <button class="btn btn-default toolBoxControl" id="topButton">Jump to top &nbsp;<i class="fa-solid fa-arrow-up"></i></button>
+                        <button class="btn btn-default" id="closeResourceButton" title="Close resource box"><span><span id="closeText" class="wb-inv">Close resource box</span><i class="fa-solid fa-x"></i></span></button>
+                    </div>
+
+                </div>
+
+                <button class="btn btn-default" id="openResourceButton" title="Open resource box"><span><span id="openResourceText" class="wb-inv">Open resource box</span><i class="fa-solid fa-chevron-up"></i></span></button>
+
+            </div>
+
+            <div class="clearfix"></div>
+
+
+            <!--End of your page content -->
+
+            <!-- Download data tiles, fill out if needed, remove if not -->
+            <!--<div id="tiles">-->
+            <!--    <h3>Additional ... data resources</h3>-->
+            <!--    <div class="wb-eqht">-->
+            <!--        <div id="downloadPanel1" class="text-center learn-more outerPanel" style="vertical-align: top; min-height: 202px;">-->
+            <!--            <div class="innerPanel">-->
+            <!--                <p><i style="font-size:80px;" class="fa fa-database"></i></p>-->
+            <!--                <p class="innerPanelText"><strong>Download</strong> <a href=".csv" target="_blank" class="downloadData">... data (.csv)</a> and <a href=".csv" target="_blank" class="downloadData">... data (.csv)</a></p>-->
+            <!--            </div>-->
+            <!--        </div>-->
+            <!--        <div id="downloadPanel2" class="text-center learn-more outerPanel" style="vertical-align: top; min-height: 202px;">-->
+            <!--            <div class="downloadData innerPanel">-->
+            <!--                <p><i style="font-size:80px;" class="fab fa-readme"></i></p>-->
+            <!--                <p class="innerPanelText"><strong>Download</strong> <a href=".csv" target="_blank" class="downloadData">... data dictionary (.csv)</a> and <a href=".csv" target="_blank" class="downloadData">... data dictionary (.csv)</a></p>-->
+            <!--            </div>-->
+            <!--        </div>-->
+            <!--        <div id="downloadPanel3" class="text-center learn-more outerPanel" style="vertical-align: top; min-height: 202px;">-->
+            <!--            <a href=".pdf" target="_blank" class="downloadReport innerPanel">-->
+            <!--                <p><i style="font-size:80px;" class="fa fa-file-download"></i></p>-->
+            <!--                <p><strong>Download</strong> report (.pdf)</p>-->
+            <!--            </a>-->
+            <!--        </div>-->
+            <!--        <div id="downloadPanel4" class="text-center learn-more outerPanel" style="vertical-align: top; min-height: 202px;">-->
+            <!--            <a href=".html" target="_blank" class="clickDataTrendsPage innerPanel">-->
+            <!--                <p><i style="font-size:80px;" class="fa fa-external-link-alt"></i></p>-->
+            <!--                <p>To learn more, visit <span class="nowrap">...</span></p>-->
+            <!--            </a>-->
+            <!--        </div>-->
+            <!--    </div>-->
+            <!--</div>-->
+
+
+            <!-- 2 links to other relevant/related Infobase products, customize for your product -->
+            <div class="well well-md">
+                <h2 class="h3 mrgn-tp-sm">You might also be interested in</h2>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="col-md-3 hidden-sm hidden-xs">
+                            <!--<img class="img-responsive mrgn-bttm-sm" src="/src/img/covid-icon.png" alt="" />-->
+                            <img class="img-responsive mrgn-bttm-sm" src="/src/img/redesign/covid.png" alt="" />
+                        </div>
+                        <div class="col-md-9">
+                            <h3 class="h4 mrgn-tp-sm"><a href="https://health-infobase.canada.ca/covid-19/wastewater/">COVID-19 wastewater surveillance dashboard</a></h3>
+                            <p>Trend data about the levels of COVID-19 in the wastewater.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="col-md-3 hidden-sm hidden-xs">
+                            <!--<img class="img-responsive mrgn-bttm-sm" src="/src/img/redesign/vaccine.png" alt="" />-->
+                            <img class="img-responsive mrgn-bttm-sm" src="/src/img/redesign/rx.png" alt="" />
+                            <!--<img class="img-responsive mrgn-bttm-sm" src="/src/img/redesign/virus.png" alt="" />-->
+                            <!--<img class="img-responsive mrgn-bttm-sm" src="/src/img/redesign/hospital.png" alt="" />-->
+                        </div>
+                        <div class="col-md-9">
+                            <!--<h3 class="h4 mrgn-tp-sm"><a href="https://health-infobase.canada.ca/covid-19/vaccine-administration/">COVID-19 vaccination</a></h3>-->
+                            <!--<p>Number of COVID-19 vaccine doses that have been administed in Canada.</p>-->
+                            <h3 class="h4 mrgn-tp-sm"><a href="https://health-infobase.canada.ca/cnisp/viral-respiratory-infections.html">The Canadian Nosocomial Infection Surveillance Program (CNISP)</a></h3>
+                            <p>Data on healthcare-associated infections (HAIs) and antimicrobial resistant organisms (AROs) in Canada.</p>
+                        </div>
+                    </div>
+                </div>
+                <a href="https://health-infobase.canada.ca/">All Health Infobase data products</a>
+            </div>
+
+            <!-- Feedback widget, need to fill inputs below -->
+            <div class="row row-no-gutters mrgn-tp-xl">
+                <div class="col-sm-7 col-lg-6">
+                    <section class="gc-pg-hlpfl provisional">
+                        <div class="well mrgn-bttm-0">
+                            <form id="gc-pg-hlpfl-frm" action="#" method="post" autocomplete="off">
+                                <input type="hidden" name="institutionopt" value="Public Health Agency of Canada">
+                                <input type="hidden" name="pageOwner" value="gc:institutions/public-health-agency-of-canada">
+                                <input type="hidden" name="themeopt" value="Health">
+                                <input type="hidden" name="sectionopt" value="">
+                                <input type="hidden" name="language" value="en">
+                                <input type="hidden" name="pageTitle" value="">
+                                <input type="hidden" name="submissionPage" value="">
+                                <input type="hidden" id="helpful" name="helpful" value="Yes">
+
+                                <div class="gc-pg-hlpfl-btn">
+                                    <div class="row row-no-gutters">
+                                        <div class="col-xs-12 col-sm-7 mrgn-tp-sm">
+                                            <h2 class="mrgn-tp-sm h5">Did you find what you were looking for?</h2>
+                                        </div>
+                                        <div class="col-xs-8 col-sm-5 text-right">
+                                            <button id="btnyes" type="submit" value="Yes" class="btn btn-primary">Yes</button>
+                                            <button id="btnno" type="button" class="btn btn-primary mrgn-lft-sm nojs-hide">No</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="h3 hidden nojs-show">If not, tell us why:</p>
+                                <div class="gc-pg-hlpfl-no nojs-show">
+                                    <fieldset>
+                                        <legend class="h4 mrgn-tp-0 mrgn-bttm-md">What was wrong?</legend>
+                                        <div class="radio">
+                                            <label for="problem1">
+                                                <input name="problem" id="problem1" type="radio" value="The answer I need is missing" data-gc-analytics-wtph-value="The answer I need is missing-La réponse dont j’ai besoin n’est pas là" data-gc-analytics-collect="notPrivate">
+                                                The answer I need is missing
+                                            </label>
+                                        </div>
+                                        <div class="radio">
+                                            <label for="problem2">
+                                                <input name="problem" id="problem2" type="radio" value="The information isn’t clear" data-gc-analytics-wtph-value="The information isn’t clear-L'information n'est pas claire" data-gc-analytics-collect="notPrivate">
+                                                The information isn’t clear
+                                            </label>
+                                        </div>
+                                        <div class="radio">
+                                            <label for="problem3">
+                                                <input name="problem" id="problem3" type="radio" value="I’m not in the right place" data-gc-analytics-wtph-value="I’m not in the right place-Je ne suis pas au bon endroit" data-gc-analytics-collect="notPrivate">
+                                                I’m not in the right place
+                                            </label>
+                                        </div>
+                                        <div class="radio">
+                                            <label for="problem4">
+                                                <input name="problem" id="problem4" type="radio" value="Something is broken or incorrect" data-gc-analytics-wtph-value="Something is broken or incorrect-Quelque chose est brisé ou incorrect" data-gc-analytics-collect="notPrivate">
+                                                Something is broken or incorrect
+                                            </label>
+                                        </div>
+                                        <div class="radio">
+                                            <label for="problem5">
+                                                <input name="problem" id="problem5" type="radio" value="Other reason" data-gc-analytics-wtph-value="Other reason-Autre raison" data-gc-analytics-collect="notPrivate">
+                                                Other reason
+                                            </label>
+                                        </div>
+                                    </fieldset>
+                                    <label for="problem6" class="mrgn-bttm-0">Please provide more details</label>
+                                    <p class="small">
+                                        <strong>(Don’t include any personal information. Note that you will not receive a reply.)</strong>
+                                        <br>
+                                        <span class="small">Maximum 300 characters</span>
+                                    </p>
+                                    <textarea id="problem6" name="details" class="full-width" maxlength="300"></textarea>
+                                    <button type="submit" value="No" class="btn btn-primary mrgn-tp-md mrgn-bttm-sm">Submit</button>
+                                </div>
+                            </form>
+                            <div class="gc-pg-hlpfl-thnk hide">
+                                <p class="h6 mrgn-tp-sm mrgn-bttm-sm"><span class="far fa-check-circle text-success mrgn-rght-sm" aria-hidden="true"></span> Thank you for your feedback</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="col-sm-3 col-sm-offset-1 col-lg-offset-3">
+                    <div class="wb-share" data-wb-share="{&quot;pnlId&quot;:&quot;pnlShrPg&quot;, &quot;lnkClass&quot;: &quot;btn btn-default btn-block mrgn-tp-md&quot;}"></div>
+                </div>
+            </div>
+
+            <div class="row pagedetails">
+                <div class="datemod col-xs-12 mrgn-tp-lg">
+                    <dl id="wb-dtmd">
+                        <dt>Date modified: </dt>
+                        <dd><time class="dateModified" property="dateModified">2025-01-03</time></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer id="wb-info">
+        <h2 class="wb-inv">About this site</h2>
+        <div class="gc-contextual">
+            <div class="container">
+                <nav>
+                    <h3><a href="https://health-infobase.canada.ca">Health Infobase</a></h3>
+                    <ul class="list-col-xs-1 list-col-sm-2 list-col-md-3">
+                        <li><a href="mailto:infobase@phac-aspc.gc.ca">Contact us by email</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+        <div class="gc-main-footer">
+            <div class="container">
+                <nav>
+                    <h3>Government of Canada</h3>
+                    <ul class="list-col-xs-1 list-col-sm-2 list-col-md-3">
+                        <li><a href="https://www.canada.ca/en/contact.html">All Contacts</a></li>
+                        <li><a href="https://www.canada.ca/en/government/dept.html">Departments and agencies</a></li>
+                        <li><a href="https://www.canada.ca/en/government/system.html">About government</a></li>
+                    </ul>
+                    <h4><span class="wb-inv">Themes and topics</span></h4>
+                    <ul class="list-unstyled colcount-sm-2 colcount-md-3">
+                        <li><a href="https://www.canada.ca/en/services/jobs.html">Jobs</a></li>
+                        <li><a href="https://www.canada.ca/en/services/immigration-citizenship.html">Immigration and citizenship</a></li>
+                        <li><a href="https://travel.gc.ca/">Travel and tourism</a></li>
+                        <li><a href="https://www.canada.ca/en/services/business.html">Business</a></li>
+                        <li><a href="https://www.canada.ca/en/services/benefits.html">Benefits</a></li>
+                        <li><a href="https://www.canada.ca/en/services/health.html">Health</a></li>
+                        <li><a href="https://www.canada.ca/en/services/taxes.html">Taxes</a></li>
+                        <li><a href="https://www.canada.ca/en/services/environment.html">Environment and natural resources</a></li>
+                        <li><a href="https://www.canada.ca/en/services/defence.html">National security and defence</a></li>
+                        <li><a href="https://www.canada.ca/en/services/culture.html">Culture, history and sport</a></li>
+                        <li><a href="https://www.canada.ca/en/services/policing.html">Policing, justice and emergencies</a></li>
+                        <li><a href="https://www.canada.ca/en/services/transport.html">Transport and infrastructure</a></li>
+                        <li><a href="https://international.gc.ca/world-monde/index.aspx?lang=eng">Canada and the world</a></li>
+                        <li><a href="https://www.canada.ca/en/services/finance.html">Money and finance</a></li>
+                        <li><a href="https://www.canada.ca/en/services/science.html">Science and innovation</a></li>
+                        <li><a href="https://www.canada.ca/en/services/indigenous-peoples.html">Indigenous peoples</a></li>
+                        <li><a href="https://www.canada.ca/en/services/veterans.html">Veterans and military</a></li>
+                        <li><a href="https://www.canada.ca/en/services/youth.html">Youth</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+        <div class="gc-sub-footer">
+            <div class="container d-flex align-items-center">
+                <nav>
+                    <h3 class="wb-inv">Government of Canada Corporate</h3>
+                    <ul>
+                        <li><a href="https://www.canada.ca/en/social.html">Social media</a></li>
+                        <li><a href="https://www.canada.ca/en/mobile.html">Mobile applications</a></li>
+                        <li><a href="https://www.canada.ca/en/government/about.html">About Canada.ca</a></li>
+                        <li><a href="https://www.canada.ca/en/transparency/terms.html">Terms and conditions</a></li>
+                        <li><a href="https://www.canada.ca/en/transparency/privacy.html">Privacy</a></li>
+                    </ul>
+                </nav>
+                <div class="wtrmrk align-self-end">
+                    <img src="/src/assets/wmms-blk.svg" alt="Symbol of the Government of Canada" />
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script src="/src/js/jquery.js"></script>
+    <script src="/src/wet-boew/js/wet-boew.min.js"></script>
+    <script src="/src/GCWeb/js/theme.min.js"></script><script src="/src/js/maintenance-banner.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="/src/js/datatables.js"></script>
+    <script src="/src/js/d3.v7.min.js"></script>
+    <script src="/src/js/d3-interpolate-path/d3-interpolate-path.min.js"></script>
+    <script src="/src/js/topojson.v2.min.js"></script>
+    <script src="/src/js/polylabel.js"></script>
+    <script src="/src/js/d3-array.v2.min.js"></script>
+    <script src="/src/js/survey.js"></script>
+    <script src="https://unpkg.com/textures@1.2.0/dist/textures.js"></script>
+
+    <script src="/src/js/d3-interpolate-path/d3-interpolate-path.js"></script>
+    <script src="/src/js/d3-line-chunked/d3-line-chunked-CRFA.js"></script>
+
+	<script>
+		const queryString = window.location.search;
+		const searchParams = new URLSearchParams(queryString);
+		const source = searchParams.get('source');
+		if(source=="rvdss") {
+			d3.select("#changeLocationMessage").classed("hidden",false);
+		}
+	</script>
+
+    <script>
+        var beforePrint = function() {
+            $("details").attr('open', '');
+        };
+
+        var afterPrint = function() {
+            $("details").removeAttr('open');
+        };
+
+        if (window.matchMedia) {
+            var mediaQueryList = window.matchMedia('print');
+            mediaQueryList.addListener(function(mql) {
+                if (mql.matches) {
+                    beforePrint();
+                }
+                else {
+                    afterPrint();
+                }
+            });
+        }
+
+        $(document).on("wb-ready.wb", function() {
+            $("#btnno").click(function(e) {
+                $(".gc-pg-hlpfl-no").removeClass("nojs-show");
+                $(".gc-pg-hlpfl-btn").addClass("hide");
+                $("#helpful").val("No");
+            });
+            $("#gc-pg-hlpfl-frm").submit(function(e) {
+                e.preventDefault();
+                $(".gc-pg-hlpfl-thnk").removeClass("hide");
+                $("#gc-pg-hlpfl-frm").addClass("hide nojs-show");
+                $.ajax({
+                    url: 'https://pagesuccessemailqueue.azurewebsites.net/api/QueueProblemForm',
+                    type: 'POST',
+                    dataType: 'text',
+                    data: $('form#gc-pg-hlpfl-frm').serialize(),
+                    success: function(data) {},
+                    error: function(xhr, status, err) {
+                        console.log(xhr.responseText);
+                    }
+                });
+            });
+        });
+    </script>
+    <script src='/src/js/respiratory-virus-surveillance/sharedFunctions.js'></script>
+    <script src='/src/js/respiratory-virus-surveillance/index.js' type='module'></script>
+
+    <!--<script src='/src/js/FluWatch2024/influenza.js' type='module'></script>-->
+
+    <!-- JS for slider -->
+    <script src="/src/js/noUiSlider-15.5.1/dist/nouislider.js"></script>
+
+    <!-- Add index script -->
+    <!--<script src="/src/js/respiratory-virus-detections/figure1.js"></script>-->
+    <script src="/src/js/respiratory-virus-surveillance/rvdss-figure1.js"></script>
+    <!--<script src="/src/js/respiratory-virus-surveillance/dev/rvdss-figure1-dev.js"></script>-->
+    <script src="/src/js/respiratory-virus-detections/figure2.js"></script>
+    <script src="/src/js/respiratory-virus-detections/figure3.js"></script>
+    <!--<script src="/src/js/respiratory-virus-detections/dev/figure3-dev.js"></script>-->
+    <script src="/src/js/respiratory-virus-detections/table1.js"></script>
+    <script src="/src/js/respiratory-virus-detections/data_exploration.js"></script>
+
+</body>
+
+</html>

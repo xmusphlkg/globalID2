@@ -22,6 +22,7 @@ from src.core import get_database, get_logger
 from src.core.country_library import get_country_bootstrap_config
 from src.core.country_library import SUBDIVISION_REGISTRY
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
+from src.core.south_asia_sources import SOUTH_ASIA_SOURCES, SOUTH_ASIA_ALL_SOURCES, south_asia_source
 from src.core.remaining_country_sources import WHO_COUNTRIES, SPF_TERRITORIES, EXTRA_SOURCE_CONTRACTS, source_contract
 from src.core.disease_mutation_lock import acquire_country_data_mutation_lock
 from src.core.task_manager import task_manager
@@ -100,6 +101,8 @@ class CrawlService:
         "CH": _PipelineSpec("_execute_ch_monthly", "CHMonthlyUpdater"),
         "IS": _PipelineSpec("_execute_is_mixed", "ISMultiFrequencyUpdater"),
     }
+    for _code, _spec in SOUTH_ASIA_SOURCES.items():
+        _PIPELINES[_code] = _PipelineSpec("_execute_south_asia", _spec["updater"])
     for _code in WHO_COUNTRIES:
         _PIPELINES[_code] = _PipelineSpec("_execute_who_country_annual", "WHOAnnualUpdater")
     for _code in SPF_TERRITORIES:
@@ -197,6 +200,9 @@ class CrawlService:
     for _code in (*WHO_COUNTRIES, *SPF_TERRITORIES):
         _SERIES_SOURCE_IDS[_code] = source_contract(_code)["source_id"]
 
+    for _code, _spec in SOUTH_ASIA_SOURCES.items():
+        _SERIES_SOURCE_IDS[_code] = _spec["source_id"]
+
     @classmethod
     def supported_country_codes(cls) -> List[str]:
         """Return country codes with implemented crawl pipelines."""
@@ -209,6 +215,13 @@ class CrawlService:
 
     @staticmethod
     def _make_updater(updater_name: str, country_code: Optional[str] = None):
+        for spec in SOUTH_ASIA_ALL_SOURCES.values():
+            if updater_name == spec["updater"]:
+                from importlib import import_module
+                return getattr(import_module(f"src.data.processors.{spec['module']}"), updater_name)()
+        if updater_name.startswith("high_frequency:"):
+            from src.core.high_frequency_sources import make_updater
+            return make_updater(str(country_code), updater_name.split(":", 1)[1])
         if updater_name == "CostaRicaNotificationsUpdater":
             from src.data.processors.cr_notifications import CostaRicaNotificationsUpdater
             return CostaRicaNotificationsUpdater()
@@ -240,7 +253,7 @@ class CrawlService:
         if updater_name == "ThailandDDSWeeklyUpdater":
             from src.data.processors.th_dds import ThailandDDSWeeklyUpdater
             return ThailandDDSWeeklyUpdater()
-        priority_modules = {'SouthAfricaNICDNMCUpdater': 'za', 'IndonesiaKemkesProfileUpdater': 'id', 'MexicoDGEAnnualUpdater': 'mx', 'NigeriaNCDCUpdater': 'ng', 'CambodiaCamEWARNWeeklyUpdater': 'kh', 'ArgentinaBENUpdater': 'ar', 'ArgentinaHIVAnnualUpdater': 'ar_hiv', 'PeruCDCWeeklyUpdater': 'pe', 'ChileENOHistoricalUpdater': 'cl', 'ColombiaINSSivigilaUpdater': 'co', 'ColombiaINSSivigilaCurrentUpdater': 'co_current', 'ColombiaINSBESUpdater': 'co_bes', 'MalawiPHIMIDSRUpdater': 'mw'}
+        priority_modules = {'SouthAfricaNICDNMCUpdater': 'za', 'IndonesiaKemkesProfileUpdater': 'id', 'MexicoDGEAnnualUpdater': 'mx', 'NigeriaNCDCUpdater': 'ng', 'CambodiaCamEWARNWeeklyUpdater': 'kh', 'ArgentinaBENUpdater': 'ar', 'ArgentinaHIVAnnualUpdater': 'ar_hiv', 'PeruCDCWeeklyUpdater': 'pe', 'ChileENOHistoricalUpdater': 'cl', 'ColombiaINSSivigilaUpdater': 'co', 'ColombiaINSSivigilaCurrentUpdater': 'co_current', 'ColombiaINSBESUpdater': 'co_bes', 'ColombiaINSMicrodataUpdater': 'co_microdatos', 'MalawiPHIMIDSRUpdater': 'mw'}
         if updater_name in priority_modules:
             from importlib import import_module
             return getattr(import_module(f"src.data.processors.{priority_modules[updater_name]}"), updater_name)()
@@ -426,11 +439,22 @@ class CrawlService:
         """
         normalized_country = (country_code or "").strip().upper()
         normalized_source = str(source or "all").strip().casefold()
-        if normalized_country in {"AR", "TH"}:
+        if normalized_source == "all":
+            preferred = get_country_bootstrap_config(normalized_country).get("crawler_config", {}).get("preferred_source")
+            if preferred:
+                source = normalized_source = str(preferred)
+        if normalized_country in {"AR", "TH", *SOUTH_ASIA_SOURCES}:
             from src.core.source_scopes import canonicalize_task_source
             source = canonicalize_task_source(source, country_code=normalized_country)
             normalized_source = source
-        if (normalized_country, normalized_source) in EXTRA_SOURCE_CONTRACTS:
+        from src.core.high_frequency_sources import high_frequency_source
+        high_frequency = high_frequency_source(normalized_country, normalized_source)
+        if (normalized_country, normalized_source) in SOUTH_ASIA_ALL_SOURCES:
+            spec = south_asia_source(normalized_country, normalized_source)
+            pipeline = _PipelineSpec("_execute_south_asia", spec["updater"])
+        elif high_frequency is not None:
+            pipeline = _PipelineSpec("_execute_high_frequency", f"high_frequency:{normalized_source}")
+        elif (normalized_country, normalized_source) in EXTRA_SOURCE_CONTRACTS:
             extra = EXTRA_SOURCE_CONTRACTS[(normalized_country, normalized_source)]
             pipeline = _PipelineSpec("_execute_remaining_extra", extra["updater"])
         elif normalized_country == "AR" and normalized_source == "ar_moh_hiv_annual":
@@ -439,6 +463,8 @@ class CrawlService:
             pipeline = _PipelineSpec("_execute_co_current_surveillance", "ColombiaINSSivigilaCurrentUpdater")
         elif normalized_country == "CO" and normalized_source == "co_ins_bes_weekly":
             pipeline = _PipelineSpec("_execute_co_bes_surveillance", "ColombiaINSBESUpdater")
+        elif normalized_country == "CO" and normalized_source == "co_ins_sivigila_microdatos":
+            pipeline = _PipelineSpec("_execute_co_microdatos", "ColombiaINSMicrodataUpdater")
         elif normalized_country == "MY" and normalized_source == "who_flunet_weekly":
             pipeline = _PipelineSpec("_execute_my_who_flunet", "MYWHOFluNetUpdater")
         elif normalized_country == "MY" and normalized_source == "who_gho_annual":
@@ -1198,6 +1224,10 @@ class CrawlService:
             },
         )
 
+    async def _execute_south_asia(self, **kwargs) -> CrawlResult:
+        spec = south_asia_source(kwargs["updater"].country_code, kwargs["source"])
+        return await self._execute_priority_surveillance(spec["module"], **kwargs)
+
     async def _execute_priority_surveillance(
         self, module: str, *, task: Task, source: str, force: bool, process: bool,
         save_raw: bool, fill_missing: bool, updater,
@@ -1220,6 +1250,14 @@ class CrawlService:
         if not updater.full_history_start_year <= int(start_year) <= datetime.now(timezone.utc).year:
             raise ValueError("start_year is outside the official historical archive range")
         options = {"start_year": int(start_year), "force": force}
+        if module in {spec["module"] for spec in SOUTH_ASIA_ALL_SOURCES.values()}:
+            for name in ("max_reports", "max_pages", "max_directory_pages"):
+                if name in supplied:
+                    options[name] = int(supplied[name])
+        if module in {"in_idsp", "pk_idsr", "np_sormas", "lk_wer"}:
+            for name in ("max_reports", "weeks", "max_index_pages"):
+                if name in supplied:
+                    options[name] = supplied[name]
         if module in {"kh", "pe", "id"}:
             from pathlib import Path
             cache_name = {"kh": "camewarn-parses", "pe": "bulletin-parses", "id": "kemkes-parses"}[module]
@@ -1263,6 +1301,17 @@ class CrawlService:
                    'download_workers': 8, 'parse_workers': 4}
         return await self._execute_co_bounded_surveillance(
             co_bes_refresh, store_rows=True, connector_options=options, **kwargs)
+
+    async def _execute_co_microdatos(self, **kwargs) -> CrawlResult:
+        from src.services.ingestion import co_microdatos_refresh
+        supplied = kwargs['task'].input_data or {}
+        last_closed_year = datetime.now(ZoneInfo('America/Bogota')).year - 1
+        options = {'start_year': int(supplied.get('start_year') or last_closed_year),
+                   'end_year': int(supplied.get('end_year') or last_closed_year)}
+        # Store classification strata as private native facts. Publication
+        # review remains independent; these are never a live BES fallback.
+        return await self._execute_co_bounded_surveillance(
+            co_microdatos_refresh, store_rows=True, connector_options=options, **kwargs)
 
     async def _execute_co_bounded_surveillance(
         self, connector, *, store_rows=False, connector_options=None, **kwargs
@@ -1364,6 +1413,41 @@ class CrawlService:
             source=source, force=force, process=process,
             connector_options={key: inputs[key] for key in ("start_year",)
                                if inputs.get(key) is not None},
+        )
+
+    async def _execute_high_frequency(
+        self, *, task, source, force, process, save_raw, fill_missing, updater,
+    ) -> CrawlResult:
+        """Run registered high-frequency feeds through the ordinary durable stages."""
+        from importlib import import_module
+        from src.core.high_frequency_sources import high_frequency_source
+        from src.services.ingestion.runner import run_surveillance
+        if fill_missing:
+            raise ValueError("Source-native high-frequency feeds do not synthesize missing periods")
+        spec = high_frequency_source(updater.country_code, source)
+        if spec is None:
+            raise ValueError("High-frequency source does not belong to this country")
+        inputs = task.input_data or {}
+        options = {"country_code": updater.country_code, "force": bool(force)}
+        years = int(inputs.get("revision_window_months") or 3)
+        if not 1 <= years <= 24:
+            raise ValueError("High-frequency revision window must be 1–24 calendar years")
+        options["start_year"] = (
+            spec.start_year if force
+            else max(spec.start_year, datetime.now(timezone.utc).year - years + 1)
+        )
+        for name in ("start_year", "end_year", "max_reports", "max_pdfs", "cache_ttl_days"):
+            if inputs.get(name) is not None:
+                options[name] = inputs[name]
+        strategy = None
+        if updater.country_code == "CO" and source == "who_flunet_weekly":
+            from src.services.ingestion.co_flunet_commit import ColombiaFluNetCommitStrategy
+            options.setdefault("start_year", 2025)
+            strategy = ColombiaFluNetCommitStrategy(options["start_year"])
+        return await run_surveillance(
+            self, task=task, updater=updater,
+            connector=import_module(f"src.services.ingestion.countries.{spec.module}"),
+            source=source, force=force, process=process, connector_options=options, strategy=strategy,
         )
 
     async def _execute_my_dengue(self, **kwargs) -> CrawlResult:

@@ -1,0 +1,12 @@
+{
+  "relative_path": "data/raw/frequency-expansion/20261117T013647Z-at/at/ages_radar/0021-71e5ca65e61057532e486db79ec5b8c0ac975ddc0eb38e5bd4749b0c0e896ece.bin",
+  "sha256": "71e5ca65e61057532e486db79ec5b8c0ac975ddc0eb38e5bd4749b0c0e896ece",
+  "byte_size": 2151,
+  "source_url": "https://www.ages.at/download/sdl-eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2MDk0NTkyMDAsImV4cCI6NDA3MDkwODgwMCwidXNlciI6MCwiZ3JvdXBzIjpbMCwtMV0sImZpbGUiOiJmaWxlYWRtaW4vQUdFU18yMDIyLzJfTUVOU0NIL0tyYW5raGVpdC9BR0VTX1JhZGFyX2ZcdTAwZmNyX0luZmVrdGlvbnNrcmFua2hlaXRlbi8yMDI2LzIwMjYxMC9yYWRhcl90YWJsZV9jb21fMjAyNi0xMC0xNC5jc3YiLCJwYWdlIjozMTU2fQ.-hnTZntEQ1Sp9Ezg9k6GJ_hgIQvaRqsU_LM_WmzHCOo/radar_table_com_2026-10-14.csv",
+  "kind": "ages_csv",
+  "metadata_": {
+    "detail_url": "https://www.ages.at/en/human/disease/ages-radar-for-infectious-diseases/details/ages-radar-for-infectious-diseases-15-october-2026",
+    "report_month": "2026-09-01",
+    "retrieved_at": "2026-11-17T01:36:59.657446+00:00"
+  }
+}

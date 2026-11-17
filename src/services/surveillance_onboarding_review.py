@@ -37,7 +37,15 @@ def reviewed_public_record(record: dict, country_code: str) -> dict | None:
     key admits a verified total without deleting its original dimensions.
     """
     parent = collection_country(country_code)
+    if parent == "AT" and record.get("source_system") == "SRC_AT_AGES_RADAR":
+        from src.services.at_high_frequency_review import reviewed_at_high_frequency_record
+        return reviewed_at_high_frequency_record(record, country_code)
+    from src.core.high_frequency_sources import sources_for_country
+    high_frequency = next((item for item in sources_for_country(parent)
+                           if item.source_id == str(record.get("source_system") or "")), None)
     if parent not in REVIEWED_COLLECTION_COUNTRIES:
+        if high_frequency is not None:
+            return _reviewed_high_frequency_record(record, country_code, high_frequency.module)
         return record
     source = str(record.get("source_system") or "")
     if source == "SRC_NL_ECDC_ATLAS" and country_code == "NL":
@@ -57,6 +65,11 @@ def reviewed_public_record(record: dict, country_code: str) -> dict | None:
     )):
         return None
     result = dict(record)
+    if parent == "CO" and source == "SRC_CO_INS_BES":
+        from src.services.co_surveillance_review import reviewed_co_bes_record
+        return reviewed_co_bes_record(result)
+    if high_frequency is not None:
+        return _reviewed_high_frequency_record(result, country_code, high_frequency.module)
     if parent in WHO_COUNTRIES and source == f"SRC_{parent}_WHO_GHO":
         from src.services.annual_source_mapping_review import who_mapping
         try:
@@ -85,3 +98,16 @@ def reviewed_public_record(record: dict, country_code: str) -> dict | None:
     if contract["metric_type"] == "confirmed_case_notifications":
         result["projection_metric_type"] = "case_notifications"
     return result
+
+
+def _reviewed_high_frequency_record(record, country_code, module):
+    """Apply the same source contract to reviewed and static registry series."""
+    if module == "mx_high_frequency":
+        from src.services.mx_high_frequency_review import reviewed_mx_high_frequency_record
+        return reviewed_mx_high_frequency_record(record, country_code)
+    if module in {"ecdc_respiratory", "eu_monthly"}:
+        from src.services.europe_high_frequency_review import reviewed_europe_high_frequency_record
+        return reviewed_europe_high_frequency_record(record, country_code)
+    from src.services.global_high_frequency_review import reviewed_global_high_frequency_record
+    return reviewed_global_high_frequency_record(
+        {**record, "unit": record.get("unit") or record.get("observation_unit")}, country_code)

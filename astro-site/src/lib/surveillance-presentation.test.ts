@@ -37,6 +37,8 @@ test('snapshot comparison requires consecutive reported periods and preserves a 
   assert.equal(latestSnapshot({ ...row, dates_tail: ['2026-09-01', '2026-10-11'] })?.change, null);
   assert.equal(latestSnapshot({ ...row, cases_tail: [null, 0] })?.change, null);
   assert.equal(latestSnapshot({ ...row, comparability: 'not_comparable' })?.change, null);
+  assert.equal(latestSnapshot({ ...row, metric_type: 'source_reported_ytd_event_count' })?.change, null);
+  assert.equal(latestSnapshot({ ...row, observation_kind: 'cumulative_count' })?.change, null);
 });
 test('archive boundaries use ISO weeks and monthly totals count distinct outbreaks', () => {
   assert.equal(weekOfDay('2021-01-01'), '2020-W53');

@@ -1,7 +1,7 @@
-"""Conservative discovery contract for INS weekly epidemiological bulletins.
+"""INS bulletin discovery and source-year cumulative territorial annexes.
 
-No observation parser is enabled until complete official PDFs establish the
-table, reporting period and revision semantics across current report editions.
+Annex extraction does not establish national weekly incidence coverage.
+Comparison columns and chart-only curves cannot substitute for weekly counts.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ class BESCover:
     period_end: date | None = None
 
 
-PARSER_VERSION = "co-ins-bes-dashboard-parser-v4"
+PARSER_VERSION = "co-ins-bes-dashboard-parser-v5"
 SOURCE_DEFINITION_VERSION = "co-ins-bes-dashboard-ytd"
 _MONTHS = {
     "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5,
@@ -477,6 +477,13 @@ def normalize_annex_cells(cells: list[dict], report: BESReport,
             "SourceAnnexGroupPosition": group,
             "SourcePeriodEnd": cover.period_end.isoformat(),
             "SourceDateRole": "report_period_end_not_weekly_incidence",
+            "SourceObservationPeriod": "year_to_date",
+            "WeeklyIncidenceEligible": "false",
+            "CumulativeDifferenceEligible": "false",
+            # Keep these as evidence only. Poisson and MMWR windows differ by
+            # event; neither the column name nor the issue week fixes a window.
+            "SourceComparisonCells": json.dumps(cell.get("comparison_cells", []),
+                                                ensure_ascii=False, sort_keys=True),
             "SourceRecordID": f"{cover.year}-{cover.week:02d}:"
                               f"{hashlib.sha256((event_code + geography_key).encode()).hexdigest()[:20]}",
             "DatasetStatus": "published_revisable", "IsProvisional": "true",
@@ -495,7 +502,11 @@ def normalize_annex_cells(cells: list[dict], report: BESReport,
                   "explicit_missing_cells": sum(row["MissingValueStatus"] == "source_missing" for row in rows),
                   "source_unreadable_cells": sum(row["MissingValueStatus"] == "source_unreadable"
                                                  for row in rows),
-                  "period_type": "source_epi_year_to_date_at_week"}
+                  "period_type": "source_epi_year_to_date_at_week",
+                  "weekly_incidence_coverage_complete": False,
+                  "comparison_values_used_as_weekly_counts": False,
+                  "cumulative_differencing_enabled": False,
+                  "chart_only_weekly_values_extracted": False}
 
 
 def parse_observations(payload: bytes, report: BESReport) -> tuple[list[dict], dict]:
@@ -544,6 +555,12 @@ def parse_observations(payload: bytes, report: BESReport) -> tuple[list[dict], d
                                      "reason": "source_year_cumulative_column_missing_or_ambiguous"})
                         continue
                     column = columns[0]
+                    comparison_columns = []
+                    for i in range(start, min(stop, len(cells[2]))):
+                        heading = " ".join((cells[2][i] or "").split())
+                        if re.fullmatch(r"(?:Acumulado\s+)?(?:Esperado|Observado)", heading,
+                                        re.IGNORECASE):
+                            comparison_columns.append((i, heading))
                     case_definition = " ".join((cells[1][start] or "").split())
                     for source_row in cells[3:]:
                         geography = " ".join((source_row[0] or "").split())
@@ -564,6 +581,14 @@ def parse_observations(payload: bytes, report: BESReport) -> tuple[list[dict], d
                             "accumulated_value_raw": raw_count,
                             "column_1_based": column + 1,
                             "extraction_method": "deterministic_pdf_table",
+                            "comparison_cells": [
+                                {"header_raw": heading,
+                                 "value_raw": source_row[i] if i < len(source_row) else None,
+                                 "column_1_based": i + 1,
+                                 "period_type": ("year_to_date" if heading.lower().startswith("acumulado")
+                                                 else "event_specific_comparison_window_unverified")}
+                                for i, heading in comparison_columns
+                            ],
                         })
     if not table_pages or not source_cells:
         raise NotYetVerifiedContract("BES territorial dashboard cumulative tables not extracted")

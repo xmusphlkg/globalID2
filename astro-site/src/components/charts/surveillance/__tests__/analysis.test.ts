@@ -43,6 +43,21 @@ const context = {
   kind: "disease" as const,
   diseaseId: "D017",
 };
+test("Colombia YTD and laboratory observations retain separate value kinds and calendars", () => {
+  const catalog = adaptCatalog({ CO: entry({ dates: [], cases: [], deaths: [], incidence_rates: [],
+    source_series: [
+      { series_code: "YTD", metric_type: "source_reported_ytd_event_count", dates: ["2025-05-17"], values: [682] },
+      { series_code: "LAB", metric_type: "laboratory_detections", observation_kind: "interval_count",
+        temporal_granularity: "weekly", calendar: "ISO-8601", dates: ["2024-12-30"], values: [0],
+        period_starts: ["2024-12-30"], period_ends_exclusive: ["2025-01-06"] },
+    ] }) }, context);
+  assert.equal(catalog.series["CO::YTD::source_value"].valueKind, "cumulative_count");
+  const lab = catalog.series["CO::LAB::source_value"];
+  assert.equal(lab.valueKind, "interval_count");
+  assert.equal(lab.observations[0].period.calendar, "iso-week");
+  assert.equal(lab.observations[0].value, 0);
+  assert.equal(catalog.series["CO::LAB::cases"], undefined);
+});
 test("adapter separates disease, geography, source and measure identities and retains zeroes", () => {
   const catalog = adaptCatalog({ "CN-BJ": entry() }, context);
   assert.equal(catalog.entities["CN-BJ"].diseaseId, "D017");

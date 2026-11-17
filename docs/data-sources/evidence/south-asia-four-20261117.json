@@ -1,0 +1,56 @@
+{
+  "checked_at": "2026-11-17T02:00:00+00:00",
+  "database_public_release_enabled": false,
+  "countries": {
+    "BD": {
+      "scope": "bd_dghs_dengue_daily",
+      "source_id": "SRC_BD_DGHS_DENGUE",
+      "manifest": "data/raw/bd/20261117T013609Z-60d7bb44/manifest.json",
+      "receipt": "data/current/bd/database_import_receipt.json",
+      "observations": 1268,
+      "imported_records": 1268,
+      "coverage": "2026-09-04..2026-11-15",
+      "historical_index_manifest": "data/raw/bd/history-index-20261117/manifest.json",
+      "historical_linked_pdfs": 1878,
+      "historical_numeric_additional": 0,
+      "notes": "72/72 current official PDFs; hospital admissions/deaths and cumulative metrics remain independent geography/measure identities. A static history page exposes 1,878 older PDF links (2019, 2021–2026), but sampled originals returned 502 HTML and were not imported. IEDCR NISB remains unverified."
+    },
+    "BT": {
+      "scope": "bt_rcdc_publications",
+      "source_id": "SRC_BT_RCDC_PUBLICATIONS",
+      "manifest": "data/raw/bt/20261117T013557Z-revalidated/manifest.json",
+      "receipt": "data/current/bt/database_import_receipt.json",
+      "observations": 96,
+      "imported_records": 96,
+      "coverage": "2024-07-14..2026-11-01",
+      "historical_catalogue_manifest": "data/raw/bt/20261117T-full-20261117-priority/manifest.json",
+      "historical_catalogue_publications": 598,
+      "historical_numeric_additional": 0,
+      "notes": "100 selected publication records from the earlier captured listing yielded 96 verified explicit weekly influenza laboratory observations. A complete 598-publication catalogue snapshot is now preserved, but RCDC detail pages for the 49 priority 2025–2026 respiratory reports timed out; no unverified historical values were imported. Events/documents remain audit metadata."
+    },
+    "MV": {
+      "scope": "mv_hpa_communicable",
+      "source_id": "SRC_MV_HPA_COMMUNICABLE",
+      "manifest": "data/raw/mv/20261117T013557Z-dcca19f4/manifest.json",
+      "receipt": "data/current/mv/database_import_receipt.json",
+      "observations": 87,
+      "imported_records": 87,
+      "coverage": "2022-01-31..2024-08-31",
+      "notes": "87 observations from 16/17 parsed PDFs; 41 source-version conflicts quarantined; printed monthly labels only; no SIDAS/public weekly dengue feed verified."
+    },
+    "AF": {
+      "scope": "af_who_outbreaks_weekly",
+      "source_id": "SRC_AF_WHO_OUTBREAKS",
+      "manifest": "data/raw/af/who-outbreaks-20261117/manifest.json",
+      "receipt": "data/current/af/who_database_import_receipt.json",
+      "observations": 497,
+      "imported_records": 497,
+      "coverage": "2025-01-04..2025-12-13",
+      "historical_manifest": "data/raw/af/who-outbreaks-history-20261117/manifest.json",
+      "historical_receipt": "data/current/af/database_import_receipt.json",
+      "historical_observations": 333,
+      "historical_coverage": "2023-10-14..2024-12-28 (2022 reports captured but no exact matrix observations)",
+      "notes": "2025 window: 50/50 WHO PDFs parsed, 497 observations across 14 source categories. Historical replay: 147 captured PDFs, 333 additional exact matrix observations from 2023–2024; 2022 layouts remain unparsed. Reporting-site current-week matrix cells only; independent MoPH NDSR source remains access-blocked/unverified."
+    }
+  }
+}

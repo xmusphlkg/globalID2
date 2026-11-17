@@ -389,17 +389,28 @@ def parse_bulletin_pdf(payload, *, source_url, reference):
 
 
 class PeruCDCCrawler(BaseCrawler):
+    supports_cooperative_cancellation = True
+
     def __init__(self, *, cache_directory=None, **kwargs):
         super().__init__(timeout=45, delay=0.2, **kwargs)
         self.cache_directory = Path(cache_directory or DEFAULT_CACHE)
         self.cache_directory.mkdir(parents=True, exist_ok=True)
 
-    def discover(self, *, start_year=HISTORY_START_YEAR, end_year=None):
+    @staticmethod
+    def _check_cancelled(cancel_event):
+        if cancel_event is not None and cancel_event.is_set():
+            from src.services.exceptions import TaskCancelledError
+            raise TaskCancelledError("Peru collection cancellation requested")
+
+    def discover(self, *, start_year=HISTORY_START_YEAR, end_year=None, cancel_event=None):
+        self._check_cancelled(cancel_event)
         response = self.post(LISTING_URL, data=LISTING_FORM)
+        self._check_cancelled(cancel_event)
         return discover_reports(response.content, start_year=start_year, end_year=end_year), response.content
 
-    def download(self, reference, *, force=False):
+    def download(self, reference, *, force=False, cancel_event=None):
         """Complete cached snapshots or resumable public GET, with exact receipts."""
+        self._check_cancelled(cancel_event)
         url = reference["url"]; key = hashlib.sha256(url.encode()).hexdigest()
         path = self.cache_directory / (key + ".pdf"); receipt_path = path.with_suffix(".json")
         now = time.time()
@@ -408,6 +419,7 @@ class PeruCDCCrawler(BaseCrawler):
             validated = float(receipt.get("validated_at", receipt.get("retrieved_at", 0)))
             ttl = 3600 if int(reference["year"]) >= datetime.now(timezone.utc).year - 1 else 30 * 86400
             if hashlib.sha256(payload).hexdigest() == receipt.get("sha256") and now - validated < ttl:
+                self._check_cancelled(cancel_event)
                 return payload, {"reference": reference, "retrieval_mode": "cached_snapshot", **receipt}
         from src.services.ingestion.capture import assert_source_access, capture_sync
         assert_source_access()
@@ -420,6 +432,7 @@ class PeruCDCCrawler(BaseCrawler):
                 headers["Range"] = f"bytes={offset}-"
                 if meta.get("etag") or meta.get("last_modified"):
                     headers["If-Range"] = meta.get("etag") or meta["last_modified"]
+        self._check_cancelled(cancel_event)
         with self.session.get(url, stream=True, timeout=(15, self.timeout), headers=headers) as response:
             response.raise_for_status()
             if response.status_code == 206:
@@ -437,9 +450,11 @@ class PeruCDCCrawler(BaseCrawler):
             partial_receipt.write_text(json.dumps(transfer))
             with partial.open(mode) as stream:
                 for chunk in response.iter_content(64 * 1024):
+                    self._check_cancelled(cancel_event)
                     if chunk:
                         stream.write(chunk); stream.flush()
                 os.fsync(stream.fileno())
+            self._check_cancelled(cancel_event)
             if expected_size and partial.stat().st_size != expected_size:
                 raise PeruContractError("Source PDF transfer was incomplete; partial bytes retained for resume")
             payload = partial.read_bytes()

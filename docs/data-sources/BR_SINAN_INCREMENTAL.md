@@ -60,3 +60,35 @@ The first run builds the new caches. Existing artifacts and older aggregate
 caches remain intact. When changing parsing or aggregation semantics, bump
 `NATIONAL_PARSER_VERSION`, `STATE_PARSER_VERSION`, or the standalone script's
 `CACHE_VERSION`, as applicable.
+
+## Reviewed residence corrections
+
+A normal refresh still rejects an unexplained positive-to-zero replacement.
+`SourceAuthoritative` and `closed_revisable` do not disable that check. The
+standalone refresh now uses the connector's shared residence parser; a month
+containing only unknown residence cannot become 27 invented state zeroes.
+The parser cache version is advanced so old derived results are not reused.
+
+Use `--output-dir /path/to/candidate` to keep a dry-run CSV and source audit
+outside the shared processed directory. Import quality failures retain
+`applied=false` and their full quality report in `import_report.json`; they
+still roll back the complete import and never queue a release.
+
+An inspected upstream correction can be supplied with
+`--apply --reviewed-revisions /path/to/reviewed-revisions.json`. This accepts
+only individual cells with all of the following verified in the BR write
+transaction: retained old/new `source_artifacts` for the same official SINAN
+file, their exact bytes and SHA-256 hashes, chronological artifact capture,
+old/new values recomputed with the shared residence parser, matching candidate
+source contributions, and an unchanged stored source-series value. Each entry
+names `country_code`, `disease_code`, `date`, `series_code`, `stored_value`,
+`incoming_value`, and `previous_artifact` / `current_artifact` objects containing
+`relative_path` and `sha256`. The top-level object has `schema_version: 1` and
+an `entries` array. A changed artifact, database value, missing observation or
+mixed annual-source contribution fails closed. Exact proof and receipt digest
+are retained in each corrected observation's raw provenance; other rows keep
+the normal quality policy.
+
+A recovery import should omit `--export`. Its committed dirty scopes can then
+follow the normal supervised publication workflow. A reviewed receipt is a
+one-time reconciliation, not a reusable permission to reduce later values.

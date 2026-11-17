@@ -90,6 +90,14 @@ def _freeze_candidate(run: Path, state: Path, public: Path, *, task_uuid: str,
 
 async def execute_data_release(service, task, *, runtime) -> dict:
     data = dict(task.input_data or {})
+    rebuild_all = data.get("surveillance_rebuild_all") is True
+    if rebuild_all:
+        frozen = data.get("publication_plan") or {}
+        if (data.get("manual_trigger") is not True or frozen.get("execution_mode") != "content"
+                or frozen.get("surveillance_rebuild_all") is not True
+                or frozen.get("country_codes") != sorted(data.get("incremental_country_codes") or [])
+                or data.get("data_line") != "surveillance"):
+            raise ValueError("Full surveillance rebuilding requires its exact frozen content plan")
     if any(data.get(flag) for flag in ("reports_only", "code_only", "raw_archive_only")):
         raise ValueError("JSON release cannot include a static publication mode")
     if data.get("data_line") == "situation":
@@ -108,7 +116,8 @@ async def execute_data_release(service, task, *, runtime) -> dict:
         raise ValueError("Invalid data release task UUID")
     started = time.monotonic()
     async with runtime.get_database() as db:
-        selected_plan = await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid)
+        selected_plan = await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid,
+            **({"surveillance_rebuild_all": True} if rebuild_all else {}))
     timings = {"selection_seconds": round(time.monotonic() - started, 3)}
     root = runtime.root_dir
     state, public = root / "exports/surveillance-state", root / "exports/surveillance-data"
@@ -116,6 +125,8 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     downloads = bool(data.get("include_git_push"))
     receipt = await asyncio.to_thread(_ready_candidate, run, task_uuid=task.task_uuid,
         codes=codes, dirty_ids=dirty_ids, available_codes=selected_plan["available_country_codes"], downloads=downloads)
+    if rebuild_all and receipt is not None and receipt["projection_full"] is not True:
+        raise ValueError("Frozen JSON projection is not the explicitly planned full rebuild")
     from .publication_recovery import require_candidate, save_recovery
     require_candidate(service, receipt is not None)
     python = service._python_executable()
@@ -146,7 +157,7 @@ async def execute_data_release(service, task, *, runtime) -> dict:
             metadata={"event": "surveillance_json_publish", "operation": "capture_baseline"},
             timeout_seconds=runtime.download_publish_timeout_seconds)
         async with surveillance_output_lock(state, public):
-            full = await asyncio.to_thread(completed_generation, state, public) is None
+            full = rebuild_all or await asyncio.to_thread(completed_generation, state, public) is None
             if downloads:
                 from src.generation.surveillance_downloads import downloads_initialized
                 # First coupled publication catches up the old standalone
@@ -155,6 +166,10 @@ async def execute_data_release(service, task, *, runtime) -> dict:
             cmd = [str(python), "scripts/generate_site_data.py", "--data-only",
                 "--surveillance-state", str(state), "--surveillance-output", str(public),
                 "--data-release-id", f"data-{task.task_uuid}", "--exact-country-scopes"]
+            if rebuild_all:
+                # Recovery rebuilds span the entire eligible inventory; keep
+                # their country processing within the reviewed memory budget.
+                cmd.extend(["--surveillance-workers", "2"])
             if downloads:
                 cmd.extend(["--surveillance-downloads", str(run / "downloads"),
                     "--direct-download-output", str(root / "exports/site-downloads"),
@@ -183,7 +198,8 @@ async def execute_data_release(service, task, *, runtime) -> dict:
         export_seconds = time.monotonic() - export_started
     await asyncio.to_thread(save_recovery, root, task, run / "ready.json")
     async with runtime.get_database() as db:
-        before_publish = await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid)
+        before_publish = await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid,
+            **({"surveillance_rebuild_all": True} if rebuild_all else {}))
     await asyncio.to_thread(_validate_projection_scopes, run / "_release-projection", codes,
         full=receipt["projection_full"], available_codes=before_publish["available_country_codes"])
     await runtime.task_manager.update_task_progress(task.task_uuid, 65)
@@ -214,7 +230,8 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     # Upload success publishes only the frozen database snapshot. New dirty IDs
     # arriving during export/upload remain pending for the next JSON release.
     async with runtime.get_database() as db:
-        await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid)
+        await validate_data_selection(db, country_codes=codes, dirty_ids=dirty_ids, expected_task_uuid=task.task_uuid,
+            **({"surveillance_rebuild_all": True} if rebuild_all else {}))
         projection_counts = await commit_release_projection(db, task_uuid=task.task_uuid, country_codes=codes,
             full=receipt["projection_full"], dirty_ids=dirty_ids, country_scopes_exact=True,
             prepared_dir=run / "_release-projection", require_prepared=True)

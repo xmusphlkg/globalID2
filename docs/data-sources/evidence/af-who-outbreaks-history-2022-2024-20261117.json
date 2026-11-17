@@ -1,0 +1,4673 @@
+{
+  "checked_at": "2026-11-17T03:46:08.023963+00:00",
+  "country": "AF",
+  "scope": "af_who_outbreaks_weekly",
+  "requested_years": [
+    2022,
+    2023,
+    2024
+  ],
+  "manifest": "data/raw/af/who-outbreaks-history-20261117/manifest.json",
+  "source_csv": "data/current/af/afghanistan_who_outbreaks_weekly_2022_2024.csv",
+  "source_csv_sha256": "a78319a92bc371351ddbf9194fa697c894c93321dd31610056eb25828efff055",
+  "source_audit": {
+    "status": "partial",
+    "coverage_complete": false,
+    "numerical_contract_live_verified": true,
+    "discovered_reports": 148,
+    "captured_reports": 147,
+    "reports": [
+      {
+        "year": 2022,
+        "week": 1,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week1_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 2,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week2_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 3,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week3_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 4,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week4_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 5,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week5_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 6,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: WHO source interval is not seven days within the stated reporting year",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week6_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 7,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week7_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 8,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: WHO report identity and explicit week/date interval not established",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week8_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 9,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week9_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 10,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: WHO report identity and explicit week/date interval not established",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week10_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 11,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: WHO report identity and explicit week/date interval not established",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week11_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 12,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week12_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 13,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week13_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 14,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week14_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 15,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week15_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 16,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week16_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 17,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week17_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 18,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week18_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 19,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week19_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 20,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: WHO report identity and explicit week/date interval not established",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Week20_2022-Afghanistan-Infectious-Disease-Outbreaks.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 21,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_21.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 22,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-22-29-May-04_June-2022.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 23,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-23-05-11-June-2022.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 24,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_24.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 25,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_25.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 26,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_26.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 27,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_27.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 28,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_28.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 29,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_29.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 30,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_30.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 32,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_32.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 33,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_33.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 34,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: Invalid WHO report interval",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_34.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 35,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_35.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 37,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_37.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 38,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_38.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 39,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_39.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 40,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_40.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 41,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_41.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 42,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_42.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 43,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_43.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 44,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_44.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 45,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_45.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 46,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_46.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 47,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_47.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 50,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_50.pdf"
+      },
+      {
+        "year": 2022,
+        "week": 52,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_52.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 1,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_01_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 2,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_02_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 3,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_03_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 4,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_04_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 5,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_05_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 6,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_06_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 7,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_07_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 8,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_08_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 9,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_09_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 10,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_10_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 11,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_11_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 12,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_12_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 13,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_13_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 14,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_14_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 15,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_15_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 16,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_16_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 17,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_17_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 19,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: WHO PDF period differs from its official link",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_18_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 20,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_20_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 21,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_21_2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 22,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week_22-28_May-03_June-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 23,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-23-4-10-june-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 24,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-24-11-17-june-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 26,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-25-june-1-july-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 27,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-2-8-july-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 28,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-9-15-july-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 29,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-16-22-july-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 30,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-17-23-july-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 31,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-18-5-august-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 32,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-6-12-august-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 34,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-20-26-august-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 35,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-27-august-2-september-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 36,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-3-9-september-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 37,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-10-16-september-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 38,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-17-23-september-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 39,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-24-30-september-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 40,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-1-7-october-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 41,
+        "status": "parsed",
+        "period_start": "2023-10-08",
+        "period_end": "2023-10-14",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2023,
+        "week": 42,
+        "status": "parsed",
+        "period_start": "2023-10-15",
+        "period_end": "2023-10-21",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2023,
+        "week": 43,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: WHO report identity and explicit week/date interval not established",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-22-28-october-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 44,
+        "status": "parsed",
+        "period_start": "2023-10-29",
+        "period_end": "2023-11-04",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2023,
+        "week": 45,
+        "status": "parsed",
+        "period_start": "2023-11-05",
+        "period_end": "2023-11-11",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2023,
+        "week": 46,
+        "status": "parsed",
+        "period_start": "2023-11-12",
+        "period_end": "2023-11-18",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2023,
+        "week": 47,
+        "status": "parsed",
+        "period_start": "2023-11-19",
+        "period_end": "2023-11-25",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2023,
+        "week": 48,
+        "status": "parsed",
+        "period_start": "2023-11-26",
+        "period_end": "2023-12-02",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2023,
+        "week": 49,
+        "status": "parsed",
+        "period_start": "2023-12-03",
+        "period_end": "2023-12-09",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2023,
+        "week": 50,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-50-2023.pdf"
+      },
+      {
+        "year": 2023,
+        "week": 51,
+        "status": "parsed",
+        "period_start": "2023-12-17",
+        "period_end": "2023-12-23",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2023,
+        "week": 52,
+        "status": "parsed",
+        "period_start": "2023-12-24",
+        "period_end": "2023-12-30",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 1,
+        "status": "parsed",
+        "period_start": "2023-12-31",
+        "period_end": "2024-01-06",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 2,
+        "status": "parsed",
+        "period_start": "2024-01-07",
+        "period_end": "2024-01-13",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 3,
+        "status": "parsed",
+        "period_start": "2024-01-14",
+        "period_end": "2024-01-20",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 4,
+        "status": "parsed",
+        "period_start": "2024-01-21",
+        "period_end": "2024-01-27",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 5,
+        "status": "parsed",
+        "period_start": "2024-01-28",
+        "period_end": "2024-02-03",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 6,
+        "status": "parsed",
+        "period_start": "2024-02-04",
+        "period_end": "2024-02-10",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 7,
+        "status": "parsed",
+        "period_start": "2024-02-11",
+        "period_end": "2024-02-17",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 8,
+        "status": "parsed",
+        "period_start": "2024-02-18",
+        "period_end": "2024-02-24",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 9,
+        "status": "parsed",
+        "period_start": "2024-02-25",
+        "period_end": "2024-03-02",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 10,
+        "status": "parsed",
+        "period_start": "2024-03-03",
+        "period_end": "2024-03-09",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 11,
+        "status": "parsed",
+        "period_start": "2024-03-10",
+        "period_end": "2024-03-16",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 12,
+        "status": "parsed",
+        "period_start": "2024-03-17",
+        "period_end": "2024-03-23",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 13,
+        "status": "parsed",
+        "period_start": "2024-03-24",
+        "period_end": "2024-03-30",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 14,
+        "status": "parsed",
+        "period_start": "2024-03-31",
+        "period_end": "2024-04-06",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 15,
+        "status": "parsed",
+        "period_start": "2024-04-07",
+        "period_end": "2024-04-13",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "suspected measles"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 16,
+        "status": "parsed",
+        "period_start": "2024-04-14",
+        "period_end": "2024-04-20",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 17,
+        "status": "parsed",
+        "period_start": "2024-04-21",
+        "period_end": "2024-04-27",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 18,
+        "status": "parsed",
+        "period_start": "2024-04-28",
+        "period_end": "2024-05-04",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 19,
+        "status": "parsed",
+        "period_start": "2024-05-05",
+        "period_end": "2024-05-11",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 20,
+        "status": "parsed",
+        "period_start": "2024-05-12",
+        "period_end": "2024-05-18",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 21,
+        "status": "parsed",
+        "period_start": "2024-05-19",
+        "period_end": "2024-05-25",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 4,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 22,
+        "status": "parsed",
+        "period_start": "2024-05-26",
+        "period_end": "2024-06-01",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 23,
+        "status": "parsed",
+        "period_start": "2024-06-02",
+        "period_end": "2024-06-08",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 24,
+        "status": "parsed",
+        "period_start": "2024-06-09",
+        "period_end": "2024-06-15",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 25,
+        "status": "parsed",
+        "period_start": "2024-06-16",
+        "period_end": "2024-06-22",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 26,
+        "status": "parsed",
+        "period_start": "2024-06-23",
+        "period_end": "2024-06-29",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 2,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 27,
+        "status": "parsed",
+        "period_start": "2024-06-30",
+        "period_end": "2024-07-06",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 28,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: Current WHO reporting week is not the unique final matrix column",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-28-2024.pdf"
+      },
+      {
+        "year": 2024,
+        "week": 29,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: WHO PDF period differs from its official link",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-29-2024.pdf"
+      },
+      {
+        "year": 2024,
+        "week": 30,
+        "status": "parsed",
+        "period_start": "2024-07-21",
+        "period_end": "2024-07-27",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 31,
+        "status": "parsed",
+        "period_start": "2024-07-28",
+        "period_end": "2024-08-03",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 32,
+        "status": "parsed",
+        "period_start": "2024-08-04",
+        "period_end": "2024-08-10",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 33,
+        "status": "parsed",
+        "period_start": "2024-08-11",
+        "period_end": "2024-08-17",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 5,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 34,
+        "status": "parsed",
+        "period_start": "2024-08-18",
+        "period_end": "2024-08-24",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 36,
+        "status": "parsed",
+        "period_start": "2024-09-01",
+        "period_end": "2024-09-07",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 37,
+        "status": "unparsed",
+        "error": "AfghanistanNDSRContractError: No verified current-week WHO case/death matrix cells",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/Outbreak-Situation-Report-Week-37-2024.pdf"
+      },
+      {
+        "year": 2024,
+        "week": 38,
+        "status": "parsed",
+        "period_start": "2024-09-15",
+        "period_end": "2024-09-21",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 39,
+        "status": "parsed",
+        "period_start": "2024-09-22",
+        "period_end": "2024-09-28",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 40,
+        "status": "parsed",
+        "period_start": "2024-09-29",
+        "period_end": "2024-10-05",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 41,
+        "status": "parsed",
+        "period_start": "2024-10-06",
+        "period_end": "2024-10-12",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 42,
+        "status": "parsed",
+        "period_start": "2024-10-13",
+        "period_end": "2024-10-19",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 43,
+        "status": "parsed",
+        "period_start": "2024-10-20",
+        "period_end": "2024-10-26",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 44,
+        "status": "parsed",
+        "period_start": "2024-10-27",
+        "period_end": "2024-11-02",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 9,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "measure": "cases",
+            "status": "ambiguous_matrix_cells"
+          },
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 45,
+        "status": "parsed",
+        "period_start": "2024-11-03",
+        "period_end": "2024-11-09",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 10,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 3,
+            "table": 2,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 8,
+            "table": 5,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 10,
+            "table": 6,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "status": "unsupported_category",
+            "label": "ari"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 46,
+        "status": "parsed",
+        "period_start": "2024-11-10",
+        "period_end": "2024-11-16",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "status": "unsupported_category",
+            "label": "ari"
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 47,
+        "status": "parsed",
+        "period_start": "2024-11-17",
+        "period_end": "2024-11-23",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 48,
+        "status": "parsed",
+        "period_start": "2024-11-24",
+        "period_end": "2024-11-30",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 49,
+        "status": "parsed",
+        "period_start": "2024-12-01",
+        "period_end": "2024-12-07",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 50,
+        "status": "parsed",
+        "period_start": "2024-12-08",
+        "period_end": "2024-12-14",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 51,
+        "status": "parsed",
+        "period_start": "2024-12-15",
+        "period_end": "2024-12-21",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 6,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      },
+      {
+        "year": 2024,
+        "week": 52,
+        "status": "parsed",
+        "period_start": "2024-12-22",
+        "period_end": "2024-12-28",
+        "numerical_contract_live_verified": true,
+        "coverage_complete": false,
+        "observations": 8,
+        "tables": [
+          {
+            "page": 1,
+            "table": 1,
+            "category": "ari-pneumonia",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 2,
+            "table": 2,
+            "category": "measles",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 4,
+            "table": 3,
+            "category": "covid-19",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 6,
+            "table": 4,
+            "category": "awd with dehydration",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 7,
+            "table": 5,
+            "category": "dengue fever",
+            "status": "unreadable_matrix"
+          },
+          {
+            "page": 9,
+            "table": 6,
+            "category": "cchf",
+            "status": "parsed_current_week_matrix",
+            "measures": [
+              "cases",
+              "deaths"
+            ]
+          },
+          {
+            "page": 11,
+            "table": 7,
+            "status": "unsupported_category",
+            "label": "confirmed malaria"
+          }
+        ],
+        "excluded": [
+          "eight-week history without explicit dates",
+          "cumulative counts",
+          "figures",
+          "laboratory tests",
+          "narratives",
+          "province/district breakdowns"
+        ]
+      }
+    ],
+    "failures": [
+      {
+        "error": "NICD report cache refuses non-document response",
+        "stage": "pdf",
+        "url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_49.pdf"
+      }
+    ],
+    "conflicts": [],
+    "observations": 333,
+    "link_conflicts": [
+      {
+        "conflicting": {
+          "discovery": "official_link",
+          "listed_week": 18,
+          "listed_year": 2023,
+          "pdf_url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_18_2023.pdf",
+          "post_url": "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html",
+          "title": "Epidemiological Week 18, 30 April-6 May 2023"
+        },
+        "first": {
+          "discovery": "official_link",
+          "listed_week": 19,
+          "listed_year": 2023,
+          "pdf_url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_18_2023.pdf",
+          "post_url": "https://www.emro.who.int/afg/information-resources/infectious-disease-outbreak-situation-reports.html",
+          "title": "Epidemiological Week 19, 7-13 May 2023"
+        },
+        "pdf_url": "https://www.emro.who.int/images/stories/afghanistan/AFG_INFECTIOUS_DISEASE_OUTBREAKS_WEEK_18_2023.pdf",
+        "status": "conflicting_official_link_periods"
+      }
+    ],
+    "coverage_note": "Current-week exact matrix cells only; unreadable/rotated historical tables, revision notes, charts, cumulative counts, province/district breakdowns and narratives remain gaps."
+  },
+  "parse_stats": {
+    "2022": {
+      "parsed": 0,
+      "unparsed": 47,
+      "observations": 0
+    },
+    "2023": {
+      "parsed": 10,
+      "unparsed": 39,
+      "observations": 22
+    },
+    "2024": {
+      "parsed": 48,
+      "unparsed": 3,
+      "observations": 311
+    }
+  },
+  "rows_by_year": {
+    "2022": 0,
+    "2023": 22,
+    "2024": 311
+  },
+  "database_mutated": true,
+  "network_forbidden_during_replay": true,
+  "database_receipt": "data/current/af/database_import_receipt.json",
+  "imported_records": 333
+}
