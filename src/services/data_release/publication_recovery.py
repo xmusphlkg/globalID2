@@ -164,24 +164,34 @@ def _binding(task) -> dict:
     return {"task_uuid": task.task_uuid, "selection_digest": digest(task.input_data or {})}
 
 
+def _recovery_file(root: Path, relative: str) -> Path:
+    relative_path = Path(relative)
+    if relative_path.is_absolute() or ".." in relative_path.parts or not relative_path.parts:
+        raise ValueError()
+    # exports is a fixed persistent directory and may link to a prior release.
+    # Descendants must still resolve within that directory, never outside it.
+    base = root / "exports" if relative_path.parts[0] == "exports" else root
+    path = root / relative_path
+    if path.is_symlink() or not path.resolve().is_relative_to(base.resolve()):
+        raise ValueError()
+    return path
+
+
 def load_recovery(root: Path, task) -> dict | None:
     path = recovery_path(root, task)
     if not path.exists():
         return None
     try:
-        if path.is_symlink():
-            raise ValueError()
+        path = _recovery_file(root, str(path.relative_to(root)))
         value = json.loads(path.read_bytes())
         if value.get("schema") != 1 or value.get("binding") != _binding(task):
             raise ValueError()
-        ready = root / value["ready_path"]
-        if (ready.is_symlink() or not ready.resolve().is_relative_to(root.resolve())
-                or hashlib.sha256(ready.read_bytes()).hexdigest() != value["ready_sha256"]):
+        ready = _recovery_file(root, value["ready_path"])
+        if hashlib.sha256(ready.read_bytes()).hexdigest() != value["ready_sha256"]:
             raise ValueError()
         for relative, expected in value.get("additional_files", {}).items():
-            path = root / relative
-            if (path.is_symlink() or not path.resolve().is_relative_to(root.resolve())
-                    or hashlib.sha256(path.read_bytes()).hexdigest() != expected):
+            path = _recovery_file(root, relative)
+            if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
                 raise ValueError()
         return value
     except (OSError, ValueError, TypeError, KeyError) as error:

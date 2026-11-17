@@ -27,13 +27,13 @@ def national_record():
     }
 
 
-def test_only_new_source_is_public_with_registry_and_fallback(monkeypatch):
+def test_hiv_and_flunet_are_public_while_ben_stays_private(monkeypatch):
     registry = json.loads(country_library.COUNTRY_BOOTSTRAP_FILE.read_text())
     for config in (registry["AR"], country_library.get_country_bootstrap_config("AR")):
         assert config["public_release_enabled"] is True
         assert config["public_legacy_enabled"] is False
-        assert config["public_source_systems"] == [SOURCE_ID]
-        assert config["public_source_scopes"] == [SOURCE_SCOPE]
+        assert config["public_source_systems"] == [SOURCE_ID, "SRC_AR_WHO_FLUNET"]
+        assert config["public_source_scopes"] == [SOURCE_SCOPE, "who_flunet_weekly"]
         policies = config["crawler_config"]["source_policies"]
         assert policies[SOURCE_SCOPE]["public_release_enabled"] is True
         assert policies["ar_ben_weekly"]["public_release_enabled"] is False
@@ -107,8 +107,8 @@ def test_public_source_metadata_preserves_attribution_and_statistical_limits():
         "crawler_config": {"sources": ["ar_ben_weekly"]},
         "data_source_url": "https://stale.test/ben", "notes": "stale cumulative feed",
     })
-    assert len(info["sources"]) == 1
-    source = info["sources"][0]
+    assert {s["scope"] for s in info["sources"]} == {SOURCE_SCOPE, "who_flunet_weekly"}
+    source = next(s for s in info["sources"] if s["scope"] == SOURCE_SCOPE)
     assert source["scope"] == SOURCE_SCOPE and source["source_id"] == SOURCE_ID
     assert "CC BY 4.0" in source["license"]
     assert "Ministerio de Salud" in source["required_attribution"]

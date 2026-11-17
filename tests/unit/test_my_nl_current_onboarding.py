@@ -12,7 +12,7 @@ from src.services.crawl_service import CrawlService
 
 FEEDS = [
     ("MY", "my_idengue_daily", "SRC_MY_IDENGUE_DAILY", "MalaysiaIDengueDailyUpdater", "my_dengue"),
-    ("MY", "who_flunet_weekly", "SRC_MY_WHO_FLUNET", "MYWHOFluNetUpdater", "my_who_flunet"),
+    ("MY", "who_flunet_weekly", "SRC_MY_WHO_FLUNET", "WHOFluNetUpdater", "who_flunet"),
     ("MY", "who_gho_annual", "SRC_MY_WHO_GHO", "MYWHOAnnualUpdater", "my_who_annual"),
     ("NL", "rivm_virological_weekly", "SRC_NL_RIVM_VIROLOGICAL", "NLVirologicalWeeklyUpdater", "nl_weekly"),
     ("NL", "rivm_respiratory_weekly", "SRC_NL_RIVM_RESPIRATORY", "NLRespiratoryWeeklyUpdater", "nl_weekly"),
@@ -38,13 +38,19 @@ async def test_current_source_dispatch_preserves_connector_and_identity(
     assert args["source"] == scope
     assert args["updater"].ontology_source_id == source_id
     assert args["updater"].mapping_notifications_enabled is False
-    assert args["updater"].public_release_enabled is False
-    assert args["connector_options"] == {}
+    is_public = country == "MY" and scope in {"who_flunet_weekly", "who_gho_annual"}
+    assert args["updater"].public_release_enabled is (scope == "who_flunet_weekly")
+    if scope == "who_flunet_weekly":
+        assert args["connector_options"]["country_code"] == country
+        assert args["connector_options"]["force"] is False
+        assert args["connector_options"]["start_year"] >= 1996
+    else:
+        assert args["connector_options"] == {}
     assert canonicalize_task_source(scope, country_code=country) == scope
     assert scope_from_data_source(source_id) == scope
     config = get_country_bootstrap_config(country)
     assert scope in config["crawler_config"]["sources"]
-    assert config["crawler_config"]["source_policies"][scope]["public_release_enabled"] is False
+    assert config["crawler_config"]["source_policies"][scope]["public_release_enabled"] is is_public
     assert any(row["id"] == source_id for row in load_disease_ontology().to_dict()["sources"])
 
 
@@ -56,7 +62,7 @@ async def test_current_sources_reject_synthetic_gap_filling(
 
     run = AsyncMock()
     monkeypatch.setattr(runner, "run_surveillance", run)
-    with pytest.raises(ValueError, match="fill_missing"):
+    with pytest.raises(ValueError, match="fill_missing|synthesize"):
         await CrawlService().execute(
             task=SimpleNamespace(input_data={}), country_code=country,
             source=scope, force=False, process=True,

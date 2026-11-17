@@ -37,17 +37,17 @@ def test_historical_source_contracts(code, scope, source_id, updater_name, label
 
 def test_netherlands_ecdc_release_remains_independent():
     config = get_country_bootstrap_config("NL")
-    assert set(config["crawler_config"]["sources"]) == {"rivm_notifiable_annual", "ecdc_atlas_annual", "rivm_virological_weekly", "rivm_respiratory_weekly"}
+    assert set(config["crawler_config"]["sources"]) == {"rivm_notifiable_annual", "ecdc_atlas_annual", "rivm_virological_weekly", "rivm_respiratory_weekly", "ecdc_respiratory_weekly"}
     # The merger keeps the verified ECDC feed public; the unverified native
     # feed must still be excluded by the explicit source-system allowlist.
-    assert config["public_source_systems"] == ["SRC_NL_ECDC_ATLAS"]
+    assert config["public_source_systems"] == ["SRC_NL_ECDC_ATLAS", "SRC_NL_ECDC_RESPIRATORY"]
     assert config["public_legacy_enabled"] is False
     policies = config["crawler_config"]["source_policies"]
     assert policies["rivm_notifiable_annual"]["public_release_enabled"] is False
     assert policies["ecdc_atlas_annual"]["public_release_enabled"] is True
     malaysia = get_country_bootstrap_config("MY")
     assert malaysia["public_release_enabled"] is True
-    assert malaysia["public_source_systems"] == ["SRC_MY_MOH_STD", "SRC_MY_WHO_GHO"]
+    assert malaysia["public_source_systems"] == ["SRC_MY_MOH_STD", "SRC_MY_WHO_GHO", "SRC_MY_WHO_FLUNET"]
 
 
 @pytest.mark.parametrize("scope,source_id,updater_name,module", [

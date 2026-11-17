@@ -87,16 +87,16 @@ def test_cndss_reviewed_contract_is_complete_and_projection_safe() -> None:
 
 def test_canada_national_pipeline_is_registered_separately_from_ontario() -> None:
     config = get_country_bootstrap_config("CA")
-    assert config["crawler_config"]["sources"] == ["phac_cndss_annual"]
+    assert config["crawler_config"]["sources"] == ["ca_phac_respiratory_weekly", "phac_cndss_annual"]
     assert config["crawler_config"]["public_release_enabled"] is True
-    assert get_expected_scopes_for_country("CA") == ["phac_cndss_annual"]
-    assert canonicalize_task_source("all", country_code="CA") == "phac_cndss_annual"
+    assert get_expected_scopes_for_country("CA") == ["ca_phac_respiratory_weekly", "phac_cndss_annual"]
+    assert canonicalize_task_source("all", country_code="CA") == "ca_phac_respiratory_weekly"
     assert CrawlService._SERIES_SOURCE_IDS["CA"] == "SRC_CA_PHAC_CNDSS"
     assert CrawlService._SERIES_SOURCE_IDS["CA-ON"] == "SRC_CA_ON_PHO_IDTO"
 
 
 def test_public_source_metadata_discloses_national_coverage_limitations() -> None:
-    source = build_country_source_info("ca")["sources"][0]
+    source = next(s for s in build_country_source_info("ca")["sources"] if s["scope"] == "phac_cndss_annual")
     assert "does not mean every jurisdiction is complete" in source["description"]
     assert "no longer marks 44 disease contracts as Manitoba-2023-unavailable" in source["description"]
 

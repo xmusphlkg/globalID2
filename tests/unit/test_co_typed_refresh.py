@@ -1,13 +1,26 @@
 """Guard the source break that previously made Colombia curves misleading."""
 from datetime import date
+from types import SimpleNamespace
+
+from src.services.disease_mapping_config import load_reviewed_source_category_mappings
 
 from src.data.storage.series_observation_store import SeriesObservationStore
 from src.services.co_surveillance_review import reviewed_co_bes_record
 
 
 def test_annex_label_cannot_resolve_to_weekly_body_contract():
-    store = SeriesObservationStore()
     label = "Leishmaniasis cutánea"
+    mapping = next(m for m in load_reviewed_source_category_mappings()
+                   if m.source_id == "SRC_CO_INS_BES" and m.source_code == "bes_weekly_420")
+    assert mapping.target_code == "D082"
+    assert mapping.definition_version == "co_bes_explicit_weekly_notifications_v1"
+    # Registry discovery creates source series at ingestion time. Give this
+    # resolver unit test an explicit series, including its ambiguous label.
+    weekly_series = {"id": "SER_TEST_BES_WEEKLY", "measure": "case_notifications"}
+    def lookup(*, local_code=None, local_label=None, **filters):
+        return [weekly_series] if (local_code == "bes_weekly_420" or
+                                  (local_code is None and local_label == label)) else []
+    store = SeriesObservationStore(ontology=SimpleNamespace(series_lookup=lookup))
     assert store._resolve_series(country_code="CO", source_id="SRC_CO_INS_BES",
                                  local_code="bes_leishmaniasis_cutanea", local_label=label) == []
     weekly = store._resolve_series(country_code="CO", source_id="SRC_CO_INS_BES",

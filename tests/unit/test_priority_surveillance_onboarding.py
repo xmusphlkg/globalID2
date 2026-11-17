@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.core.country_library import get_country_bootstrap_config
+from src.core.high_frequency_sources import sources_for_country
 from src.core.source_scopes import canonical_data_source_label, canonicalize_task_source, scope_from_data_source, source_options_for_country
 from src.services.crawl_service import CrawlService
 
@@ -35,6 +36,8 @@ async def test_country_task_roundtrip_uses_canonical_archive_connector(monkeypat
     expected_default = (
         'ar_moh_hiv_annual' if country == 'AR'
         else 'co_ins_bes_weekly' if country == 'CO'
+        else 'mx_dge_weekly' if country == 'MX'
+        else 'who_flunet_weekly' if country in {'CL', 'ID'}
         else scope
     )
     assert canonicalize_task_source('all', country_code=country) == expected_default
@@ -42,6 +45,9 @@ async def test_country_task_roundtrip_uses_canonical_archive_connector(monkeypat
     assert scope_from_data_source(scope) == scope
     assert canonical_data_source_label(scope, country_code=country) == label
     expected_options = {scope, 'co_ins_sivigila_current', 'co_ins_bes_weekly', 'co_ins_sivigila_microdatos', 'who_flunet_weekly'} if country == 'CO' else {scope}
+    expected_options.update(spec.scope for spec in sources_for_country(country))
+    if country in {'CL', 'ID', 'MX'}:
+        expected_options.add('all')
     if country == 'AR':
         expected_options.add('ar_moh_hiv_annual')
     assert {option['value'] for option in source_options_for_country(country)} == expected_options

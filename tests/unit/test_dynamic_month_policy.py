@@ -66,6 +66,7 @@ def test_ie_control_plane_exposes_current_and_annual_source_policies() -> None:
         "hpsc_ndh",
         "hpsc_weekly_archive",
         "hpsc_annual",
+        "ecdc_respiratory_weekly",
         "ecdc_atlas_annual",
     ]
     assert options["hpsc_ndh"].default_start_year == 2021
