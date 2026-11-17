@@ -46,6 +46,19 @@ def test_explicit_selection_excludes_old_shards_but_requires_referenced_ones(tmp
     assert select_index_artifacts(source) == ["catalogue.json", "index.json", "shards/active.json"]
 
 
+def test_snapshot_allows_symlinked_workspace_ancestor_but_not_source_symlinks(tmp_path):
+    physical = tmp_path / "physical"
+    source = physical / "source"
+    source.mkdir(parents=True)
+    (source / "index.json").write_text('{}')
+    alias = tmp_path / "alias"
+    alias.symlink_to(physical, target_is_directory=True)
+
+    result = freeze_literature_json(alias / "source", tmp_path / "output", release_id="one", generated_at="t")
+
+    assert result["files"]["index.json"]["sha256"] == hashlib.sha256(b"{}").hexdigest()
+
+
 def test_content_named_shards_use_writer_receipts_without_rereading(tmp_path, monkeypatch):
     source, output = tmp_path / 'source', tmp_path / 'output'
     (source / 'shards').mkdir(parents=True)
