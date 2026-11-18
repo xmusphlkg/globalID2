@@ -49,6 +49,8 @@ const siteOrigin = new URL(siteBase).origin;
 const documentLocale = seo?.locale ?? initialLanguage;
 const isChinese = documentLocale === 'zh';
 const isFrench = documentLocale === 'fr';
+const ogLocale = isChinese ? 'zh_CN' : isFrench ? 'fr_FR' : 'en_US';
+const alternateOgLocales = ['en_US', 'zh_CN', 'fr_FR'].filter(locale => locale !== ogLocale);
 const pageTitle = seo?.title ?? (title === 'GIDS' ? title : `${title} | GIDS`);
 const pageDescription = seo?.description ?? description;
 const metaDescription = clampSeoDescription(pageDescription);
@@ -162,8 +164,8 @@ const structuredData = {
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content="GIDS" />
-    <meta property="og:locale" content={isChinese ? 'zh_CN' : isFrench ? 'fr_FR' : 'en_US'} />
-    <meta property="og:locale:alternate" content={isChinese ? 'en_US' : isFrench ? 'en_US' : 'zh_CN'} />
+    <meta property="og:locale" content={ogLocale} />
+    {alternateOgLocales.map(locale => <meta property="og:locale:alternate" content={locale} />)}
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={metaDescription} />
     <meta property="og:image" content={absoluteSiteUrl(pageImage, siteBase)} />

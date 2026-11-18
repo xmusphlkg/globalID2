@@ -39,6 +39,16 @@ test('independent template publication rebuilds collections before all output ga
   assert.equal(failed.includes('finalize page caches'), false);
 });
 
+test('missing styles after collection assembly prevent cache finalization', async () => {
+  const ran = [];
+  await assert.rejects(buildPipeline({ env: { GIDS_RESEARCH_PUBLICATION_ENABLED: '1' }, run: async stages => {
+    ran.push(...stages.map(stage => stage.name));
+    if (stages.some(stage => stage.name === 'stylesheet audit')) throw new Error('Missing base layout CSS');
+  } }), /Missing base layout CSS/);
+  assert.ok(ran.indexOf('stylesheet audit') > ran.indexOf('render independent research collections'));
+  assert.equal(ran.includes('finalize page caches'), false);
+});
+
 test('independent validators execute concurrently in separate processes', async () => {
   const root = mkdtempSync(join(tmpdir(), 'gids-parallel-checks-'));
   try {

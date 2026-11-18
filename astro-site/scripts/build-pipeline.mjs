@@ -109,6 +109,7 @@ export async function buildPipeline({ cwd = resolve(import.meta.dirname, '..'), 
   await run([stage('optimize map', 'optimize-world-map')], options);
   await run([
     check('performance audit', 'check-performance-budgets'),
+    check('stylesheet audit', 'build-output'),
     check('SEO audit', 'seo-audit-workers'),
     check('output translations', 'check-i18n', '--dist'),
   ], checks);

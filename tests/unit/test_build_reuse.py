@@ -141,28 +141,37 @@ async def test_real_build_entrypoint_skips_commands_and_restamps_only_after_vali
     assert calls == []
     assert result["release_id"] == "second" and result["build_digest"] == "current-digest"
     assert 'data-release-id="second"' in (runtime.astro_dir / "dist/index.html").read_text()
-    # The legacy full selector and a template plan do not turn unrelated jobs
-    # into force renders. A frozen full plan does, even with identical bytes.
-    for selected in [{'full': True}, {'full': True, 'publication_plan': {'execution_mode': 'code_only'}}]:
+    # A legacy selector or a plan label alone is not a template task. Ordinary
+    # data updates can reuse already validated output when their inputs match.
+    for selected in [{'full': True}, {'full': True, 'publication_plan': {'execution_mode': 'code_only'}},
+                     {'content_only': True, 'publication_plan': {'execution_mode': 'content_only'}}]:
         task.input_data = selected
         await build_release_site(**options, release_identity=IDENTITY)
         assert calls == []
-    task.input_data = {'full': True, 'publication_plan': {'execution_mode': 'full'}}
-    with monkeypatch.context() as scoped:
-        scoped.setenv('GIDS_FORCE_FULL_RENDER', '0')
-        scoped.setattr(BuildReuse, 'matches', lambda *_: pytest.fail('Full publication must not consult a reusable output'))
-        await build_release_site(**options, release_identity=IDENTITY)
-    assert calls == ['Build Astro Site', 'Validate Situation Release Gate', 'Split Papers Bundle', 'Split Reports Bundle']
-    assert build_environments[-1]['GIDS_FORCE_FULL_RENDER'] == '1'
-    assert (tree / 'data/cache/validated-site-build.json').is_file(), 'Fresh validated outputs may still populate the cache'
+    # Real template tasks carry code_only=True. They must render fresh even
+    # with warm matching caches and an ambient flag requesting reuse.
+    for selected in [
+        {'full': True, 'publication_plan': {'execution_mode': 'full'}},
+        {'code_only': True},
+        {'code_only': True, 'publication_plan': {'execution_mode': 'code_only'}},
+    ]:
+        calls.clear()
+        task.input_data = selected
+        with monkeypatch.context() as scoped:
+            scoped.setenv('GIDS_FORCE_FULL_RENDER', '0')
+            scoped.setattr(BuildReuse, 'matches', lambda *_: pytest.fail('Full/template publication must not consult reusable output'))
+            await build_release_site(**options, release_identity=IDENTITY)
+        assert calls == ['Build Astro Site', 'Validate Situation Release Gate', 'Split Papers Bundle', 'Split Reports Bundle']
+        assert build_environments[-1]['GIDS_FORCE_FULL_RENDER'] == '1'
+        assert (tree / 'data/cache/validated-site-build.json').is_file(), 'Fresh validated outputs may still populate the cache'
     calls.clear()
-    task.input_data = {'publication_plan': {'execution_mode': 'code_only'}}
+    task.input_data = {'content_only': True, 'publication_plan': {'execution_mode': 'content_only'}}
     put(runtime.astro_dir / "src/data/meta.json", "new data")
     with monkeypatch.context() as scoped:
         scoped.setenv('GIDS_FORCE_FULL_RENDER', '1')
         await build_release_site(**options, release_identity=IDENTITY)
     assert calls[0] == "Build Astro Site"
-    assert build_environments[-1]['GIDS_FORCE_FULL_RENDER'] == '0', 'Ambient flags cannot escalate a template plan to a full render'
+    assert build_environments[-1]['GIDS_FORCE_FULL_RENDER'] == '0', 'Data updates retain incremental rendering despite ambient flags'
 
 
 @pytest.mark.asyncio

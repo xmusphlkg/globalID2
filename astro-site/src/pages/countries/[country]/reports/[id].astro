@@ -13,6 +13,7 @@ import {
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { buildAlternatePaths } from '../../../../lib/seo';
+import { absoluteSiteUrl } from '../../../../lib/papers';
 import { reportCoverage as coverageForReport, reportOverviewTitle } from '../../../../lib/report-seo';
 import { downloadCatalogue } from '../../../../lib/downloads-data';
 import { shouldBuildPage } from '../../../../lib/page-build-plan';
@@ -101,7 +102,7 @@ const reportSeo = {
 };
 const reportStructuredData = {
   '@type': 'Report',
-  '@id': `${canonicalPath}#report`,
+  '@id': `${absoluteSiteUrl(canonicalPath, Astro.site ?? Astro.url.origin).toString()}#report`,
   name: zh ? reportTitleZh : fr ? reportTitleFr : reportTitleEn,
   inLanguage: zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en',
   datePublished: report?.created_at,

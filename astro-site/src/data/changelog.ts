@@ -3,6 +3,28 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.3', date: '2026-11-18',
+    titleEn: 'Reliable styles and a compact Situation list',
+    titleZh: '可靠的页面样式与紧凑的态势列表',
+    titleFr: 'Styles fiables et liste de situation compacte',
+    summaryEn: 'Improve multilingual search metadata, keep shared styles intact during publication, and make places with news easier to scan.',
+    summaryZh: '完善多语言搜索元数据，保障发布时的共享样式，并让有新闻的地点列表更易浏览。',
+    summaryFr: 'Améliorez les métadonnées multilingues, préservez les styles partagés lors des publications et facilitez la lecture des lieux avec des actualités.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Sitemaps cover English, Chinese and French pages in manageable parts. Reports and research pages use consistent canonical links and localized breadcrumbs.',
+      zh: '网站地图完整覆盖英、中、法页面并合理分片；报告与文献页使用一致的规范链接和本地化面包屑。',
+      fr: 'Les plans de site couvrent les pages en anglais, chinois et français dans des fichiers de taille limitée. Les rapports et les articles utilisent des liens canoniques cohérents et des fils d’Ariane localisés.',
+    }, {
+      en: 'Publication checks reject pages with missing layout styles or local assets before they replace the complete site.',
+      zh: '发布检查会拦截缺失布局样式或本地资源的页面，避免替换完整网站。',
+      fr: 'Les contrôles de publication rejettent les pages sans styles de mise en page ou ressources locales avant de remplacer le site complet.',
+    }] }, { kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'Places with news uses compact rows with human or animal host icons beside each disease name. Unknown hosts take no extra space.',
+      zh: '有新闻的地点列表采用紧凑行，在疾病名后用图标标注人类或动物宿主；未知宿主不额外占位。',
+      fr: 'Les lieux avec des actualités utilisent des lignes compactes, avec des icônes d’hôte humain ou animal à côté du nom de la maladie. Les hôtes inconnus n’occupent pas d’espace supplémentaire.',
+    }] }],
+  },
+  {
     version: '0.20.1', date: '2026-11-17',
     titleEn: 'A clearer GIDS public template',
     titleZh: '更清晰的 GIDS 公开站模板',

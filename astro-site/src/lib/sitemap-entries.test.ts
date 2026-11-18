@@ -102,8 +102,8 @@ test('builds only publishable static, country, disease, and report URLs', () => 
   });
 
   const byPath = new Map(entries.map(entry => [entry.path, entry]));
-  const localizedStaticPaths = STATIC_SITEMAP_PATHS.flatMap(path => path === '/' ? ['/', '/zh/'] : [path, `/zh${path}`]);
-  const localized = (path: string) => [path, `/zh${path}`];
+  const localizedStaticPaths = STATIC_SITEMAP_PATHS.flatMap(path => path === '/' ? ['/', '/zh/', '/fr/'] : [path, `/zh${path}`, `/fr${path}`]);
+  const localized = (path: string) => [path, `/zh${path}`, `/fr${path}`];
   assert.deepEqual([...byPath.keys()], [
     ...localizedStaticPaths,
     ...localized('/diseases/influenza/'),
@@ -153,6 +153,7 @@ test('publishes latest, methodology, weekly and monthly situation URLs only afte
   for (const path of ['/situation/', '/situation/methodology/', '/situation/weekly/', '/situation/monthly/', '/situation/weekly/2026-W33/', '/situation/monthly/2026-08/']) {
     assert.equal(paths.has(path), true);
     assert.equal(paths.has(`/zh${path}`), true);
+    assert.equal(paths.has(`/fr${path}`), true);
   }
   assert.equal(visible.find(entry => entry.path === '/situation/monthly/2026-08/')?.lastmod, '2026-08-13T02:00:00.000Z');
 });
@@ -271,15 +272,15 @@ test('current generated data matches the Astro static-route intent', () => {
   });
   const actualPaths = new Set(entries.map(entry => entry.path));
 
-  const expectedPaths = new Set<string>(STATIC_SITEMAP_PATHS.flatMap(path => path === '/' ? ['/', '/zh/'] : [path, `/zh${path}`]));
+  const expectedPaths = new Set<string>(STATIC_SITEMAP_PATHS.flatMap(path => path === '/' ? ['/', '/zh/', '/fr/'] : [path, `/zh${path}`, `/fr${path}`]));
   for (const country of meta.countries ?? []) {
     const code = normalizeReportRouteSegment(country.code, true);
     if (!code || !hasCountryDataSnapshot(country)) continue;
-    expectedPaths.add(`/countries/${code}/`); expectedPaths.add(`/zh/countries/${code}/`);
+    expectedPaths.add(`/countries/${code}/`); expectedPaths.add(`/zh/countries/${code}/`); expectedPaths.add(`/fr/countries/${code}/`);
   }
   for (const disease of diseases) {
     const slug = toSeoSlug(disease.slug);
-    if (slug) { expectedPaths.add(`/diseases/${slug}/`); expectedPaths.add(`/zh/diseases/${slug}/`); }
+    if (slug) { expectedPaths.add(`/diseases/${slug}/`); expectedPaths.add(`/zh/diseases/${slug}/`); expectedPaths.add(`/fr/diseases/${slug}/`); }
   }
 
   const publishableReports = buildPublishableReports(
@@ -288,13 +289,14 @@ test('current generated data matches the Astro static-route intent', () => {
   );
   expectedPaths.add('/reports/');
   expectedPaths.add('/zh/reports/');
+  expectedPaths.add('/fr/reports/');
   for (const country of reportArchiveCountries(publishableReports)) {
-    expectedPaths.add(`/countries/${country}/reports/`); expectedPaths.add(`/zh/countries/${country}/reports/`);
+    expectedPaths.add(`/countries/${country}/reports/`); expectedPaths.add(`/zh/countries/${country}/reports/`); expectedPaths.add(`/fr/countries/${country}/reports/`);
   }
   for (const report of publishableReports) {
-    expectedPaths.add(`/countries/${report.country}/reports/${report.id}/`); expectedPaths.add(`/zh/countries/${report.country}/reports/${report.id}/`);
+    expectedPaths.add(`/countries/${report.country}/reports/${report.id}/`); expectedPaths.add(`/zh/countries/${report.country}/reports/${report.id}/`); expectedPaths.add(`/fr/countries/${report.country}/reports/${report.id}/`);
     for (const slug of report.diseaseSlugs) {
-      expectedPaths.add(`/countries/${report.country}/reports/${report.id}/${slug}/`); expectedPaths.add(`/zh/countries/${report.country}/reports/${report.id}/${slug}/`);
+      expectedPaths.add(`/countries/${report.country}/reports/${report.id}/${slug}/`); expectedPaths.add(`/zh/countries/${report.country}/reports/${report.id}/${slug}/`); expectedPaths.add(`/fr/countries/${report.country}/reports/${report.id}/${slug}/`);
     }
   }
 

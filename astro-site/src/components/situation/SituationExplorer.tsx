@@ -436,9 +436,22 @@ export default function SituationExplorer({
                         <span className={`sit-dot${recency === 'fresh' ? ' is-live' : ''}${recency === 'recent' ? ' is-live-slow' : ''}`} style={{ background: RECENCY_COLORS[recency] }} aria-hidden="true" />
                         <span className="sit-sr">{copy[recency]}</span>
                         <span className="sit-item-main">
-                          <strong>{diseaseName(point, locale)}</strong>
-                          <span>{placeLabel(point, countryName(point, locale))}</span>
-                          <span>{hostLabel(point, locale)}</span>
+                          <strong className="sit-item-disease">{diseaseName(point, locale)}{(point.host_type === 'human' || point.host_type === 'animal') && (
+                            <svg className="sit-host-icon" viewBox="0 0 24 24" width="14" height="14" role="img" aria-label={hostLabel(point, locale)}>
+                              <title>{hostLabel(point, locale)}</title>
+                              {point.host_type === 'human' ? <>
+                                <circle cx="12" cy="5" r="3" />
+                                <path d="M6 14v-2a6 6 0 0 1 12 0v2M9 12v9m6-9v9" />
+                              </> : <>
+                                <ellipse cx="5" cy="9" rx="2" ry="3" />
+                                <ellipse cx="10" cy="5" rx="2" ry="3" />
+                                <ellipse cx="16" cy="5" rx="2" ry="3" />
+                                <ellipse cx="21" cy="10" rx="2" ry="3" />
+                                <path d="M7 16c0-3 3-5 5-5s5 2 5 5c2 1 2 5-1 5-2 0-2-1-4-1s-2 1-4 1c-3 0-3-4-1-5Z" />
+                              </>}
+                            </svg>
+                          )}</strong>
+                          <span className="sit-item-place" title={placeLabel(point, countryName(point, locale))}>{placeLabel(point, countryName(point, locale))}</span>
                         </span>
                         <span className="sit-item-meta">
                           <span className={`sit-status sit-status-${point.status}`}>{STATUS_LABELS[point.status][locale]}</span>

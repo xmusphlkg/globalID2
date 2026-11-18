@@ -5,7 +5,7 @@ import type { SituationAlertRecord } from '../src/utils/situationTypes';
 // Cold Astro/map compilation can take most of the default 30-second budget.
 test.setTimeout(60_000);
 
-async function mockSituation(page: Page) {
+async function mockSituation(page: Page, withHosts = false) {
   await page.route('**/astro/runtime/client/dev-toolbar/entrypoint.js', route => route.fulfill({ body: '', contentType: 'application/javascript' }));
   await page.route('**/site-data/**', route => route.fulfill({ status: 404 }));
   const alert = (id: string, published: string, country: string, extra = {}): SituationAlertRecord => ({
@@ -16,7 +16,10 @@ async function mockSituation(page: Page) {
     country_code: country, country_name_en: country === 'CD' ? 'DR Congo' : 'Kenya', country_name_zh: null,
     admin_area: null, status: 'ongoing', cases: 6, deaths: 0, count_basis: 'confirmed',
     as_of: published, published_date: published, quote: 'Six cases reported.',
-    summary_en: null, summary_zh: null, summary_fr: null, ai: null, ...extra,
+    summary_en: null, summary_zh: null, summary_fr: null, ai: null,
+    ...(withHosts && id.startsWith('fresh') ? { host_type: 'human' as const } : {}),
+    ...(withHosts && id === 'recent' ? { host_type: 'animal' as const, host_species: 'wild birds' } : {}),
+    ...extra,
   });
   const alerts = [
     alert('fresh', '2026-11-03', 'CD'),
@@ -77,6 +80,36 @@ test('situation filters remove old map series, including an empty result', async
   await expect.poll(() => renderedPointIds(page)).toEqual([]);
   await page.locator('.sit-reset').click();
   await expect.poll(() => renderedPointIds(page)).toEqual(['fresh', 'recent']);
+});
+
+test('place cards keep known host icons beside the disease and omit unspecified hosts', async ({ page }) => {
+  await mockSituation(page, true);
+  await page.goto('/situation/?window=all');
+  await openPlaceList(page);
+  const rows = page.locator('.sit-places-list .sit-item');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.locator('.sit-host-icon')).toHaveCount(2);
+  await expect(rows.nth(0).getByRole('img', { name: 'Human', exact: true })).toBeVisible();
+  await expect(rows.nth(1).getByRole('img', { name: 'Animal · wild birds', exact: true })).toBeVisible();
+  await expect(rows.nth(2).locator('.sit-host-icon')).toHaveCount(0);
+  await expect(rows.nth(2)).not.toContainText('Host unspecified');
+  for (const row of await rows.all()) {
+    const bounds = await row.boundingBox();
+    expect(bounds!.height).toBeGreaterThanOrEqual(44);
+    expect(bounds!.height).toBeLessThan(58);
+    const disease = await row.locator('.sit-item-disease').boundingBox();
+    const location = await row.locator('.sit-item-place').boundingBox();
+    expect(location!.y).toBeGreaterThan(disease!.y);
+  }
+  const iconPosition = await rows.nth(0).locator('.sit-host-icon').evaluate(icon => {
+    const text = icon.parentElement!.firstChild!;
+    const range = document.createRange(); range.selectNode(text);
+    return { gap: icon.getBoundingClientRect().left - range.getBoundingClientRect().right,
+      sameLine: Math.abs(icon.getBoundingClientRect().top - range.getBoundingClientRect().top) < 5 };
+  });
+  expect(iconPosition.gap).toBeGreaterThanOrEqual(0);
+  expect(iconPosition.gap).toBeLessThan(8);
+  expect(iconPosition.sameLine).toBe(true);
 });
 
 test('timeline shares filters, merges duplicates and keeps all report links', async ({ page }) => {

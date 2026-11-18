@@ -142,7 +142,13 @@ const maintainer = copy({
         <p>{maintainer.description}</p>
         <p>{maintainer.availability}</p>
         <div class="site-footer-maintainer-links">
-          <a class="site-footer-link" href={`${localizedHref('/about/')}#maintainer`}>{maintainer.learnMore}</a>
+          <a class="site-footer-link" href={`${localizedHref('/about/')}#maintainer`}>
+            {initialLanguage === 'zh'
+              ? '了解维护者 Kangguo Li'
+              : initialLanguage === 'fr'
+                ? 'En savoir plus sur le responsable Kangguo Li'
+                : 'Learn more about maintainer Kangguo Li'}
+          </a>
           <a class="site-footer-link" href="mailto:lkg1116@outlook.com">{maintainer.contact}<span aria-hidden="true"> ↗</span></a>
         </div>
       </div>
