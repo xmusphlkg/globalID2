@@ -59,6 +59,7 @@ node_modules/
 
 # Frontend test and build artifacts
 /astro-site/.subscription-build-*/
+/astro-site/.dist-build-*/
 coverage/
 test-results/
 playwright-report/

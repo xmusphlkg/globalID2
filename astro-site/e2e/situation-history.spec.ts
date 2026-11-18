@@ -67,7 +67,7 @@ async function showFilters(page: Page) {
   await expect(page.locator('.sit-list')).toBeVisible();
 }
 
-async function selectFilter(page: Page, name: 'Source' | 'Time window', value: string) {
+async function selectFilter(page: Page, name: 'Disease' | 'Source' | 'Time window', value: string) {
   await showFilters(page);
   await page.locator('.sit-list').getByRole('combobox', { name, exact: true }).click();
   await page.locator(`.sit-list [role="option"][data-value="${value}"]`).click();
@@ -145,6 +145,38 @@ for (const [locale, retryLabel] of [['en', 'Retry'], ['zh', '重试'], ['fr', 'R
     expect(requests).toBe(2);
   });
 }
+
+test('disease selection opens all places, reopens after closing and shows an empty timeline when no reports match', async ({ page }) => {
+  await mockHistory(page);
+  await page.goto('/situation/');
+  await selectFilter(page, 'Disease', 'D049');
+  const detail = page.locator('.sit-detail.is-open');
+  const overview = page.locator('.sit-overview');
+  await expect(detail).toBeVisible();
+  await expect(overview.locator('.sit-alert')).toHaveCount(2);
+  await expect(overview.locator('.sit-alert-disease')).toHaveText(['MERS', 'MERS']);
+  expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+
+  await detail.locator('.sit-close').click();
+  await expect(detail).toHaveCount(0);
+  await selectFilter(page, 'Disease', 'D049');
+  await expect(detail).toBeVisible();
+  await expect(overview.locator('.sit-alert')).toHaveCount(2);
+
+  await showFilters(page);
+  await page.locator('.sit-item').first().click();
+  await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
+  await selectFilter(page, 'Disease', 'D038');
+  await expect(detail).toBeVisible();
+  await expect(overview).toBeVisible();
+  await expect(overview).toHaveAttribute('aria-busy', 'false');
+  await expect(overview.locator('.sit-alert')).toHaveCount(0);
+  await expect(overview).toContainText('No alerts match these filters.');
+  expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+  await showFilters(page);
+  await page.locator('.sit-reset').click();
+  await expect(detail).toHaveCount(0);
+});
 
 test('a historical source remains selectable when the latest marker came from another channel', async ({ page }) => {
   await mockHistory(page);

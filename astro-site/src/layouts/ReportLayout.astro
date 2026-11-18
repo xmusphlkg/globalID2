@@ -33,11 +33,17 @@ const {
 } = Astro.props;
 const homeLabel = initialLanguage === 'zh' ? '首页' : initialLanguage === 'fr' ? 'Accueil' : 'Home';
 const localePrefix = initialLanguage === 'zh' ? '/zh' : initialLanguage === 'fr' ? '/fr' : '';
-const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
+const siteOrigin = siteOriginOverride
+  ? new URL(siteOriginOverride).origin
+  : Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
+const localizedBreadcrumbs = breadcrumbs.map(({ label, labelZh, labelFr, href }) => ({
+  label: initialLanguage === 'zh' ? (labelZh ?? label) : initialLanguage === 'fr' ? (labelFr ?? label) : label,
+  href,
+}));
 const breadcrumbStructuredData = buildBreadcrumbStructuredData({
   siteOrigin,
   currentPath: Astro.url.pathname,
-  breadcrumbs,
+  breadcrumbs: localizedBreadcrumbs,
 });
 const pageStructuredData = Array.isArray(structuredData) ? structuredData : [structuredData];
 const additionalStructuredData = [
