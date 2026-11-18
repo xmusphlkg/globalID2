@@ -41,6 +41,9 @@ class _Result:
         except Exception:
             keys = []
         self._rows = [_Row(row, keys) for row in result.fetchall()] if keys else []
+    def __iter__(self):
+        """Iterate rows for parity with sqlite3 cursors and SQLAlchemy results."""
+        return iter(self._rows)
     def fetchone(self):
         return self._rows.pop(0) if self._rows else None
     def fetchall(self):
