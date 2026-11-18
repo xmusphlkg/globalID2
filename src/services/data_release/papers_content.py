@@ -195,6 +195,14 @@ def catalogue_from_entries(*, root: Path, origin: str, release_id: str, entries:
                                   template_root, template_objects)
 
 
+def candidate_upload_sizes(candidate: PapersContentCandidate) -> dict[str, int]:
+    """Bound candidate storage by raw payload sizes, including its catalogues."""
+    sizes = {entry["key"]: entry["bytes"] for entry, _root in _source_objects(candidate)}
+    sizes.update({key: len(body) for key, body in candidate.shards})
+    sizes[candidate.manifest_key] = len(candidate.manifest)
+    return sizes
+
+
 def publish_papers_content(candidate: PapersContentCandidate, *, client: Any,
                            previous_objects: set[str] | None = None, workers: int = 16) -> dict[str, Any]:
     """Upload changed objects, then catalogue shards and the immutable root.
@@ -205,18 +213,31 @@ def publish_papers_content(candidate: PapersContentCandidate, *, client: Any,
     """
     if type(workers) is not int or not 1 <= workers <= 96:
         raise ValueError("Papers upload workers must be 1–96")
-    known = previous_objects or set()
+    preflight = getattr(client, "preflight_objects", None)
+    if callable(preflight):
+        # Raw file sizes are a conservative upper bound for compressed uploads.
+        # Check the entire candidate before writing any of its objects, so an
+        # over-budget release cannot leave another partially uploaded version.
+        preflight(candidate_upload_sizes(candidate))
+    # A generation receipt alone cannot notice an object removed since that
+    # release. Indexed clients must confirm existence in their reconciled DB.
+    known = set() if getattr(client, "object_index", None) is not None else previous_objects or set()
     uploaded = 0
     seen: set[str] = set()
     skipped = 0
     started = time.monotonic()
     pending_entries = []
+    confirmed = getattr(client, "has_immutable_object", None)
     for entry, source_root in _source_objects(candidate):
         key = entry["key"]
         if key in seen:
             continue
         seen.add(key)
         if key in known:
+            skipped += 1
+            continue
+        if callable(confirmed) and confirmed(key, content_sha256=entry["sha256"],
+                content_type=entry["content_type"], cache_control="public, max-age=31536000, immutable"):
             skipped += 1
             continue
         pending_entries.append((entry, source_root))
@@ -233,9 +254,11 @@ def publish_papers_content(candidate: PapersContentCandidate, *, client: Any,
         # text objects can use fewer wire bytes without changing generations.
         body, metadata = _wire_body(body, entry['content_type'])
         try:
-            client.put_object_conditional(key, body, previous=None, content_type=entry["content_type"],
-                                          cache_control="public, max-age=31536000, immutable", **metadata)
-            return True
+            written = client.put_object_conditional(key, body, previous=None, content_type=entry["content_type"],
+                                                   cache_control="public, max-age=31536000, immutable", **metadata)
+            # Indexed clients return False when they prove the object already
+            # exists without issuing PUT. Older injected clients return None.
+            return written is not False
         except R2S3Error as error:
             if error.status != 412:
                 raise
@@ -263,13 +286,14 @@ def publish_papers_content(candidate: PapersContentCandidate, *, client: Any,
     def put_metadata(item):
         key, body = item
         try:
-            client.put_object_conditional(key, body, previous=None,
+            written = client.put_object_conditional(key, body, previous=None,
                 content_type="application/json; charset=utf-8",
                 cache_control="public, max-age=31536000, immutable")
+            return written is not False
         except R2S3Error as error:
             if error.status != 412:
                 raise
-        return None
+            return False
 
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="research-papers") as pool:
         last_progress = started
@@ -281,11 +305,13 @@ def publish_papers_content(candidate: PapersContentCandidate, *, client: Any,
                             uploaded + skipped, len(seen), uploaded, skipped)
                 last_progress = time.monotonic()
         # The root must only be committed after all object and shard uploads.
-        list(bounded_map(pool, put_metadata, candidate.shards))
-        put_metadata((candidate.manifest_key, candidate.manifest))
-    logger.info("Research papers objects published: uploaded={} reused={} shards={} elapsed_seconds={:.2f}",
-                uploaded, skipped, len(candidate.shards), time.monotonic() - started)
+        metadata_uploaded = sum(bounded_map(pool, put_metadata, candidate.shards))
+        metadata_uploaded += int(put_metadata((candidate.manifest_key, candidate.manifest)))
+    metadata_reused = len(candidate.shards) + 1 - metadata_uploaded
+    logger.info("Research papers objects published: uploaded={} reused={} shards={} metadata_uploaded={} metadata_reused={} elapsed_seconds={:.2f}",
+                uploaded, skipped, len(candidate.shards), metadata_uploaded, metadata_reused, time.monotonic() - started)
     return {"generation_sha256": candidate.generation,
             "manifest_url": candidate.origin + "/" + candidate.manifest_key,
             "manifest_sha256": _hash(candidate.manifest),
-            "uploaded_objects": uploaded, "reused_objects": skipped}
+            "uploaded_objects": uploaded, "reused_objects": skipped,
+            "uploaded_metadata_objects": metadata_uploaded, "reused_metadata_objects": metadata_reused}

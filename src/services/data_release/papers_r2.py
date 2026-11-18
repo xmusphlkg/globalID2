@@ -9,8 +9,10 @@ import hashlib
 import hmac
 import io
 import json
+import os
 import re
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -31,6 +33,7 @@ import httpx
 from .artifact_index import ArtifactIndex
 from .papers_bundle import DEFAULT_PAPERS_ORIGIN, LIBRARY_SHARD_PATH, build_papers_manifest, is_obsolete_research_build_path
 from .research_publishing import is_research_card, research_social_cards_enabled
+from .r2_object_index import R2ObjectIndex, metadata_matches
 
 MANIFEST_KEY = "papers-manifest.json"
 # Cloudflare R2 occasionally drops TLS mid-PUT on large incremental syncs.
@@ -189,13 +192,33 @@ class R2S3Client:
         *,
         opener: Callable[[Request, float | None], Any] | None = None,
         timeout_seconds: float = 120.0,
+        max_total_bytes: int | None = None,
+        object_index: R2ObjectIndex | bool | None = None,
     ) -> None:
         self.config = config
         self.manifest_key = config.manifest_key
-        self._http = None if opener else httpx.Client(
-            limits=httpx.Limits(max_connections=96, max_keepalive_connections=96, keepalive_expiry=30.0),
-            follow_redirects=False,
-        )
+        self.max_total_bytes = (int(os.environ.get("R2_PAPERS_MAX_TOTAL_BYTES", "8000000000"))
+                                if max_total_bytes is None else max_total_bytes)
+        if type(self.max_total_bytes) is not int or self.max_total_bytes <= 0:
+            raise ValueError("R2 storage budget must be a positive integer")
+        if isinstance(object_index, R2ObjectIndex) and (
+                object_index.endpoint != config.s3_endpoint.rstrip("/") or object_index.bucket != config.bucket):
+            raise ValueError("R2 object index belongs to another endpoint or bucket")
+        self.object_index = (None if object_index is False else object_index
+            if isinstance(object_index, R2ObjectIndex) else R2ObjectIndex(
+                config.s3_endpoint, config.bucket, max_total_bytes=self.max_total_bytes))
+        self._owns_index = self.object_index is not None and object_index is not self.object_index
+        self._index_mutex = threading.Lock()
+        self._index_checked_at = 0.0
+        self._publication_mutex = threading.RLock()
+        self._publication_depth = 0
+        # Preserve production's per-thread pools: one slow transfer must not
+        # hold the shared HTTP pool lock for the entire publication.
+        self._http = None  # Optional injected HTTP transport for protocol tests.
+        self._http_local = threading.local()
+        self._http_clients: list[httpx.Client] = []
+        self._http_clients_lock = threading.Lock()
+        self._http_closed = False
         self._opener = opener or self._pooled_open
         self.timeout_seconds = timeout_seconds
         self.region = "auto"
@@ -203,14 +226,245 @@ class R2S3Client:
 
     @contextmanager
     def _pooled_open(self, request: Request, timeout: float):
-        """Reuse TLS connections across the bounded upload worker threads."""
-        assert self._http is not None
-        with _http_open(self._http, request, timeout) as response:
+        """Reuse each worker's TLS connections without a shared pool lock."""
+        client = self._http or getattr(self._http_local, "client", None)
+        if client is None:
+            client = httpx.Client(
+                limits=httpx.Limits(max_connections=2, max_keepalive_connections=2, keepalive_expiry=30.0),
+                follow_redirects=False,
+            )
+            with self._http_clients_lock:
+                closed = self._http_closed
+                if not closed:
+                    self._http_clients.append(client)
+                    self._http_local.client = client
+            if closed:
+                client.close()
+                raise RuntimeError("Cannot send a request, as the client has been closed.")
+        with _http_open(client, request, timeout) as response:
             yield response
 
     def close(self) -> None:
+        with self._http_clients_lock:
+            self._http_closed = True
+            clients, self._http_clients = self._http_clients, []
         if self._http is not None:
-            self._http.close()
+            clients.append(self._http)
+        error = None
+        try:
+            for client in clients:
+                try:
+                    client.close()
+                except Exception as exc:
+                    error = error or exc
+        finally:
+            if self._owns_index:
+                self.object_index.close()
+                self._owns_index = False
+        if error is not None:
+            raise error
+
+    @contextmanager
+    def _index_lock(self, *, exclusive: bool = False):
+        """All indexed writers and inventory refreshes share this local fence."""
+        if self.object_index is None:
+            yield
+            return
+        identity = self.object_index.target
+        path = self.object_index.lock_dir / f"r2-index-{identity}.lock"
+        with path.open("a") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle, fcntl.LOCK_UN)
+
+    @contextmanager
+    def publication_session(self):
+        """Serialize complete publications and single-version cleanup locally.
+
+        This lock is distinct from the inventory lock. Upload pool threads use
+        their owning client's session; nested research JSON publication reuses
+        it. The caller must join all uploads before leaving the session.
+        """
+        if self.object_index is None:
+            yield
+            return
+        with self._publication_mutex:
+            handle = None
+            if self._publication_depth == 0:
+                path = self.object_index.lock_dir / f"r2-publication-{self.object_index.target}.lock"
+                handle = path.open("a")
+                fcntl.flock(handle, fcntl.LOCK_EX)
+            self._publication_depth += 1
+            try:
+                yield
+            finally:
+                self._publication_depth -= 1
+                if handle is not None:
+                    fcntl.flock(handle, fcntl.LOCK_UN)
+                    handle.close()
+
+    @contextmanager
+    def _publication_operation(self):
+        """Keep standalone writes/deletes outside another process's cleanup."""
+        if self.object_index is None or self._publication_depth:
+            yield
+            return
+        path = self.object_index.lock_dir / f"r2-publication-{self.object_index.target}.lock"
+        with path.open("a") as handle:
+            fcntl.flock(handle, fcntl.LOCK_SH)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle, fcntl.LOCK_UN)
+
+    def refresh_inventory(self, *, force: bool = False) -> dict[str, dict[str, Any]]:
+        """Reconcile once daily; ordinary publications reuse the durable database.
+
+        Direct/external writers must use this database or trigger a refresh.
+        Never clear ambiguous upload reservations without an operator fence.
+        """
+        if self.object_index is None:
+            return self.list_objects()
+        with self._index_mutex, self._index_lock(exclusive=True):
+            if force or not self.object_index.inventory_is_fresh():
+                self.object_index.replace_inventory(self.list_objects())
+            self._index_checked_at = time.monotonic()
+            return self.object_index.snapshot()
+
+    def _ensure_inventory(self) -> None:
+        if self.object_index is None:
+            return
+        # Double-check after taking the mutex: a whole upload pool may reach
+        # this method together. Never materialize the bucket once per worker.
+        with self._index_mutex:
+            if self._index_checked_at and time.monotonic() - self._index_checked_at <= 300:
+                return
+            with self._index_lock(exclusive=True):
+                if not self.object_index.inventory_is_fresh():
+                    self.object_index.replace_inventory(self.list_objects())
+                self._index_checked_at = time.monotonic()
+
+    def preflight_objects(self, objects: dict[str, int]) -> None:
+        """Reject an immutable candidate's conservative size before any PUT."""
+        self._ensure_inventory()
+        if self.object_index is not None:
+            with self._index_lock():
+                self.object_index.preflight(objects, max_total_bytes=self.max_total_bytes)
+
+    def has_immutable_object(self, key: str, *, content_sha256: str,
+                             content_type: str, cache_control: str) -> bool:
+        """Reuse a decoded-content receipt before rereading local build files."""
+        if self.object_index is None or not self._immutable_object(key, cache_control):
+            return False
+        self._ensure_inventory()
+        with self._index_lock():
+            return self.object_index.matches_content(key, content_sha256, content_type, cache_control)
+
+    @staticmethod
+    def _immutable_object(key: str, cache_control: str | None) -> bool:
+        # Never short-circuit compare-and-swap pointers, intents or mutable URLs.
+        if "immutable" not in {part.strip() for part in (cache_control or "").split(",")}:
+            return False
+        digest = r"[a-f0-9]{64}"
+        return re.fullmatch(
+            rf"(?:releases/sha256/(?:objects/{digest}/[a-f0-9]{{16}}|(?:catalogues|catalogue-shards)/{digest}\.json)"
+            rf"|paper-template-v[23]/(?:records|templates|assets)/{digest}\.json"
+            rf"|site-data/[a-z0-9-]+/(?:objects|manifests)/{digest}\.json)", key) is not None
+
+    def head_object(self, key: str) -> dict[str, Any] | None:
+        """Cheap Class B verification of an object absent from the local index."""
+        headers: dict[str, str] = {}
+        try:
+            status, _ = self._request("HEAD", key, response_headers=headers)
+        except R2S3Error as exc:
+            if exc.status == 404:
+                return None
+            raise
+        if status == 404:
+            return None
+        if status != 200:
+            raise R2S3Error(f"R2 HEAD {key!r} returned HTTP {status}", status=status)
+        try:
+            size = int(headers["content-length"])
+            etag = headers["etag"].strip('"')
+            if size < 0 or not etag:
+                raise ValueError("Invalid HEAD metadata")
+        except (KeyError, ValueError) as exc:
+            raise R2S3Error(f"R2 HEAD {key!r} returned incomplete metadata") from exc
+        return {"size": size, "etag": etag, "content_type": headers.get("content-type"),
+                "content_encoding": headers.get("content-encoding"), "cache_control": headers.get("cache-control")}
+
+    def _indexed_put(self, key: str, body: bytes, *, content_type: str | None,
+                     cache_control: str | None, content_encoding: str | None,
+                     condition: dict[str, str] | None = None) -> bool:
+        self._ensure_inventory()
+        metadata = {"etag": hashlib.md5(body, usedforsecurity=False).hexdigest(),
+                    "content_type": content_type, "content_encoding": content_encoding,
+                    "cache_control": cache_control}
+        immutable = condition == {"if-none-match": "*"} and self._immutable_object(key, cache_control)
+        content_digest = (_sha256_hex(gzip.decompress(body) if content_encoding == "gzip" else body)
+                          if immutable else None)
+        index = self.object_index
+        with self._publication_operation(), self._index_lock():
+            if immutable and index is not None:
+                if (index.matches(key, size=len(body), **metadata)
+                        or index.matches_content(key, content_digest, content_type, cache_control)):
+                    return False
+                remote = self.head_object(key)
+                if remote is not None:
+                    if self._verify_existing_immutable(key, body, metadata, content_digest, remote):
+                        return False
+                    # A 412 is treated as reuse by some callers. A mismatched
+                    # immutable object must instead fail without that status.
+                    raise R2S3Error(f"Immutable R2 object differs from candidate: {key}")
+                index.delete(key)
+            token = index.reserve(key, len(body), max_total_bytes=self.max_total_bytes) if index is not None else None
+            try:
+                status, _ = self._request("PUT", key, body=body, content_type=content_type,
+                    cache_control=cache_control, content_encoding=content_encoding, conditional_headers=condition)
+                if status not in {200, 201}:
+                    raise R2S3Error(f"R2 PUT {key!r} returned HTTP {status}", status=status)
+            except R2S3Error as exc:
+                if index is not None and exc.status is not None and 400 <= exc.status < 500:
+                    # The final error may follow an earlier successful PUT
+                    # whose response was lost. Reconcile actual bytes first.
+                    remote = self.head_object(key)
+                    index.resolve(token, remote)
+                    if immutable and exc.status == 412:
+                        if remote is not None and self._verify_existing_immutable(
+                                key, body, metadata, content_digest, remote):
+                            return False
+                        raise R2S3Error(f"Immutable R2 object changed during upload: {key}") from exc
+                # An interrupted PUT may have succeeded. Keep its reservation
+                # until a fenced inventory repair confirms the remote state.
+                raise
+            if index is not None:
+                index.commit(token, **metadata, content_sha256=content_digest)
+            return True
+
+    def _verify_existing_immutable(self, key: str, body: bytes, expected: dict,
+                                   content_digest: str, remote: dict) -> bool:
+        """Validate old encodings once, then persist decoded content identity."""
+        index = self.object_index
+        index.record(key, **remote)
+        if index.matches(key, size=len(body), **expected):
+            index.record(key, **remote, content_sha256=content_digest)
+            return True
+        if not metadata_matches(remote, expected, compare_encoding=False):
+            return False
+        headers: dict[str, str] = {}
+        status, payload = self._request("GET", key, response_headers=headers)
+        if status != 200 or headers.get("etag", "").strip('"') != remote["etag"]:
+            raise R2S3Error(f"R2 object changed during content verification: {key}")
+        # HTTPX already decodes gzip; an injected urllib transport may not.
+        if headers.get("content-encoding") == "gzip" and payload.startswith(b"\x1f\x8b"):
+            payload = gzip.decompress(payload)
+        if _sha256_hex(payload) != content_digest:
+            return False
+        index.record(key, **remote, content_sha256=content_digest)
+        return True
 
     def _host(self) -> str:
         return urllib.parse.urlparse(self.config.s3_endpoint).netloc
@@ -301,6 +555,9 @@ class R2S3Client:
                 continue
             request.add_header(name, value)
         request.add_header("Authorization", authorization)
+        # CDN transfer compression can turn a strong stored ETag into W/"..."
+        # and omit Content-Length on HEAD. Request stored representation metadata.
+        request.add_header("Accept-Encoding", "identity")
         return request
 
     def _request(
@@ -314,6 +571,7 @@ class R2S3Client:
         content_encoding: str | None = None,
         query: str = "",
         conditional_headers: dict[str, str] | None = None,
+        response_headers: dict[str, str] | None = None,
     ) -> tuple[int, bytes]:
         last_error: BaseException | None = None
         for attempt in range(1, _TRANSPORT_RETRY_ATTEMPTS + 1):
@@ -329,6 +587,9 @@ class R2S3Client:
             )
             try:
                 with self._opener(request, self.timeout_seconds) as response:
+                    if response_headers is not None:
+                        response_headers.update({str(k).lower(): str(v)
+                            for k, v in getattr(response, "headers", {}).items()})
                     return int(getattr(response, "status", 200)), response.read()
             except urllib.error.HTTPError as exc:
                 detail = exc.read().decode("utf-8", errors="replace")
@@ -368,21 +629,22 @@ class R2S3Client:
             if len(encoded) < len(body):
                 print(f"R2 manifest transport: raw_bytes={len(body)}, encoded_bytes={len(encoded)}", flush=True)
                 body, content_encoding = encoded, "gzip"
-        status, _payload = self._request(
-            "PUT",
-            key,
-            body=body,
-            content_type=content_type,
-            cache_control=cache_control,
-            content_encoding=content_encoding,
-        )
-        if status not in {200, 201}:
-            raise R2S3Error(f"R2 PUT {key!r} returned HTTP {status}")
+        self._indexed_put(key, body, content_type=content_type,
+            cache_control=cache_control, content_encoding=content_encoding)
 
     def delete_object(self, key: str) -> None:
-        status, _payload = self._request("DELETE", key)
-        if status not in {200, 204}:
-            raise R2S3Error(f"R2 DELETE {key!r} returned HTTP {status}")
+        with self._publication_operation(), self._index_lock(exclusive=True):
+            try:
+                status, _payload = self._request("DELETE", key)
+                if status not in {200, 204}:
+                    raise R2S3Error(f"R2 DELETE {key!r} returned HTTP {status}")
+            except BaseException:
+                if self.object_index is not None:
+                    self.object_index.invalidate(key)
+                    self._index_checked_at = 0
+                raise
+            if self.object_index is not None:
+                self.object_index.delete(key)
 
     def delete_objects(self, keys: list[str]) -> None:
         """Delete an explicit manifest-derived batch; fail on partial errors."""
@@ -392,29 +654,34 @@ class R2S3Client:
         for key in keys:
             ElementTree.SubElement(ElementTree.SubElement(root, "Object"), "Key").text = key
         ElementTree.SubElement(root, "Quiet").text = "true"
-        status, payload = self._request("POST", "", query="delete=",
-            body=ElementTree.tostring(root, encoding="utf-8", xml_declaration=True), content_type="application/xml")
-        result = ElementTree.fromstring(payload)
-        errors = result.findall("{*}Error")
-        if status != 200 or errors or result.tag.split('}')[-1] != 'DeleteResult':
-            raise R2S3Error(f"R2 batch deletion failed: HTTP {status}, errors={len(errors)}")
+        with self._publication_operation(), self._index_lock(exclusive=True):
+            try:
+                status, payload = self._request("POST", "", query="delete=",
+                    body=ElementTree.tostring(root, encoding="utf-8", xml_declaration=True), content_type="application/xml")
+                result = ElementTree.fromstring(payload)
+                errors = result.findall("{*}Error")
+                if status != 200 or errors or result.tag.split('}')[-1] != 'DeleteResult':
+                    raise R2S3Error(f"R2 batch deletion failed: HTTP {status}, errors={len(errors)}")
+            except BaseException:
+                if self.object_index is not None:
+                    for key in keys:
+                        self.object_index.invalidate(key)
+                    self._index_checked_at = 0
+                raise
+            if self.object_index is not None:
+                self.object_index.delete(keys)
 
     def put_object_conditional(
         self, key: str, body: bytes, *, previous: bytes | None,
         content_type: str = "application/json", cache_control: str = "no-store",
         content_encoding: str | None = None,
-    ) -> None:
+    ) -> bool:
         """Atomically replace a single-PUT pointer only at the observed version."""
         condition = ({"if-none-match": "*"} if previous is None else {
             "if-match": '"' + hashlib.md5(previous, usedforsecurity=False).hexdigest() + '"',
         })
-        status, _ = self._request(
-            "PUT", key, body=body, content_type=content_type,
-            cache_control=cache_control, conditional_headers=condition,
-            content_encoding=content_encoding,
-        )
-        if status not in {200, 201}:
-            raise R2S3Error(f"R2 conditional PUT {key!r} returned HTTP {status}")
+        return self._indexed_put(key, body, content_type=content_type,
+            cache_control=cache_control, content_encoding=content_encoding, condition=condition)
 
     def get_object(self, key: str) -> bytes | None:
         try:
@@ -441,7 +708,7 @@ class R2S3Client:
         """Return True when the bucket accepts authenticated requests."""
 
         try:
-            status, _payload = self._request("GET", "", query="max-keys=1")
+            status, _payload = self._request("HEAD", "")
         except R2S3Error:
             return False
         return status in {200, 204}
@@ -460,11 +727,16 @@ class R2S3Client:
             if token:
                 params["continuation-token"] = token
             query = urllib.parse.urlencode(sorted(params.items()), quote_via=urllib.parse.quote)
-            _status, body = self._request("GET", "", query=query)
+            status, body = self._request("GET", "", query=query)
             root = ElementTree.fromstring(body)
+            if (status != 200 or root.tag.split("}")[-1] != "ListBucketResult"
+                    or root.findtext("{*}IsTruncated") not in {"true", "false"}):
+                raise R2S3Error("Incomplete R2 inventory response")
             for item in root.findall("{*}Contents"):
                 key = item.findtext("{*}Key")
                 if key is not None:
+                    if key in objects:
+                        raise R2S3Error("Duplicate key in R2 inventory")
                     objects[key] = {
                         "bytes": int(item.findtext("{*}Size") or "0"),
                         "etag": (item.findtext("{*}ETag") or "").strip('"'),
@@ -611,7 +883,7 @@ def publish_papers_site(
     target = _sha256_hex(f"{config.s3_endpoint}/{config.bucket}".encode())
     with (directory / f"{target}.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        active = client or R2S3Client(config)
+        active = client or R2S3Client(config, max_total_bytes=max_total_bytes)
         artifacts = ArtifactIndex(papers_dir)
         try:
             if template_candidate is not None:
@@ -714,10 +986,12 @@ def _publish_papers_site(
             raise R2S3Error(f"Papers file size changed after build: {item['path']}")
 
     print(f"R2 inventory: checking {len(local_files)} files; workers={workers}", flush=True)
-    # Remote metadata is also the durable resume checkpoint. Listing recovers
-    # successful PUTs from *any* earlier attempt, even if it never wrote its
-    # final manifest, and detects objects overwritten by an incomplete release.
-    inventory = active.list_objects() if hasattr(active, "list_objects") else None
+    # The shared database captures successful writes before a release commits.
+    # A daily complete reconciliation detects changes by external writers.
+    if getattr(active, "object_index", None) is not None:
+        inventory = active.refresh_inventory()
+    else:
+        inventory = active.list_objects() if hasattr(active, "list_objects") else None
 
     if preserve_static_articles:
         if inventory is None:

@@ -386,9 +386,32 @@ async def _claim_next_task_uuid(
             (Task.priority == TaskPriority.NORMAL, 2),
             else_=3,
         )
+        static_owner = aliased(Task)
+        static_blocking = (
+            select(static_owner.id)
+            .where(
+                static_owner.task_type == TaskType.EXPORT_DATA,
+                static_owner.status.in_((TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING)),
+                static_owner.input_data["data_only"].as_boolean().is_not(True),
+                static_owner.input_data["raw_archive_only"].as_boolean().is_not(True),
+                static_owner.input_data["reports_only"].as_boolean().is_not(True),
+                static_owner.input_data["theme_only"].as_boolean().is_not(True),
+            )
+            .exists()
+        )
+        wait_kind = Task.metadata_["publication_wait"]["kind"].as_string()
+        wait_not_before = Task.metadata_["publication_wait"]["not_before"].as_string()
         query = (
             select(Task)
             .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]))
+            .where(or_(
+                wait_kind.is_(None),
+                and_(
+                    wait_kind == "transient_backoff",
+                    wait_not_before <= datetime.now(timezone.utc).isoformat(),
+                ),
+            ))
+            .where(or_(~or_(surveillance_data, literature_data), ~static_blocking))
             .where(or_(~health_operation, health_room))
             .order_by(
                 case(
@@ -507,6 +530,9 @@ async def _claim_next_task_uuid(
 
         now = datetime.now(timezone.utc)
         metadata = dict(task.metadata_ or {})
+        wait = metadata.get("publication_wait")
+        if isinstance(wait, dict) and wait.get("kind") == "transient_backoff":
+            metadata.pop("publication_wait", None)
         metadata["task_lease"] = {
             "owner": worker_instance_id,
             "claimed_at": now.isoformat(),

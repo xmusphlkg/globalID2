@@ -493,8 +493,17 @@ async def run_logged_command(
                 )
             except Exception as exc:  # pragma: no cover - lifecycle records the error.
                 logger.warning("Failed to write command failure workbook entry: {}", exc)
+            error_line = next((
+                line.strip() for line in failure_tail.splitlines()
+                if any(token in line for token in ("Error:", "PublishedResearchMismatch", "failed ("))
+            ), "")
+            message = f"{title} failed with exit code {returncode}."
+            if error_line:
+                message = f"{error_line}\n{message}"
+            if failure_tail:
+                message = f"{message}\n{failure_tail}"
             raise ReleaseCommandError(
-                f"{title} failed with exit code {returncode}.\n{failure_tail}".rstrip(),
+                message.rstrip(),
                 release_stage=str(metadata.get("event") or "").strip() or None,
                 title=title,
                 returncode=returncode,

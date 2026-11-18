@@ -82,6 +82,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--preserve-research-data', action='store_true',
         default=os.environ.get('GIDS_PRESERVE_RESEARCH_DATA') == '1')
     args = parser.parse_args(argv)
+    if args.max_total_bytes <= 0:
+        parser.error('--max-total-bytes must be positive')
     config = _config_from_env()
     if not args.release_id or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,160}', args.release_id):
         parser.error('--release-id (or GIDS_RESEARCH_RELEASE_ID) is required')
@@ -103,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
             receipt=ROOT / 'data/cache/isolated-research-publication.json',
             articles_dir=args.articles_dir, template_dir=args.template_dir, inventory=inventory,
             workers=args.workers, prepare_only=args.prepare_only,
-            preserve_research_data=args.preserve_research_data)
+            preserve_research_data=args.preserve_research_data, max_total_bytes=args.max_total_bytes)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 

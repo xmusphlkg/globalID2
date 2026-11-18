@@ -170,6 +170,19 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
                     retry_exc,
                 )
 
+        if task.task_type == TaskType.EXPORT_DATA:
+            try:
+                if await data_release_service.park_publication_failure(
+                    task.task_uuid, exc, allow_running=True,
+                ):
+                    return
+            except Exception as park_exc:
+                logger.warning(
+                    "Failed to park publication wait for {}: {}",
+                    task.task_uuid,
+                    park_exc,
+                )
+
         error_summary = safe_exception_summary(exc)
         logger.error(f"Task {task.task_uuid} failed: {error_summary}")
         try:

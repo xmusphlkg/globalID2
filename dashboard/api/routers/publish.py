@@ -201,7 +201,7 @@ async def start(body: PublishRunCreate, db: AsyncSession = DB_DEPENDENCY):
             result = await publication_execution.enqueue_plan(body, db=db, root=ROOT_DIR,
                 data_dir=get_config().data_dir, service=data_release_service)
         except publication_execution.PublicationPlanError as exc:
-            raise HTTPException(exc.status, {"code": exc.code}) from exc
+            raise HTTPException(exc.status, {"code": exc.code, **getattr(exc, "details", {})}) from exc
         return DataResponse(data=result)
     if sum((body.full, body.reports_only, body.code_only)) > 1:
         raise HTTPException(400, "Full, reports-only and code-only release modes are mutually exclusive")

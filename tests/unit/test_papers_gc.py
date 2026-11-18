@@ -209,3 +209,89 @@ def test_injected_other_channel_candidate_is_rejected(tmp_path):
     with pytest.raises(ValueError, match='plan changed'):
         gc.apply_cleanup(reviewed, client, bucket='test', output=tmp_path, assert_fenced=lambda: None)
     assert not client.deleted
+
+
+def test_prepared_objects_survive_cleanup_even_without_a_published_catalogue(tmp_path):
+    client, names = setup()
+    future = 'paper-template-v3/records/' + 'e' * 64 + '.json'
+    protected = {names['expired_only'], names['orphan'], future}
+    reviewed = gc.prepare_cleanup(client, gc.inventory_papers(client), bucket='test', now=NOW,
+                                  protected_keys=protected)
+    assert reviewed['protected_keys'] == sorted(protected)
+    assert future not in reviewed['retained_keys']
+    assert not reviewed['missing_historical_external_keys']
+    assert {item['key'] for item in reviewed['candidates']} == {names['expired_root'], names['expired_shard']}
+    result = gc.apply_cleanup(reviewed, client, bucket='test', output=tmp_path,
+                              assert_fenced=lambda: None, batch_size=1)
+    assert result['verified'] and result['completed']
+    assert {names['expired_only'], names['orphan']}.issubset(client.objects)
+    assert future not in client.objects
+    previous = list(client.deleted)
+    gc.apply_cleanup(reviewed, client, bucket='test', output=tmp_path,
+                     assert_fenced=lambda: None, batch_size=1)
+    assert client.deleted == previous
+
+
+def test_protected_old_catalogue_retains_its_complete_remote_closure(tmp_path):
+    client, names = setup()
+    reviewed = gc.prepare_cleanup(client, gc.inventory_papers(client), bucket='test', now=NOW,
+                                  protected_keys={names['expired_root']})
+    assert not reviewed['retired_roots']
+    assert {item['key'] for item in reviewed['candidates']} == {names['orphan']}
+    assert {names['expired_root'], names['expired_shard'], names['expired_only']}.issubset(reviewed['retained_keys'])
+    gc.apply_cleanup(reviewed, client, bucket='test', output=tmp_path, assert_fenced=lambda: None)
+    assert client.deleted == [names['orphan']]
+    assert names['expired_only'] in client.objects
+
+
+@pytest.mark.parametrize('change', ['remove_protection', 'inject_protected_deletion'])
+def test_tampered_protected_plan_cannot_bypass_revalidation(tmp_path, change):
+    client, names = setup()
+    reviewed = gc.prepare_cleanup(client, gc.inventory_papers(client), bucket='test', now=NOW,
+                                  protected_keys={names['orphan']})
+    if change == 'remove_protection':
+        reviewed['protected_keys'] = []
+    else:
+        reviewed['candidates'].append({'key': names['orphan'], **client.metadata[names['orphan']]})
+        reviewed['stored_bytes'] += client.metadata[names['orphan']]['bytes']
+    with pytest.raises(ValueError, match='plan changed'):
+        gc.apply_cleanup(reviewed, client, bucket='test', output=tmp_path, assert_fenced=lambda: None)
+    assert not client.deleted
+
+
+def test_missing_published_dependency_is_not_excused_by_protection():
+    client, names = setup()
+    client.metadata.pop(names['nested'])
+    client.objects.pop(names['nested'])
+    with pytest.raises(ValueError, match='Missing current'):
+        gc.prepare_cleanup(client, gc.inventory_papers(client), bucket='test', now=NOW,
+                           protected_keys={names['nested']})
+
+
+def test_original_unprotected_plan_remains_valid(tmp_path):
+    client, names = setup()
+    reviewed = plan(client)
+    assert reviewed.pop('protected_keys') == []
+    result = gc.apply_cleanup(reviewed, client, bucket='test', output=tmp_path, assert_fenced=lambda: None)
+    assert result['verified'] and names['orphan'] in client.deleted
+
+
+@pytest.mark.parametrize('change', ['bucket', 'endpoint', 'schema', 'duplicate', 'unsafe_key'])
+def test_protection_file_requires_the_exact_target_and_valid_keys(tmp_path, change):
+    from scripts.cleanup_papers_generations import load_protected_keys
+
+    _, names = setup()
+    value = {'schema': 1, 'bucket': 'test', 'endpoint': 'https://test.r2.cloudflarestorage.com',
+             'keys': [names['orphan']]}
+    path = tmp_path / 'protection.json'
+    path.write_bytes(json_bytes(value))
+    assert load_protected_keys(path, bucket='test', endpoint=value['endpoint']) == {names['orphan']}
+    if change in {'bucket', 'endpoint', 'schema'}:
+        value[change] = 'different'
+    elif change == 'duplicate':
+        value['keys'].append(names['orphan'])
+    else:
+        value['keys'] = ['site-data/surveillance/current.json']
+    path.write_bytes(json_bytes(value))
+    with pytest.raises(ValueError, match='exact bucket|Duplicate protected|Invalid protected'):
+        load_protected_keys(path, bucket='test', endpoint='https://test.r2.cloudflarestorage.com')

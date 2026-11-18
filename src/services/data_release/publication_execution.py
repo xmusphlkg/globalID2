@@ -17,8 +17,8 @@ from .surveillance_publish import _atomic_receipt
 
 
 class PublicationPlanError(ValueError):
-    def __init__(self, code: str, status: int = 409):
-        self.code, self.status = code, status
+    def __init__(self, code: str, status: int = 409, **details):
+        self.code, self.status, self.details = code, status, details
         super().__init__(code)
 
 
@@ -311,7 +311,12 @@ async def enqueue_plan(body, *, db, root: Path, data_dir: Path, service) -> dict
         kwargs["pending_ids"] = plan["dirty_ids"]
     result = await service.trigger_job(plan["job_id"], manual=True, trigger="publication_plan", **kwargs)
     if result.get("status") == "skipped" and result.get("reason") != "idempotent_replay":
-        raise PublicationPlanError("publication_" + result.get("reason", "enqueue_conflict"))
+        raise PublicationPlanError(
+            "publication_waiting",
+            task_uuid=result.get("task_uuid"),
+            reason=result.get("reason"),
+            publication_wait=result.get("publication_wait"),
+        )
     return result
 
 

@@ -60,6 +60,38 @@ def test_newer_pointer_prevents_any_paper_upload(tmp_path):
     assert not store.writes
 
 
+def test_combined_capacity_preflight_rejects_before_papers_when_json_will_not_fit(tmp_path):
+    from src.services.data_release.papers_content import candidate_upload_sizes
+    from src.services.data_release.r2_object_index import R2StorageBudgetExceeded
+
+    config = replace(CONFIG, public_base_url='https://papers.example')
+    run = tmp_path / 'run'
+    run.mkdir()
+    relative, payload = generation(run, release='candidate')
+    papers = make_candidate(tmp_path / 'papers', {'article.html': 'Article'})
+    paper_sizes = candidate_upload_sizes(papers)
+    budget = sum(paper_sizes.values())
+
+    class BudgetStore(Store):
+        def preflight_objects(self, sizes):
+            assert {key: sizes[key] for key in paper_sizes} == paper_sizes
+            assert sizes[f'{PREFIX}/{relative}'] == len(payload)
+            assert f'{PREFIX}/current.json' in sizes
+            assert any(key.startswith(f'{PREFIX}/intents/') for key in sizes)
+            assert any(key.startswith(f'{PREFIX}/manifests/') for key in sizes)
+            if sum(sizes.values()) > budget:
+                raise R2StorageBudgetExceeded('Combined publication exceeds budget')
+
+    store = BudgetStore()
+    capture_surveillance_baseline(run, config, prefix=PREFIX, client=store)
+    with pytest.raises(R2StorageBudgetExceeded, match='Combined publication'):
+        publish_literature_candidate(run=run, objects_dir=run / 'objects', papers=papers,
+            config=config, receipt=tmp_path / 'receipt.json', client=store)
+    assert not store.writes
+    assert papers.manifest_key not in store.objects
+    assert not (run / 'authority-committed.json').exists()
+
+
 def test_verified_pre_staged_templates_are_not_reuploaded_before_pointer(tmp_path):
     import hashlib
     from src.services.data_release.papers_content import publish_papers_content, verified_existing_objects

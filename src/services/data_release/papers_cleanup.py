@@ -257,11 +257,15 @@ def apply_plan(plan: dict, manifest: bytes, client, *, publication_sha256: str,
     if observed != replacement:
         # Canonical manifests may be gzip encoded; their ETag is over stored
         # bytes, not get_object()'s transparently decoded JSON.
-        status, _ = client._request('PUT', 'papers-manifest.json', body=replacement,
-            content_type='application/json', cache_control='no-cache',
-            conditional_headers={'if-match': '"' + plan['manifest_etag'] + '"'})
-        if status not in (200, 201):
-            raise R2S3Error('Conditional canonical manifest update failed', status=status)
+        condition = {'if-match': '"' + plan['manifest_etag'] + '"'}
+        if callable(getattr(client, '_indexed_put', None)):
+            client._indexed_put('papers-manifest.json', replacement, content_type='application/json',
+                cache_control='no-cache', content_encoding=None, condition=condition)
+        else:
+            status, _ = client._request('PUT', 'papers-manifest.json', body=replacement,
+                content_type='application/json', cache_control='no-cache', conditional_headers=condition)
+            if status not in (200, 201):
+                raise R2S3Error('Conditional canonical manifest update failed', status=status)
     ordered = sorted(keys) + [item['key'] for item in plan.get('prototype', [])]
     removed = 0
     for offset in range(0, len(ordered), batch_size):

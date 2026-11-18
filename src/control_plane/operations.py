@@ -493,7 +493,9 @@ class TaskOperationsService:
             TaskType.UPDATE_DISEASE_KNOWLEDGE,
         }
         completed_collection = task.status == TaskStatus.COMPLETED and task.task_type in collection_types
-        if task.status not in {TaskStatus.FAILED, TaskStatus.CANCELLED} and not completed_collection:
+        publication_wait = (task.metadata_ or {}).get("publication_wait") if isinstance(task.metadata_, dict) else None
+        waiting = task.status == TaskStatus.QUEUED and isinstance(publication_wait, dict)
+        if task.status not in {TaskStatus.FAILED, TaskStatus.CANCELLED} and not completed_collection and not waiting:
             raise RuntimeError(f"Task status '{_value(task.status)}' cannot be retried")
 
         if task.task_type == TaskType.CRAWL_DATA and task.country_id is not None:
@@ -514,6 +516,7 @@ class TaskOperationsService:
                 raise RuntimeError("This country already has a queued or running collection")
 
         metadata = dict(task.metadata_ or {})
+        metadata.pop("publication_wait", None)
         for key in ("cancel_requested", "cancel_requested_at", "cancel_reason"):
             metadata.pop(key, None)
         metadata["retried_at"] = (
