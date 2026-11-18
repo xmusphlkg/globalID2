@@ -9,6 +9,7 @@ export const GET: APIRoute = ({ site }) => {
     'Allow: /',
     '',
     `Sitemap: ${new URL('/sitemap.xml', siteUrl).toString()}`,
+    `Sitemap: ${new URL('/research/sitemap.xml', siteUrl).toString()}`,
   ].join('\n');
 
   return new Response(body, {

@@ -5,8 +5,9 @@ import type { SituationAlertRecord } from '../src/utils/situationTypes';
 // Cold Astro/map compilation can take most of the default 30-second budget.
 test.setTimeout(60_000);
 
-async function mockSituation(page: Page) {
+async function mockSituation(page: Page, withHosts = false) {
   await page.route('**/astro/runtime/client/dev-toolbar/entrypoint.js', route => route.fulfill({ body: '', contentType: 'application/javascript' }));
+  await page.route('**/site-data/**', route => route.fulfill({ status: 404 }));
   const alert = (id: string, published: string, country: string, extra = {}): SituationAlertRecord => ({
     alert_id: id, outbreak_id: 'OB-test', notice_id: `notice-${id}`,
     source_id: 'feed-one', source_label_en: 'Feed one', source_label_zh: null,
@@ -15,7 +16,10 @@ async function mockSituation(page: Page) {
     country_code: country, country_name_en: country === 'CD' ? 'DR Congo' : 'Kenya', country_name_zh: null,
     admin_area: null, status: 'ongoing', cases: 6, deaths: 0, count_basis: 'confirmed',
     as_of: published, published_date: published, quote: 'Six cases reported.',
-    summary_en: null, summary_zh: null, summary_fr: null, ai: null, ...extra,
+    summary_en: null, summary_zh: null, summary_fr: null, ai: null,
+    ...(withHosts && id.startsWith('fresh') ? { host_type: 'human' as const } : {}),
+    ...(withHosts && id === 'recent' ? { host_type: 'animal' as const, host_species: 'wild birds' } : {}),
+    ...extra,
   });
   const alerts = [
     alert('fresh', '2026-11-03', 'CD'),
@@ -76,6 +80,36 @@ test('situation filters remove old map series, including an empty result', async
   await expect.poll(() => renderedPointIds(page)).toEqual([]);
   await page.locator('.sit-reset').click();
   await expect.poll(() => renderedPointIds(page)).toEqual(['fresh', 'recent']);
+});
+
+test('place cards keep known host icons beside the disease and omit unspecified hosts', async ({ page }) => {
+  await mockSituation(page, true);
+  await page.goto('/situation/?window=all');
+  await openPlaceList(page);
+  const rows = page.locator('.sit-places-list .sit-item');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.locator('.sit-host-icon')).toHaveCount(2);
+  await expect(rows.nth(0).getByRole('img', { name: 'Human', exact: true })).toBeVisible();
+  await expect(rows.nth(1).getByRole('img', { name: 'Animal · wild birds', exact: true })).toBeVisible();
+  await expect(rows.nth(2).locator('.sit-host-icon')).toHaveCount(0);
+  await expect(rows.nth(2)).not.toContainText('Host unspecified');
+  for (const row of await rows.all()) {
+    const bounds = await row.boundingBox();
+    expect(bounds!.height).toBeGreaterThanOrEqual(44);
+    expect(bounds!.height).toBeLessThan(58);
+    const disease = await row.locator('.sit-item-disease').boundingBox();
+    const location = await row.locator('.sit-item-place').boundingBox();
+    expect(location!.y).toBeGreaterThan(disease!.y);
+  }
+  const iconPosition = await rows.nth(0).locator('.sit-host-icon').evaluate(icon => {
+    const text = icon.parentElement!.firstChild!;
+    const range = document.createRange(); range.selectNode(text);
+    return { gap: icon.getBoundingClientRect().left - range.getBoundingClientRect().right,
+      sameLine: Math.abs(icon.getBoundingClientRect().top - range.getBoundingClientRect().top) < 5 };
+  });
+  expect(iconPosition.gap).toBeGreaterThanOrEqual(0);
+  expect(iconPosition.gap).toBeLessThan(8);
+  expect(iconPosition.sameLine).toBe(true);
 });
 
 test('timeline shares filters, merges duplicates and keeps all report links', async ({ page }) => {
@@ -202,7 +236,7 @@ test('situation page: filtering recentres the map without errors', async ({ page
 });
 
 
-test('typing filters keeps place selection explicit, scopes monitoring cards and restores cancelled searches', async ({ page }) => {
+test('committing a disease opens its timeline, scopes monitoring cards and restores cancelled searches', async ({ page }) => {
   await mockSituation(page);
   await page.goto('/situation/');
   await openPlaceList(page);
@@ -210,11 +244,15 @@ test('typing filters keeps place selection explicit, scopes monitoring cards and
   const disease = page.getByRole('combobox', { name: 'Disease', exact: true });
   await disease.fill('d050');
   await expect(page.getByRole('option', { name: /Ebola/ })).toBeVisible();
-  await disease.press('Enter');
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+  await disease.press('Enter');
+  await expect(page.locator('.sit-detail.is-open')).toBeVisible();
+  await expect(page.locator('.sit-overview .sit-alert')).toHaveCount(2);
   expect(new URL(page.url()).searchParams.has('place')).toBe(false);
+  expect(new URL(page.url()).searchParams.get('timeline')).toBe('all');
+  await openPlaceList(page);
   await page.locator('.sit-item').first().click();
-  await expect(page.locator('.sit-alert')).toHaveCount(1);
+  await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
   await openPlaceList(page);
   await expect(page.locator('.sit-monitor-count')).toHaveText('2');
@@ -270,21 +308,21 @@ test('MERS shared link groups identical cumulative figures across channels and d
 });
 
 for (const prefix of ['', '/zh', '/fr']) {
-  test(`disease-only links never select a place on load or reload in ${prefix || 'en'}`, async ({ page }) => {
+  test(`disease-only links open the full timeline without selecting a place on load and reload in ${prefix || 'en'}`, async ({ page }) => {
     await mockSituation(page);
-    const outbreakRequests: string[] = [];
-    page.on('request', request => { if (request.url().includes('/outbreaks/')) outbreakRequests.push(request.url()); });
     await page.goto(`${prefix}/situation/?disease=D050&window=all`, { waitUntil: 'domcontentloaded' });
     await openPlaceList(page);
     await expect(page.locator('.sit-item')).toHaveCount(3);
-    await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+    await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+    await expect(page.locator('.sit-overview .sit-alert')).toHaveCount(3);
     expect(new URL(page.url()).searchParams.has('place')).toBe(false);
     expect(new URL(page.url()).searchParams.has('country')).toBe(false);
-    expect(outbreakRequests).toEqual([]);
+    expect(new URL(page.url()).searchParams.get('timeline')).toBe('all');
     await page.reload({ waitUntil: 'domcontentloaded' });
     await openPlaceList(page);
     await expect(page.locator('.sit-item')).toHaveCount(3);
-    await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+    await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+    await expect(page.locator('.sit-overview .sit-alert')).toHaveCount(3);
     expect(new URL(page.url()).searchParams.has('place')).toBe(false);
     await page.locator('.sit-item').first().click();
     await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);

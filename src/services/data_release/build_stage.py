@@ -44,7 +44,13 @@ async def build_release_site(
     # A frozen full publication explicitly requests fresh HTML. Other tasks
     # retain validated incremental rendering; upload-only recovery still uses
     # its already frozen candidate before reaching this stage.
-    force_full_render = (task_data.get("publication_plan") or {}).get("execution_mode") == "full"
+    # Template releases change the renderer or its shared CSS/JS graph. A
+    # cached page can still carry HTML that points at an asset from an older
+    # Astro build, so code-only publications always render from an empty page
+    # and asset graph. Data-only releases keep the incremental path.
+    force_full_render = bool(task_data.get("code_only")) or (
+        (task_data.get("publication_plan") or {}).get("execution_mode") == "full"
+    )
     isolated = runtime.astro_dir != runtime.root_dir / "astro-site"
     path_options = {"astro_dir": runtime.astro_dir} if isolated else {}
     if task_data.get("country_template_only"):

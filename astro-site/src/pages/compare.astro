@@ -2,11 +2,12 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CompareWorkspace from '../components/charts/CompareWorkspace';
 import { diseaseIndex } from '../lib/seo-page-data';
-import { toSeoSlug } from '../lib/seo';
+import { buildAlternatePaths, toSeoSlug } from '../lib/seo';
 import { localizedDiseaseName } from '../utils/diseaseNames';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
+const canonicalPath = `${prefix}/compare/`;
 const options = diseaseIndex.map(disease => ({
     id: disease.disease_id,
     slug: disease.slug,
@@ -16,9 +17,26 @@ const options = diseaseIndex.map(disease => ({
     fr: localizedDiseaseName({ disease_id: disease.disease_id, slug: disease.slug, name_en: disease.name_en, name_zh: disease.name_zh, name_fr: disease.name_fr }, 'fr'),
 }));
 const title = locale === 'zh' ? '地理区域与疾病对比' : locale === 'fr' ? 'Comparer les zones géographiques et les maladies' : 'Compare geographic areas and diseases';
+const description = locale === 'zh'
+  ? '比较不同地理区域和传染病的监测趋势，并查看官方来源与报告期。'
+  : locale === 'fr'
+    ? 'Comparez les tendances de surveillance des maladies infectieuses entre zones géographiques avec leurs sources officielles.'
+    : 'Compare infectious disease surveillance trends across geographic areas with official sources and reporting periods.';
 ---
 
-<BaseLayout title={title} description={title} initialLanguage={locale}>
+<BaseLayout
+  title={title}
+  description={description}
+  initialLanguage={locale}
+  seo={{
+    title: `${title} | GIDS`,
+    description,
+    locale,
+    canonicalPath,
+    alternatePaths: buildAlternatePaths(canonicalPath, locale),
+    pageType: 'WebPage',
+  }}
+>
   <div class="compare-page">
     <p class="academic-kicker">GIDS / {locale === 'zh' ? '数据工具' : locale === 'fr' ? 'Outil de données' : 'Data tool'}</p>
     <h1 class="academic-title">{title}</h1>

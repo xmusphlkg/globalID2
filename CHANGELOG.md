@@ -4,6 +4,19 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.3] - 2026-11-18
+
+### Fixed
+
+- Include all three locales in public sitemaps, localize report breadcrumbs, and correct report and research canonical metadata.
+- Partition research sitemaps by URL count and UTF-8 byte size so every sitemap fits the Pages upload limit without dropping URLs.
+- Validate shared layout styles and local asset references before promoting freshly rendered pages. Resolve isolated build paths physically and retain the last complete output when rendering fails.
+- Require fresh rendering for template releases and cover surveillance export dependency fingerprints with regression tests.
+
+### Improved
+
+- Compact Situation “Places with news” entries, placing accessible human or animal host icons beside the disease name and omitting unknown hosts.
+
 ## [0.20.2] - 2026-11-17
 
 ### Fixed

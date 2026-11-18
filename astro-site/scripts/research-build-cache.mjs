@@ -78,6 +78,7 @@ export function sharedFingerprint() {
     resolve(siteRoot, 'tsconfig.json'),
     ...readdirSync(siteRoot).filter(name => /(?:tailwind|postcss).*config/.test(name)).map(name => resolve(siteRoot, name)),
     resolve(siteRoot, 'scripts', 'build-site.mjs'),
+    resolve(siteRoot, 'scripts', 'build-output.mjs'),
     resolve(siteRoot, 'scripts', 'research-build-cache.mjs'),
     resolve(siteRoot, 'scripts', 'file-fingerprints.mjs'),
     resolve(siteRoot, 'scripts', 'source-dependencies.mjs'),

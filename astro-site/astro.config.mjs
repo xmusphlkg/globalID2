@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import { realpathSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 
 const siteUrl = process.env.GLOBALID_SITE_URL || process.env.SITE_URL || 'https://globalinfectiousdisease.com';
 const buildConcurrency = Number(process.env.GIDS_ASTRO_BUILD_CONCURRENCY ?? 8);
@@ -11,7 +11,7 @@ if (!Number.isInteger(buildConcurrency) || buildConcurrency < 1 || buildConcurre
 
 // Each parallel prerender worker has its own module cache and parses the full
 // research corpus. Keep a single shared cache unless explicitly configured.
-const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 4);
+const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 1);
 if (!Number.isInteger(renderWorkers) || renderWorkers < 0 || renderWorkers > 32) {
   throw new Error('GIDS_ASTRO_RENDER_WORKERS must be an integer from 0 to 32');
 }
@@ -19,24 +19,30 @@ if ([process.env.GIDS_RESEARCH_BUILD_DIR, process.env.GIDS_REPORTS_BUILD_DIR, pr
   throw new Error('Research, reports and country builds require separate workspaces');
 }
 const configuredBuildDir = process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_REPORTS_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR || process.env.GIDS_CODE_BUILD_DIR;
-// Vite resolves module IDs through symlinks. Astro's page-to-asset graph must
-// use the same physical root or it silently omits the page's CSS references.
-// Production release checkouts share exports through a symlinked ancestor.
+// Vite canonicalizes module paths. Astro must use the same physical root or
+// pages under a symlinked exports ancestor can silently lose their CSS links.
 const isolatedBuildDir = configuredBuildDir ? realpathSync(configuredBuildDir) : undefined;
 const privateRoot = (process.env.GIDS_RESEARCH_BUILD_DIR || process.env.GIDS_COUNTRY_BUILD_DIR || process.env.GIDS_CODE_BUILD_DIR)
   ? isolatedBuildDir : undefined;
+const publicBuildDir = process.env.GIDS_BUILD_PUBLIC_DIR ? realpathSync(process.env.GIDS_BUILD_PUBLIC_DIR) : undefined;
+const outputPath = process.env.GIDS_SITE_BUILD_OUTPUT_DIR ? resolve(process.env.GIDS_SITE_BUILD_OUTPUT_DIR) : undefined;
+// Staging output is not created until Astro runs; its parent already exists.
+const stagedOutput = outputPath ? resolve(realpathSync(dirname(outputPath)), basename(outputPath)) : undefined;
 export default defineConfig({
   ...(privateRoot ? { root: resolve(privateRoot) } : {}),
   experimental: { parallelPrerender: renderWorkers ? { workers: renderWorkers } : false },
-  ...(process.env.GIDS_BUILD_PUBLIC_DIR ? { publicDir: resolve(process.env.GIDS_BUILD_PUBLIC_DIR) } : {}),
+  ...(publicBuildDir ? { publicDir: publicBuildDir } : {}),
   ...(isolatedBuildDir ? {
     srcDir: resolve(isolatedBuildDir, 'src'),
-    publicDir: process.env.GIDS_BUILD_PUBLIC_DIR ? resolve(process.env.GIDS_BUILD_PUBLIC_DIR) : resolve(isolatedBuildDir, 'public'),
+    publicDir: publicBuildDir || resolve(isolatedBuildDir, 'public'),
     outDir: resolve(isolatedBuildDir, 'dist'),
     ...(privateRoot ? { cacheDir: resolve(isolatedBuildDir, '.astro') } : {}),
   } : {}),
   site: siteUrl,
   output: 'static',
+  ...(stagedOutput ? {
+    outDir: stagedOutput,
+  } : {}),
   compressHTML: true,
   integrations: [
     react(),

@@ -8,6 +8,7 @@ import { writeBuildRedirects } from './build-redirects.mjs';
 import { astroAssetCacheRoot, incrementalBuildEnabled, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, summarizeBuildPlan, writePending } from './research-build-cache.mjs';
 import { pageSourceSnapshot, planSitePages, pagePlanPath, sitePageCacheRoot, writePagePending } from './page-build-cache.mjs';
 import { preparePublicBuildInputs } from './public-build-inputs.mjs';
+import { promoteBuildOutput, validateStylesheets } from './build-output.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
 const settingsPath = resolve(projectRoot, 'data', 'system-settings.json');
@@ -88,6 +89,7 @@ let plan = independentResearch ? { mode: 'incremental', selected: [], reused: []
   snapshot,
 });
 const assetCachePath = resolve(astroAssetCacheRoot, sharedFingerprint());
+const distPath = resolve(import.meta.dirname, '..', 'dist');
 const elapsedSeconds = started => ((performance.now() - started) / 1000).toFixed(1);
 mkdirSync(resolve(projectRoot, 'data', 'cache'), { recursive: true });
 writeFileSync(planPath, JSON.stringify({ selected: plan.selected }));
@@ -105,6 +107,8 @@ writeFileSync(resolve(projectRoot, 'data/cache/site-build-plan-report.json'), JS
 
 const runAstro = (selectedPath, selectedPagePath) => {
   const started = performance.now();
+  const stagingPath = resolve(import.meta.dirname, '..', `.dist-build-${process.pid}-${Date.now()}`);
+  if (existsSync(stagingPath)) rmSync(stagingPath, { recursive: true, force: true });
   const publicInputs = preparePublicBuildInputs({
     publicRoot: resolve(import.meta.dirname, '..', 'public'),
     stageRoot: resolve(projectRoot, 'data/cache/public-build-inputs', String(process.pid)),
@@ -119,29 +123,32 @@ const runAstro = (selectedPath, selectedPagePath) => {
       GIDS_SITE_DIRECTORY_FACTS: directoryFactsPath(),
       GIDS_SITE_DIRECTORY_VERSION: directoryFactsVersion(),
       PUBLIC_GA4_MEASUREMENT_ID: measurementId,
+      GIDS_SITE_BUILD_OUTPUT_DIR: stagingPath,
       ...(publicInputs.staged ? { GIDS_BUILD_PUBLIC_DIR: publicInputs.publicDir } : {}),
       ...(selectedPath ? { GIDS_RESEARCH_BUILD_PLAN: selectedPath } : { GIDS_RESEARCH_BUILD_PLAN: '' }),
       GIDS_PAGE_BUILD_PLAN: selectedPagePath ?? '',
     },
     stdio: 'inherit',
   }); } finally { publicInputs.cleanup(); }
-  process.stdout.write(`[build-timing] Astro render ${elapsedSeconds(started)}s status=${result.status ?? 'error'}\n`);
-  return result;
+  process.stdout.write(`[build-timing] Astro render ${elapsedSeconds(started)}s status=${result.status ?? 'error'} signal=${result.signal ?? 'none'}\n`);
+  if ((result.status ?? 1) !== 0) process.stderr.write(`Incomplete build retained at ${stagingPath}; dist was not replaced.\n`);
+  return { ...result, stagingPath };
 };
 let result = runAstro(plan.mode === 'incremental' ? planPath : null, pagePlan.mode === 'incremental' ? pagePlanPath : null);
 
 if ((result.status ?? 1) === 0 && (plan.reused.length || pagePlan.reused.length)) {
   const restoreStarted = performance.now();
-  restoreReusablePages(plan);
-  restoreReusablePages(pagePlan, sitePageCacheRoot);
+  restoreReusablePages(plan, undefined, result.stagingPath);
+  restoreReusablePages(pagePlan, sitePageCacheRoot, result.stagingPath);
   process.stdout.write(`[build-timing] restore reusable pages ${elapsedSeconds(restoreStarted)}s\n`);
   const assetsStarted = performance.now();
-  const restoredAssets = mergeAstroAssetTree(assetCachePath, resolve(import.meta.dirname, '..', 'dist', '_astro'));
+  const restoredAssets = mergeAstroAssetTree(assetCachePath, resolve(result.stagingPath, '_astro'));
   process.stdout.write(`[asset-cache] restored ${restoredAssets} shared assets\n`);
-  const available = reusedAssetReferencesAvailable(plan) && reusedAssetReferencesAvailable(pagePlan);
+  const available = reusedAssetReferencesAvailable(plan, result.stagingPath) && reusedAssetReferencesAvailable(pagePlan, result.stagingPath);
   process.stdout.write(`[build-timing] restore and validate shared assets ${elapsedSeconds(assetsStarted)}s\n`);
   if (!available) {
     process.stdout.write('[page-cache] cached page asset missing; rebuilding all page bundles\n');
+    rmSync(result.stagingPath, { recursive: true, force: true });
     result = runAstro(null, null);
     plan = { ...plan, mode: 'full', selected: Object.keys(snapshot.articles), reused: [] };
     pagePlan = { ...pagePlan, mode: 'full', selected: Object.keys(pageSnapshot.articles), reused: [] };
@@ -155,7 +162,7 @@ if (result.error) {
   process.exit(1);
 }
 if ((result.status ?? 1) === 0) {
-  const redirects = writeBuildRedirects();
+  const redirects = writeBuildRedirects({ outputFile: resolve(result.stagingPath, '_redirects') });
   process.stdout.write(`[redirects] generated ${redirects.generatedRules} legacy situation rules\n`);
 }
 const researchFingerprintAfter = contentFingerprint(researchIndexPath);
@@ -173,14 +180,20 @@ if ((result.status ?? 1) === 0 && ((!independentResearch && JSON.stringify(sourc
 }
 if ((result.status ?? 1) === 0) {
   process.stdout.write(`[build-timing] recheck source consistency ${elapsedSeconds(recheckStarted)}s\n`);
+  const requiredPaths = ['index.html', 'zh/index.html', 'fr/index.html',
+    ...Object.values(snapshot.articles).flatMap(article => article.paths),
+    ...Object.values(pageSnapshot.articles).flatMap(article => article.paths)];
+  const css = validateStylesheets(result.stagingPath, { requiredPaths });
+  process.stdout.write(`[stylesheets] PASS ${JSON.stringify(css)}\n`);
   const cacheStarted = performance.now();
   const cachedAssets = replaceAstroAssetCache(
-    resolve(import.meta.dirname, '..', 'dist', '_astro'),
+    resolve(result.stagingPath, '_astro'),
     assetCachePath,
   );
   process.stdout.write(`[asset-cache] saved ${cachedAssets} shared assets\n`);
   if (!independentResearch) writePending(plan);
   writePagePending(pagePlan);
+  promoteBuildOutput(result.stagingPath, distPath);
   process.stdout.write(`[build-timing] save shared assets and pending plans ${elapsedSeconds(cacheStarted)}s\n`);
 }
 process.exit(result.status ?? 1);

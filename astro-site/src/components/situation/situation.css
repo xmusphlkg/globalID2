@@ -74,6 +74,13 @@
 .sit-item-main { display: grid; font-size: .74rem; gap: .1rem; min-width: 0; color: rgb(var(--text-muted)); }
 .sit-item-main strong { color: rgb(var(--text-strong)); font-size: .82rem; }
 .sit-item-meta { align-items: end; color: rgb(var(--text-faint)); display: grid; font-size: .68rem; gap: .2rem; justify-items: end; }
+.sit-places-list .sit-item { min-height: 44px; column-gap: .4rem; row-gap: .15rem; padding: .35rem .45rem; line-height: 1.25; }
+.sit-places-list .sit-dot { grid-row: 1; grid-column: 1; }
+.sit-places-list .sit-item-main { display: contents; }
+.sit-item-disease { grid-row: 1; grid-column: 2 / -1; overflow-wrap: anywhere; }
+.sit-host-icon { display: inline-block; margin-inline-start: .3em; vertical-align: -.12em; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sit-item-place { grid-row: 2; grid-column: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgb(var(--text-muted)); font-size: .7rem; }
+.sit-places-list .sit-item-meta { grid-row: 2; grid-column: 3; display: flex; align-items: center; gap: .35rem; white-space: nowrap; font-size: .64rem; }
 .sit-status { border: 1px solid rgb(var(--border)); color: rgb(var(--text-muted)); font-size: .64rem; font-weight: 750; padding: .05rem .4rem; }
 .sit-status-new { border-color: #e0483d; color: #e0483d; }
 .sit-status-imported { border-color: #f0a030; color: #c77f10; }

@@ -99,6 +99,7 @@ export const STATIC_SITEMAP_PATHS = [
   '/about/',
   '/changelog/',
   '/data-updates/',
+  '/compare/',
   '/subscribe/',
   '/copyright/',
   '/terms/',
@@ -137,14 +138,17 @@ function pathSegment(value: unknown, lowercase = false): string | null {
 function localizedEntry(path: string, lastmod?: string): SitemapEntry[] {
   const englishPath = path;
   const chinesePath = path === '/' ? '/zh/' : `/zh${path}`;
+  const frenchPath = path === '/' ? '/fr/' : `/fr${path}`;
   const alternates = [
     { locale: 'en' as const, path: englishPath },
     { locale: 'zh-CN' as const, path: chinesePath },
+    { locale: 'fr-FR' as const, path: frenchPath },
     { locale: 'x-default' as const, path: englishPath },
   ];
   return [
     { path: englishPath, lastmod, alternates },
     { path: chinesePath, lastmod, alternates },
+    { path: frenchPath, lastmod, alternates },
   ];
 }
 

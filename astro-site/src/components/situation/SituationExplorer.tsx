@@ -126,8 +126,12 @@ export default function SituationExplorer({
         setGeneratedAt(payload.generated_at || initialGeneratedAt);
         const deep = applyDeepLinks(nextPoints, site, nextAsOf, payload.monitoring ?? [], indexed);
         setFilters(deep.filters);
-        setSelection(deep.selection);
-        setTimelineScope(new URLSearchParams(window.location.search).get('timeline') === 'all' ? 'all' : 'place');
+        const params = new URLSearchParams(window.location.search);
+        const diseaseOverview = Boolean(deep.filters.disease
+          && !params.get('place') && !params.get('outbreak') && !deep.filters.country);
+        setSelection(diseaseOverview ? null : deep.selection);
+        const showOverview = params.get('timeline') === 'all' || diseaseOverview;
+        setTimelineScope(showOverview ? 'all' : 'place');
         setDataState('ready');
       })
       .catch(() => {
@@ -277,6 +281,15 @@ export default function SituationExplorer({
   const closeListOnNarrow = () => {
     if (window.matchMedia('(max-width: 899px)').matches) setListMode('closed');
   };
+  const selectDisease = (value: string) => {
+    applyFilters({ ...filters, disease: value });
+    if (value) {
+      // A disease spans places; open its full timeline without picking a marker.
+      setSelection(null);
+      setTimelineScope('all');
+      closeListOnNarrow();
+    }
+  };
   const selectPlace = (id: string) => {
     setTimelineScope('place');
     setSelection({ kind: 'place', id });
@@ -348,7 +361,7 @@ export default function SituationExplorer({
 
   const filterControls = (
     <div className="sit-filter-grid">
-      <SearchableFilter label={copy.disease} value={filters.disease} options={diseases} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('disease', value)} />
+      <SearchableFilter label={copy.disease} value={filters.disease} options={diseases} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={selectDisease} />
       <SearchableFilter label={copy.country} value={filters.country} options={countries} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('country', value)} />
       <SearchableFilter label={copy.source} value={filters.source} options={sources} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('source', value)} />
       <SearchableFilter label={HOST_FILTER_LABEL[locale]} value={filters.host || ''} options={hosts} noResults={copy.noFilterResults} anyLabel={copy.any} onChange={value => set('host', value as HostType | '')} />
@@ -427,9 +440,22 @@ export default function SituationExplorer({
                         <span className={`sit-dot${recency === 'fresh' ? ' is-live' : ''}${recency === 'recent' ? ' is-live-slow' : ''}`} style={{ background: RECENCY_COLORS[recency] }} aria-hidden="true" />
                         <span className="sit-sr">{copy[recency]}</span>
                         <span className="sit-item-main">
-                          <strong>{diseaseName(point, locale)}</strong>
-                          <span>{placeLabel(point, countryName(point, locale))}</span>
-                          <span>{hostLabel(point, locale)}</span>
+                          <strong className="sit-item-disease">{diseaseName(point, locale)}{(point.host_type === 'human' || point.host_type === 'animal') && (
+                            <svg className="sit-host-icon" viewBox="0 0 24 24" width="14" height="14" role="img" aria-label={hostLabel(point, locale)}>
+                              <title>{hostLabel(point, locale)}</title>
+                              {point.host_type === 'human' ? <>
+                                <circle cx="12" cy="5" r="3" />
+                                <path d="M6 14v-2a6 6 0 0 1 12 0v2M9 12v9m6-9v9" />
+                              </> : <>
+                                <ellipse cx="5" cy="9" rx="2" ry="3" />
+                                <ellipse cx="10" cy="5" rx="2" ry="3" />
+                                <ellipse cx="16" cy="5" rx="2" ry="3" />
+                                <ellipse cx="21" cy="10" rx="2" ry="3" />
+                                <path d="M7 16c0-3 3-5 5-5s5 2 5 5c2 1 2 5-1 5-2 0-2-1-4-1s-2 1-4 1c-3 0-3-4-1-5Z" />
+                              </>}
+                            </svg>
+                          )}</strong>
+                          <span className="sit-item-place" title={placeLabel(point, countryName(point, locale))}>{placeLabel(point, countryName(point, locale))}</span>
                         </span>
                         <span className="sit-item-meta">
                           <span className={`sit-status sit-status-${point.status}`}>{STATUS_LABELS[point.status][locale]}</span>

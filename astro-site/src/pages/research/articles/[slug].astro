@@ -6,6 +6,7 @@ import researchRoutes from '../../../data/research/routes.json';
 import { groupResearchSignals } from '../../../lib/research-signal-groups';
 import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/research-integrity';
 import { buildAlternatePaths, clampSeoDescription, clampSeoTitle, normalizeDiseaseHref } from '../../../lib/seo';
+import { absoluteSiteUrl } from '../../../lib/papers';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/diseaseNames';
 import { localizedRegionName, translateUi } from '../../../utils/i18n';
 import { researchSocialImage } from '../../../lib/research-publishing';
@@ -112,8 +113,12 @@ const publicationDateFr = article.publication_date_label_fr ?? (article.publishe
 const authorLine = (article.authors ?? []).join(', ');
 const originalUrl = article.source_urls?.doi ?? article.source_urls?.publisher;
 const isHistoricalBaseline = article.source_kind === 'historical_seed' || article.historical_baseline;
+const canonicalPath = localeHref(`/research/articles/${article.slug}/`);
+const canonicalUrl = absoluteSiteUrl(canonicalPath, Astro.site ?? Astro.url.origin).toString();
 const structuredArticle = {
   '@type': 'ScholarlyArticle',
+  url: canonicalUrl,
+  mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
   headline: article.title,
   datePublished: article.published_at,
   dateModified: article.updated_at,
@@ -152,7 +157,6 @@ const relatedArticles = article.related_articles ?? [];
 const isIndexableEvidencePage = article.indexable !== false
   && Boolean(article.summary?.en)
   && Boolean(article.summary?.zh);
-const canonicalPath = localeHref(`/research/articles/${article.slug}/`);
 const whyItMatters = pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en, article.why_it_matters_fr ?? summaryFr.public_health_relevance);
 const descriptionContext = zh
   ? '本页提供研究设计、主要发现、重要局限、来源标识及相关监测背景。'

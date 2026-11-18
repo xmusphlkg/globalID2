@@ -43,7 +43,6 @@ export default function SurveillanceHomeSummary({ dataUrl, mode, language, repor
       [metricLabels[3], sources],
       ...(reportCount !== undefined ? [[pick('Published reports', '已发布报告', 'Rapports publiés'), reportCount]] : []),
     ].map(([name, value]) => <div key={String(name)}><dt className="academic-kicker mb-2">{name}</dt><dd className="font-semibold tabular-nums">{number(value, language)}</dd></div>)}</dl>
-    <p className="figure-caption home-summary-status">{pick('Data updated', '数据更新于', 'Données mises à jour')} {String(data.generated_at ?? '—').slice(0, 10)}</p>
     <p className="figure-caption mt-2">{pick('Top-level areas and subdivisions are counted separately; their totals are not added together.', '上级区域与下级行政单位分别统计，子级数据不叠加到上级总量。', 'Les zones de niveau supérieur et leurs subdivisions sont comptées séparément, sans additionner leurs totaux.')}</p>
   </div>;
 }

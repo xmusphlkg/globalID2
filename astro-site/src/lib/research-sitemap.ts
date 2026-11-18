@@ -1,13 +1,29 @@
-/** Sitemap pages stay below protocol limits even as the literature grows. */
-export const RESEARCH_SITEMAP_PAGE_SIZE = 45000;
+import { renderSitemapXml, type SitemapEntry } from './sitemap-entries.ts';
 
-export function researchSitemapPageCount(researchCount: number, paperCount: number): number {
-  return Math.max(1, Math.ceil((researchCount + paperCount) / RESEARCH_SITEMAP_PAGE_SIZE));
-}
+/** Leave room for multilingual alternate URLs below the Pages asset limit. */
+export const RESEARCH_SITEMAP_PAGE_SIZE = 10000;
+export const RESEARCH_SITEMAP_MAX_BYTES = 20 * 1024 * 1024;
 
-export function researchSitemapPage<T>(research: T[], papers: T[], page: number): T[] {
-  const start = (page - 1) * RESEARCH_SITEMAP_PAGE_SIZE, end = start + RESEARCH_SITEMAP_PAGE_SIZE;
-  return [...research.slice(start, end), ...papers.slice(Math.max(0, start - research.length), Math.max(0, end - research.length))];
+/** Count UTF-8 XML bytes as well as URLs; long hreflang URLs can dominate size. */
+export function researchSitemapPages(research: SitemapEntry[], papers: SitemapEntry[], origin: string,
+  maxBytes = RESEARCH_SITEMAP_MAX_BYTES): SitemapEntry[][] {
+  const pages: SitemapEntry[][] = [[]];
+  let bytes = 0;
+  for (const entry of [...research, ...papers]) {
+    // Including the XML envelope per entry is conservative: the rendered page
+    // only writes it once, so every partition stays below this byte budget.
+    const size = Buffer.byteLength(renderSitemapXml([entry], origin));
+    if (size > maxBytes) throw new Error(`Research sitemap entry exceeds its byte budget: ${entry.path}`);
+    let page = pages[pages.length - 1];
+    if (page.length && (page.length >= RESEARCH_SITEMAP_PAGE_SIZE || bytes + size > maxBytes)) {
+      page = [];
+      pages.push(page);
+      bytes = 0;
+    }
+    page.push(entry);
+    bytes += size;
+  }
+  return pages;
 }
 
 export function renderResearchSitemapIndex(origin: string, count: number): string {
