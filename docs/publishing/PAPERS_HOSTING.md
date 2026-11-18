@@ -93,10 +93,10 @@ Before any upload it checks a conservative final bucket size: raw candidate
 bytes, retained dependencies, the completion manifest and all other objects in
 the same bucket. A breach fails publication before mutation. This reserves
 headroom for Reports and the account's other buckets; it is not an account-wide
-billing guarantee. Cloudflare's free allowance is monthly storage and operation
-usage, so monitor Class A/B usage as well as bytes. The budget may reject a
-compressible candidate conservatively; do not raise it without reviewing the
-account's complete usage.
+billing guarantee. Cloudflare's account usage page remains the source for
+current storage and operation charges. The budget may reject a compressible
+candidate conservatively; do not raise it without reviewing the account's
+complete usage.
 
 For a direct static research candidate, build with `GIDS_RESEARCH_STATIC_HOST=1`
 and run `scripts/prepare_static_research_release.py` against a verified Pages

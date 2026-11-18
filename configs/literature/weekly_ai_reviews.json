@@ -146,7 +146,7 @@
           "bilingual_mismatch",
           "french_mismatch"
         ],
-        "reviewed_at": "2026-11-16T05:18:12+00:00",
+        "reviewed_at": "2026-11-18T13:01:32+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center",
@@ -157,12 +157,9 @@
       "week": "2026-W46",
       "brief_fingerprint": "6c3efdb9c150b0f71f6077e20eb39e58efa84dba98ded3b70106e0c06934a594",
       "review": {
-        "verdict": "needs_editorial_review",
-        "issue_codes": [
-          "content_too_large",
-          "invalid_monitoring_relation"
-        ],
-        "reviewed_at": "2026-11-16T05:13:01+00:00",
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-11-18T13:00:38+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center",
