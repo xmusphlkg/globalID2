@@ -328,7 +328,7 @@ export default function CountriesMapView({ metaCountries: initialCountries = [],
   };
   const option = useMemo(() => mapReady ? ({
     backgroundColor: 'transparent',
-    geo: { map: MAP_NAME, roam: true, boundingCoords: DEFAULT_BOUNDS, left: 0, right: 0, top: 0, bottom: 0, scaleLimit: { min: 0.7, max: 8 }, silent: true, itemStyle: { areaColor: palette.areaColor, borderColor: palette.areaBorder, borderWidth: 0.5 }, emphasis: { itemStyle: { areaColor: palette.areaHover }, label: { show: false } } },
+    geo: { map: MAP_NAME, roam: true, boundingCoords: DEFAULT_BOUNDS, left: 0, right: 0, top: 0, bottom: 0, scaleLimit: { min: 0.7, max: 8 }, silent: false, itemStyle: { areaColor: palette.areaColor, borderColor: palette.areaBorder, borderWidth: 0.5 }, emphasis: { itemStyle: { areaColor: palette.areaHover }, label: { show: false } } },
     // The interactive HTML dots below are the single source of marker pixels.
     // Keeping an invisible scatter series gives ECharts a geo coordinate layer
     // to roam without doubling each marker visually.
