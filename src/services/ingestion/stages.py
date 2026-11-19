@@ -279,8 +279,8 @@ class StageRun:
                 row.metrics = {**(row.metrics or {}), **metrics}
         self.current = None
 
-    async def mark_dirty(self, db: AsyncSession, scope_key: str) -> None:
-        await mark_dirty(db, line=self.line, scope_key=scope_key, task_uuid=self.task_uuid)
+    async def mark_dirty(self, db: AsyncSession, scope_key: str, *, change_set: dict | None = None) -> None:
+        await mark_dirty(db, line=self.line, scope_key=scope_key, task_uuid=self.task_uuid, change_set=change_set)
 
 
 __all__ += ["StageRun", "mark_dirty"]

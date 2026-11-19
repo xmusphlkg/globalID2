@@ -781,7 +781,12 @@ class LiteraturePipeline:
                             batch_counts["updated"] += int(not was_inserted)
                             if was_inserted:
                                 inserted_article_ids.append(candidate.article_id)
-                        await stages.mark_dirty(db, "*")
+                        from .publication_changes import build_literature_change_set
+                        affected = getattr(repository, "affected_article_ids", None)
+                        if affected is None or affected:
+                            await stages.mark_dirty(db, "*", change_set=(
+                                build_literature_change_set(affected, change_kind="article")
+                                if affected is not None else None))
                     return batch_counts
 
                 batch_counts = await _retry_postgres_deadlock(
@@ -1027,7 +1032,6 @@ class LiteraturePipeline:
                 counts=counts,
                 checkpoint=checkpoint,
                 through_indexed_at=through_indexed_at,
-                publish_task_uuid=stages.task_uuid,
                 source=(
                     self._source_label(crossref=False, pubmed_fallback=True)
                     if pubmed_fallback

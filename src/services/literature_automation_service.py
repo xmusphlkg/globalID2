@@ -323,6 +323,8 @@ class LiteratureAutomationService:
             "gaps_reopened": 0,
         }
         published_article_ids: list[str] = []
+        changed_article_ids: set[str] = set()
+        gap_scope_changed = False
         decision_reasons: dict[str, Counter[str]] = {
             "articles": Counter(),
             "links": Counter(),
@@ -373,6 +375,7 @@ class LiteratureAutomationService:
                         elif link.status == "review":
                             counts["link_exceptions"] += 1
                         if not dry_run and effective != link.status:
+                            changed_article_ids.add(article.article_id)
                             link.status = effective
                             link.reviewed_at = at
                             link.reviewed_by = AUTOPILOT_ACTOR
@@ -512,6 +515,7 @@ class LiteratureAutomationService:
                     if desired == original_status:
                         continue
                     article.publication_status = desired
+                    changed_article_ids.add(article.article_id)
                     db.add(LiteratureStatusEvent(
                         article_id=article.article_id,
                         event_type="publication_status_changed",
@@ -594,6 +598,8 @@ class LiteratureAutomationService:
                         if summary.status != "archived":
                             counts["summaries_archived"] += 1
                         if not dry_run and summary.status != "archived":
+                            if summary.status == "published":
+                                changed_article_ids.add(summary.article_id)
                             summary.status = "archived"
                             summary.generation_metadata = {
                                 **(summary.generation_metadata or {}),
@@ -624,6 +630,8 @@ class LiteratureAutomationService:
                             # Already waiting: rewriting the audit each cycle only churns updated_at.
                             continue
                         if not dry_run:
+                            if reopen:
+                                changed_article_ids.add(summary.article_id)
                             if restore or reopen:
                                 summary.status = "review"
                             summary.generation_metadata = {
@@ -698,6 +706,7 @@ class LiteratureAutomationService:
                 elif desired == "open" and gap.status != "open":
                     counts["gaps_reopened"] += 1
                 if not dry_run and desired != gap.status:
+                    gap_scope_changed = True
                     gap.status = desired
                     gap.resolved_at = at if desired == "covered" else None
                     gap.resolution_note = (
@@ -742,8 +751,10 @@ class LiteratureAutomationService:
             else:
                 run_uuid = None
             if not dry_run:
-                from src.services.ingestion.stages import mark_dirty
-                await mark_dirty(db, line="literature", scope_key="*", task_uuid=source_task_uuid)
+                from src.literature.publication_changes import mark_literature_dirty
+                await mark_literature_dirty(db, task_uuid=source_task_uuid,
+                    article_ids=None if gap_scope_changed else changed_article_ids,
+                    change_kind="automation")
                 await db.commit()
         result = {
             "enabled": config.autopilot_enabled,

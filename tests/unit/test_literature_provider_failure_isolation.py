@@ -31,7 +31,7 @@ def isolate_stage_persistence(monkeypatch):
             pass
         async def finish(self, **_kwargs):
             pass
-        async def mark_dirty(self, *_args):
+        async def mark_dirty(self, *_args, **_kwargs):
             pass
     monkeypatch.setattr("src.services.ingestion.stages.StageRun", Stages)
 

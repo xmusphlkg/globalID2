@@ -146,7 +146,7 @@
           "bilingual_mismatch",
           "french_mismatch"
         ],
-        "reviewed_at": "2026-11-18T13:01:32+00:00",
+        "reviewed_at": "2026-11-19T07:51:37+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center",

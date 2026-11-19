@@ -14,7 +14,7 @@ def population(code="AU-NSW", year=2024, value=8_492_050):
 
 
 def monthly(values=None):
-    return {"name_en": "Pertussis", "name_zh": "百日咳", "period_granularity": "monthly", "dates": ["2024-01-01", "2024-02-01"], "cases": values or [0, 100], "deaths": [900, 900], "selected_series_codes": ["SER_TEST"], "definition_version": "same-definition"}
+    return {"name_en": "Pertussis", "name_zh": "百日咳", "period_granularity": "monthly", "dates": ["2024-01-01", "2024-02-01"], "cases": values or [0, 100], "deaths": [900, 900], "selected_series_codes": ["SER_TEST"], "point_series_codes": ["SER_TEST"], "projection_policy": "single_series", "source_series": [{"series_code": "SER_TEST", "dimension_key": "all", "dimensions": {}, "aggregation_policy": "non_additive", "mapping_relation": "exact", "metric_type": "case_notifications", "temporal_granularity": "monthly", "unit": "count"}], "definition_version": "same-definition"}
 
 
 def test_population_is_local_official_exact_year_with_traceable_semantics():
@@ -57,6 +57,50 @@ def test_monthly_numerator_preserves_zero_null_and_suppression_and_ignores_death
 ])
 def test_non_comparable_or_non_interval_counts_are_not_admitted(patch):
     assert monthly_series({**monthly(), **patch}, "AU") is None
+
+
+def test_cn_projection_allows_resolved_non_additive_sources_and_raw_points():
+    entry = monthly()
+    entry.update({
+        "projection_policy": "priority_overlay",
+        "selected_series_codes": ["SER_HIGH", "SER_LOW"],
+        "point_series_codes": ["SER_HIGH", "SER_LOW"],
+        "quality_statuses": ["raw", "raw"],
+        "source_series": [
+            {"series_code": "SER_HIGH", "dimension_key": "all", "dimensions": {},
+             "aggregation_policy": "non_additive", "projection_policy": "priority_overlay",
+             "projection_priority": 200, "comparability_set": "CN_TEST",
+             "mapping_relation": "exact", "metric_type": "case_notifications",
+             "temporal_granularity": "monthly", "unit": "count"},
+            {"series_code": "SER_LOW", "dimension_key": "all", "dimensions": {},
+             "aggregation_policy": "non_additive", "projection_policy": "priority_overlay",
+             "projection_priority": 100, "comparability_set": "CN_TEST",
+             "mapping_relation": "exact", "metric_type": "case_notifications",
+             "temporal_granularity": "monthly", "unit": "count"},
+        ],
+    })
+    result = monthly_series(entry, "CN")
+    assert result["points"] == [["2024-01-01", 0, "observed"], ["2024-02-01", 100, "observed"]]
+
+
+def test_cn_non_additive_sources_without_projection_resolution_are_rejected():
+    entry = monthly()
+    entry.update({
+        "projection_policy": "representative_series",
+        "selected_series_codes": ["SER_TEST", "SER_OTHER"],
+        "point_series_codes": ["SER_TEST", "SER_OTHER"],
+        "source_series": [
+            {"series_code": "SER_TEST", "dimension_key": "all", "dimensions": {}, "aggregation_policy": "non_additive"},
+            {"series_code": "SER_OTHER", "dimension_key": "all", "dimensions": {}, "aggregation_policy": "non_additive"},
+        ],
+    })
+    assert monthly_series(entry, "CN") is None
+
+
+def test_legacy_fallback_curves_are_not_admitted_to_subnational_maps():
+    entry = monthly()
+    entry["data_layer"] = "legacy_fallback"
+    assert monthly_series(entry, "AU") is None
 
 
 def test_map_does_not_mix_national_counts_or_other_year_population():

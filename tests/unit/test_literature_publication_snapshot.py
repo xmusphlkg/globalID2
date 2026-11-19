@@ -122,7 +122,8 @@ async def test_export_uses_supplied_snapshot_and_private_directories(tmp_path, m
     )
     assert payload["snapshot"] == {"snapshot_id": "s1"}
     collect.assert_awaited_once_with(session, diseases_by_id={"D1": {}},
-        surveillance_coverage={"D1": {"US"}}, limit=100, title_cache_path=None)
+        surveillance_coverage={"D1": {"US"}}, limit=100, title_cache_path=None,
+        selected_article_ids=None, previous_projection=None, projection_state={})
     assert calls[0][1:] == (private / "build", private / "public")
     (private / "existing").touch()
     with pytest.raises(ValueError, match="empty private"):

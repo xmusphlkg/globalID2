@@ -36,6 +36,9 @@ from src.core.task_manager import task_manager
 from src.domain import Task, TaskPriority, TaskStatus, TaskType
 from src.services._lifecycle import safe_exception_summary
 from src.services.data_release.channel_control import is_automatic_json_paused
+from src.services.data_release.publication_wait import (
+    static_reservation_blocks_json,
+)
 from src.services.task_executor import (
     execute_task,
     recover_interrupted_tasks_on_startup,
@@ -386,18 +389,21 @@ async def _claim_next_task_uuid(
             (Task.priority == TaskPriority.NORMAL, 2),
             else_=3,
         )
-        static_owner = aliased(Task)
-        static_blocking = (
-            select(static_owner.id)
-            .where(
-                static_owner.task_type == TaskType.EXPORT_DATA,
-                static_owner.status.in_((TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING)),
-                static_owner.input_data["data_only"].as_boolean().is_not(True),
-                static_owner.input_data["raw_archive_only"].as_boolean().is_not(True),
-                static_owner.input_data["reports_only"].as_boolean().is_not(True),
-                static_owner.input_data["theme_only"].as_boolean().is_not(True),
+        static_tasks = (
+            await db.execute(
+                select(Task).where(
+                    Task.task_type == TaskType.EXPORT_DATA,
+                    Task.status.in_((TaskStatus.RUNNING, TaskStatus.PENDING, TaskStatus.QUEUED)),
+                    Task.input_data["data_only"].as_boolean().is_not(True),
+                    Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                    Task.input_data["reports_only"].as_boolean().is_not(True),
+                    Task.input_data["theme_only"].as_boolean().is_not(True),
+                )
             )
-            .exists()
+        ).scalars().all()
+        static_blocking = any(
+            static_reservation_blocks_json(task, datetime.now(timezone.utc))
+            for task in static_tasks
         )
         wait_kind = Task.metadata_["publication_wait"]["kind"].as_string()
         wait_not_before = Task.metadata_["publication_wait"]["not_before"].as_string()
@@ -411,7 +417,7 @@ async def _claim_next_task_uuid(
                     wait_not_before <= datetime.now(timezone.utc).isoformat(),
                 ),
             ))
-            .where(or_(~or_(surveillance_data, literature_data), ~static_blocking))
+            .where(or_(~or_(surveillance_data, situation_data, literature_data), not static_blocking))
             .where(or_(~health_operation, health_room))
             .order_by(
                 case(

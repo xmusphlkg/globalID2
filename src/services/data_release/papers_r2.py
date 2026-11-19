@@ -223,6 +223,35 @@ class R2S3Client:
         self.timeout_seconds = timeout_seconds
         self.region = "auto"
         self.service = "s3"
+        self._operation_lock = threading.Lock()
+        self._operation_counts: dict[str, int] = {}
+
+    def operation_counts(self) -> dict[str, Any]:
+        """Count transport attempts, including retries; not a billing invoice.
+
+        Reused local receipts never reach the transport. LIST pages each count
+        once; HEAD/GET are reads and DeleteObjects is a free operation.
+        """
+        with self._operation_lock:
+            counts = dict(self._operation_counts)
+        return {
+            "requests": sum(counts.values()),
+            "class_a_requests": sum(counts.get(key, 0) for key in ("put", "copy", "list")),
+            "class_b_requests": sum(counts.get(key, 0) for key in ("get", "head")),
+            "delete_requests": counts.get("delete", 0),
+            "by_operation": counts,
+        }
+
+    def _record_operation(self, method: str, query: str, headers: dict | None) -> None:
+        operation = method.lower()
+        if method == "GET" and "list-type" in urllib.parse.parse_qs(query):
+            operation = "list"
+        elif method == "PUT" and (headers or {}).get("x-amz-copy-source"):
+            operation = "copy"
+        elif method == "POST" and query == "delete=":
+            operation = "delete"
+        with self._operation_lock:
+            self._operation_counts[operation] = self._operation_counts.get(operation, 0) + 1
 
     @contextmanager
     def _pooled_open(self, request: Request, timeout: float):
@@ -586,6 +615,7 @@ class R2S3Client:
                 conditional_headers=conditional_headers,
             )
             try:
+                self._record_operation(method, query, conditional_headers)
                 with self._opener(request, self.timeout_seconds) as response:
                     if response_headers is not None:
                         response_headers.update({str(k).lower(): str(v)

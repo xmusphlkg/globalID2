@@ -37,6 +37,7 @@ from src.services.data_release.publication_wait import (
     contract_fingerprint,
     failure_kind,
     surveillance_baseline_ready,
+    static_reservation_blocks_json,
     wait_reason,
 )
 from src.services.data_release.global_selection import read_selected_batch, selection_batches
@@ -647,15 +648,17 @@ class DataReleaseService:
             ).order_by(Task.created_at.asc()).limit(1))).scalar_one_or_none()
 
     async def _open_static_reservation(self) -> Task | None:
+        now = datetime.now(timezone.utc)
         async with get_database() as db:
-            return (await db.execute(select(Task).where(
+            tasks = (await db.execute(select(Task).where(
                 Task.task_type == TaskType.EXPORT_DATA,
                 Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING]),
                 Task.input_data["data_only"].as_boolean().is_not(True),
                 Task.input_data["raw_archive_only"].as_boolean().is_not(True),
                 Task.input_data["reports_only"].as_boolean().is_not(True),
                 Task.input_data["theme_only"].as_boolean().is_not(True),
-            ).order_by(Task.created_at.asc()).limit(1))).scalar_one_or_none()
+            ).order_by(Task.created_at.asc()))).scalars().all()
+        return next((task for task in tasks if static_reservation_blocks_json(task, now)), None)
 
     async def schedule_automatic_retry_after_failure(
         self,

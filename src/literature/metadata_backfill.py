@@ -492,6 +492,7 @@ async def backfill_existing_literature_metadata(
                     operation="metadata_backfill",
                     task_uuid=task_uuid,
                     details={"run_id": stats["run_id"], "article_ids": changed_article_ids},
+                    article_ids=changed_article_ids, change_kind="metadata",
                 )
             elif apply:
                 # Release the read transaction at every batch boundary as before.

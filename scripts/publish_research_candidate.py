@@ -100,6 +100,10 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
     if os.environ.get('GIDS_PAPERS_PROJECTION_V3') != '1':
         raise ValueError('Papers v3 publication requires the explicit projection feature gate')
     if prepare_build:
+        from src.services.data_release.site_research_reuse import capture_render_inputs, project_root
+        root = project_root(run)
+        if root is not None:
+            capture_render_inputs(root, run)
         return freeze_projection_build_baseline(run=run,
             previous=validate_manifest(previous)[0] if previous else None, origin=config.public_base_url)
     projected = None
@@ -136,6 +140,10 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
             if identity(current['files']) != identity(baseline_files):
                 raise ValueError('Direct paper update requires unchanged directory/index projections; run the regular research build')
         elif projected is None:
+            from src.services.data_release.site_research_reuse import capture_render_inputs, project_root
+            root = project_root(run)
+            if root is not None and (run / 'research-render-inputs.json').is_file():
+                capture_render_inputs(root, run)
             manifest_path = run / 'papers-build-manifest.json'
             if manifest_path.exists():
                 manifest = json.loads(manifest_path.read_bytes())
@@ -211,6 +219,10 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
         if projection_receipt_path.is_file():
             result['projection'] = json.loads(projection_receipt_path.read_bytes())
         _atomic_write(run / 'published.json', json.dumps(result, ensure_ascii=False, separators=(',', ':')).encode())
+        from src.services.data_release.site_research_reuse import project_root, record_committed_inputs
+        root = project_root(run)
+        if root is not None:
+            record_committed_inputs(root, run, config)
         return result
 
 

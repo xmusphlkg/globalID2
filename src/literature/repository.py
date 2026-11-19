@@ -28,6 +28,25 @@ from .types import ArticleCandidate, Classification
 logger = get_logger(__name__)
 
 
+def _publication_fingerprint(article: LiteratureArticle) -> str:
+    """Public projection dependencies, excluding provider-only bookkeeping."""
+    fields = ("article_id", "slug", "doi", "pmid", "pmcid", "openalex_id", "title", "journal",
+              "publisher", "authors", "article_type", "study_type", "published_at", "indexed_at",
+              "abstract_text", "source_urls", "open_access_status", "open_access_url", "license_url",
+              "peer_review_status", "integrity_status", "discovery_score", "publication_status", "is_featured")
+    metadata = article.metadata_ or {}
+    value = {key: getattr(article, key, None) for key in fields}
+    for key in ("published_at", "indexed_at"):
+        stamp = value[key]
+        if isinstance(stamp, datetime):
+            value[key] = (stamp.replace(tzinfo=timezone.utc) if stamp.tzinfo is None
+                          else stamp.astimezone(timezone.utc)).isoformat()
+    value["metadata"] = {key: metadata.get(key) for key in (
+        "classification_fingerprint", "classification_version", "classification_evidence", "version_relations")}
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, default=str,
+                                    separators=(",", ":")).encode()).hexdigest()
+
+
 def _merge_version_relations(
     existing: list[Any],
     incoming: list[dict[str, str]],
@@ -106,6 +125,8 @@ def _classification_metadata(
 class LiteratureRepository:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
+        # Includes reciprocal version-relation changes made by an upsert.
+        self.affected_article_ids: set[str] = set()
 
     async def upsert(
         self,
@@ -129,6 +150,7 @@ class LiteratureRepository:
         else:
             previous_integrity = article.integrity_status
             previous_publication_status = article.publication_status
+        before_publication = None if inserted else _publication_fingerprint(article)
 
         existing_metadata = dict(article.metadata_ or {})
         editorial_locked = bool(existing_metadata.get("editorial_locked"))
@@ -258,6 +280,8 @@ class LiteratureRepository:
             else:
                 article.publication_status = next_publication_status
 
+        if inserted or before_publication != _publication_fingerprint(article):
+            self.affected_article_ids.add(article.article_id)
         await self.db.flush()
         if inserted or classification_changed:
             await self._replace_links(candidate.article_id, classification)
@@ -427,7 +451,9 @@ class LiteratureRepository:
                     list(target_metadata.get("version_relations") or []),
                     [mapped],
                 )
-                target.metadata_ = target_metadata
+                if target_metadata != (target.metadata_ or {}):
+                    target.metadata_ = target_metadata
+                    self.affected_article_ids.add(target.article_id)
             mapped_relations.append(mapped)
         return mapped_relations
 
@@ -437,7 +463,7 @@ class LiteratureRepository:
         classification: Classification,
     ) -> None:
         """Replace classifier-owned fields without touching editorial state."""
-
+        before = _publication_fingerprint(article)
         article.study_type = classification.study_type
         article.relevance_score = classification.relevance_score
         article.public_health_score = classification.public_health_score
@@ -447,6 +473,8 @@ class LiteratureRepository:
         article.metadata_ = {**article.metadata_, "initial_screen": {
             key: value for key, value in screen.items() if key != "controlled_subjects"
         }}
+        if before != _publication_fingerprint(article):
+            self.affected_article_ids.add(article.article_id)
         await self.db.flush()
         await self._replace_links(article.article_id, classification)
 

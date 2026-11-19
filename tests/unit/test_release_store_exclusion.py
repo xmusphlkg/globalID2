@@ -144,6 +144,59 @@ async def test_literature_lane_is_independent_of_json_but_excludes_static_builds
     assert (claimed is not None) is expected
 
 
+@pytest.mark.parametrize("wait_kind", ["baseline_invalid", "contract_blocked", "blocked_by_static"])
+@pytest.mark.parametrize("line", ["surveillance", "situation", "literature"])
+async def test_parked_static_wait_does_not_deadlock_json_claim(worker_database, wait_kind, line):
+    """A non-runnable static reservation must not hold the JSON worker lane."""
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="parked-static", task_name="Parked site release",
+                 task_type=TaskType.EXPORT_DATA, status=TaskStatus.QUEUED,
+                 input_data={"content_only": True},
+                 metadata_={"publication_wait": {"kind": wait_kind}}),
+            Task(task_uuid="json", task_name=f"{line.title()} JSON",
+                 task_type=TaskType.EXPORT_DATA, status=TaskStatus.QUEUED,
+                 input_data={"data_only": True, "data_line": line}),
+        ])
+        await session.commit()
+
+    assert await task_worker._claim_next_task_uuid("worker") == (
+        "json", TaskType.EXPORT_DATA
+    )
+
+
+async def test_running_static_release_still_blocks_json_claim(worker_database):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="running-static", task_name="Site release",
+                 task_type=TaskType.EXPORT_DATA, status=TaskStatus.RUNNING,
+                 input_data={"content_only": True}),
+            Task(task_uuid="json", task_name="Situation JSON",
+                 task_type=TaskType.EXPORT_DATA, status=TaskStatus.QUEUED,
+                 input_data={"data_only": True, "data_line": "situation"}),
+        ])
+        await session.commit()
+
+    assert await task_worker._claim_next_task_uuid("worker") is None
+
+
+async def test_queued_static_release_without_wait_still_blocks_json_claim(worker_database):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="queued-static", task_name="Site release",
+                 task_type=TaskType.EXPORT_DATA, status=TaskStatus.QUEUED,
+                 input_data={"content_only": True}),
+            Task(task_uuid="json", task_name="Situation JSON",
+                 task_type=TaskType.EXPORT_DATA, status=TaskStatus.QUEUED,
+                 input_data={"data_only": True, "data_line": "situation"}),
+        ])
+        await session.commit()
+
+    assert await task_worker._claim_next_task_uuid(
+        "worker", blocked_task_types={TaskType.EXPORT_DATA}
+    ) is None
+
+
 @pytest.mark.parametrize("active_status", [TaskStatus.RUNNING, TaskStatus.RETRYING])
 @pytest.mark.parametrize("active_flags,queued_flags,blocked,expected", [
     ({"content_only": True}, {"data_only": True}, {TaskType.EXPORT_DATA}, True),

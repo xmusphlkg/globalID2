@@ -21,6 +21,7 @@ from src.domain import (
 )
 
 from .query_batches import argument_batches
+from .publication_changes import build_literature_change_set
 from .classification import (
     CLASSIFICATION_VERSION,
     classify_candidate,
@@ -155,13 +156,16 @@ async def reclassify_existing_literature(
             topics_added += len(new_topics - existing_topics[article.article_id])
             if not dry_run:
                 await repository.replace_classification(article, classification)
+                if differs:
+                    repository.affected_article_ids.add(article.article_id)
 
-        if not dry_run and articles:
+        if not dry_run and repository.affected_article_ids:
             from src.services.ingestion.manual_runs import record_manual_store
             await record_manual_store(
                 db, line="literature", scope_keys=["*"],
                 operation="reclassify_literature",
                 metrics={"examined": len(articles), "changed": changed},
+                change_set=build_literature_change_set(repository.affected_article_ids, change_kind="classification"),
             )
 
     # A scoped run must not modify links for the rest of the corpus. Those
@@ -263,6 +267,7 @@ async def reconcile_automatic_signal_links(*, dry_run: bool = False) -> dict[str
                 country_evidence[row.article_id][str(row.country_code).upper()] = float(row.confidence or 0.0)
 
         changed = upgraded = downgraded = skipped = 0
+        changed_article_ids: set[str] = set()
         relation_rank = {"candidate": 0, "disease_context": 1, "exact_disease_geography": 2}
         now = datetime.now(timezone.utc).replace(microsecond=0)
         strongest_confirmed: dict[str, str] = {}
@@ -291,6 +296,7 @@ async def reconcile_automatic_signal_links(*, dry_run: bool = False) -> dict[str
             )
             changed += int(differs)
             if not dry_run and differs:
+                changed_article_ids.add(link.article_id)
                 previous = {
                     "relation_level": link.relation_level,
                     "status": link.status,
@@ -348,7 +354,10 @@ async def reconcile_automatic_signal_links(*, dry_run: bool = False) -> dict[str
                     "weight": 0.15,
                     "contribution": round(relation_score * 0.15, 4),
                 }
-                article.discovery_score = round(sum(float(row.get("contribution") or 0.0) for row in components.values()), 3)
+                desired_score = round(sum(float(row.get("contribution") or 0.0) for row in components.values()), 3)
+                if article.discovery_score != desired_score:
+                    changed_article_ids.add(article.article_id)
+                article.discovery_score = desired_score
                 metadata["discovery_score_evidence"] = {
                     **discovery,
                     "surveillance_relation_level": relation_level,
@@ -357,13 +366,15 @@ async def reconcile_automatic_signal_links(*, dry_run: bool = False) -> dict[str
                 }
                 article.metadata_ = metadata
 
-        if not dry_run and (changed or strongest_confirmed):
+        if not dry_run and changed_article_ids:
             from src.services.ingestion.manual_runs import record_manual_store
             await record_manual_store(
                 db, line="literature", scope_keys=["*"],
                 operation="reconcile_literature_signal_links",
                 metrics={"changed": changed, "upgraded": upgraded,
                          "downgraded": downgraded},
+                change_set=build_literature_change_set(
+                    changed_article_ids, change_kind="signal_link"),
             )
 
     return {

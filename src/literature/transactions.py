@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
+from collections.abc import Iterable
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -23,6 +24,8 @@ async def commit_literature_change(
     task_uuid: str | None = None,
     actor: str | None = None,
     details: dict[str, Any] | None = None,
+    article_ids: Iterable[str] | None = None,
+    change_kind: str = "article",
 ) -> str:
     """Commit facts, dirty marker and any synchronous operation record together.
 
@@ -32,7 +35,7 @@ async def commit_literature_change(
     Any failure rolls back even if the caller catches the exception afterwards.
     """
     from src.ai.runtime import current_parent
-    from src.services.ingestion.stages import mark_dirty
+    from src.literature.publication_changes import mark_literature_dirty
 
     try:
         if task_uuid is None:
@@ -67,7 +70,8 @@ async def commit_literature_change(
                 output_data={"line": "literature", "scope_key": "*"},
                 metadata_={"execution_mode": "synchronous", "audit_record": True},
             ))
-        await mark_dirty(db, line="literature", scope_key="*", task_uuid=task_uuid)
+        await mark_literature_dirty(db, task_uuid=task_uuid,
+            article_ids=article_ids, change_kind=change_kind)
         await db.commit()
         return task_uuid
     except BaseException as exc:

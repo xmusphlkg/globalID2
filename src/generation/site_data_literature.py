@@ -13,11 +13,13 @@ import re
 import time
 import unicodedata
 from collections import Counter, defaultdict
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import String, any_, bindparam, func, select
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain import (
@@ -445,10 +447,37 @@ async def collect_literature_export(
     surveillance_coverage: dict[str, set[str]] | None = None,
     limit: int = 500,
     title_cache_path: Path | None = None,
+    selected_article_ids: set[str] | None = None,
+    previous_projection: dict[str, Any] | None = None,
+    projection_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if selected_article_ids is not None and previous_projection is None:
+        raise ValueError("Incremental literature export requires a completed projection baseline")
     if not await has_table(session, "literature_articles"):
         return empty_literature_export()
     now = datetime.now(timezone.utc)
+    if selected_article_ids is not None:
+        selected_article_ids = set(selected_article_ids)
+        # Time can make a previously future-dated publication eligible even
+        # without a write event. This indexed range read avoids a daily full
+        # scan while keeping the ordinary published-at gate authoritative.
+        evaluated_at = _parse_public_datetime(previous_projection["evaluated_at"])
+        if evaluated_at > now:
+            raise ValueError("Literature projection baseline is from the future")
+        due = await session.execute(select(LiteratureArticle.article_id).where(
+            LiteratureArticle.publication_status == "published",
+            LiteratureArticle.published_at > evaluated_at,
+            LiteratureArticle.published_at <= now,
+        ))
+        selected_article_ids.update(due.scalars().all())
+    selected_clause = True
+    if selected_article_ids is not None:
+        selected = sorted(selected_article_ids)
+        get_bind = getattr(session, "get_bind", None)
+        dialect = getattr(getattr(get_bind() if callable(get_bind) else None, "dialect", None), "name", None)
+        selected_clause = (LiteratureArticle.article_id == any_(bindparam(
+            "selected_literature_ids", value=selected, type_=ARRAY(String(48)), unique=True))
+            if dialect == "postgresql" else LiteratureArticle.article_id.in_(selected))
     status_counts = (
         await session.execute(
             select(
@@ -468,6 +497,7 @@ async def collect_literature_export(
                 LiteratureArticle.peer_review_status.in_(("peer_reviewed", "preprint")),
                 LiteratureArticle.published_at.is_not(None),
                 LiteratureArticle.published_at <= now,
+                selected_clause,
             )
             .order_by(LiteratureArticle.is_featured.desc(), LiteratureArticle.discovery_score.desc(), LiteratureArticle.published_at.desc())
         )
@@ -493,6 +523,7 @@ async def collect_literature_export(
                 LiteratureArticle.publication_status == "review",
                 LiteratureArticle.peer_review_status.in_(("peer_reviewed", "preprint")),
                 LiteratureArticle.integrity_status.notin_(("retracted", "expression_of_concern")),
+                selected_clause,
             )
             .order_by(LiteratureArticle.published_at.desc().nullslast(), LiteratureArticle.article_id)
         )
@@ -825,6 +856,42 @@ async def collect_literature_export(
             "updated_at": article.updated_at.isoformat() if article.updated_at else None,
         })
 
+    signal_decisions = [
+        {"signal_id": link.signal_id, "article_id": link.article_id,
+         "relation_level": link.relation_level, "status": link.status,
+         "confidence": link.confidence, "source": link.source}
+        for link in signal_article_links
+    ]
+    if selected_article_ids is not None:
+        def retained(name):
+            return [deepcopy(item) for item in previous_projection[name]
+                    if item["article_id"] not in selected_article_ids]
+        projected = retained("articles") + projected
+        title_estimate_records = retained("title_estimated_related_records") + title_estimate_records
+        signal_decisions = retained("signal_decisions") + signal_decisions
+    # Canonical ordering makes full and merged projections byte-equivalent,
+    # including ties that were previously left to database row order.
+    projected.sort(key=lambda item: item["article_id"])
+    projected.sort(key=lambda item: (bool(item["is_featured"]),
+                   float(item["discovery_score"] or 0), item.get("published_at") or ""), reverse=True)
+    title_estimate_records.sort(key=lambda item: item["article_id"])
+    title_estimate_records.sort(key=lambda item: item.get("published_at") or "", reverse=True)
+    signal_decisions.sort(key=lambda item: (item["article_id"], item["signal_id"]))
+    # Coverage and Situation are independent publication inputs. Refresh their
+    # derived fields after merging instead of invalidating SQL reuse whenever
+    # another channel advances.
+    for item in projected:
+        item["related_surveillance"] = build_related_surveillance(
+            item["diseases"], item["countries"], surveillance_coverage)
+    projected_updated_values = [_parse_public_datetime(item["updated_at"])
+                                for item in projected if item.get("updated_at")]
+    if projection_state is not None:
+        projection_state.update(deepcopy({
+            "evaluated_at": now.isoformat(), "articles": projected,
+            "title_estimated_related_records": title_estimate_records,
+            "signal_decisions": signal_decisions,
+        }))
+
     projected, preprints = partition_public_literature_articles(projected)
     # Bibliographic records can be useful even when no detailed GIDS summary
     # is available. They link to their original source, not to an evidence
@@ -959,11 +1026,7 @@ async def collect_literature_export(
             # valid human editorial review still takes precedence downstream.
             "_ai_review": weekly_ai_reviews.get(week),
         })
-    latest_updated_values = [
-        article.updated_at
-        for article in articles
-        if article.updated_at
-    ]
+    latest_updated_values = projected_updated_values
     latest_updated_values.extend(
         _parse_public_datetime(item["updated_at"])
         for item in projected
@@ -977,11 +1040,11 @@ async def collect_literature_export(
     latest_updated = max(latest_updated_values, default=None)
     public_article_ids = {item["article_id"] for item in projected}
     exact_linked_public_articles = len({
-        link.article_id
-        for link in signal_article_links
-        if link.status == "confirmed"
-        and link.relation_level == "exact_disease_geography"
-        and link.article_id in public_article_ids
+        link["article_id"]
+        for link in signal_decisions
+        if link["status"] == "confirmed"
+        and link["relation_level"] == "exact_disease_geography"
+        and link["article_id"] in public_article_ids
     })
     pipeline_funnel = build_pipeline_funnel(
         total=int(status_counts.total or 0),
@@ -1074,17 +1137,7 @@ async def collect_literature_export(
             "hotspots": build_hotspot_visualizations(projected, now=now),
         },
         "weekly_briefs": weekly_briefs,
-        "_signal_article_links": [
-            {
-                "signal_id": link.signal_id,
-                "article_id": link.article_id,
-                "relation_level": link.relation_level,
-                "status": link.status,
-                "confidence": link.confidence,
-                "source": link.source,
-            }
-            for link in signal_article_links
-        ],
+        "_signal_article_links": signal_decisions,
     }
 
 

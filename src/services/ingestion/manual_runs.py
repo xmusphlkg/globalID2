@@ -27,6 +27,7 @@ async def record_manual_store(
     operation: str,
     metrics: dict | None = None,
     input_data: dict | None = None,
+    change_set: dict | None = None,
 ) -> Task:
     """Add a completed maintenance run and pending publication scopes; no commit.
 
@@ -67,7 +68,7 @@ async def record_manual_store(
             },
         ))
     for scope in scopes:
-        await mark_dirty(db, line=line, scope_key=scope, task_uuid=task.task_uuid)
+        await mark_dirty(db, line=line, scope_key=scope, task_uuid=task.task_uuid, change_set=change_set)
     return task
 
 

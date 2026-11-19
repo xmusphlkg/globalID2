@@ -454,6 +454,8 @@ async def _execute_release_task(
         if recovery:
             raise ValueError("publication_prepared_candidate_unavailable")
     research_reused = False
+    research_generation_reused = None
+    research_run = None
     if r2_papers_enabled and (runtime.root_dir / 'scripts/publish_papers_r2.py').is_file():
         # Capture before export/render, not at upload time: an independent
         # literature publication during the build must invalidate this attempt.
@@ -533,6 +535,10 @@ async def _execute_release_task(
                      '--public', str(runtime.astro_dir / 'public/site-data')],
                 cwd=runtime.root_dir, env=papers_environment(service, git_env),
                 metadata={'event': 'site_research_snapshot_reused'}, timeout_seconds=300)
+        if research_run is not None:
+            from .site_research_reuse import capture_render_inputs
+            await asyncio.to_thread(capture_render_inputs, runtime.root_dir, research_run,
+                astro_dir=runtime.astro_dir, settings=service._config())
         from .build_stage import build_release_site
 
         # Reject a changed plan before copying gigabytes of data or rendering.
@@ -561,8 +567,37 @@ async def _execute_release_task(
     research_recovery_files = {}
     if r2_papers_enabled and (runtime.root_dir / 'scripts/publish_papers_r2.py').is_file():
         from .surveillance_publish import STARTING_BASELINE
+        from .site_research_reuse import (
+            INPUTS, REUSED, capture_render_inputs, freeze_reuse, load_reuse,
+            reusable_generation, selected_literature_changes,
+        )
         baseline_name = f'.publication/{STARTING_BASELINE}'
-        if resumed_identity is None:
+        reuse_path = research_run / REUSED
+        if resumed_identity is not None and reuse_path.exists():
+            research_generation_reused = await asyncio.to_thread(load_reuse, research_run, service._r2_papers_config())
+        elif resumed_identity is None and (research_run / INPUTS).is_file():
+            # Verify the sources actually used by this build before considering
+            # a no-op. An unknown/old input contract follows normal publication.
+            await asyncio.to_thread(capture_render_inputs, runtime.root_dir, research_run,
+                astro_dir=runtime.astro_dir, settings=service._config())
+            reuse_candidate = await asyncio.to_thread(reusable_generation,
+                runtime.root_dir, research_run, service._r2_papers_config(),
+                research_source=runtime.astro_dir / 'public/site-data/research')
+            if reuse_candidate and not await selected_literature_changes(input_data, runtime.get_database):
+                await asyncio.to_thread(freeze_reuse, research_run, reuse_candidate)
+                research_generation_reused = reuse_candidate
+        if research_generation_reused:
+            names = (REUSED, INPUTS, baseline_name)
+            research_candidate_paths.extend(research_run / name for name in names)
+            if input_data.get('publication_plan'):
+                research_recovery_files.update({str((research_run / name).relative_to(runtime.root_dir)):
+                    hashlib.sha256((research_run / name).read_bytes()).hexdigest() for name in names})
+            await runtime.task_manager.add_workbook_entry(task.task_uuid,
+                entry_type='info', title='Published Research Generation Reused',
+                content='Research data, renderer and projection inputs match the captured committed generation; no Papers candidate or upload is needed.',
+                content_type='text', metadata={'event': 'site_research_generation_reused',
+                    **research_generation_reused['identity']})
+        elif resumed_identity is None:
             # Recovery may not create missing candidates. Freeze Papers before
             # the global ready receipt permits an upload-only retry.
             await service._run_logged_command(task.task_uuid, title='Prepare Papers Research Candidate',
@@ -571,12 +606,13 @@ async def _execute_release_task(
                 cwd=runtime.root_dir, env=papers_environment(service, git_env),
                 metadata={'event': 'site_research_publication_prepare'},
                 timeout_seconds=runtime.download_publish_timeout_seconds)
-        for name in ('bundle', 'json', 'projection-v3', 'paper-templates',
-                     'site-ready.json', 'papers-prepared.json', 'papers-build-manifest.json', baseline_name):
-            path = research_run / name
-            if path.exists():
-                research_candidate_paths.append(path)
-        if input_data.get('publication_plan'):
+        if not research_generation_reused:
+            for name in ('bundle', 'json', 'projection-v3', 'paper-templates', INPUTS,
+                         'site-ready.json', 'papers-prepared.json', 'papers-build-manifest.json', baseline_name):
+                path = research_run / name
+                if path.exists():
+                    research_candidate_paths.append(path)
+        if input_data.get('publication_plan') and not research_generation_reused:
             for name in ('site-ready.json', 'papers-prepared.json', 'projection-v3/candidate.json', baseline_name):
                 path = research_run / name
                 research_recovery_files[str(path.relative_to(runtime.root_dir))] = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -621,7 +657,7 @@ async def _execute_release_task(
     )
     await runtime.task_manager.update_task_progress(task.task_uuid, 60)
 
-    if (r2_papers_enabled and not literature_detached and job.include_cloudflare_deploy
+    if (r2_papers_enabled and not research_generation_reused and not literature_detached and job.include_cloudflare_deploy
             and not (code_only and research_candidate_paths)):
         from .shared_assets import publish_shared_assets
 
@@ -641,12 +677,16 @@ async def _execute_release_task(
         download_git_timeout_seconds=DOWNLOAD_GIT_PUBLISH_TIMEOUT_SECONDS,
         literature_only=literature_only or content_only, code_only=code_only,
         r2_papers_enabled=r2_papers_enabled, r2_reports_enabled=r2_reports_enabled,
+        research_generation_reused=research_generation_reused,
     )
     completed_publications = await _run_repository_publications(repository_publications)
     raw_archive_published = "raw_archive" in completed_publications
     downloads_published = "direct_downloads" in completed_publications
     r2_papers_published = "r2_papers" in completed_publications
     r2_reports_published = "r2_reports" in completed_publications
+    if research_generation_reused:
+        from .site_research_reuse import verify_reused_baseline
+        await asyncio.to_thread(verify_reused_baseline, research_run, service._r2_papers_config())
 
     report_subscription_dispatch = None
 
@@ -811,6 +851,7 @@ async def _execute_release_task(
         "website_verification": "verified" if planned_public_verification and pages_deployed else "skipped",
         "artifact_rollback": False,
         "r2_papers_published": r2_papers_published,
+        "research_generation_reused": research_generation_reused['identity'] if research_generation_reused else None,
         "r2_reports_published": r2_reports_published,
         "report_subscription_dispatch": report_subscription_dispatch,
         "r2_reports_public_base_url": (

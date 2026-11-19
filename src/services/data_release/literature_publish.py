@@ -60,6 +60,7 @@ def publish_literature_candidate(*, run: Path, objects_dir: Path, papers: Papers
     verification_required = (any(entry.get("paper_template", {}).get("schema") == 3 for entry in papers.entries)
         or any(item.get('key', '').startswith('paper-template-v3/templates/') for item in papers.template_objects))
     active = client or R2S3Client(config, max_total_bytes=max_total_bytes)
+    result = None
     try:
         with managed_publication(active, channel=PREFIX) as publication:
             current = active.get_object(f"{PREFIX}/current.json")
@@ -108,5 +109,11 @@ def publish_literature_candidate(*, run: Path, objects_dir: Path, papers: Papers
                 result['retention'] = publication.cleanup()
             return result
     finally:
+        operations = getattr(active, 'operation_counts', None)
+        if callable(operations):
+            counts = operations()
+            _atomic_write(run / 'r2-operations.json', json.dumps(counts, sort_keys=True, separators=(',', ':')).encode())
+            if result is not None:
+                result['r2_operations'] = counts
         if client is None:
             active.close()

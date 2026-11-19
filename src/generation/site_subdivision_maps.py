@@ -159,9 +159,19 @@ def reported_series(entry: dict, country_code: str, *, as_of: date | None = None
         return None
     if entry.get("comparability") in {"non_comparable", "incomparable", "not_comparable"}:
         return None
+    if entry.get("data_layer") == "legacy_fallback":
+        return None
     sources = entry.get("source_series") or []
     selected = set(entry.get("selected_series_codes") or [])
     selected_sources = [source for source in sources if source.get("series_code") in selected]
+    # A map must be backed by the exact registered source series that produced
+    # its points.  This also prevents legacy fallback curves (which have no
+    # selected registry source) from entering a subnational map by accident.
+    if (sources or selected) and (not selected or len(selected_sources) != len(selected)):
+        return None
+    point_sources = set(entry.get("point_series_codes") or [])
+    if point_sources and not point_sources <= selected:
+        return None
     profile = PROFILES.get(country_code, {})
     reviewed_direct = country_code in {"US", "JP", "SE"}
     if reviewed_direct:
@@ -171,6 +181,18 @@ def reported_series(entry: dict, country_code: str, *, as_of: date | None = None
             return None
     elif entry.get("loss_risk") == "non_additive_series_not_rolled_up":
         return None
+    if entry.get("projection_policy") == "priority_overlay":
+        # The projection layer has already resolved these definitions per
+        # period. Recheck its identity here so a malformed entry cannot turn
+        # an arbitrary set of non-additive sources into a map.
+        overlay_sets = {str(source.get("comparability_set") or "") for source in selected_sources}
+        if (any(source.get("projection_policy") != "priority_overlay" for source in selected_sources)
+                or len(overlay_sets) != 1 or "" in overlay_sets
+                or any(isinstance(source.get("projection_priority"), bool)
+                       or not isinstance(source.get("projection_priority"), (int, float))
+                       or not math.isfinite(float(source.get("projection_priority")))
+                       for source in selected_sources)):
+            return None
     for source in selected_sources:
         if source.get("dimension_key") not in {None, "all"} or source.get("dimensions"):
             return None
@@ -189,7 +211,13 @@ def reported_series(entry: dict, country_code: str, *, as_of: date | None = None
                 return None
             if location_code and source.get("geography_key") != f"country:{location_code}:national":
                 return None
-        elif source.get("aggregation_policy") == "non_additive":
+        elif (source.get("aggregation_policy") == "non_additive"
+              and len(selected) > 1
+              and entry.get("projection_policy") != "priority_overlay"):
+            # ``non_additive`` means independent source definitions must not
+            # be summed.  A single selected source and an explicit priority
+            # overlay are already resolved by the series projection layer;
+            # rejecting them here silently removes otherwise valid maps.
             return None
     dates, values = entry.get("dates") or [], entry.get("cases") or []
     if not dates or len(dates) != len(values):
@@ -217,7 +245,11 @@ def reported_series(entry: dict, country_code: str, *, as_of: date | None = None
             return None
         elif status in {"partial", "partial_report_window", "period_scope_mismatch", "missing", "invalid", "excluded"}:
             value, status = None, "incomplete"
-        elif status not in {"observed", "provisional", "revised", "verified", "good", "complete", "confirmed", "high"}:
+        # ``raw`` is the adapter's internal quality vocabulary for a numeric
+        # source observation. Legacy fallback data was rejected above; for a
+        # selected registry series it is safe to expose the point and retain
+        # the public map's normal observed/provisional status vocabulary.
+        elif status not in {"observed", "provisional", "revised", "verified", "good", "complete", "confirmed", "high", "raw"}:
             value, status = None, "incomplete"
         else:
             status = "provisional" if status == "provisional" or (entry.get("provisional_from") and str(raw_date) >= entry["provisional_from"]) else "observed"

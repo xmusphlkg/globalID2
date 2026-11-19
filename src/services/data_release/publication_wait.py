@@ -11,8 +11,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from .resilience import classify_release_failure
+from sqlalchemy import and_, or_
 
+from src.domain.task import TaskStatus
+
+from .resilience import classify_release_failure
 
 WAIT_KINDS = frozenset({
     "blocked_by_static",
@@ -48,6 +51,22 @@ def claim_allowed(metadata: dict[str, Any] | None, now: datetime) -> bool:
         return False
     due = _aware(wait.get("not_before"))
     return due is not None and due <= now
+
+
+def static_reservation_blocks_json(task: Any, now: datetime) -> bool:
+    """Whether a static export currently blocks independent JSON lanes.
+
+    A queued static export parked on a non-runnable publication wait is only a
+    durable reservation for its own recovery. Treating it as an active static
+    build deadlocks the JSON channels because the worker is deliberately not
+    allowed to claim that parked row. Running exports always remain blockers;
+    a due transient retry is also still an active reservation.
+    """
+    if task.status == TaskStatus.RUNNING:
+        return True
+    return task.status in (TaskStatus.PENDING, TaskStatus.QUEUED) and claim_allowed(
+        task.metadata_, now
+    )
 
 
 def failure_kind(exc: BaseException) -> str | None:

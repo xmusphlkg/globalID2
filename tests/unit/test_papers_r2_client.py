@@ -113,6 +113,30 @@ def test_get_object_treats_http_404_as_missing() -> None:
     assert R2S3Client(CONFIG, object_index=False, opener=opener).get_object("missing") is None
 
 
+def test_operation_counts_distinguish_list_from_reads_and_include_retries(monkeypatch):
+    attempts = 0
+
+    def opener(request, _timeout):
+        nonlocal attempts
+        if request.get_method() == 'PUT':
+            attempts += 1
+            if attempts == 1:
+                raise urllib.error.URLError('lost response')
+        return _Response()
+
+    monkeypatch.setattr('src.services.data_release.papers_r2.time.sleep', lambda _seconds: None)
+    client = R2S3Client(CONFIG, object_index=False, opener=opener)
+    client._request('PUT', 'new-object')
+    client._request('GET', '', query='list-type=2')
+    client._request('GET', 'current.json')
+    client._request('HEAD', 'old-object')
+    client._request('POST', '', query='delete=')
+    assert client.operation_counts() == {
+        'requests': 6, 'class_a_requests': 3, 'class_b_requests': 2,
+        'delete_requests': 1, 'by_operation': {'put': 2, 'list': 1, 'get': 1, 'head': 1, 'delete': 1},
+    }
+
+
 def test_get_object_raises_on_other_http_errors() -> None:
     def opener(request, _timeout):
         raise urllib.error.HTTPError(

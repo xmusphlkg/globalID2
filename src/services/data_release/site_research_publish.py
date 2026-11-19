@@ -205,6 +205,10 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
         # only record completion after canonical canaries pass in every locale.
         result['public_verification'] = (projection_verifier or verify_projected_publication)(candidate)
         _atomic_write(run / 'published.json', json.dumps(result, separators=(',', ':')).encode())
+        from .site_research_reuse import project_root, record_committed_inputs
+        root = project_root(run)
+        if root is not None:
+            record_committed_inputs(root, run, config)
         return result
     finally:
         if client is None:

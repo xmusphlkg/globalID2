@@ -17,6 +17,7 @@ from sqlalchemy.orm import defer
 from src.ai.peer_review import ReviewedOutput
 from src.domain import LiteratureArticle, LiteratureSummary, Task, TaskStatus
 from src.literature.screening import decision_is_grounded
+from src.literature.publication_changes import build_literature_change_set
 
 ReviewKind = Literal["articles", "summaries"]
 ReviewKey = str | int
@@ -183,13 +184,8 @@ class LiteratureReviewApplication:
             result.applied.append(
                 {"summary_id": key, "decision": "archive", "reason": reason}
             )
-        if not dry_run and result.counts["rejected"]:
-            await self.mark_dirty(
-                db,
-                line="literature",
-                scope_key="*",
-                parent_task_uuid=parent_task_uuid,
-            )
+        # These summaries were already private (review); archiving them does
+        # not invalidate any public article or collection.
         return result
 
     async def apply(
@@ -222,6 +218,7 @@ class LiteratureReviewApplication:
             else {}
         )
         applied_keys: set[ReviewKey] = set()
+        changed_article_ids: set[str] = set()
         for key, fingerprint, reviewed in reviews:
             row = rows.get(key)
             current = (
@@ -300,10 +297,13 @@ class LiteratureReviewApplication:
                     displayed = "published" if publish else "excluded"
                     if not dry_run:
                         self.policy._apply_article(db, row, reviewed, displayed)
+                        changed_article_ids.add(row.article_id)
                 else:
                     displayed = "publish" if publish else "archive"
                     if not dry_run:
                         self.policy._apply_summary(row, reviewed, publish)
+                        if publish:
+                            changed_article_ids.add(row.article_id)
             result.applied.append(
                 {
                     "article_id" if kind == "articles" else "summary_id": key,
@@ -311,12 +311,14 @@ class LiteratureReviewApplication:
                     "review": reviewed.provenance(self.prompt_version),
                 }
             )
-        if not dry_run and (result.counts["published"] or result.counts["rejected"]):
+        if not dry_run and changed_article_ids:
             await self.mark_dirty(
                 db,
                 line="literature",
                 scope_key="*",
                 parent_task_uuid=parent_task_uuid,
+                change_set=build_literature_change_set(changed_article_ids,
+                    change_kind="article_status" if kind == "articles" else "summary"),
             )
         return result
 
