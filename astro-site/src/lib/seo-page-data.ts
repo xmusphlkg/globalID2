@@ -14,6 +14,10 @@ let indexableDiseaseCache: Array<Record<string, any>> | null = null;
 const countryDiseaseCandidateCache = new Map<number, CountryDiseaseCandidate[]>();
 let publishableReportCache: ReturnType<typeof buildPublishableReports> | null = null;
 let countryDiseaseRouteCache: Array<{ code: string; slug: string }> | null = null;
+let countryDiseaseStaticCandidateCache: CountryDiseaseCandidate[] | null = null;
+
+const COUNTRY_DISEASE_ROUTE_LIMIT = 12;
+const FULL_COUNTRY_DISEASE_ROUTES = new Set(['cn', 'us']);
 
 export const siteMeta = metaRaw as Record<string, any>;
 export const diseaseIndex = diseasesRaw as Array<Record<string, any>>;
@@ -41,12 +45,30 @@ export function countryDiseaseCandidates(limit = 50): CountryDiseaseCandidate[] 
   return countryDiseaseCandidateCache.get(limit) ?? [];
 }
 
+/**
+ * Static country/disease pages are deliberately bounded for the Pages file
+ * budget. The country directory remains data-driven and links long-tail
+ * diseases to their global profile when a local route is not pre-rendered.
+ * China and the United States keep every publishable disease route because
+ * their country pages are the primary map and directory entry points.
+ */
+export function countryDiseaseStaticCandidates(): CountryDiseaseCandidate[] {
+  if (countryDiseaseStaticCandidateCache) return countryDiseaseStaticCandidateCache;
+  const grouped = new Map<string, ReturnType<typeof selectDirectoryCandidates>>();
+  for (const row of selectDirectoryCandidates(siteMeta.countries ?? [], loadCountryFacts, Infinity)) {
+    const rows = grouped.get(row.code) ?? [];
+    rows.push(row);
+    grouped.set(row.code, rows);
+  }
+  const selected = [...grouped.entries()].flatMap(([code, rows]) =>
+    FULL_COUNTRY_DISEASE_ROUTES.has(code) ? rows : rows.slice(0, COUNTRY_DISEASE_ROUTE_LIMIT));
+  countryDiseaseStaticCandidateCache = hydrateDirectoryCandidates(selected, loadCountry);
+  return countryDiseaseStaticCandidateCache;
+}
+
 /** Navigation needs route identities, never the full historical series. */
 export function countryDiseaseRouteIdentities() {
-  // Country disease pages are addressed individually. Applying the global
-  // directory's display limit here silently dropped most of China's disease
-  // routes when a handful of high-volume countries filled the first 50 rows.
-  return countryDiseaseRouteCache ??= selectDirectoryCandidates(siteMeta.countries ?? [], loadCountryFacts, Infinity)
+  return countryDiseaseRouteCache ??= countryDiseaseStaticCandidates()
     .map(({ code, slug }) => ({ code, slug }));
 }
 

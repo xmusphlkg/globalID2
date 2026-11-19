@@ -71,7 +71,7 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
     </div>;
   }
   if (mode === 'country-diseases') return <div><ul className="mt-4 flex flex-wrap gap-2">
-    {[...(data.diseases ?? [])].sort((a, b) => Number(b.total_cases ?? 0) - Number(a.total_cases ?? 0)).slice(0, 16).map((row: Summary) => <li key={String(row.disease_id ?? row.id)}><a href={routes[row.slug] || `${prefix}/diseases/${encodeURIComponent(row.slug || row.disease_id || row.id)}/`} className="site-action-secondary inline-flex px-3 py-1.5 text-sm border">{diseaseLabel(row, language)}</a></li>)}
+    {[...(data.diseases ?? [])].sort((a, b) => Number(b.total_cases ?? 0) - Number(a.total_cases ?? 0)).map((row: Summary) => <li key={String(row.disease_id ?? row.id)}><a href={routes[row.slug] || `${prefix}/diseases/${encodeURIComponent(row.slug || row.disease_id || row.id)}/`} className="site-action-secondary inline-flex px-3 py-1.5 text-sm border">{diseaseLabel(row, language)}</a></li>)}
   </ul>{!(data.diseases?.length > 0) && <p className="figure-caption">{pick('No mapped disease series are available.', '暂无已映射的疾病序列。', 'Aucune série de maladie associée.')}</p>}</div>;
   if (mode === 'country-disease-indicators') {
     const series = (data.diseases ?? []).find((entry: Summary) => String(entry.disease_id ?? entry.id).toUpperCase() === diseaseId?.toUpperCase());
