@@ -1,4 +1,4 @@
-import { readSurveillanceDownloadIndex } from '../../../lib/surveillance-downloads.ts';
+import { readSurveillanceDownloadIndex } from '../../../lib/surveillance-download-index.ts';
 import { getFlagAssetPath } from '../../../lib/country-flag.ts';
 import { downloadCatalogue } from './catalogue.ts';
 import { downloadMessages } from './messages.ts';

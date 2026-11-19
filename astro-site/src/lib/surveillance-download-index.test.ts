@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { createSurveillanceDataClient } from './surveillance-data.ts';
-import { readSurveillanceDownloadIndex } from './surveillance-downloads.ts';
+import { readSurveillanceDownloadIndex } from './surveillance-download-index.ts';
 import { downloadCatalogue } from '../components/public/downloads/catalogue.ts';
 
 const country = (code = 'JP', version = 1) => ({ kind: 'country', id: code.toLowerCase(), code,
