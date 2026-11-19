@@ -122,6 +122,23 @@ test('exposes page JSON and only the current download part', () => {
   assert.equal(distributions[1].contentSize, '42 bytes');
 });
 
+test('exposes every current cell and skips historical cells', () => {
+  const distributions = buildDatasetDistributions({
+    siteOrigin: 'https://example.com',
+    entry: {
+      parts: [
+        { files: { csv: { filename: 'old.csv', url: 'https://data.example/old.csv' } } },
+        { is_current: true, files: { csv: { filename: 'cn.csv', url: 'https://data.example/cn.csv' } } },
+        { is_current: true, files: { csv: { filename: 'jp.csv', url: 'https://data.example/jp.csv' } } },
+      ],
+    },
+  });
+  assert.deepEqual(distributions.map(item => item.contentUrl), [
+    'https://data.example/cn.csv',
+    'https://data.example/jp.csv',
+  ]);
+});
+
 test('normalizes SEO slugs, titles, descriptions, and language alternates', () => {
   assert.equal(toSeoSlug('Respiratory syncytial virus infection (RSV)'), 'respiratory-syncytial-virus-infection-rsv');
   assert.equal(formatYearRange('1982-01-01', '2026-08-01'), '1982–2026');

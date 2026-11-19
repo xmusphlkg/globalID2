@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -68,6 +69,54 @@ def test_validate_source_rejects_assets_not_declared_by_manifest(tmp_path):
     unexpected.write_text("unexpected")
 
     with pytest.raises(RuntimeError, match="not declared by manifest"):
+        validate_source(tmp_path, "main")
+
+
+def test_validate_source_accepts_shared_cell_declared_by_country_and_disease(tmp_path):
+    manifest = _write_source(tmp_path)
+    cell = "cells/cn/d007/2026-2029.csv"
+    source = tmp_path / "diseases/d007/2026-2029.csv"
+    target = tmp_path / cell
+    target.parent.mkdir(parents=True)
+    target.write_bytes(source.read_bytes())
+    for format_name, file_meta in manifest["diseases"][0]["parts"][0]["files"].items():
+        origin = tmp_path / file_meta["relative_path"]
+        destination = tmp_path / f"cells/cn/d007/2026-2029.{format_name}"
+        destination.write_bytes(origin.read_bytes())
+        file_meta["relative_path"] = destination.relative_to(tmp_path).as_posix()
+        file_meta["url"] = f"https://raw.githubusercontent.com/example/data/main/{file_meta['relative_path']}"
+    for path in list((tmp_path / "diseases").rglob("*")):
+        if path.is_file():
+            path.unlink()
+    manifest["schema_version"] = 5
+    manifest["partitioning"] = {"grain": "country_disease_window"}
+    manifest["diseases"][0]["parts"][0].update(country_code="CN", disease_id="D007")
+    manifest["countries"] = [{
+        "id": "cn",
+        "code": "CN",
+        "parts": [{"id": "2026-2029", "country_code": "CN", "disease_id": "D007", "is_current": True, "files": manifest["diseases"][0]["parts"][0]["files"]}],
+    }]
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    validate_source(tmp_path, "main")
+
+    wrong_owner = copy.deepcopy(manifest)
+    wrong_owner["countries"][0]["parts"][0]["disease_id"] = "D038"
+    (tmp_path / "manifest.json").write_text(json.dumps(wrong_owner))
+    with pytest.raises(RuntimeError, match="Cell identity"):
+        validate_source(tmp_path, "main")
+
+    missing_catalogue = copy.deepcopy(manifest)
+    missing_catalogue["diseases"] = []
+    (tmp_path / "manifest.json").write_text(json.dumps(missing_catalogue))
+    with pytest.raises(RuntimeError, match="same cell assets"):
+        validate_source(tmp_path, "main")
+
+    conflict = copy.deepcopy(manifest)
+    country_files = copy.deepcopy(conflict["diseases"][0]["parts"][0]["files"])
+    country_files["csv"]["sha256"] = "0" * 64
+    conflict["countries"][0]["parts"][0]["files"] = country_files
+    (tmp_path / "manifest.json").write_text(json.dumps(conflict))
+    with pytest.raises(RuntimeError, match="conflicting copies"):
         validate_source(tmp_path, "main")
 
 
@@ -582,3 +631,14 @@ def test_in_place_rejects_remote_advancement_without_overwriting_it(tmp_path, mo
         publisher.publish(args)
     assert run_git(["rev-parse", "main"], tmp_path / "remote.git") == advanced
     assert not publisher.publication_is_verified(args.workdir, args.repo_url, args.branch)
+
+
+def test_sync_refuses_frozen_legacy_candidate_after_cell_migration(tmp_path):
+    source, target = tmp_path / 'source', tmp_path / 'target'
+    _write_source(source)
+    target.mkdir()
+    (target / 'manifest.json').write_text(json.dumps({'schema_version': 5}))
+    before = (target / 'manifest.json').read_bytes()
+    with pytest.raises(RuntimeError, match='frozen schema 4'):
+        sync_managed_assets(source, target)
+    assert (target / 'manifest.json').read_bytes() == before

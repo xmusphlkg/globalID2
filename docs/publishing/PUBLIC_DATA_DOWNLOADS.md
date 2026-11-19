@@ -20,29 +20,90 @@ Pages Advanced Mode 同源路由提供，也可部署为独立 Worker；数据�
 
 ## 文件结构
 
-公开数据仓库使用 `main` 分支和稳定的时间窗口文件名：
+新的下载仓库把每个文件打到国家、疾病和时间窗的交叉粒度。更新一个国家只重写
+这个国家自己的格子，疾病目录引用同一批文件，不再把其他国家合并进一份疾病大文件。
 
 ```text
 manifest.json
-countries/<country>/<window>.csv
-countries/<country>/<window>.json
-countries/<country>/<window>.xlsx
-diseases/<disease>/<window>.csv
-diseases/<disease>/<window>.json
-diseases/<disease>/<window>.xlsx
+cells/<country>/<disease>/<window>.csv
+cells/<country>/<disease>/<window>.json
+cells/<country>/<disease>/<window>.xlsx
 ```
 
-D007 示例：
+D007、中国、当前窗示例：
 
 ```text
-diseases/d007/2015-2019.csv
-diseases/d007/2020-2025.json
-diseases/d007/2026-2029.xlsx
+cells/cn/d007/2026-2029.csv
+cells/cn/d007/2026-2029.json
+cells/cn/d007/2026-2029.xlsx
 ```
 
-`manifest.json` 使用 schema version 4。每个数据集包含 `parts`，每个时间块
-声明实际数据范围、记录数、是否为当前更新块，以及三种格式的 Raw URL、文件名、
-字节数和 SHA-256。
+`manifest.json` 使用 schema version 5。`partitioning.grain` 为
+`country_disease_window`。国家和疾病条目都保留时间窗 `parts`，但 `files`
+指向同一组格子。国家页的分块标签带疾病编号，疾病页的分块标签带国家代码。
+同一相对路径可以出现在两边，字节数和 SHA-256 必须一致。
+
+为满足 GitHub 对清单本身的 100 MiB 限制，磁盘上的 v5 清单使用
+`cell_metadata: "country_parts_v1"` 编码。国家 `parts` 保存完整单元格元数据；
+疾病 `parts` 只保存 `{country_code, id}`，通过本条目的 `disease_id` 引用国家
+单元格。格式对象保存 `bytes` 和 `sha256`，默认路径由国家代码、疾病编号、
+时间窗及格式组成；URL 为 `download_url_base + "/" + relative_path`，文件名为
+`globalid-<country>-<disease>-<window>.<format>`。国家和疾病路径代码均转小写。
+`content_sha256` 默认取 JSON 文件的 SHA-256。显式非默认字段仍保留。
+
+`src/generation/direct_download/manifest.py` 的 `expand_manifest()` 将上述编码
+还原成原有的完整国家、疾病下载条目；网页摘要继续收到完整 URL、文件名和
+文件描述，无需浏览器解析原始大清单。旧的完整 v4/v5 清单仍可读取。
+
+已经发布的 schema 4 清单仍使用原来的整国文件和整病文件：
+
+```text
+countries/<country>/<window>.csv
+diseases/<disease>/<window>.csv
+```
+
+生成器看到 schema 4 时继续按这个粒度增量更新，不会在一次国家更新里把仓库
+改写成格子。空目录和已经是 schema 5 的清单默认写格子。显式切换使用
+`layout="cells"` 或 `GIDS_DOWNLOAD_LAYOUT=cells`，这是一次性迁移，不是日常
+增量。迁移完成前不要设置这个环境变量。
+
+### 从现有 v4 文件迁移
+
+无需重新查询数据库，迁移器读取并验证现有国家 JSON，保留全部行和来源字段，
+按国家、疾病重新生成三种格式，并逐疾病核对记录数与来源观测数：
+
+```bash
+venv/bin/python scripts/migrate_download_cells.py --workers 4 --activate
+```
+
+候选默认生成到 `exports/site-downloads-cells/`。每完成一个国家就保存断点；
+中断后重跑同一命令会校验并复用已完成国家。源清单或生成代码改变时必须换一个
+候选目录。迁移和切换都使用生产发布锁；锁被占用时立即失败，不无限等待。
+
+`--activate` 在全量校验通过后切换本地 `exports/site-downloads/`，旧目录保留在
+`exports/.site-downloads.v4-<源清单哈希前缀>/`。不传该参数只生成候选。
+切换后正常生产调用会根据 v5 清单自动选择 cells，无需设置环境变量，也无需
+在每次增量发布中强制全量转换。发布器拒绝旧 v4 冻结候选覆盖已迁移的 v5 基线。
+
+此命令不推送 GitHub，也不部署网站。上线时先部署支持单元格标识的下载页面，
+再通过 surveillance 发布流程同步下载文件及网页下载清单；避免只推送新目录而
+让线上清单仍指向已删除的旧文件。旧备份在确认线上发布成功前保留。
+
+迁移开始后，可在另一个终端同步上传已完成国家的文件：
+
+```bash
+venv/bin/python scripts/stream_download_cells.py --publish
+```
+
+上传器读取国家断点，逐文件验证 SHA-256，并默认以 512 MiB 为一批推送到
+`globalid-upload/cells-<源清单哈希>` 分支；生成和网络上传可重叠进行。
+中断后重跑会根据远端预上传分支跳过已收到的文件。全部文件完成且本地 v5
+清单已校验、激活后，`--publish` 才切换公开主分支并抽样核验远端文件。
+最终提交承接预上传历史，因此不会再次上传整批数据；正常 fast-forward
+检查仍会阻止覆盖其他发布者的新提交。成功后自动删除预上传分支。
+
+展开后每个 `part` 仍声明实际数据范围、记录数、是否为当前更新块，以及每种格式的
+Raw URL、文件名、字节数和 SHA-256。下载按钮按一个 URL 取一个文件。
 
 ## 时间窗口
 
@@ -87,8 +148,9 @@ make site-download-sync
 文件，不使用独立的六小时下载调度，也不依赖静态站点构建。
 
 1. 从同一数据库快照投影一次数据，生成网页 JSON 和下载文件。
-2. 按所选国家和受影响疾病增量检查输入指纹；未变化数据集不生成文件，变化
-   数据集只替换内容变化的时间分块。CSV、JSON、XLSX 均保持确定性输出。
+2. 按所选国家和受影响疾病增量检查输入指纹；未变化的格子不生成文件。Schema 5
+   只重写变化国家自己的格子，疾病条目改为指向这些格子。Schema 4 仍替换整份
+   疾病时间块。CSV、JSON、XLSX 均保持确定性输出。
 3. 用硬链接冻结本次下载候选，避免复制全部历史数据；后续写入使用原子替换。
 4. 发布 surveillance JSON，然后把相同快照的下载文件推送 GitHub；两者成功
    后才确认本批 dirty IDs。网页摘要携带本次下载清单。

@@ -1,3 +1,4 @@
+import { downloadPartKey } from './download-presentation.ts';
 import { mainSiteBase } from './papers.ts';
 import { surveillanceData, type createSurveillanceDataClient } from './surveillance-data.ts';
 
@@ -22,9 +23,16 @@ function catalogue(value: unknown, identity?: { kind: string; id: string }): Row
   } else if (value.schema_version !== 1) throw new Error('Invalid legacy download catalogue');
   const ids = new Set<string>();
   for (const part of value.parts) {
-    if (!object(part) || typeof part.id !== 'string' || !part.id.trim() || ids.has(part.id)
+    if (!object(part) || typeof part.id !== 'string' || !part.id.trim()
       || !count(part.record_count) || !object(part.files)) throw new Error('Invalid download part');
-    ids.add(part.id);
+    for (const field of ['country_code', 'disease_id']) {
+      if (part[field] !== undefined && (typeof part[field] !== 'string' || !/^[a-z0-9-]+$/i.test(part[field]))) {
+        throw new Error('Invalid download part identity');
+      }
+    }
+    const key = downloadPartKey(part);
+    if (ids.has(key)) throw new Error('Invalid download part');
+    ids.add(key);
     for (const format of formats) {
       const file = part.files[format];
       if (file === undefined) continue;
@@ -35,7 +43,7 @@ function catalogue(value: unknown, identity?: { kind: string; id: string }): Row
         || (file.filename !== undefined && typeof file.filename !== 'string')) throw new Error('Invalid download file');
     }
   }
-  // Embedded entries use the native schema-4 manifest entry shape, without
+  // Embedded entries use the native schema-4/5 manifest entry shape, without
   // their own schema_version. Keep the download date, never the summary date.
   return { ...value, schema_version: 1 };
 }

@@ -265,6 +265,6 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     if downloads:
         # The durable publication receipt makes finalization retries safe even
         # after these private hard links have been removed.
-        for name in ("countries", "diseases"):
+        for name in ("cells", "countries", "diseases"):
             await asyncio.to_thread(shutil.rmtree, run / "downloads" / name, True)
     return result

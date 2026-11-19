@@ -18,6 +18,25 @@ SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS = 30 * 60
 DOWNLOAD_GIT_PUBLISH_TIMEOUT_SECONDS = 3 * 60 * 60
 
 
+def site_download_stage_paths(root: Path) -> list[Path]:
+    """Stage the download grain recorded in the manifest.
+
+    Schema 5 owns cells/. Schema 4, and a missing manifest, keep the legacy
+    countries/ and diseases/ trees so an in-flight publication is unchanged.
+    """
+
+    base = root / "exports" / "site-downloads"
+    manifest_path = base / "manifest.json"
+    legacy = [base / "countries", base / "diseases", manifest_path]
+    try:
+        schema = json.loads(manifest_path.read_text(encoding="utf-8")).get("schema_version")
+    except (OSError, ValueError):
+        return legacy
+    if schema == 5:
+        return [base / "cells", manifest_path]
+    return legacy
+
+
 class ReleasePreflightError(RuntimeError):
     """A release preflight failure retaining integration diagnostics."""
 
@@ -498,8 +517,7 @@ async def _execute_release_task(
 
             generated_paths = [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"]
             if not content_only:
-                generated_paths.extend(runtime.root_dir / name for name in (
-                    "exports/site-downloads/countries", "exports/site-downloads/diseases", "exports/site-downloads/manifest.json"))
+                generated_paths.extend(site_download_stage_paths(runtime.root_dir))
             await asyncio.to_thread(stage_receipts.save, "generated", generated_signature,
                 generated_paths, identity=release_identity)
 
@@ -568,9 +586,9 @@ async def _execute_release_task(
         stage_paths = [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data", runtime.astro_dir / "dist"]
         shared_outputs = []
         if not code_only:
+            shared_outputs.extend(site_download_stage_paths(runtime.root_dir))
             shared_outputs.extend(runtime.root_dir / name for name in (
-                "exports/site-downloads/countries", "exports/site-downloads/diseases",
-                "exports/site-downloads/manifest.json", "exports/papers-site", "exports/reports-site"))
+                "exports/papers-site", "exports/reports-site"))
         elif r2_papers_enabled and not research_candidate_paths:
             # Legacy publishers without a frozen research candidate still need
             # their split bundle; modern code plans depend on private inputs.

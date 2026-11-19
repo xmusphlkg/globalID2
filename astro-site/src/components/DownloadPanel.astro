@@ -1,5 +1,6 @@
 ---
 import CountryFlag from './CountryFlag.astro';
+import { downloadPartKey } from '../lib/download-presentation';
 import './download-dialog-shell.css';
 import './download-dialog.css';
 import { createTranslator, type Lang } from '../utils/i18n';
@@ -33,6 +34,8 @@ interface DownloadFile {
 
 interface DownloadPart {
   id?: string;
+  country_code?: string;
+  disease_id?: string;
   label?: string;
   is_current?: boolean;
   record_count?: number;
@@ -322,7 +325,7 @@ const formatCards = [
               <select data-download-time-filter>
                 <option value="all">{pick('All time ranges', '全部时间范围', 'Toutes les périodes')}</option>
                 {downloadParts.map((part) => (
-                <option value={part.id}>{part.label ?? part.id}{part.is_current ? ` · ${pick('Current', '当前', 'Actuelle')}` : ''}</option>
+                <option value={downloadPartKey(part)}>{part.label ?? part.id}{part.is_current ? ` · ${pick('Current', '当前', 'Actuelle')}` : ''}</option>
                 ))}
               </select>
             </label>
@@ -345,7 +348,7 @@ const formatCards = [
                 <article
                   class="download-file-item card relative overflow-hidden"
                   data-download-file
-                  data-download-time={part.id}
+                  data-download-time={downloadPartKey(part)}
                   data-download-format={format.key}
                 >
                   <div class="download-file-item__heading">

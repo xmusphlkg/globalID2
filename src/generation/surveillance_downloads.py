@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 
 from .direct_download_files import build_direct_download_files
-from .site_data_writer import write_compact_json
+from .direct_download.manifest import write_download_manifest
 
 
 def downloads_initialized(directory: Path) -> bool:
@@ -38,11 +38,13 @@ def generate_download_candidate(context: dict, output: Path, candidate: Path, *,
             changed_disease_ids=set(context["changed_disease_ids"]) if context.get("incremental") else None)
         manifest.pop("generation", None)
         manifest["surveillance_release_id"] = release_id
-        write_compact_json(output / "manifest.json", manifest)
+        write_download_manifest(output / "manifest.json", manifest)
         if candidate.exists():
             shutil.rmtree(candidate)
         candidate.mkdir(parents=True)
-        for name in ("countries", "diseases"):
-            shutil.copytree(output / name, candidate / name, copy_function=os.link)
+        for name in ("cells", "countries", "diseases"):
+            source = output / name
+            if source.is_dir():
+                shutil.copytree(source, candidate / name, copy_function=os.link)
         shutil.copy2(output / "manifest.json", candidate / "manifest.json")
         return manifest

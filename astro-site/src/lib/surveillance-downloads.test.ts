@@ -107,3 +107,19 @@ test('checksum errors, absent objects and manifest failures cannot downgrade to 
       /mismatch|unavailable/);
   }
 });
+
+for (const [kind, id] of [['countries', 'JP'], ['diseases', 'D038']]) {
+  test(`cell ${kind} catalogue accepts shared windows and rejects duplicate cells`, async () => {
+    const download: any = entry(kind, id);
+    download.parts = ['first', 'second'].map((_, index) => ({
+      ...download.parts[0], country_code: kind === 'countries' ? 'JP' : ['JP', 'CN'][index],
+      disease_id: kind === 'diseases' ? 'D038' : ['D038', 'D007'][index],
+    }));
+    const state = server(kind, id, download);
+    const result = await readSurveillanceDownloads(`/site-data/${state.key}`, { client: state.client(), fetcher: noFallback });
+    assert.equal(result.data.parts.length, 2);
+    download.parts.push(download.parts[0]);
+    const duplicate = server(kind, id, download);
+    await assert.rejects(readSurveillanceDownloads(`/site-data/${duplicate.key}`, { client: duplicate.client(), fetcher: noFallback }), /Invalid download part/);
+  });
+}

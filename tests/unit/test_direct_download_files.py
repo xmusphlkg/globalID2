@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import csv
 import json
 import subprocess
 from pathlib import Path
@@ -23,7 +24,7 @@ from src.generation.site_data_views import (
 from src.generation.site_series_projection import apply_series_first_projection
 
 
-@pytest.mark.parametrize("module_name", ["rows", "windows", "disease_merge", "runtime", "formats", "partitions"])
+@pytest.mark.parametrize("module_name", ["rows", "windows", "disease_merge", "runtime", "formats", "partitions", "cells"])
 def test_projection_fingerprint_tracks_extracted_module_changes(tmp_path, monkeypatch, module_name):
     module = getattr(direct_download_files, module_name)
     copied_source = tmp_path / f"{module_name}.py"
@@ -188,7 +189,9 @@ def test_build_writes_three_formats_for_every_partition(tmp_path) -> None:
     manifest = build_direct_download_files(_context(), tmp_path, download_url_base=base)
 
     entry = manifest["diseases"][0]
-    assert manifest["schema_version"] == 4
+    assert manifest["schema_version"] == 5
+    assert manifest["partitioning"]["grain"] == "country_disease_window"
+    assert entry["parts"][0]["files"]["csv"]["relative_path"].startswith("cells/cn/d007/")
     assert manifest["includes_series_provenance"] is True
     current = entry["parts"][0]
     assert manifest["formats"] == ["csv", "json", "xlsx"]
@@ -642,15 +645,28 @@ def test_incremental_download_build_only_rewrites_selected_country(tmp_path) -> 
     )
 
     assert second["generation"]["changed_files"] >= 1
+    assert not (tmp_path / "countries").exists()
+    assert not (tmp_path / "diseases").exists()
     disease_paths = {
         file_meta["relative_path"]
-        for part in first["diseases"][0]["parts"]
+        for part in second["diseases"][0]["parts"]
         for file_meta in part["files"].values()
     }
-    assert {
-        relative_path: (tmp_path / relative_path).read_bytes()
-        for relative_path in disease_paths
-    } == {relative_path: before[relative_path] for relative_path in disease_paths}
+    country_paths = {
+        file_meta["relative_path"]
+        for part in second["countries"][0]["parts"]
+        for file_meta in part["files"].values()
+    }
+    assert disease_paths == country_paths
+    for part in first["diseases"][0]["parts"]:
+        for format_name, file_meta in part["files"].items():
+            updated = next(item for item in second["diseases"][0]["parts"] if item["id"] == part["id"])
+            payload = (tmp_path / file_meta["relative_path"]).read_bytes()
+            if part["id"] == "2026-2029":
+                assert payload != before[file_meta["relative_path"]]
+            else:
+                assert payload == before[file_meta["relative_path"]]
+                assert updated["files"][format_name]["sha256"] == file_meta["sha256"]
 
 
 def test_corrupted_reused_artifact_is_regenerated(tmp_path) -> None:
@@ -805,7 +821,8 @@ def test_missing_unselected_download_scope_fails_before_replacing_manifest(tmp_p
     before = manifest_path.read_bytes()
     missing = initial[kind][0]["parts"][0]["files"]["json"]["relative_path"]
     (tmp_path / missing).unlink()
-    with pytest.raises(RuntimeError, match=f"unchanged {scope}.*missing or invalid"):
+    # Country and disease catalogues share one cell, so either guard may fire first.
+    with pytest.raises(RuntimeError, match=rf"unchanged ({scope}|country CN|disease D007).*missing or invalid"):
         build_direct_download_files(
             _context(), tmp_path, download_url_base=base,
             changed_country_codes=set(), changed_disease_ids=set(),
@@ -861,13 +878,13 @@ def test_surveillance_download_candidate_is_incremental_and_retry_snapshot_is_im
         release_id="data-first", download_url_base=base)
     assert downloads_initialized(output)
     snapshots = {path.relative_to(first_run): (path.read_bytes(), path.stat().st_ino)
-        for group in ("countries", "diseases") for path in (first_run / group).rglob("*") if path.is_file()}
+        for group in ("cells",) for path in (first_run / group).rglob("*") if path.is_file()}
     context = _context()
     context.update(incremental=True, incremental_country_codes=["CN"], changed_disease_ids=["D007"])
     context["country_exports"][0]["country_data"]["disease_series"]["D007"]["cases"][-1] = 99
     second = generate_download_candidate(context, output, second_run,
         release_id="data-second", download_url_base=base)
-    for group in ("countries", "diseases"):
+    for group in ("countries", "diseases"):  # catalogue entries; bytes live under cells/
         before = {part["id"]: part for part in first[group][0]["parts"]}
         for part in second[group][0]["parts"]:
             for fmt, asset in part["files"].items():
@@ -878,3 +895,78 @@ def test_surveillance_download_candidate_is_incremental_and_retry_snapshot_is_im
                 else:
                     assert asset["sha256"] != before[part["id"]]["files"][fmt]["sha256"]
     assert all((first_run / path).read_bytes() == value[0] for path, value in snapshots.items())
+
+
+def _two_country_context() -> dict:
+    context = _context()
+    japan = copy.deepcopy(context["country_exports"][0])
+    japan["code"] = "JP"
+    japan["country_name"] = "Japan"
+    japan["country_data"]["country_code"] = "JP"
+    japan["country_data"]["country_name"] = "Japan"
+    context["countries_simple"].append({"code": "JP", "name": "Japan"})
+    context["country_sources_by_code"]["JP"] = context["country_sources_by_code"]["CN"]
+    context["country_download_entries"].append({
+        "kind": "country", "id": "jp", "code": "JP", "name": "Japan",
+        "record_count": 4, "date_range": {"start": "2010-01-01", "end": "2026-01-01"},
+        "site_json_path": "/site-data/countries/jp.json",
+    })
+    context["country_exports"].append(japan)
+    context["disease_exports"][0]["disease_data"]["country_series"]["JP"] = copy.deepcopy(
+        context["disease_exports"][0]["disease_data"]["country_series"]["CN"]
+    )
+    return context
+
+
+def test_cell_update_leaves_other_country_files_untouched(tmp_path) -> None:
+    base = "https://raw.githubusercontent.com/example/data/main"
+    first = build_direct_download_files(_two_country_context(), tmp_path, download_url_base=base)
+    china = {
+        path: (path.stat().st_ino, path.read_bytes())
+        for path in (tmp_path / "cells" / "cn").rglob("*") if path.is_file()
+    }
+    assert china
+    changed = _two_country_context()
+    changed["country_exports"][1]["country_data"]["disease_series"]["D007"]["cases"][-1] = 99
+    changed["disease_exports"][0]["disease_data"]["country_series"]["JP"]["cases"][-1] = 99
+    second = build_direct_download_files(
+        changed, tmp_path, download_url_base=base,
+        changed_country_codes={"JP"}, changed_disease_ids={"D007"},
+    )
+    for path, (inode, payload) in china.items():
+        assert path.stat().st_ino == inode
+        assert path.read_bytes() == payload
+    disease_paths = {
+        file_meta["relative_path"]
+        for part in second["diseases"][0]["parts"]
+        for file_meta in part["files"].values()
+    }
+    assert any(path.startswith("cells/cn/") for path in disease_paths)
+    assert any(path.startswith("cells/jp/") for path in disease_paths)
+    assert not (tmp_path / "countries").exists()
+    assert not (tmp_path / "diseases").exists()
+    japan_current = next(
+        part for part in second["diseases"][0]["parts"]
+        if part["country_code"] == "JP" and part["id"] == "2026-2029"
+    )
+    rows = list(csv.DictReader((tmp_path / japan_current["files"]["csv"]["relative_path"]).open()))
+    assert rows[-1]["cases"] == "99"
+    assert {row["country_code"] for row in rows} == {"JP"}
+
+
+def test_schema_4_manifest_keeps_legacy_files(tmp_path) -> None:
+    base = "https://raw.githubusercontent.com/example/data/main"
+    first = build_direct_download_files(
+        _context(), tmp_path, download_url_base=base, layout="legacy",
+    )
+    assert first["schema_version"] == 4
+    assert first["countries"][0]["parts"][0]["files"]["csv"]["relative_path"].startswith("countries/cn/")
+    assert "grain" not in first["partitioning"]
+    second = build_direct_download_files(
+        _context(generated_at="2026-09-01T00:00:00+00:00"), tmp_path, download_url_base=base,
+    )
+    assert second["schema_version"] == 4
+    assert second["generation"]["changed_files"] == 0
+    assert (tmp_path / "countries").is_dir()
+    assert (tmp_path / "diseases").is_dir()
+    assert not (tmp_path / "cells").exists()

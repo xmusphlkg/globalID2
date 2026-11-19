@@ -110,3 +110,27 @@ test('publication downloads follow the pinned summary and advance on reload with
   expect(legacyReads).toBe(0);
   expect(await htmlHash()).toBe(before);
 });
+
+test('cell downloads sharing a window select and save only the chosen disease', async ({ page }) => {
+  const data = catalogue();
+  data.parts = ['D007', 'D038'].map((disease_id, index) => ({
+    ...data.parts[index], id: '2026-2029', label: `${disease_id} · 2026–now`,
+    country_code: 'JP', disease_id,
+  }));
+  await page.route('**/site-data/bootstrap.json', route => route.fulfill({ status: 404 }));
+  await page.route('**/site-data/current.json', route => route.fulfill({ status: 404 }));
+  await page.route('**/site-data/downloads/countries/jp.json', route => route.fulfill({ json: data }));
+  await page.route('https://files.example.test/**', route => route.fulfill({ body: 'date,cases\n2026-01-01,10\n', contentType: 'text/csv' }));
+  await page.goto('/zh/countries/jp/', { waitUntil: 'domcontentloaded' });
+  await page.locator('astro-island:not([ssr]) [data-download-modal-trigger]').waitFor();
+  await page.locator('#downloads [data-download-modal-trigger]').click();
+  const dialog = page.getByRole('dialog', { name: '选择数据下载' });
+  await expect(dialog.locator('[data-download-file]')).toHaveCount(6);
+  await dialog.getByLabel('时间范围').selectOption('JP/D038/2026-2029');
+  await dialog.getByLabel('文件格式').selectOption('csv');
+  await expect(dialog.locator('[data-download-file]')).toHaveCount(1);
+  await expect(dialog.locator('[data-download-file]')).toContainText('D038');
+  const saved = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: '下载 CSV', exact: true }).click();
+  expect((await saved).suggestedFilename()).toBe('gids-1.csv');
+});

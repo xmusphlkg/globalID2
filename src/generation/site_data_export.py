@@ -1984,6 +1984,8 @@ async def export(
     else:
         changed_country_codes = None
         changed_disease_ids = None
+    # An existing schema 4 manifest stays on legacy files. Cell files are used
+    # for a new output directory or a manifest that is already schema 5.
     downloads_manifest = build_direct_download_files(
         context,
         direct_download_output_dir,

@@ -363,7 +363,8 @@ async def _export_surveillance_data_unlocked(
     # or artifact writes. Later checks still protect changes during those steps.
     if projection_version != _generation_version():
         raise ValueError("Surveillance projection implementation changed during export; retry with one version")
-    downloads = _read(downloads_manifest) if downloads_manifest and downloads_manifest.is_file() else None
+    from .direct_download.manifest import expand_manifest
+    downloads = expand_manifest(_read(downloads_manifest)) if downloads_manifest and downloads_manifest.is_file() else None
     if download_candidate is not None:
         from .surveillance_downloads import generate_download_candidate
         downloads = generate_download_candidate(context, download_output, download_candidate,
