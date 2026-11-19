@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import './map-tiles.css';
 
 type MapLanguage = 'en' | 'zh' | 'fr';
@@ -27,14 +27,17 @@ function tileUrl(provider: TileProvider, style: TileStyle, x: number, y: number)
  * and wheel zoom continue to belong to the map below it.
  */
 export default function MapTileLayer({ language }: { language: MapLanguage }) {
-  const [provider, setProvider] = useState<TileProvider>(language === 'zh' ? 'amap' : 'osm');
+  // Keep the provider tied to the page language.  OSM's WGS84 tiles are the
+  // canonical context for English/French pages; Chinese pages use Gaode's
+  // local map service.  Users switch visual layers below without accidentally
+  // mixing providers (which have different coordinate systems).
+  const provider: TileProvider = language === 'zh' ? 'amap' : 'osm';
   const [style, setStyle] = useState<TileStyle>('standard');
-  useEffect(() => setProvider(language === 'zh' ? 'amap' : 'osm'), [language]);
   const labels = useMemo(() => language === 'zh'
-    ? { label: '底图', provider: '地图源', style: '样式', standard: '常规', satellite: '卫星', dark: '暗色', osm: 'OpenStreetMap', amap: '高德地图', attribution: provider === 'osm' ? (style === 'satellite' ? '© Esri' : style === 'dark' ? '© CARTO' : '© OpenStreetMap contributors') : '© 高德地图' }
+    ? { label: '底图', style: '样式', standard: '常规', satellite: '卫星', dark: '暗色', attribution: '© 高德地图' }
     : language === 'fr'
-      ? { label: 'Fond de carte', provider: 'Source', style: 'Style', standard: 'Standard', satellite: 'Satellite', dark: 'Sombre', osm: 'OpenStreetMap', amap: 'Amap', attribution: provider === 'osm' ? (style === 'satellite' ? '© Esri' : style === 'dark' ? '© CARTO' : '© contributeurs OpenStreetMap') : '© Amap' }
-      : { label: 'Basemap', provider: 'Source', style: 'Style', standard: 'Standard', satellite: 'Satellite', dark: 'Dark', osm: 'OpenStreetMap', amap: 'Amap', attribution: provider === 'osm' ? (style === 'satellite' ? '© Esri' : style === 'dark' ? '© CARTO' : '© OpenStreetMap contributors') : '© Amap' }, [language, provider, style]);
+      ? { label: 'Fond de carte', style: 'Style', standard: 'Standard', satellite: 'Satellite', dark: 'Sombre', attribution: style === 'satellite' ? '© Esri' : style === 'dark' ? '© CARTO' : '© contributeurs OpenStreetMap' }
+      : { label: 'Basemap', style: 'Style', standard: 'Standard', satellite: 'Satellite', dark: 'Dark', attribution: style === 'satellite' ? '© Esri' : style === 'dark' ? '© CARTO' : '© OpenStreetMap contributors' }, [language, style]);
   const tiles = useMemo(() => Array.from({ length: TILE_COUNT * TILE_COUNT }, (_, index) => {
     const x = index % TILE_COUNT;
     const y = Math.floor(index / TILE_COUNT);
@@ -48,13 +51,6 @@ export default function MapTileLayer({ language }: { language: MapLanguage }) {
         </div>
       </div>
       <div className="map-tile-control" role="group" aria-label={labels.label}>
-        <label>
-          <span className="sr-only">{labels.provider}</span>
-          <select value={provider} onChange={event => setProvider(event.target.value as TileProvider)}>
-            <option value="osm">{labels.osm}</option>
-            <option value="amap">{labels.amap}</option>
-          </select>
-        </label>
         <label>
           <span className="sr-only">{labels.style}</span>
           <select value={style} onChange={event => setStyle(event.target.value as TileStyle)}>

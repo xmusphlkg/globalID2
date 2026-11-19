@@ -18,6 +18,13 @@ echarts.use([GraphicComponent, LegendComponent]);
 
 type Geometry = Parameters<typeof echarts.registerMap>[1];
 interface Props { countryCode: string; diseaseId?: string; language?: Language; }
+// Preserve the established US presentation: Alaska and Hawaii are shown as
+// conventional lower-left insets so the contiguous states remain readable.
+// The source geometry and region codes stay unchanged for data interaction.
+const usInsetAreas = {
+  'US-AK': { left: -123, top: 31, width: 13, height: 7 },
+  'US-HI': { left: -112, top: 27, width: 6, height: 3.5 },
+};
 const monthNames = (lang: Language) => Array.from({ length: 12 }, (_, index) => lang === 'zh' ? `${index + 1}月` : new Intl.DateTimeFormat(lang, { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2024, index, 1))));
 const labels = {
   en: { title: 'Regional distribution', disease: 'Disease', year: 'Year', start: 'First month', end: 'Last month', metric: 'Measure', rate: 'Reports per 100,000', cases: 'Reported cases', area: 'Region', population: 'Total resident population', observed: 'Reported months', source: 'Population source', reference: 'Reference date', basis: 'Population basis', version: 'Population version', download: 'Download filtered CSV', loading: 'Loading regional data…', unavailable: 'Regional map data are not available in this publication.', noDisease: 'No comparable regional counts are available for this disease.', zero: 'Zero', missing: 'Missing / suppressed', notAnnual: 'Selected-period crude report rates; not annualized or age standardized.', scale: 'The same disease, measure and month range share a color scale across years.', boundary: 'Boundaries', historical: 'Present monitoring units; historical boundary changes are not reconstructed.', formula: 'Period reports ÷ local population in the same year × 100,000. Missing years are not filled.', trend: 'Monthly reports in the selected region', complete: 'regions with a complete value', provisional: 'Provisional', unverified: 'Unverified', selected: 'Selected region', noPopulation: 'No verified local population for this year. Case counts remain available.', fullYear: 'Full year', firstQuarter: 'Jan–Mar' },
@@ -103,9 +110,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       if (controller.signal.aborted) return;
       if (current.schema_version !== 1 || current.country_code !== code || populations.country_code !== code) throw new Error('Map publication mismatch');
       const key = `subdivision-${code}-${current.boundary.version}`;
-      // Keep the source geometry intact. ECharts' specialAreas transform made
-      // the US map appear distorted and also broke geographic roaming.
-      echarts.registerMap(key, geometry);
+      echarts.registerMap(key, geometry, code === 'US' ? usInsetAreas : undefined);
       setMapName(key); setPopulation(populations); setCatalog(current);
       const requested = diseaseId || saved.get('mapDisease');
       setSelectedDisease(current.diseases.find(item => item.id === requested)?.id || (diseaseId ? '' : current.diseases.find(item => item.id === 'D028')?.id || current.diseases[0]?.id || ''));
@@ -213,6 +218,13 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const populationSources = [...new Set(rows.flatMap(row => row.annual.flatMap(item => item.population ? [item.population.source] : [])))];
   const selectedSource = dataset?.regions[selected];
   const tabs = ['map', 'trend', 'table'] as const;
+  const zoomLabels = lang === 'zh'
+    ? { group: '地图缩放', in: '放大地图', out: '缩小地图', reset: '重置地图' }
+    : lang === 'fr'
+      ? { group: 'Zoom de la carte', in: 'Agrandir la carte', out: 'Réduire la carte', reset: 'Réinitialiser la carte' }
+      : { group: 'Map zoom', in: 'Zoom in', out: 'Zoom out', reset: 'Reset map' };
+  const zoom = (factor: number) => mapRef.current?.getEchartsInstance?.()?.dispatchAction({ type: 'geoRoam', componentType: 'series', seriesIndex: 0, zoom: factor });
+  const resetZoom = () => mapRef.current?.getEchartsInstance?.()?.setOption(chartOption, { notMerge: true });
   const detail = active && window && <div className="subdivision-map-detail" aria-live="polite">
     <h3>{name(active.region)}{active.provisional && <span className="subdivision-map-badge">{t.provisional}</span>}{active.unverified && <span className="subdivision-map-badge">{t.unverified}</span>}</h3>
     <div className="subdivision-map-value">{number(active.value)}<span>{metricLabel}</span></div>
@@ -281,7 +293,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
         <p className="subdivision-map-status" aria-live="polite">{rows.filter(row => row.value !== null).length}/{catalog.expected_regions} {ui.available} · {cadenceLabels[lang][dataset.cadence]}{compareWindow && expected?.expected !== comparedExpected?.expected && <> · {ui.periodDifference}</>}</p>
         <div role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-${tab}`}>
           {tab === 'map' && <div className="subdivision-map-content">
-            <div className="subdivision-map-plot"><div className="subdivision-map-canvas" role="img" aria-label={`${t.title} · ${metricLabel}. ${scale.ticks.map(tick => tick.value.toLocaleString(lang, { maximumFractionDigits: 0 })).join('; ')}; ${t.missing}`}><MapTileLayer language={lang} /><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /></div></div>
+            <div className="subdivision-map-plot"><div className="subdivision-map-canvas" role="img" aria-label={`${t.title} · ${metricLabel}. ${scale.ticks.map(tick => tick.value.toLocaleString(lang, { maximumFractionDigits: 0 })).join('; ')}; ${t.missing}`}><MapTileLayer language={lang} /><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /><div className="subdivision-map-zoom" role="group" aria-label={zoomLabels.group}><button type="button" onClick={() => zoom(1.25)} aria-label={zoomLabels.in}>+</button><button type="button" onClick={() => zoom(.8)} aria-label={zoomLabels.out}>−</button><button type="button" onClick={resetZoom} aria-label={zoomLabels.reset}>↺</button></div></div></div>
             <RegionList rows={rows} previous={compareByCode} comparison={!!compareWindow} lang={lang} selected={selected} onSelect={setSelected} metricLabel={metricLabel} number={number} reason={reason}>{detail}</RegionList>
           </div>}
           {tab === 'trend' && active && <>
