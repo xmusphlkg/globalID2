@@ -175,6 +175,11 @@ async def build_release_site(
             # Publication latency takes priority over minimizing heap use.
             # The production worker has a 60 GiB memory budget.
             "NODE_OPTIONS": "--max-old-space-size=12288",
+            # Full multilingual releases render tens of thousands of pages.
+            # Use bounded parallelism so the control-panel build completes well
+            # within the release timeout while staying below the worker memory
+            # budget.
+            "GIDS_ASTRO_RENDER_WORKERS": "4",
             "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
             "GIDS_FORCE_FULL_RENDER": "1" if force_full_render else "0",
             "GIDS_EXTERNAL_SURVEILLANCE_DATA": "1" if external_surveillance else "0",
