@@ -30,7 +30,7 @@ const safeSegment = value => {
 // Keep the page cache manifest in lockstep with the bounded static route
 // catalogue used by countries/[country]/diseases/[disease].astro. The
 // country directory remains data-driven, while long-tail links use globals.
-const COUNTRY_DISEASE_ROUTE_LIMIT = 12;
+const COUNTRY_DISEASE_ROUTE_LIMIT = 8;
 const FULL_COUNTRY_DISEASE_ROUTES = new Set(['cn', 'us']);
 
 export function readResearchCacheIndex(dataRoot, env = process.env) {

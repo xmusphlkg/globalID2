@@ -16,7 +16,7 @@ let publishableReportCache: ReturnType<typeof buildPublishableReports> | null = 
 let countryDiseaseRouteCache: Array<{ code: string; slug: string }> | null = null;
 let countryDiseaseStaticCandidateCache: CountryDiseaseCandidate[] | null = null;
 
-const COUNTRY_DISEASE_ROUTE_LIMIT = 12;
+const COUNTRY_DISEASE_ROUTE_LIMIT = 8;
 const FULL_COUNTRY_DISEASE_ROUTES = new Set(['cn', 'us']);
 
 export const siteMeta = metaRaw as Record<string, any>;
