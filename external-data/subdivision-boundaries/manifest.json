@@ -185,7 +185,7 @@
       ],
       "geography_level": "ADM1",
       "expected_regions": 56,
-      "transform": "State-level inset-map geometry based on PublicaMundi US states GeoJSON; Alaska and Hawaii are rendered with ECharts specialAreas; four US territories retained from the reviewed boundary set.",
+      "transform": "Source state and territory geometry from PublicaMundi US states GeoJSON; no cartographic inset transform is applied; four US territories retained from the reviewed boundary set.",
       "historical_boundary_policy": "Current monitoring units; historical boundary changes are not reconstructed.",
       "metadata_url": "https://github.com/PublicaMundi/MappingAPI/blob/master/data/geojson/us-states.json",
       "metadata_sha256": "c990eeb4aca8cbea2dcffc3187b36a6f6a887a643fe51d7c639fb635afcfa07e",

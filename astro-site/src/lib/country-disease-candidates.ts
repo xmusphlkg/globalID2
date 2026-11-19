@@ -29,9 +29,19 @@ export function selectCountryDiseaseCandidates(
       const last = dates.at(-1);
       const spanDays = first && last ? (new Date(last).getTime() - new Date(first).getTime()) / 86_400_000 : 0;
       const granularity = String(series.period_granularity ?? '').toLowerCase();
+      // Older national exports (including China's long-running monthly
+      // bulletin series) predate the series registry and therefore do not
+      // carry `available_series_count` or selected series codes. They still
+      // contain a complete, publishable observation vector. Treat those
+      // legacy fallback records as valid identities so the country disease
+      // directory does not collapse to the single registry-backed disease.
+      const legacyObservationVector = dates.length > 0
+        && (Array.isArray(series.cases) || Array.isArray(series.deaths))
+        && (series.data_layer === 'legacy_fallback' || series.data_layer === 'mixed' || series.data_layer == null);
       const identity = Number(series.available_series_count ?? 0) > 0
         || (Array.isArray(series.selected_series_codes) && series.selected_series_codes.length > 0)
-        || (Array.isArray(series.source_series) && series.source_series.length > 0);
+        || (Array.isArray(series.source_series) && series.source_series.length > 0)
+        || legacyObservationVector;
       const enoughHistory = ['annual', 'yearly'].includes(granularity)
         ? dates.length >= 5
         : dates.length >= 24 && spanDays >= 365;

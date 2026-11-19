@@ -257,6 +257,28 @@
     background-color: rgb(var(--surface));
   }
 
+  /* Shared compact action used by situation-map and download-center links. */
+  .intl-panel-action {
+    --intl-panel-accent: var(--color-teal);
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    max-width: 100%;
+    padding: .3rem .65rem;
+    border: 1px solid rgb(var(--intl-panel-accent) / .4);
+    border-radius: 0;
+    background: rgb(var(--intl-panel-accent) / .04);
+    color: rgb(var(--intl-panel-accent));
+    font-size: .7rem;
+    font-weight: 650;
+    line-height: 1.4;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  .intl-panel-action:hover { border-color: rgb(var(--intl-panel-accent) / .75); background: rgb(var(--intl-panel-accent) / .09); }
+  .intl-panel-action:focus-visible { outline: 2px solid rgb(var(--intl-panel-accent)); outline-offset: 3px; }
+  .surveillance-downloads { display: flex; justify-content: flex-end; margin-top: 1rem; }
+
   .site-action-primary {
     border-color: rgb(var(--color-brand) / 0.9);
     background-color: rgb(var(--color-brand));

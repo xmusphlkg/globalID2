@@ -19,7 +19,10 @@ import { parentAreaCode } from '../../../../lib/surveillance-coverage';
 import metaRaw from '../../../../data/meta.json';
 
 export function getStaticPaths() {
-  return countryDiseaseCandidates()
+  // Build every country/disease route. The display directory may cap its
+  // ranked list, but using that cap here silently dropped most of China's
+  // legacy disease series from static pages.
+  return countryDiseaseCandidates(Infinity)
     .filter(candidate => shouldBuildPage(`country-disease:${candidate.code}:${candidate.slug}`)).map(candidate => ({
     params: { country: candidate.code, disease: candidate.slug },
     props: { countryCode: candidate.code, diseaseSlug: candidate.slug, locale: 'en' },
@@ -41,7 +44,7 @@ const code = props.countryCode ?? props.code ?? String(Astro.params.country ?? '
 const slug = props.diseaseSlug ?? props.slug ?? String(Astro.params.disease ?? '');
 const candidate = props.country && props.series
   ? props
-  : countryDiseaseCandidates().find(item => item.code === code && item.slug === slug);
+  : countryDiseaseCandidates(Infinity).find(item => item.code === code && item.slug === slug);
 const country = candidate?.country ?? {};
 const series = candidate?.series ?? {};
 const locale = props.locale ?? 'en';

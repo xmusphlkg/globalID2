@@ -19,6 +19,7 @@ import {
   resolveCoverageStatus,
   type CoverageStatus,
 } from '../../lib/country-coverage';
+import MapTileLayer from './MapTileLayer';
 
 const MAP_NAME = 'world-countries-lnglat';
 const LOCAL_WORLD_MAP_URL = '/data/world.json';
@@ -357,7 +358,8 @@ export default function CountriesMapView({ metaCountries: initialCountries = [],
       />
     </div>
     <div ref={containerRef} className="coverage-map-canvas" style={{ position: 'relative', height: isFullscreen ? undefined : height, overflow: 'hidden', background: palette.mapBg }}>
-      <ReactEChartsCore ref={chartRef} echarts={echarts} option={option} style={{ height: '100%', width: '100%' }} onEvents={handleEvents} notMerge />
+      <MapTileLayer language={initialLanguage} />
+      <ReactEChartsCore ref={chartRef} echarts={echarts} option={option} style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }} onEvents={handleEvents} notMerge />
       <div className="coverage-map-controls" role="group" aria-label={initialLanguage === 'zh' ? '地图缩放' : initialLanguage === 'fr' ? 'Zoom de la carte' : 'Map zoom'}>
         <button type="button" onClick={() => zoom(1.25)} aria-label={initialLanguage === 'zh' ? '放大地图' : initialLanguage === 'fr' ? 'Agrandir la carte' : 'Zoom in'}>+</button>
         <button type="button" onClick={() => zoom(0.8)} aria-label={initialLanguage === 'zh' ? '缩小地图' : initialLanguage === 'fr' ? 'Réduire la carte' : 'Zoom out'}>−</button>

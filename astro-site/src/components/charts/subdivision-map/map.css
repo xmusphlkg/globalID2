@@ -36,7 +36,7 @@
 .subdivision-map-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(330px, 38%); align-items: start; gap: 20px; }
 .subdivision-map-plot,
 .subdivision-map-trend { min-width: 0; }
-.subdivision-map-canvas { width: 100%; height: clamp(400px, 42vw, 560px); min-height: 400px; }
+.subdivision-map-canvas { position: relative; width: 100%; height: clamp(400px, 42vw, 560px); min-height: 400px; }
 .subdivision-region-list { min-width: 0; padding-left: 18px; border-left: 1px solid var(--sv-border); }
 .subdivision-region-search h3 { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .subdivision-region-search h3 span { color: rgb(var(--text-muted)); font-variant-numeric: tabular-nums; font-weight: 400; }

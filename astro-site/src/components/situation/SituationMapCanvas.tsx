@@ -7,6 +7,7 @@ import featureIsoJson from '../../lib/data/world-feature-iso.json' with { type: 
 import type { Locale, MapPoint } from '../../utils/situationTypes.ts';
 import { RECENCY_COLORS, WORLD_BOUNDS, WORLD_CENTER, buildAnchors, fitView, placeLabel, placePoints, recencyOf } from './model.ts';
 import { COPY, STATUS_LABELS, countryName, diseaseName, formatDay } from './labels.ts';
+import MapTileLayer from '../charts/MapTileLayer';
 
 const MAP_NAME = 'world-countries-lnglat';
 const WORLD_MAP_URL = '/data/world.json';
@@ -271,11 +272,12 @@ export default function SituationMapCanvas({
 
   return (
     <div className="sit-canvas" style={{ backgroundColor: palette.bg }} role="img" aria-label={copy.mapLabel}>
+      <MapTileLayer language={locale === 'zh' ? 'zh' : locale === 'fr' ? 'fr' : 'en'} />
       <ReactEChartsCore
         echarts={echarts}
         option={option}
         replaceMerge={['series']}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }}
         onEvents={events}
         onChartReady={(instance: any) => setChart(instance)}
       />

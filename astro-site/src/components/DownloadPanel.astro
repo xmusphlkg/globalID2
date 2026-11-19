@@ -139,7 +139,7 @@ const centerHref = downloadCenterHref(initialLanguage, { country: countryCode, d
           {pick(descriptionEn, descriptionZh, descriptionFr)}
         </p>
       </div>
-      <a href={centerHref} data-download-center-link class="site-action-secondary download-panel__action">
+      <a href={centerHref} data-download-center-link class="intl-panel-action download-panel__action">
         {pick('Open download center', '进入下载中心', 'Ouvrir le centre de téléchargement')}
       </a>
     </div>
@@ -205,13 +205,13 @@ const centerHref = downloadCenterHref(initialLanguage, { country: countryCode, d
 )}
 
 <style>
-  .download-panel { display: grid; gap: .85rem; padding-block: 1.05rem; }
-  .download-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .download-panel { --intl-panel-accent: var(--color-teal); display: grid; gap: .85rem; padding-block: 1.05rem; }
+  .download-panel__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
   .download-panel__intro { min-width: 0; display: grid; gap: .28rem; }
   .download-panel .figure-title { font-size: clamp(1.15rem, 1.8vw, 1.45rem); line-height: 1.15; }
   .download-panel__summary { max-width: 58rem; color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.45; }
   .download-panel__summary span { margin-left: .45rem; color: rgb(var(--text-faint)); }
-  .download-panel__action { display: inline-flex; min-height: 2.35rem; flex: 0 0 auto; align-items: center; gap: .45rem; border: 1px solid rgb(var(--border)); border-radius: 0; padding: .45rem .7rem; font-size: .78rem; font-weight: 700; transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
+  .download-panel__action { flex: 0 0 auto; }
   .source-register { border-top: 1px solid rgb(var(--border)); }
   .source-register > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem 0 0; color: rgb(var(--text-strong)); cursor: pointer; list-style: none; }
   .source-register > summary::-webkit-details-marker { display: none; }
@@ -236,9 +236,9 @@ const centerHref = downloadCenterHref(initialLanguage, { country: countryCode, d
   .source-register-link:hover { background: rgb(var(--bg-soft)); border-color: rgb(var(--color-teal)); }
   @media (max-width: 640px) {
     .download-panel { padding-block: .9rem; }
-    .download-panel__header { align-items: center; gap: .7rem; }
+    .download-panel__header { align-items: flex-start; gap: .7rem; }
     .download-panel__summary { display: none; }
-    .download-panel__action { justify-content: center; padding-inline: .6rem; }
+    .download-panel__action { justify-content: center; }
     .source-register > summary { padding-top: .45rem; }
     .source-register > summary small { display: none; }
 

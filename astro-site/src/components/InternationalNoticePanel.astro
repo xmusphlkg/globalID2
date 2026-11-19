@@ -14,14 +14,13 @@ interface Props {
   dataUrl?: string;
   diseaseId?: string;
   locale: Locale;
-  limit?: number;
   /** Jurisdictions the host page is about, cross-referenced when an alert does not name them. */
   contextCodes?: string[];
   /** Link to the situation map filtered to this page's country or disease. */
   mapHref?: string;
 }
 
-const { alerts = [], dataUrl, diseaseId, locale, limit = 8, contextCodes = [], mapHref } = Astro.props;
+const { alerts = [], dataUrl, diseaseId, locale, contextCodes = [], mapHref } = Astro.props;
 
 const COPY = {
   en: {
@@ -43,7 +42,7 @@ const COPY = {
 
 const copy = COPY[locale];
 const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
-const rows = alerts.slice(0, limit);
+const rows = alerts;
 const badgesFor = (alert: SituationAlertRecord) =>
   noticeSnapshotBadges(
     {
@@ -67,11 +66,12 @@ const PANEL_CSS = `  .intl-panel {
   .intl-panel-header {
     display: flex;
     flex-wrap: wrap;
-    align-items: end;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1rem;
   }
+  .intl-panel-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
   .intl-panel-heading { margin-top: 0; }
   .intl-panel-list {
     display: grid;
@@ -184,7 +184,7 @@ const PANEL_CSS = `  .intl-panel {
 ---
 
 {
-  dataUrl && <><style set:html={PANEL_CSS} /><RuntimeNoticePanel client:visible dataUrl={dataUrl} diseaseId={diseaseId} locale={locale} limit={limit} contextCodes={contextCodes} mapHref={mapHref} /></>
+  dataUrl && <><style set:html={PANEL_CSS} /><RuntimeNoticePanel client:visible dataUrl={dataUrl} diseaseId={diseaseId} locale={locale} contextCodes={contextCodes} mapHref={mapHref} /></>
 }
 {
   !dataUrl && rows.length > 0 && (

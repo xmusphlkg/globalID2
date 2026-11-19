@@ -90,7 +90,10 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   const diseases = json(resolve(dataRoot, 'diseases/index.json'), []);
   const downloads = json(resolve(dataRoot, 'downloads.json'), {});
   const directory = openDirectoryBuildCache(dataRoot, { path: directoryCachePath });
-  const candidates = selectDirectoryCandidates(countries, code => directory.country(safeSegment(code)));
+  // The public directory may use a ranked display limit, but the page plan
+  // must retain every country/disease route so newly added or lower-volume
+  // diseases (especially legacy China series) are still generated.
+  const candidates = selectDirectoryCandidates(countries, code => directory.country(safeSegment(code)), Infinity);
   const alertsDir = resolve(dataRoot, 'situation/international');
   const alertHash = path => {
     const value = json(path);

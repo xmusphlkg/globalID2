@@ -43,7 +43,10 @@ export function countryDiseaseCandidates(limit = 50): CountryDiseaseCandidate[] 
 
 /** Navigation needs route identities, never the full historical series. */
 export function countryDiseaseRouteIdentities() {
-  return countryDiseaseRouteCache ??= selectDirectoryCandidates(siteMeta.countries ?? [], loadCountryFacts, 50)
+  // Country disease pages are addressed individually. Applying the global
+  // directory's display limit here silently dropped most of China's disease
+  // routes when a handful of high-volume countries filled the first 50 rows.
+  return countryDiseaseRouteCache ??= selectDirectoryCandidates(siteMeta.countries ?? [], loadCountryFacts, Infinity)
     .map(({ code, slug }) => ({ code, slug }));
 }
 
