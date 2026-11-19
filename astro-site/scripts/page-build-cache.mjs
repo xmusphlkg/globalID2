@@ -27,6 +27,11 @@ const safeSegment = value => {
   if (!/^[A-Za-z0-9][A-Za-z0-9_()\-]*$/.test(segment)) throw new Error(`Unsafe page cache segment: ${segment}`);
   return segment;
 };
+// Keep the page cache manifest in lockstep with the bounded static route
+// catalogue used by countries/[country]/diseases/[disease].astro. The
+// country directory remains data-driven, while long-tail links use globals.
+const COUNTRY_DISEASE_ROUTE_LIMIT = 12;
+const FULL_COUNTRY_DISEASE_ROUTES = new Set(['cn', 'us']);
 
 export function readResearchCacheIndex(dataRoot, env = process.env) {
   const source = resolve(dataRoot, 'research/index.json');
@@ -90,10 +95,18 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   const diseases = json(resolve(dataRoot, 'diseases/index.json'), []);
   const downloads = json(resolve(dataRoot, 'downloads.json'), {});
   const directory = openDirectoryBuildCache(dataRoot, { path: directoryCachePath });
-  // The public directory may use a ranked display limit, but the page plan
-  // must retain every country/disease route so newly added or lower-volume
-  // diseases (especially legacy China series) are still generated.
+  // Keep the full candidate set for country-page dependency fingerprints so
+  // newly added and lower-volume diseases update the dynamic directory. The
+  // static country/disease page entries below apply the bounded route policy.
   const candidates = selectDirectoryCandidates(countries, code => directory.country(safeSegment(code)), Infinity);
+  const candidatesByCountry = new Map();
+  for (const candidate of candidates) {
+    const rows = candidatesByCountry.get(candidate.code) ?? [];
+    rows.push(candidate);
+    candidatesByCountry.set(candidate.code, rows);
+  }
+  const staticCandidates = [...candidatesByCountry.entries()].flatMap(([code, rows]) =>
+    FULL_COUNTRY_DISEASE_ROUTES.has(code) ? rows : rows.slice(0, COUNTRY_DISEASE_ROUTE_LIMIT));
   const alertsDir = resolve(dataRoot, 'situation/international');
   const alertHash = path => {
     const value = json(path);
@@ -110,7 +123,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
       candidates.filter(entry => entry.code === code).map(entry => entry.slug).sort(),
       reportSummaries.filter(entry => entry.country_code?.toLowerCase() === code).slice(0, 6), countryAlerts,
       downloads.countries?.find(entry => entry.code?.toLowerCase() === code) ?? null]);
-    for (const candidate of candidates.filter(entry => entry.code === code)) {
+    for (const candidate of staticCandidates.filter(entry => entry.code === code)) {
       const slug = safeSegment(candidate.slug);
       const diseaseId = candidate.diseaseId;
       add(`country-disease:${code}:${slug}`, `countries/${code}/diseases/${slug}`, [
