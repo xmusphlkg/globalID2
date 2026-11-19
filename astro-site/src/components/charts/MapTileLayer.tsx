@@ -10,9 +10,11 @@ const TILE_ZOOM = 2;
 
 function tileUrl(provider: TileProvider, style: TileStyle, x: number, y: number): string {
   if (provider === 'amap') {
-    const shard = (x + y) % 4;
+    // Gaode's public raster endpoint is served from webst01–webst04.  The
+    // similarly named `webrd` hosts return 404 for appmaptile requests.
+    const shard = ((x + y) % 4) + 1;
     const amapStyle = style === 'satellite' ? 6 : style === 'dark' ? 8 : 7;
-    return `https://webrd0${shard}.is.autonavi.com/appmaptile?style=${amapStyle}&x=${x}&y=${y}&z=${TILE_ZOOM}`;
+    return `https://webst0${shard}.is.autonavi.com/appmaptile?style=${amapStyle}&x=${x}&y=${y}&z=${TILE_ZOOM}`;
   }
   if (style === 'satellite') return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${TILE_ZOOM}/${y}/${x}`;
   if (style === 'dark') return `https://a.basemaps.cartocdn.com/dark_all/${TILE_ZOOM}/${x}/${y}.png`;
