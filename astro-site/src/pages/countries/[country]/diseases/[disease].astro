@@ -71,7 +71,9 @@ const routeFingerprint = (() => {
   }
   return hash.toString(36).padStart(7, '0').slice(-7);
 })();
-const titleMarker = `${String(code).toUpperCase()}-${routeFingerprint}`;
+// The country is already present in each suffix. Keeping the marker to the
+// seven-character fingerprint leaves room for long jurisdiction names.
+const titleMarker = routeFingerprint;
 const sourceInfo = country.source_info ?? {};
 const diseaseId = String(series.disease_id ?? '');
 const hasRegionalData = ((metaRaw as any).countries ?? []).some(
