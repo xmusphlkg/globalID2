@@ -13,7 +13,9 @@ from .papers_bundle import DEFAULT_MAIN_SITE_ORIGIN
 
 async def execute_reports_release(service, task, *, runtime):
     started = time.monotonic()
-    job_id = str((task.input_data or {}).get("release_job_id") or "")
+    input_data = task.input_data or {}
+    job_id = str(input_data.get("release_job_id") or "")
+    suppress_subscription_dispatch = bool(input_data.get("suppress_subscription_dispatch"))
     job = next((item for item in await service.load_jobs() if item.job_id == job_id), None)
     if job is None:
         raise RuntimeError(f"Release job not found: {job_id}")
@@ -68,7 +70,9 @@ async def execute_reports_release(service, task, *, runtime):
             stage_name="r2_reports_publish", environment=env, timeout=runtime.download_publish_timeout_seconds)
         from .report_subscription import dispatch_if_enabled
 
-        report_subscription_dispatch = await dispatch_if_enabled(service, runtime, reports_origin=origin)
+        report_subscription_dispatch = None
+        if not suppress_subscription_dispatch:
+            report_subscription_dispatch = await dispatch_if_enabled(service, runtime, reports_origin=origin)
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid, entry_type="info", title="Website Verification Skipped",
             content="Reports upload completed; public HTTP verification is disabled. Artifacts are retained without rollback.",
@@ -76,6 +80,7 @@ async def execute_reports_release(service, task, *, runtime):
         )
         result = {"release_job_id": job_id, "reports_only": True, "r2_reports_published": True,
             "r2_reports_public_base_url": origin, "pages_deployed": False, "website_verification": "skipped", "artifact_rollback": False,
+            "subscription_dispatch_suppressed": suppress_subscription_dispatch,
             "report_subscription_dispatch": report_subscription_dispatch,
             "release_timing": {"elapsed_seconds": round(time.monotonic() - started, 3)}}
         async with runtime.get_database() as db:

@@ -6,7 +6,8 @@ import { GraphicComponent, LegendComponent } from 'echarts/components';
 import { surveillanceData } from '../../lib/surveillance-data';
 import { useChartTheme } from './chartPreferences';
 import ChartResultActions from './ChartResultActions';
-import { prepareMapDataset, resultsFor, defaultWindow, sharedScale, restoreWindow, csvFor, validWindow, comparisonWindow, presetWindow, shiftWindowYear, trendFor, dateBounds, cadenceRank, type MapCatalog, type PopulationDataset, type DiseaseDataset, type Language, type MapWindow, type MissingReason, type RegionResult, type Cadence, type Comparison } from './subdivision-map/model';
+import { downloadCenterHref } from '../../lib/download-center-link';
+import { prepareMapDataset, resultsFor, defaultWindow, sharedScale, restoreWindow, validWindow, comparisonWindow, presetWindow, shiftWindowYear, trendFor, dateBounds, cadenceRank, type MapCatalog, type PopulationDataset, type DiseaseDataset, type Language, type MapWindow, type MissingReason, type RegionResult, type Cadence, type Comparison } from './subdivision-map/model';
 import './surveillance/components/surveillance.css';
 import './subdivision-map/map.css';
 import RegionList from './subdivision-map/RegionList';
@@ -192,11 +193,6 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
     if (window) for (const [key, value] of Object.entries({ mapDisease: selectedDisease, mapFrom: window.from, mapTo: window.to, mapView: window.view, mapMetric: window.metric, mapRegion: selected, mapCompare: comparison, mapCompareFrom: customComparison.from, mapCompareTo: customComparison.to, mapTab: tab })) url.searchParams.set(key, String(value));
     url.hash = 'regional-distribution'; return url.href;
   };
-  const download = () => {
-    if (!dataset || !window || !rangeValid) return;
-    const url = URL.createObjectURL(new Blob([csvFor(rows, window, dataset, catalog, compareRows, compareWindow)], { type: 'text/csv;charset=utf-8' }));
-    const a = document.createElement('a'); a.href = url; a.download = `${code}-${selectedDisease}-${window.from}-${window.to}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
   const months = monthNames(lang);
   const basisLabel = (basis: string) => populationBasis[basis]?.[lang === 'zh' ? 1 : lang === 'fr' ? 2 : 0] || basis;
   const bounds = dataset ? dateBounds(dataset, catalog.diseases.flatMap(item => item.years)) : { from: '2000-01-01', to: '2100-12-31' };
@@ -249,7 +245,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
             pngFilename={`${code}-${selectedDisease}-${window?.from}-${window?.to}-${tab}.png`}
             pngSelector={tab === 'trend' ? '.subdivision-map-trend' : '.subdivision-map-plot'}
             pngDisabled={!rangeValid || !dataset || tab === 'table'}
-            onData={download} dataDisabled={!rangeValid || !dataset} />
+            dataHref={downloadCenterHref(lang, { country: selected || code, disease: selectedDisease })} />
         </div>
       </div>
       {!selectedDisease ? <p className="surveillance-note" role="status">{t.noDisease}</p> : !dataset || !window ? <p role="status">{failed ? t.unavailable : t.loading}</p> : <>

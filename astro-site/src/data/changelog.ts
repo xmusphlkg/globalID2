@@ -3,6 +3,24 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.4', date: '2026-11-19',
+    titleEn: 'One download center for all surveillance data',
+    titleZh: '统一监测数据下载中心',
+    titleFr: 'Un centre de téléchargement pour toutes les données de surveillance',
+    summaryEn: 'Find smaller files by country, disease, time range and format. Country, disease, report and chart links open the same download center with your selection.',
+    summaryZh: '按国家、疾病、时间范围和格式查找小文件。国家、疾病、报告和图表入口统一进入下载中心，并保留已有选择。',
+    summaryFr: 'Trouvez des fichiers plus petits par pays, maladie, période et format. Les liens des pays, maladies, rapports et graphiques ouvrent le même centre avec votre sélection.',
+    sections: [{ kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'Browse multiple diseases for one country or multiple countries for one disease. Combine filters, share your selection and download CSV, JSON or XLSX files.',
+      zh: '一个国家可浏览多个疾病，一个疾病可浏览多个国家。组合筛选、分享当前选择，下载 CSV、JSON 或 XLSX 文件。',
+      fr: 'Parcourez plusieurs maladies pour un pays ou plusieurs pays pour une maladie. Combinez les filtres, partagez votre sélection et téléchargez les fichiers CSV, JSON ou XLSX.',
+    }, {
+      en: 'Each file covers one country, disease and time window. Country and disease views link to the same file, while other pages use a smaller download-center link.',
+      zh: '每份文件对应一个国家、一种疾病和一个时间窗。国家与疾病视角共用同一文件，其他页面只保留轻量的下载中心入口。',
+      fr: 'Chaque fichier couvre un pays, une maladie et une période. Les deux vues partagent le même fichier ; les autres pages utilisent un lien léger vers le centre.',
+    }] }],
+  },
+  {
     version: '0.20.3', date: '2026-11-18',
     titleEn: 'Reliable styles and a compact Situation list',
     titleZh: '可靠的页面样式与紧凑的态势列表',

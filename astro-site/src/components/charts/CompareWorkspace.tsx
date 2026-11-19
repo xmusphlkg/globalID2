@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import EChartsReact from '../../lib/echartsReact';
 import echarts from '../../lib/echarts';
 import ChartResultActions from './ChartResultActions';
+import { downloadCenterHref } from '../../lib/download-center-link';
 import { pngFromCanvases } from './chartExport';
 import { loadDiseaseDataset, type DiseaseDataset, type DiseaseDatasetSeriesEntry } from './diseaseDataset';
 import { useSurveillanceSummary } from '../public/useSurveillanceSummary';
@@ -38,7 +39,6 @@ function CompareResultChart({ id, title, names, option, lang, share, dataHref, r
           lang={lang}
           shellRef={shell}
           onShare={share}
-          showData={false}
           dataHref={dataHref}
           pngFilename={`gids-compare-${id.toLowerCase()}.png`}
           getPng={() => (plot.current ? pngFromCanvases(plot.current) : null)}
@@ -134,7 +134,7 @@ export default function CompareWorkspace({ diseases: identities, language = 'en'
       .catch(() => { if (!cancelled) { setDatasets({}); setLoading(false); setLoadError(true); } });
     return () => { cancelled = true; };
   }, [selected, attempt]);
-  const diseaseHref = (id: string) => diseases.find(item => item.id === id)?.href;
+  const diseaseHref = (id: string) => downloadCenterHref(language, { disease: id });
   const areaGroups = useMemo(() => comparisonAreaGroups(selected, datasets, publication.data?.countries), [selected, datasets, publication.data]);
   const available = useMemo(() => areaGroups.flatMap(group => [group.area, ...group.children].filter(area => area.selectable)), [areaGroups]);
   const areaByCode = useMemo(() => new Map(available.map(area => [area.code, area])), [available]);

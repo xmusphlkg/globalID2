@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { downloadDataUrl, pngFromCanvases } from "./chartExport";
 import "./chartActions.css";
+import { downloadCenterHref } from "../../lib/download-center-link";
 
 export type ChartLang = "en" | "zh" | "fr";
 
@@ -24,12 +25,10 @@ interface Props {
   pngSelector?: string;
   getPng?: () => string | null | undefined;
   pngDisabled?: boolean;
-  /** When the page has no published-file dialog, omit the data button. */
+  /** Omit archive navigation for figures that do not represent downloadable data. */
   showData?: boolean;
-  /** Link to the page that owns the download dialog for this chart. */
+  /** Scoped download-center URL for this chart. */
   dataHref?: string;
-  /** Download the chart's current selection, taking precedence over the page dialog and dataHref. */
-  onData?: () => void;
   dataDisabled?: boolean;
   leading?: ReactNode;
 }
@@ -124,7 +123,6 @@ export default function ChartResultActions({
   pngDisabled = false,
   showData = true,
   dataHref,
-  onData,
   dataDisabled = false,
   leading,
 }: Props) {
@@ -152,8 +150,8 @@ export default function ChartResultActions({
       setDataReady(false);
       return;
     }
-    setDataReady(Boolean(onData) || Boolean(document.querySelector("[data-download-confirm-dialog], #downloads")));
-  }, [showData, onData]);
+    setDataReady(Boolean(document.querySelector("[data-download-center-link]")));
+  }, [showData]);
 
   async function toggleFullscreen() {
     if (fullscreen) {
@@ -217,27 +215,8 @@ export default function ChartResultActions({
 
   function openData() {
     if (dataDisabled) return;
-    if (onData) {
-      onData();
-      return;
-    }
-    const dialog = document.querySelector("[data-download-confirm-dialog]");
-    if (!(dialog instanceof HTMLDialogElement)) {
-      document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    if (dialog.open) return;
-    for (const selector of ["[data-download-time-filter]", "[data-download-format-filter]"]) {
-      const select = dialog.querySelector(selector);
-      if (!(select instanceof HTMLSelectElement) || select.value === "all") continue;
-      select.value = "all";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-    try {
-      dialog.showModal();
-    } catch {
-      // Another modal is already open.
-    }
+    const entry = document.querySelector<HTMLAnchorElement>('a[data-download-center-link]');
+    window.location.assign(dataLink || entry?.href || downloadCenterHref(lang));
   }
 
   const fullscreenLabel = active ? copy.exit : copy.enter;
@@ -271,8 +250,8 @@ export default function ChartResultActions({
         >
           {copy.png}
         </button>
-        {(onData ? showData : dataReady || dataLink) && (
-          !onData && dataLink
+        {showData && (dataReady || dataLink) && (
+          dataLink
             ? <a className="chart-link-btn" href={dataLink}>{copy.data}</a>
             : <button type="button" className="chart-link-btn" onClick={openData} disabled={dataDisabled}>
                 {copy.data}

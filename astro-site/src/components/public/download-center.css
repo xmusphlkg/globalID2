@@ -1,0 +1,12 @@
+.download-center { padding-block: 1.5rem; }
+.download-center__filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1.5fr)) minmax(0, 1fr) minmax(0, .8fr); gap: .8rem; padding: 1rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+.download-center .download-filter { min-width: 0; }
+.download-center__catalogue, .download-center__count { margin-block: 1rem; color: rgb(var(--text-muted)); font-size: .85rem; }
+.download-center__notice { padding: 2rem 1rem; border: 1px dashed rgb(var(--border)); text-align: center; }
+.download-center .download-file-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); }
+.download-center .download-file-item__heading h3 { white-space: normal; overflow-wrap: anywhere; }
+.download-center__pages { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.25rem; }
+.download-center__pages button { padding: .5rem .8rem; }
+.download-center__pages button:disabled { opacity: .45; cursor: default; }
+@media (max-width: 800px) { .download-center__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .download-center__filters { padding: .75rem; } .download-center__filters .download-filter:nth-child(-n+2) { grid-column: 1 / -1; } }

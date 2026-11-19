@@ -15,7 +15,6 @@ import { resolve } from 'path';
 import { buildAlternatePaths } from '../../../../lib/seo';
 import { absoluteSiteUrl } from '../../../../lib/papers';
 import { reportCoverage as coverageForReport, reportOverviewTitle } from '../../../../lib/report-seo';
-import { downloadCatalogue } from '../../../../lib/downloads-data';
 import { shouldBuildPage } from '../../../../lib/page-build-plan';
 
 export async function getStaticPaths() {
@@ -52,9 +51,6 @@ if (existsSync(countryDataPath)) {
   countryData = JSON.parse(readFileSync(countryDataPath, 'utf-8'));
 }
 
-const countryDownload: any = (downloadCatalogue()?.countries ?? []).find(
-  (entry: any) => entry.code?.toLowerCase() === country
-) ?? null;
 
 {
   const allReports = (reportsForCountry(readPublishableReports(), country) as any[])
@@ -307,15 +303,16 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
           ) : <span />}
         </div>
 
-        {countryDownload && (
+        {country && (
           <DownloadPanel
-            entry={{ ...countryDownload, source_info: countryData?.source_info }}
+            countryCode={String(country)}
+            entry={{ source_info: countryData?.source_info, site_json_path: `/site-data/countries/${country}.json` }}
             title="Download Underlying Dataset"
             titleFr="Télécharger le jeu de données sous-jacent"
             initialLanguage={locale}
-            descriptionEn="Download the area dataset used to generate this report, including source metadata."
-            descriptionZh="下载生成本报告所依据的区域数据集，并附带数据源信息。"
-            descriptionFr="Téléchargez le jeu de données national utilisé pour générer ce rapport, avec ses métadonnées de source."
+            descriptionEn="Browse published data for this area in the download center. Check the file dates against this report."
+            descriptionZh="在下载中心查看本区域的公开数据，使用前请核对文件与报告的日期。"
+            descriptionFr="Consultez les données publiées pour cette zone dans le centre de téléchargement. Vérifiez les dates par rapport au rapport."
           />
         )}
       </>

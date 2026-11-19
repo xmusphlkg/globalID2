@@ -3,7 +3,6 @@ import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { createSurveillanceDataClient } from './surveillance-data.ts';
 import { readSurveillanceDownloadIndex } from './surveillance-download-index.ts';
-import { downloadCatalogue } from '../components/public/downloads/catalogue.ts';
 
 const country = (code = 'JP', version = 1) => ({ kind: 'country', id: code.toLowerCase(), code,
   name_en: code === 'JP' ? 'Japan' : 'Tokyo', name_zh: code === 'JP' ? '日本' : '东京都',
@@ -43,11 +42,11 @@ test('compact directory pins index and meta, preserves true period counts, and n
   const first = (await readSurveillanceDownloadIndex({ client }))!;
   assert.equal(first.version, 'release-1');
   assert.equal(first.index.surveillance_release_id, 'independent-download-release');
-  const model = downloadCatalogue(first.index, first.meta, 'zh');
-  assert.equal(model.countries.length, 1);
-  assert.equal(model.subdivisionCount, 1);
-  assert.match(model.entries[0].detail, /当前文件 20 条.*全部历史 100 条（10 个时间范围）/);
-  assert.equal(model.entries[0].files.csv.url, 'https://files.example.test/JP-v1.csv');
+  assert.equal(first.index.countries.length, 2);
+  assert.equal(first.index.countries[0].parts_count, 10);
+  assert.equal(first.index.countries[0].parts[0].record_count, 20);
+  assert.equal(first.index.countries[0].record_count, 100);
+  assert.equal(first.index.countries[0].parts[0].files.csv.url, 'https://files.example.test/JP-v1.csv');
   assert.equal(state.calls.length, 3);
   assert.ok(state.calls.slice(1).every(path => path.includes('/objects/')));
   const next = (await readSurveillanceDownloadIndex({ client: state.client() }))!;
@@ -55,7 +54,7 @@ test('compact directory pins index and meta, preserves true period counts, and n
   assert.equal(next.index.countries[0].record_count, 200);
 });
 
-test('only a completely absent manifest permits a static directory', async () => {
+test('an absent publication is reported explicitly to the download center', async () => {
   const client = createSurveillanceDataClient({ fetcher: async () => new Response('', { status: 404 }) });
   assert.equal(await readSurveillanceDownloadIndex({ client }), null);
 });

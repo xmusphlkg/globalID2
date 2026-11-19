@@ -1,12 +1,39 @@
 ---
-import downloadsRaw from '../../data/downloads.json';
-import metaRaw from '../../data/meta.json';
-import DownloadCatalogue from './downloads/DownloadCatalogue.astro';
-import { downloadCatalogue } from './downloads/catalogue';
-import { downloadMessages } from './downloads/messages';
+import DownloadCenter from './DownloadCenter';
 interface Props { locale?: 'en' | 'zh' | 'fr' }
 const { locale = 'en' } = Astro.props;
-const model = downloadCatalogue(downloadsRaw, metaRaw, locale);
-const copy = downloadMessages(locale, model.subdivisionCount);
+const copy = locale === 'zh' ? {
+  kicker: 'GIDS 公开监测数据', title: '数据下载中心',
+  lead: '按国家／地区、疾病和时间范围查找文件，支持 CSV、JSON 和 XLSX。',
+  note: '选择国家可查看多个疾病，选择疾病可查看多个国家；同时选择可定位到一个国家的一种疾病。文件与在线图表分别更新，请核对文件日期和来源说明。',
+  noScript: '请启用 JavaScript，以读取最新下载目录并筛选文件。',
+} : locale === 'fr' ? {
+  kicker: 'Données publiques GIDS', title: 'Centre de téléchargement',
+  lead: 'Recherchez les fichiers par pays ou région, maladie et période, aux formats CSV, JSON et XLSX.',
+  note: 'Un pays regroupe plusieurs maladies ; une maladie regroupe plusieurs pays. Combinez les filtres pour préciser votre sélection. Les fichiers et les graphiques sont actualisés séparément : vérifiez les dates et les sources.',
+  noScript: 'Activez JavaScript pour consulter le répertoire actuel et filtrer les fichiers.',
+} : {
+  kicker: 'GIDS public surveillance data', title: 'Data download center',
+  lead: 'Find CSV, JSON and XLSX files by country or region, disease and time range.',
+  note: 'Choose a country to browse its diseases, or a disease to browse its countries. Combine both to narrow your selection. Files and live charts update separately; check file dates and source notes.',
+  noScript: 'Enable JavaScript to load the current download directory and filter files.',
+};
 ---
-<DownloadCatalogue locale={locale} model={model} copy={copy} />
+<div class="downloads-page">
+  <header class="download-center-hero">
+    <p class="figure-kicker">{copy.kicker}</p>
+    <h1>{copy.title}</h1>
+    <p class="download-center-lead">{copy.lead}</p>
+    <p class="download-center-note">{copy.note}</p>
+  </header>
+  <DownloadCenter language={locale} client:load />
+  <noscript><p>{copy.noScript}</p></noscript>
+</div>
+<style>
+  .downloads-page { max-width: 86rem; margin-inline: auto; padding: 2rem 1.25rem 4rem; }
+  .download-center-hero { padding-block: 1rem; border-bottom: 1px solid rgb(var(--border)); }
+  h1 { margin-top: .6rem; color: rgb(var(--text-strong)); font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 700; line-height: 1.2; }
+  .download-center-lead { margin-top: 1rem; max-width: 58rem; color: rgb(var(--text)); font-size: 1.05rem; line-height: 1.7; }
+  .download-center-note { margin-top: .7rem; max-width: 64rem; color: rgb(var(--text-muted)); font-size: .85rem; line-height: 1.7; }
+  @media (max-width: 480px) { .downloads-page { padding-inline: .8rem; } }
+</style>

@@ -121,9 +121,18 @@ Raw URL、文件名、字节数和 SHA-256。下载按钮按一个 URL 取一个
 
 ## 浏览器下载
 
-下载弹窗在视口水平、垂直居中，按时间块展示 CSV、JSON、XLSX。按钮通过浏览器
-读取 GitHub Raw 文件并创建 Blob 下载，从而避免 CSV/JSON 只在新标签页中打开；
-如果自动下载失败，会退回到 Raw 链接。
+所有数据下载统一进入三语 `/downloads/` 下载中心。国家、疾病、报告与图表入口
+只生成中心链接，可携带 `country`、`disease`、`window`、`format` 查询参数。
+其他页面不再维护文件列表或下载弹窗。
+
+中心先读取已发布的 compact index，再按所选国家或疾病读取一份 summary；
+国家、疾病、时间窗、格式独立筛选，每页展示 24 个文件。国家与疾病入口在相同
+组合下引用完全相同的 cell 文件。没有有效发布清单时显示错误，不回退到旧链接。
+实际文件读取、Blob 保存和失败后的 Raw 链接都由中心的 `DownloadFileCard` 处理。
+
+旧 `/site-data/downloads/<kind>/<id>.json` 入口只返回 schema 2 的 `download_center`
+导航地址，不再发布可能过期的文件清单。报告站需单独执行 reports-only 模板发布；
+维护发布设置 `suppress_subscription_dispatch=True`，不发送订阅通知。
 
 ## 本地 Git 工作区与发布
 

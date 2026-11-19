@@ -4,6 +4,20 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.4] - 2026-11-19
+
+### Improved
+
+- Centralize surveillance downloads in one multilingual download center with country/region, disease, time-window and file-format filters, shareable selections and paginated results.
+- Route country, disease, report and chart download actions to the center with their existing selection. Remove duplicate download dialogs and frozen archive links.
+- Publish country–disease–window files in CSV, JSON and XLSX; country and disease views share the same files. Keep the compact v5 catalogue and every asset below GitHub's file-size limit.
+- Reduce the assets loaded by country and disease pages by moving file selection and downloading into the center.
+
+### Fixed
+
+- Replace legacy download metadata endpoints with links to the current center.
+- Honor subscription suppression for report-only template publications.
+
 ## [0.20.3] - 2026-11-18
 
 ### Fixed

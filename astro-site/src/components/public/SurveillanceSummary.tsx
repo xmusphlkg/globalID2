@@ -12,7 +12,7 @@ export default function SurveillanceSummary({ dataUrl, mode, language = 'en', co
   const pick = (en: string, zh: string, fr: string) => language === 'zh' ? zh : language === 'fr' ? fr : en;
   const prefix = language === 'en' ? '' : `/${language}`;
   if (mode === 'downloads') return <div className="space-y-4" data-surveillance-version={version}>
-    <SurveillanceDownloads dataUrl={dataUrl} language={language} />
+    <SurveillanceDownloads dataUrl={dataUrl} language={language} diseaseId={diseaseId} />
     {data && <SurveillanceSources data={data} language={language} />}
   </div>;
   if (!data) return <div className="text-sm text-[rgb(var(--text-muted))]" role="status">

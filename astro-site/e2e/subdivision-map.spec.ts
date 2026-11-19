@@ -22,8 +22,8 @@ test.beforeEach(async ({ page }) => {
   for (const [key, value] of Object.entries(entries)) await page.route(`**/site-data/subdivision-maps/${key}`, route => route.fulfill({ json: value }));
 });
 
-test('regional navigation, compact filters, sortable selection, legend and exports', async ({ page }, testInfo) => {
-  await page.goto('/zh/countries/br/?mapDisease=D028&mapFrom=2025-01-01&mapTo=2025-01-31&mapMetric=cases#regional-distribution');
+test('regional navigation, compact filters, sortable selection, PNG and central data downloads', async ({ page }, testInfo) => {
+  await page.goto('/zh/countries/br/?mapDisease=D028&mapFrom=2025-01-01&mapTo=2025-01-31&mapMetric=cases#regional-distribution', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('navigation', { name: '本页导航' }).getByRole('link', { name: '地区分布' })).toHaveAttribute('href', '#regional-distribution');
   const map = page.locator('#regional-distribution');
   await map.scrollIntoViewIfNeeded();
@@ -70,9 +70,7 @@ test('regional navigation, compact filters, sortable selection, legend and expor
   await map.screenshot({ path: screenshot });
   await testInfo.attach('regional-distribution', { path: screenshot, contentType: 'image/png' });
   expect(await map.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
-  const dataDownload = page.waitForEvent('download');
-  await map.getByRole('button', { name: '下载数据', exact: true }).click();
-  expect((await dataDownload).suggestedFilename()).toContain('BR-D028');
+  await expect(map.getByRole('link', { name: '下载数据', exact: true })).toHaveAttribute('href', '/zh/downloads/?country=BR-AL&disease=D028');
   const pngDownload = page.waitForEvent('download');
   await map.getByRole('button', { name: '下载 PNG', exact: true }).click();
   expect((await pngDownload).suggestedFilename()).toMatch(/\.png$/);
@@ -89,4 +87,6 @@ test('regional navigation, compact filters, sortable selection, legend and expor
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   const darkAxe = await new AxeBuilder({ page }).include('#regional-distribution').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(darkAxe.violations.filter(item => ['serious', 'critical'].includes(item.impact || ''))).toEqual([]);
+  await map.getByRole('link', { name: '下载数据', exact: true }).click();
+  await expect(page).toHaveURL(/\/zh\/downloads\/\?country=BR-AL&disease=D028$/);
 });

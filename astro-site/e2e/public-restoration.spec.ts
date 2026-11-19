@@ -89,20 +89,16 @@ test('home restores real curves and clear national coverage without fetching cou
   expect(htmlHash(await (await request.get('/zh/')).body())).toBe(before);
 });
 
-test('country restores contextual links, source cadence and separately dated download formats', async ({ page }) => {
+test('country restores contextual links, source cadence and scoped download-center navigation', async ({ page }) => {
   await mock(page);
-  await page.goto('/zh/countries/jp/');
+  await page.goto('/zh/countries/jp/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#disease-directory a').first()).toHaveAttribute('href', '/zh/countries/jp/diseases/influenza/');
   await page.locator('#downloads').scrollIntoViewIfNeeded();
-  await page.locator('#downloads [data-download-modal-trigger]').click();
-  await expect(page.getByTestId('download-archive')).toContainText('2026-10-01');
+  await expect(page.locator('#downloads [data-download-center-link]')).toHaveAttribute('href', '/zh/downloads/?country=JP');
   await expect(page.locator('#downloads')).toContainText('每周');
   await expect(page.locator('#downloads [data-testid="surveillance-sources"] article')).toHaveCount(1);
-  await expect(page.locator('#downloads a[href$=".csv"]')).toHaveCount(1);
-  await page.getByLabel('文件格式', { exact: false }).selectOption('xlsx');
-  await expect(page.locator('#downloads a[href$=".csv"]')).toHaveCount(0);
-  await expect(page.locator('#downloads a[href$=".xlsx"]')).toHaveCount(1);
-  await page.keyboard.press('Escape');
+  await expect(page.locator('#downloads a[href$=".csv"], #downloads a[href$=".xlsx"]')).toHaveCount(0);
+  await expect(page.locator('[data-download-confirm-dialog]')).toHaveCount(0);
   await page.locator('#international').scrollIntoViewIfNeeded();
   const notices = page.locator('#international [data-situation-version="restored-situation"]');
   await expect(notices.locator('.intl-panel-item')).toHaveCount(1);
@@ -114,19 +110,43 @@ test('country restores contextual links, source cadence and separately dated dow
 
 test('disease page keeps the selected disease when opening a country', async ({ page }) => {
   await mock(page);
-  await page.goto('/zh/diseases/influenza/');
+  await page.goto('/zh/diseases/influenza/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#coverage a[href="/zh/countries/jp/diseases/influenza/"]')).toHaveCount(1);
 });
 
-test('chart data action opens the lazy download dialog directly', async ({ page }) => {
+test('chart data action opens the shared center with the disease selected', async ({ page }) => {
   await mock(page);
-  await page.goto('/zh/diseases/influenza/');
+  await page.goto('/zh/diseases/influenza/', { waitUntil: 'domcontentloaded' });
   await page.locator('#seasonality').scrollIntoViewIfNeeded();
   await page.locator('#seasonality select').waitFor();
   await page.locator('#seasonality').getByRole('button', { name: '下载数据', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: '选择数据下载' });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.locator('a[href$=".xlsx"]')).toHaveCount(1);
+  await expect(page).toHaveURL(/\/zh\/downloads\/\?disease=D038$/);
+
+});
+
+test('country and disease links preserve scope when navigating to the center', async ({ page }) => {
+  await mock(page);
+  for (const [path, query] of [['/zh/countries/jp/', 'country=JP'], ['/zh/diseases/influenza/', 'disease=D038'], ['/zh/countries/jp/diseases/influenza/', 'country=JP&disease=D038']]) {
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
+    const entry = page.locator('#downloads [data-download-center-link]');
+    await expect(entry).toHaveAttribute('href', `/zh/downloads/?${query}`);
+    await entry.click();
+    await expect(page).toHaveURL(new RegExp(`/zh/downloads/\\?${query}$`));
+  }
+});
+
+test('report entry points retain country and disease without embedding archive links', async ({ page }) => {
+  for (const [path, query] of [
+    ['/zh/countries/jp/reports/50/', 'country=JP'],
+    ['/zh/countries/jp/reports/50/influenza/', 'country=JP&disease=D038'],
+  ]) {
+    const response = await page.goto(path, { waitUntil: 'domcontentloaded' });
+    expect(response?.status()).toBe(200);
+    const link = page.locator('.download-panel [data-download-center-link]');
+    await expect(link).toHaveAttribute('href', new RegExp(`(?:https://globalinfectiousdisease.com)?/zh/downloads/\\?${query}$`));
+    await expect(page.locator('a[href*="raw.githubusercontent.com/xmusphlkg/globalID2_data_download/"]')).toHaveCount(0);
+    await expect(page.locator('[data-download-confirm-dialog]')).toHaveCount(0);
+  }
 });
 
 test('French country facts and disease names retain localization', async ({ page }) => {
