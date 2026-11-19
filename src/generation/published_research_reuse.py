@@ -68,6 +68,15 @@ def _validate_private_articles(source: Path, expected: dict) -> None:
             raise ValueError('Published private article differs from its frozen receipt')
 
 
+def _task_id_for_release(release_id: str) -> str | None:
+    if not release_id.startswith("literature-"):
+        return None
+    try:
+        return str(UUID(release_id.removeprefix("literature-")))
+    except ValueError:
+        return None
+
+
 def prepare_research_for_baseline(root: Path, output: Path, public: Path, baseline: dict) -> str:
     """Install the private snapshot matching a captured pointer, or verify local data.
 
@@ -79,12 +88,17 @@ def prepare_research_for_baseline(root: Path, output: Path, public: Path, baseli
     if receipt.exists():
         try:
             return install_published_research(root, output, public, expected_manifest=baseline)
-        except (FileNotFoundError, PublishedResearchMismatch) as error:
+        except (FileNotFoundError, PublishedResearchMismatch, ValueError) as error:
             # A receipt can legitimately point at an older literature snapshot
             # after a full export. The local tree is acceptable only when its
             # entire public projection still matches the captured pointer.
             if str(baseline.get('release_id', '')).startswith('literature-'):
-                raise ValueError('Cannot install the currently published literature snapshot') from error
+                task_id = _task_id_for_release(str(baseline.get('release_id') or ''))
+                if task_id is None:
+                    raise ValueError('Cannot identify the captured literature snapshot') from error
+                return install_published_research(
+                    root, output, public, expected_manifest=baseline, task_uuid=task_id,
+                )
     elif str(baseline.get('release_id', '')).startswith('literature-'):
         raise ValueError('Currently published literature has no acknowledged private snapshot receipt')
     _validate_build_source(output / 'research')
@@ -92,24 +106,32 @@ def prepare_research_for_baseline(root: Path, output: Path, public: Path, baseli
     return str(baseline['release_id'])
 
 
-def install_published_research(root: Path, output: Path, public: Path, *, expected_manifest: dict | None = None) -> str:
+def install_published_research(
+    root: Path,
+    output: Path,
+    public: Path,
+    *,
+    expected_manifest: dict | None = None,
+    task_uuid: str | None = None,
+) -> str:
     """Install a coherent published snapshot without re-querying the database.
 
     Both trees are prepared before replacing either. Roll back the first swap if
     the second fails; an interrupted run never acknowledges a publication.
     """
     receipt = json.loads((root / "exports/research-current-receipt.json").read_bytes())
-    task_id = str(UUID(receipt["task_uuid"]))
-    release_id = receipt["release_id"]
-    if release_id != f"literature-{task_id}":
+    selected_task_id = str(UUID(task_uuid)) if task_uuid is not None else str(UUID(receipt["task_uuid"]))
+    release_id = f"literature-{selected_task_id}"
+    if task_uuid is None and receipt.get("release_id") != release_id:
         raise ValueError("Research receipt does not identify its snapshot")
     if expected_manifest is not None and str(expected_manifest.get('release_id', '')).startswith('literature-'):
         generation = (expected_manifest.get('papers') or {}).get('papers_generation_sha256')
         if (not isinstance(generation, str) or not re.fullmatch(r'[a-f0-9]{64}', generation)
                 or expected_manifest['release_id'] != release_id
-                or receipt.get('papers_generation_sha256') != (expected_manifest.get('papers') or {}).get('papers_generation_sha256')):
+                or (selected_task_id == str(receipt.get('task_uuid'))
+                    and receipt.get('papers_generation_sha256') != generation)):
             raise ValueError('Research receipt does not match the captured publication generation')
-    snapshot = root / "exports/research-runs" / task_id / "snapshot"
+    snapshot = root / "exports/research-runs" / selected_task_id / "snapshot"
     sources = [snapshot / "build/research", snapshot / "public/research"]
     for path in (sources[0] / "routes.json", sources[0] / "index.json", sources[1] / "index.json"):
         if not path.is_file():
