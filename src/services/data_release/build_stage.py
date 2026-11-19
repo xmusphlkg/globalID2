@@ -37,6 +37,13 @@ async def build_release_site(
     """Run local build gates in order and bind deployment identity to output bytes."""
     split = bool(job.include_cloudflare_deploy or r2_papers_enabled or r2_reports_enabled)
     config = service._config()
+    # Astro defaults to one prerender worker. Release workers have enough
+    # memory for the documented four-worker setting, and a full static
+    # catalogue otherwise spends most of the deployment window rendering
+    # routes serially. Resolve through the service so publication recovery
+    # still honors the frozen environment when one was recorded.
+    env_value = getattr(service, "_env_value", None)
+    astro_render_workers = env_value("GIDS_ASTRO_RENDER_WORKERS", "4") if callable(env_value) else "4"
     if ((runtime.astro_dir / "src/lib/surveillance-data.ts").is_file()
             and not getattr(config, "surveillance_json_enabled", False)):
         raise RuntimeError("Runtime data templates require an initialized JSON channel and Worker; enable DATA_RELEASE__SURVEILLANCE_JSON_ENABLED after initialization before publishing templates")
@@ -86,6 +93,7 @@ async def build_release_site(
                      "GIDS_RESEARCH_PUBLICATION_ENABLED": "1" if getattr(config, "literature_json_enabled", False) else "0",
                      "PUBLIC_GIDS_THEME_V1_URL": str(getattr(config, "theme_stylesheet_url", "") or ""),
                      "NODE_OPTIONS": "--max-old-space-size=12288",
+                     "GIDS_ASTRO_RENDER_WORKERS": astro_render_workers,
                      "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
                      "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
                      "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],
@@ -175,11 +183,7 @@ async def build_release_site(
             # Publication latency takes priority over minimizing heap use.
             # The production worker has a 60 GiB memory budget.
             "NODE_OPTIONS": "--max-old-space-size=12288",
-            # Full multilingual releases render tens of thousands of pages.
-            # Use bounded parallelism so the control-panel build completes well
-            # within the release timeout while staying below the worker memory
-            # budget.
-            "GIDS_ASTRO_RENDER_WORKERS": "4",
+            "GIDS_ASTRO_RENDER_WORKERS": astro_render_workers,
             "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
             "GIDS_FORCE_FULL_RENDER": "1" if force_full_render else "0",
             "GIDS_EXTERNAL_SURVEILLANCE_DATA": "1" if external_surveillance else "0",

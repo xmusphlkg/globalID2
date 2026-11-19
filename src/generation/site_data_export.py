@@ -1541,17 +1541,20 @@ def write_site_export_artifacts(
             continue
         country_data = country_export["country_data"]
         site_data = country_export["site_data"]
-        write_pretty_json(
-            output_dir / "countries" / f"{code.lower()}.json", country_data
-        )
-        write_compact_json(
-            public_site_data_dir / "countries" / f"{code.lower()}.json",
-            site_data,
-        )
-        write_compact_json(
-            public_site_data_dir / "countries" / f"{code.lower()}-source-series.json",
-            build_country_source_series_data(country_data),
-        )
+        # Published/curve-only runs intentionally carry an empty projection
+        # for unchanged countries.  Never replace an existing lossless or
+        # compact snapshot with that placeholder: doing so makes a later
+        # release appear to contain zero diseases (notably China's 57 series).
+        unchanged = bool(country_export.get("unchanged_curve"))
+        private_path = output_dir / "countries" / f"{code.lower()}.json"
+        public_path = public_site_data_dir / "countries" / f"{code.lower()}.json"
+        source_path = public_site_data_dir / "countries" / f"{code.lower()}-source-series.json"
+        if not (unchanged and private_path.is_file()):
+            write_pretty_json(private_path, country_data)
+        if not (unchanged and public_path.is_file()):
+            write_compact_json(public_path, site_data)
+        if not (unchanged and source_path.is_file()):
+            write_compact_json(source_path, build_country_source_series_data(country_data))
         print(
             f"  ✓ countries/{code.lower()}.json "
             f"({country_record_counts.get(code, 0)} records)"
@@ -1581,13 +1584,13 @@ def write_site_export_artifacts(
         )
         if limit_curves and did not in changed_disease_set:
             continue
-        write_pretty_json(
-            output_dir / "diseases" / f"{did.lower()}.json", disease_data
-        )
-        write_compact_json(
-            public_site_data_dir / "diseases" / f"{did.lower()}.json",
-            disease_site_data,
-        )
+        unchanged = bool(disease_export.get("unchanged_curve"))
+        private_path = output_dir / "diseases" / f"{did.lower()}.json"
+        public_path = public_site_data_dir / "diseases" / f"{did.lower()}.json"
+        if not (unchanged and private_path.is_file()):
+            write_pretty_json(private_path, disease_data)
+        if not (unchanged and public_path.is_file()):
+            write_compact_json(public_path, disease_site_data)
     rewritten_diseases = len(changed_disease_set) if limit_curves else len(diseases)
     print(
         f"  ✓ diseases/{diseases[0]['disease_id'].lower()}.json … "
