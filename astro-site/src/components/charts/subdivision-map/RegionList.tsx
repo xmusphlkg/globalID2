@@ -3,9 +3,9 @@ import type { Language, RegionResult } from './model';
 import { relativeChange, sortRegions, type RegionSort, type RegionSortKey } from './presentation';
 
 const labels = {
-  en: { title: 'Regions', search: 'Find a region', area: 'Region', change: 'Change', sort: 'Sort by', empty: 'No matching regions', previous: 'Comparison' },
-  zh: { title: '地区列表', search: '搜索地区名称或编码', area: '地区', change: '变化', sort: '排序', empty: '没有匹配的地区', previous: '对比范围' },
-  fr: { title: 'Régions', search: 'Rechercher une région', area: 'Région', change: 'Variation', sort: 'Trier par', empty: 'Aucune région correspondante', previous: 'Comparaison' },
+  en: { title: 'Regions', search: 'Find a region', area: 'Region', change: 'Change', sort: 'Sort by', empty: 'No matching regions', previous: 'Comparison', unverified: 'Unverified' },
+  zh: { title: '地区列表', search: '搜索地区名称或编码', area: '地区', change: '变化', sort: '排序', empty: '没有匹配的地区', previous: '对比范围', unverified: '未核实' },
+  fr: { title: 'Régions', search: 'Rechercher une région', area: 'Région', change: 'Variation', sort: 'Trier par', empty: 'Aucune région correspondante', previous: 'Comparaison', unverified: 'Non vérifié' },
 };
 interface Props {
   rows: RegionResult[]; previous: Map<string, RegionResult>; comparison: boolean;
@@ -46,7 +46,7 @@ export default function RegionList({ rows, previous, comparison, lang, selected,
           const delta = relativeChange(row, previous.get(row.region.code));
           return <tr key={row.region.code} data-region-code={row.region.code} data-selected={row.region.code === selected || undefined} onClick={() => onSelect(row.region.code)}>
             <th scope="row"><button type="button" aria-pressed={row.region.code === selected} onClick={() => onSelect(row.region.code)}><span className="subdivision-region-marker" aria-hidden="true">{row.region.code === selected ? '●' : '○'}</span>{name(row)}</button></th>
-            <td title={row.value === null ? reason(row) : comparison ? `${t.previous}: ${number(previous.get(row.region.code)?.value)}` : undefined}>{number(row.value)}{row.provisional && <span aria-label={lang === 'zh' ? '暂定数据' : lang === 'fr' ? 'Provisoire' : 'Provisional'}> *</span>}</td>
+            <td title={row.value === null ? reason(row) : comparison ? `${t.previous}: ${number(previous.get(row.region.code)?.value)}` : undefined}>{number(row.value)}{row.provisional && <span aria-label={lang === 'zh' ? '暂定数据' : lang === 'fr' ? 'Provisoire' : 'Provisional'}> *</span>}{row.unverified && <span aria-label={t.unverified}> †</span>}</td>
             {comparison && <td>{delta === null ? '—' : `${delta > 0 ? '+' : ''}${number(delta)}%`}</td>}
           </tr>;
         })}</tbody>

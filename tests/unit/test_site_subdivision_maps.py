@@ -80,7 +80,28 @@ def test_cn_projection_allows_resolved_non_additive_sources_and_raw_points():
         ],
     })
     result = monthly_series(entry, "CN")
-    assert result["points"] == [["2024-01-01", 0, "observed"], ["2024-02-01", 100, "observed"]]
+    assert result["points"] == [["2024-01-01", 0, "raw"], ["2024-02-01", 100, "raw"]]
+
+
+def test_cn_map_selects_one_source_system_and_uses_its_values():
+    def source(system, code, values, basis, time_basis):
+        return {"series_code": code, "source_system": system,
+                "definition_version": "CN_PROVINCE_DATACENTER_ONSET_V1" if system.endswith("DATACENTER") else "CN_PROVINCE_MONTHLY_REPORT_V1",
+                "reporting_basis": basis, "time_basis": time_basis,
+                "metric_type": "case_notifications", "unit": "count", "temporal_granularity": "monthly",
+                "mapping_relation": "exact", "comparability": "conditional", "comparability_break": None,
+                "series_is_active": True, "geography_key": "country:CN-AH:national", "dimension_key": "all", "dimensions": {},
+                "dates": ["2021-01-01", "2021-02-01"], "values": values, "point_quality_statuses": ["raw", "raw"]}
+    dc = source("SRC_CN_PROV_DATACENTER", "DC", [1461, 837], "national_notifiable_disease_surveillance_by_onset", "month of onset")
+    monthly_report = source("SRC_CN_PROV_MONTHLY_REPORT", "MR", [1482, 860], "provincial_statutory_infectious_disease_monthly_report", "publisher reporting month")
+    entry = {"name_en": "Influenza", "name_zh": "流感", "period_granularity": "monthly",
+             "source_series": [dc, monthly_report], "data_layer": "series_registry"}
+    ah = {"country_code": "CN-AH", "country_name_en": "Anhui", "disease_series": {"D038": entry}}
+    boundary = {"codes": ["CN-AH"], "expected_regions": 1}
+    _, _, payloads = build_map_payloads("CN", {"CN-AH": ah}, [], boundary)
+    result = payloads["D038"]["regions"]["CN-AH"]
+    assert result["source_system"] == "SRC_CN_PROV_DATACENTER"
+    assert result["points"][0] == ["2021-01-01", 1461, "raw"]
 
 
 def test_cn_non_additive_sources_without_projection_resolution_are_rejected():

@@ -37,7 +37,7 @@ export interface RegionResult {
   region: Region; cases: number | null; rate: number | null; value: number | null;
   population: Population | null; annual: AnnualContribution[];
   observed: number; expected: number; from: string | null; to: string | null;
-  reasons: MissingReason[]; provisional: boolean;
+  reasons: MissingReason[]; provisional: boolean; unverified: boolean;
 }
 const day = 86400000;
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -238,7 +238,7 @@ export function aggregateRegion(region: Region, dataset: DiseaseDataset, populat
   const indexed = source ? preparedDatasets.get(dataset)?.sources.get(source) ?? indexSeries(source, dataset.cadence) : undefined;
   if (indexed?.invalid) reasons.push('invalid_period');
   const annualCounts = new Map<number, number>();
-  let observed = 0, provisional = false;
+  let observed = 0, provisional = false, unverified = false;
   for (const period of expected) {
     const matches = indexed?.lookup.get(period.start) ?? [];
     if (period.reporting_year !== null) annualCounts.set(period.reporting_year, annualCounts.get(period.reporting_year) ?? 0);
@@ -249,8 +249,8 @@ export function aggregateRegion(region: Region, dataset: DiseaseDataset, populat
     if (point.period.end_exclusive !== period.end_exclusive) { reasons.push('invalid_period'); continue; }
     if (['suppressed', 'missing_or_suppressed'].includes(point.quality)) { reasons.push('suppressed'); continue; }
     if (point.quality === 'missing' || !finite(point.value)) { reasons.push('missing_period'); continue; }
-    if (!['observed', 'provisional'].includes(point.quality) || point.value < 0 || !Number.isInteger(point.value)) { reasons.push('incomplete'); continue; }
-    observed++; provisional ||= point.quality === 'provisional';
+    if (!['observed', 'provisional', 'raw'].includes(point.quality) || point.value < 0 || !Number.isInteger(point.value)) { reasons.push('incomplete'); continue; }
+    observed++; provisional ||= point.quality === 'provisional'; unverified ||= point.quality === 'raw';
     annualCounts.set(point.period.reporting_year, (annualCounts.get(point.period.reporting_year) ?? 0) + point.value);
   }
   const complete = reasons.length === 0;
@@ -263,7 +263,7 @@ export function aggregateRegion(region: Region, dataset: DiseaseDataset, populat
   const rate = complete && annual.length && annual.every(item => item.rate !== null) ? annual.reduce((sum, item) => sum + item.rate!, 0) : null;
   return { region, cases, rate, value: window.metric === 'cases' ? cases : rate, population: annual.length === 1 ? annual[0].population : null, annual,
     observed, expected: expected.length, from: expected[0]?.start ?? null, to: expected.length ? addDays(expected[expected.length - 1].end_exclusive, -1) : null,
-    reasons: [...new Set(reasons)], provisional };
+    reasons: [...new Set(reasons)], provisional, unverified };
 }
 export function resultsFor(catalog: MapCatalog, dataset: DiseaseDataset, populations: PopulationDataset, window: MapWindow) {
   if (!validWindow(window)) throw new RangeError('Invalid date range');
@@ -345,9 +345,9 @@ export function trendFor(region: Region, dataset: DiseaseDataset, populations: P
   });
 }
 export function csvFor(rows: RegionResult[], window: MapWindow, dataset: DiseaseDataset, catalog: MapCatalog, comparisonRows: RegionResult[] = [], comparison?: MapWindow | null) {
-  const header = ['region_code', 'region_name', 'disease_id', 'requested_start', 'requested_end', 'actual_start', 'actual_end', 'source_cadence', 'view', 'cases', 'reports_per_100000', 'rate_method', 'population', 'population_year', 'population_source', 'population_reference_date', 'population_basis', 'population_source_url', 'population_version', 'annual_denominators_and_contributions', 'observed_periods', 'expected_periods', 'status', 'provisional', 'definition', 'time_basis', 'boundary_version', 'case_version', 'case_source_url', 'comparison_start', 'comparison_end', 'comparison_actual_start', 'comparison_actual_end', 'comparison_observed_periods', 'comparison_expected_periods', 'comparison_status', 'comparison_cases', 'comparison_reports_per_100000', 'comparison_annual_denominators_and_contributions', 'case_source_labels'];
+  const header = ['region_code', 'region_name', 'disease_id', 'requested_start', 'requested_end', 'actual_start', 'actual_end', 'source_cadence', 'view', 'cases', 'reports_per_100000', 'rate_method', 'population', 'population_year', 'population_source', 'population_reference_date', 'population_basis', 'population_source_url', 'population_version', 'annual_denominators_and_contributions', 'observed_periods', 'expected_periods', 'status', 'provisional', 'unverified', 'definition', 'time_basis', 'boundary_version', 'case_version', 'case_source_url', 'comparison_start', 'comparison_end', 'comparison_actual_start', 'comparison_actual_end', 'comparison_observed_periods', 'comparison_expected_periods', 'comparison_status', 'comparison_cases', 'comparison_reports_per_100000', 'comparison_annual_denominators_and_contributions', 'case_source_labels'];
   const escape = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
   const other = new Map(comparisonRows.map(row => [row.region.code, row]));
-  const records = rows.map(row => [row.region.code, row.region.name_en, dataset.disease_id, window.from, window.to, row.from, row.to, dataset.cadence, window.view, row.cases, row.rate, 'sum_of_reporting_year_cases_divided_by_same_year_local_population_times_100000', row.population?.value, row.population?.year, row.population?.source, row.population?.reference_date, row.population?.basis, row.population?.source_url, row.population?.version, JSON.stringify(row.annual), row.observed, row.expected, row.reasons.join('|') || 'observed', row.provisional, dataset.regions[row.region.code]?.semantics.definition, dataset.regions[row.region.code]?.semantics.time_basis, catalog.boundary.version, dataset.regions[row.region.code]?.case_version, dataset.regions[row.region.code]?.source_url, comparison?.from, comparison?.to, other.get(row.region.code)?.from, other.get(row.region.code)?.to, other.get(row.region.code)?.observed, other.get(row.region.code)?.expected, other.get(row.region.code)?.reasons.join('|'), other.get(row.region.code)?.cases, other.get(row.region.code)?.rate, other.has(row.region.code) ? JSON.stringify(other.get(row.region.code)!.annual) : '', dataset.regions[row.region.code]?.semantics.source_labels?.join(' | ')]);
+  const records = rows.map(row => [row.region.code, row.region.name_en, dataset.disease_id, window.from, window.to, row.from, row.to, dataset.cadence, window.view, row.cases, row.rate, 'sum_of_reporting_year_cases_divided_by_same_year_local_population_times_100000', row.population?.value, row.population?.year, row.population?.source, row.population?.reference_date, row.population?.basis, row.population?.source_url, row.population?.version, JSON.stringify(row.annual), row.observed, row.expected, row.reasons.join('|') || 'observed', row.provisional, row.unverified, dataset.regions[row.region.code]?.semantics.definition, dataset.regions[row.region.code]?.semantics.time_basis, catalog.boundary.version, dataset.regions[row.region.code]?.case_version, dataset.regions[row.region.code]?.source_url, comparison?.from, comparison?.to, other.get(row.region.code)?.from, other.get(row.region.code)?.to, other.get(row.region.code)?.observed, other.get(row.region.code)?.expected, other.get(row.region.code)?.reasons.join('|'), other.get(row.region.code)?.cases, other.get(row.region.code)?.rate, other.has(row.region.code) ? JSON.stringify(other.get(row.region.code)!.annual) : '', dataset.regions[row.region.code]?.semantics.source_labels?.join(' | ')]);
   return '\uFEFF' + [header, ...records].map(record => record.map(escape).join(',')).join('\r\n');
 }
