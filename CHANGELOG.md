@@ -4,6 +4,13 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.7] - 2026-11-20
+
+### Fixed
+
+- Keep content-only static reservations independent from JSON publication lanes while preserving legacy static serialization.
+- Preserve scoped surveillance baselines and report invalid incremental download baselines clearly during retries.
+
 ## [0.20.6] - 2026-11-20
 
 ### Fixed
