@@ -39,7 +39,7 @@ def write_papers_discovery(work: Path) -> None:
     host.mkdir(exist_ok=True)
     urls = []
     for prefix in ('research', 'zh/research', 'fr/research'):
-        for kind in ('articles', 'diseases'):
+        for kind in ('articles', 'diseases', 'countries', 'weekly'):
             for page in sorted((work / prefix / kind).glob('*/index.html')):
                 with page.open() as stream:
                     head = stream.read(32768).split('</head>', 1)[0]

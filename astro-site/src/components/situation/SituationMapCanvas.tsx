@@ -275,7 +275,7 @@ export default function SituationMapCanvas({
         echarts={echarts}
         option={option}
         replaceMerge={['series']}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }}
         onEvents={events}
         onChartReady={(instance: any) => setChart(instance)}
       />

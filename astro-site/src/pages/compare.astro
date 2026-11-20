@@ -2,8 +2,9 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CompareWorkspace from '../components/charts/CompareWorkspace';
 import { diseaseIndex } from '../lib/seo-page-data';
-import { buildAlternatePaths, toSeoSlug } from '../lib/seo';
+import { buildAlternatePaths } from '../lib/seo';
 import { localizedDiseaseName } from '../utils/diseaseNames';
+import { downloadCenterHref } from '../lib/download-center-link';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
@@ -11,7 +12,7 @@ const canonicalPath = `${prefix}/compare/`;
 const options = diseaseIndex.map(disease => ({
     id: disease.disease_id,
     slug: disease.slug,
-    href: `${prefix}/diseases/${toSeoSlug(disease.slug) || disease.slug}/#downloads`,
+    href: downloadCenterHref(locale, { disease: disease.disease_id }),
     en: disease.name_en,
     zh: disease.name_zh,
     fr: localizedDiseaseName({ disease_id: disease.disease_id, slug: disease.slug, name_en: disease.name_en, name_zh: disease.name_zh, name_fr: disease.name_fr }, 'fr'),

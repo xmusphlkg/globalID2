@@ -5,7 +5,7 @@ import SurveillanceDownloads from './SurveillanceDownloads';
 import { getFlagAssetPath } from '../../lib/country-flag';
 import { countryLabel, number, coverage, pick as translate, type Language, type Summary } from '../../lib/surveillance-presentation';
 
-export default function SurveillanceDiseaseSummary({ dataUrl, mode, language, routes = {} }: { dataUrl: string; mode: 'disease-coverage' | 'disease-countries' | 'downloads'; language: Language; routes?: Record<string, string> }) {
+export default function SurveillanceDiseaseSummary({ dataUrl, mode, language, routes = {}, disease }: { dataUrl: string; mode: 'disease-coverage' | 'disease-countries' | 'downloads'; language: Language; routes?: Record<string, string>; disease?: string }) {
   const { data, version, error, retry } = useSurveillanceSummary(dataUrl);
   const pick = (en: string, zh: string, fr: string) => translate(language, en, zh, fr);
   const prefix = language === 'en' ? '' : `/${language}`;
@@ -19,7 +19,13 @@ export default function SurveillanceDiseaseSummary({ dataUrl, mode, language, ro
     {[[pick('Coverage window', '覆盖区间', 'Période couverte'), coverage(data)], [pick('Reporting areas', '报告区域数', 'Zones déclarantes'), number(data.country_count, language)]].map(([name, value]) => <div className="academic-meta-item" key={name}><div className="academic-meta-label">{name}</div><div className="academic-meta-value text-sm">{value}</div></div>)}{revision}
   </div>;
   if (mode === 'disease-countries') return <div><p className="figure-caption">{number(data.country_count, language)} {pick('reporting areas', '个报告区域', 'zones déclarantes')}</p><ul className="grid gap-2 mt-4 sm:grid-cols-2 lg:grid-cols-4">
-    {(data.reporting_countries ?? []).map((row: Summary) => <li key={row.code}><a href={routes[String(row.code).toUpperCase()] || `${prefix}/countries/${encodeURIComponent(String(row.code).toLowerCase())}/`} className="site-action-secondary flex items-center gap-2 px-3 py-2 text-sm border"><img src={getFlagAssetPath(row.code) ?? undefined} alt="" width="28" height="20" loading="lazy" /><span>{countryLabel(row, language)}</span><span className="text-xs text-[rgb(var(--text-muted))]">{row.code}</span></a></li>)}
+    {(data.reporting_countries ?? []).map((row: Summary) => {
+      const code = String(row.code ?? '').toLowerCase();
+      const runtimeHref = disease && code
+        ? `${prefix}/country-disease/?country=${encodeURIComponent(code)}&disease=${encodeURIComponent(disease)}`
+        : `${prefix}/countries/${encodeURIComponent(code)}/`;
+      return <li key={row.code}><a href={routes[String(row.code).toUpperCase()] || runtimeHref} className="site-action-secondary flex items-center gap-2 px-3 py-2 text-sm border"><img src={getFlagAssetPath(row.code) ?? undefined} alt="" width="28" height="20" loading="lazy" /><span>{countryLabel(row, language)}</span><span className="text-xs text-[rgb(var(--text-muted))]">{row.code}</span></a></li>;
+    })}
   </ul></div>;
   return null;
 }

@@ -3,6 +3,78 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.7', date: '2026-11-20',
+    titleEn: 'More reliable incremental publication',
+    titleZh: '更可靠的增量发布',
+    titleFr: 'Publication incrémentielle plus fiable',
+    summaryEn: 'Keep static content releases independent from JSON updates and preserve exact scoped surveillance baselines during retries.',
+    summaryZh: '让静态内容发布与 JSON 更新相互独立，并在重试时保留精确的监测范围基线。',
+    summaryFr: 'Les publications de contenu statique restent indépendantes des mises à jour JSON et les bases de surveillance ciblées sont conservées lors des reprises.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Content-only releases no longer block independent JSON channels, while legacy static releases keep their serialization guarantees.',
+      zh: '仅内容发布不再阻塞独立的 JSON 通道，同时保留旧式静态发布的串行保证。',
+      fr: 'Les publications de contenu ne bloquent plus les canaux JSON indépendants, tandis que la sérialisation des anciennes publications statiques est conservée.',
+    }, {
+      en: 'Incremental surveillance retries validate their published baseline and download manifest before acknowledging changes.',
+      zh: '监测增量重试会在确认变更前校验已发布基线和下载清单。',
+      fr: 'Les reprises de surveillance incrémentielle vérifient la base publiée et le manifeste de téléchargement avant de confirmer les changements.',
+    }] }],
+  },
+  {
+    version: '0.20.6', date: '2026-11-20',
+    titleEn: 'A consolidated and validated public release',
+    titleZh: '统一并完成校验的公开站版本',
+    titleFr: 'Une version publique consolidée et validée',
+    summaryEn: 'Consolidate the public-site reliability work with runtime long-tail pages, bounded static output, and broader publication checks.',
+    summaryZh: '整合公开站可靠性改进，采用运行时长尾页面、受控静态输出和更完整的发布校验。',
+    summaryFr: 'Consolidez les améliorations de fiabilité avec des pages longue traîne à l’exécution, une sortie statique bornée et des contrôles de publication élargis.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Keep the existing multilingual map and runtime country-disease behavior while validating generated assets and public navigation before publication.',
+      zh: '保留现有多语言地图和国家疾病运行时行为，并在发布前校验生成资源和公开导航。',
+      fr: 'Conservez le comportement cartographique multilingue et les pages pays-maladie à l’exécution, avec une validation des ressources et de la navigation avant publication.',
+    }] }],
+  },
+  {
+    version: '0.20.5', date: '2026-11-20',
+    titleEn: 'A smaller static site with runtime long-tail pages',
+    titleZh: '更小的静态站点与运行时长尾页面',
+    titleFr: 'Un site statique plus compact avec des pages longue traîne à l’exécution',
+    summaryEn: 'Country-disease and research collections now grow through shared runtime shells, while path-scoped Pages Functions keep data requests separate from static site traffic.',
+    summaryZh: '国家疾病页面和研究集合通过共享运行时页面壳增长，路径受限的 Pages Functions 将数据请求与静态站点流量分开。',
+    summaryFr: 'Les pages pays-maladie et les collections de recherche utilisent des modèles d’exécution partagés, tandis que les Pages Functions limitées aux données séparent les requêtes de données du trafic statique.',
+    sections: [{ kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'New diseases and ordinary country combinations use one multilingual runtime shell instead of creating another group of static HTML pages.',
+      zh: '新增疾病和普通国家组合使用统一的多语言运行时页面壳，不再新增一组静态 HTML 页面。',
+      fr: 'Les nouvelles maladies et les combinaisons de pays ordinaires utilisent un modèle multilingue partagé au lieu de créer de nouvelles pages HTML statiques.',
+    }, {
+      en: 'Surveillance and Situation data use path-scoped Pages Functions, keeping ordinary HTML and assets on the static Pages path.',
+      zh: '监测和 Situation 数据使用路径受限的 Pages Functions，普通 HTML 和资源继续走静态 Pages 路径。',
+      fr: 'Les données de surveillance et de Situation utilisent des Pages Functions limitées à leurs chemins, tandis que les HTML et ressources ordinaires restent statiques.',
+    }] }, { kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Incremental subdivision map exports retain unchanged regions and disease series while applying new source observations.',
+      zh: '增量下级区域地图导出会保留未变化的区域和疾病序列，同时应用新的来源观测。',
+      fr: 'Les exports incrémentiels des cartes de subdivisions conservent les régions et séries inchangées tout en appliquant les nouvelles observations sources.',
+    }] }],
+  },
+  {
+    version: '0.20.4', date: '2026-11-19',
+    titleEn: 'One download center for all surveillance data',
+    titleZh: '统一监测数据下载中心',
+    titleFr: 'Un centre de téléchargement pour toutes les données de surveillance',
+    summaryEn: 'Find smaller files by country, disease, time range and format. Country, disease, report and chart links open the same download center with your selection.',
+    summaryZh: '按国家、疾病、时间范围和格式查找小文件。国家、疾病、报告和图表入口统一进入下载中心，并保留已有选择。',
+    summaryFr: 'Trouvez des fichiers plus petits par pays, maladie, période et format. Les liens des pays, maladies, rapports et graphiques ouvrent le même centre avec votre sélection.',
+    sections: [{ kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'Browse multiple diseases for one country or multiple countries for one disease. Combine filters, share your selection and download CSV, JSON or XLSX files.',
+      zh: '一个国家可浏览多个疾病，一个疾病可浏览多个国家。组合筛选、分享当前选择，下载 CSV、JSON 或 XLSX 文件。',
+      fr: 'Parcourez plusieurs maladies pour un pays ou plusieurs pays pour une maladie. Combinez les filtres, partagez votre sélection et téléchargez les fichiers CSV, JSON ou XLSX.',
+    }, {
+      en: 'Each file covers one country, disease and time window. Country and disease views link to the same file, while other pages use a smaller download-center link.',
+      zh: '每份文件对应一个国家、一种疾病和一个时间窗。国家与疾病视角共用同一文件，其他页面只保留轻量的下载中心入口。',
+      fr: 'Chaque fichier couvre un pays, une maladie et une période. Les deux vues partagent le même fichier ; les autres pages utilisent un lien léger vers le centre.',
+    }] }],
+  },
+  {
     version: '0.20.3', date: '2026-11-18',
     titleEn: 'Reliable styles and a compact Situation list',
     titleZh: '可靠的页面样式与紧凑的态势列表',

@@ -15,6 +15,7 @@ from datetime import date
 from pathlib import Path
 
 from src.generation.direct_download import (
+    cells,
     disease_merge,
     formats,
     partitions,
@@ -22,6 +23,7 @@ from src.generation.direct_download import (
     runtime,
     windows,
 )
+from src.generation.direct_download.manifest import expand_manifest, manifest_bytes
 from src.generation.direct_download.disease_merge import (
     _merge_existing_disease_rows,
     _read_disease_baseline_json,  # noqa: F401 - compatibility re-export
@@ -76,7 +78,7 @@ def _projection_code_sha256() -> str:
     for source in (
         Path(__file__),
         Path(disease_series_policy.__file__),
-        *(Path(module.__file__) for module in (rows, windows, disease_merge, runtime, formats, partitions)),
+        *(Path(module.__file__) for module in (rows, windows, disease_merge, runtime, formats, partitions, cells)),
     ):
         digest.update(source.read_bytes())
     return digest.hexdigest()
@@ -121,15 +123,19 @@ def _entry_files_available(
     *,
     verify_hash: bool = True,
     trusted_paths: set[str] | None = None,
+    layout: str = "legacy",
 ) -> bool:
     """Require every reused part to exist at its declared path and size.
 
     Hash verification reads the file bytes. Callers that already know the
     published curve is unchanged pass verify_hash=False and trust the size.
+    Cell entries share files under cells/<country>/<disease>/.
     """
     parts = entry.get("parts") or []
     if not parts:
         return bool(entry) and entry.get("record_count") == 0 and isinstance(entry.get("parts"), list)
+    country = path_id if layout == "cells" and directory == "countries" else None
+    disease = path_id if layout == "cells" and directory == "diseases" else None
     prefix = f"{directory}/{path_id}/"
     for part in parts:
         files = part.get("files") or {}
@@ -137,7 +143,11 @@ def _entry_files_available(
             return False
         for file_meta in files.values():
             relative = str(file_meta.get("relative_path") or "")
-            if not relative.startswith(prefix) or ".." in Path(relative).parts:
+            if layout == "cells":
+                allowed = cells.relative_is_cell(relative, country=country, disease=disease)
+            else:
+                allowed = relative.startswith(prefix) and ".." not in Path(relative).parts
+            if not allowed:
                 return False
             path = output_dir / relative
             if not path.is_file() or path.stat().st_size != file_meta.get("bytes"):
@@ -145,6 +155,44 @@ def _entry_files_available(
             if verify_hash and relative not in (trusted_paths or ()) and _file_sha256(path) != file_meta.get("sha256"):
                 return False
     return True
+
+
+def _tracked_download_directories(output_dir: Path) -> tuple[str, ...]:
+    """Trust the manifest already on disk. A schema 4 tree has no cells yet."""
+
+    try:
+        schema = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8")).get("schema_version")
+    except (OSError, ValueError):
+        return ("cells",)
+    if schema == 5:
+        return ("cells",)
+    return ("countries", "diseases")
+
+
+def resolve_download_layout(existing_manifest: dict, layout: str | None = None) -> str:
+    """Keep a schema 4 manifest on its original files unless a cell export is requested.
+
+    Empty outputs and schema 5 manifests use cells/<country>/<disease>/<window>.
+    GIDS_DOWNLOAD_LAYOUT is an explicit override and is not set for the live tree.
+    """
+
+    requested = (layout if layout is not None else os.environ.get("GIDS_DOWNLOAD_LAYOUT") or "").strip().lower()
+    if requested in {"cells", "legacy"}:
+        return requested
+    if requested:
+        raise ValueError("Download layout must be 'cells' or 'legacy'")
+    schema = existing_manifest.get("schema_version")
+    if schema == 4:
+        return "legacy"
+    return "cells"
+
+
+def _delete_download_tree(root: Path) -> int:
+    if not root.is_dir():
+        return 0
+    removed = sum(1 for path in root.rglob("*") if path.is_file())
+    shutil.rmtree(root)
+    return removed
 
 
 def _git_unchanged_paths(output_dir: Path) -> set[str]:
@@ -157,9 +205,11 @@ def _git_unchanged_paths(output_dir: Path) -> set[str]:
                 ["git", *args], cwd=output_dir, check=True,
                 capture_output=True, text=True,
             ).stdout
-        tracked = set(git("ls-files", "-z", "--", "countries", "diseases").split("\0"))
-        changed = set(git("diff", "HEAD", "--name-only", "--no-renames", "-z", "--", "countries", "diseases").split("\0"))
+        directories = _tracked_download_directories(output_dir)
+        tracked = set(git("ls-files", "-z", "--", *directories).split("\0"))
+        changed = set(git("diff", "HEAD", "--name-only", "--no-renames", "-z", "--", *directories).split("\0"))
         def assets(manifest):
+            manifest = expand_manifest(manifest)
             return {
                 item["relative_path"]: (item["bytes"], item["sha256"])
                 for entry in [*manifest.get("countries", []), *manifest.get("diseases", [])]
@@ -301,12 +351,13 @@ def _build_country_parts_task(
     max_file_bytes: int,
     existing_parts: dict[str, dict],
     trusted_paths: set[str] | None = None,
+    layout: str = "cells",
 ) -> dict:
     code = country_export["code"]
     path_id = code.lower()
     dataset = {
         "kind": "country",
-        "directory": "countries",
+        "directory": "countries" if layout != "cells" else "cells",
         "dataset_id": path_id,
         "path_id": path_id,
         "slug": path_id,
@@ -315,18 +366,69 @@ def _build_country_parts_task(
     rows = build_country_download_rows(
         country_export["country_data"], country_export["source_info"]
     )
-    result = _build_dataset_parts_task(
-        kind="country",
-        dataset=dataset,
-        rows=rows,
-        output_dir=output_dir,
-        download_url_base=download_url_base,
-        max_file_bytes=max_file_bytes,
-        existing_parts=existing_parts,
-        trusted_paths=trusted_paths,
-    )
-    result["source_info"] = country_export["source_info"]
-    return result
+    if layout != "cells":
+        result = _build_dataset_parts_task(
+            kind="country",
+            dataset=dataset,
+            rows=rows,
+            output_dir=output_dir,
+            download_url_base=download_url_base,
+            max_file_bytes=max_file_bytes,
+            existing_parts=existing_parts,
+            trusted_paths=trusted_paths,
+        )
+        result["source_info"] = country_export["source_info"]
+        return result
+
+    grouped: dict[str, list[dict]] = {}
+    for row in rows:
+        grouped.setdefault(str(row.get("disease_id") or ""), []).append(row)
+    parts: list[dict] = []
+    expected_paths: set[Path] = set()
+    changed = reused = rebuilt = 0
+    disease_counts: dict[str, dict] = {}
+    for disease_id in sorted(grouped):
+        disease_rows = grouped[disease_id]
+        cell_dataset = {
+            **dataset,
+            "path_id": f"{path_id}/{disease_id.lower()}",
+            "filename_id": f"{path_id}-{disease_id.lower()}",
+        }
+        partial = _build_dataset_parts_task(
+            kind="country",
+            dataset=cell_dataset,
+            rows=disease_rows,
+            output_dir=output_dir,
+            download_url_base=download_url_base,
+            max_file_bytes=max_file_bytes,
+            existing_parts=cells.parts_for_disease(existing_parts, disease_id),
+            trusted_paths=trusted_paths,
+        )
+        parts.extend(
+            cells.annotate_country_part(part, disease_id=disease_id, country_code=code)
+            for part in partial["parts"]
+        )
+        expected_paths.update(partial["paths"])
+        changed += partial["changed"]
+        reused += partial["reused_partitions"]
+        rebuilt += partial["rebuilt_partitions"]
+        disease_counts[disease_id] = {
+            "record_count": len(disease_rows),
+            **_row_provenance_counts(disease_rows),
+        }
+    return {
+        "kind": "country",
+        "dataset": dataset,
+        "row_count": len(rows),
+        "provenance_counts": _row_provenance_counts(rows),
+        "parts": parts,
+        "changed": changed,
+        "paths": expected_paths,
+        "reused_partitions": reused,
+        "rebuilt_partitions": rebuilt,
+        "source_info": country_export["source_info"],
+        "disease_counts": disease_counts,
+    }
 
 
 def _build_disease_parts_task(
@@ -418,12 +520,14 @@ def build_direct_download_files(
     workers: int | None = None,
     changed_country_codes: set[str] | None = None,
     changed_disease_ids: set[str] | None = None,
+    layout: str | None = None,
 ) -> dict:
     """Write deterministic CSV/JSON/XLSX partitions and return the manifest.
 
-    Unchanged windows are reused by content hash.  Changed country and disease
-    trees write to disjoint paths, allowing their CSV/JSON/XLSX generation to
-    run concurrently without changing manifest order.
+    Unchanged windows are reused by content hash. Cell layout writes one file
+    per country, disease and window. Disease entries index those files and do
+    not rewrite other countries. A schema 4 manifest stays on the legacy
+    country-file and disease-file grain unless layout="cells" is requested.
     """
 
     if not download_url_base.startswith("https://raw.githubusercontent.com/"):
@@ -437,15 +541,16 @@ def build_direct_download_files(
         shutil.rmtree(misspelled_country_dir)
     existing_manifest_path = output_dir / "manifest.json"
     try:
-        existing_manifest = json.loads(existing_manifest_path.read_text(encoding="utf-8"))
+        existing_manifest = expand_manifest(json.loads(existing_manifest_path.read_text(encoding="utf-8")))
     except (FileNotFoundError, json.JSONDecodeError):
         existing_manifest = {}
+    layout = resolve_download_layout(existing_manifest, layout)
     existing_country_parts = {
-        entry.get("id"): {part.get("id"): part for part in entry.get("parts") or []}
+        entry.get("id"): cells.index_parts(entry.get("parts") or [])
         for entry in existing_manifest.get("countries") or []
     }
     existing_disease_parts = {
-        entry.get("disease_id"): {part.get("id"): part for part in entry.get("parts") or []}
+        entry.get("disease_id"): cells.index_parts(entry.get("parts") or [])
         for entry in existing_manifest.get("diseases") or []
     }
     expected_paths: set[Path] = set()
@@ -489,10 +594,12 @@ def build_direct_download_files(
                 "countries",
                 path_id,
                 verify_hash=False,
+                layout=layout,
             ):
+                refresh = "full cell export" if layout == "cells" else "full data export"
                 raise RuntimeError(
                     f"Cannot reuse downloads for unchanged country {code}: files are missing or invalid. "
-                    f"Refresh country scope {code} (or run a full data export) before publishing."
+                    f"Refresh country scope {code} (or run a {refresh}) before publishing."
                 )
             if index % 25 == 0 or index == len(country_exports):
                 print(
@@ -500,7 +607,7 @@ def build_direct_download_files(
                     flush=True,
                 )
             continue
-        available = _entry_files_available(existing, output_dir, "countries", path_id, trusted_paths=trusted_paths)
+        available = _entry_files_available(existing, output_dir, "countries", path_id, trusted_paths=trusted_paths, layout=layout)
         if available:
             verified_paths.update(file["relative_path"] for part in existing["parts"] for file in part["files"].values())
         if changed_country_codes is None or code in requested_country_codes or not available:
@@ -528,11 +635,13 @@ def build_direct_download_files(
                 "diseases",
                 path_id,
                 verify_hash=False,
+                layout=layout,
             ):
+                refresh = "full cell export" if layout == "cells" else "full data export"
                 raise RuntimeError(
                     f"Cannot reuse downloads for unchanged disease {disease_id}: files are missing or invalid. "
                     f"Refresh country scopes contributing to disease {disease_id} "
-                    "(or run a full data export) before publishing."
+                    f"(or run a {refresh}) before publishing."
                 )
             if index % 25 == 0 or index == len(disease_exports):
                 print(
@@ -540,7 +649,7 @@ def build_direct_download_files(
                     flush=True,
                 )
             continue
-        available = _entry_files_available(existing, output_dir, "diseases", path_id, trusted_paths=trusted_paths)
+        available = _entry_files_available(existing, output_dir, "diseases", path_id, trusted_paths=trusted_paths, layout=layout)
         if available:
             verified_paths.update(file["relative_path"] for part in existing["parts"] for file in part["files"].values())
         if changed_disease_ids is None or disease_id in requested_disease_ids or not available:
@@ -582,8 +691,9 @@ def build_direct_download_files(
     ]
     tasks: list[tuple[str, dict]] = [
         *[("country", item) for item in selected_country_exports],
-        *[("disease", item) for item in selected_disease_exports],
     ]
+    if layout != "cells":
+        tasks.extend(("disease", item) for item in selected_disease_exports)
     task_count = len(tasks)
     worker_count = min(max(1, workers or DEFAULT_EXPORT_WORKERS), max(1, task_count))
     results_by_index: dict[int, dict] = {}
@@ -616,6 +726,7 @@ def build_direct_download_files(
                         {file["relative_path"] for part in previous_parts.values()
                          for file in part.get("files", {}).values()
                          if file.get("relative_path") in verified_paths},
+                        layout,
                     )
                 else:
                     disease_export = item
@@ -736,66 +847,123 @@ def build_direct_download_files(
                 "includes_series_provenance": True,
                 "parts": result["parts"],
                 "source_info": result["source_info"],
+                **({"disease_counts": result["disease_counts"]} if layout == "cells" else {}),
             }
         )
         country_entries.append(entry)
 
     disease_entries: list[dict] = []
-    for disease_export in disease_exports:
-        disease_id = disease_export["disease_id"]
-        result = processed_disease_results.get(disease_id)
-        if result is None:
-            existing_entry = existing_disease_entries.get(disease_id)
-            if existing_entry is None:
-                raise RuntimeError(
-                    f"Incremental download manifest is missing disease {disease_id}"
-                )
-            disease_entries.append(reuse_existing_entry(existing_entry))
-            continue
-        dataset = result["dataset"]
-        entry = dict(disease_entries_by_id[dataset["dataset_id"]])
-        entry.update(
-            {
-                "dependency_sha256": disease_dependencies.get(disease_id),
-                "input_sha256": disease_fingerprints.get(disease_id) or _input_sha256(
-                    {
-                        "disease_data": disease_export["disease_data"],
-                        "country_sources": {code: context["country_sources_by_code"].get(code) for code in result["country_codes"]},
-                        "country_names": {code: country_names.get(code) for code in result["country_codes"]},
-                    },
-                    projection_code=projection_code,
-                    max_file_bytes=max_file_bytes,
-                ),
-                "record_count": result["row_count"],
-                **result["provenance_counts"],
-                "includes_series_provenance": True,
-                "parts": result["parts"],
-                "countries": [
-                    {"code": code, "name": country_names.get(code)}
-                    for code in result["country_codes"]
-                ],
-                "source_info": result["source_info"],
-            }
-        )
-        disease_entries.append(entry)
+    if layout == "cells":
+        for disease_export in disease_exports:
+            disease_id = disease_export["disease_id"]
+            disease_parts = cells.assemble_disease_parts(country_entries, disease_id)
+            for part in disease_parts:
+                for file_meta in part["files"].values():
+                    relative_path = str(file_meta.get("relative_path") or "")
+                    if relative_path:
+                        expected_paths.add(output_dir / relative_path)
+                        file_meta["url"] = _download_url(download_url_base, relative_path)
+            counts = cells.sum_disease_counts(country_entries, disease_id)
+            country_codes = sorted({
+                str(part.get("country_code") or "").upper()
+                for part in disease_parts if part.get("country_code")
+            })
+            existing_entry = existing_disease_entries.get(disease_id) or {}
+            entry = dict(disease_entries_by_id[disease_id])
+            entry.update(
+                {
+                    "dependency_sha256": disease_dependencies.get(
+                        disease_id, existing_entry.get("dependency_sha256")
+                    ),
+                    "input_sha256": disease_fingerprints.get(disease_id) or existing_entry.get("input_sha256") or _input_sha256(
+                        {
+                            "disease_data": disease_export["disease_data"],
+                            "country_sources": {
+                                code: context["country_sources_by_code"].get(code) for code in country_codes
+                            },
+                            "country_names": {code: country_names.get(code) for code in country_codes},
+                        },
+                        projection_code=projection_code,
+                        max_file_bytes=max_file_bytes,
+                    ),
+                    "record_count": counts["record_count"],
+                    "projection_record_count": counts["projection_record_count"],
+                    "source_observation_count": counts["source_observation_count"],
+                    "source_series_count": counts["source_series_count"],
+                    "includes_series_provenance": True,
+                    "parts": disease_parts,
+                    "countries": [
+                        {"code": code, "name": country_names.get(code)}
+                        for code in country_codes
+                    ],
+                    "source_info": disease_export["disease_data"].get("source_info") or [],
+                }
+            )
+            disease_entries.append(entry)
+    else:
+        for disease_export in disease_exports:
+            disease_id = disease_export["disease_id"]
+            result = processed_disease_results.get(disease_id)
+            if result is None:
+                existing_entry = existing_disease_entries.get(disease_id)
+                if existing_entry is None:
+                    raise RuntimeError(
+                        f"Incremental download manifest is missing disease {disease_id}"
+                    )
+                disease_entries.append(reuse_existing_entry(existing_entry))
+                continue
+            dataset = result["dataset"]
+            entry = dict(disease_entries_by_id[dataset["dataset_id"]])
+            entry.update(
+                {
+                    "dependency_sha256": disease_dependencies.get(disease_id),
+                    "input_sha256": disease_fingerprints.get(disease_id) or _input_sha256(
+                        {
+                            "disease_data": disease_export["disease_data"],
+                            "country_sources": {code: context["country_sources_by_code"].get(code) for code in result["country_codes"]},
+                            "country_names": {code: country_names.get(code) for code in result["country_codes"]},
+                        },
+                        projection_code=projection_code,
+                        max_file_bytes=max_file_bytes,
+                    ),
+                    "record_count": result["row_count"],
+                    **result["provenance_counts"],
+                    "includes_series_provenance": True,
+                    "parts": result["parts"],
+                    "countries": [
+                        {"code": code, "name": country_names.get(code)}
+                        for code in result["country_codes"]
+                    ],
+                    "source_info": result["source_info"],
+                }
+            )
+            disease_entries.append(entry)
 
-    removed_files = _remove_stale_files(output_dir / "countries", expected_paths)
-    removed_files += _remove_stale_files(output_dir / "diseases", expected_paths)
+    if layout == "cells":
+        removed_files = _remove_stale_files(output_dir / "cells", expected_paths)
+        for directory_name in ("countries", "diseases"):
+            removed_files += _delete_download_tree(output_dir / directory_name)
+    else:
+        removed_files = _remove_stale_files(output_dir / "countries", expected_paths)
+        removed_files += _remove_stale_files(output_dir / "diseases", expected_paths)
+    partitioning = {
+        "strategy": "stable_calendar_windows",
+        "historical_years": 5,
+        "special_window": "2020-2025",
+        "bridge_window": "2026-2029",
+        "rolling_anchor_year": ROLLING_WINDOW_START,
+        "target_file_bytes": max_file_bytes,
+        "github_max_file_bytes": GITHUB_MAX_FILE_BYTES,
+    }
+    if layout == "cells":
+        partitioning["grain"] = "country_disease_window"
     manifest = {
-        "schema_version": 4,
+        "schema_version": 5 if layout == "cells" else 4,
         "generated_at": generated_at,
         "includes_source_info": True,
         "includes_series_provenance": True,
         "formats": list(PUBLIC_FORMATS),
-        "partitioning": {
-            "strategy": "stable_calendar_windows",
-            "historical_years": 5,
-            "special_window": "2020-2025",
-            "bridge_window": "2026-2029",
-            "rolling_anchor_year": ROLLING_WINDOW_START,
-            "target_file_bytes": max_file_bytes,
-            "github_max_file_bytes": GITHUB_MAX_FILE_BYTES,
-        },
+        "partitioning": partitioning,
         "download_url_base": download_url_base.rstrip("/"),
         "countries": country_entries,
         "diseases": disease_entries,
@@ -808,8 +976,10 @@ def build_direct_download_files(
             "reused_partitions": sum(result["reused_partitions"] for result in results_by_index.values())
             + sum(len(entry.get("parts") or []) for entry in country_entries
                   if entry["id"] not in processed_country_results)
-            + sum(len(entry.get("parts") or []) for entry in disease_entries
-                  if entry["disease_id"] not in processed_disease_results),
+            + (0 if layout == "cells" else sum(
+                len(entry.get("parts") or []) for entry in disease_entries
+                if entry["disease_id"] not in processed_disease_results
+            )),
         },
     }
     # Export timings/counters describe a run, not a dataset version. Keep them
@@ -827,12 +997,7 @@ def build_direct_download_files(
     manifest_path = output_dir / "manifest.json"
     _write_if_changed(
         manifest_path,
-        json.dumps(
-            manifest,
-            ensure_ascii=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode("utf-8"),
+        manifest_bytes(manifest),
     )
     return {**manifest, "generation": generation}
 

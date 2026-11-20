@@ -6,7 +6,7 @@ import EpidemicCurve from '../../../../components/charts/EpidemicCurve';
 import DiseaseResearchPanel from '../../../../components/research/DiseaseResearchPanel.astro';
 import SubdivisionIncidenceMap from '../../../../components/charts/SubdivisionIncidenceMap';
 import InternationalNoticePanel from '../../../../components/InternationalNoticePanel.astro';
-import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
+import { countryDiseaseStaticCandidates } from '../../../../lib/seo-page-data';
 import { shouldBuildPage } from '../../../../lib/page-build-plan';
 import {
   buildAlternatePaths,
@@ -19,7 +19,7 @@ import { parentAreaCode } from '../../../../lib/surveillance-coverage';
 import metaRaw from '../../../../data/meta.json';
 
 export function getStaticPaths() {
-  return countryDiseaseCandidates()
+  return countryDiseaseStaticCandidates()
     .filter(candidate => shouldBuildPage(`country-disease:${candidate.code}:${candidate.slug}`)).map(candidate => ({
     params: { country: candidate.code, disease: candidate.slug },
     props: { countryCode: candidate.code, diseaseSlug: candidate.slug, locale: 'en' },
@@ -41,7 +41,7 @@ const code = props.countryCode ?? props.code ?? String(Astro.params.country ?? '
 const slug = props.diseaseSlug ?? props.slug ?? String(Astro.params.disease ?? '');
 const candidate = props.country && props.series
   ? props
-  : countryDiseaseCandidates().find(item => item.code === code && item.slug === slug);
+  : countryDiseaseStaticCandidates().find(item => item.code === code && item.slug === slug);
 const country = candidate?.country ?? {};
 const series = candidate?.series ?? {};
 const locale = props.locale ?? 'en';
@@ -57,6 +57,23 @@ const diseaseNameFr = localizedDiseaseName({ disease_id: series.disease_id ?? sl
 const countryName = zh ? countryNameZh : locale === 'fr' ? countryNameFr : countryNameEn;
 const diseaseName = zh ? diseaseNameZh : locale === 'fr' ? diseaseNameFr : diseaseNameEn;
 const copy = (en: string, zhValue: string, frValue: string) => zh ? zhValue : locale === 'fr' ? frValue : en;
+// Long disease names can share the same 70-character prefix after SEO
+// clamping. Add a compact, deterministic route fingerprint so every
+// country/disease page keeps a unique indexable title.
+const routeFingerprint = (() => {
+  let hash = 2166136261;
+  for (const character of `${String(code).toUpperCase()}:${slug}`) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash.toString(36).padStart(7, '0').slice(-7);
+})();
+// The country is already present in each suffix. Keeping the marker to the
+// seven-character fingerprint leaves room for long jurisdiction names.
+const titleMarker = routeFingerprint;
+const titleCountry = (name: string) => name.length > 28 ? `${name.slice(0, 24).trimEnd()}…` : name;
+const titleCountryEn = titleCountry(countryNameEn);
+const titleCountryFr = titleCountry(countryNameFr);
 const sourceInfo = country.source_info ?? {};
 const diseaseId = String(series.disease_id ?? '');
 const hasRegionalData = ((metaRaw as any).countries ?? []).some(
@@ -82,7 +99,14 @@ const dataset = buildDatasetStructuredData({
   sourceUrls,
 });
 const seo = {
-  title: copy(`${diseaseNameEn} surveillance in ${countryNameEn} | GIDS`, `${countryNameZh}${diseaseNameZh}监测 | GIDS`, clampSeoTitleWithSuffix(`Surveillance de ${diseaseNameFr}`, `en ${countryNameFr} | GIDS`)),
+  // Preserve the site and jurisdiction suffix while shortening long disease
+  // names in every locale. English and Chinese used to bypass the clamp,
+  // which produced hundreds of overlong titles in the release audit.
+  title: copy(
+    clampSeoTitleWithSuffix(`${diseaseNameEn} surveillance`, `in ${titleCountryEn} · ${titleMarker} | GIDS`),
+    clampSeoTitleWithSuffix(`${countryNameZh}${diseaseNameZh}监测`, `· ${titleMarker} | GIDS`),
+    clampSeoTitleWithSuffix(`Surveillance de ${diseaseNameFr}`, `en ${titleCountryFr} · ${titleMarker} | GIDS`),
+  ),
   description: copy(`${diseaseNameEn} surveillance in ${countryNameEn}: latest published observations, official sources and downloadable data.`, `${countryNameZh}${diseaseNameZh}监测：最新已发布观测、官方来源与可下载数据。`, `Surveillance de ${diseaseNameFr} en ${countryNameFr} : observations publiées, sources officielles et données téléchargeables.`),
   locale,
   canonicalPath,
@@ -140,7 +164,7 @@ const seo = {
     </div>
     <section id="downloads" class="figure-panel mt-6 scroll-mt-24">
       <h2 class="figure-title">{copy('Sources and downloads', '来源与下载', 'Sources et téléchargements')}</h2>
-      <SurveillanceSummary client:load dataUrl={`/site-data/countries/${code}-summary.json`} mode="downloads" language={locale} />
+      <SurveillanceSummary client:load dataUrl={`/site-data/countries/${code}-summary.json`} mode="downloads" language={locale} diseaseId={diseaseId} />
     </section>
   </article>
 </ReportLayout>

@@ -60,12 +60,12 @@ test('the site index prefixes catalogue links and sparks only the requested pair
 
   assert.equal(seriesKey('jp', 'd038'), 'JP:D038');
   assert.equal(site.countries.JP?.href, '/zh/countries/jp/');
-  assert.equal(site.countries.JP?.researchHref, '/zh/research/countries/jp/');
+  assert.equal(site.countries.JP?.researchHref, 'https://papers.globalinfectiousdisease.com/zh/research/countries/jp/');
   assert.equal(site.countries.KE?.href, undefined);
-  assert.equal(site.countries.KE?.researchHref, '/zh/research/countries/ke/');
+  assert.equal(site.countries.KE?.researchHref, 'https://papers.globalinfectiousdisease.com/zh/research/countries/ke/');
   assert.equal(site.diseases.D038?.href, '/zh/diseases/influenza/');
   assert.equal(site.diseases.D038?.researchHref, 'https://papers.globalinfectiousdisease.com/zh/research/diseases/influenza/');
-  assert.equal(site.series['JP:D038']?.curveHref, '/zh/countries/jp/diseases/influenza/');
+  assert.equal(site.series['JP:D038']?.curveHref, '/zh/country-disease/?country=jp&disease=influenza');
   assert.deepEqual(site.series['JP:D038']?.spark, [1, 2, 3]);
   assert.equal(site.series['JP:D038']?.value, 3);
   assert.equal(site.series['JP:D038']?.changePct, 50);

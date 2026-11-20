@@ -41,7 +41,8 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
         finally:
             stage_timing[f'{phase}_seconds'] = round(time.monotonic() - phase_started, 3)
     async with runtime.get_database() as db:
-        await validate_global_selection(db, dirty_ids, line='literature', task_uuid=task.task_uuid)
+        selected = await validate_global_selection(db, dirty_ids, line='literature', task_uuid=task.task_uuid)
+        change_sets = [row.change_set for row in selected]
     root = runtime.root_dir
     run = root / 'exports/research-runs' / task.task_uuid
     snapshot, context = run / 'snapshot', run / 'context.json'
@@ -83,9 +84,17 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
                 raise ValueError('Invalid literature snapshot directory')
             if snapshot.exists():
                 await asyncio.to_thread(shutil.rmtree, snapshot)
+            from .literature_export_selection import incremental_export_arguments
+            from .papers_r2 import R2PapersConfig
+            target = R2PapersConfig(env['CLOUDFLARE_ACCOUNT_ID'] or env['R2_ACCOUNT_ID'],
+                env['R2_PAPERS_BUCKET'], '', '', endpoint_url=env['R2_ENDPOINT_URL'] or None)
+            incremental_args = await asyncio.to_thread(incremental_export_arguments,
+                root=root, run=run, change_sets=[None] if data.get('full') else change_sets,
+                dirty_ids=dirty_ids, config=target)
             async with runtime.read_snapshot() as snapshot_env:
                 await command(title='Export Literature Snapshot',
-                    cmd=[str(python), 'scripts/export_research_snapshot.py', '--context', str(context), '--candidate', str(snapshot)],
+                    cmd=[str(python), 'scripts/export_research_snapshot.py', '--context', str(context), '--candidate', str(snapshot),
+                         *incremental_args],
                     cwd=root, env={**snapshot_env, 'PYTHONUNBUFFERED': '1'}, metadata={'event': 'literature_publication_export'},
                     timeout_seconds=runtime.generate_timeout_seconds)
         await runtime.task_manager.update_task_progress(task.task_uuid, 30)
@@ -127,6 +136,8 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
     published = json.loads((run / 'published.json').read_bytes())
     if published.get('release_id') != release_id:
         raise ValueError('Published literature receipt belongs to a different task')
+    from src.generation.literature_projection_state import bind_projection_state
+    await asyncio.to_thread(bind_projection_state, snapshot, json.loads((run / 'current.json').read_bytes()))
     # A committed candidate can finish recovery after optional build receipts
     # have been cleaned up; acknowledgements depend on the frozen candidate.
     build = json.loads(build_receipt.read_bytes()) if build_receipt.is_file() else {}
@@ -138,6 +149,9 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
             'subscription_dispatch_suppressed': bool(data.get('suppress_subscription_dispatch')),
             'publish_dirty_count': len(dirty_ids), 'papers': published['papers'], 'json': published['json'],
             'projection': published.get('projection'),
+            'r2_operations': published.get('r2_operations'),
+            'export_projection': (json.loads((snapshot / 'projection-plan.json').read_bytes())
+                                  if (snapshot / 'projection-plan.json').is_file() else None),
             'build_scope': build.get('scope', 'full'),
             'article_pages_rendered': build.get('article_pages_rendered'),
             'article_pages_restored': build.get('article_pages_restored'),

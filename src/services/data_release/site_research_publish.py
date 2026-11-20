@@ -139,7 +139,8 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
                           articles_dir: Path | None = None,
                           template_dir: Path | None = None, inventory: dict | None = None,
                           workers: int = 32, client=None, prepare_only: bool = False,
-                          preserve_research_data: bool = False, projection_verifier=None) -> dict:
+                          preserve_research_data: bool = False, projection_verifier=None,
+                          max_total_bytes: int | None = None) -> dict:
     captured, previous = _starting_baseline(run, config, PREFIX)
     if not captured:
         raise ValueError('Capture the research baseline before building the site')
@@ -176,7 +177,7 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
             prior = json.loads(previous) if previous else {}
             if prior and json.loads((run / 'current.json').read_bytes())['files'] != prior.get('files'):
                 raise ValueError('Static research projections differ from the captured Papers v3 baseline')
-            active = client or R2S3Client(config)
+            active = client or R2S3Client(config, max_total_bytes=max_total_bytes)
             try:
                 candidate = compose_site_candidate(run=run, static=base,
                     previous=prior, client=active,
@@ -194,15 +195,20 @@ def publish_site_research(*, papers_dir: Path, site_dist: Path, research_source:
                 'article_pages': sum('paper_template' in item for item in candidate.entries),
                 'file_count': len(candidate.entries)}
     known = verified_existing_objects(candidate, inventory, workers=min(workers, 8)) if inventory is not None else None
-    active = client or R2S3Client(config)
+    active = client or R2S3Client(config, max_total_bytes=max_total_bytes)
     try:
         result = publish_literature_candidate(run=run, objects_dir=run / 'json/objects', papers=candidate,
-            config=config, receipt=receipt, client=active, workers=workers, known_staged_objects=known, build=None)
+            config=config, receipt=receipt, client=active, workers=workers, known_staged_objects=known,
+            build=None, max_total_bytes=max_total_bytes)
         # A committed pointer alone does not prove that the Worker can render
         # this v3 generation. Keep the frozen candidate recoverable on failure;
         # only record completion after canonical canaries pass in every locale.
         result['public_verification'] = (projection_verifier or verify_projected_publication)(candidate)
         _atomic_write(run / 'published.json', json.dumps(result, separators=(',', ':')).encode())
+        from .site_research_reuse import project_root, record_committed_inputs
+        root = project_root(run)
+        if root is not None:
+            record_committed_inputs(root, run, config)
         return result
     finally:
         if client is None:

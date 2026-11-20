@@ -9,7 +9,7 @@ test('country navigation preserves report order, the six-report limit, total cou
     const actual = navigation('jp', prefix);
     assert.deepEqual(actual.reports, reports.filter(row => row.country_code === 'JP').slice(0, 6));
     assert.equal(actual.reportCount, 8);
-    assert.deepEqual(actual.diseaseRoutes, { influenza: `${prefix}/countries/jp/diseases/influenza/` });
+    assert.deepEqual(actual.diseaseRoutes, { influenza: `${prefix}/country-disease/?country=jp&disease=influenza` });
   }
   assert.deepEqual(navigation('unknown'), { reports: [], reportCount: 0, diseaseRoutes: {} });
 });

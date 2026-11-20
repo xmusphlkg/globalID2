@@ -492,11 +492,11 @@ class DataReleaseSettings(_BaseEnvSettings):
         description="Cloudflare Pages 主站部署允许的最大文件数",
     )
     pages_file_warn: int = Field(
-        default=18_000,
+        default=14_000,
         ge=1_000,
         le=100_000,
         validation_alias="DATA_RELEASE__PAGES_FILE_WARN",
-        description="Cloudflare Pages 主站文件数告警阈值",
+        description="Cloudflare Pages 主站文件数告警阈值，低于平台硬上限以保留增长余量",
     )
     r2_papers_enabled: bool = Field(
         default=True,

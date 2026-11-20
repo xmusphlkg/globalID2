@@ -631,7 +631,8 @@ async def test_incomplete_summary_archive_uses_atomic_application_boundary(pool,
     assert model.call_args.args[0] == []
     async with maker() as db:
         assert (await db.get(LiteratureSummary, summary_id)).status == ("review" if dry_run else "archived")
-        assert len((await db.execute(select(PublishDirty))).scalars().all()) == (0 if dry_run else 1)
+        # A review-only summary was never public; archiving it needs no release.
+        assert (await db.execute(select(PublishDirty))).scalars().all() == []
 
 
 async def test_dry_run_review_does_not_change_status_events_or_dirty_state(pool, monkeypatch):

@@ -1618,8 +1618,7 @@ async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(m
 
     assert isinstance(db.summary, LiteratureSummary)
     assert db.summary.status == "review"
-    assert db.dirty[0].source_task_uuid == "11111111-1111-4111-8111-111111111111"
-    assert db.dirty[0].line == "literature"
+    assert db.dirty == []  # A failed private draft does not change the public projection.
     assert db.summary.language == "zh"
     assert db.summary.generated_by == "literature-evidence-agent"
     assert db.summary.generation_metadata["publication_gate"] == "generation-failed"

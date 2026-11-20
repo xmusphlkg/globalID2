@@ -1,7 +1,7 @@
 ---
 import CountryFlag from './CountryFlag.astro';
-import './download-dialog-shell.css';
-import './download-dialog.css';
+import { downloadCenterHref } from '../lib/download-center-link';
+import { MAIN_ORIGIN } from '../lib/papers';
 import { createTranslator, type Lang } from '../utils/i18n';
 
 interface SourceSummary {
@@ -24,44 +24,15 @@ interface SourceInfoGroup {
   sources?: SourceSummary[];
 }
 
-interface DownloadFile {
-  url?: string;
-  filename?: string;
-  bytes?: number;
-  sha256?: string;
-}
-
-interface DownloadPart {
-  id?: string;
-  label?: string;
-  is_current?: boolean;
-  record_count?: number;
-  projection_record_count?: number;
-  source_observation_count?: number;
-  source_series_count?: number;
-  date_range?: { start?: string; end?: string };
-  files?: {
-    csv?: DownloadFile;
-    json?: DownloadFile;
-    xlsx?: DownloadFile;
-  };
-}
-
 interface DownloadEntry {
   site_json_path?: string;
-  parts?: DownloadPart[];
-  generated_at?: string;
-  record_count?: number;
-  projection_record_count?: number;
-  source_observation_count?: number;
-  source_series_count?: number;
-  includes_series_provenance?: boolean;
-  date_range?: { start?: string; end?: string };
   source_info?: SourceInfoGroup | SourceInfoGroup[];
 }
 
 interface Props {
   entry?: DownloadEntry | null;
+  countryCode?: string;
+  diseaseId?: string;
   title?: string;
   titleFr?: string;
   descriptionEn?: string;
@@ -72,6 +43,8 @@ interface Props {
 
 const {
   entry = null,
+  countryCode,
+  diseaseId,
   title = 'Download data',
   titleFr = 'Télécharger les données',
   descriptionEn = 'Download this dataset by time range in CSV, JSON or XLSX format.',
@@ -81,34 +54,6 @@ const {
 } = Astro.props;
 
 const pick = createTranslator(initialLanguage);
-
-function formatDate(value?: string | null) {
-  if (!value) return '—';
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString().slice(0, 10);
-}
-
-function formatCount(value?: number | null) {
-  return value == null ? '—' : value.toLocaleString();
-}
-
-function formatBytes(value?: number) {
-  if (!value) return '—';
-  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-  if (value >= 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${value} B`;
-}
-
-function githubRawUrl(value?: string) {
-  if (!value) return '';
-  try {
-    const url = new URL(value);
-    if (url.protocol !== 'https:' || url.hostname !== 'raw.githubusercontent.com') return '';
-    return url.toString();
-  } catch {
-    return '';
-  }
-}
 
 const CADENCE_ZH: Record<string, string> = {
   annual: '每年', daily: '每日', weekly: '每周', monthly: '每月', quarterly: '每季度', yearly: '每年',
@@ -179,32 +124,13 @@ const sourceEntries = sourceGroups.flatMap((group) => {
 });
 const sourcePreviewEntries = sourceEntries.slice(0, 12);
 const fullSourceDataUrl = entry?.site_json_path?.startsWith('/site-data/')
-  ? entry.site_json_path
+  ? `${import.meta.env.DEV ? '' : MAIN_ORIGIN}${entry.site_json_path}`
   : null;
 
-const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
-  ? `${entry?.date_range?.start ?? '—'} → ${entry?.date_range?.end ?? '—'}`
-  : '—';
-
-const downloadParts = (entry?.parts ?? [])
-  .map((part) => ({
-    ...part,
-    files: {
-      csv: part.files?.csv ? { ...part.files.csv, url: githubRawUrl(part.files.csv.url) } : undefined,
-      json: part.files?.json ? { ...part.files.json, url: githubRawUrl(part.files.json.url) } : undefined,
-      xlsx: part.files?.xlsx ? { ...part.files.xlsx, url: githubRawUrl(part.files.xlsx.url) } : undefined,
-    },
-  }))
-  .filter((part) => part.files.csv?.url || part.files.json?.url || part.files.xlsx?.url);
-
-const formatCards = [
-  { key: 'csv', label: 'CSV', en: 'Tabular text', zh: '通用表格文本' },
-  { key: 'json', label: 'JSON', en: 'Structured data', zh: '结构化数据' },
-  { key: 'xlsx', label: 'XLSX', en: 'Excel workbook', zh: 'Excel 工作簿' },
-] as const;
+const centerHref = downloadCenterHref(initialLanguage, { country: countryCode, disease: diseaseId }, !import.meta.env.DEV);
 ---
 
-{entry && (
+{(entry || countryCode || diseaseId) && (
   <section class="figure-panel download-panel">
     <div class="download-panel__header">
       <div class="download-panel__intro">
@@ -213,39 +139,9 @@ const formatCards = [
           {pick(descriptionEn, descriptionZh, descriptionFr)}
         </p>
       </div>
-      {downloadParts.length > 0 && (
-        <button type="button" data-download-modal-trigger class="site-action-secondary download-panel__action">
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
-          </svg>
-          <span>{pick('Download data', '下载数据', 'Télécharger les données')}</span>
-        </button>
-      )}
-    </div>
-
-    <div class="download-panel__meta">
-      <div class="download-panel__metric">
-          <span>{pick('Rows', '行数', 'Lignes')}</span>
-        <strong>{formatCount(entry.record_count)}</strong>
-      </div>
-      <div class="download-panel__metric">
-          <span>{pick('Updated', '更新', 'Mis à jour')}</span>
-        <strong>{formatDate(entry.generated_at)}</strong>
-      </div>
-      <div class="download-panel__metric download-panel__metric--wide">
-          <span>{pick('Coverage', '范围', 'Couverture')}</span>
-        <strong>{coverageLabel}</strong>
-      </div>
-      <div class="download-panel__metric">
-          <span>{pick('Partitions', '分块', 'Partitions')}</span>
-        <strong>{formatCount(downloadParts.length)}</strong>
-      </div>
-      {entry.includes_series_provenance && (
-        <div class="download-panel__metric download-panel__metric--wide">
-          <span>{pick('Source', '来源', 'Source')}</span>
-          <strong>{formatCount(entry.source_series_count)} {pick('series', '序列', 'séries')} · {formatCount(entry.source_observation_count)} {pick('observations', '观测', 'observations')}</strong>
-        </div>
-      )}
+      <a href={centerHref} data-download-center-link class="intl-panel-action download-panel__action">
+        {pick('Open download center', '进入下载中心', 'Ouvrir le centre de téléchargement')}
+      </a>
     </div>
 
     {sourceEntries.length > 0 && (
@@ -305,175 +201,17 @@ const formatCards = [
       </details>
     )}
 
-    {downloadParts.length > 0 && (
-      <dialog class="download-dialog" data-download-confirm-dialog aria-label={pick('Choose data download', '选择数据下载', 'Choisir un téléchargement')}>
-        <div class="download-dialog__toolbar">
-          <div class="download-dialog__header">
-            <div>
-              <p class="figure-kicker">{pick('Partitioned public data', '分块公开数据', 'Données publiques partitionnées')}</p>
-              <h2 class="download-dialog__title">{pick('Choose a time range and format', '选择时间范围和格式', 'Choisir une période et un format')}</h2>
-              <p class="download-dialog__note">{pick('These files are the published dataset for this page. A chart may show only part of the same release.', '这些文件是本页已发布的数据集。图表可能只展示同一版本中的一部分。', 'Ces fichiers sont le jeu de données publié pour cette page. Un graphique peut n’en montrer qu’une partie.')}</p>
-            </div>
-            <button class="download-dialog__close" type="button" data-download-modal-close aria-label={pick('Close', '关闭', 'Fermer')}>×</button>
-          </div>
-          <div class="download-dialog__filters" aria-label={pick('Download filters', '下载筛选', 'Filtres de téléchargement')}>
-            <label class="download-filter">
-              <span>{pick('Time range', '时间范围', 'Période')}</span>
-              <select data-download-time-filter>
-                <option value="all">{pick('All time ranges', '全部时间范围', 'Toutes les périodes')}</option>
-                {downloadParts.map((part) => (
-                <option value={part.id}>{part.label ?? part.id}{part.is_current ? ` · ${pick('Current', '当前', 'Actuelle')}` : ''}</option>
-                ))}
-              </select>
-            </label>
-            <label class="download-filter">
-              <span>{pick('File format', '文件格式', 'Format de fichier')}</span>
-              <select data-download-format-filter>
-                <option value="all">{pick('All formats', '全部格式', 'Tous les formats')}</option>
-                {formatCards.map((format) => <option value={format.key}>{format.label}</option>)}
-              </select>
-            </label>
-          </div>
-        </div>
-
-        <div class="download-dialog__body">
-          <div class="download-file-grid">
-            {downloadParts.flatMap((part) => formatCards.map((format) => {
-              const file = part.files[format.key];
-              if (!file?.url) return null;
-              return (
-                <article
-                  class="download-file-item card relative overflow-hidden"
-                  data-download-file
-                  data-download-time={part.id}
-                  data-download-format={format.key}
-                >
-                  <div class="download-file-item__heading">
-                    <div class="min-w-0">
-                      <div class="flex flex-wrap items-center gap-2">
-                        <h3>{part.label ?? part.id}</h3>
-                        {part.is_current && <span class="download-file-item__current">{pick('Current', '当前', 'Actuelle')}</span>}
-                      </div>
-                      <p>{part.date_range?.start ?? '—'} → {part.date_range?.end ?? '—'}</p>
-                    </div>
-                    <button type="button" class="site-action-primary download-file-item__action" data-file-download data-download-url={file.url} data-download-filename={file.filename ?? `globalid-${part.id}.${format.key}`}>
-                      <svg class="download-file-item__action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
-                      </svg>
-                      <span>{pick(`Download ${format.label}`, `下载 ${format.label}`, `Télécharger ${format.label}`)}</span>
-                    </button>
-                  </div>
-                  <div class="download-file-item__meta">
-                    <span>{formatCount(part.record_count)} {pick('records', '条记录', 'enregistrements')}</span>
-                    <span>{formatBytes(file.bytes)}</span>
-                      <span>{pick(format.en, format.zh, format.key === 'csv' ? 'Texte tabulaire' : format.key === 'json' ? 'Données structurées' : 'Classeur Excel')}</span>
-                  </div>
-                  <a class="download-file-item__raw" href={file.url} target="_blank" rel="noopener noreferrer" title={file.url} data-file-download><code>{file.url}</code></a>
-                  <p class="download-file-item__status" data-download-status aria-live="polite"></p>
-                </article>
-              );
-            }))}
-          </div>
-          <p class="download-dialog__empty" data-download-empty hidden>{pick('No files match these filters.', '没有符合筛选条件的文件。', 'Aucun fichier ne correspond à ces filtres.')}</p>
-        </div>
-      </dialog>
-    )}
   </section>
 )}
 
-<script>
-  document.querySelectorAll('[data-download-modal-trigger]').forEach((trigger) => {
-    if (!(trigger instanceof HTMLButtonElement) || trigger.dataset.bound === 'true') return;
-    trigger.dataset.bound = 'true';
-    const panel = trigger.closest('section');
-    const dialog = panel?.querySelector('[data-download-confirm-dialog]');
-    if (!(dialog instanceof HTMLDialogElement)) return;
-
-    trigger.addEventListener('click', () => dialog.showModal());
-    dialog.querySelectorAll('[data-download-modal-close]').forEach((button) => {
-      button.addEventListener('click', () => dialog.close());
-    });
-    dialog.addEventListener('click', (event) => {
-      if (event.target === dialog) dialog.close();
-    });
-
-    const timeFilter = dialog.querySelector('[data-download-time-filter]');
-    const formatFilter = dialog.querySelector('[data-download-format-filter]');
-    const emptyState = dialog.querySelector('[data-download-empty]');
-    const applyFilters = () => {
-      const selectedTime = timeFilter instanceof HTMLSelectElement ? timeFilter.value : 'all';
-      const selectedFormat = formatFilter instanceof HTMLSelectElement ? formatFilter.value : 'all';
-      let visibleFiles = 0;
-
-      dialog.querySelectorAll('[data-download-file]').forEach((file) => {
-        if (!(file instanceof HTMLElement)) return;
-        const matchesTime = selectedTime === 'all' || file.dataset.downloadTime === selectedTime;
-        const matchesFormat = selectedFormat === 'all' || file.dataset.downloadFormat === selectedFormat;
-        file.hidden = !matchesTime || !matchesFormat;
-        if (!file.hidden) visibleFiles += 1;
-      });
-      if (emptyState instanceof HTMLElement) emptyState.hidden = visibleFiles > 0;
-    };
-    timeFilter?.addEventListener('change', applyFilters);
-    formatFilter?.addEventListener('change', applyFilters);
-    dialog.addEventListener('toggle', (event) => {
-      if (!(event instanceof ToggleEvent) || event.newState !== 'open') return;
-      if (timeFilter instanceof HTMLSelectElement) timeFilter.value = 'all';
-      if (formatFilter instanceof HTMLSelectElement) formatFilter.value = 'all';
-      applyFilters();
-    });
-  });
-
-  document.querySelectorAll('[data-file-download]').forEach((control) => {
-    if (!(control instanceof HTMLButtonElement) || control.dataset.bound === 'true') return;
-    control.dataset.bound = 'true';
-    control.addEventListener('click', async () => {
-      const url = control.dataset.downloadUrl ?? '';
-      const filename = control.dataset.downloadFilename ?? 'globalid-data';
-      const status = control.closest('[data-download-file]')?.querySelector('[data-download-status]');
-      const pageLang = document.documentElement.lang.toLowerCase();
-      const statusText = pageLang.startsWith('zh')
-        ? { preparing: '正在准备下载…', started: '下载已开始。', failed: '自动下载失败，已打开 Raw 文件。' }
-        : pageLang.startsWith('fr')
-          ? { preparing: 'Préparation du téléchargement…', started: 'Téléchargement lancé.', failed: 'Le téléchargement automatique a échoué ; ouverture du fichier Raw.' }
-          : { preparing: 'Preparing download…', started: 'Download started.', failed: 'Automatic download failed; opening the Raw file.' };
-      control.disabled = true;
-      if (status) status.textContent = statusText.preparing;
-      try {
-        const response = await fetch(url, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const blobUrl = URL.createObjectURL(await response.blob());
-        const anchor = document.createElement('a');
-        anchor.href = blobUrl;
-        anchor.download = filename;
-        document.body.append(anchor);
-        anchor.click();
-        anchor.remove();
-        window.setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
-        if (status) status.textContent = statusText.started;
-      } catch {
-        if (status) status.textContent = statusText.failed;
-        window.open(url, '_blank', 'noopener,noreferrer');
-      } finally {
-        control.disabled = false;
-      }
-    });
-  });
-</script>
-
 <style>
-  .download-panel { display: grid; gap: .85rem; padding-block: 1.05rem; }
-  .download-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .download-panel { --intl-panel-accent: var(--color-teal); display: grid; gap: .85rem; padding-block: 1.05rem; }
+  .download-panel__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
   .download-panel__intro { min-width: 0; display: grid; gap: .28rem; }
   .download-panel .figure-title { font-size: clamp(1.15rem, 1.8vw, 1.45rem); line-height: 1.15; }
   .download-panel__summary { max-width: 58rem; color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.45; }
   .download-panel__summary span { margin-left: .45rem; color: rgb(var(--text-faint)); }
-  .download-panel__action { display: inline-flex; min-height: 2.35rem; flex: 0 0 auto; align-items: center; gap: .45rem; border: 1px solid rgb(var(--border)); border-radius: 0; padding: .45rem .7rem; font-size: .78rem; font-weight: 700; transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
-  .download-panel__meta { display: flex; flex-wrap: wrap; gap: .45rem; }
-  .download-panel__metric { display: inline-flex; min-height: 2.35rem; align-items: center; gap: .55rem; border: 1px solid rgb(var(--border) / .78); background: rgb(var(--surface-raised) / .44); padding: .4rem .6rem; }
-  .download-panel__metric--wide { flex: 1 1 15rem; }
-  .download-panel__metric span { color: rgb(var(--text-faint)); font-size: .58rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
-  .download-panel__metric strong { min-width: 0; color: rgb(var(--text-strong)); font-size: .78rem; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+  .download-panel__action { flex: 0 0 auto; }
   .source-register { border-top: 1px solid rgb(var(--border)); }
   .source-register > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem 0 0; color: rgb(var(--text-strong)); cursor: pointer; list-style: none; }
   .source-register > summary::-webkit-details-marker { display: none; }
@@ -498,12 +236,9 @@ const formatCards = [
   .source-register-link:hover { background: rgb(var(--bg-soft)); border-color: rgb(var(--color-teal)); }
   @media (max-width: 640px) {
     .download-panel { padding-block: .9rem; }
-    .download-panel__header { align-items: center; gap: .7rem; }
+    .download-panel__header { align-items: flex-start; gap: .7rem; }
     .download-panel__summary { display: none; }
-    .download-panel__action { justify-content: center; padding-inline: .6rem; }
-    .download-panel__meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .download-panel__metric { min-height: 2.05rem; justify-content: space-between; padding: .32rem .45rem; }
-    .download-panel__metric--wide { grid-column: 1 / -1; }
+    .download-panel__action { justify-content: center; }
     .source-register > summary { padding-top: .45rem; }
     .source-register > summary small { display: none; }
 

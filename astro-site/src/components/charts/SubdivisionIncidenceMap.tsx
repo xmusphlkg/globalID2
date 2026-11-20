@@ -6,7 +6,8 @@ import { GraphicComponent, LegendComponent } from 'echarts/components';
 import { surveillanceData } from '../../lib/surveillance-data';
 import { useChartTheme } from './chartPreferences';
 import ChartResultActions from './ChartResultActions';
-import { prepareMapDataset, resultsFor, defaultWindow, sharedScale, restoreWindow, csvFor, validWindow, comparisonWindow, presetWindow, shiftWindowYear, trendFor, dateBounds, cadenceRank, type MapCatalog, type PopulationDataset, type DiseaseDataset, type Language, type MapWindow, type MissingReason, type RegionResult, type Cadence, type Comparison } from './subdivision-map/model';
+import { downloadCenterHref } from '../../lib/download-center-link';
+import { prepareMapDataset, resultsFor, defaultWindow, sharedScale, restoreWindow, validWindow, comparisonWindow, presetWindow, shiftWindowYear, trendFor, dateBounds, cadenceRank, type MapCatalog, type PopulationDataset, type DiseaseDataset, type Language, type MapWindow, type MissingReason, type RegionResult, type Cadence, type Comparison } from './subdivision-map/model';
 import './surveillance/components/surveillance.css';
 import './subdivision-map/map.css';
 import RegionList from './subdivision-map/RegionList';
@@ -18,9 +19,9 @@ type Geometry = Parameters<typeof echarts.registerMap>[1];
 interface Props { countryCode: string; diseaseId?: string; language?: Language; }
 const monthNames = (lang: Language) => Array.from({ length: 12 }, (_, index) => lang === 'zh' ? `${index + 1}月` : new Intl.DateTimeFormat(lang, { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2024, index, 1))));
 const labels = {
-  en: { title: 'Regional distribution', disease: 'Disease', year: 'Year', start: 'First month', end: 'Last month', metric: 'Measure', rate: 'Reports per 100,000', cases: 'Reported cases', area: 'Region', population: 'Total resident population', observed: 'Reported months', source: 'Population source', reference: 'Reference date', basis: 'Population basis', version: 'Population version', download: 'Download filtered CSV', loading: 'Loading regional data…', unavailable: 'Regional map data are not available in this publication.', noDisease: 'No comparable regional counts are available for this disease.', zero: 'Zero', missing: 'Missing / suppressed', notAnnual: 'Selected-period crude report rates; not annualized or age standardized.', scale: 'The same disease, measure and month range share a color scale across years.', boundary: 'Boundaries', historical: 'Present monitoring units; historical boundary changes are not reconstructed.', formula: 'Period reports ÷ local population in the same year × 100,000. Missing years are not filled.', trend: 'Monthly reports in the selected region', complete: 'regions with a complete value', provisional: 'Provisional', selected: 'Selected region', noPopulation: 'No verified local population for this year. Case counts remain available.', fullYear: 'Full year', firstQuarter: 'Jan–Mar' },
-  zh: { title: '地区分布', disease: '疾病', year: '年份', start: '开始月份', end: '结束月份', metric: '指标', rate: '每10万人报告数', cases: '报告病例数', area: '地区', population: '当年常住总人口', observed: '可用报告月', source: '人口来源', reference: '人口参照日期', basis: '人口统计口径', version: '人口版本', download: '下载当前筛选 CSV', loading: '正在加载地区数据…', unavailable: '当前发布版本尚无可用地区地图数据。', noDisease: '此疾病暂无可比较的地区病例数。', zero: '零', missing: '缺失／抑制', notAnnual: '所选期间的粗报告率，未年化、未作年龄标化。', scale: '同病种、同指标和月份范围跨年共用色阶。', boundary: '边界', historical: '按当前监测地区展示，未重建历史行政区变更。', formula: '期间病例总数 ÷ 该省同年人口 × 100,000；人口缺年不补值。', trend: '选中地区月度报告趋势', complete: '个地区具有完整数值', provisional: '暂定数据', selected: '选中地区', noPopulation: '缺少此地区当年已核实人口，仍可切换查看病例数。', fullYear: '全年', firstQuarter: '1–3月' },
-  fr: { title: 'Répartition régionale', disease: 'Maladie', year: 'Année', start: 'Premier mois', end: 'Dernier mois', metric: 'Indicateur', rate: 'Notifications pour 100 000', cases: 'Cas déclarés', area: 'Région', population: 'Population résidente totale', observed: 'Mois renseignés', source: 'Source démographique', reference: 'Date de référence', basis: 'Base démographique', version: 'Version démographique', download: 'Télécharger le CSV filtré', loading: 'Chargement régional…', unavailable: 'Carte régionale indisponible dans cette publication.', noDisease: 'Aucun décompte régional comparable pour cette maladie.', zero: 'Zéro', missing: 'Manquant / masqué', notAnnual: 'Taux brut de la période, non annualisé et non standardisé sur l’âge.', scale: 'Échelle commune entre années pour la même maladie, mesure et période.', boundary: 'Limites', historical: 'Unités de surveillance actuelles ; changements historiques non reconstruits.', formula: 'Notifications de la période ÷ population locale de la même année × 100 000. Aucune imputation.', trend: 'Notifications mensuelles de la région sélectionnée', complete: 'régions avec valeur complète', provisional: 'Provisoire', selected: 'Région sélectionnée', noPopulation: 'Population locale vérifiée indisponible pour cette année. Les cas restent consultables.', fullYear: 'Année entière', firstQuarter: 'Jan–mars' },
+  en: { title: 'Regional distribution', disease: 'Disease', year: 'Year', start: 'First month', end: 'Last month', metric: 'Measure', rate: 'Reports per 100,000', cases: 'Reported cases', area: 'Region', population: 'Total resident population', observed: 'Reported months', source: 'Population source', reference: 'Reference date', basis: 'Population basis', version: 'Population version', download: 'Download filtered CSV', loading: 'Loading regional data…', unavailable: 'Regional map data are not available in this publication.', noDisease: 'No comparable regional counts are available for this disease.', zero: 'Zero', missing: 'Missing / suppressed', notAnnual: 'Selected-period crude report rates; not annualized or age standardized.', scale: 'The same disease, measure and month range share a color scale across years.', boundary: 'Boundaries', historical: 'Present monitoring units; historical boundary changes are not reconstructed.', formula: 'Period reports ÷ local population in the same year × 100,000. Missing years are not filled.', trend: 'Monthly reports in the selected region', complete: 'regions with a complete value', provisional: 'Provisional', unverified: 'Unverified', selected: 'Selected region', noPopulation: 'No verified local population for this year. Case counts remain available.', fullYear: 'Full year', firstQuarter: 'Jan–Mar' },
+  zh: { title: '地区分布', disease: '疾病', year: '年份', start: '开始月份', end: '结束月份', metric: '指标', rate: '每10万人报告数', cases: '报告病例数', area: '地区', population: '当年常住总人口', observed: '可用报告月', source: '人口来源', reference: '人口参照日期', basis: '人口统计口径', version: '人口版本', download: '下载当前筛选 CSV', loading: '正在加载地区数据…', unavailable: '当前发布版本尚无可用地区地图数据。', noDisease: '此疾病暂无可比较的地区病例数。', zero: '零', missing: '缺失／抑制', notAnnual: '所选期间的粗报告率，未年化、未作年龄标化。', scale: '同病种、同指标和月份范围跨年共用色阶。', boundary: '边界', historical: '按当前监测地区展示，未重建历史行政区变更。', formula: '期间病例总数 ÷ 该省同年人口 × 100,000；人口缺年不补值。', trend: '选中地区月度报告趋势', complete: '个地区具有完整数值', provisional: '暂定数据', unverified: '未核实', selected: '选中地区', noPopulation: '缺少此地区当年已核实人口，仍可切换查看病例数。', fullYear: '全年', firstQuarter: '1–3月' },
+  fr: { title: 'Répartition régionale', disease: 'Maladie', year: 'Année', start: 'Premier mois', end: 'Dernier mois', metric: 'Indicateur', rate: 'Notifications pour 100 000', cases: 'Cas déclarés', area: 'Région', population: 'Population résidente totale', observed: 'Mois renseignés', source: 'Source démographique', reference: 'Date de référence', basis: 'Base démographique', version: 'Version démographique', download: 'Télécharger le CSV filtré', loading: 'Chargement régional…', unavailable: 'Carte régionale indisponible dans cette publication.', noDisease: 'Aucun décompte régional comparable pour cette maladie.', zero: 'Zéro', missing: 'Manquant / masqué', notAnnual: 'Taux brut de la période, non annualisé et non standardisé sur l’âge.', scale: 'Échelle commune entre années pour la même maladie, mesure et période.', boundary: 'Limites', historical: 'Unités de surveillance actuelles ; changements historiques non reconstruits.', formula: 'Notifications de la période ÷ population locale de la même année × 100 000. Aucune imputation.', trend: 'Notifications mensuelles de la région sélectionnée', complete: 'régions avec valeur complète', provisional: 'Provisoire', unverified: 'Non vérifié', selected: 'Région sélectionnée', noPopulation: 'Population locale vérifiée indisponible pour cette année. Les cas restent consultables.', fullYear: 'Année entière', firstQuarter: 'Jan–mars' },
 };
 const calendarLabels = {
   en: { from: 'Start date', to: 'End date', view: 'Group trend by', compare: 'Compare with', none: 'No comparison', previous_year: 'Same period last year', previous_period: 'Previous period', custom: 'Custom range', compareFrom: 'Comparison start', compareTo: 'Comparison end', current: 'Selected range', previous: 'Comparison', change: 'Change', monthPreset: 'Select month', quarterPreset: 'Select quarter', yearPreset: 'Full year', actual: 'Complete source periods included', periodRule: 'Only whole source periods are included. Boundary weeks, months, quarters or years are not split.', invalid: 'Choose valid start and end dates in chronological order.', annualPopulations: 'Population and rate contribution by reporting year', formula: 'For each reporting year: period reports ÷ local population for that year × 100,000; contributions are added across years. Not annualized or age standardized.', observed: 'Available source periods', trend: 'Reports in the selected region', equalDuration: 'Comparison periods contain different numbers of source periods; compare with care.', noPopulation: 'Verified population is missing for at least one reporting year. Case counts remain available.', scale: 'The same disease, measure and range share a scale across years and comparison periods.', focus: 'Focus on mainland', reset: 'Reset map', populationPrecision: 'Japanese population totals are published in thousands and converted to persons at that original precision.', alignment: 'Comparison curves align by period order; hover to see each period’s actual dates.', weeklyGrouping: 'Weekly reports are grouped by the week’s start date; whole weeks are retained.' },
@@ -66,7 +67,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const [selected, setSelected] = useState('');
   const [comparison, setComparison] = useState<Comparison>('previous_year');
   const [customComparison, setCustomComparison] = useState({ from: '', to: '' });
-  const [mapFocused, setMapFocused] = useState(code === 'US' || code === 'JP');
+  const [mapFocused, setMapFocused] = useState(code === 'JP');
   const [status, setStatus] = useState<'loading' | 'absent' | 'ready' | 'error'>('loading');
   const [failed, setFailed] = useState(false);
   const saved = useMemo(() => typeof globalThis.window === 'undefined' ? new URLSearchParams() : new URLSearchParams(globalThis.window.location.search), []);
@@ -87,7 +88,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   useEffect(() => {
     const controller = new AbortController();
     retainedRange.current = null; comparisonRestored.current = false;
-    setMapFocused(code === 'US' || code === 'JP');
+    setMapFocused(code === 'JP');
     setStatus('loading'); setCatalog(null); setDataset(null); setWindow(null); setPopulation(null); setMapName('');
     void (async () => {
       const index = await surveillanceData.read<{ countries: Array<{ code: string; path: string }> }>('/site-data/subdivision-maps/index.json', { signal: controller.signal });
@@ -101,6 +102,8 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       if (controller.signal.aborted) return;
       if (current.schema_version !== 1 || current.country_code !== code || populations.country_code !== code) throw new Error('Map publication mismatch');
       const key = `subdivision-${code}-${current.boundary.version}`;
+      // Keep every US state in its source longitude/latitude. Alaska and
+      // Hawaii must remain real geographic features rather than inset art.
       echarts.registerMap(key, geometry);
       setMapName(key); setPopulation(populations); setCatalog(current);
       const requested = saved.get('mapDisease') || diseaseId;
@@ -196,11 +199,6 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
     if (window) for (const [key, value] of Object.entries({ mapDisease: selectedDisease, mapFrom: window.from, mapTo: window.to, mapView: window.view, mapMetric: window.metric, mapRegion: selected, mapCompare: comparison, mapCompareFrom: customComparison.from, mapCompareTo: customComparison.to, mapTab: tab })) url.searchParams.set(key, String(value));
     url.hash = 'regional-distribution'; return url.href;
   };
-  const download = () => {
-    if (!dataset || !window || !rangeValid) return;
-    const url = URL.createObjectURL(new Blob([csvFor(rows, window, dataset, catalog, compareRows, compareWindow)], { type: 'text/csv;charset=utf-8' }));
-    const a = document.createElement('a'); a.href = url; a.download = `${code}-${selectedDisease}-${window.from}-${window.to}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
   const months = monthNames(lang);
   const basisLabel = (basis: string) => populationBasis[basis]?.[lang === 'zh' ? 1 : lang === 'fr' ? 2 : 0] || basis;
   const bounds = dataset ? dateBounds(dataset) : { from: '2000-01-01', to: '2100-12-31' };
@@ -218,8 +216,15 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const populationSources = [...new Set(rows.flatMap(row => row.annual.flatMap(item => item.population ? [item.population.source] : [])))];
   const selectedSource = dataset?.regions[selected];
   const tabs = ['map', 'trend', 'table'] as const;
+  const zoomLabels = lang === 'zh'
+    ? { group: '地图缩放', in: '放大地图', out: '缩小地图', reset: '重置地图' }
+    : lang === 'fr'
+      ? { group: 'Zoom de la carte', in: 'Agrandir la carte', out: 'Réduire la carte', reset: 'Réinitialiser la carte' }
+      : { group: 'Map zoom', in: 'Zoom in', out: 'Zoom out', reset: 'Reset map' };
+  const zoom = (factor: number) => mapRef.current?.getEchartsInstance?.()?.dispatchAction({ type: 'geoRoam', componentType: 'series', seriesIndex: 0, zoom: factor });
+  const resetZoom = () => mapRef.current?.getEchartsInstance?.()?.setOption(chartOption, { notMerge: true });
   const detail = active && window && <div className="subdivision-map-detail" aria-live="polite">
-    <h3>{name(active.region)}{active.provisional && <span className="subdivision-map-badge">{t.provisional}</span>}</h3>
+    <h3>{name(active.region)}{active.provisional && <span className="subdivision-map-badge">{t.provisional}</span>}{active.unverified && <span className="subdivision-map-badge">{t.unverified}</span>}</h3>
     <div className="subdivision-map-value">{number(active.value)}<span>{metricLabel}</span></div>
     {active.value === null && <p className="surveillance-note">{reason(active)}</p>}
     <dl>
@@ -253,7 +258,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
             pngFilename={`${code}-${selectedDisease}-${window?.from}-${window?.to}-${tab}.png`}
             pngSelector={tab === 'trend' ? '.subdivision-map-trend' : '.subdivision-map-plot'}
             pngDisabled={!rangeValid || !dataset || tab === 'table'}
-            onData={download} dataDisabled={!rangeValid || !dataset} />
+            dataHref={downloadCenterHref(lang, { country: selected || code, disease: selectedDisease })} />
         </div>
       </div>
       {!selectedDisease ? <p className="surveillance-note" role="status">{t.noDisease}</p> : !dataset || !window ? <p role="status">{failed ? t.unavailable : t.loading}</p> : <>
@@ -286,7 +291,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
         <p className="subdivision-map-status" aria-live="polite">{rows.filter(row => row.value !== null).length}/{catalog.expected_regions} {ui.available} · {cadenceLabels[lang][dataset.cadence]}{compareWindow && expected?.expected !== comparedExpected?.expected && <> · {ui.periodDifference}</>}</p>
         <div role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-${tab}`}>
           {tab === 'map' && <div className="subdivision-map-content">
-            <div className="subdivision-map-plot"><div className="subdivision-map-canvas" role="img" aria-label={`${t.title} · ${metricLabel}. ${scale.ticks.map(tick => tick.value.toLocaleString(lang, { maximumFractionDigits: 0 })).join('; ')}; ${t.missing}`}><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%' }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /></div></div>
+            <div className="subdivision-map-plot"><div className="subdivision-map-canvas" role="img" aria-label={`${t.title} · ${metricLabel}. ${scale.ticks.map(tick => tick.value.toLocaleString(lang, { maximumFractionDigits: 0 })).join('; ')}; ${t.missing}`}><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /><div className="subdivision-map-zoom" role="group" aria-label={zoomLabels.group}><button type="button" onClick={() => zoom(1.25)} aria-label={zoomLabels.in}>+</button><button type="button" onClick={() => zoom(.8)} aria-label={zoomLabels.out}>−</button><button type="button" onClick={resetZoom} aria-label={zoomLabels.reset}>↺</button></div></div></div>
             <RegionList rows={rows} previous={compareByCode} comparison={!!compareWindow} lang={lang} selected={selected} onSelect={setSelected} metricLabel={metricLabel} number={number} reason={reason}>{detail}</RegionList>
           </div>}
           {tab === 'trend' && active && <>
@@ -295,13 +300,13 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
           </>}
           {tab === 'table' && <div className="subdivision-map-table" role="region" aria-label={t.area}>
             <table><thead><tr><th scope="col">{t.area}</th><th scope="col">{metricLabel}</th>{compareWindow && <><th scope="col">{t.previous}</th><th scope="col">{t.change}</th></>}</tr></thead><tbody>
-              {[...rows].sort((a, b) => (b.value ?? -1) - (a.value ?? -1)).map(row => <tr key={row.region.code} data-selected={selected === row.region.code || undefined}><th scope="row"><button type="button" aria-pressed={selected === row.region.code} onClick={() => { setSelected(row.region.code); setTab('map'); }}>{name(row.region)}</button></th><td>{row.value === null ? <span className="subdivision-map-unavailable">{reason(row)}</span> : number(row.value)}{row.provisional && <span className="sr-only"> {t.provisional}</span>}</td>{compareWindow && <><td>{number(compareByCode.get(row.region.code)?.value)}</td><td>{change(row)}</td></>}</tr>)}
+              {[...rows].sort((a, b) => (b.value ?? -1) - (a.value ?? -1)).map(row => <tr key={row.region.code} data-selected={selected === row.region.code || undefined}><th scope="row"><button type="button" aria-pressed={selected === row.region.code} onClick={() => { setSelected(row.region.code); setTab('map'); }}>{name(row.region)}</button></th><td>{row.value === null ? <span className="subdivision-map-unavailable">{reason(row)}</span> : number(row.value)}{row.provisional && <span className="sr-only"> {t.provisional}</span>}{row.unverified && <span className="sr-only"> {t.unverified}</span>}</td>{compareWindow && <><td>{number(compareByCode.get(row.region.code)?.value)}</td><td>{change(row)}</td></>}</tr>)}
             </tbody></table>
           </div>}
         </div>
         <details className="subdivision-map-methods surveillance-methods">
           <summary>{ui.methods}</summary>
-          <p>{dataset.case_basis[lang] || dataset.case_basis.en}</p>
+          <p>{dataset.case_basis[lang] || dataset.case_basis.en}</p>{active?.unverified && <p>{t.unverified}: {lang === 'zh' ? '数值来自尚未完成核验的原始来源记录。' : lang === 'fr' ? 'Valeur issue d’une observation source non vérifiée.' : 'The value comes from an unverified source observation.'}</p>}
           <p>{t.periodRule}</p>
           {expected?.from && <p>{t.actual}: {expected.from} – {expected.to} ({expected.expected}){comparedExpected?.from && <> · {t.previous}: {comparedExpected.from} – {comparedExpected.to} ({comparedExpected.expected})</>}</p>}
           {compareWindow && expected?.expected !== comparedExpected?.expected && <p>{t.equalDuration}</p>}

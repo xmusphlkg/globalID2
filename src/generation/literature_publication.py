@@ -75,7 +75,10 @@ def select_index_artifacts(source: Path) -> list[str]:
 async def export_literature_snapshot(session, *, diseases_by_id: dict, surveillance_coverage: dict,
                                      situation_snapshot: dict | None, private_dir: Path,
                                      limit: int | None, title_cache_path: Path | None = None,
-                                     related_cache_path: Path | None = None) -> dict:
+                                     related_cache_path: Path | None = None,
+                                     previous_snapshot: Path | None = None,
+                                     selected_article_ids: set[str] | None = None,
+                                     expected_previous_manifest_sha256: str | None = None) -> dict:
     """Generate only Research Radar inputs from a caller-owned read snapshot.
 
     The caller must hold a read-only repeatable-read database transaction and
@@ -87,9 +90,20 @@ async def export_literature_snapshot(session, *, diseases_by_id: dict, surveilla
     if private_dir.is_symlink() or (private_dir.exists() and any(private_dir.iterdir())):
         raise ValueError("Literature snapshot requires an empty private directory")
     private_dir.mkdir(parents=True, exist_ok=True)
+    from src.generation.literature_projection_state import (
+        load_projection_state, projection_dependencies, reuse_build_artifacts, write_projection_state,
+    )
+    dependencies = projection_dependencies(diseases_by_id)
+    previous, reason = load_projection_state(previous_snapshot,
+        expected_manifest_sha256=expected_previous_manifest_sha256, dependencies=dependencies)
+    if selected_article_ids is None:
+        previous, reason = None, "coarse_changes"
+    state: dict = {}
     payload = await collect_literature_export(
         session, diseases_by_id=diseases_by_id, surveillance_coverage=surveillance_coverage,
         limit=limit, title_cache_path=title_cache_path,
+        selected_article_ids=selected_article_ids if previous is not None else None,
+        previous_projection=previous, projection_state=state,
     )
     payload = attach_surveillance_evidence(payload, situation_snapshot, diseases_by_id=diseases_by_id,
                                            related_cache_path=related_cache_path)
@@ -97,9 +111,20 @@ async def export_literature_snapshot(session, *, diseases_by_id: dict, surveilla
                 len(payload.get("articles") or []), len(payload.get("preprints") or []),
                 len(payload.get("bibliographic_articles") or []))
     article_digests: dict[str, str] = {}
+    reused = reuse_build_artifacts(previous_snapshot, private_dir) if previous is not None else 0
     write_literature_artifacts(payload, private_dir / "build", private_dir / "public", article_digests=article_digests)
     _atomic_write(private_dir / "article-inputs.json", json.dumps({"schema": 1, "articles": article_digests},
                   sort_keys=True, separators=(",", ":")).encode())
+    if state:
+        write_projection_state(private_dir, state, dependencies=dependencies)
+    _atomic_write(private_dir / "projection-plan.json", json.dumps({
+        "schema": 1, "mode": "incremental" if previous is not None else "full", "reason": reason,
+        "selected_article_count": len(selected_article_ids) if selected_article_ids is not None else None,
+        "reused_build_files": reused,
+    }, sort_keys=True, separators=(",", ":")).encode())
+    logger.info("Research SQL projection: mode={} reason={} selected_articles={} reused_build_files={}",
+                "incremental" if previous is not None else "full", reason,
+                len(selected_article_ids) if selected_article_ids is not None else None, reused)
     return payload
 
 

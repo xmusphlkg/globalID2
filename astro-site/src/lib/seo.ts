@@ -245,19 +245,22 @@ export function buildDatasetDistributions(input: {
   }
 
   const parts = Array.isArray(input.entry?.parts) ? input.entry.parts : [];
-  const currentPart = parts.find(part => part?.is_current) ?? parts[0];
-  for (const [format, file] of Object.entries(currentPart?.files ?? {})) {
-    const url = normalizeSeoText(file?.url);
-    if (!url) continue;
-    distributions.push({
-      '@type': 'DataDownload',
-      name: normalizeSeoText(file?.filename) || `Current dataset (${format.toUpperCase()})`,
-      encodingFormat: DOWNLOAD_MIME_TYPES[format] ?? 'application/octet-stream',
-      contentUrl: url,
-      ...(Number.isFinite(file?.bytes) && Number(file?.bytes) > 0
-        ? { contentSize: `${file?.bytes} bytes` }
-        : {}),
-    });
+  const currentParts = parts.filter(part => part?.is_current);
+  const publishedParts = currentParts.length > 0 ? currentParts : parts.slice(0, 1);
+  for (const currentPart of publishedParts) {
+    for (const [format, file] of Object.entries(currentPart?.files ?? {})) {
+      const url = normalizeSeoText(file?.url);
+      if (!url) continue;
+      distributions.push({
+        '@type': 'DataDownload',
+        name: normalizeSeoText(file?.filename) || `Current dataset (${format.toUpperCase()})`,
+        encodingFormat: DOWNLOAD_MIME_TYPES[format] ?? 'application/octet-stream',
+        contentUrl: url,
+        ...(Number.isFinite(file?.bytes) && Number(file?.bytes) > 0
+          ? { contentSize: `${file?.bytes} bytes` }
+          : {}),
+      });
+    }
   }
 
   return distributions;

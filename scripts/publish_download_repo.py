@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -30,10 +31,10 @@ DEFAULT_SOURCE_DIR = ROOT / "exports" / "site-downloads"
 DEFAULT_WORKDIR = DEFAULT_SOURCE_DIR
 DEFAULT_REPO_URL = get_data_share_repo_url()
 DEFAULT_REPO_BRANCH = get_data_share_repo_branch()
-MANAGED_PATHS = ("countries", "diseases", "manifest.json")
+MANAGED_PATHS = ("countries", "diseases", "cells", "manifest.json")
 GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024
 PUSH_BATCH_BYTES = 1024 * 1024 * 1024
-ASSET_DIRECTORIES = ("countries", "diseases")
+ASSET_DIRECTORIES = ("countries", "diseases", "cells")
 GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 NETWORK_ATTEMPTS = 4
 NETWORK_RETRY_DELAY_SECONDS = 2.0
@@ -47,6 +48,8 @@ TRANSIENT_GIT_ERROR_MARKERS = (
     "could not resolve host",
     "failed to connect",
     "connection closed",
+    "not responding",
+    "broken pipe",
     "remote end hung up unexpectedly",
     "unexpected disconnect",
     "http/2 stream",
@@ -103,6 +106,9 @@ def configure_github_ssh_transport(repo_url: str) -> bool:
         current += " -o Hostname=ssh.github.com"
     if " -p 443" not in current and "Port=443" not in current:
         current += " -p 443"
+    for option in ("ConnectTimeout=20", "ServerAliveInterval=15", "ServerAliveCountMax=3"):
+        if option.split("=")[0] + "=" not in current:
+            current += f" -o {option}"
     os.environ["GIT_SSH_COMMAND"] = current
     os.environ["GIT_TERMINAL_PROMPT"] = "0"
     return True
@@ -148,7 +154,8 @@ def remote_branch_exists(repo_url: str, branch: str) -> bool:
 
 def push_download_snapshot(workdir: Path, branch: str, *, batch_bytes: int = PUSH_BATCH_BYTES) -> None:
     _transport.push_download_snapshot(workdir, branch, batch_bytes=batch_bytes,
-        run_git=run_git, run_git_with_retry=run_git_with_retry, push_branch=push_branch)
+        run_git=run_git, run_git_with_retry=run_git_with_retry, push_branch=push_branch,
+        preload_branch=os.environ.get('GIDS_DOWNLOAD_PRELOAD_BRANCH') or None)
 
 
 def _asset_relative_path(relative_path: str) -> Path:
@@ -313,6 +320,22 @@ def write_readme(workdir: Path, manifest: dict) -> None:
     _assets.write_readme(workdir, manifest)
 
 
+def _stage_download_tree(workdir: Path) -> None:
+    """Stage the active grain and drop files that belong to the other grain."""
+
+    manifest = json.loads((workdir / "manifest.json").read_text(encoding="utf-8"))
+    schema = manifest.get("schema_version")
+    active = ("cells",) if schema == 5 else ("countries", "diseases")
+    retired = ("countries", "diseases") if schema == 5 else ("cells",)
+    present = [name for name in (*active, "manifest.json", "README.md") if (workdir / name).exists()]
+    if present:
+        run_git(["add", "--", *present], workdir)
+    for name in retired:
+        tracked = run_git(["ls-files", "--", name], workdir).strip()
+        if tracked:
+            run_git(["rm", "-r", "--ignore-unmatch", "--", name], workdir)
+
+
 def commit_and_push(
     workdir: Path,
     branch: str,
@@ -332,8 +355,8 @@ def commit_and_push(
     if not push:
         print("Validation complete. Pass --push to commit and publish these changes.")
         return False
-    run_git(["add", "countries", "diseases", "manifest.json", "README.md"], workdir)
-    run_git(["commit", "-m", commit_message], workdir)
+    _stage_download_tree(workdir)
+    run_git(["commit", "--quiet", "-m", commit_message], workdir)
     push_download_snapshot(workdir, branch)
     return True
 

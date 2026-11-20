@@ -46,11 +46,12 @@ def test_bucket_probe_url_matches_signed_canonical_uri() -> None:
         seen.append(request)
         return _Response()
 
-    assert R2S3Client(CONFIG, opener=opener).head_bucket() is True
+    assert R2S3Client(CONFIG, object_index=False, opener=opener).head_bucket() is True
     # The signed canonical URI is "/<bucket>"; a trailing slash would make
     # every probe fail with SignatureDoesNotMatch.
+    assert seen[0].get_method() == "HEAD"
     assert seen[0].full_url == (
-        "https://acct.r2.cloudflarestorage.com/globalid-papers?max-keys=1"
+        "https://acct.r2.cloudflarestorage.com/globalid-papers"
     )
 
 
@@ -61,7 +62,7 @@ def test_put_object_sends_cache_control_and_signs_it() -> None:
         seen.append(request)
         return _Response()
 
-    R2S3Client(CONFIG, opener=opener).put_object(
+    R2S3Client(CONFIG, object_index=False, opener=opener).put_object(
         "research/articles/a/",
         b"<html></html>",
         content_type="text/html; charset=utf-8",
@@ -88,7 +89,7 @@ def test_put_object_retries_transient_ssl_eof(monkeypatch: pytest.MonkeyPatch) -
         "src.services.data_release.papers_r2.time.sleep",
         lambda seconds: sleeps.append(float(seconds)),
     )
-    R2S3Client(CONFIG, opener=opener).put_object("research/articles/a/", b"<html></html>")
+    R2S3Client(CONFIG, object_index=False, opener=opener).put_object("research/articles/a/", b"<html></html>")
     assert attempts["count"] == 3
     assert sleeps == [1.0, 2.0]
 
@@ -100,7 +101,7 @@ def test_put_object_gives_up_after_transport_retries(monkeypatch: pytest.MonkeyP
         raise urllib.error.URLError(OSError("UNEXPECTED_EOF_WHILE_READING"))
 
     with pytest.raises(R2S3Error, match="transport failed"):
-        R2S3Client(CONFIG, opener=opener).put_object("research/articles/a/", b"x")
+        R2S3Client(CONFIG, object_index=False, opener=opener).put_object("research/articles/a/", b"x")
 
 
 def test_get_object_treats_http_404_as_missing() -> None:
@@ -109,7 +110,31 @@ def test_get_object_treats_http_404_as_missing() -> None:
             request.full_url, 404, "Not Found", {}, io.BytesIO(b"<Error/>")
         )
 
-    assert R2S3Client(CONFIG, opener=opener).get_object("missing") is None
+    assert R2S3Client(CONFIG, object_index=False, opener=opener).get_object("missing") is None
+
+
+def test_operation_counts_distinguish_list_from_reads_and_include_retries(monkeypatch):
+    attempts = 0
+
+    def opener(request, _timeout):
+        nonlocal attempts
+        if request.get_method() == 'PUT':
+            attempts += 1
+            if attempts == 1:
+                raise urllib.error.URLError('lost response')
+        return _Response()
+
+    monkeypatch.setattr('src.services.data_release.papers_r2.time.sleep', lambda _seconds: None)
+    client = R2S3Client(CONFIG, object_index=False, opener=opener)
+    client._request('PUT', 'new-object')
+    client._request('GET', '', query='list-type=2')
+    client._request('GET', 'current.json')
+    client._request('HEAD', 'old-object')
+    client._request('POST', '', query='delete=')
+    assert client.operation_counts() == {
+        'requests': 6, 'class_a_requests': 3, 'class_b_requests': 2,
+        'delete_requests': 1, 'by_operation': {'put': 2, 'list': 1, 'get': 1, 'head': 1, 'delete': 1},
+    }
 
 
 def test_get_object_raises_on_other_http_errors() -> None:
@@ -119,7 +144,7 @@ def test_get_object_raises_on_other_http_errors() -> None:
         )
 
     with pytest.raises(R2S3Error) as raised:
-        R2S3Client(CONFIG, opener=opener).get_object("secret")
+        R2S3Client(CONFIG, object_index=False, opener=opener).get_object("secret")
     assert raised.value.status == 403
 
 
@@ -146,21 +171,19 @@ def test_inventory_paginates_and_encodes_continuation_token():
           <Contents><Key>b</Key><ETag>"def"</ETag><Size>4</Size></Contents>
           <IsTruncated>false</IsTruncated></ListBucketResult>''')
 
-    result = R2S3Client(CONFIG, opener=opener).list_objects()
+    result = R2S3Client(CONFIG, object_index=False, opener=opener).list_objects()
     assert result == {"a/": {"bytes": 3, "etag": "abc"}, "b": {"bytes": 4, "etag": "def"}}
     assert "continuation-token=a%2Bb%2F%3D&list-type=2" in calls[1]
 
 
-def test_pooled_http_transport_preserves_body_and_status(monkeypatch):
+def test_pooled_http_transport_preserves_body_and_status():
     import httpx
-    original_client = httpx.Client
-    monkeypatch.setattr(httpx, "Client", lambda **kwargs: original_client(
-        transport=httpx.MockTransport(
-            lambda request: httpx.Response(200, content=b"payload")
-        ),
-        **kwargs,
+    client = R2S3Client(CONFIG, object_index=False)
+    if client._http is not None:
+        client._http.close()
+    client._http = httpx.Client(transport=httpx.MockTransport(
+        lambda request: httpx.Response(200, content=b"payload")
     ))
-    client = R2S3Client(CONFIG)
     try:
         assert client.get_object("test") == b"payload"
     finally:

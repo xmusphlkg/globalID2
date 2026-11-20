@@ -14,7 +14,7 @@ def population(code="AU-NSW", year=2024, value=8_492_050):
 
 
 def monthly(values=None):
-    return {"name_en": "Pertussis", "name_zh": "百日咳", "period_granularity": "monthly", "dates": ["2024-01-01", "2024-02-01"], "cases": values or [0, 100], "deaths": [900, 900], "selected_series_codes": ["SER_TEST"], "definition_version": "same-definition"}
+    return {"name_en": "Pertussis", "name_zh": "百日咳", "period_granularity": "monthly", "dates": ["2024-01-01", "2024-02-01"], "cases": values or [0, 100], "deaths": [900, 900], "selected_series_codes": ["SER_TEST"], "point_series_codes": ["SER_TEST"], "projection_policy": "single_series", "source_series": [{"series_code": "SER_TEST", "dimension_key": "all", "dimensions": {}, "aggregation_policy": "non_additive", "mapping_relation": "exact", "metric_type": "case_notifications", "temporal_granularity": "monthly", "unit": "count"}], "definition_version": "same-definition"}
 
 
 def test_population_is_local_official_exact_year_with_traceable_semantics():
@@ -59,6 +59,71 @@ def test_non_comparable_or_non_interval_counts_are_not_admitted(patch):
     assert monthly_series({**monthly(), **patch}, "AU") is None
 
 
+def test_cn_projection_allows_resolved_non_additive_sources_and_raw_points():
+    entry = monthly()
+    entry.update({
+        "projection_policy": "priority_overlay",
+        "selected_series_codes": ["SER_HIGH", "SER_LOW"],
+        "point_series_codes": ["SER_HIGH", "SER_LOW"],
+        "quality_statuses": ["raw", "raw"],
+        "source_series": [
+            {"series_code": "SER_HIGH", "dimension_key": "all", "dimensions": {},
+             "aggregation_policy": "non_additive", "projection_policy": "priority_overlay",
+             "projection_priority": 200, "comparability_set": "CN_TEST",
+             "mapping_relation": "exact", "metric_type": "case_notifications",
+             "temporal_granularity": "monthly", "unit": "count"},
+            {"series_code": "SER_LOW", "dimension_key": "all", "dimensions": {},
+             "aggregation_policy": "non_additive", "projection_policy": "priority_overlay",
+             "projection_priority": 100, "comparability_set": "CN_TEST",
+             "mapping_relation": "exact", "metric_type": "case_notifications",
+             "temporal_granularity": "monthly", "unit": "count"},
+        ],
+    })
+    result = monthly_series(entry, "CN")
+    assert result["points"] == [["2024-01-01", 0, "raw"], ["2024-02-01", 100, "raw"]]
+
+
+def test_cn_map_selects_one_source_system_and_uses_its_values():
+    def source(system, code, values, basis, time_basis):
+        return {"series_code": code, "source_system": system,
+                "definition_version": "CN_PROVINCE_DATACENTER_ONSET_V1" if system.endswith("DATACENTER") else "CN_PROVINCE_MONTHLY_REPORT_V1",
+                "reporting_basis": basis, "time_basis": time_basis,
+                "metric_type": "case_notifications", "unit": "count", "temporal_granularity": "monthly",
+                "mapping_relation": "exact", "comparability": "conditional", "comparability_break": None,
+                "series_is_active": True, "geography_key": "country:CN-AH:national", "dimension_key": "all", "dimensions": {},
+                "dates": ["2021-01-01", "2021-02-01"], "values": values, "point_quality_statuses": ["raw", "raw"]}
+    dc = source("SRC_CN_PROV_DATACENTER", "DC", [1461, 837], "national_notifiable_disease_surveillance_by_onset", "month of onset")
+    monthly_report = source("SRC_CN_PROV_MONTHLY_REPORT", "MR", [1482, 860], "provincial_statutory_infectious_disease_monthly_report", "publisher reporting month")
+    entry = {"name_en": "Influenza", "name_zh": "流感", "period_granularity": "monthly",
+             "source_series": [dc, monthly_report], "data_layer": "series_registry"}
+    ah = {"country_code": "CN-AH", "country_name_en": "Anhui", "disease_series": {"D038": entry}}
+    boundary = {"codes": ["CN-AH"], "expected_regions": 1}
+    _, _, payloads = build_map_payloads("CN", {"CN-AH": ah}, [], boundary)
+    result = payloads["D038"]["regions"]["CN-AH"]
+    assert result["source_system"] == "SRC_CN_PROV_DATACENTER"
+    assert result["points"][0] == ["2021-01-01", 1461, "raw"]
+
+
+def test_cn_non_additive_sources_without_projection_resolution_are_rejected():
+    entry = monthly()
+    entry.update({
+        "projection_policy": "representative_series",
+        "selected_series_codes": ["SER_TEST", "SER_OTHER"],
+        "point_series_codes": ["SER_TEST", "SER_OTHER"],
+        "source_series": [
+            {"series_code": "SER_TEST", "dimension_key": "all", "dimensions": {}, "aggregation_policy": "non_additive"},
+            {"series_code": "SER_OTHER", "dimension_key": "all", "dimensions": {}, "aggregation_policy": "non_additive"},
+        ],
+    })
+    assert monthly_series(entry, "CN") is None
+
+
+def test_legacy_fallback_curves_are_not_admitted_to_subnational_maps():
+    entry = monthly()
+    entry["data_layer"] = "legacy_fallback"
+    assert monthly_series(entry, "AU") is None
+
+
 def test_map_does_not_mix_national_counts_or_other_year_population():
     boundary = json.loads((BOUNDARIES / "manifest.json").read_text())["countries"]["AU"]
     snapshots = {"AU-NSW": {"country_code": "AU-NSW", "disease_series": {"D028": monthly()}}, "AU": {"country_code": "AU", "disease_series": {"D028": monthly([999999, 999999])}}}
@@ -85,6 +150,39 @@ def test_map_export_updates_population_revisions_retires_regions_and_disables_hi
     write_subdivision_maps(state, public, [population()], active_codes=set())
     assert json.loads((public / "subdivision-maps/index.json").read_text())["countries"] == []
     assert not (public / "subdivision-maps/au/d028.json").exists()
+
+
+def test_incremental_map_export_preserves_unchanged_cn_diseases_and_regions(tmp_path):
+    state, public = tmp_path / "state", tmp_path / "public"
+    countries = state / "countries"
+    countries.mkdir(parents=True)
+    ah = {"country_code": "CN-AH", "country_name_en": "Anhui", "disease_series": {"D001": monthly(), "D002": monthly([2, 4])}}
+    bj = {"country_code": "CN-BJ", "country_name_en": "Beijing", "disease_series": {"D001": monthly(), "D002": monthly([3, 5])}}
+    (countries / "cn-ah.json").write_text(json.dumps(ah))
+    (countries / "cn-bj.json").write_text(json.dumps(bj))
+    write_subdivision_maps(state, public, [], active_codes={"CN-AH", "CN-BJ"})
+    initial = json.loads((public / "subdivision-maps/cn/index.json").read_text())
+    assert {item["id"] for item in initial["diseases"]} == {"D001", "D002"}
+
+    # A scoped release contains only the changed province and one changed
+    # disease. Existing map payloads supply the omitted province and disease.
+    (countries / "cn-bj.json").unlink()
+    changed = {"country_code": "CN-AH", "country_name_en": "Anhui", "disease_series": {"D001": monthly([9, 11])}}
+    (countries / "cn-ah.json").write_text(json.dumps(changed))
+    write_subdivision_maps(
+        state,
+        public,
+        [],
+        active_codes={"CN-AH", "CN-BJ"},
+        preserve_existing=True,
+    )
+    latest = json.loads((public / "subdivision-maps/cn/index.json").read_text())
+    assert {item["id"] for item in latest["diseases"]} == {"D001", "D002"}
+    d001 = json.loads((public / "subdivision-maps/cn/d001.json").read_text())
+    d002 = json.loads((public / "subdivision-maps/cn/d002.json").read_text())
+    assert d001["regions"]["CN-AH"]["points"][1][1] == 11
+    assert d001["regions"]["CN-BJ"]["points"][1][1] == 100
+    assert d002["regions"]["CN-BJ"]["points"][1][1] == 5
 
 
 def test_case_definition_changes_have_different_comparison_keys():

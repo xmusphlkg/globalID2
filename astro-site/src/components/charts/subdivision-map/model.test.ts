@@ -33,6 +33,15 @@ test('true zero differs from suppression and a missing report period', () => {
   local.regions['AU-NSW'].points.shift();
   assert.ok(aggregateRegion(region, local, populations, window).reasons.includes('missing_period'));
 });
+test('raw source points remain numeric but are marked unverified', () => {
+  const local = structuredClone(dataset);
+  local.regions['AU-NSW'].points = [['2024-01-01', 10, 'raw'], ['2024-02-01', 20, 'raw'], ['2025-01-01', 1, 'observed'], ['2025-02-01', 1, 'observed']];
+  const result = aggregateRegion(region, local, populations, window);
+  assert.equal(result.cases, 30);
+  assert.equal(result.unverified, true);
+  assert.equal(result.provisional, false);
+  assert.match(csvFor([result], window, local, catalog), /unverified/);
+});
 test('duplicates and incompatible definitions cannot produce a complete value', () => {
   const local = structuredClone(dataset);
   local.regions['AU-NSW'].points.push(['2024-01-01', 100, 'observed']);

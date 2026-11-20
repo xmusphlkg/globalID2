@@ -25,6 +25,11 @@ for (const hostname of ['globalinfectiousdisease.com', 'papers.globalinfectiousd
         assert.equal(siteHref(path), PAPERS_ORIGIN + path);
         assert.equal(researchVersionedHref(path), path);
       }
+      for (const section of ['countries', 'weekly']) {
+        const path = `${prefix}/research/${section}/a/?source=list#summary`;
+        assert.equal(siteHref(path), PAPERS_ORIGIN + path);
+        assert.equal(researchVersionedHref(path), path);
+      }
       assert.equal(siteHref(`${prefix}/research/`), `${base}${prefix}/research/`);
     }
     assert.equal(articleHref('paper-a'), `${PAPERS_ORIGIN}/research/articles/paper-a/`);

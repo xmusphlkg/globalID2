@@ -46,3 +46,19 @@ test('streaming candidate selection preserves ranking, ties, and limit semantics
     assert.deepEqual(selectCountryDiseaseCandidates(countries, load, limit), all.slice(0, limit));
   }
 });
+
+test('legacy observation vectors remain visible when registry identity fields are absent', () => {
+  const candidates = selectCountryDiseaseCandidates(
+    [{ code: 'CN', data_available: true }],
+    () => ({ source_info: { primary_url: 'https://example.org' }, disease_series: {
+      flu: {
+        slug: 'influenza', data_layer: 'legacy_fallback', period_granularity: 'monthly',
+        dates: Array.from({ length: 24 }, (_, index) => `${2023 + Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}-01`),
+        cases: Array.from({ length: 24 }, () => 1), total_cases: 24,
+      },
+    } }),
+    Infinity,
+  );
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].slug, 'influenza');
+});

@@ -36,6 +36,9 @@ from src.core.task_manager import task_manager
 from src.domain import Task, TaskPriority, TaskStatus, TaskType
 from src.services._lifecycle import safe_exception_summary
 from src.services.data_release.channel_control import is_automatic_json_paused
+from src.services.data_release.publication_wait import (
+    static_reservation_blocks_json,
+)
 from src.services.task_executor import (
     execute_task,
     recover_interrupted_tasks_on_startup,
@@ -386,9 +389,34 @@ async def _claim_next_task_uuid(
             (Task.priority == TaskPriority.NORMAL, 2),
             else_=3,
         )
+        static_tasks = (
+            await db.execute(
+                select(Task).where(
+                    Task.task_type == TaskType.EXPORT_DATA,
+                    Task.status.in_((TaskStatus.RUNNING, TaskStatus.PENDING, TaskStatus.QUEUED)),
+                    Task.input_data["data_only"].as_boolean().is_not(True),
+                    Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                    Task.input_data["reports_only"].as_boolean().is_not(True),
+                    Task.input_data["theme_only"].as_boolean().is_not(True),
+                )
+            )
+        ).scalars().all()
+        static_blocking = any(
+            static_reservation_blocks_json(task, datetime.now(timezone.utc))
+            for task in static_tasks
+        )
+        wait_kind = Task.metadata_["publication_wait"]["kind"].as_string()
+        wait_not_before = Task.metadata_["publication_wait"]["not_before"].as_string()
         query = (
             select(Task)
             .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]))
+            .where(or_(
+                wait_kind.is_(None),
+                and_(
+                    wait_kind == "transient_backoff",
+                    wait_not_before <= datetime.now(timezone.utc).isoformat(),
+                ),
+            ))
             .where(or_(~health_operation, health_room))
             .order_by(
                 case(
@@ -470,6 +498,30 @@ async def _claim_next_task_uuid(
                for _uuid, task_type, _nonexclusive, _is_archive, _is_data, _is_legacy, is_situation_legacy, _line, _status in active_tasks):
             query = query.where(~situation_data)
         candidates = list((await db.execute(query)).scalars().all())
+        if static_blocking and candidates:
+            blocking_static = [
+                task for task in static_tasks
+                if static_reservation_blocks_json(task, datetime.now(timezone.utc))
+            ]
+            running_static = any(task.status == TaskStatus.RUNNING for task in blocking_static)
+
+            def task_order(task: Task) -> tuple[datetime, int]:
+                created = task.created_at or datetime.min.replace(tzinfo=timezone.utc)
+                if created.tzinfo is None:
+                    created = created.replace(tzinfo=timezone.utc)
+                return created, int(task.id or 0)
+
+            if running_static:
+                candidates = [
+                    task for task in candidates
+                    if not (task.input_data or {}).get("data_only")
+                ]
+            else:
+                candidates = [
+                    candidate for candidate in candidates
+                    if not (candidate.input_data or {}).get("data_only")
+                    or not any(task_order(blocker) <= task_order(candidate) for blocker in blocking_static)
+                ]
         if not candidates:
             return None
 
@@ -507,6 +559,9 @@ async def _claim_next_task_uuid(
 
         now = datetime.now(timezone.utc)
         metadata = dict(task.metadata_ or {})
+        wait = metadata.get("publication_wait")
+        if isinstance(wait, dict) and wait.get("kind") == "transient_backoff":
+            metadata.pop("publication_wait", None)
         metadata["task_lease"] = {
             "owner": worker_instance_id,
             "claimed_at": now.isoformat(),

@@ -327,7 +327,7 @@ export default function CountriesMapView({ metaCountries: initialCountries = [],
   };
   const option = useMemo(() => mapReady ? ({
     backgroundColor: 'transparent',
-    geo: { map: MAP_NAME, roam: true, boundingCoords: DEFAULT_BOUNDS, left: 0, right: 0, top: 0, bottom: 0, scaleLimit: { min: 0.7, max: 8 }, silent: true, itemStyle: { areaColor: palette.areaColor, borderColor: palette.areaBorder, borderWidth: 0.5 }, emphasis: { itemStyle: { areaColor: palette.areaHover }, label: { show: false } } },
+    geo: { map: MAP_NAME, roam: true, boundingCoords: DEFAULT_BOUNDS, left: 0, right: 0, top: 0, bottom: 0, scaleLimit: { min: 0.7, max: 8 }, silent: false, itemStyle: { areaColor: palette.areaColor, borderColor: palette.areaBorder, borderWidth: 0.5 }, emphasis: { itemStyle: { areaColor: palette.areaHover }, label: { show: false } } },
     // The interactive HTML dots below are the single source of marker pixels.
     // Keeping an invisible scatter series gives ECharts a geo coordinate layer
     // to roam without doubling each marker visually.
@@ -357,7 +357,7 @@ export default function CountriesMapView({ metaCountries: initialCountries = [],
       />
     </div>
     <div ref={containerRef} className="coverage-map-canvas" style={{ position: 'relative', height: isFullscreen ? undefined : height, overflow: 'hidden', background: palette.mapBg }}>
-      <ReactEChartsCore ref={chartRef} echarts={echarts} option={option} style={{ height: '100%', width: '100%' }} onEvents={handleEvents} notMerge />
+      <ReactEChartsCore ref={chartRef} echarts={echarts} option={option} style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }} onEvents={handleEvents} notMerge />
       <div className="coverage-map-controls" role="group" aria-label={initialLanguage === 'zh' ? '地图缩放' : initialLanguage === 'fr' ? 'Zoom de la carte' : 'Map zoom'}>
         <button type="button" onClick={() => zoom(1.25)} aria-label={initialLanguage === 'zh' ? '放大地图' : initialLanguage === 'fr' ? 'Agrandir la carte' : 'Zoom in'}>+</button>
         <button type="button" onClick={() => zoom(0.8)} aria-label={initialLanguage === 'zh' ? '缩小地图' : initialLanguage === 'fr' ? 'Réduire la carte' : 'Zoom out'}>−</button>

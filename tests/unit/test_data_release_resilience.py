@@ -533,3 +533,56 @@ async def test_lifecycle_suppresses_operator_alert_while_automatic_retry_is_sche
 
     assert statuses == [TaskStatus.RUNNING, TaskStatus.FAILED]
     assert alerts == []
+
+
+@pytest.mark.asyncio
+async def test_baseline_failure_stays_on_one_queued_reservation(monkeypatch):
+    task = SimpleNamespace(
+        task_uuid="surveillance-json",
+        task_type=TaskType.EXPORT_DATA,
+        status=TaskStatus.RUNNING,
+        input_data={"data_only": True, "data_line": "surveillance", "trigger": "upstream_completion"},
+        metadata_={},
+        last_error="old",
+        progress=40,
+        completed_steps=2,
+        started_at=datetime.now(timezone.utc),
+        completed_at=None,
+        actual_duration=4,
+    )
+    database = _Database([_ScalarResult(one=task)])
+    monkeypatch.setattr(release_module, "get_database", lambda: database)
+    monkeypatch.setattr(release_module, "contract_fingerprint", lambda _root: "fingerprint")
+    monkeypatch.setattr(release_module.task_manager, "add_workbook_entry", AsyncMock())
+    service = DataReleaseService()
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(poll_interval_seconds=30))
+
+    parked = await service.park_publication_failure(
+        task.task_uuid,
+        ValueError(
+            "Surveillance incremental baseline is missing or invalid; "
+            "restore the published baseline before retrying"
+        ),
+        allow_running=True,
+    )
+
+    assert parked is True
+    assert task.status == TaskStatus.QUEUED
+    assert task.last_error is None
+    assert task.metadata_["publication_wait"]["kind"] == "baseline_invalid"
+    assert database.commits == 1
+
+
+@pytest.mark.asyncio
+async def test_reconcile_does_not_insert_when_a_reservation_exists(monkeypatch):
+    service = DataReleaseService()
+    monkeypatch.setattr(release_module, "_data_enabled", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(release_module, "is_automatic_json_paused", lambda _line: False)
+
+    async def reserved(_line):
+        return SimpleNamespace(task_uuid="already-waiting")
+
+    service._open_json_reservation = reserved
+    service.trigger_job = AsyncMock()
+    await service._reconcile_pending_json("surveillance")
+    service.trigger_job.assert_not_awaited()

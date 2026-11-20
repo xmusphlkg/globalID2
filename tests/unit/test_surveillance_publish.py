@@ -64,6 +64,65 @@ def test_objects_complete_before_single_pointer_switch_and_warm_update_has_no_tr
     assert len(store.writes) == 4
 
 
+def test_indexed_json_reuse_reports_no_upload_or_bytes(tmp_path):
+    relative, payload = generation(tmp_path)
+
+    class IndexedStore(Store):
+        object_index = object()
+
+        def put_object_conditional(self, key, body, *, previous, **metadata):
+            if previous is None and self.objects.get(key) == body and 'immutable' in metadata.get('cache_control', ''):
+                return False
+            super().put_object_conditional(key, body, previous=previous, **metadata)
+            return True
+
+    store = IndexedStore()
+    publish_surveillance_data(tmp_path, CONFIG, client=store)
+    generation(tmp_path, release='data-2')
+    store.writes.clear()
+    result = publish_surveillance_data(tmp_path, CONFIG, client=store)
+    assert result['uploaded'] == result['bytes_uploaded'] == 0
+    assert not any(key == f'{PREFIX}/{relative}' for key, _ in store.writes)
+    del store.objects[f'{PREFIX}/{relative}']
+    generation(tmp_path, release='data-3')
+    result = publish_surveillance_data(tmp_path, CONFIG, client=store)
+    assert result['uploaded'] == 1 and result['bytes_uploaded'] == len(payload)
+    assert store.objects[f'{PREFIX}/{relative}'] == payload
+
+
+def test_json_capacity_preflight_rejects_before_intent_or_data_write(tmp_path):
+    relative, payload = generation(tmp_path)
+
+    class FullBucket(Store):
+        def preflight_objects(self, sizes):
+            assert sizes[f'{PREFIX}/{relative}'] == len(payload)
+            assert f'{PREFIX}/current.json' in sizes
+            assert any(key.startswith(f'{PREFIX}/intents/') for key in sizes)
+            assert any(key.startswith(f'{PREFIX}/manifests/') for key in sizes)
+            raise ValueError('R2 storage budget exceeded')
+
+    store = FullBucket()
+    with pytest.raises(ValueError, match='budget exceeded'):
+        publish_surveillance_data(tmp_path, CONFIG, client=store)
+    assert store.writes == []
+
+
+def test_json_preflight_control_sizes_match_actual_write_bodies(tmp_path):
+    from src.services.data_release.surveillance_publish import publication_upload_sizes
+
+    generation(tmp_path, release='first')
+    store = Store()
+    publish_surveillance_data(tmp_path, CONFIG, client=store)
+    previous = store.objects[f'{PREFIX}/current.json']
+    generation(tmp_path, value=2, release='second')
+    body = (tmp_path / 'current.json').read_bytes()
+    sizes = publication_upload_sizes(body, prefix=PREFIX, previous=previous)
+    store.writes.clear()
+    publish_surveillance_data(tmp_path, CONFIG, client=store)
+    assert set(sizes) == {key for key, _ in store.writes}
+    assert all(size == len(store.objects[key]) for key, size in sizes.items())
+
+
 def test_failure_does_not_advance_pointer_and_retry_reuses_immutable_uploads(tmp_path):
     generation(tmp_path)
     store = Store()

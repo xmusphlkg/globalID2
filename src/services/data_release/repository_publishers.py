@@ -26,7 +26,7 @@ async def prepare_repository_publications(
     git_env: dict[str, str], branch: str, download_repo_url: str,
     publish_commit_message: str, download_git_timeout_seconds: float,
     literature_only: bool, code_only: bool, r2_papers_enabled: bool,
-    r2_reports_enabled: bool,
+    r2_reports_enabled: bool, research_generation_reused: dict | None = None,
 ) -> list[tuple[str, Awaitable[None]]]:
     """Create publication commands without starting them; record disabled channels."""
     repository_publications: list[tuple[str, Awaitable[None]]] = []
@@ -74,7 +74,7 @@ async def prepare_repository_publications(
             },
         )
 
-    if r2_papers_enabled:
+    if r2_papers_enabled and not research_generation_reused:
         r2_env = papers_environment(service, git_env)
         path_options = ({"astro_dir": runtime.astro_dir}
                         if runtime.astro_dir != runtime.root_dir / "astro-site" else {})
@@ -100,11 +100,13 @@ async def prepare_repository_publications(
             task.task_uuid,
             entry_type="info",
             title="Papers R2 Publish Skipped",
-            content="R2 papers publication is disabled for this release job.",
+            content=("The captured committed research generation is unchanged and will be reused."
+                     if research_generation_reused else "R2 papers publication is disabled for this release job."),
             content_type="text",
             metadata={
                 "event": "r2_papers_publish_skipped",
                 "release_job_id": job.job_id,
+                "reason": "unchanged_generation" if research_generation_reused else "disabled",
             },
         )
 

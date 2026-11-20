@@ -236,7 +236,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     </section>
     <section id="disease-directory" class="figure-panel scroll-mt-24">
       <h2 class="figure-title">{zh ? '已追踪疾病画像' : fr ? 'Profils des maladies suivies' : 'Tracked disease profiles'}</h2>
-      <SurveillanceSummary client:load dataUrl={countrySummaryUrl} mode="country-diseases" language={locale} routes={diseaseRoutes} />
+      <SurveillanceSummary client:load dataUrl={countrySummaryUrl} mode="country-diseases" language={locale} code={country} routes={diseaseRoutes} />
     </section>
 
     <section id="trends" class="figure-panel scroll-mt-24">

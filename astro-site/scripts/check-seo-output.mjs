@@ -8,7 +8,7 @@ export const WORKER_DYNAMIC_LINK_PATHS = Object.freeze(['/site-data/situation/rs
 const workerDynamicLinks = new Set(WORKER_DYNAMIC_LINK_PATHS);
 export const isIndependentResearchRoute = pathname => /^\/(?:(?:zh|fr)\/)?research(?:\/|$)/.test(pathname);
 // Mirrors PAPERS_PATH in src/lib/papers.ts: paths published on the papers host.
-const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases)\/|^\/research\/catalogue\/diseases\/|^\/research\/cards\/|^\/site-data\/research\//;
+const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases|countries|weekly)\/|^\/research\/catalogue\/diseases\/|^\/research\/cards\/|^\/site-data\/research\//;
 
 // Regex captures can be slices backed by an entire HTML document. The global
 // uniqueness maps must own small strings, otherwise one canonical per page

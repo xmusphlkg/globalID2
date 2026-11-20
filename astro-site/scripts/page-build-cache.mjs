@@ -27,7 +27,6 @@ const safeSegment = value => {
   if (!/^[A-Za-z0-9][A-Za-z0-9_()\-]*$/.test(segment)) throw new Error(`Unsafe page cache segment: ${segment}`);
   return segment;
 };
-
 export function readResearchCacheIndex(dataRoot, env = process.env) {
   const source = resolve(dataRoot, 'research/index.json');
   if (!existsSync(source)) return {};
@@ -42,7 +41,6 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   const templates = new Map();
   const routeTemplates = {
     country: 'countries/[country]/index.astro',
-    'country-disease': 'countries/[country]/diseases/[disease].astro',
     disease: 'diseases/[disease].astro',
     'report-archive': 'countries/[country]/reports/index.astro',
     report: 'countries/[country]/reports/[id].astro',
@@ -90,7 +88,10 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   const diseases = json(resolve(dataRoot, 'diseases/index.json'), []);
   const downloads = json(resolve(dataRoot, 'downloads.json'), {});
   const directory = openDirectoryBuildCache(dataRoot, { path: directoryCachePath });
-  const candidates = selectDirectoryCandidates(countries, code => directory.country(safeSegment(code)));
+  // Keep the full candidate set for country-page dependency fingerprints so
+  // newly added and lower-volume diseases update the dynamic directory. The
+  // country-disease detail is rendered by the shared runtime shell.
+  const candidates = selectDirectoryCandidates(countries, code => directory.country(safeSegment(code)), Infinity);
   const alertsDir = resolve(dataRoot, 'situation/international');
   const alertHash = path => {
     const value = json(path);
@@ -107,16 +108,6 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
       candidates.filter(entry => entry.code === code).map(entry => entry.slug).sort(),
       reportSummaries.filter(entry => entry.country_code?.toLowerCase() === code).slice(0, 6), countryAlerts,
       downloads.countries?.find(entry => entry.code?.toLowerCase() === code) ?? null]);
-    for (const candidate of candidates.filter(entry => entry.code === code)) {
-      const slug = safeSegment(candidate.slug);
-      const diseaseId = candidate.diseaseId;
-      add(`country-disease:${code}:${slug}`, `countries/${code}/diseases/${slug}`, [
-        hashFile(resolve(dataRoot, 'countries', `${code}.json`)), countryAlerts,
-        hashFile(resolve(dataRoot, 'research/diseases', `${safeSegment(diseaseId || slug).toLowerCase()}.json`)),
-        literatureFingerprints.get(String(diseaseId || slug).toLowerCase()) ?? null,
-        downloads.countries?.find(entry => entry.code?.toLowerCase() === code) ?? null,
-      ]);
-    }
   }
 
   const publishableReports = buildPublishableReports(reportSummaries, id => (

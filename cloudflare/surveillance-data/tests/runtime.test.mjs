@@ -4,9 +4,10 @@ import { resolve } from 'node:path';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { buildPages } from '../scripts/build-pages.mjs';
 
 import './template-runtime-cases.mjs';
@@ -162,54 +163,43 @@ test('real local Worker streams R2 generations and exposes a fresh same-origin p
   } finally { await runtime.dispose(); }
 });
 
-test('packaged Pages Worker routes live JSON while preserving ordinary static assets', async () => {
-  const directory = mkdtempSync(join(tmpdir(), 'gids-pages-data-'));
-  await buildPages(directory, { researchEnabled: false });
-  assert.equal(JSON.parse(readFileSync(join(directory, '_routes.json'), 'utf8')).include.includes('/research/*'), false);
-  await buildPages(directory, { researchEnabled: true });
-  const routes = JSON.parse(readFileSync(join(directory, '_routes.json'), 'utf8'));
-  assert.equal(routes.include.includes('/*'), false);
-  assert.equal(routes.include.includes('/site-data/situation/*'), true);
-  assert.equal(routes.include.includes('/site-data/research-publication/*'), true);
-  assert.equal(routes.include.includes('/research-publication/*'), true);
-  assert.equal(routes.include.includes('/research/*'), true);
-  assert.equal(routes.include.includes('/site-data/updates/*'), true);
-  const runtime = new Miniflare(convertV4MiniflareOptions({
-    modules: true, rootPath: directory, scriptPath: join(directory, '_worker.js'), compatibilityDate: '2026-11-07',
-    compatibilityFlags: ['nodejs_compat'], r2Buckets: ['DATA'],
-    serviceBindings: { ASSETS: request => new Response(`static:${new URL(request.url).pathname}`) },
-  }));
+test('path-scoped Pages Function packaging leaves ordinary assets outside the Worker', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'gids-pages-function-'));
   try {
-    const bucket = await runtime.getR2Bucket('DATA');
-    await bucket.put('site-data/situation/current.json', '{"schema_version":1,"release_id":"pages-situation","files":{}}');
-    assert.equal((await (await runtime.dispatchFetch('https://site.test/site-data/situation/current.json')).json()).release_id, 'pages-situation');
-    const updateUrl = 'https://site.test/site-data/updates/latest.json';
-    const missing = await runtime.dispatchFetch(updateUrl);
-    assert.equal(missing.status, 404);
-    assert.equal(missing.headers.get('cache-control'), 'no-store');
-    await bucket.put('site-data/updates/latest.json', '{"schema_version":1,"months":["2026-11"]}');
-    const index = await runtime.dispatchFetch(updateUrl);
-    assert.deepEqual((await index.json()).months, ['2026-11']);
-    assert.equal(index.headers.get('cache-control'), 'no-store');
-    const unchanged = await runtime.dispatchFetch(updateUrl, { headers: { 'If-None-Match': index.headers.get('etag') } });
-    assert.equal(unchanged.status, 304);
-    assert.equal(unchanged.headers.get('cache-control'), 'no-store');
-    await bucket.put('site-data/updates/2026-11.json', '{"schema_version":1,"month":"2026-11","events":[]}');
-    const monthHead = await runtime.dispatchFetch('https://site.test/site-data/updates/2026-11.json', { method: 'HEAD' });
-    assert.equal(monthHead.status, 200);
-    assert.equal(await monthHead.text(), '');
-    assert.equal(monthHead.headers.get('cache-control'), 'no-store');
-    const historyUrl = 'https://site.test/site-data/updates/changelog.json';
-    for (const version of ['90.0.0', '91.0.0']) {
-      await bucket.put('site-data/updates/changelog.json', JSON.stringify({ schema_version: 1, releases: [{ version }] }));
-      const history = await runtime.dispatchFetch(historyUrl);
-      assert.equal(history.headers.get('cache-control'), 'no-store');
-      assert.equal((await history.json()).releases[0].version, version);
+    await buildPages(directory);
+    assert.equal(existsSync(join(directory, '_worker.js')), false);
+    assert.deepEqual(JSON.parse(readFileSync(join(directory, '_routes.json'), 'utf8')), {
+      version: 1,
+      include: ['/site-data/*', '/situation/*'],
+      exclude: [],
+    });
+    for (const relative of [
+      'site-data/[[path]].js',
+      'situation/map-data.json.js',
+      'situation/outbreaks/[[path]].js',
+    ]) {
+      const functionPath = join(directory, 'functions', relative);
+      assert.equal(existsSync(functionPath), true, relative);
+      const source = readFileSync(functionPath, 'utf8');
+      assert.match(source, /onRequest/);
+      assert.match(source, /request/);
+      assert.match(source, /next/);
+      if (relative === 'site-data/[[path]].js') {
+        const pagesFunction = await import(`${pathToFileURL(functionPath).href}?static-fallback`);
+        let nextCalled = false;
+        const response = await pagesFunction.onRequest({
+          request: new Request('https://site.test/site-data/search-index.json'),
+          env: {},
+          next: async () => {
+            nextCalled = true;
+            return new Response('static');
+          },
+        });
+        assert.equal(nextCalled, true);
+        assert.equal(await response.text(), 'static');
+      }
     }
-    const removed = await runtime.dispatchFetch(`https://site.test/research-publication/${'a'.repeat(64)}/research/articles/old/`);
-    assert.equal(removed.status, 410);
-    assert.equal(removed.headers.get('location'), null);
-    assert.equal(await (await runtime.dispatchFetch('https://site.test/countries/jp/')).text(), 'static:/countries/jp/');
-    assert.equal(await (await runtime.dispatchFetch('https://site.test/site-data/search-index.json')).text(), 'static:/site-data/search-index.json');
-  } finally { await runtime.dispose(); rmSync(directory, { recursive: true, force: true }); }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

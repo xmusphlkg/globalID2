@@ -400,6 +400,86 @@ async def test_archive_task_dispatch_bypasses_main_pipeline(release, monkeypatch
     assert not r.service.commands
 
 
+async def test_unchanged_research_skips_candidate_and_upload_on_site_retry(release, monkeypatch):
+    import json
+    from src.generation.literature_publication import freeze_literature_json
+    from src.services.data_release import shared_assets, site_research_reuse as reuse
+    from src.services.data_release.papers_r2 import R2PapersConfig
+    from src.services.data_release.surveillance_publish import capture_surveillance_baseline, _target
+
+    r = release
+    config = R2PapersConfig('account', 'papers', 'id', 'secret', public_base_url='https://papers.test')
+    r.service._config = lambda: SimpleNamespace(timezone='UTC', r2_papers_bucket='papers',
+        r2_papers_public_base_url=config.public_base_url, r2_access_key_id='id',
+        r2_secret_access_key='secret', r2_endpoint_url='', r2_account_id='account')
+    r.service._r2_papers_enabled = lambda _job: True
+    r.service._r2_papers_config = lambda: config
+    r.task.input_data['publish_dirty_ids'] = []
+    r.put(r.root / 'scripts/publish_papers_r2.py', '# publisher entry point')
+    monkeypatch.setattr(reuse, 'render_inputs', lambda *_args, **_kwargs: {'schema': 1, 'sources_sha256': 'c' * 64})
+    assets = AsyncMock()
+    monkeypatch.setattr(shared_assets, 'publish_shared_assets', assets)
+
+    source = r.astro / 'public/site-data/research'
+    r.put(source / 'index.json', '{"articles":[]}')
+    r.put(source / 'catalogue.json', '{"articles":[]}')
+    published = r.root / 'exports/research-runs/published'
+    pointer = freeze_literature_json(source, published, release_id='literature-published', generated_at='t')
+    generation = 'a' * 64
+    pointer['papers'] = {'papers_generation_sha256': generation, 'papers_manifest_sha256': 'b' * 64,
+        'papers_origin': config.public_base_url,
+        'papers_manifest_url': f'{config.public_base_url}/releases/sha256/catalogues/{generation}.json'}
+    r.put(published / 'current.json', json.dumps(pointer))
+    r.put(published / 'published.json', json.dumps({'release_id': pointer['release_id'],
+        'public_verification': {'status': 'verified'}}))
+    r.put(r.root / 'data/cache/isolated-research-publication.json', json.dumps({'schema': 1, 'keys': [],
+        'identity': {'target': _target(config, reuse.PREFIX), 'release_id': pointer['release_id'],
+                     'generation': generation, 'origin': config.public_base_url}}))
+    r.put(r.root / 'exports/research-current-receipt.json', json.dumps({'schema': 1,
+        'release_id': pointer['release_id'], 'task_uuid': 'published', 'papers_generation_sha256': generation}))
+    reuse.capture_render_inputs(r.root, published)
+    assert reuse.record_committed_inputs(r.root, published, config)
+
+    candidate_run = r.root / 'exports/site-research-runs' / r.task.task_uuid / r.service.identity['release_id']
+    body = (published / 'current.json').read_bytes()
+    remote_reads = []
+    verify = reuse.verify_reused_baseline
+
+    def verify_remote(run, target):
+        remote_reads.append(run)
+        verify(run, target, client=SimpleNamespace(get_object=lambda _key: body))
+
+    monkeypatch.setattr(reuse, 'verify_reused_baseline', verify_remote)
+    logged = r.service._run_logged_command
+
+    async def commands(task_uuid, *, title, **kwargs):
+        await logged(task_uuid, title=title, **kwargs)
+        if title == 'Capture Research Publication Baseline':
+            capture_surveillance_baseline(candidate_run, config, prefix=reuse.PREFIX,
+                client=SimpleNamespace(get_object=lambda _key: body))
+
+    r.service._run_logged_command = commands
+    r.service.failure = 'Deploy Cloudflare Pages'
+    with pytest.raises(RuntimeError, match='injected Deploy'):
+        await execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert (candidate_run / reuse.REUSED).is_file()
+    assert 'Prepare Papers Research Candidate' not in r.service.commands
+    assert 'Publish Papers Bundle to R2' not in r.service.commands
+    assets.assert_not_awaited()
+
+    # Retrying the frozen decision must not depend on the mutable shared receipt.
+    (r.root / reuse.COMMITTED).unlink()
+    r.service.failure = None
+    r.service.commands.clear()
+    result = await execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert result['pages_deployed']
+    assert result['research_generation_reused']['generation'] == generation
+    assert not result['r2_papers_published']
+    assert len(remote_reads) == 2
+    for title in ('Generate Site Data', 'Build Astro Site', 'Prepare Papers Research Candidate', 'Publish Papers Bundle to R2'):
+        assert title not in r.service.commands
+
+
 @pytest.mark.asyncio
 async def test_deploy_success_then_ack_failure_reuses_frozen_artifacts(release):
     r = release

@@ -18,10 +18,10 @@ from .surveillance_publish import validate_manifest
 def _validate_projection_scopes(directory: Path, codes: list[str], *, full: bool, available_codes: list[str] | None = None) -> dict:
     projection = validate_read_snapshot_projection(directory)
     scopes = set(projection["countries"])
-    if (not scopes or (not full and scopes != set(codes)) or not set(codes) <= scopes):
-        raise ValueError("Frozen JSON projection does not match selected country scopes")
     if full and available_codes is not None and scopes != set(available_codes):
         raise ValueError("Full JSON projection does not match all available country scopes")
+    if (not scopes or (not full and scopes != set(codes)) or not set(codes) <= scopes):
+        raise ValueError("Frozen JSON projection does not match selected country scopes")
     return projection
 
 
@@ -265,6 +265,6 @@ async def execute_data_release(service, task, *, runtime) -> dict:
     if downloads:
         # The durable publication receipt makes finalization retries safe even
         # after these private hard links have been removed.
-        for name in ("countries", "diseases"):
+        for name in ("cells", "countries", "diseases"):
             await asyncio.to_thread(shutil.rmtree, run / "downloads" / name, True)
     return result

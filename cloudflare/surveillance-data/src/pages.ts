@@ -1,4 +1,4 @@
-/** Pages Advanced Mode also works without permission to manage zone routes. */
+/** Shared data handler used by the path-scoped Pages Functions. */
 import worker, { dataRoute } from './index.ts';
 
 type PagesBindings = Parameters<PagesFunction<Env>>[0]['env'];

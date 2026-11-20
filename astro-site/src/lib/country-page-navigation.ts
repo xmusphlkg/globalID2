@@ -1,6 +1,11 @@
 type Report = Record<string, any>;
 type Route = { code: string; slug: string };
 
+export function countryDiseaseRuntimeHref(prefix: string, code: string, slug: string): string {
+  const params = new URLSearchParams({ country: code.toLowerCase(), disease: slug });
+  return `${prefix}/country-disease/?${params.toString()}`;
+}
+
 /** Index once per renderer, instead of rescanning both catalogues per locale/page. */
 export function createCountryPageNavigation(reports: Iterable<Report>, routes: Iterable<Route>) {
   const reportsByCountry = new Map<string, Report[]>();
@@ -24,7 +29,7 @@ export function createCountryPageNavigation(reports: Iterable<Report>, routes: I
       reports: reports.slice(0, 6),
       reportCount: reports.length,
       diseaseRoutes: Object.fromEntries((routesByCountry.get(code) ?? [])
-        .map(({ slug }) => [slug, `${prefix}/countries/${code}/diseases/${slug}/`])),
+        .map(({ slug }) => [slug, countryDiseaseRuntimeHref(prefix, code, slug)])),
     };
   };
 }

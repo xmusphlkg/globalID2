@@ -84,7 +84,7 @@ def rendering_configuration(root: Path) -> str:
         if key.startswith("PUBLIC_") or key in {
             "GLOBALID_SITE_URL", "SITE_URL", "SITUATION_SHADOW_PREVIEW",
             "SUBSCRIPTIONS__PUBLIC_BASE_URL", "NODE_ENV",
-            "GIDS_PAGES_DATA_WORKER", "GIDS_RUNTIME_DATA_READY", "GIDS_RUNTIME_SITUATION_READY",
+                     "GIDS_PAGES_DATA_WORKER", "GIDS_RUNTIME_DATA_READY", "GIDS_RUNTIME_SITUATION_READY",
             "GIDS_RESEARCH_PUBLICATION_ENABLED",
             "GIDS_EXTERNAL_SURVEILLANCE_DATA",
         }

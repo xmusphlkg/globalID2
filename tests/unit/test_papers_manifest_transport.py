@@ -24,7 +24,7 @@ def test_bulk_delete_signs_checksum_and_rejects_partial_errors():
     def opener(request, timeout):
         seen.append(request)
         return Response(b'<DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Error><Key>a</Key><Code>AccessDenied</Code></Error></DeleteResult>')
-    client = R2S3Client(CONFIG, opener=opener)
+    client = R2S3Client(CONFIG, object_index=False, opener=opener)
     with pytest.raises(R2S3Error, match='batch deletion failed'):
         client.delete_objects(['a', 'b&c'])
     request = seen[0]
@@ -59,7 +59,7 @@ def test_compressed_manifest_signs_encoded_payload_and_decodes_legacy_transports
         seen.append(request)
         return Response(seen[0].data if request.method == "GET" else b"")
 
-    client = R2S3Client(CONFIG, opener=opener)
+    client = R2S3Client(CONFIG, object_index=False, opener=opener)
     client.put_object(
         MANIFEST_KEY, body, content_type="application/json", cache_control="no-store"
     )
@@ -74,16 +74,16 @@ def test_compressed_manifest_signs_encoded_payload_and_decodes_legacy_transports
 
 def test_httpx_manifest_is_not_decoded_twice(monkeypatch):
     body = b'{"files":[]}'
-    original_client = httpx.Client
-    monkeypatch.setattr(httpx, "Client", lambda **kwargs: original_client(
+    client = R2S3Client(CONFIG, object_index=False)
+    if client._http is not None:
+        client._http.close()
+    client._http = httpx.Client(
         transport=httpx.MockTransport(
             lambda request: httpx.Response(
                 200, content=gzip.compress(body), headers={"Content-Encoding": "gzip"}
             )
         ),
-        **kwargs,
-    ))
-    client = R2S3Client(CONFIG)
+    )
     try:
         assert client.get_object(MANIFEST_KEY) == body
     finally:
@@ -97,7 +97,7 @@ def test_ordinary_object_bytes_are_not_changed():
         seen.append(request)
         return Response()
 
-    client = R2S3Client(CONFIG, opener=opener)
+    client = R2S3Client(CONFIG, object_index=False, opener=opener)
     body = b"x" * 2000
     client.put_object("site-data/index.json", body)
     assert seen[0].data == body
@@ -109,7 +109,7 @@ def test_static_gzip_encoding_is_signed_and_preserved():
     def opener(request, timeout):
         seen.append(request)
         return Response()
-    client = R2S3Client(CONFIG, opener=opener)
+    client = R2S3Client(CONFIG, object_index=False, opener=opener)
     body = gzip.compress(b'<html>paper</html>', mtime=0)
     client.put_object('research/articles/a/', body,
                       content_type='text/html; charset=utf-8', content_encoding='gzip')
@@ -119,6 +119,6 @@ def test_static_gzip_encoding_is_signed_and_preserved():
 
 
 def test_invalid_compressed_manifest_is_terminal():
-    client = R2S3Client(CONFIG, opener=lambda *args: Response(b"\x1f\x8btruncated"))
+    client = R2S3Client(CONFIG, object_index=False, opener=lambda *args: Response(b"\x1f\x8btruncated"))
     with pytest.raises(R2S3Error, match="Invalid compressed"):
         client.get_object(MANIFEST_KEY)

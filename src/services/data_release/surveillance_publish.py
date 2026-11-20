@@ -1,13 +1,13 @@
 """Publish immutable browser JSON first and atomically switch its version pointer.
 
-This channel owns only its R2 prefix. It does not render HTML, list the Papers
-bucket, delete historical objects, or depend on a Pages deployment.
+This channel owns only its R2 prefix. After verifying the new pointer, its local
+reference ledger retires previous managed objects without listing the bucket.
 """
 from __future__ import annotations
 
 import fcntl
 import base64
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import hashlib
 import gzip
 import json
@@ -20,6 +20,7 @@ from pathlib import Path
 
 from .artifact_index import ArtifactIndex
 from .papers_r2 import R2PapersConfig, R2S3Client, R2S3Error
+from .r2_single_version import managed_publication
 from src.core import get_logger
 
 logger = get_logger(__name__)
@@ -148,11 +149,27 @@ def capture_surveillance_baseline(directory: Path, config: R2PapersConfig, *,
             "baseline_sha256": hashlib.sha256(previous).hexdigest() if previous is not None else None}
 
 
+def publication_upload_sizes(body: bytes, *, prefix: str, previous: bytes | None) -> dict[str, int]:
+    """Bound one frozen JSON publication, including its exact control bodies."""
+    _, objects = validate_manifest(body)
+    prefix = _prefix(prefix)
+    candidate_sha = hashlib.sha256(body).hexdigest()
+    baseline_sha = hashlib.sha256(previous).hexdigest() if previous is not None else None
+    intent = json.dumps({"schema": 1, "candidate_sha256": candidate_sha,
+        "baseline_sha256": baseline_sha}, sort_keys=True, separators=(",", ":")).encode()
+    sizes = {f"{prefix}/{relative}": entry["bytes"] for relative, entry in objects.items()}
+    sizes.update({f"{prefix}/intents/{candidate_sha}.json": len(intent),
+                  f"{prefix}/manifests/{candidate_sha}.json": len(body),
+                  f"{prefix}/current.json": len(body)})
+    return sizes
+
+
 def publish_surveillance_data(
     directory: Path, config: R2PapersConfig, *, prefix: str = DEFAULT_PREFIX,
     workers: int = 4, client=None, objects_dir: Path | None = None,
     require_starting_baseline: bool = False,
     trust_frozen_objects: bool = False,
+    manage_retention: bool = True,
 ) -> dict:
     if not 1 <= workers <= 8:
         raise ValueError("Surveillance upload workers must be 1–8")
@@ -177,107 +194,125 @@ def publish_surveillance_data(
         index.save()
     active = client or R2S3Client(config)
     try:
-        with _publication_lock(directory, config, prefix):
-            captured, starting_previous = _starting_baseline(directory, config, prefix)
-            if require_starting_baseline and not captured:
-                raise ValueError("Managed JSON publication requires a starting baseline captured before generation")
-            pointer = f"{prefix}/current.json"
-            previous = active.get_object(pointer)
-            previous_objects = {}
-            if previous is not None:
-                _, previous_objects = validate_manifest(previous)
-            if previous == body:
-                return {"release_id": manifest["release_id"], "uploaded": 0,
-                        "unchanged": len(objects), "bytes_uploaded": 0, "pointer_changed": False,
-                        "manifest_sha256": hashlib.sha256(body).hexdigest()}
-            if captured and previous != starting_previous:
-                raise R2S3Error("Public JSON changed since the starting baseline was captured before generation", status=412)
-            candidate_sha = hashlib.sha256(body).hexdigest()
-            baseline_sha = hashlib.sha256(previous).hexdigest() if previous is not None else None
-            receipt_dir = directory / ".publication"
-            receipt_dir.mkdir(parents=True, exist_ok=True)
-            receipt_path = receipt_dir / f"{candidate_sha}.json"
-            if receipt_path.exists():
-                receipt = json.loads(receipt_path.read_text())
-                if (receipt.get("schema") != 1 or receipt.get("candidate_sha256") != candidate_sha
-                        or receipt.get("baseline_sha256") != baseline_sha):
-                    raise R2S3Error("A newer JSON publication invalidated this candidate's original baseline", status=412)
-            else:
-                # Persist the first observed baseline before uploading anything.
-                # An old interrupted candidate must never adopt a newer release
-                # as its baseline on retry and roll the pointer backwards.
-                _atomic_receipt(receipt_path, {"schema": 1, "candidate_sha256": candidate_sha,
-                    "baseline_sha256": baseline_sha})
-            # The small remote intent retains the same fence if a local cache
-            # is lost or a candidate is resumed from another machine.
-            intent = json.dumps({"schema": 1, "candidate_sha256": candidate_sha,
-                "baseline_sha256": baseline_sha}, sort_keys=True, separators=(",", ":")).encode()
-            intent_key = f"{prefix}/intents/{candidate_sha}.json"
-            try:
-                active.put_object_conditional(intent_key, intent, previous=None, cache_control="no-store")
-            except R2S3Error as error:
-                if error.status != 412:
-                    raise
-                if active.get_object(intent_key) != intent:
-                    raise R2S3Error("Candidate no longer matches its original remote publication baseline", status=412) from error
-            selected = [(relative, entry) for relative, entry in objects.items()
-                        if previous_objects.get(relative) != entry]
-
-            def upload(item):
-                relative, expected = item
-                path = objects_root / relative.removeprefix("objects/")
-                payload = path.read_bytes()
-                if not trust_frozen_objects and (len(payload) != expected["bytes"] or hashlib.sha256(payload).hexdigest() != expected["sha256"]):
-                    raise ValueError(f"Surveillance object changed during upload: {relative}")
-                # Content-addressed keys are create-once; a failed prior attempt
-                # may already have uploaded one. Never overwrite different bytes.
-                key = f"{prefix}/{relative}"
-                encoded = gzip.compress(payload, compresslevel=6, mtime=0) if len(payload) > 1024 else payload
-                compressed = len(encoded) < len(payload)
-                wire = encoded if compressed else payload
+        retention = managed_publication(active, channel=prefix) if manage_retention else nullcontext(None)
+        with retention as publication:
+            with _publication_lock(directory, config, prefix):
+                captured, starting_previous = _starting_baseline(directory, config, prefix)
+                if require_starting_baseline and not captured:
+                    raise ValueError("Managed JSON publication requires a starting baseline captured before generation")
+                pointer = f"{prefix}/current.json"
+                previous = active.get_object(pointer)
+                previous_objects = {}
+                if previous is not None:
+                    _, previous_objects = validate_manifest(previous)
+                if captured and previous not in (starting_previous, body):
+                    raise R2S3Error("Public JSON changed since the starting baseline was captured before generation", status=412)
+                if publication is not None:
+                    publication.stage(body, publication_upload_sizes(body, prefix=prefix, previous=previous))
+                if previous == body:
+                    result = {"release_id": manifest["release_id"], "uploaded": 0,
+                            "unchanged": len(objects), "bytes_uploaded": 0, "pointer_changed": False,
+                            "manifest_sha256": hashlib.sha256(body).hexdigest()}
+                    if publication is not None:
+                        publication.commit(body)
+                        result['retention'] = publication.cleanup()
+                    return result
+                candidate_sha = hashlib.sha256(body).hexdigest()
+                baseline_sha = hashlib.sha256(previous).hexdigest() if previous is not None else None
+                receipt_dir = directory / ".publication"
+                receipt_dir.mkdir(parents=True, exist_ok=True)
+                receipt_path = receipt_dir / f"{candidate_sha}.json"
+                if receipt_path.exists():
+                    receipt = json.loads(receipt_path.read_text())
+                    if (receipt.get("schema") != 1 or receipt.get("candidate_sha256") != candidate_sha
+                            or receipt.get("baseline_sha256") != baseline_sha):
+                        raise R2S3Error("A newer JSON publication invalidated this candidate's original baseline", status=412)
+                else:
+                    # Persist the first observed baseline before uploading anything.
+                    # An old interrupted candidate must never adopt a newer release
+                    # as its baseline on retry and roll the pointer backwards.
+                    _atomic_receipt(receipt_path, {"schema": 1, "candidate_sha256": candidate_sha,
+                        "baseline_sha256": baseline_sha})
+                # The small remote intent retains the same fence if a local cache
+                # is lost or a candidate is resumed from another machine.
+                intent = json.dumps({"schema": 1, "candidate_sha256": candidate_sha,
+                    "baseline_sha256": baseline_sha}, sort_keys=True, separators=(",", ":")).encode()
+                intent_key = f"{prefix}/intents/{candidate_sha}.json"
+                version = f"{prefix}/manifests/{candidate_sha}.json"
+                preflight = getattr(active, "preflight_objects", None)
+                if callable(preflight):
+                    # Raw source lengths safely bound the compressed wire bytes.
+                    # Include the control objects before the first remote write.
+                    preflight(publication_upload_sizes(body, prefix=prefix, previous=previous))
                 try:
-                    active.put_object_conditional(key, wire, previous=None,
-                        cache_control="public, max-age=31536000, immutable",
-                        content_encoding="gzip" if compressed else None)
+                    active.put_object_conditional(intent_key, intent, previous=None, cache_control="no-store")
                 except R2S3Error as error:
-                    if error.status != 412 or (not trust_frozen_objects and active.get_object(key) != payload):
+                    if error.status != 412:
                         raise
-                    return 0, 0
-                return 1, len(wire)
+                    if active.get_object(intent_key) != intent:
+                        raise R2S3Error("Candidate no longer matches its original remote publication baseline", status=412) from error
+                selected = [(relative, entry) for relative, entry in objects.items()
+                            if getattr(active, "object_index", None) is not None
+                            or previous_objects.get(relative) != entry]
 
-            upload_started = time.monotonic()
-            with ThreadPoolExecutor(max_workers=workers) as pool:
-                results = list(pool.map(upload, selected))
-            object_upload_seconds = time.monotonic() - upload_started
-            uploaded = sum(count for count, _ in results)
-            transferred = sum(size for _, size in results)
-            # Retain immutable version manifests for audit/rollback. No garbage
-            # collection is coupled to publication, so open pages keep resolving.
-            version = f"{prefix}/manifests/{candidate_sha}.json"
-            try:
-                active.put_object_conditional(version, body, previous=None,
-                    cache_control="public, max-age=31536000, immutable")
-            except R2S3Error as error:
-                if error.status != 412 or active.get_object(version) != body:
-                    raise
-            pointer_started = time.monotonic()
-            # This is the only mutable key. A competing publisher cannot silently
-            # overwrite a newer pointer; an ambiguous successful PUT is resumable.
-            try:
-                active.put_object_conditional(pointer, body, previous=previous, cache_control="no-store")
-            except R2S3Error as error:
-                if error.status != 412 or active.get_object(pointer) != body:
-                    raise
-            pointer_commit_seconds = time.monotonic() - pointer_started
-            if trust_frozen_objects:
-                logger.info("Research JSON published: release={} uploaded={} reused={} bytes={} seconds={:.2f}",
-                            manifest["release_id"], uploaded, len(objects) - uploaded, transferred,
-                            time.monotonic() - started)
-            return {"release_id": manifest["release_id"], "uploaded": uploaded,
-                    "unchanged": len(objects) - uploaded, "bytes_uploaded": transferred,
-                    "pointer_changed": True, "manifest_sha256": hashlib.sha256(body).hexdigest(),
-                    "release_timing": {"object_upload_seconds": round(object_upload_seconds, 3),
-                                       "pointer_commit_seconds": round(pointer_commit_seconds, 3)}}
+                def upload(item):
+                    relative, expected = item
+                    path = objects_root / relative.removeprefix("objects/")
+                    payload = path.read_bytes()
+                    if not trust_frozen_objects and (len(payload) != expected["bytes"] or hashlib.sha256(payload).hexdigest() != expected["sha256"]):
+                        raise ValueError(f"Surveillance object changed during upload: {relative}")
+                    # Content-addressed keys are create-once; a failed prior attempt
+                    # may already have uploaded one. Never overwrite different bytes.
+                    key = f"{prefix}/{relative}"
+                    encoded = gzip.compress(payload, compresslevel=6, mtime=0) if len(payload) > 1024 else payload
+                    compressed = len(encoded) < len(payload)
+                    wire = encoded if compressed else payload
+                    try:
+                        written = active.put_object_conditional(key, wire, previous=None,
+                            cache_control="public, max-age=31536000, immutable",
+                            content_encoding="gzip" if compressed else None)
+                    except R2S3Error as error:
+                        if error.status != 412 or (not trust_frozen_objects and active.get_object(key) != payload):
+                            raise
+                        return 0, 0
+                    return (0, 0) if written is False else (1, len(wire))
+
+                upload_started = time.monotonic()
+                with ThreadPoolExecutor(max_workers=workers) as pool:
+                    results = list(pool.map(upload, selected))
+                object_upload_seconds = time.monotonic() - upload_started
+                uploaded = sum(count for count, _ in results)
+                transferred = sum(size for _, size in results)
+                # The current immutable manifest belongs to this publication;
+                # previous manifests retire only after its pointer commits.
+                try:
+                    active.put_object_conditional(version, body, previous=None,
+                        cache_control="public, max-age=31536000, immutable")
+                except R2S3Error as error:
+                    if error.status != 412 or active.get_object(version) != body:
+                        raise
+                pointer_started = time.monotonic()
+                # This is the only mutable key. A competing publisher cannot silently
+                # overwrite a newer pointer; an ambiguous successful PUT is resumable.
+                try:
+                    active.put_object_conditional(pointer, body, previous=previous, cache_control="no-store")
+                except R2S3Error as error:
+                    if error.status != 412 or active.get_object(pointer) != body:
+                        raise
+                pointer_commit_seconds = time.monotonic() - pointer_started
+                if trust_frozen_objects:
+                    logger.info("Research JSON published: release={} uploaded={} reused={} bytes={} seconds={:.2f}",
+                                manifest["release_id"], uploaded, len(objects) - uploaded, transferred,
+                                time.monotonic() - started)
+                result = {"release_id": manifest["release_id"], "uploaded": uploaded,
+                        "unchanged": len(objects) - uploaded, "bytes_uploaded": transferred,
+                        "pointer_changed": True, "manifest_sha256": hashlib.sha256(body).hexdigest(),
+                        "release_timing": {"object_upload_seconds": round(object_upload_seconds, 3),
+                                           "pointer_commit_seconds": round(pointer_commit_seconds, 3)}}
+                if publication is not None:
+                    publication.commit(body)
+                    result['retention'] = publication.cleanup()
+                return result
     finally:
         if client is None:
             active.close()

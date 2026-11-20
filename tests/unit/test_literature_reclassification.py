@@ -232,6 +232,7 @@ async def test_reclassification_public_writes_and_marker_share_transaction(monke
             if pending:
                 assert pending[0].source_task_uuid == tasks[0].task_uuid
                 assert pending[0].line == "literature" and pending[0].published_at is None
+                assert pending[0].change_set["article_ids"] == ["article"]
             if operation == "classification":
                 topics = list((await db.execute(select(LiteratureTopicLink))).scalars())
                 assert [topic.topic for topic in topics] == ([] if fail_marker else ["outbreak"])

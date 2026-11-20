@@ -1237,3 +1237,19 @@ async def test_frozen_release_does_not_consume_same_country_change_committed_dur
     async with maker() as db:
         assert (await db.get(PublishDirty, old_id)).published_task_uuid == 'release'
         assert (await db.get(PublishDirty, new_id)).published_at is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("wait_kind", ["baseline_invalid", "contract_blocked", "blocked_by_static"])
+async def test_open_static_reservation_ignores_parked_wait(release_db, wait_kind):
+    maker, service, _ = release_db
+    async with maker() as db:
+        db.add(Task(
+            task_uuid="parked-static", task_name="Parked site release",
+            task_type=TaskType.EXPORT_DATA, status=TaskStatus.QUEUED,
+            input_data={"content_only": True},
+            metadata_={"publication_wait": {"kind": wait_kind}},
+        ))
+        await db.commit()
+
+    assert await service._open_static_reservation() is None

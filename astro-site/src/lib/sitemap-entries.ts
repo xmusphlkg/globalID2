@@ -14,6 +14,7 @@ import {
   type ReportIndexEntry,
 } from './report-routes.ts';
 import { absoluteSiteUrl, isPapersPath, REPORTS_ORIGIN } from './papers.ts';
+import { countryDiseaseRuntimeHref } from './country-page-navigation.ts';
 import type { CountryDirectory, DiseaseDirectory } from './site-data-loaders.ts';
 
 export interface SitemapEntry {
@@ -190,7 +191,7 @@ function countryDiseaseEntries(
     if (loadDirectory) {
       const summary = loadDirectory(code);
       for (const candidate of summary?.candidates ?? []) candidates.push({
-        path: `/countries/${code}/diseases/${candidate.slug}/`, score: candidate.score,
+        path: countryDiseaseRuntimeHref('', code, candidate.slug), score: candidate.score,
         lastmod: normalizeSitemapDate(summary?.generated_at),
       });
       continue;
@@ -216,7 +217,7 @@ function countryDiseaseEntries(
       const slug = toSeoSlug(series.slug);
       if (!seriesIdentity || !enoughHistory || !slug) continue;
       candidates.push({
-        path: `/countries/${code}/diseases/${slug}/`,
+        path: countryDiseaseRuntimeHref('', code, slug),
         lastmod: normalizeSitemapDate(data.generated_at),
         score: Number(series.total_cases ?? 0) + dates.length,
       });
@@ -326,7 +327,7 @@ export function buildSitemapGroups({
     for (const country of research.facets?.countries ?? []) {
       const slug = pathSegment(country.slug ?? country.code, true);
       const count = Number(country.count ?? 0);
-      if (slug && isIndexableResearchCollection(count)) groups.research.push(...localizedEntry(
+      if (slug && isIndexableResearchCollection(count)) groups[PAPERS_SITEMAP_GROUP].push(...localizedEntry(
         `/research/countries/${slug}/`,
         latestMatchingResearchUpdate(article => (article.countries ?? []).some(item => (
           pathSegment(item.slug ?? item.code, true) === slug
@@ -348,7 +349,7 @@ export function buildSitemapGroups({
       const count = Number(brief.article_count ?? 0);
       const start = typeof brief.start_date === 'string' ? brief.start_date : null;
       const end = typeof brief.end_date === 'string' ? brief.end_date : null;
-      if (week && isIndexableResearchCollection(count)) groups.research.push(...localizedEntry(
+      if (week && isIndexableResearchCollection(count)) groups[PAPERS_SITEMAP_GROUP].push(...localizedEntry(
         `/research/weekly/${week}/`,
         latestMatchingResearchUpdate(article => {
           const published = typeof article.published_at === 'string' ? article.published_at.slice(0, 10) : '';

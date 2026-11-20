@@ -693,7 +693,8 @@ async def test_repository_maps_crossref_version_dois_to_existing_article_ids_rec
     )
     db = _FindDb([peer_reviewed])
 
-    mapped = await LiteratureRepository(db)._map_version_relations(preprint, [{
+    repository = LiteratureRepository(db)
+    mapped = await repository._map_version_relations(preprint, [{
         "relation_type": "preprint_to_peer_reviewed",
         "preprint_doi": "10.1101/PREPRINT",
         "peer_reviewed_doi": "10.1000/PEER",
@@ -703,6 +704,7 @@ async def test_repository_maps_crossref_version_dois_to_existing_article_ids_rec
     assert mapped[0]["preprint_article_id"] == "lit_preprint"
     assert mapped[0]["peer_reviewed_article_id"] == "lit_peer"
     assert peer_reviewed.metadata_["version_relations"] == mapped
+    assert repository.affected_article_ids == {"lit_peer"}
     assert "literature_articles.doi" in db.statements[0]
 
 

@@ -94,3 +94,11 @@ def test_unchanged_summary_gets_new_archives_without_relabelling_curve_date():
     download["parts"][0]["record_count"] = 999
     assert refreshed["download"]["parts"][0]["record_count"] == 10
     assert refresh_summary_download(summary, None)["download"] is None
+
+
+def test_cell_identity_survives_compact_index():
+    cell = {**part('2026-2029', current=True), 'country_code': 'CN', 'disease_id': 'D007'}
+    result = build_download_index({'countries': [{'code': 'CN', 'parts': [cell]}]})
+    current = result['countries'][0]['parts'][0]
+    assert current['country_code'] == 'CN'
+    assert current['disease_id'] == 'D007'

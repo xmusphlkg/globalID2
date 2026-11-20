@@ -126,6 +126,21 @@ def test_receipt_generation_mismatch_rejects_even_when_public_index_happens_to_m
     assert not (tmp_path / 'site/research').exists()
 
 
+def test_captured_older_generation_uses_its_own_verified_snapshot(tmp_path):
+    old_source, baseline = bound_snapshot(tmp_path)
+    newer_id = '4f74b786-0e9c-4dae-9f2d-ef1e3a75a837'
+    snapshot(tmp_path, newer_id)
+    receipt_path = tmp_path / 'exports/research-current-receipt.json'
+    receipt = json.loads(receipt_path.read_bytes())
+    receipt['papers_generation_sha256'] = 'b' * 64
+    receipt_path.write_text(json.dumps(receipt))
+
+    output, public = tmp_path / 'site', tmp_path / 'public'
+    assert prepare_research_for_baseline(tmp_path, output, public, baseline) == baseline['release_id']
+    assert (output / 'research/routes.json').read_bytes() == (old_source / 'build/research/routes.json').read_bytes()
+    require_public_research_matches(public / 'research', baseline)
+
+
 def test_existing_matching_site_sources_need_no_receipt_or_database(tmp_path):
     source, baseline = bound_snapshot(tmp_path)
     baseline['release_id'] = 'site-current'

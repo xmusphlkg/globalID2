@@ -322,10 +322,11 @@ class PartitionWriter:
                         raise RuntimeError(
                             f"Generated file exceeds GitHub's limit: {path} ({len(content)} bytes)"
                         )
+                    filename_id = str(dataset.get("filename_id") or dataset["path_id"]).replace("/", "-")
                     files[format_name] = {
                         "url": _download_url(download_url_base, relative_path),
                         "relative_path": relative_path,
-                        "filename": f"globalid-{dataset['path_id']}-{spec.key}.{format_name}",
+                        "filename": f"globalid-{filename_id}-{spec.key}.{format_name}",
                         "bytes": len(content),
                         "sha256": _sha256(content),
                     }

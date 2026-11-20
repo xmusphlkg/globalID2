@@ -122,16 +122,19 @@ test('fails closed when generated HTML exceeds average and compressed all-site b
   assert.ok(result.html.gzipBytes > 10);
 });
 
-test('treats compare workspaces as chart routes in every locale', (t) => {
+test('treats chart workspaces as chart routes in every locale', (t) => {
   const directory = fixture();
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   writeFileSync(join(directory, '_astro', 'chart.js'), randomBytes(2_000));
   const island = '<astro-island component-url="/_astro/chart.js"></astro-island>';
   mkdirSync(join(directory, 'compare'));
+  mkdirSync(join(directory, 'country-disease'));
   mkdirSync(join(directory, 'zh', 'compare'), { recursive: true });
+  mkdirSync(join(directory, 'zh', 'country-disease'), { recursive: true });
   mkdirSync(join(directory, 'fr', 'compare'), { recursive: true });
+  mkdirSync(join(directory, 'fr', 'country-disease'), { recursive: true });
   writeFileSync(join(directory, 'index.html'), '<main>home</main>');
-  for (const route of ['compare', 'zh/compare', 'fr/compare']) {
+  for (const route of ['compare', 'country-disease', 'zh/compare', 'zh/country-disease', 'fr/compare', 'fr/country-disease']) {
     writeFileSync(join(directory, route, 'index.html'), island);
   }
 

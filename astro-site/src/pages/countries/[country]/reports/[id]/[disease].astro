@@ -14,7 +14,6 @@ import {
 import { resolve } from 'path';
 import { buildAlternatePaths, clampSeoTitle, toSeoSlug } from '../../../../../lib/seo';
 import { indexableDiseases } from '../../../../../lib/seo-page-data';
-import { downloadCatalogue } from '../../../../../lib/downloads-data';
 import { localizedDiseaseName } from '../../../../../utils/diseaseNames';
 import { localizedRegionName } from '../../../../../utils/i18n';
 import { shouldBuildPage } from '../../../../../lib/page-build-plan';
@@ -72,8 +71,6 @@ const globalDisease = diseaseRow
   : null;
 const globalDiseasePath = globalDisease ? `/diseases/${toSeoSlug(globalDisease.slug)}/` : null;
 const countryData: any = readJsonFile(countryPath);
-const downloads: any = downloadCatalogue();
-const diseaseDownload = (downloads?.diseases ?? []).find((entry: any) => entry.slug === disease) ?? null;
 const countryNameEn = report?.country_name_en ?? report?.country_name ?? country?.toUpperCase();
 const countryNameZh = report?.country_name_local ?? countryData?.country_name_zh ?? countryNameEn;
 const countryNameFr = report?.country_name_fr ?? countryData?.country_name_fr ?? localizedRegionName('fr', country, { en: countryNameEn });
@@ -393,15 +390,17 @@ const seo = {
         initialLanguage={locale}
       />
 
-      {diseaseDownload && (
+      {(diseaseRow?.disease_id || globalDisease?.disease_id) && (
         <DownloadPanel
-          entry={{ ...diseaseDownload, source_info: countryData?.source_info }}
+          countryCode={String(country)}
+          diseaseId={String(diseaseRow?.disease_id || globalDisease?.disease_id)}
+          entry={{ source_info: countryData?.source_info, site_json_path: `/site-data/countries/${country}.json` }}
           title="Download disease dataset"
           titleFr="Télécharger le jeu de données sur la maladie"
           initialLanguage={locale}
-          descriptionEn="Download the full disease dataset referenced by this report section, including source metadata."
-          descriptionZh="下载本报告疾病页面对应的完整数据集，并附带数据源信息。"
-          descriptionFr="Téléchargez le jeu de données complet sur la maladie cité dans cette section, avec les métadonnées de source."
+          descriptionEn="Browse published data for this area and disease in the download center. Check the file dates against this report."
+          descriptionZh="在下载中心查看本区域、此疾病的公开数据，使用前请核对文件与报告的日期。"
+          descriptionFr="Consultez les données publiées pour cette zone et cette maladie dans le centre de téléchargement. Vérifiez les dates par rapport au rapport."
         />
       )}
     </div>

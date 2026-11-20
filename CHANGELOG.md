@@ -4,6 +4,47 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.7] - 2026-11-20
+
+### Fixed
+
+- Keep content-only static reservations independent from JSON publication lanes while preserving legacy static serialization.
+- Preserve scoped surveillance baselines and report invalid incremental download baselines clearly during retries.
+
+## [0.20.6] - 2026-11-20
+
+### Fixed
+
+- Complete the public-site reliability merge while keeping runtime country-disease pages, bounded static output, and the existing multilingual map behavior.
+- Add build asset validation and regression coverage for dynamic directories, navigation, search recovery, charts, maps, and publication paths.
+
+## [0.20.5] - 2026-11-20
+
+### Improved
+
+- Serve country-disease long-tail routes through one multilingual runtime shell so new diseases do not multiply static HTML files.
+- Move weekly and geographic Research Radar collections to the Papers host and keep their multilingual sitemap and redirect coverage.
+- Use path-scoped Pages Functions for surveillance and Situation data, leaving ordinary HTML and assets on the static Pages path for the free Cloudflare plan.
+- Lower the Pages file-count warning threshold to 14,000 files to preserve room below the 20,000-file platform limit.
+
+### Fixed
+
+- Keep incremental subdivision map exports from dropping unchanged regions and disease series.
+
+## [0.20.4] - 2026-11-19
+
+### Improved
+
+- Centralize surveillance downloads in one multilingual download center with country/region, disease, time-window and file-format filters, shareable selections and paginated results.
+- Route country, disease, report and chart download actions to the center with their existing selection. Remove duplicate download dialogs and frozen archive links.
+- Publish country–disease–window files in CSV, JSON and XLSX; country and disease views share the same files. Keep the compact v5 catalogue and every asset below GitHub's file-size limit.
+- Reduce the assets loaded by country and disease pages by moving file selection and downloading into the center.
+
+### Fixed
+
+- Replace legacy download metadata endpoints with links to the current center.
+- Honor subscription suppression for report-only template publications.
+
 ## [0.20.3] - 2026-11-18
 
 ### Fixed

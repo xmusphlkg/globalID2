@@ -52,6 +52,84 @@ def test_failed_upload_never_commits_catalogue(tmp_path):
     assert candidate.manifest_key not in store.objects
 
 
+def test_indexed_reuse_counts_content_and_metadata_without_rewriting(tmp_path):
+    candidate = make_candidate(tmp_path / 'papers', {'article.html': 'Unchanged article'})
+
+    class IndexedStore(Store):
+        def put_object_conditional(self, key, body, *, previous, **metadata):
+            if previous is None and self.objects.get(key) == body:
+                return False
+            super().put_object_conditional(key, body, previous=previous, **metadata)
+            return True
+
+    store = IndexedStore()
+    initial = publish_papers_content(candidate, client=store)
+    writes = list(store.writes)
+    repeated = publish_papers_content(candidate, client=store)
+    assert initial['uploaded_objects'] == 1
+    assert initial['uploaded_metadata_objects'] == len(candidate.shards) + 1
+    assert repeated['uploaded_objects'] == repeated['uploaded_metadata_objects'] == 0
+    assert repeated['reused_objects'] == 1
+    assert repeated['reused_metadata_objects'] == len(candidate.shards) + 1
+    assert store.writes == writes
+
+
+def test_capacity_preflight_covers_entire_candidate_before_any_write(tmp_path):
+    candidate = make_candidate(tmp_path / 'papers', {'article.html': 'Article', 'style.css': 'body{}'})
+
+    class FullBucket(Store):
+        def preflight_objects(self, sizes):
+            assert sizes == {
+                **{entry['key']: entry['bytes'] for entry in candidate.entries},
+                **{key: len(body) for key, body in candidate.shards},
+                candidate.manifest_key: len(candidate.manifest),
+            }
+            raise ValueError('R2 storage budget exceeded')
+
+    store = FullBucket()
+    with pytest.raises(ValueError, match='budget exceeded'):
+        publish_papers_content(candidate, client=store)
+    assert not store.writes
+
+
+def test_generation_receipt_cannot_skip_indexed_confirmation_of_deleted_object(tmp_path):
+    candidate = make_candidate(tmp_path / 'papers', {'article.html': 'Article'})
+    store = Store()
+    store.object_index = object()
+    publish_papers_content(candidate, client=store)
+    key = candidate.entries[0]['key']
+    del store.objects[key]
+    store.writes.clear()
+    result = publish_papers_content(candidate, client=store, previous_objects={key})
+    assert store.objects[key] == b'Article'
+    assert result['uploaded_objects'] == 1
+    assert [name for name, _ in store.writes] == [key]
+
+
+def test_confirmed_immutable_content_skips_local_read_but_missing_content_is_uploaded(tmp_path):
+    candidate = make_candidate(tmp_path / 'papers', {'existing.html': 'Existing', 'missing.html': 'New'})
+    existing = next(entry for entry in candidate.entries if entry['path'] == 'existing.html')
+    missing = next(entry for entry in candidate.entries if entry['path'] == 'missing.html')
+    (candidate.root / 'existing.html').unlink()
+
+    class IndexedStore(Store):
+        object_index = object()
+
+        def has_immutable_object(self, key, *, content_sha256, content_type, cache_control):
+            entry = next(item for item in candidate.entries if item['key'] == key)
+            assert content_sha256 == entry['sha256']
+            assert content_type == entry['content_type']
+            assert cache_control == 'public, max-age=31536000, immutable'
+            return key == existing['key']
+
+    store = IndexedStore()
+    store.objects[existing['key']] = b'Existing'
+    result = publish_papers_content(candidate, client=store)
+    assert result['uploaded_objects'] == result['reused_objects'] == 1
+    assert store.objects[missing['key']] == b'New'
+    assert existing['key'] not in [key for key, _ in store.writes]
+
+
 def test_preparing_from_build_receipts_does_not_read_files(tmp_path):
     root = tmp_path / "papers"
     root.mkdir()

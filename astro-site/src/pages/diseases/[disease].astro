@@ -33,6 +33,7 @@ import {
 } from '../../lib/seo';
 import { shouldBuildPage } from '../../lib/page-build-plan';
 import { diseaseIndex, loadKnowledge, loadDiseaseDirectory, countryDiseaseRouteIdentities } from '../../lib/seo-page-data';
+import { countryDiseaseRuntimeHref } from '../../lib/country-page-navigation';
 
 export async function getStaticPaths() {
   return diseaseIndex.filter(d => shouldBuildPage(`disease:${d.disease_id}`)).map(d => {
@@ -187,7 +188,7 @@ const profileUnavailableMessageZh = knowledgeStatus === 'automating'
 const coverageStart: string | null = null;
 const coverageEnd: string | null = null;
 const snapshotContextCodes: string[] = [];
-const countryRoutes = Object.fromEntries(countryDiseaseRouteIdentities().filter(row => row.slug === disease).map(row => [row.code.toUpperCase(), localeHref(`/countries/${row.code}/diseases/${row.slug}/`)]));
+const countryRoutes = Object.fromEntries(countryDiseaseRouteIdentities().filter(row => row.slug === disease).map(row => [row.code.toUpperCase(), countryDiseaseRuntimeHref(prefix, row.code, row.slug)]));
 const preferredCountry: string | undefined = undefined;
 const diseaseDataUrl = `/site-data/diseases/${diseaseId.toLowerCase()}.json`;
 const diseaseNameEn = diseaseData?.name_en ?? disease ?? 'Disease';
@@ -508,7 +509,7 @@ const diseaseSeo = {
               dataUrl={diseaseDataUrl}
               initialLanguage={locale}
             />
-            <SurveillanceDiseaseSummary client:load dataUrl={diseaseSummaryUrl} mode="disease-countries" language={locale} routes={countryRoutes} />
+            <SurveillanceDiseaseSummary client:load dataUrl={diseaseSummaryUrl} mode="disease-countries" language={locale} disease={disease} routes={countryRoutes} />
         </section>
 
         <section id="seasonality" class="figure-panel scroll-mt-24">

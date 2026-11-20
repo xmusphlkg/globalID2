@@ -958,6 +958,7 @@ class LiteratureEnrichmentPipeline:
                 return
             if summary.status == "published" and not existing_metadata.get("autopilot"):
                 return
+            was_public = summary.status == "published"
             previous_attempts = (
                 int(existing_metadata.get("quality_attempts") or 0)
                 if existing_metadata.get("source_fingerprint") == result.source_fingerprint
@@ -1003,8 +1004,10 @@ class LiteratureEnrichmentPipeline:
                 }
             summary.generated_at = datetime.now(timezone.utc)
             summary.review_notes = result.review_notes
-            from src.services.ingestion.stages import mark_dirty
-            await mark_dirty(db, line="literature", scope_key="*", task_uuid=task_uuid)
+            if was_public:
+                from .publication_changes import mark_literature_dirty
+                await mark_literature_dirty(db, task_uuid=task_uuid,
+                    article_ids=[article_id], change_kind="summary")
             await db.commit()
 
     async def _store_failure(self, article: LiteratureArticle, *, language: str, error: Exception, task_uuid: str) -> None:
@@ -1025,6 +1028,7 @@ class LiteratureEnrichmentPipeline:
                 return
             if summary.status == "published" and not existing_metadata.get("autopilot"):
                 return
+            was_public = summary.status == "published"
             previous_attempts = (
                 int(existing_metadata.get("quality_attempts") or 0)
                 if existing_metadata.get("source_fingerprint") == source_fingerprint(article)
@@ -1059,8 +1063,10 @@ class LiteratureEnrichmentPipeline:
                 f"{summary.review_notes or ''} Generation failed for {language}: {str(error)[:240]}"
             ).strip()
             summary.generated_at = datetime.now(timezone.utc)
-            from src.services.ingestion.stages import mark_dirty
-            await mark_dirty(db, line="literature", scope_key="*", task_uuid=task_uuid)
+            if was_public:
+                from .publication_changes import mark_literature_dirty
+                await mark_literature_dirty(db, task_uuid=task_uuid,
+                    article_ids=[article.article_id], change_kind="summary")
             await db.commit()
 
 

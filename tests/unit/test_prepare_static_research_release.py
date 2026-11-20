@@ -35,7 +35,9 @@ def test_static_package_preserves_other_worker_routes_and_moves_papers(tmp_path)
 def test_papers_discovery_excludes_noindex_and_includes_locales(tmp_path):
     from scripts.prepare_static_research_release import write_papers_discovery
     for name, html in [('research/articles/private', '<meta name="robots" content="noindex, follow">'),
-                       ('zh/research/diseases/influenza', '<html>public</html>')]:
+                       ('zh/research/diseases/influenza', '<html>public</html>'),
+                       ('fr/research/countries/cn', '<html>country</html>'),
+                       ('research/weekly/2026-W01', '<html>weekly</html>')]:
         page = tmp_path / name / 'index.html'
         page.parent.mkdir(parents=True)
         page.write_text(html)
@@ -43,6 +45,8 @@ def test_papers_discovery_excludes_noindex_and_includes_locales(tmp_path):
     sitemap = (tmp_path / 'papers-host/sitemap.xml').read_text()
     assert 'private' not in sitemap
     assert '/zh/research/diseases/influenza/' in sitemap
+    assert '/fr/research/countries/cn/' in sitemap
+    assert '/research/weekly/2026-W01/' in sitemap
 
 
 def test_static_package_rejects_broad_worker_routes(tmp_path):

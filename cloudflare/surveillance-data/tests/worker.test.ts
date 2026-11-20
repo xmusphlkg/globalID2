@@ -167,7 +167,7 @@ test('versioned research data resolves through the pinned catalogue and streams 
   assert.equal((await worker.fetch(new Request(`https://site.test/research-publication/${generation}/research/catalogue/missing.json`), env)).status, 404);
 });
 
-test('Pages Advanced Mode preserves static routes and serves JSON through the same handler', async () => {
+test('the shared data handler serves JSON routes and preserves static fallback behavior', async () => {
   const f = fixture();
   const assets: string[] = [];
   const env = { ...f.env, ASSETS: { async fetch(request: Request) { assets.push(request.url); return new Response('static asset'); } } };

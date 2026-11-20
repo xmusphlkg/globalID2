@@ -19,7 +19,7 @@ ENTRY_FIELDS = (
     "date_range", "country_count", "site_json_path", "location_type", "parent_code",
 )
 PART_FIELDS = (
-    "id", "label", "is_current", "window", "date_range", "period_start", "period_end",
+    "id", "country_code", "disease_id", "label", "is_current", "window", "date_range", "period_start", "period_end",
     "record_count", "projection_record_count", "source_observation_count", "source_series_count",
 )
 FILE_FIELDS = ("url", "filename", "bytes", "sha256", "relative_path")

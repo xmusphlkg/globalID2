@@ -11,7 +11,7 @@ import { isResearchPagePath, isResearchResourcePath, RESEARCH_PAPERS_ORIGIN } fr
 export const PAPERS_ORIGIN = RESEARCH_PAPERS_ORIGIN;
 export const REPORTS_ORIGIN = 'https://reports.globalinfectiousdisease.com';
 
-const PAPERS_PATH = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases)\/|^\/research\/catalogue\/(?:diseases|studies)\/|^\/research\/cards\/|^\/site-data\/research\//;
+const PAPERS_PATH = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases|countries|weekly)\/|^\/research\/catalogue\/(?:diseases|studies)\/|^\/research\/cards\/|^\/site-data\/research\//;
 const REPORTS_PATH = /^\/(?:(?:zh|fr)\/)?reports(?:\/|$)|^\/(?:(?:zh|fr)\/)?countries\/[^/]+\/reports(?:\/|$)|^\/site-data\/reports\//;
 
 type Locale = 'en' | 'zh' | 'fr';

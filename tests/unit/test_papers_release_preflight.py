@@ -92,7 +92,8 @@ def test_real_r2_adapter_retries_immutable_generation_without_overwrite(tmp_path
             return Response(200)
         assert request.method == "GET"
         return Response(200, objects[key]) if key in objects else Response(404)
-    client = R2S3Client(R2PapersConfig(account_id="acct", bucket="bucket", access_key_id="key", secret_access_key="secret"), opener=opener)
+    client = R2S3Client(R2PapersConfig(account_id="acct", bucket="bucket", access_key_id="key", secret_access_key="secret"), opener=opener,
+                        object_index=False)
     def public_read(url, limit):
         return objects[url.removeprefix(origin + "/")][:limit]
     first = publish_immutable_papers(candidate=candidate, client=client, public_read=public_read)

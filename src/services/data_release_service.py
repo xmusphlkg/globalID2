@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import asdict, dataclass
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -31,6 +31,15 @@ from src.domain.collection import PublishDirty
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
 from src.services.data_release.channel_control import is_automatic_json_paused
+from src.services.data_release.publication_wait import (
+    build_wait,
+    channel_of,
+    contract_fingerprint,
+    failure_kind,
+    surveillance_baseline_ready,
+    static_reservation_blocks_json,
+    wait_reason,
+)
 from src.services.data_release.global_selection import read_selected_batch, selection_batches
 from src.services.data_release.planning import publishable_scope_keys
 from src.services.data_release.public_changelog import (
@@ -193,10 +202,10 @@ DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS = 15 * 60
 # A complete export can revalidate several gigabytes of partitioned downloads.
 # Allow the full catalogue to finish under the worker's bounded memory budget.
 GENERATE_SITE_DATA_TIMEOUT_SECONDS = 2 * 60 * 60
-# The multilingual static site now renders thousands of country/disease pages.
-# Keep the build guard finite, but allow a full production render to finish on
-# memory-constrained release workers instead of aborting at the legacy 15 min.
-ASTRO_BUILD_TIMEOUT_SECONDS = 60 * 60
+# The multilingual static site renders tens of thousands of country/disease
+# pages. Keep the build guard finite, but allow a full production render to
+# finish on release workers instead of aborting at the one-hour legacy limit.
+ASTRO_BUILD_TIMEOUT_SECONDS = 2 * 60 * 60
 CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS = 15 * 60
 SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
 # The initial partitioned download publication can introduce tens of thousands
@@ -448,6 +457,7 @@ class DataReleaseService:
             self._last_tick_at = datetime.now(ZoneInfo("UTC"))
             try:
                 await self.requeue_due_automatic_retries()
+                await self.reevaluate_publication_waits()
                 await self.reconcile_release_continuations()
                 await self._reconcile_json_channels()
                 for job in await self.load_jobs():
@@ -481,6 +491,174 @@ class DataReleaseService:
             int(getattr(cfg, "auto_retry_max_delay_seconds", 3600) or 3600),
         )
         return attempts, base_delay, max_delay
+
+    async def park_publication_failure(
+        self,
+        task_uuid: str,
+        exc: BaseException,
+        *,
+        allow_running: bool = False,
+    ) -> bool:
+        """Keep one blocked publication row queued instead of recording a new failure."""
+        kind = failure_kind(exc)
+        if kind is None:
+            return False
+        now = datetime.now(timezone.utc)
+        parked = False
+        reason = ""
+        async with get_database() as db:
+            task = (
+                await db.execute(select(Task).where(Task.task_uuid == task_uuid).with_for_update())
+            ).scalar_one_or_none()
+            allowed = {TaskStatus.FAILED, TaskStatus.RUNNING} if allow_running else {TaskStatus.FAILED}
+            if task is None or task.task_type != TaskType.EXPORT_DATA or task.status not in allowed:
+                return False
+            channel = channel_of(task.input_data or {})
+            if channel is None:
+                return False
+            parked_channel = channel
+            metadata = dict(task.metadata_ or {})
+            previous = metadata.get("publication_wait") if isinstance(metadata.get("publication_wait"), dict) else {}
+            fingerprint = contract_fingerprint(ROOT_DIR) if kind == "contract_blocked" else (
+                "invalid" if kind == "baseline_invalid" else None
+            )
+            same = previous.get("kind") == kind and previous.get("blocker_fingerprint") == fingerprint
+            reason = wait_reason(kind, channel, blocked_by=previous.get("blocked_by"), detail=str(exc))
+            metadata["publication_wait"] = build_wait(
+                kind=kind,
+                channel=channel,
+                reason=reason,
+                now=now,
+                blocked_by=previous.get("blocked_by"),
+                blocker_fingerprint=fingerprint,
+                since=previous.get("since") if same else None,
+                recheck_seconds=int(getattr(self._config(), "poll_interval_seconds", 30) or 30),
+            )
+            task.metadata_ = metadata
+            task.status = TaskStatus.QUEUED
+            task.last_error = None
+            task.progress = 0
+            task.completed_steps = 0
+            task.started_at = None
+            task.completed_at = None
+            task.actual_duration = None
+            await db.commit()
+            parked = not same
+        if parked:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="info",
+                title="Publication waiting",
+                content=reason,
+                content_type="text",
+                metadata={"event": "publication_waiting", "kind": kind},
+            )
+            logger.warning("Publication waiting task={} kind={} channel={}", task_uuid, kind, parked_channel)
+        return True
+
+    async def reevaluate_publication_waits(self) -> None:
+        """Refresh wait reasons in place. This never inserts a task."""
+        now = datetime.now(timezone.utc)
+        stuck_after = timedelta(seconds=int(getattr(self._config(), "publication_wait_stuck_seconds", 21600) or 21600))
+        recheck = int(getattr(self._config(), "poll_interval_seconds", 30) or 30)
+        static = await self._open_static_reservation()
+        async with get_database() as db:
+            rows = list((await db.execute(select(Task).where(
+                Task.task_type == TaskType.EXPORT_DATA,
+                Task.status == TaskStatus.QUEUED,
+                Task.metadata_["publication_wait"]["kind"].as_string().is_not(None),
+            ).with_for_update(skip_locked=True))).scalars().all())
+            for task in rows:
+                metadata = dict(task.metadata_ or {})
+                wait = dict(metadata.get("publication_wait") or {})
+                channel = channel_of(task.input_data or {}) or str(wait.get("channel") or "")
+                kind = str(wait.get("kind") or "")
+                if channel in {"surveillance", "literature"} and static is not None and static.task_uuid != task.task_uuid:
+                    kind = "blocked_by_static"
+                    wait["blocked_by"] = static.task_uuid
+                elif kind == "blocked_by_static" and (static is None or static.task_uuid == task.task_uuid):
+                    kind = "baseline_invalid" if channel == "surveillance" else "contract_blocked"
+                if kind == "baseline_invalid":
+                    downloads = bool((task.input_data or {}).get("include_git_push"))
+                    try:
+                        ready = await asyncio.to_thread(surveillance_baseline_ready, ROOT_DIR, downloads=downloads)
+                    except Exception:
+                        ready = False
+                    if ready:
+                        metadata.pop("publication_wait", None)
+                        task.metadata_ = metadata
+                        task.last_error = None
+                        continue
+                elif kind == "contract_blocked" and not wait.get("stuck"):
+                    current = await asyncio.to_thread(contract_fingerprint, ROOT_DIR)
+                    if current != wait.get("blocker_fingerprint"):
+                        metadata.pop("publication_wait", None)
+                        task.metadata_ = metadata
+                        task.last_error = None
+                        continue
+                since = now
+                if wait.get("since"):
+                    try:
+                        since = _as_aware_utc(datetime.fromisoformat(str(wait.get("since")).replace("Z", "+00:00"))) or now
+                    except ValueError:
+                        since = now
+                stuck = bool(wait.get("stuck"))
+                if since and now - since >= stuck_after and not stuck:
+                    stuck = True
+                    logger.warning("Publication wait stuck task={} age_seconds={}", task.task_uuid, int((now - since).total_seconds()))
+                previous_kind = (metadata.get("publication_wait") or {}).get("kind")
+                metadata["publication_wait"] = build_wait(
+                    kind=kind if kind in {"blocked_by_static", "baseline_invalid", "contract_blocked", "transient_backoff"} else "contract_blocked",
+                    channel=channel or "static",
+                    reason=wait_reason(kind if kind in {"blocked_by_static", "baseline_invalid"} else "contract_blocked", channel or "static", blocked_by=wait.get("blocked_by"), detail=str(wait.get("reason") or "")),
+                    now=now,
+                    blocked_by=wait.get("blocked_by"),
+                    blocker_fingerprint=wait.get("blocker_fingerprint"),
+                    since=wait.get("since"),
+                    attempt=int(wait.get("attempt") or 0),
+                    stuck=stuck,
+                    recheck_seconds=recheck,
+                )
+                if previous_kind != metadata["publication_wait"]["kind"]:
+                    logger.warning(
+                        "Publication wait changed task={} kind={} blocked_by={}",
+                        task.task_uuid, metadata["publication_wait"]["kind"], wait.get("blocked_by"),
+                    )
+                task.metadata_ = metadata
+                task.last_error = None
+            await db.commit()
+
+    async def _open_json_reservation(self, line: str) -> Task | None:
+        data_only = Task.input_data["data_only"].as_boolean().is_(True)
+        if line == "situation":
+            identity = and_(data_only, Task.input_data["data_line"].as_string() == "situation")
+        elif line == "literature":
+            identity = and_(data_only, Task.input_data["data_line"].as_string() == "literature")
+        else:
+            identity = and_(
+                data_only,
+                Task.input_data["data_line"].as_string().is_distinct_from("situation"),
+                Task.input_data["data_line"].as_string().is_distinct_from("literature"),
+            )
+        async with get_database() as db:
+            return (await db.execute(select(Task).where(
+                Task.task_type == TaskType.EXPORT_DATA,
+                identity,
+                Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.RETRYING]),
+            ).order_by(Task.created_at.asc()).limit(1))).scalar_one_or_none()
+
+    async def _open_static_reservation(self) -> Task | None:
+        now = datetime.now(timezone.utc)
+        async with get_database() as db:
+            tasks = (await db.execute(select(Task).where(
+                Task.task_type == TaskType.EXPORT_DATA,
+                Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING]),
+                Task.input_data["data_only"].as_boolean().is_not(True),
+                Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                Task.input_data["reports_only"].as_boolean().is_not(True),
+                Task.input_data["theme_only"].as_boolean().is_not(True),
+            ).order_by(Task.created_at.asc()))).scalars().all()
+        return next((task for task in tasks if static_reservation_blocks_json(task, now)), None)
 
     async def schedule_automatic_retry_after_failure(
         self,
@@ -794,6 +972,7 @@ class DataReleaseService:
         theme_only: bool = False,
         publication_plan: dict | None = None,
         surveillance_rebuild_all: bool = False,
+        publication_wait: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if surveillance_rebuild_all and not (
             manual and data_only and data_line == "surveillance" and not any((full, reports_only, code_only, theme_only))
@@ -824,6 +1003,7 @@ class DataReleaseService:
                     job, manual=manual, trigger=trigger,
                     trigger_task_uuid=trigger_task_uuid, data_only=True, data_line=data_line,
                     pending_ids=pending_ids,
+                    publication_wait=publication_wait,
                     **({"suppress_subscription_dispatch": True} if suppress_subscription_dispatch else {}),
                     **({"publication_plan": publication_plan} if publication_plan else {}),
                     **({"surveillance_rebuild_all": True} if surveillance_rebuild_all else {}),
@@ -1117,15 +1297,28 @@ class DataReleaseService:
                 Task.input_data["data_only"].as_boolean().is_(True),
                 (Task.input_data["data_line"].as_string() == "literature").is_(True),
             ).order_by(Task.created_at.desc(), Task.id.desc()).limit(1))).scalar_one_or_none()
-        if latest is not None:
+        if await self._open_json_reservation("literature") is not None:
+            return
+        if latest is not None and latest.status in {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}:
             interval = int(getattr(self._config(), "literature_publish_interval_minutes", 360))
-            last = _as_aware_utc(latest.created_at)
+            last = _as_aware_utc(latest.completed_at or latest.created_at)
             if last and datetime.now(ZoneInfo("UTC")) < last + timedelta(minutes=interval):
                 return
+        elif latest is not None:
+            return
         job = jobs[0]
         if await self._release_failure_cooldown_reason(job.job_id, data_only=True, data_line="literature"):
             return
-        await self.trigger_job(job.job_id, manual=False, trigger="scheduled", data_only=True, data_line="literature")
+        static = await self._open_static_reservation()
+        waiting = None
+        if static is not None:
+            waiting = build_wait(
+                kind="blocked_by_static", channel="literature",
+                reason=wait_reason("blocked_by_static", "literature", blocked_by=static.task_uuid),
+                now=datetime.now(timezone.utc), blocked_by=static.task_uuid,
+                recheck_seconds=int(getattr(self._config(), "poll_interval_seconds", 30) or 30),
+            )
+        await self.trigger_job(job.job_id, manual=False, trigger="scheduled", data_only=True, data_line="literature", publication_wait=waiting)
 
     async def _reconcile_pending_json(self, line: str) -> None:
         """Recover committed dirty markers independently of site schedules."""
@@ -1136,14 +1329,37 @@ class DataReleaseService:
         jobs = [job for job in await self.load_jobs() if job.enabled]
         if not jobs:
             return
+        if await self._open_json_reservation(line) is not None:
+            return
         job = jobs[0]
+        static = await self._open_static_reservation() if line == "surveillance" else None
+        waiting = None
+        if static is not None:
+            waiting = build_wait(
+                kind="blocked_by_static", channel="surveillance",
+                reason=wait_reason("blocked_by_static", "surveillance", blocked_by=static.task_uuid),
+                now=datetime.now(timezone.utc), blocked_by=static.task_uuid,
+                recheck_seconds=int(getattr(self._config(), "poll_interval_seconds", 30) or 30),
+            )
         if await self._yield_json_turn(job.job_id, line):
             return
+        if waiting is None and line == "surveillance":
+            try:
+                ready = await asyncio.to_thread(surveillance_baseline_ready, ROOT_DIR, downloads=False)
+            except Exception:
+                ready = False
+            if not ready:
+                waiting = build_wait(
+                    kind="baseline_invalid", channel="surveillance",
+                    reason=wait_reason("baseline_invalid", "surveillance", blocked_by=None),
+                    now=datetime.now(timezone.utc), blocker_fingerprint="invalid",
+                    recheck_seconds=int(getattr(self._config(), "poll_interval_seconds", 30) or 30),
+                )
         kwargs = {"data_line": line} if line != "surveillance" else {}
-        if await self._release_failure_cooldown_reason(job.job_id, data_only=True, **kwargs):
+        if waiting is None and await self._release_failure_cooldown_reason(job.job_id, data_only=True, **kwargs):
             return
         await self.trigger_job(job.job_id, manual=False, trigger="upstream_completion",
-            data_only=True, **kwargs)
+            data_only=True, publication_wait=waiting, **kwargs)
 
     async def _yield_json_turn(self, job_id: str, line: str) -> bool:
         """Alternate ready channels so a country backlog cannot starve Situation."""
@@ -1265,6 +1481,7 @@ class DataReleaseService:
         theme_only: bool = False,
         publication_plan: dict | None = None,
         surveillance_rebuild_all: bool = False,
+        publication_wait: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if surveillance_rebuild_all and not (
             manual and data_only and data_line == "surveillance" and not any((full, reports_only, code_only, theme_only))
@@ -1524,11 +1741,15 @@ class DataReleaseService:
                 existing = existing_tasks[0]
                 metadata = dict(existing.metadata_ or {})
                 same_job = metadata.get("release_job_id") == job.job_id
+                waiting = existing.status != TaskStatus.RUNNING
                 return {
                     "job_id": job.job_id,
                     "status": "skipped",
                     "task_uuid": existing.task_uuid,
-                    "reason": "already_running" if same_job else "release_pipeline_busy",
+                    "reason": "publication_waiting" if waiting and same_job else (
+                        "already_running" if same_job else "release_pipeline_busy"
+                    ),
+                    "publication_wait": (existing.metadata_ or {}).get("publication_wait"),
                 }
 
             if data_only:
@@ -1569,6 +1790,7 @@ class DataReleaseService:
                         "status": "not_scheduled",
                         "scheduled_attempts": 0,
                     },
+                    **({"publication_wait": publication_wait} if publication_wait else {}),
                 },
             )
             db.add(task)
@@ -2279,7 +2501,9 @@ class DataReleaseService:
             ),
             pages_file_budget=int(cfg.pages_file_budget),
             pages_file_warn=int(cfg.pages_file_warn),
-            research_on_main=bool(getattr(cfg, "literature_json_enabled", False)),
+            # All long-tail research pages are published on the Papers host.
+            # The literature flag controls data publication, not URL ownership.
+            research_on_main=False,
         )
 
     def _publish_papers_r2_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:

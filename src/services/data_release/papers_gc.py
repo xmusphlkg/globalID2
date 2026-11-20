@@ -69,9 +69,29 @@ def inventory_papers(client) -> dict:
     return {key: value for group in groups for key, value in group.items()}
 
 
+def validate_protected_keys(keys) -> set[str]:
+    """Accept only exact immutable keys from a trusted candidate closure."""
+    if not isinstance(keys, (list, tuple, set, frozenset)):
+        raise ValueError('Protected Papers keys must be an explicit collection')
+    if any(not isinstance(key, str) or not (CATALOGUE.fullmatch(key) or OBJECT.fullmatch(key))
+           for key in keys):
+        raise ValueError('Invalid protected Papers key')
+    if len(set(keys)) != len(keys):
+        raise ValueError('Duplicate protected Papers key')
+    return set(keys)
+
+
 def prepare_cleanup(client, objects: dict, *, bucket: str, now: datetime | None = None,
-                    grace_hours: int = 48, cache_dir: Path | None = None) -> dict:
-    """Plan a retirement using verified catalogue, shard and asset references."""
+                    grace_hours: int = 48, cache_dir: Path | None = None,
+                    protected_keys: set[str] | list[str] | None = None) -> dict:
+    """Plan retirement while preserving trusted, complete prepared candidates.
+
+    The caller must supply the full closure of any candidate which may resume.
+    A protected remote catalogue is traversed like every retained generation.
+    Candidates can contain objects not uploaded yet; those are recorded for
+    revalidation but are not treated as missing published dependencies.
+    """
+    protected = validate_protected_keys(protected_keys if protected_keys is not None else [])
     now = now or datetime.now(timezone.utc)
     if grace_hours < 48 or now.tzinfo is None:
         raise ValueError('Papers retention requires at least 48 hours and an aware time')
@@ -95,7 +115,7 @@ def prepare_cleanup(client, objects: dict, *, bucket: str, now: datetime | None 
             expired = _time(item['last_modified']) <= cutoff
         except (ValueError, AttributeError, KeyError, TypeError):
             expired = False
-        if key != current_root and expired:
+        if key != current_root and key not in protected and expired:
             retired.add(key)
     retained = set(roots) - retired
     keep, current_keys, shards, current_shards, assets = set(retained), {current_root}, {}, set(), {}
@@ -173,6 +193,7 @@ def prepare_cleanup(client, objects: dict, *, bucket: str, now: datetime | None 
     missing = sorted(keep - objects.keys())
     if current_keys - objects.keys() or any(key.startswith(PREFIXES) for key in missing):
         raise ValueError('Missing current or collected-namespace retained dependency')
+    keep.update(protected & objects.keys())
     candidates, grace_excluded, unknown_age = [], 0, 0
     for key, item in sorted(objects.items()):
         if key in keep or not (OBJECT.fullmatch(key) or key in retired):
@@ -194,6 +215,7 @@ def prepare_cleanup(client, objects: dict, *, bucket: str, now: datetime | None 
     return {'schema': 1, 'bucket': bucket, 'planned_at': now.isoformat(), 'grace_hours': grace_hours,
             'publication_sha256': sha(before), 'release_id': current['release_id'], 'roots': roots,
             'retained_roots': sorted(retained), 'retired_roots': sorted(retired),
+            'protected_keys': sorted(protected),
             'retained_keys': sorted(keep), 'current_keys': sorted(current_keys), 'candidates': candidates,
             'stored_bytes': sum(item['bytes'] for item in candidates), 'grace_excluded': grace_excluded,
             'unknown_age_excluded': unknown_age, 'missing_historical_external_keys': missing}
@@ -209,6 +231,7 @@ def apply_cleanup(plan: dict, client, *, bucket: str, output: Path, assert_fence
     """
     if plan.get('schema') != 1 or plan.get('bucket') != bucket or not 1 <= batch_size <= 1000:
         raise ValueError('Invalid GC target, schema or batch size')
+    protected = validate_protected_keys(plan.get('protected_keys', []))
     assert_fenced()
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
@@ -258,7 +281,12 @@ def apply_cleanup(plan: dict, client, *, bucket: str, output: Path, assert_fence
             return status, body
 
     refreshed = prepare_cleanup(ResumedView(), simulated, bucket=bucket, now=_time(plan['planned_at']),
-                                grace_hours=plan['grace_hours'], cache_dir=cache_dir)
+                                grace_hours=plan['grace_hours'], cache_dir=cache_dir,
+                                protected_keys=protected)
+    if 'protected_keys' not in plan:
+        # Existing reviewed plans predate prepared-candidate protection.
+        # Their original retention and candidate sets must still match exactly.
+        refreshed.pop('protected_keys')
     if refreshed != plan:
         raise ValueError('GC plan changed during fenced revalidation')
     assert_fenced()
@@ -302,8 +330,9 @@ def apply_cleanup(plan: dict, client, *, bucket: str, output: Path, assert_fence
             print(json.dumps(receipt), flush=True)
     fence()
     final_inventory = inventory_papers(client)
-    if set(candidates) & final_inventory.keys() or not set(plan['current_keys']).issubset(final_inventory):
-        raise ValueError('Post-cleanup exact absence or current dependency check failed')
+    retained = {key for key in plan['retained_keys'] if key.startswith(PREFIXES)}
+    if set(candidates) & final_inventory.keys() or not retained.issubset(final_inventory):
+        raise ValueError('Post-cleanup exact absence or retained dependency check failed')
     fence()
     receipt = {'schema': 1, 'plan_sha256': plan_hash, 'removed': len(candidates),
                'total': len(candidates), 'stored_bytes': plan['stored_bytes'], 'completed': True,

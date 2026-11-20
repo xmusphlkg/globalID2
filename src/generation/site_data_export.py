@@ -1550,17 +1550,30 @@ def write_site_export_artifacts(
             continue
         country_data = country_export["country_data"]
         site_data = country_export["site_data"]
-        write_pretty_json(
-            output_dir / "countries" / f"{code.lower()}.json", country_data
-        )
-        write_compact_json(
-            public_site_data_dir / "countries" / f"{code.lower()}.json",
-            site_data,
-        )
-        write_compact_json(
-            public_site_data_dir / "countries" / f"{code.lower()}-source-series.json",
-            build_country_source_series_data(country_data),
-        )
+        # Published/curve-only runs intentionally carry an empty projection
+        # for unchanged countries.  Never replace an existing lossless or
+        # compact snapshot with that placeholder: doing so makes a later
+        # release appear to contain zero diseases (notably China's 57 series).
+        unchanged = bool(country_export.get("unchanged_curve"))
+        private_path = output_dir / "countries" / f"{code.lower()}.json"
+        public_path = public_site_data_dir / "countries" / f"{code.lower()}.json"
+        source_path = public_site_data_dir / "countries" / f"{code.lower()}-source-series.json"
+        repair_country_projection = False
+        if unchanged and private_path.is_file() and public_path.is_file():
+            private_snapshot = _read_json_file(private_path, {})
+            public_snapshot = _read_json_file(public_path, {})
+            private_count = len(private_snapshot.get("disease_series") or {}) if isinstance(private_snapshot, dict) else 0
+            public_count = len(public_snapshot.get("series") or []) if isinstance(public_snapshot, dict) else 0
+            repair_country_projection = private_count > public_count
+            if repair_country_projection:
+                country_data = private_snapshot
+                site_data = build_country_site_data(country_data)
+        if not (unchanged and private_path.is_file()):
+            write_pretty_json(private_path, country_data)
+        if not (unchanged and public_path.is_file() and not repair_country_projection):
+            write_compact_json(public_path, site_data)
+        if not (unchanged and source_path.is_file() and not repair_country_projection):
+            write_compact_json(source_path, build_country_source_series_data(country_data))
         print(
             f"  ✓ countries/{code.lower()}.json "
             f"({country_record_counts.get(code, 0)} records)"
@@ -1590,13 +1603,25 @@ def write_site_export_artifacts(
         )
         if limit_curves and did not in changed_disease_set:
             continue
-        write_pretty_json(
-            output_dir / "diseases" / f"{did.lower()}.json", disease_data
-        )
-        write_compact_json(
-            public_site_data_dir / "diseases" / f"{did.lower()}.json",
-            disease_site_data,
-        )
+        unchanged = bool(disease_export.get("unchanged_curve"))
+        private_path = output_dir / "diseases" / f"{did.lower()}.json"
+        public_path = public_site_data_dir / "diseases" / f"{did.lower()}.json"
+        repair_disease_projection = False
+        if unchanged and private_path.is_file() and public_path.is_file():
+            private_snapshot = _read_json_file(private_path, {})
+            public_snapshot = _read_json_file(public_path, {})
+            private_count = len(private_snapshot.get("country_series") or {}) if isinstance(private_snapshot, dict) else 0
+            public_count = len(public_snapshot.get("series") or []) if isinstance(public_snapshot, dict) else 0
+            repair_disease_projection = private_count > public_count
+            if repair_disease_projection:
+                disease_data = private_snapshot
+                disease_site_data = build_disease_site_data(
+                    disease_data, country_name_by_code, country_name_zh_by_code,
+                )
+        if not (unchanged and private_path.is_file()):
+            write_pretty_json(private_path, disease_data)
+        if not (unchanged and public_path.is_file() and not repair_disease_projection):
+            write_compact_json(public_path, disease_site_data)
     rewritten_diseases = len(changed_disease_set) if limit_curves else len(diseases)
     print(
         f"  ✓ diseases/{diseases[0]['disease_id'].lower()}.json … "
@@ -1881,7 +1906,14 @@ def write_incremental_site_export_artifacts(
         (public_site_data_dir / "countries" / f"{code.lower()}.json").unlink(missing_ok=True)
         (public_site_data_dir / "countries" / f"{code.lower()}-source-series.json").unlink(missing_ok=True)
     if not context.get("static_content_only"):
-        write_subdivision_maps(output_dir, public_site_data_dir, context.get("map_population_rows") or [], recorded_at_as_of=context.get("recorded_at_as_of"), active_codes={item["code"] for item in context["countries_simple"]})
+        write_subdivision_maps(
+            output_dir,
+            public_site_data_dir,
+            context.get("map_population_rows") or [],
+            recorded_at_as_of=context.get("recorded_at_as_of"),
+            active_codes={item["code"] for item in context["countries_simple"]},
+            preserve_existing=True,
+        )
     _write_publish_hash_manifest(output_dir, context)
     if "country_dependency_inputs" in context:
         _save_dependency_receipt(context, output_dir, public_site_data_dir)
@@ -1993,6 +2025,8 @@ async def export(
     else:
         changed_country_codes = None
         changed_disease_ids = None
+    # An existing schema 4 manifest stays on legacy files. Cell files are used
+    # for a new output directory or a manifest that is already schema 5.
     downloads_manifest = build_direct_download_files(
         context,
         direct_download_output_dir,

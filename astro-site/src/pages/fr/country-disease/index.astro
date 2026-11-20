@@ -1,0 +1,13 @@
+---
+import Page, { getStaticPaths as getEnglishStaticPaths } from '../../country-disease/index.astro';
+const FrPage = Page as any;
+
+export async function getStaticPaths() {
+  const paths = await Promise.resolve(getEnglishStaticPaths() as any);
+  return paths.map((entry: any) => ({ ...entry, props: { ...entry.props, locale: 'fr' } }));
+}
+
+const props = Astro.props as any;
+---
+
+<FrPage {...props} locale="fr" />

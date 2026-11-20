@@ -6,6 +6,11 @@ export function formatFileSize(bytes?: number): string {
   return `${Math.round(bytes)} B`;
 }
 
+export function downloadPartKey(part: { id?: string; country_code?: string; disease_id?: string }): string {
+  const pieces = [part.country_code, part.disease_id, part.id].filter((piece): piece is string => Boolean(piece));
+  return pieces.join('/') || 'part';
+}
+
 export function downloadPartRecordCount(entry: { record_count?: number; parts?: Array<{ record_count?: number; is_current?: boolean }> }): { current: number; total: number } {
   const part = entry.parts?.find(item => item.is_current) ?? entry.parts?.at(-1);
   return { current: Number(part?.record_count ?? 0), total: Number(entry.record_count ?? 0) };

@@ -10,7 +10,8 @@ from src.services.data_release.reports_pipeline import execute_reports_release
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("fail_at", [None, "Build Reports Site", "Verify Reports Host", "empty index"])
-async def test_reports_release_skips_public_verification_and_keeps_local_data(tmp_path, fail_at):
+@pytest.mark.parametrize("suppress_dispatch", [None, False, True])
+async def test_reports_release_skips_public_verification_and_keeps_local_data(tmp_path, fail_at, suppress_dispatch, monkeypatch):
     astro = tmp_path / "astro-site"
     reports = tmp_path / "exports/reports-site"
     paths = [astro / "src/data/reports", astro / "public/site-data/reports", reports]
@@ -19,6 +20,11 @@ async def test_reports_release_skips_public_verification_and_keeps_local_data(tm
         (path / "old.json").write_text("old")
     (paths[0] / "index.json").write_text('[{"id": 1}]')
     commands = []
+    async def dispatch(*_args, **_kwargs):
+        assert commands[-1][0] == "Publish Reports Bundle to R2"
+        return {"status": "baseline_recorded"}
+    dispatch_mock = AsyncMock(side_effect=dispatch)
+    monkeypatch.setattr("src.services.data_release.report_subscription.dispatch_if_enabled", dispatch_mock)
     stored = SimpleNamespace(output_data=None)
     class Database:
         async def get(self, *_args): return stored
@@ -61,10 +67,13 @@ async def test_reports_release_skips_public_verification_and_keeps_local_data(tm
         task_model=object, generate_timeout_seconds=60, astro_build_timeout_seconds=60, download_publish_timeout_seconds=60,
         read_snapshot=read_snapshot)
     task = SimpleNamespace(id=1, task_uuid="f49f0575-09b8-4d00-82b7-0e79b4056ae8", input_data={"release_job_id": "site-release"})
+    if suppress_dispatch is not None:
+        task.input_data["suppress_subscription_dispatch"] = suppress_dispatch
     if fail_at and fail_at != "Verify Reports Host":
         with pytest.raises(RuntimeError, match="empty|injected failure"):
             await execute_reports_release(service, task, runtime=runtime)
         assert (paths[0] / "old.json").read_text() == "new"
+        dispatch_mock.assert_not_awaited()
         if fail_at == "empty index":
             assert all(title != "Publish Reports Bundle to R2" for title, _ in commands)
     else:
@@ -73,6 +82,13 @@ async def test_reports_release_skips_public_verification_and_keeps_local_data(tm
         assert not result["pages_deployed"]
         assert result["website_verification"] == "skipped"
         assert result["artifact_rollback"] is False
+        assert result["subscription_dispatch_suppressed"] is bool(suppress_dispatch)
+        if suppress_dispatch:
+            dispatch_mock.assert_not_awaited()
+            assert result["report_subscription_dispatch"] is None
+        else:
+            dispatch_mock.assert_awaited_once_with(service, runtime, reports_origin="https://reports.test")
+            assert result["report_subscription_dispatch"] == {"status": "baseline_recorded"}
         assert any(call.kwargs.get("title") == "Website Verification Skipped" for call in manager.add_workbook_entry.await_args_list)
         assert stored.output_data == result
         assert [title for title, _ in commands] == ["Export Reports Data", "Build Reports Site", "Split Reports Bundle", "Publish Reports Bundle to R2"]

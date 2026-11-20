@@ -510,7 +510,7 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
           ref={chartRef}
           echarts={echarts}
           option={option}
-          style={{ height: '100%', width: '100%' }}
+          style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }}
           onEvents={handleEvents}
           notMerge
         />

@@ -59,7 +59,7 @@ def run_git_with_retry(
     raise AssertionError("unreachable Git retry state")
 
 
-def push_download_snapshot(workdir: Path, branch: str, *, run_git, run_git_with_retry, push_branch, batch_bytes: int = 1024 * 1024 * 1024) -> None:
+def push_download_snapshot(workdir: Path, branch: str, *, run_git, run_git_with_retry, push_branch, batch_bytes: int = 1024 * 1024 * 1024, preload_branch: str | None = None) -> None:
     """Preload bounded batches on a resumable ref, then atomically publish HEAD.
 
     GitHub limits each received pack to 2 GiB. A temporary branch makes each
@@ -72,7 +72,9 @@ def push_download_snapshot(workdir: Path, branch: str, *, run_git, run_git_with_
     target = run_git(["rev-parse", "HEAD"], workdir)
     tree = run_git(["rev-parse", "HEAD^{tree}"], workdir)
     branch_key = hashlib.sha256(branch.encode()).hexdigest()[:12]
-    staging = f"globalid-upload/{branch_key}-{tree}"
+    staging = preload_branch or f"globalid-upload/{branch_key}-{tree}"
+    if not staging.startswith('globalid-upload/') or staging == branch:
+        raise ValueError('Download preload branch must be under globalid-upload/')
     remote = run_git_with_retry(["ls-remote", "--heads", "origin", branch, staging], workdir)
     refs = {line.split()[1]: line.split()[0] for line in remote.splitlines()}
     remote_head = refs.get(f"refs/heads/{branch}")

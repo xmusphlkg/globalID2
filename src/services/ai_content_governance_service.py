@@ -84,13 +84,14 @@ async def _release_review_connection(db: AsyncSession, pending: list[Any]) -> di
 
 async def _mark_review_dirty(
     db: AsyncSession, *, line: str, scope_key: str, parent_task_uuid: str | None = None,
+    change_set: dict | None = None,
 ) -> None:
     from src.ai.runtime import current_parent
     from src.services.ingestion.stages import mark_dirty
     parent = current_parent()
     task_uuid = parent_task_uuid or (parent.task_uuid if parent is not None else None)
     if task_uuid is not None:
-        await mark_dirty(db, line=line, scope_key=scope_key, task_uuid=task_uuid)
+        await mark_dirty(db, line=line, scope_key=scope_key, task_uuid=task_uuid, change_set=change_set)
 
 
 def _review_stamp(value):
