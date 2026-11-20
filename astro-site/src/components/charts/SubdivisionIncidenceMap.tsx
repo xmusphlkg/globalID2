@@ -17,6 +17,10 @@ echarts.use([GraphicComponent, LegendComponent]);
 
 type Geometry = Parameters<typeof echarts.registerMap>[1];
 interface Props { countryCode: string; diseaseId?: string; language?: Language; }
+const usInsetAreas = {
+  'US-AK': { left: -123, top: 31, width: 13, height: 7 },
+  'US-HI': { left: -112, top: 27, width: 6, height: 3.5 },
+};
 const monthNames = (lang: Language) => Array.from({ length: 12 }, (_, index) => lang === 'zh' ? `${index + 1}月` : new Intl.DateTimeFormat(lang, { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2024, index, 1))));
 const labels = {
   en: { title: 'Regional distribution', disease: 'Disease', year: 'Year', start: 'First month', end: 'Last month', metric: 'Measure', rate: 'Reports per 100,000', cases: 'Reported cases', area: 'Region', population: 'Total resident population', observed: 'Reported months', source: 'Population source', reference: 'Reference date', basis: 'Population basis', version: 'Population version', download: 'Download filtered CSV', loading: 'Loading regional data…', unavailable: 'Regional map data are not available in this publication.', noDisease: 'No comparable regional counts are available for this disease.', zero: 'Zero', missing: 'Missing / suppressed', notAnnual: 'Selected-period crude report rates; not annualized or age standardized.', scale: 'The same disease, measure and month range share a color scale across years.', boundary: 'Boundaries', historical: 'Present monitoring units; historical boundary changes are not reconstructed.', formula: 'Period reports ÷ local population in the same year × 100,000. Missing years are not filled.', trend: 'Monthly reports in the selected region', complete: 'regions with a complete value', provisional: 'Provisional', unverified: 'Unverified', selected: 'Selected region', noPopulation: 'No verified local population for this year. Case counts remain available.', fullYear: 'Full year', firstQuarter: 'Jan–Mar' },
@@ -88,7 +92,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   useEffect(() => {
     const controller = new AbortController();
     retainedRange.current = null; comparisonRestored.current = false;
-    setMapFocused(code === 'JP');
+    setMapFocused(code === 'US' || code === 'JP');
     setStatus('loading'); setCatalog(null); setDataset(null); setWindow(null); setPopulation(null); setMapName('');
     void (async () => {
       const index = await surveillanceData.read<{ countries: Array<{ code: string; path: string }> }>('/site-data/subdivision-maps/index.json', { signal: controller.signal });
@@ -102,9 +106,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       if (controller.signal.aborted) return;
       if (current.schema_version !== 1 || current.country_code !== code || populations.country_code !== code) throw new Error('Map publication mismatch');
       const key = `subdivision-${code}-${current.boundary.version}`;
-      // Keep every US state in its source longitude/latitude. Alaska and
-      // Hawaii must remain real geographic features rather than inset art.
-      echarts.registerMap(key, geometry);
+      echarts.registerMap(key, geometry, code === 'US' ? usInsetAreas : undefined);
       setMapName(key); setPopulation(populations); setCatalog(current);
       const requested = saved.get('mapDisease') || diseaseId;
       setSelectedDisease(current.diseases.find(item => item.id === requested)?.id

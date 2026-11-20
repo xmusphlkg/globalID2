@@ -73,6 +73,7 @@ from src.generation.site_data_writer import (
     write_compact_json,
     write_pretty_json,
 )
+from src.generation.surveillance_data_export import country_summary, disease_summary
 from src.generation.site_data_dependencies import (
     changed_diseases as _changed_dependency_diseases,
     country_inputs as _country_dependency_inputs,
@@ -1523,6 +1524,14 @@ def write_site_export_artifacts(
     report_details = context["report_details"]
     reports = context["reports"]
     literature_export = context.get("literature_export") or {}
+    country_download_by_code = {
+        str(item.get("code") or "").upper(): item
+        for item in country_download_entries
+    }
+    disease_download_by_id = {
+        str(item.get("disease_id") or "").upper(): item
+        for item in disease_download_entries
+    }
 
     prepare_site_output_dirs(output_dir, public_site_data_dir)
     write_compact_json(public_site_data_dir / "site-status.json", {"generated_at": generated_at})
@@ -1574,6 +1583,19 @@ def write_site_export_artifacts(
             write_compact_json(public_path, site_data)
         if not (unchanged and source_path.is_file() and not repair_country_projection):
             write_compact_json(source_path, build_country_source_series_data(country_data))
+        summary_data = country_data
+        if unchanged and private_path.is_file():
+            existing = _read_json_file(private_path, {})
+            if isinstance(existing, dict) and existing.get("disease_series"):
+                summary_data = existing
+        write_compact_json(
+            public_site_data_dir / "countries" / f"{code.lower()}-summary.json",
+            country_summary(
+                summary_data,
+                generated_at=generated_at,
+                download=country_download_by_code.get(code),
+            ),
+        )
         print(
             f"  ✓ countries/{code.lower()}.json "
             f"({country_record_counts.get(code, 0)} records)"
@@ -1585,7 +1607,7 @@ def write_site_export_artifacts(
     knowledge_completeness_values: list[float] = []
     for disease_export in disease_exports:
         did = disease_export["disease_id"]
-        disease_data = disease_export["disease_data"]
+        disease_data = disease_export.get("disease_data") or {}
         disease_site_data = disease_export["site_data"]
         disease_knowledge_payload = build_disease_knowledge_fields(
             diseases_by_id[did],
@@ -1622,6 +1644,24 @@ def write_site_export_artifacts(
             write_pretty_json(private_path, disease_data)
         if not (unchanged and public_path.is_file() and not repair_disease_projection):
             write_compact_json(public_path, disease_site_data)
+        summary_data = disease_data
+        if unchanged and private_path.is_file():
+            existing = _read_json_file(private_path, {})
+            if isinstance(existing, dict) and existing.get("country_series"):
+                summary_data = existing
+        summary_countries = {
+            item["code"]: item["country_data"]
+            for item in country_exports
+        }
+        write_compact_json(
+            public_site_data_dir / "diseases" / f"{did.lower()}-summary.json",
+            disease_summary(
+                summary_data,
+                generated_at=generated_at,
+                countries=summary_countries,
+                download=disease_download_by_id.get(did),
+            ),
+        )
     rewritten_diseases = len(changed_disease_set) if limit_curves else len(diseases)
     print(
         f"  ✓ diseases/{diseases[0]['disease_id'].lower()}.json … "
@@ -1741,12 +1781,13 @@ def write_site_export_artifacts(
             for filename in (
                 f"{item['code'].lower()}.json",
                 f"{item['code'].lower()}-source-series.json",
+                f"{item['code'].lower()}-summary.json",
             )
         },
     )
     remove_stale_json_files(
         public_site_data_dir / "diseases",
-        disease_json_names,
+        disease_json_names | {f"{item['disease_id'].lower()}-summary.json" for item in disease_exports},
     )
     # Retire the legacy v2/v3 Situation artifacts. Only top-level JSON files
     # are removed, so situation/international is never touched.
@@ -1778,6 +1819,14 @@ def write_incremental_site_export_artifacts(
     diseases_by_id = {
         item["disease_id"]: item for item in context["disease_exports"]
     }
+    country_download_by_code = {
+        str(item.get("code") or "").upper(): item
+        for item in context.get("country_download_entries") or ()
+    }
+    disease_download_by_id = {
+        str(item.get("disease_id") or "").upper(): item
+        for item in context.get("disease_download_entries") or ()
+    }
 
     for code in sorted(changed_countries):
         country_export = countries_by_code.get(code)
@@ -1794,23 +1843,29 @@ def write_incremental_site_export_artifacts(
     for code, country_export in countries_by_code.items():
         site_path = public_site_data_dir / "countries" / f"{code.lower()}.json"
         source_path = public_site_data_dir / "countries" / f"{code.lower()}-source-series.json"
-        if code not in changed_countries and site_path.is_file() and source_path.is_file():
+        summary_path = public_site_data_dir / "countries" / f"{code.lower()}-summary.json"
+        projections_exist = site_path.is_file() and source_path.is_file()
+        if code not in changed_countries and projections_exist and summary_path.is_file():
             continue
         country_data = country_export["country_data"]
-        write_compact_json(
-            site_path,
-            country_export["site_data"],
-        )
-        write_compact_json(
-            source_path,
-            build_country_source_series_data(country_data),
-        )
+        if code in changed_countries or not projections_exist:
+            write_compact_json(site_path, country_export["site_data"])
+            write_compact_json(source_path, build_country_source_series_data(country_data))
+        if not country_data.get("disease_series") and (output_dir / "countries" / f"{code.lower()}.json").is_file():
+            existing = _read_json_file(output_dir / "countries" / f"{code.lower()}.json", {})
+            if isinstance(existing, dict):
+                country_data = existing
+        write_compact_json(summary_path, country_summary(
+            country_data,
+            generated_at=context["generated_at"],
+            download=country_download_by_code.get(code),
+        ))
 
     for disease_id in sorted(changed_diseases):
         disease_export = diseases_by_id.get(disease_id)
         if not disease_export:
             continue
-        disease_data = disease_export["disease_data"]
+        disease_data = disease_export.get("disease_data") or {}
         write_pretty_json(
             output_dir / "diseases" / f"{disease_id.lower()}.json",
             disease_data,
@@ -1835,12 +1890,30 @@ def write_incremental_site_export_artifacts(
 
     for disease_id, disease_export in diseases_by_id.items():
         site_path = public_site_data_dir / "diseases" / f"{disease_id.lower()}.json"
-        if disease_id not in changed_diseases and site_path.is_file():
+        summary_path = public_site_data_dir / "diseases" / f"{disease_id.lower()}-summary.json"
+        if disease_id not in changed_diseases and site_path.is_file() and summary_path.is_file():
             continue
-        write_compact_json(
-            site_path,
-            disease_export["site_data"],
-        )
+        if disease_id in changed_diseases or not site_path.is_file():
+            write_compact_json(site_path, disease_export["site_data"])
+        disease_data = disease_export.get("disease_data") or {}
+        if not disease_data.get("country_series") and (output_dir / "diseases" / f"{disease_id.lower()}.json").is_file():
+            existing = _read_json_file(output_dir / "diseases" / f"{disease_id.lower()}.json", {})
+            if isinstance(existing, dict):
+                disease_data = existing
+        summary_countries = {}
+        for code, country_export in countries_by_code.items():
+            country_data = country_export["country_data"]
+            if not country_data.get("disease_series") and (output_dir / "countries" / f"{code.lower()}.json").is_file():
+                existing = _read_json_file(output_dir / "countries" / f"{code.lower()}.json", {})
+                if isinstance(existing, dict):
+                    country_data = existing
+            summary_countries[code] = country_data
+        write_compact_json(summary_path, disease_summary(
+            disease_data,
+            generated_at=context["generated_at"],
+            countries=summary_countries,
+            download=disease_download_by_id.get(disease_id),
+        ))
 
     existing_meta = _read_json_file(output_dir / "meta.json", {})
     if not isinstance(existing_meta, dict):
