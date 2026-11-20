@@ -1458,6 +1458,19 @@
 
 /* Research article cards also render client-side after catalogue filtering, so
    these styles intentionally live outside Astro's component scoping. */
+.research-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .72rem;
+  margin-top: .72rem;
+}
+
+.research-list[hidden], .research-card[hidden] { display: none; }
+
+@media (max-width: 900px) {
+  .research-list { grid-template-columns: minmax(0, 1fr); }
+}
+
 .research-card {
   position: relative;
   padding: 1.15rem 0;
@@ -1538,6 +1551,7 @@
 }
 
 .research-card-title {
+  overflow-wrap: anywhere;
   max-width: 54rem;
   margin-top: .68rem;
   color: rgb(var(--text-strong));

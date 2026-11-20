@@ -1,7 +1,7 @@
 ---
 import { readResearchIndex } from '../../lib/generated-site-data.ts';
 import ReportLayout from '../../layouts/ReportLayout.astro';
-import ResearchArticleCard from '../../components/research/ResearchArticleCard.astro';
+import ResearchArticleCard from '../../components/research/ResearchArticleCard';
 import ResearchHotspotCharts from '../../components/research/ResearchHotspotCharts';
 import GIDSLoading from '../../components/GIDSLoading.astro';
 import researchHotspotsData from '../../data/research/hotspots.json';
@@ -9,7 +9,7 @@ import { buildResearchFeedDefinitions, filterResearchFeedArticles, toResearchFee
 import { buildAlternatePaths, normalizeDiseaseHref } from '../../lib/seo';
 import { absoluteSiteUrl, siteHref } from '../../lib/papers';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID, localizedDiseaseName } from '../../utils/diseaseNames';
-import { localizedRegionName, localizedResearchFacet, localizedResearchTopic, localizedStudyType, RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS, translateUi } from '../../utils/i18n';
+import { localizedRegionName, localizedResearchFacet, localizedResearchTopic, localizedStudyType, RESEARCH_TOPIC_LABELS, translateUi } from '../../utils/i18n';
 
 interface Props {
   locale?: 'en' | 'zh' | 'fr';
@@ -291,7 +291,7 @@ const itemList = {
           <div><p class="academic-kicker">{pick('Evidence synthesis', '证据综合')}</p><h2 id="reviews-guidelines-title" class="section-heading">{pick('New Reviews & Guidelines', '最新综述与指南')}</h2></div>
           <a href="/research/rss/collections/reviews-and-guidelines.xml" type="application/rss+xml">{pick('Subscribe to this collection →', '订阅此集合 →')}</a>
         </div>
-        <div class="curated-research-grid">{reviewsAndGuidelines.map((article: any) => <ResearchArticleCard article={article} stream locale={locale} />)}</div>
+        <div class="curated-research-grid">{reviewsAndGuidelines.map((article: any) => <ResearchArticleCard article={article} locale={locale} />)}</div>
       </section>
     )}
 
@@ -375,9 +375,8 @@ const itemList = {
         data-total={catalogueCount}
         data-disease-name-map={JSON.stringify({ ...DISEASE_NAMES_FR, ...Object.fromEntries(Object.entries(DISEASE_NAMES_FR_BY_ID).map(([key, value]) => [key.toLowerCase(), value])) })}
         data-region-name-map={JSON.stringify(Object.fromEntries(countries.map(country => [String(country.code).toLowerCase(), countryName(country)])))}
-        data-study-type-map={JSON.stringify(Object.fromEntries(Object.entries(STUDY_TYPE_LABELS).map(([key, labels]) => [key, labels[locale]])))}
         data-topic-name-map={JSON.stringify(Object.fromEntries(Object.entries(RESEARCH_TOPIC_LABELS).map(([key, labels]) => [key, labels[locale]])))}
-      >{articles.slice(0, initialVisibleArticles).map((article: any, index: number) => <ResearchArticleCard article={article} stream index={index} initialVisible={initialVisibleArticles} locale={locale} />)}</div>
+      >{articles.slice(0, initialVisibleArticles).map((article: any, index: number) => <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} />)}</div>
       {catalogueCount > initialVisibleArticles && <button id="research-load-more" class="research-load-more" type="button" aria-controls="research-list" data-load-more-research>{pick('Load more publications', '加载更多论文')}</button>}
       <div id="research-empty" class:list={['research-empty', articles.length > 0 && 'hidden']}>
         <div class="empty-orbit" aria-hidden="true"></div>
@@ -391,7 +390,7 @@ const itemList = {
   <script>
   import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
   import { normalizeSearchText } from '../../lib/disease-search';
-    import { siteHref } from '../../lib/papers';
+    import { renderResearchList } from '../../components/research/renderResearchList';
     import { readResearchFilterValues, writeResearchFilterValues, type ResearchFilterValues } from '../../lib/research-filter-url';
     const search = document.querySelector<HTMLInputElement>('#research-search');
     const disease = document.querySelector<HTMLSelectElement>('#research-disease');
@@ -423,7 +422,6 @@ const itemList = {
     };
     const diseaseNameMap = parseMap(list?.dataset.diseaseNameMap);
     const regionNameMap = parseMap(list?.dataset.regionNameMap);
-    const studyTypeMap = parseMap(list?.dataset.studyTypeMap);
     const topicNameMap = parseMap(list?.dataset.topicNameMap);
     let visibleLimit = initialVisible;
     const query = new URLSearchParams(location.search);
@@ -448,9 +446,6 @@ const itemList = {
     const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const currentLang = () => form?.dataset.researchLocale === 'zh' ? 'zh' : form?.dataset.researchLocale === 'fr' ? 'fr' : 'en';
     const routePrefix = currentLang() === 'zh' ? '/zh' : currentLang() === 'fr' ? '/fr' : '';
-    const setLangText = (element: HTMLElement, en: string, zh?: string | null, fr?: string | null) => {
-      element.textContent = currentLang() === 'zh' ? (zh || en) : currentLang() === 'fr' ? (fr || 'Traduction française en attente.') : en;
-    };
     const frenchDiseaseName = (item: any) => item.name_fr
       || diseaseNameMap[String(item.slug ?? '').toLowerCase()]
       || diseaseNameMap[String(item.disease_id ?? '').toLowerCase()]
@@ -467,20 +462,6 @@ const itemList = {
       }
       return item.name_en || code;
     };
-    const text = (value: unknown) => String(value ?? '');
-    const formatDate = (value: string | undefined, lang: 'en' | 'zh' | 'fr') => {
-      if (!value) return lang === 'zh' ? '日期暂缺' : lang === 'fr' ? 'Date indisponible' : 'Date unavailable';
-      return new Intl.DateTimeFormat(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        timeZone: 'UTC',
-      }).format(new Date(value));
-    };
-    const formatArticleDate = (article: any, lang: 'en' | 'zh' | 'fr') => {
-      const label = lang === 'zh' ? article.publication_date_label_zh : lang === 'fr' ? article.publication_date_label_fr : article.publication_date_label_en;
-      return label || formatDate(article.published_at, lang);
-    };
     const articleTokens = (article: any) => ({
       diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''} ${frenchDiseaseName(item)}`).join(' ').toLowerCase(),
       diseaseIds: (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean).join(' '),
@@ -494,158 +475,6 @@ const itemList = {
       populationText: (article.populations ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     });
     const articleSearchText = (article: any, tokens = articleTokens(article)) => normalizeSearchText(`${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText} ${tokens.pathogenText} ${tokens.populationText}`);
-    const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
-      const element = document.createElement(tag);
-      if (className) element.className = className;
-      return element;
-    };
-    const makeBadge = (en: string, zh: string | null | undefined, extraClass = '', fr?: string | null) => {
-      const badge = make('span', `research-badge ${extraClass}`.trim());
-      setLangText(badge, en, zh, fr);
-      return badge;
-    };
-    const makeTopicBadge = (name: string) => {
-      const badge = make('a', 'research-badge research-badge-topic');
-      badge.href = `${routePrefix}/research/topics/${slugifyTopic(name)}/`;
-      badge.textContent = topicNameMap[name] || name;
-      return badge;
-    };
-    const renderArticleCard = (article: any) => {
-      const tokens = articleTokens(article);
-      const card = make('article', 'research-card research-card-stream');
-      card.dataset.researchCard = '';
-      card.dataset.search = articleSearchText(article, tokens);
-      card.dataset.disease = tokens.diseaseText;
-      card.dataset.diseaseIds = tokens.diseaseIds;
-      card.dataset.country = tokens.countryText;
-      card.dataset.countryCodes = tokens.countryCodes;
-      card.dataset.topic = tokens.topicText;
-      card.dataset.topicSlugs = tokens.topicSlugs;
-      card.dataset.pathogenTypes = tokens.pathogenTypeIds;
-      card.dataset.populations = tokens.populationIds;
-      card.dataset.study = String(article.study_type ?? '').toLowerCase();
-      card.dataset.journal = String(article.journal ?? '').toLowerCase();
-      card.dataset.publisher = String(article.publisher ?? '').toLowerCase();
-      card.dataset.publishedAt = String(article.published_at ?? '');
-      card.dataset.peerReviewStatus = String(article.peer_review_status ?? '');
-      card.dataset.openAccess = article.open_access_status === 'open' ? 'true' : 'false';
-
-      const topline = make('div', 'research-card-topline');
-      const badges = make('div', 'research-card-badges');
-      badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer', article.peer_review_status === 'peer_reviewed' ? 'Évalué par les pairs' : 'Prépublication'));
-      if (article.detail_available === false) badges.appendChild(makeBadge('Bibliographic record', '书目记录', '', 'Notice bibliographique'));
-      if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history', 'Référence historique'));
-      if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa', 'Accès ouvert'));
-      (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', frenchDiseaseName(item))));
-      (article.topics ?? []).slice(0, 3).forEach((item: any) => badges.appendChild(makeTopicBadge(text(item.name))));
-      topline.appendChild(badges);
-      if (article.doi) {
-        const doi = document.createElement('a');
-        doi.className = 'research-card-doi';
-        doi.href = `https://doi.org/${article.doi}`;
-        doi.target = '_blank';
-        doi.rel = 'noopener noreferrer';
-        doi.textContent = `DOI ${article.doi} ↗`;
-        topline.appendChild(doi);
-      }
-      card.appendChild(topline);
-
-      const title = make('h3', 'research-card-title');
-      const titleLink = document.createElement('a');
-      if (article.detail_available === false) {
-        titleLink.href = article.doi ? `https://doi.org/${article.doi}` : `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(article.pmid)}/`;
-        titleLink.target = '_blank';
-        titleLink.rel = 'noopener noreferrer';
-      } else {
-        titleLink.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
-      }
-      titleLink.textContent = text(article.title);
-      title.appendChild(titleLink);
-      card.appendChild(title);
-
-      const authorNames = (article.authors ?? []).filter(Boolean).map(text);
-      if (authorNames.length) {
-        const authors = make('p', 'research-card-authors');
-        const preview = authorNames.slice(0, 3);
-        const en = authorNames.length > 3 ? `${preview.join(', ')} +${authorNames.length - preview.length} more` : preview.join(', ');
-        const zh = authorNames.length > 3 ? `${preview.join('、')} 等 ${authorNames.length} 位作者` : preview.join('、');
-        const fr = authorNames.length > 3 ? `${preview.join(', ')} et ${authorNames.length - preview.length} autre${authorNames.length - preview.length === 1 ? '' : 's'}` : preview.join(', ');
-        setLangText(authors, en, zh, fr);
-        card.appendChild(authors);
-      }
-
-      const source = make('p', 'research-card-source');
-      const journal = document.createElement('span');
-      setLangText(journal, text(article.journal || 'Journal unavailable'), text(article.journal || '期刊信息暂缺'), text(article.journal || 'Revue indisponible'));
-      source.appendChild(journal);
-      const separator = document.createElement('span');
-      separator.setAttribute('aria-hidden', 'true');
-      separator.textContent = '·';
-      source.appendChild(separator);
-      const time = document.createElement('time');
-      if (article.published_at) time.dateTime = article.published_at;
-      setLangText(time, formatArticleDate(article, 'en'), formatArticleDate(article, 'zh'), formatArticleDate(article, 'fr'));
-      source.appendChild(time);
-      card.appendChild(source);
-
-      const openAccessUrl = article.open_access_status === 'open'
-        ? article.open_access_url || article.source_urls?.publisher
-        : '';
-      const surveillance = (article.related_surveillance ?? [])[0];
-      const fallbackDisease = (article.diseases ?? [])[0];
-      const surveillancePath = surveillance?.url || (fallbackDisease?.slug ? `/diseases/${fallbackDisease.slug}/` : '');
-      const surveillanceUrl = surveillancePath && routePrefix && surveillancePath.startsWith('/') ? `${routePrefix}${surveillancePath}` : surveillancePath;
-      if (openAccessUrl || surveillanceUrl) {
-        const actions = make('div', 'research-card-actions');
-        if (openAccessUrl) {
-          const open = make('a', 'research-card-action research-card-action-oa');
-          open.href = openAccessUrl;
-          open.target = '_blank';
-          open.rel = 'noopener noreferrer';
-          setLangText(open, 'Open article ↗', '打开全文 ↗', 'Ouvrir l’article ↗');
-          actions.appendChild(open);
-        }
-        if (surveillanceUrl) {
-          const related = make('a', 'research-card-action');
-          related.href = surveillanceUrl;
-          const labelEn = `${surveillance?.disease_name_en || fallbackDisease?.name_en || 'Related'} surveillance →`;
-          const labelZh = `${surveillance?.disease_name_zh || surveillance?.disease_name_en || fallbackDisease?.name_zh || fallbackDisease?.name_en || '相关'}监测 →`;
-          const labelFr = `${surveillance?.disease_name_fr || frenchDiseaseName(fallbackDisease ?? {})} — surveillance →`;
-          setLangText(related, labelEn, labelZh, labelFr);
-          actions.appendChild(related);
-        }
-        card.appendChild(actions);
-      }
-
-      const facts = make('dl', 'research-card-facts');
-      const studyFact = document.createElement('div');
-      const studyDt = document.createElement('dt');
-      setLangText(studyDt, 'Type', '类型', 'Type');
-      const studyDd = document.createElement('dd');
-      studyDd.textContent = studyTypeMap[text(article.study_type || 'Journal article')] || text(article.study_type || (currentLang() === 'zh' ? '期刊论文' : 'Journal article'));
-      studyFact.append(studyDt, studyDd);
-      const geographyFact = document.createElement('div');
-      const geographyDt = document.createElement('dt');
-      setLangText(geographyDt, 'Scope', '范围', 'Portée');
-      const geographyDd = document.createElement('dd');
-      geographyDd.textContent = (article.countries ?? []).length > 0
-        ? (article.countries ?? []).slice(0, 3).map(regionName).join(currentLang() === 'zh' ? '、' : ', ')
-        : currentLang() === 'zh' ? '未分类' : currentLang() === 'fr' ? 'Non classé' : 'Not classified';
-      geographyFact.append(geographyDt, geographyDd);
-      facts.append(studyFact, geographyFact);
-      card.appendChild(facts);
-
-      if (article.detail_available === false) return card;
-      const context = make('p', 'research-context');
-      const contextLabel = document.createElement('strong');
-      setLangText(contextLabel, 'Why it matters now', '为何现在值得关注', 'Pourquoi cette étude compte maintenant');
-      const contextCopy = document.createElement('span');
-      setLangText(contextCopy, text(article.why_it_matters_en), article.why_it_matters_zh, article.why_it_matters_fr || article.summary?.fr?.public_health_relevance);
-      context.append(contextLabel, contextCopy);
-      card.appendChild(context);
-
-      return card;
-    };
     const filtersAreActive = () => Boolean(
       (search?.value.trim() ?? '')
       || disease?.value
@@ -697,7 +526,7 @@ const itemList = {
     const renderArticles = (articles: any[], knownTotal = articles.length) => {
       if (!list) return;
       const visible = articles.slice(0, visibleLimit);
-      list.replaceChildren(...visible.map(renderArticleCard));
+      renderResearchList(list, visible, currentLang());
       if (count) count.textContent = currentLang() === 'zh'
         ? (knownTotal === visible.length ? `${knownTotal} 篇文献` : `已显示 ${visible.length} / ${knownTotal} 篇文献`)
         : currentLang() === 'fr'
@@ -880,17 +709,15 @@ const itemList = {
   .oa-filter input { width: .9rem; height: .9rem; accent-color: rgb(var(--color-brand)); }
   .research-filters .oa-filter > span { margin: 0; color: rgb(var(--text-muted)); letter-spacing: 0; text-transform: none; }
   .result-count { margin-top: .82rem; color: rgb(var(--text-faint)); font: 500 .64rem/1 ui-monospace, monospace; }
-  .research-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .72rem; margin-top: .72rem; }
   .research-load-more { display: inline-flex; align-items: center; justify-content: center; min-height: 2.5rem; margin-top: 1rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .48); padding: 0 1rem; color: rgb(var(--color-brand)); font-size: .74rem; font-weight: 650; }
   .research-load-more:hover { border-color: rgb(var(--color-brand) / .5); }
   .research-load-more[hidden] { display: none; }
-  .research-list[hidden] { display: none; }
   .research-empty { display: grid; place-items: center; min-height: 16rem; text-align: center; }
   .research-empty.hidden { display: none; }
   .research-empty h3 { margin-top: 1rem; color: rgb(var(--text-strong)); font: 600 1.3rem/1.1 'IBM Plex Sans', sans-serif; }
   .research-empty p { max-width: 30rem; margin-top: .55rem; color: rgb(var(--text-muted)); font-size: .84rem; }
   .empty-orbit { width: 3.5rem; height: 3.5rem; border: 1px solid rgb(var(--color-teal) / .45); box-shadow: inset 0 0 0 .8rem rgb(var(--color-teal) / .05); }
   @media (max-width: 1080px) { .featured-list, .curated-research-grid { grid-template-columns: 1fr; } .historical-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .research-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .search-field { grid-column: 1 / -1; border-bottom: 1px solid rgb(var(--border) / .62); } .research-filters > label:nth-child(even) { border-left: 0; } .research-filters > label:nth-child(n+4) { border-top: 1px solid rgb(var(--border) / .62); } }
-  @media (max-width: 900px) { .research-hero-grid { grid-template-columns: 1fr; } .research-week { max-width: 34rem; } .feed-heading { grid-template-columns: 1fr; } .feed-all-link { justify-self: start; } .research-list { grid-template-columns: 1fr; } }
+  @media (max-width: 900px) { .research-hero-grid { grid-template-columns: 1fr; } .research-week { max-width: 34rem; } .feed-heading { grid-template-columns: 1fr; } .feed-all-link { justify-self: start; } }
   @media (max-width: 600px) { .research-page { width: min(var(--page-directory-width), calc(100% - var(--page-gutter))); padding-top: 1rem; } .research-hero-grid { padding: 1.2rem; } .research-hero-actions { align-items: flex-start; flex-direction: column; } .research-primary-link { width: 100%; } .research-week dl { grid-template-columns: 1fr; } .research-week dl div, .research-week dl div:nth-child(odd), .research-week dl div:nth-child(n+3) { display: flex; align-items: center; justify-content: space-between; margin-top: 0; padding: .65rem 0; border-top: 1px solid rgb(var(--border) / .65); border-left: 0; } .research-week dl div:first-child { border-top: 0; } .research-week dt { min-height: 0; } .research-week dd { margin-top: 0; } .historical-list { grid-template-columns: 1fr; } .research-heading-split, .directory-heading { align-items: flex-start; flex-direction: column; } .directory-rows section { grid-template-columns: 1fr; gap: .4rem; } .feed-groups { grid-template-columns: 1fr; } .feed-all-link { width: 100%; justify-content: space-between; white-space: normal; } .research-filters { grid-template-columns: 1fr; } .research-filters > label { border-top: 1px solid rgb(var(--border) / .62); border-left: 0; } .research-filters > .search-field { grid-column: auto; border-top: 0; } .research-filters > .oa-filter { min-height: 3rem; justify-content: flex-start; } }
 </style>

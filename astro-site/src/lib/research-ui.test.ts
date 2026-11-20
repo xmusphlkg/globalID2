@@ -46,13 +46,15 @@ test('Research homepage renders collections, seven-day metrics, and the trend in
 });
 
 test('static and dynamically rendered research cards expose the same discovery actions', () => {
-  const component = readSource('components/research/ResearchArticleCard.astro');
-  const homepage = readSource('pages/research/index.astro');
+  const component = readSource('components/research/ResearchArticleCard.tsx');
   const catalogue = readSource('lib/research-catalogue.ts');
 
+  for (const path of ['pages/research/index.astro', 'components/research/ResearchCollectionPage.astro',
+    'components/research/DiseaseLiteratureExplorer.tsx', 'components/research/renderResearchList.tsx']) {
+    assert.match(readSource(path), /<ResearchArticleCard\b/);
+  }
   for (const marker of ['research-card-authors', 'research-badge-topic', 'research-card-action-oa', 'surveillanceUrl']) {
     assert.match(component, new RegExp(marker));
-    assert.match(homepage, new RegExp(marker));
   }
   assert.match(catalogue, /authors: article\.authors/);
   assert.match(catalogue, /related_surveillance: article\.related_surveillance/);

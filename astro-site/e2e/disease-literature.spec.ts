@@ -80,7 +80,7 @@ test('complete disease records, filters and yearly chart stay in sync and valida
   await expect(library.locator('.literature-result-count')).toContainText('符合条件 30 篇');
   await library.getByLabel('记录类型', { exact: false }).selectOption('bibliographic');
   await expect(library.locator('[data-literature-record]')).toHaveCount(10);
-  await expect(library.locator('[data-literature-record] a').first()).toHaveAttribute('href', /^https:\/\/doi.org\//);
+  await expect(library.locator('[data-literature-record] .research-card-title a').first()).toHaveAttribute('href', /^https:\/\/doi.org\//);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 });
 

@@ -1,10 +1,8 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
-import ResearchArticleCard from './ResearchArticleCard.astro';
+import ResearchArticleCard from './ResearchArticleCard';
 import { buildAlternatePaths, clampSeoTitle, isIndexableResearchCollection } from '../../lib/seo';
 import { absoluteSiteUrl } from '../../lib/papers';
-import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
-import { RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS } from '../../utils/i18n';
 
 interface Props {
   eyebrow: string;
@@ -140,17 +138,13 @@ const structuredData = {
             <p id="collection-result-count" class="collection-result-count" aria-live="polite">{initialResultCount}</p>
             <div
               id="collection-list"
-              class="collection-list"
+              class="research-list"
               data-initial-visible={initialVisibleArticles}
               data-collection-locale={locale}
               data-collection-total={articles.length}
               data-collection-client-catalogue={useClientCollectionCatalogue ? 'true' : 'false'}
               data-collection-scope={clientCollectionScope}
               data-collection-value={clientCollectionValue}
-              data-disease-name-map={JSON.stringify({ ...DISEASE_NAMES_FR, ...Object.fromEntries(Object.entries(DISEASE_NAMES_FR_BY_ID).map(([key, value]) => [key.toLowerCase(), value])) })}
-              data-region-name-map={JSON.stringify({ 'cn-gx': 'Guangxi, Chine', 'cn-sd': 'Shandong, Chine' })}
-              data-study-type-map={JSON.stringify(Object.fromEntries(Object.entries(STUDY_TYPE_LABELS).map(([key, labels]) => [key, labels.fr])))}
-              data-topic-name-map={JSON.stringify(Object.fromEntries(Object.entries(RESEARCH_TOPIC_LABELS).map(([key, labels]) => [key, labels.fr])))}
             >
               {serverRenderedArticles.map((article: any, index: number) => (
                 <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} />
@@ -176,7 +170,7 @@ const structuredData = {
 
 <script>
   import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
-  import { siteHref } from '../../lib/papers';
+  import { renderResearchList } from './renderResearchList';
   const list = document.querySelector<HTMLElement>('#collection-list');
   const cards = [...document.querySelectorAll<HTMLElement>('[data-research-card]')].filter(card => card.closest('#collection-list'));
   const count = document.querySelector<HTMLElement>('#collection-result-count');
@@ -186,54 +180,11 @@ const structuredData = {
   const useClientCatalogue = list?.dataset.collectionClientCatalogue === 'true';
   const collectionScope = list?.dataset.collectionScope ?? '';
   const collectionValue = (list?.dataset.collectionValue ?? '').toLowerCase();
-  const diseaseNameMap = (() => {
-    try { return JSON.parse(list?.dataset.diseaseNameMap ?? '{}') as Record<string, string>; } catch { return {}; }
-  })();
-  const regionNameMap = (() => {
-    try { return JSON.parse(list?.dataset.regionNameMap ?? '{}') as Record<string, string>; } catch { return {}; }
-  })();
-  const studyTypeMap = (() => {
-    try { return JSON.parse(list?.dataset.studyTypeMap ?? '{}') as Record<string, string>; } catch { return {}; }
-  })();
-  const topicNameMap = (() => {
-    try { return JSON.parse(list?.dataset.topicNameMap ?? '{}') as Record<string, string>; } catch { return {}; }
-  })();
   const locale = list?.dataset.collectionLocale === 'zh' ? 'zh' : list?.dataset.collectionLocale === 'fr' ? 'fr' : 'en';
-  const routePrefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
   let visibleLimit = initialVisible;
   const text = (value: unknown) => String(value ?? '');
   const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const setLangText = (element: HTMLElement, en: string, zh?: string | null, fr?: string | null) => {
-    element.textContent = locale === 'zh' ? (zh || en) : locale === 'fr' ? (fr || 'Traduction française en attente.') : en;
-  };
-  const frenchDiseaseName = (item: any) => item.name_fr
-    || diseaseNameMap[String(item.slug ?? '').toLowerCase()]
-    || diseaseNameMap[String(item.disease_id ?? '').toLowerCase()]
-    || 'Nom français indisponible';
-  const frenchRegionName = (item: any) => {
-    if (item.name_fr) return item.name_fr;
-    const code = String(item.code ?? '').toUpperCase();
-    const override = regionNameMap[code.toLowerCase()];
-    if (override) return override;
-    if (/^[A-Z]{2}$/.test(code)) {
-      try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(code) || 'Région non précisée'; } catch { return 'Région non précisée'; }
-    }
-    return 'Région non précisée';
-  };
   const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
-  const formatDate = (value: string | undefined, lang: 'en' | 'zh' | 'fr') => {
-    if (!value) return lang === 'zh' ? '日期暂缺' : lang === 'fr' ? 'Date indisponible' : 'Date unavailable';
-    return new Intl.DateTimeFormat(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(value));
-  };
-  const formatArticleDate = (article: any, lang: 'en' | 'zh' | 'fr') => {
-    const label = lang === 'zh' ? article.publication_date_label_zh : lang === 'fr' ? article.publication_date_label_fr : article.publication_date_label_en;
-    return label || formatDate(article.published_at, lang);
-  };
   const articleTokens = (article: any) => ({
     diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase(),
     diseaseIds: (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean).join(' '),
@@ -246,147 +197,6 @@ const structuredData = {
     scope: ['disease', 'country', 'topic', 'week'].includes(collectionScope) ? collectionScope as 'disease' | 'country' | 'topic' | 'week' : undefined,
     value: collectionValue,
   });
-  const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
-    const element = document.createElement(tag);
-    if (className) element.className = className;
-    return element;
-  };
-  const makeBadge = (en: string, zh: string | null | undefined, extraClass = '', fr: string | null | undefined = null) => {
-    const badge = make('span', `research-badge ${extraClass}`.trim());
-    setLangText(badge, en, zh, fr);
-    return badge;
-  };
-  const makeTopicBadge = (name: string) => {
-    const badge = make('a', 'research-badge research-badge-topic');
-    badge.href = `${routePrefix}/research/topics/${slugifyTopic(name)}/`;
-    badge.textContent = locale === 'fr' ? (topicNameMap[name] || 'Thème non traduit') : name;
-    return badge;
-  };
-  const renderArticleCard = (article: any) => {
-    const tokens = articleTokens(article);
-    const card = make('article', 'research-card');
-    card.dataset.researchCard = '';
-    card.dataset.disease = tokens.diseaseText;
-    card.dataset.diseaseIds = tokens.diseaseIds;
-    card.dataset.country = tokens.countryText;
-    card.dataset.countryCodes = tokens.countryCodes;
-    card.dataset.topic = tokens.topicText;
-    card.dataset.topicSlugs = tokens.topicSlugs;
-    card.dataset.study = String(article.study_type ?? '').toLowerCase();
-    card.dataset.journal = String(article.journal ?? '').toLowerCase();
-    card.dataset.publisher = String(article.publisher ?? '').toLowerCase();
-    card.dataset.publishedAt = String(article.published_at ?? '');
-    card.dataset.peerReviewStatus = String(article.peer_review_status ?? '');
-    card.dataset.openAccess = article.open_access_status === 'open' ? 'true' : 'false';
-
-    const topline = make('div', 'research-card-topline');
-    const badges = make('div', 'research-card-badges');
-    badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer', article.peer_review_status === 'peer_reviewed' ? 'Évalué par les pairs' : 'Prépublication'));
-    if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history', 'Référence historique'));
-    if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa', 'Accès ouvert'));
-    (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', frenchDiseaseName(item))));
-    (article.topics ?? []).slice(0, 3).forEach((item: any) => badges.appendChild(makeTopicBadge(text(item.name))));
-    topline.appendChild(badges);
-    if (article.doi) {
-      const doi = make('a', 'research-card-doi');
-      doi.href = `https://doi.org/${article.doi}`;
-      doi.target = '_blank';
-      doi.rel = 'noopener noreferrer';
-      doi.textContent = `DOI ${article.doi} ↗`;
-      topline.appendChild(doi);
-    }
-    card.appendChild(topline);
-
-    const title = make('h3', 'research-card-title');
-    const titleLink = make('a');
-    titleLink.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
-    titleLink.textContent = text(article.title);
-    title.appendChild(titleLink);
-    card.appendChild(title);
-
-    const authorNames = (article.authors ?? []).filter(Boolean).map(text);
-    if (authorNames.length) {
-      const authors = make('p', 'research-card-authors');
-      const preview = authorNames.slice(0, 3);
-      const en = authorNames.length > 3 ? `${preview.join(', ')} +${authorNames.length - preview.length} more` : preview.join(', ');
-      const zh = authorNames.length > 3 ? `${preview.join('、')} 等 ${authorNames.length} 位作者` : preview.join('、');
-      const fr = authorNames.length > 3 ? `${preview.join(', ')} et ${authorNames.length - preview.length} autre${authorNames.length - preview.length === 1 ? '' : 's'}` : preview.join(', ');
-      setLangText(authors, en, zh, fr);
-      card.appendChild(authors);
-    }
-
-    const source = make('p', 'research-card-source');
-    const journal = make('span');
-    setLangText(journal, text(article.journal || 'Journal unavailable'), text(article.journal || '期刊信息暂缺'), text(article.journal || 'Revue indisponible'));
-    source.appendChild(journal);
-    const separator = make('span');
-    separator.setAttribute('aria-hidden', 'true');
-    separator.textContent = '·';
-    source.appendChild(separator);
-    const time = make('time');
-    if (article.published_at) time.dateTime = article.published_at;
-    setLangText(time, formatArticleDate(article, 'en'), formatArticleDate(article, 'zh'), formatArticleDate(article, 'fr'));
-    source.appendChild(time);
-    card.appendChild(source);
-
-    const openAccessUrl = article.open_access_status === 'open'
-      ? article.open_access_url || article.source_urls?.publisher
-      : '';
-    const surveillance = (article.related_surveillance ?? [])[0];
-    const fallbackDisease = (article.diseases ?? [])[0];
-    const rawSurveillancePath = surveillance?.url || (fallbackDisease?.slug ? `/diseases/${fallbackDisease.slug}/` : '');
-    const surveillancePath = rawSurveillancePath.replace(/^\/diseases\/([^/]+)\//, (_match: string, slug: string) => `/diseases/${slug.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}/`);
-    const surveillanceUrl = surveillancePath && routePrefix && surveillancePath.startsWith('/') ? `${routePrefix}${surveillancePath}` : surveillancePath;
-    if (openAccessUrl || surveillanceUrl) {
-      const actions = make('div', 'research-card-actions');
-      if (openAccessUrl) {
-        const open = make('a', 'research-card-action research-card-action-oa');
-        open.href = openAccessUrl;
-        open.target = '_blank';
-        open.rel = 'noopener noreferrer';
-        setLangText(open, 'Open article ↗', '打开全文 ↗', 'Ouvrir l’article ↗');
-        actions.appendChild(open);
-      }
-      if (surveillanceUrl) {
-        const related = make('a', 'research-card-action');
-        related.href = surveillanceUrl;
-        const labelEn = `${surveillance?.disease_name_en || fallbackDisease?.name_en || 'Related'} surveillance →`;
-        const labelZh = `${surveillance?.disease_name_zh || surveillance?.disease_name_en || fallbackDisease?.name_zh || fallbackDisease?.name_en || '相关'}监测 →`;
-        const labelFr = `${surveillance?.disease_name_fr || frenchDiseaseName(fallbackDisease ?? {})} — surveillance →`;
-        setLangText(related, labelEn, labelZh, labelFr);
-        actions.appendChild(related);
-      }
-      card.appendChild(actions);
-    }
-
-    const facts = make('dl', 'research-card-facts');
-    const studyFact = make('div');
-    const studyDt = make('dt');
-    setLangText(studyDt, 'Type', '类型', 'Type');
-    const studyDd = make('dd');
-    studyDd.textContent = locale === 'fr' ? (studyTypeMap[text(article.study_type || 'Journal article')] || 'Type d’étude non traduit') : text(article.study_type || (locale === 'zh' ? '期刊论文' : 'Journal article'));
-    studyFact.append(studyDt, studyDd);
-    const geographyFact = make('div');
-    const geographyDt = make('dt');
-    setLangText(geographyDt, 'Scope', '范围', 'Portée');
-    const geographyDd = make('dd');
-    geographyDd.textContent = (article.countries ?? []).length > 0
-      ? (article.countries ?? []).slice(0, 3).map((item: any) => locale === 'zh' ? item.name_zh ?? item.name_en : locale === 'fr' ? frenchRegionName(item) : item.name_en).join(locale === 'zh' ? '、' : ', ')
-      : (locale === 'zh' ? '未分类' : locale === 'fr' ? 'Non classé' : 'Not classified');
-    geographyFact.append(geographyDt, geographyDd);
-    facts.append(studyFact, geographyFact);
-    card.appendChild(facts);
-
-    const context = make('p', 'research-context');
-    const contextLabel = make('strong');
-    setLangText(contextLabel, 'Why it matters now', '为何现在值得关注', 'Pourquoi cette étude compte maintenant');
-    const contextCopy = make('span');
-    setLangText(contextCopy, text(article.why_it_matters_en), article.why_it_matters_zh, article.why_it_matters_fr || article.summary?.fr?.public_health_relevance);
-    context.append(contextLabel, contextCopy);
-    card.appendChild(context);
-
-    return card;
-  };
   const matchesCollection = (article: any) => {
     const tokens = articleTokens(article);
     if (collectionScope === 'disease') return hasToken(tokens.diseaseIds, collectionValue);
@@ -415,7 +225,7 @@ const structuredData = {
     try {
       const articles = (await loadCatalogue()).filter(matchesCollection);
       const visible = articles.slice(0, visibleLimit);
-      list.replaceChildren(...visible.map(renderArticleCard));
+      renderResearchList(list, visible, locale);
       renderCount(visible.length, articles.length || totalArticles);
       if (loadMore) loadMore.hidden = (articles.length || totalArticles) <= visibleLimit;
     } catch (error) {
@@ -434,7 +244,7 @@ const structuredData = {
 </script>
 
 <style>
-  .research-collection { width: min(var(--page-reading-width), calc(100% - var(--page-gutter))); margin: 0 auto; padding: var(--page-block-space) 0 3rem; }
+  .research-collection { width: min(var(--page-directory-width), calc(100% - var(--page-gutter))); margin: 0 auto; padding: var(--page-block-space) 0 3rem; }
   .collection-hero { padding: clamp(1.5rem, 4vw, 2.75rem); }
   .collection-topline { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
   .collection-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
@@ -452,11 +262,10 @@ const structuredData = {
   .collection-heading h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.4rem, 3vw, 2rem)/1.1 'IBM Plex Sans', sans-serif; }
   .collection-heading > span { color: rgb(var(--border-soft)); font: 500 .75rem/1 ui-monospace, monospace; }
   .collection-result-count { margin-top: 1rem; color: rgb(var(--text-faint)); font: 500 .67rem/1 ui-monospace, monospace; }
-  .collection-list { margin-top: .35rem; }
   .collection-load-more { display: inline-flex; align-items: center; justify-content: center; min-height: 2.5rem; margin-top: 1rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .48); padding: 0 1rem; color: rgb(var(--color-brand)); font-size: .74rem; font-weight: 650; }
   .collection-load-more[hidden] { display: none; }
   .collection-empty { display: grid; place-items: center; min-height: 15rem; text-align: center; }
   .collection-empty h3 { color: rgb(var(--text-strong)); font: 600 1.25rem/1.2 'IBM Plex Sans', sans-serif; }
   .collection-empty p { max-width: 32rem; margin-top: .55rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.6; }
-  @media (max-width: 640px) { .research-collection { width: min(var(--page-reading-width), calc(100% - var(--page-gutter))); padding-top: 1rem; } .collection-topline { align-items: start; flex-direction: column; } .collection-metrics { grid-template-columns: repeat(2, 1fr); } .collection-metrics div:nth-child(3) { padding-left: 0; border-left: 0; } }
+  @media (max-width: 640px) { .research-collection { width: min(var(--page-directory-width), calc(100% - var(--page-gutter))); padding-top: 1rem; } .collection-topline { align-items: start; flex-direction: column; } .collection-metrics { grid-template-columns: repeat(2, 1fr); } .collection-metrics div:nth-child(3) { padding-left: 0; border-left: 0; } }
 </style>
