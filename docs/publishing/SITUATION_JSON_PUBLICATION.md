@@ -45,9 +45,9 @@ Situation 浏览器入口为同源 `/site-data/situation/current.json`，可通�
 
 `cloudflare/surveillance-data/src/index.ts` 保留原 surveillance 协议，并支持 Situation namespace；standalone Worker 名仍为 `globalid-surveillance-data`。两个前缀共用现有 `DATA` R2 binding。current 使用 `no-store`，不可变对象长期缓存，R2 body 直接流式返回。gzip HTTP 表示保留编码头，浏览器对解压后的 JSON 校验。旧 `/situation/map-data.json` 与 `/situation/outbreaks/{id}.json` 由当前 manifest 返回无缓存跳转。
 
-没有 zone Workers Routes 管理权限时，使用 Pages Advanced Mode：`src/pages.ts` 复用同一 handler，其他请求交给 `env.ASSETS.fetch`。`scripts/build-pages.mjs <dist>` 生成 `_worker.js` 与 `_routes.json`；路由只包含数据 namespace 和旧 JSON aliases，不接管普通 HTML、研究索引或静态资源。Pages 的 production 配置需要 `DATA` → `globalid-papers`，可显式设置 `DATA_PREFIX=site-data/surveillance` 与 `SITUATION_PREFIX=site-data/situation`，未配置变量时 handler 使用相同默认值。此方案遵循 [Pages Advanced Mode](https://developers.cloudflare.com/pages/functions/advanced-mode/) 与 [路由文件](https://developers.cloudflare.com/pages/functions/routing/) 的公开契约。
+Pages 使用路径受限的 Functions：`src/pages.ts` 复用同一数据 handler，生成的 `functions/site-data/[[path]].js` 和 Situation 别名只处理数据请求，普通 HTML、研究页面和静态资源由 Pages 直接提供。`scripts/build-pages.mjs <dist>` 生成 `functions/` 与 `_routes.json`。Pages 的 production 配置需要 `DATA` → `globalid-papers`，可显式设置 `DATA_PREFIX=site-data/surveillance` 与 `SITUATION_PREFIX=site-data/situation`，未配置变量时 handler 使用相同默认值。此方案遵循 [Pages Functions 路由](https://developers.cloudflare.com/pages/functions/routing/) 与 [路由文件](https://developers.cloudflare.com/pages/functions/routing/#create-a-_routesjson-file) 的公开契约。
 
-每次后续模板发布都必须保留两个文件，避免移除同源数据服务。`GIDS_PAGES_DATA_WORKER=1` 让 npm 构建在校验完成后打包 Worker；该模式也不再预渲染旧 outbreak JSON。Python 模板构建/完整收据必须纳入 Worker 源码、打包脚本和依赖锁文件。监测 JSON 与 Situation JSON 的日常发布无需构建这个 Worker。
+每次后续模板发布都必须保留同源数据入口，避免移除数据服务。`GIDS_PAGES_DATA_WORKER=1` 让 npm 构建只打包匹配 `/site-data/*` 和 Situation 数据别名的 Pages Functions，普通 HTML 和静态资源继续由 Pages 直接提供。该入口也不再预渲染旧 outbreak JSON。Python 模板构建/完整收据必须纳入数据处理源码、打包脚本和依赖锁文件。监测 JSON 与 Situation JSON 的日常发布无需构建这个入口。
 
 受管生产构建同时提供 `GLOBALID_SKIP_SITE_DATA_GENERATION=1` 与 `PUBLIC_GIDS_RELEASE_ID` 时，要求 `GIDS_RUNTIME_DATA_READY=1` 与 `GIDS_RUNTIME_SITUATION_READY=1`；缺少任一初始化标志时，在任何构建 stage 前停止。标志由管理流程在首次验证通道后传入，不是网络就绪探测的替代品。
 

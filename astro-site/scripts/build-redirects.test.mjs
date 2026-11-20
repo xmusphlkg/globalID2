@@ -37,6 +37,8 @@ test('main-origin research drops papers-host article redirects and keeps the res
     '/research/articles/*  https://papers.globalinfectiousdisease.com/research/articles/:splat  301',
     '/zh/research/articles/*  https://papers.globalinfectiousdisease.com/zh/research/articles/:splat  301',
     '/fr/research/articles/*  https://papers.globalinfectiousdisease.com/fr/research/articles/:splat  301',
+    '/research/countries/*  https://papers.globalinfectiousdisease.com/research/countries/:splat  301',
+    '/fr/research/weekly/*  https://papers.globalinfectiousdisease.com/fr/research/weekly/:splat  301',
     '/research/cards/*  https://papers.globalinfectiousdisease.com/research/cards/:splat  301',
     '/site-data/research/*  https://papers.globalinfectiousdisease.com/site-data/research/:splat  301',
     '/privacy/  /terms/  301',

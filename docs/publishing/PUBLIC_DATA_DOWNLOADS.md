@@ -15,7 +15,7 @@ Situation 使用独立的 `/site-data/situation/bootstrap.json` 和 `summary.jso
 因后台切换 `current.json` 而混用不同版本。
 
 原有 `current.json` 和逻辑数据地址继续供旧页面及外部客户端使用。新入口通过
-Pages Advanced Mode 同源路由提供，也可部署为独立 Worker；数据发布仍先写入
+路径受限的 Pages Functions 同源路由提供，也可部署为独立 Worker；数据发布仍先写入
 不可变对象和完整清单，再以条件写入切换当前版本。
 
 ## 文件结构

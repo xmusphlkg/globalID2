@@ -7,6 +7,8 @@ import pytest
 
 from src.services.data_release import papers_bundle
 from src.services.data_release.papers_bundle import (
+    DEFAULT_PAGES_FILE_BUDGET,
+    DEFAULT_PAGES_FILE_WARN,
     assert_pages_budget,
     evaluate_pages_budget,
     is_papers_relative_path,
@@ -27,12 +29,20 @@ def test_papers_path_classification() -> None:
     assert is_papers_relative_path("research/cards/slug.png")
     assert is_papers_relative_path("site-data/research/index.json")
     assert is_papers_relative_path("zh/research/diseases/influenza/index.html")
+    assert is_papers_relative_path("research/countries/cn/index.html")
+    assert is_papers_relative_path("zh/research/weekly/2026-W01/index.html")
     assert is_papers_relative_path("research/catalogue/diseases/d038.json")
     assert is_papers_relative_path("research/catalogue/diseases/d038/0-0123456789abcdef.json")
     assert not is_papers_relative_path("research/catalogue/entities.json")
     assert not is_papers_relative_path("research/index.html")
     assert not is_papers_relative_path("site-data/countries/us.json")
     assert not is_papers_relative_path("_astro/BaseLayout.css")
+
+
+def test_default_pages_budget_keeps_a_four_thousand_file_safety_margin() -> None:
+    assert DEFAULT_PAGES_FILE_BUDGET == 20_000
+    assert DEFAULT_PAGES_FILE_WARN == 14_000
+    assert DEFAULT_PAGES_FILE_BUDGET - DEFAULT_PAGES_FILE_WARN >= 6_000
 
 
 def test_build_only_research_indexes_are_excluded_from_both_bundles(tmp_path):
@@ -97,6 +107,8 @@ def test_disease_library_is_removed_from_pages_and_uses_same_build_styles_on_pap
     assert 'href="/research/catalogue/diseases/d038.json"' in html
     redirects = (dist / "_redirects").read_text()
     assert "/zh/research/diseases/*  https://papers.globalinfectiousdisease.com/zh/research/diseases/:splat  301" in redirects
+    assert "/research/countries/*  https://papers.globalinfectiousdisease.com/research/countries/:splat  301" in redirects
+    assert "/fr/research/weekly/*  https://papers.globalinfectiousdisease.com/fr/research/weekly/:splat  301" in redirects
 
 
 def test_disabled_cards_are_removed_from_legacy_build_and_staging(tmp_path, monkeypatch):
@@ -370,11 +382,11 @@ def test_library_retention_ignores_arbitrary_paths_and_rejects_modified_shard_by
 
 def test_main_origin_research_keeps_article_links_and_drops_papers_redirects(tmp_path):
     dist, papers = tmp_path / "dist", tmp_path / "papers"
-    weekly = dist / "research/weekly/index.html"
+    main = dist / "research/index.html"
     article = dist / "research/articles/example/index.html"
-    weekly.parent.mkdir(parents=True)
+    main.parent.mkdir(parents=True)
     article.parent.mkdir(parents=True)
-    weekly.write_text('<a href="/research/articles/example/">paper</a>')
+    main.write_text('<a href="/research/articles/example/">paper</a>')
     article.write_text("<p>article</p>")
     (dist / "_redirects").write_text(
         "/research/articles/*  https://papers.globalinfectiousdisease.com/research/articles/:splat  301\n"
@@ -385,7 +397,7 @@ def test_main_origin_research_keeps_article_links_and_drops_papers_redirects(tmp
     redirects = (dist / "_redirects").read_text()
     assert "papers.globalinfectiousdisease.com" not in redirects
     assert "/privacy/  /terms/  301" in redirects
-    assert weekly.read_text() == '<a href="/research/articles/example/">paper</a>'
+    assert main.read_text() == '<a href="/research/articles/example/">paper</a>'
     assert not article.exists()
     assert (papers / "research/articles/example/index.html").is_file()
 

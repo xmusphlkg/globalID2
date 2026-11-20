@@ -326,7 +326,7 @@ export function buildSitemapGroups({
     for (const country of research.facets?.countries ?? []) {
       const slug = pathSegment(country.slug ?? country.code, true);
       const count = Number(country.count ?? 0);
-      if (slug && isIndexableResearchCollection(count)) groups.research.push(...localizedEntry(
+      if (slug && isIndexableResearchCollection(count)) groups[PAPERS_SITEMAP_GROUP].push(...localizedEntry(
         `/research/countries/${slug}/`,
         latestMatchingResearchUpdate(article => (article.countries ?? []).some(item => (
           pathSegment(item.slug ?? item.code, true) === slug
@@ -348,7 +348,7 @@ export function buildSitemapGroups({
       const count = Number(brief.article_count ?? 0);
       const start = typeof brief.start_date === 'string' ? brief.start_date : null;
       const end = typeof brief.end_date === 'string' ? brief.end_date : null;
-      if (week && isIndexableResearchCollection(count)) groups.research.push(...localizedEntry(
+      if (week && isIndexableResearchCollection(count)) groups[PAPERS_SITEMAP_GROUP].push(...localizedEntry(
         `/research/weekly/${week}/`,
         latestMatchingResearchUpdate(article => {
           const published = typeof article.published_at === 'string' ? article.published_at.slice(0, 10) : '';

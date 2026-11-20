@@ -415,21 +415,145 @@ def build_map_payloads(code: str, snapshots: dict[str, dict], population_rows: l
     return catalogue_payload, population_payload, disease_payloads
 
 
-def write_subdivision_maps(output_dir: Path, public_dir: Path, population_rows: list[dict], *, recorded_at_as_of: str | None = None, active_codes: set[str] | None = None) -> dict:
+def _read_existing_map_payloads(root: Path, code: str) -> tuple[dict, dict, dict[str, dict]]:
+    """Read a previous browser map generation for an incremental merge.
+
+    The lossless country snapshots are not guaranteed to be present in a
+    scoped release directory. The previous map payloads are the only complete
+    source for unchanged provinces and diseases in that case.
+    """
+    directory = root / code.lower()
+    catalogue_path = directory / "index.json"
+    if not catalogue_path.is_file():
+        return {}, {}, {}
+    try:
+        catalogue = json.loads(catalogue_path.read_text())
+    except (OSError, ValueError):
+        return {}, {}, {}
+    if not isinstance(catalogue, dict) or catalogue.get("country_code") != code:
+        return {}, {}, {}
+    population = {}
+    population_path = directory / "population.json"
+    if population_path.is_file():
+        try:
+            loaded = json.loads(population_path.read_text())
+            if isinstance(loaded, dict) and loaded.get("country_code") == code:
+                population = loaded
+        except (OSError, ValueError):
+            population = {}
+    diseases = {}
+    for item in catalogue.get("diseases") or []:
+        if not isinstance(item, dict) or not item.get("id"):
+            continue
+        disease_id = str(item["id"]).upper()
+        path = directory / f"{disease_id.lower()}.json"
+        if not path.is_file():
+            continue
+        try:
+            payload = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        if isinstance(payload, dict) and payload.get("country_code") == code:
+            diseases[disease_id] = payload
+    return catalogue, population, diseases
+
+
+def _merge_existing_map_payloads(
+    code: str,
+    catalogue: dict,
+    population: dict,
+    diseases: dict[str, dict],
+    previous_catalogue: dict,
+    previous_population: dict,
+    previous_diseases: dict[str, dict],
+    *,
+    active_codes: set[str] | None,
+) -> tuple[dict, dict, dict[str, dict]]:
+    """Merge fresh entries over an existing incremental map baseline."""
+    # Disease IDs are written in a canonical form so an upstream casing change
+    # cannot create duplicate catalogue entries or leave stale payload files.
+    diseases = {
+        str(disease_id).upper(): payload
+        for disease_id, payload in diseases.items()
+    }
+    for disease_id, payload in diseases.items():
+        if isinstance(payload, dict):
+            payload["disease_id"] = disease_id
+    # A scoped incremental export can contain only changed subdivisions. The
+    # parent country code identifies a complete active catalogue, while a set
+    # without that parent is a partial scope and must inherit every existing
+    # region and disease from the prior publication.
+    allowed = set(active_codes) if active_codes is not None and code in active_codes else None
+    def active(region_code: str) -> bool:
+        return allowed is None or region_code in allowed
+
+    regions = {str(item.get("code")): item for item in catalogue.get("regions") or [] if item.get("code")}
+    for item in previous_catalogue.get("regions") or []:
+        region_code = str(item.get("code") or "")
+        if region_code and active(region_code):
+            regions.setdefault(region_code, item)
+    catalogue["regions"] = [regions[key] for key in sorted(regions)]
+
+    merged_population = dict(population.get("regions") or {})
+    for region_code, years in (previous_population.get("regions") or {}).items():
+        if active(str(region_code)):
+            merged_population.setdefault(region_code, years)
+    population["regions"] = merged_population
+
+    for disease_id, previous in previous_diseases.items():
+        fresh = diseases.get(disease_id)
+        if fresh is None:
+            diseases[disease_id] = previous
+            continue
+        merged_regions = dict(previous.get("regions") or {})
+        merged_regions.update(fresh.get("regions") or {})
+        fresh["regions"] = {
+            region_code: value for region_code, value in merged_regions.items()
+            if active(str(region_code))
+        }
+    catalogue_by_id = {
+        str(item.get("id")).upper(): {**item, "id": str(item.get("id")).upper()}
+        for item in catalogue.get("diseases") or []
+        if item.get("id")
+    }
+    for item in previous_catalogue.get("diseases") or []:
+        disease_id = str(item.get("id") or "").upper()
+        if disease_id and disease_id in diseases:
+            catalogue_by_id.setdefault(disease_id, {**item, "id": disease_id})
+    catalogue["diseases"] = [
+        catalogue_by_id[key]
+        for key in sorted(catalogue_by_id)
+        if key in diseases and diseases[key].get("regions")
+    ]
+    catalogue["cadence"] = "mixed" if len({item.get("cadence") for item in catalogue["diseases"]}) > 1 else (catalogue["diseases"][0].get("cadence", "monthly") if catalogue["diseases"] else "monthly")
+    return catalogue, population, diseases
+
+
+def write_subdivision_maps(output_dir: Path, public_dir: Path, population_rows: list[dict], *, recorded_at_as_of: str | None = None, active_codes: set[str] | None = None, preserve_existing: bool = False) -> dict:
     manifest = json.loads((BOUNDARIES / "manifest.json").read_text())
     root = public_dir / "subdivision-maps"
     countries = []
     for code, boundary in sorted(manifest["countries"].items()):
+        previous_catalogue, previous_population, previous_diseases = (
+            _read_existing_map_payloads(public_dir / "subdivision-maps", code)
+            if preserve_existing and recorded_at_as_of is None else ({}, {}, {})
+        )
         snapshots = {}
         for path in (output_dir / "countries").glob(f"{code.lower()}-*.json"):
             snapshot = json.loads(path.read_text())
             region_code = str(snapshot["country_code"]).upper()
             if active_codes is None or region_code in active_codes:
                 snapshots[region_code] = snapshot
-        if not snapshots:
+        if not snapshots and not previous_diseases:
             remove_stale_json_files(root / code.lower(), set())
             continue
         catalogue, population, diseases = build_map_payloads(code, snapshots, population_rows, boundary)
+        if previous_diseases:
+            catalogue, population, diseases = _merge_existing_map_payloads(
+                code, catalogue, population, diseases,
+                previous_catalogue, previous_population, previous_diseases,
+                active_codes=active_codes,
+            )
         directory = root / code.lower()
         directory.mkdir(parents=True, exist_ok=True)
         geometry_path = BOUNDARIES / boundary["file"]

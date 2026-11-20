@@ -508,7 +508,7 @@ const diseaseSeo = {
               dataUrl={diseaseDataUrl}
               initialLanguage={locale}
             />
-            <SurveillanceDiseaseSummary client:load dataUrl={diseaseSummaryUrl} mode="disease-countries" language={locale} routes={countryRoutes} />
+            <SurveillanceDiseaseSummary client:load dataUrl={diseaseSummaryUrl} mode="disease-countries" language={locale} disease={disease} routes={countryRoutes} />
         </section>
 
         <section id="seasonality" class="figure-panel scroll-mt-24">

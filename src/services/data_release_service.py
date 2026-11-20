@@ -2501,7 +2501,9 @@ class DataReleaseService:
             ),
             pages_file_budget=int(cfg.pages_file_budget),
             pages_file_warn=int(cfg.pages_file_warn),
-            research_on_main=bool(getattr(cfg, "literature_json_enabled", False)),
+            # All long-tail research pages are published on the Papers host.
+            # The literature flag controls data publication, not URL ownership.
+            research_on_main=False,
         )
 
     def _publish_papers_r2_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:

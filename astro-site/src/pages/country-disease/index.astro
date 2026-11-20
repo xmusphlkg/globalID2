@@ -1,0 +1,23 @@
+---
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import CountryDiseaseRuntime from '../../components/public/CountryDiseaseRuntime';
+import { buildAlternatePaths } from '../../lib/seo';
+
+export function getStaticPaths() {
+  return [{ params: {}, props: { locale: 'en' } }];
+}
+
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
+const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
+const title = locale === 'zh' ? '国家疾病监测' : locale === 'fr' ? 'Surveillance par pays et maladie' : 'Country disease surveillance';
+const description = locale === 'zh' ? '按国家和疾病查看官方来源传染病监测数据。' : locale === 'fr' ? 'Consultez les données officielles de surveillance des maladies infectieuses par pays et par maladie.' : 'View official-source infectious disease surveillance data by country and disease.';
+---
+
+<ReportLayout
+  title={`${title} | GIDS`}
+  description={description}
+  initialLanguage={locale}
+  seo={{ title: `${title} | GIDS`, description, locale, canonicalPath: `${prefix}/country-disease/`, alternatePaths: buildAlternatePaths(`${prefix}/country-disease/`, locale), pageType: 'WebPage' }}
+>
+  <CountryDiseaseRuntime client:load language={locale} />
+</ReportLayout>

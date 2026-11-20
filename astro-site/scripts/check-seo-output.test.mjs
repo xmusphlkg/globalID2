@@ -144,13 +144,13 @@ test('links between papers pages share one host and are not flagged as redirects
 
 test('main-site pages linking to a papers path through the redirect are reported', () => {
   const dist = pageDist({
-    'research/weekly/w1': '<a href="/research/articles/a/">a</a>',
+    'about': '<a href="/research/articles/a/">a</a>',
     'research/articles/a': '<p>a</p>',
   });
   try {
     const errors = linkErrors(auditSeoOutput(dist).errors);
     assert.equal(errors.length, 1);
-    assert.match(errors[0], /^\/research\/weekly\/w1\/: internal link points through redirect/);
+    assert.match(errors[0], /^\/about\/: internal link points through redirect/);
   } finally { rmSync(dist, { recursive: true, force: true }); }
 });
 

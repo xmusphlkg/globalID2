@@ -3,6 +3,28 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.5', date: '2026-11-20',
+    titleEn: 'A smaller static site with runtime long-tail pages',
+    titleZh: '更小的静态站点与运行时长尾页面',
+    titleFr: 'Un site statique plus compact avec des pages longue traîne à l’exécution',
+    summaryEn: 'Country-disease and research collections now grow through shared runtime shells, while path-scoped Pages Functions keep data requests separate from static site traffic.',
+    summaryZh: '国家疾病页面和研究集合通过共享运行时页面壳增长，路径受限的 Pages Functions 将数据请求与静态站点流量分开。',
+    summaryFr: 'Les pages pays-maladie et les collections de recherche utilisent des modèles d’exécution partagés, tandis que les Pages Functions limitées aux données séparent les requêtes de données du trafic statique.',
+    sections: [{ kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'New diseases and ordinary country combinations use one multilingual runtime shell instead of creating another group of static HTML pages.',
+      zh: '新增疾病和普通国家组合使用统一的多语言运行时页面壳，不再新增一组静态 HTML 页面。',
+      fr: 'Les nouvelles maladies et les combinaisons de pays ordinaires utilisent un modèle multilingue partagé au lieu de créer de nouvelles pages HTML statiques.',
+    }, {
+      en: 'Surveillance and Situation data use path-scoped Pages Functions, keeping ordinary HTML and assets on the static Pages path.',
+      zh: '监测和 Situation 数据使用路径受限的 Pages Functions，普通 HTML 和资源继续走静态 Pages 路径。',
+      fr: 'Les données de surveillance et de Situation utilisent des Pages Functions limitées à leurs chemins, tandis que les HTML et ressources ordinaires restent statiques.',
+    }] }, { kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Incremental subdivision map exports retain unchanged regions and disease series while applying new source observations.',
+      zh: '增量下级区域地图导出会保留未变化的区域和疾病序列，同时应用新的来源观测。',
+      fr: 'Les exports incrémentiels des cartes de subdivisions conservent les régions et séries inchangées tout en appliquant les nouvelles observations sources.',
+    }] }],
+  },
+  {
     version: '0.20.4', date: '2026-11-19',
     titleEn: 'One download center for all surveillance data',
     titleZh: '统一监测数据下载中心',

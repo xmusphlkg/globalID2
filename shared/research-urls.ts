@@ -2,6 +2,11 @@
 export const RESEARCH_MAIN_ORIGIN = 'https://globalinfectiousdisease.com';
 export const RESEARCH_PAPERS_ORIGIN = 'https://papers.globalinfectiousdisease.com';
 
+export function isResearchPapersPagePath(path: string): boolean {
+  const pathname = path.split(/[?#]/, 1)[0];
+  return /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases|countries|weekly)\//.test(pathname);
+}
+
 export function isResearchPagePath(path: string): boolean {
   const pathname = path.split(/[?#]/, 1)[0];
   return /^\/(?:(?:zh|fr)\/)?research(?:\/|$)/.test(pathname)
@@ -15,7 +20,7 @@ export function isResearchResourcePath(path: string): boolean {
 }
 
 export function researchPageUrl(path: string): string {
-  const origin = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases)\//.test(path)
+  const origin = isResearchPapersPagePath(path)
     ? RESEARCH_PAPERS_ORIGIN : RESEARCH_MAIN_ORIGIN;
   return new URL(path, origin).toString();
 }

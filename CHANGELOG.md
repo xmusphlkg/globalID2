@@ -4,6 +4,19 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.5] - 2026-11-20
+
+### Improved
+
+- Serve country-disease long-tail routes through one multilingual runtime shell so new diseases do not multiply static HTML files.
+- Move weekly and geographic Research Radar collections to the Papers host and keep their multilingual sitemap and redirect coverage.
+- Use path-scoped Pages Functions for surveillance and Situation data, leaving ordinary HTML and assets on the static Pages path for the free Cloudflare plan.
+- Lower the Pages file-count warning threshold to 14,000 files to preserve room below the 20,000-file platform limit.
+
+### Fixed
+
+- Keep incremental subdivision map exports from dropping unchanged regions and disease series.
+
 ## [0.20.4] - 2026-11-19
 
 ### Improved

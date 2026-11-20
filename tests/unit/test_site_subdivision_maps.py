@@ -152,6 +152,39 @@ def test_map_export_updates_population_revisions_retires_regions_and_disables_hi
     assert not (public / "subdivision-maps/au/d028.json").exists()
 
 
+def test_incremental_map_export_preserves_unchanged_cn_diseases_and_regions(tmp_path):
+    state, public = tmp_path / "state", tmp_path / "public"
+    countries = state / "countries"
+    countries.mkdir(parents=True)
+    ah = {"country_code": "CN-AH", "country_name_en": "Anhui", "disease_series": {"D001": monthly(), "D002": monthly([2, 4])}}
+    bj = {"country_code": "CN-BJ", "country_name_en": "Beijing", "disease_series": {"D001": monthly(), "D002": monthly([3, 5])}}
+    (countries / "cn-ah.json").write_text(json.dumps(ah))
+    (countries / "cn-bj.json").write_text(json.dumps(bj))
+    write_subdivision_maps(state, public, [], active_codes={"CN-AH", "CN-BJ"})
+    initial = json.loads((public / "subdivision-maps/cn/index.json").read_text())
+    assert {item["id"] for item in initial["diseases"]} == {"D001", "D002"}
+
+    # A scoped release contains only the changed province and one changed
+    # disease. Existing map payloads supply the omitted province and disease.
+    (countries / "cn-bj.json").unlink()
+    changed = {"country_code": "CN-AH", "country_name_en": "Anhui", "disease_series": {"D001": monthly([9, 11])}}
+    (countries / "cn-ah.json").write_text(json.dumps(changed))
+    write_subdivision_maps(
+        state,
+        public,
+        [],
+        active_codes={"CN-AH", "CN-BJ"},
+        preserve_existing=True,
+    )
+    latest = json.loads((public / "subdivision-maps/cn/index.json").read_text())
+    assert {item["id"] for item in latest["diseases"]} == {"D001", "D002"}
+    d001 = json.loads((public / "subdivision-maps/cn/d001.json").read_text())
+    d002 = json.loads((public / "subdivision-maps/cn/d002.json").read_text())
+    assert d001["regions"]["CN-AH"]["points"][1][1] == 11
+    assert d001["regions"]["CN-BJ"]["points"][1][1] == 100
+    assert d002["regions"]["CN-BJ"]["points"][1][1] == 5
+
+
 def test_case_definition_changes_have_different_comparison_keys():
     a, b = monthly(), monthly()
     b["definition_version"] = "different-definition"

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { absoluteSiteUrl, isPapersPath, PAPERS_ORIGIN, siteHref } from './papers.ts';
 
 test('disease literature and study collections belong to Papers', () => {
-  for (const path of ['/research/diseases/influenza/', '/zh/research/diseases/dengue/', '/fr/research/diseases/measles/', '/research/catalogue/diseases/d038.json', '/research/catalogue/diseases/d038/0-0123456789abcdef.json', '/research/catalogue/studies/mathematical-modelling-0123456789abcdef.json']) {
+  for (const path of ['/research/diseases/influenza/', '/zh/research/diseases/dengue/', '/fr/research/diseases/measles/', '/research/countries/cn/', '/zh/research/countries/cn/', '/fr/research/weekly/2026-W01/', '/research/weekly/2026-W01/', '/research/catalogue/diseases/d038.json', '/research/catalogue/diseases/d038/0-0123456789abcdef.json', '/research/catalogue/studies/mathematical-modelling-0123456789abcdef.json']) {
     assert.equal(isPapersPath(path), true, path);
     assert.equal(siteHref(path), PAPERS_ORIGIN + path);
     assert.equal(absoluteSiteUrl(path, 'https://globalinfectiousdisease.com').origin, PAPERS_ORIGIN);

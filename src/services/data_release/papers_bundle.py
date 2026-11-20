@@ -1,7 +1,7 @@
 """Split Astro dist into Pages main + papers (R2) bundles.
 
-Long-tail research article pages, card PNGs, and ``site-data/research`` shards
-move to the papers host so Cloudflare Pages stays under its file-count ceiling.
+Long-tail research pages, card PNGs, and ``site-data/research`` shards move to
+the papers host so Cloudflare Pages stays under the file-count ceiling.
 """
 
 from __future__ import annotations
@@ -25,8 +25,11 @@ from .research_publishing import is_research_card, research_social_cards_enabled
 
 DEFAULT_MAIN_SITE_ORIGIN = "https://globalinfectiousdisease.com"
 DEFAULT_PAPERS_ORIGIN = "https://papers.globalinfectiousdisease.com"
+# Cloudflare Pages currently rejects a deployment at 20,000 files. Keep the
+# platform ceiling as the hard gate, but warn early enough to leave room for
+# generated locale routes and data manifests.
 DEFAULT_PAGES_FILE_BUDGET = 20_000
-DEFAULT_PAGES_FILE_WARN = 18_000
+DEFAULT_PAGES_FILE_WARN = 14_000
 
 # Directory in dist holding files that live at the root of the papers host.
 PAPERS_HOST_DIR = "papers-host"
@@ -94,6 +97,12 @@ PAPERS_PREFIXES = (
     "research/diseases/",
     "zh/research/diseases/",
     "fr/research/diseases/",
+    "research/countries/",
+    "zh/research/countries/",
+    "fr/research/countries/",
+    "research/weekly/",
+    "zh/research/weekly/",
+    "fr/research/weekly/",
     "research/catalogue/diseases/",
     "research/catalogue/studies/",
     "research/cards/",
@@ -101,7 +110,7 @@ PAPERS_PREFIXES = (
 )
 
 _PAPERS_ROOT_PATH_RE = re.compile(
-    r"^/(?:zh/|fr/)?research/(?:articles|diseases)/"
+    r"^/(?:zh/|fr/)?research/(?:articles|diseases|countries|weekly)/"
     r"|^/research/catalogue/(?:diseases|studies)/"
     r"|^/research/cards/"
     r"|^/site-data/research/"
@@ -117,7 +126,7 @@ _ATTR_ROOT_REF_RE = re.compile(
 _ABS_MAIN_PAPERS_RE = re.compile(
     r"""(?P<prefix>\b(?:href|src|content|poster)\s*=\s*["'])"""
     r"""(?P<origin>https?://(?:www\.)?globalinfectiousdisease\.com)"""
-    r"""(?P<path>/(?:zh/|fr/)?research/(?:articles|diseases)/[^"']*|/research/catalogue/(?:diseases|studies)/[^"']*|/research/cards/[^"']*|/site-data/research/[^"']*)"""
+    r"""(?P<path>/(?:zh/|fr/)?research/(?:articles|diseases|countries|weekly)/[^"']*|/research/catalogue/(?:diseases|studies)/[^"']*|/research/cards/[^"']*|/site-data/research/[^"']*)"""
     r"""(?P<suffix>["'])""",
     re.IGNORECASE,
 )
@@ -129,6 +138,12 @@ PAPERS_REDIRECT_RULES = (
     "/research/diseases/*  {papers}/research/diseases/:splat  301",
     "/zh/research/diseases/*  {papers}/zh/research/diseases/:splat  301",
     "/fr/research/diseases/*  {papers}/fr/research/diseases/:splat  301",
+    "/research/countries/*  {papers}/research/countries/:splat  301",
+    "/zh/research/countries/*  {papers}/zh/research/countries/:splat  301",
+    "/fr/research/countries/*  {papers}/fr/research/countries/:splat  301",
+    "/research/weekly/*  {papers}/research/weekly/:splat  301",
+    "/zh/research/weekly/*  {papers}/zh/research/weekly/:splat  301",
+    "/fr/research/weekly/*  {papers}/fr/research/weekly/:splat  301",
     "/research/catalogue/diseases/*  {papers}/research/catalogue/diseases/:splat  301",
     "/research/catalogue/studies/*  {papers}/research/catalogue/studies/:splat  301",
     "/research/cards/*  {papers}/research/cards/:splat  301",
@@ -236,7 +251,10 @@ def strip_papers_host_redirects(redirects_text: str) -> str:
         source = line.strip().split("  ", 1)[0].strip()
         if source in _PAPERS_REDIRECT_SOURCES:
             continue
-        if line.strip() == "# Research article pages, cards, and research site-data live on the papers host.":
+        if line.strip() in {
+            "# Research article pages, cards, and research site-data live on the papers host.",
+            "# Long-tail research pages, cards, and research site-data live on the papers host.",
+        }:
             continue
         kept.append(line)
     text = "\n".join(kept).strip("\n")
@@ -258,7 +276,7 @@ def append_papers_redirects(
     block = "\n".join(
         [
             "",
-            "# Research article pages, cards, and research site-data live on the papers host.",
+            "# Long-tail research pages, cards, and research site-data live on the papers host.",
             *missing,
             "",
         ]

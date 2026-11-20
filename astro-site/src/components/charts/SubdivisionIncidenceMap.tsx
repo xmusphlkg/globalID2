@@ -12,19 +12,11 @@ import './surveillance/components/surveillance.css';
 import './subdivision-map/map.css';
 import RegionList from './subdivision-map/RegionList';
 import { continuousScale, scaleGraphic, scaleValue } from './subdivision-map/scale';
-import MapTileLayer from './MapTileLayer';
 
 echarts.use([GraphicComponent, LegendComponent]);
 
 type Geometry = Parameters<typeof echarts.registerMap>[1];
 interface Props { countryCode: string; diseaseId?: string; language?: Language; }
-// Preserve the established US presentation: Alaska and Hawaii are shown as
-// conventional lower-left insets so the contiguous states remain readable.
-// The source geometry and region codes stay unchanged for data interaction.
-const usInsetAreas = {
-  'US-AK': { left: -123, top: 31, width: 13, height: 7 },
-  'US-HI': { left: -112, top: 27, width: 6, height: 3.5 },
-};
 const monthNames = (lang: Language) => Array.from({ length: 12 }, (_, index) => lang === 'zh' ? `${index + 1}月` : new Intl.DateTimeFormat(lang, { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2024, index, 1))));
 const labels = {
   en: { title: 'Regional distribution', disease: 'Disease', year: 'Year', start: 'First month', end: 'Last month', metric: 'Measure', rate: 'Reports per 100,000', cases: 'Reported cases', area: 'Region', population: 'Total resident population', observed: 'Reported months', source: 'Population source', reference: 'Reference date', basis: 'Population basis', version: 'Population version', download: 'Download filtered CSV', loading: 'Loading regional data…', unavailable: 'Regional map data are not available in this publication.', noDisease: 'No comparable regional counts are available for this disease.', zero: 'Zero', missing: 'Missing / suppressed', notAnnual: 'Selected-period crude report rates; not annualized or age standardized.', scale: 'The same disease, measure and month range share a color scale across years.', boundary: 'Boundaries', historical: 'Present monitoring units; historical boundary changes are not reconstructed.', formula: 'Period reports ÷ local population in the same year × 100,000. Missing years are not filled.', trend: 'Monthly reports in the selected region', complete: 'regions with a complete value', provisional: 'Provisional', unverified: 'Unverified', selected: 'Selected region', noPopulation: 'No verified local population for this year. Case counts remain available.', fullYear: 'Full year', firstQuarter: 'Jan–Mar' },
@@ -75,7 +67,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const [selected, setSelected] = useState('');
   const [comparison, setComparison] = useState<Comparison>('previous_year');
   const [customComparison, setCustomComparison] = useState({ from: '', to: '' });
-  const [mapFocused, setMapFocused] = useState(code === 'US' || code === 'JP');
+  const [mapFocused, setMapFocused] = useState(code === 'JP');
   const [status, setStatus] = useState<'loading' | 'absent' | 'ready' | 'error'>('loading');
   const [failed, setFailed] = useState(false);
   const saved = useMemo(() => typeof globalThis.window === 'undefined' ? new URLSearchParams() : new URLSearchParams(globalThis.window.location.search), []);
@@ -96,7 +88,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   useEffect(() => {
     const controller = new AbortController();
     retainedRange.current = null; comparisonRestored.current = false;
-    setMapFocused(code === 'US' || code === 'JP');
+    setMapFocused(code === 'JP');
     setStatus('loading'); setCatalog(null); setDataset(null); setWindow(null); setPopulation(null); setMapName('');
     void (async () => {
       const index = await surveillanceData.read<{ countries: Array<{ code: string; path: string }> }>('/site-data/subdivision-maps/index.json', { signal: controller.signal });
@@ -110,7 +102,9 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       if (controller.signal.aborted) return;
       if (current.schema_version !== 1 || current.country_code !== code || populations.country_code !== code) throw new Error('Map publication mismatch');
       const key = `subdivision-${code}-${current.boundary.version}`;
-      echarts.registerMap(key, geometry, code === 'US' ? usInsetAreas : undefined);
+      // Keep every US state in its source longitude/latitude. Alaska and
+      // Hawaii must remain real geographic features rather than inset art.
+      echarts.registerMap(key, geometry);
       setMapName(key); setPopulation(populations); setCatalog(current);
       const requested = diseaseId || saved.get('mapDisease');
       setSelectedDisease(current.diseases.find(item => item.id === requested)?.id || (diseaseId ? '' : current.diseases.find(item => item.id === 'D028')?.id || current.diseases[0]?.id || ''));
@@ -293,7 +287,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
         <p className="subdivision-map-status" aria-live="polite">{rows.filter(row => row.value !== null).length}/{catalog.expected_regions} {ui.available} · {cadenceLabels[lang][dataset.cadence]}{compareWindow && expected?.expected !== comparedExpected?.expected && <> · {ui.periodDifference}</>}</p>
         <div role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-${tab}`}>
           {tab === 'map' && <div className="subdivision-map-content">
-            <div className="subdivision-map-plot"><div className="subdivision-map-canvas" role="img" aria-label={`${t.title} · ${metricLabel}. ${scale.ticks.map(tick => tick.value.toLocaleString(lang, { maximumFractionDigits: 0 })).join('; ')}; ${t.missing}`}><MapTileLayer language={lang} /><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /><div className="subdivision-map-zoom" role="group" aria-label={zoomLabels.group}><button type="button" onClick={() => zoom(1.25)} aria-label={zoomLabels.in}>+</button><button type="button" onClick={() => zoom(.8)} aria-label={zoomLabels.out}>−</button><button type="button" onClick={resetZoom} aria-label={zoomLabels.reset}>↺</button></div></div></div>
+            <div className="subdivision-map-plot"><div className="subdivision-map-canvas" role="img" aria-label={`${t.title} · ${metricLabel}. ${scale.ticks.map(tick => tick.value.toLocaleString(lang, { maximumFractionDigits: 0 })).join('; ')}; ${t.missing}`}><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /><div className="subdivision-map-zoom" role="group" aria-label={zoomLabels.group}><button type="button" onClick={() => zoom(1.25)} aria-label={zoomLabels.in}>+</button><button type="button" onClick={() => zoom(.8)} aria-label={zoomLabels.out}>−</button><button type="button" onClick={resetZoom} aria-label={zoomLabels.reset}>↺</button></div></div></div>
             <RegionList rows={rows} previous={compareByCode} comparison={!!compareWindow} lang={lang} selected={selected} onSelect={setSelected} metricLabel={metricLabel} number={number} reason={reason}>{detail}</RegionList>
           </div>}
           {tab === 'trend' && active && <>

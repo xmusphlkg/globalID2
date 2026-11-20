@@ -1897,7 +1897,14 @@ def write_incremental_site_export_artifacts(
         (public_site_data_dir / "countries" / f"{code.lower()}.json").unlink(missing_ok=True)
         (public_site_data_dir / "countries" / f"{code.lower()}-source-series.json").unlink(missing_ok=True)
     if not context.get("static_content_only"):
-        write_subdivision_maps(output_dir, public_site_data_dir, context.get("map_population_rows") or [], recorded_at_as_of=context.get("recorded_at_as_of"), active_codes={item["code"] for item in context["countries_simple"]})
+        write_subdivision_maps(
+            output_dir,
+            public_site_data_dir,
+            context.get("map_population_rows") or [],
+            recorded_at_as_of=context.get("recorded_at_as_of"),
+            active_codes={item["code"] for item in context["countries_simple"]},
+            preserve_existing=True,
+        )
     _write_publish_hash_manifest(output_dir, context)
     if "country_dependency_inputs" in context:
         _save_dependency_receipt(context, output_dir, public_site_data_dir)

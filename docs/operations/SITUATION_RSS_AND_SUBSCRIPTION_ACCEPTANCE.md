@@ -60,7 +60,7 @@ enables public email campaigns nor sends test mail.
 3. Publish the read-only data Worker code and the subscription page template
    through the established release workflow. Both the zone Worker and packaged
    Pages Worker route `/site-data/situation/*`; no new wildcard is required.
-   Updating only the zone Worker does not update a retained Pages `_worker.js`.
+   Updating only the zone Worker does not update the Pages Functions bundle. A template release is required when the handler changes.
 4. Verify all three global feeds and at least one country/disease feed against
    the expected `X-GIDS-Situation-Release`. Parse the result as XML and open a
    source-report link. Check animal and unspecified-host wording.

@@ -45,7 +45,7 @@ export function buildSituationRedirectRules(dataRoot = resolve(siteRoot, 'src', 
   return rules;
 }
 
-const PAPERS_HOST_REDIRECT = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|cards)\/\*|^\/site-data\/research\/\*/;
+const PAPERS_HOST_REDIRECT = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases|countries|weekly|cards)\/\*|^\/research\/catalogue\/(?:diseases|studies)\/\*|^\/site-data\/research\/\*/;
 
 /** Drop static papers-host bounces when the Pages worker serves research on the main origin. */
 export function withoutPapersHostRedirects(baseRedirects) {

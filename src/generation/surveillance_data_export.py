@@ -287,7 +287,14 @@ def write_surveillance_artifacts(context: dict, state_dir: Path, public_dir: Pat
         expected = {Path(name).name for name in logical if name.startswith(group + "/")}
         remove_stale_json_files(public_dir / group, expected)
         remove_stale_json_files(state_dir / group, {name for name in expected if not name.endswith(("-summary.json", "-source-series.json"))})
-    write_subdivision_maps(state_dir, public_dir, context.get("map_population_rows") or [], recorded_at_as_of=context.get("recorded_at_as_of"), active_codes=set(countries))
+    write_subdivision_maps(
+        state_dir,
+        public_dir,
+        context.get("map_population_rows") or [],
+        recorded_at_as_of=context.get("recorded_at_as_of"),
+        active_codes=set(countries),
+        preserve_existing=bool(context.get("incremental")),
+    )
     logical.extend(path.relative_to(public_dir).as_posix() for path in sorted((public_dir / "subdivision-maps").rglob("*.json")))
     save_receipt(context, state_dir, public_dir)
     return logical

@@ -33,6 +33,23 @@ test('disease literature belongs to the Papers sitemap in all supported language
   assert.match(xml, /hreflang="fr-FR"/);
 });
 
+test('research countries and weekly briefs belong to the Papers sitemap', () => {
+  const groups = buildSitemapGroups({ meta: {}, diseases: [], reports: [], loadReport: () => null,
+    research: {
+      facets: {
+        countries: [{ slug: 'br', count: 2 }],
+        weeks: [{ week: '2026-W33', article_count: 2, start_date: '2026-08-10', end_date: '2026-08-16' }],
+      },
+    },
+  });
+  assert.equal(groups.research.some(entry => entry.path.includes('/research/countries/')), false);
+  assert.equal(groups.research.some(entry => entry.path.includes('/research/weekly/')), false);
+  assert.deepEqual(groups.papers.map(entry => entry.path), [
+    '/research/countries/br/', '/zh/research/countries/br/', '/fr/research/countries/br/',
+    '/research/weekly/2026-W33/', '/zh/research/weekly/2026-W33/', '/fr/research/weekly/2026-W33/',
+  ]);
+});
+
 test('isolated reports sitemap matches the full sitemap without reading country data', () => {
   const options = {
     meta: { generated_at: '2026-11-05', countries: [{ code: 'JP', data_available: true }] },

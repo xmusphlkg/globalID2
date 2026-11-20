@@ -18,7 +18,6 @@ import featureIsoJson from '../../lib/data/world-feature-iso.json' with { type: 
 import { loadDiseaseDataset, type DiseaseDataset } from './diseaseDataset';
 import ChartResultActions from './ChartResultActions';
 import { pngFromCanvases } from './chartExport';
-import MapTileLayer from './MapTileLayer';
 
 type Lang = 'en' | 'zh' | 'fr';
 type Metric = 'coverage' | 'cases' | 'deaths';
@@ -507,7 +506,6 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
           `Carte mondiale : ${drawn.length} zones déclarant cette maladie`,
         )}
       >
-        <MapTileLayer language={lang} />
         <ReactEChartsCore
           ref={chartRef}
           echarts={echarts}

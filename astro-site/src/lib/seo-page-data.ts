@@ -16,8 +16,11 @@ let publishableReportCache: ReturnType<typeof buildPublishableReports> | null = 
 let countryDiseaseRouteCache: Array<{ code: string; slug: string }> | null = null;
 let countryDiseaseStaticCandidateCache: CountryDiseaseCandidate[] | null = null;
 
-const COUNTRY_DISEASE_ROUTE_LIMIT = 8;
-const FULL_COUNTRY_DISEASE_ROUTES = new Set(['cn', 'us']);
+// Country/disease combinations are served by the shared runtime shell. The
+// static country and disease directories remain indexable without multiplying
+// every locale by every series.
+const COUNTRY_DISEASE_ROUTE_LIMIT = 0;
+const FULL_COUNTRY_DISEASE_ROUTES = new Set<string>();
 
 export const siteMeta = metaRaw as Record<string, any>;
 export const diseaseIndex = diseasesRaw as Array<Record<string, any>>;
@@ -47,10 +50,9 @@ export function countryDiseaseCandidates(limit = 50): CountryDiseaseCandidate[] 
 
 /**
  * Static country/disease pages are deliberately bounded for the Pages file
- * budget. The country directory remains data-driven and links long-tail
- * diseases to their global profile when a local route is not pre-rendered.
- * China and the United States keep every publishable disease route because
- * their country pages are the primary map and directory entry points.
+ * budget. The country directory remains data-driven and links every disease
+ * to the shared runtime shell, so new disease records do not require a site
+ * rebuild to create another HTML combination.
  */
 export function countryDiseaseStaticCandidates(): CountryDiseaseCandidate[] {
   if (countryDiseaseStaticCandidateCache) return countryDiseaseStaticCandidateCache;
