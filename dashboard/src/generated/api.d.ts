@@ -6306,6 +6306,11 @@ export interface components {
              */
             kind: "auto" | "theme" | "content" | "full" | "template";
             /**
+             * Main Site Only
+             * @default false
+             */
+            main_site_only: boolean;
+            /**
              * Suppress Subscription Dispatch
              * @default false
              */
@@ -6371,6 +6376,11 @@ export interface components {
              * @enum {string}
              */
             kind: "content" | "theme" | "template" | "routing" | "full";
+            /**
+             * Main Site Only
+             * @default false
+             */
+            main_site_only: boolean;
             /** Pages Deploy Required */
             pages_deploy_required: boolean;
             /** Pending Scopes */

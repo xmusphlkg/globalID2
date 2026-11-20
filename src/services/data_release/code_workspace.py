@@ -5,19 +5,41 @@ import json
 import hashlib
 from pathlib import Path
 import shutil
+import re
+import subprocess
+import tarfile
+from tempfile import TemporaryDirectory, TemporaryFile
 
 from .published_data import clone_file, files, verify_copy
 from .stage_receipts import StageReceipts
 from .artifact_checkpoint import source_fingerprint, rendering_configuration, _fingerprint
 
 
-def _workspace_inputs(root: Path) -> str:
+def _workspace_inputs(root: Path, revision: str | None = None) -> str:
     # Version history is an independently published JSON feed. Editing it must
     # not invalidate an already prepared template workspace.
-    return _fingerprint({'source': source_fingerprint(root), 'rendering': rendering_configuration(root)})
+    return _fingerprint({'source': revision or source_fingerprint(root), 'rendering': rendering_configuration(root)})
 
 
-def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_research: bool = False) -> Path:
+def prepare_committed(root: Path, task_uuid: str, *, revision: str, recovery=False, independent_research=False) -> Path:
+    """Copy authored renderer inputs from the commit selected by the panel."""
+    if not isinstance(revision, str) or not re.fullmatch(r"[a-f0-9]{40}", revision):
+        raise ValueError("Main site template requires a frozen Git commit")
+    with TemporaryDirectory(prefix="globalid-template-") as directory:
+        if not recovery:
+            with TemporaryFile() as archive:
+                subprocess.run(["git", "archive", "--format=tar", revision, "--",
+                    "astro-site", "scripts", "shared", "configs", "cloudflare/surveillance-data",
+                    "CHANGELOG.md", "requirements.txt"], cwd=root, stdout=archive, check=True)
+                archive.seek(0)
+                with tarfile.open(fileobj=archive) as snapshot:
+                    snapshot.extractall(directory, filter="data")
+        return prepare(root, task_uuid, recovery=recovery, independent_research=independent_research,
+                       source_root=Path(directory), revision=revision)
+
+
+def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_research: bool = False,
+            source_root: Path | None = None, revision: str | None = None) -> Path:
     if Path(task_uuid).name != task_uuid or task_uuid in {"", ".", ".."}:
         raise ValueError("Invalid template task identity")
     work = root / "exports/code-workspaces" / task_uuid
@@ -40,10 +62,11 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_r
         own_publication = (marker.get('task_uuid') == task_uuid
             and marker.get('release_id') == ready.get('release_id')
             and marker.get('build_digest') == ready.get('build_digest'))
-        if ((same_baseline or own_publication) and saved.get("source_fingerprint") == _workspace_inputs(root)
+        if ((same_baseline or own_publication) and saved.get("source_fingerprint") == _workspace_inputs(root, revision)
                 and saved.get("independent_research", False) == independent_research):
             return site
-    fingerprint = _workspace_inputs(root)
+    fingerprint = _workspace_inputs(root, revision)
+    authored = source_root or root
     marker_body = (root / "exports/successful-site-release.json").read_bytes() if (root / "exports/successful-site-release.json").is_file() else b''
     original_paths = [root / "astro-site/src/data", root / "astro-site/public/site-data"]
     sources = StageReceipts(root, task_uuid, {}, {}).published_data_paths(
@@ -63,7 +86,7 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_r
 
     # Copy source, not a checkout or exports tree. Imports and validators with
     # relative paths then all resolve to the private project root.
-    original = root / "astro-site"
+    original = authored / "astro-site"
     for entry in original.iterdir():
         if entry.is_file() and not entry.is_symlink():
             clone_file(entry, site / entry.name)
@@ -81,13 +104,14 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_r
         if path.is_file():
             clone_file(path, site / "src/data" / name)
     for name in ("shared", "configs", "scripts"):
-        copy_tree(root / name, work / name, exclude=("__pycache__",))
+        copy_tree(authored / name, work / name, exclude=("__pycache__",))
     worker = "cloudflare/surveillance-data"
     for name in ("src", "scripts"):
-        copy_tree(root / worker / name, work / worker / name)
+        copy_tree(authored / worker / name, work / worker / name)
     for name in ("CHANGELOG.md", "requirements.txt", "data/system-settings.json"):
-        if (root / name).is_file():
-            clone_file(root / name, work / name)
+        source = (root if name == "data/system-settings.json" else authored) / name
+        if source.is_file():
+            clone_file(source, work / name)
     # Only validated renderer caches are imported, as independent bytes. The
     # renderer still checks source fingerprints, page digests and references;
     # incomplete/changed cache entries are ordinary misses, never authority.
@@ -109,7 +133,7 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_r
         elif source.is_dir():
             copy_tree(source, target)
     # Dependencies are used only for compilation; no install runs here.
-    astro_modules = original / "node_modules"
+    astro_modules = root / "astro-site/node_modules"
     worker_modules = root / worker / "node_modules"
     if not (worker_modules / "esbuild/package.json").is_file():
         # Minimal release checkouts may not have installed the Pages Worker's
@@ -120,7 +144,7 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_r
         if source.is_dir():
             target.parent.mkdir(parents=True, exist_ok=True)
             target.symlink_to(source.resolve(), target_is_directory=True)
-    if _workspace_inputs(root) != fingerprint:
+    if _workspace_inputs(root, revision) != fingerprint:
         raise ValueError("Source changed while preparing template workspace")
     if (root / "exports/successful-site-release.json").read_bytes() != marker_body:
         raise ValueError("Published baseline changed while preparing template workspace")

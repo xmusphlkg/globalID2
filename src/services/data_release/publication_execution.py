@@ -165,7 +165,7 @@ def prepare_execution(plan: dict, *, root: Path, data_dir: Path, service, kind: 
         inventory_blockers = {"published_dirty_source_baseline_unavailable", "published_source_baseline_unavailable",
             "published_source_revision_unavailable", "source_inventory_unavailable", "source_inventory_unstable",
             "source_symlink_requires_review", "rendering_configuration_unavailable"}
-        if (kind == "template" and changed and changed.issubset(country_routes) and baseline.is_dir()
+        if (kind == "template" and not plan.get("main_site_only") and changed and changed.issubset(country_routes) and baseline.is_dir()
                 and not set(plan.get("_inventory_warnings", [])).intersection(inventory_blockers)):
             try:
                 metadata = json.loads((root / "astro-site/src/data/meta.json").read_bytes())
@@ -199,6 +199,8 @@ def prepare_execution(plan: dict, *, root: Path, data_dir: Path, service, kind: 
     plan.pop("_dirty_rows", None)
     if kind == "template":
         plan["warnings"].append("reports_preserved_use_reports_only")
+        if plan.get("main_site_only"):
+            plan["warnings"].append("papers_preserved_use_literature_channel")
     if kind != "theme":
         from .publication_recovery import freeze_environment
         execution["environment"] = freeze_environment(service, job_configuration)
@@ -298,6 +300,9 @@ async def enqueue_plan(body, *, db, root: Path, data_dir: Path, service) -> dict
               "country_baseline_release_sha256": plan["_execution"].get("country_baseline_release_sha256")}
     if plan.get("surveillance_rebuild_all"):
         frozen["surveillance_rebuild_all"] = True
+    if plan.get("main_site_only"):
+        frozen["main_site_only"] = True
+        frozen["source_revision"] = plan["source_revision"]
     mode = plan["execution_mode"]
     kwargs = {"theme_only": mode == "theme", "full": mode == "full", "code_only": mode in {"code_only", "country_template"},
               "data_only": mode == "content", "publication_plan": frozen}

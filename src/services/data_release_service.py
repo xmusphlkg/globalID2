@@ -2127,6 +2127,9 @@ class DataReleaseService:
                 raise ValueError("publication_recovery_identity_mismatch")
         else:
             generated = await self._site_release_identity(deployment_branch)
+            frozen_plan = (getattr(task, "input_data", None) or {}).get("publication_plan") or {}
+            if frozen_plan.get("main_site_only") and generated["source_commit"] != frozen_plan["source_revision"]:
+                raise ValueError("Main site source commit changed since publication planning")
         async with get_database() as db:
             task_obj = (
                 await db.execute(
