@@ -1,9 +1,6 @@
 name: Project quality gates
 
 on:
-  pull_request:
-  push:
-    branches: [master]
   workflow_dispatch:
 
 permissions:
