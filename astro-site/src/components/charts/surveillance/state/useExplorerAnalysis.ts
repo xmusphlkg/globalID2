@@ -88,12 +88,26 @@ export function useExplorerAnalysis({
     }
   }, [catalog, config, sourceStatus, loadSources]);
 
+  const updateConfig = useCallback((next: AnalysisConfig) => {
+    setConfig(next);
+    const url = new URL(window.location.href);
+    const shared = url.searchParams.get("analysis");
+    // Once a visitor opens a shared analysis, its URL must follow edits.
+    // Otherwise a reload or language switch restores the original share over
+    // the newer session preference. Leave other chart contexts untouched.
+    if (shared && restoreConfig(shared, catalog)) {
+      url.searchParams.set("analysis", serializeConfig(catalog.contextId, next));
+      window.history.replaceState(window.history.state, "", url);
+      window.dispatchEvent(new Event("gids:urlchange"));
+    }
+  }, [catalog]);
+
   const propose = useCallback(
     (next: AnalysisConfig) => {
-      setConfig(next);
+      updateConfig(next);
       onChange();
     },
-    [onChange],
+    [onChange, updateConfig],
   );
   const patch = (values: Partial<AnalysisConfig>) =>
     propose({ ...config, ...values });
@@ -102,6 +116,6 @@ export function useExplorerAnalysis({
     result,
     propose,
     patch,
-    setConfig,
+    setConfig: updateConfig,
   };
 }

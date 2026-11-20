@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from .site_data_writer import write_pretty_json
+from src.ontology import ontology_document_paths
 
 
 RECEIPT_NAME = "curve-dependencies.json"
@@ -46,12 +47,16 @@ def dependency_version() -> str:
         "services/disease_series_policy.py",
         "services/surveillance_onboarding_review.py", "services/annual_source_mapping_review.py",
         "services/national_source_mapping_review.py", "services/disease_mapping_config.py",
+        "ontology/documents.py", "ontology/disease.py",
     ):
         digest.update((root / "src" / name).read_bytes())
-    for name in ("standard_diseases.csv", "disease_ontology.json", "disease_cutover.json", "country_bootstrap.json"):
+    for name in ("standard_diseases.csv", "disease_cutover.json", "country_bootstrap.json"):
         path = root / "configs" / name
         if path.is_file():
             digest.update(path.read_bytes())
+    for path in ontology_document_paths(root / "configs/disease_ontology.json"):
+        digest.update(path.relative_to(root).as_posix().encode())
+        digest.update(path.read_bytes())
     for path in sorted((root / "external-data/subdivision-boundaries").glob("*.json")):
         digest.update(path.read_bytes())
     for path in sorted((root / "configs/mapping").rglob("*.csv")):
@@ -76,10 +81,10 @@ def country_inputs(data: dict, *, name: str, name_zh: str | None, source_info: d
     }
 
 
-def load_receipt(output_dir: Path) -> dict:
+def load_receipt(output_dir: Path, *, allow_previous_version: bool = False) -> dict:
     try:
         value = json.loads((output_dir / RECEIPT_NAME).read_text(encoding="utf-8"))
-        if value.get("schema_version") == 1 and value.get("version") == dependency_version() and isinstance(value.get("countries"), dict) and isinstance(value.get("diseases"), dict):
+        if value.get("schema_version") == 1 and (allow_previous_version or value.get("version") == dependency_version()) and isinstance(value.get("countries"), dict) and isinstance(value.get("diseases"), dict):
             return value
     except (OSError, ValueError, AttributeError, TypeError):
         pass
@@ -106,7 +111,7 @@ def changed_diseases(code: str, current: dict, receipt: dict, output_dir: Path, 
 
 def save_receipt(context: dict, output_dir: Path, public_dir: Path) -> None:
     """Promote completed projection dependencies after all curve writes."""
-    previous = load_receipt(output_dir)
+    previous = load_receipt(output_dir, allow_previous_version=bool(context.get("surveillance_only")))
     countries = {code: value for code, value in previous["countries"].items() if code not in set(context.get("retired_country_codes") or ())}
     countries.update(context.get("country_dependency_inputs") or {})
     diseases = {
@@ -116,4 +121,10 @@ def save_receipt(context: dict, output_dir: Path, public_dir: Path) -> None:
         }
         for item in context["disease_exports"]
     }
-    write_pretty_json(output_dir / RECEIPT_NAME, {"schema_version": 1, "version": dependency_version(), "countries": countries, "diseases": diseases})
+    versions = dict(previous.get("country_dependency_versions") or {
+        code: previous.get("version") for code in previous["countries"]
+    })
+    versions = {code: version for code, version in versions.items() if code in countries}
+    writer_version = dependency_version()
+    versions.update({code: writer_version for code in context.get("country_dependency_inputs") or {}})
+    write_pretty_json(output_dir / RECEIPT_NAME, {"schema_version": 1, "version": writer_version, "country_dependency_versions": versions, "countries": countries, "diseases": diseases})

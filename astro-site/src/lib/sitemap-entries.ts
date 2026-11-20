@@ -14,6 +14,7 @@ import {
   type ReportIndexEntry,
 } from './report-routes.ts';
 import { absoluteSiteUrl, isPapersPath, REPORTS_ORIGIN } from './papers.ts';
+import { countryDiseaseRuntimeHref } from './country-page-navigation.ts';
 import type { CountryDirectory, DiseaseDirectory } from './site-data-loaders.ts';
 
 export interface SitemapEntry {
@@ -190,7 +191,7 @@ function countryDiseaseEntries(
     if (loadDirectory) {
       const summary = loadDirectory(code);
       for (const candidate of summary?.candidates ?? []) candidates.push({
-        path: `/countries/${code}/diseases/${candidate.slug}/`, score: candidate.score,
+        path: countryDiseaseRuntimeHref('', code, candidate.slug), score: candidate.score,
         lastmod: normalizeSitemapDate(summary?.generated_at),
       });
       continue;
@@ -216,7 +217,7 @@ function countryDiseaseEntries(
       const slug = toSeoSlug(series.slug);
       if (!seriesIdentity || !enoughHistory || !slug) continue;
       candidates.push({
-        path: `/countries/${code}/diseases/${slug}/`,
+        path: countryDiseaseRuntimeHref('', code, slug),
         lastmod: normalizeSitemapDate(data.generated_at),
         score: Number(series.total_cases ?? 0) + dates.length,
       });

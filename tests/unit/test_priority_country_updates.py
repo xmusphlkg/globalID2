@@ -45,7 +45,7 @@ EXPECTED_PUBLIC_CHANNELS = {
     ('ID', 'id_kemkes_profile'),
     ('MX', 'mx_dge_annual'),
     ('CL', 'cl_eno_historical'),
-    ('CO', 'co_ins_sivigila_historical'),
+    ('CO', 'co_ins_bes_weekly'),
     ('MW', 'mw_phim_idsr_weekly'),
 }
 EXPECTED_PUBLIC_CHANNELS.update(HIGH_FREQUENCY_SOURCES)

@@ -8,6 +8,7 @@ import { buildPublishableReports } from './report-routes';
 import { toSeoSlug } from './seo';
 import { selectDirectoryCandidates, hydrateDirectoryCandidates } from './directory-facts';
 import { createSiteDataLoaders } from './site-data-loaders';
+import { createCountryPageNavigation } from './country-page-navigation';
 
 const DATA_ROOT = resolve('./src/data');
 let indexableDiseaseCache: Array<Record<string, any>> | null = null;
@@ -21,6 +22,7 @@ let countryDiseaseStaticCandidateCache: CountryDiseaseCandidate[] | null = null;
 // every locale by every series.
 const COUNTRY_DISEASE_ROUTE_LIMIT = 0;
 const FULL_COUNTRY_DISEASE_ROUTES = new Set<string>();
+let countryNavigationCache: ReturnType<typeof createCountryPageNavigation> | null = null;
 
 export const siteMeta = metaRaw as Record<string, any>;
 export const diseaseIndex = diseasesRaw as Array<Record<string, any>>;
@@ -70,8 +72,13 @@ export function countryDiseaseStaticCandidates(): CountryDiseaseCandidate[] {
 
 /** Navigation needs route identities, never the full historical series. */
 export function countryDiseaseRouteIdentities() {
-  return countryDiseaseRouteCache ??= countryDiseaseStaticCandidates()
+  return countryDiseaseRouteCache ??= selectDirectoryCandidates(siteMeta.countries ?? [], loadCountryFacts, Infinity)
     .map(({ code, slug }) => ({ code, slug }));
+}
+
+export function countryPageNavigation(country: string, prefix = '') {
+  countryNavigationCache ??= createCountryPageNavigation(reportIndex, countryDiseaseRouteIdentities());
+  return countryNavigationCache(country, prefix);
 }
 
 export function publishableReports() {

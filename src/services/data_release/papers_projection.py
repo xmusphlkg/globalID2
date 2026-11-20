@@ -15,6 +15,7 @@ from typing import Any
 
 from .papers_content import PapersContentCandidate, _hash, _json, catalogue_from_entries
 from .papers_immutable import _source
+from .papers_styles import verify_projected_template_styles
 
 PREFIX = 'paper-template-v3'
 LOCALES = ('en', 'zh', 'fr')
@@ -125,8 +126,9 @@ def _payload(root: Path, group: str, value: dict) -> dict:
             'content_type': 'application/json; charset=utf-8'}
 
 
-def _read_object(candidate: PapersContentCandidate, key: str) -> dict:
-    descriptor = next((value for value in candidate.template_objects if value['key'] == key), None)
+def _read_object(candidate: PapersContentCandidate, key: str, *, objects_by_key: dict | None = None) -> dict:
+    descriptor = (objects_by_key.get(key) if objects_by_key is not None else
+                  next((value for value in candidate.template_objects if value['key'] == key), None))
     if not descriptor or candidate.template_root is None:
         raise ValueError('Missing frozen paper dependency')
     raw = _source(candidate.template_root, descriptor['path']).read_bytes()
@@ -259,6 +261,7 @@ def prepare_projection_candidate(base: PapersContentCandidate, *, articles: list
         available = {item['path'].removeprefix('_astro/') for item in asset_items}
         if not references.issubset(available):
             raise ValueError('Template references an asset outside the retained catalogue')
+        verify_projected_template_styles(value, root=base.root, assets=asset_items, origin=base.origin)
         spec = _payload(directory, 'templates', value)
         payloads[spec['key']] = spec
         locale_templates[locale] = spec
@@ -352,16 +355,19 @@ def prepare_full_snapshot_candidate(base: PapersContentCandidate, *, articles: l
                     or value.get('renderer') != 'gids-evidence-v1'):
                 raise ValueError('Invalid projected locale template')
 
-    # Keep immutable template resources, while current static output owns all
-    # directory pages. Old collections and article cards cannot reappear.
-    entries = {entry['logical_key']: entry for entry in base.entries
+    # Reused shells still need their immutable resources. Fresh locale shells
+    # come from a complete build, whose static output owns the entire resource
+    # set; carrying old assets forward would keep obsolete versions live in
+    # every later catalogue and prevent garbage collection from retiring them.
+    old_resources = {entry['logical_key']: entry for entry in base.entries
                if 'paper_template' not in entry and not entry['logical_key'].endswith('/')
                and not entry['path'].lower().endswith(('.html', '.htm'))
                and not entry['path'].startswith(('research/', PREFIX + '/'))}
+    entries = dict(old_resources) if locale_shells is None else {}
     for entry in static.entries:
         if 'paper_template' in entry or re.fullmatch(r'(?:zh/|fr/)?research/articles/[^/]+/', entry['logical_key']):
             raise ValueError('Full snapshot collections must not contain article HTML')
-        old = entries.get(entry['logical_key'])
+        old = old_resources.get(entry['logical_key'])
         if old and entry['path'].startswith('_astro/') and old['sha256'] != entry['sha256']:
             raise ValueError('Full snapshot immutable asset collision')
         entries[entry['logical_key']] = entry
@@ -390,6 +396,7 @@ def prepare_full_snapshot_candidate(base: PapersContentCandidate, *, articles: l
         references = set(re.findall(r'/_astro/([A-Za-z0-9._/-]+)', _json(value).decode()))
         if not references.issubset({item['path'].removeprefix('_astro/') for item in assets}):
             raise ValueError('Template references an asset outside the retained catalogue')
+        verify_projected_template_styles(value, root=static.root, assets=assets, origin=base.origin)
         templates[locale] = _payload(directory, 'templates', value)
         payloads[templates[locale]['key']] = templates[locale]
     changed, unchanged = [], []
@@ -477,8 +484,41 @@ def verify_projected_publication(candidate: PapersContentCandidate, *, opener=No
                 selected[locale] = entry
     if set(selected) != set(LOCALES):
         raise ValueError('Projected publication has no complete locale canaries')
+    canaries = {entry['logical_key']: (locale, entry) for locale, entry in selected.items()}
+    if not empty:
+        # A published-status canary cannot exercise the legacy historical
+        # reader. Keep changed-record probes, and cover both public contracts.
+        # Group locale routes before reading so each immutable record is read
+        # at most once, with constant-time dependency lookup.
+        records = {}
+        for entry in candidate.entries:
+            if entry.get('paper_template', {}).get('schema') == 3:
+                records.setdefault(entry['key'], []).append(entry)
+        record_keys = dict.fromkeys([entry['key'] for entry in selected.values()] + list(records))
+        objects_by_key = {item['key']: item for item in candidate.template_objects}
+        categories = set()
+        for key in record_keys:
+            record = _read_object(candidate, key, objects_by_key=objects_by_key)
+            data = record.get('content', {})
+            historical = (data.get('editorial_status') is None
+                          and data.get('historical_baseline') is True and data.get('indexable') is True
+                          and isinstance(record.get('article_id'), str)
+                          and record['article_id'].startswith('lit_hist_'))
+            category = 'historical' if historical else 'published'
+            if category in categories:
+                continue
+            if not historical and data.get('editorial_status') != 'published':
+                raise ValueError('Projected publication canary is not public')
+            samples = records[key]
+            if {entry['paper_template']['locale'] for entry in samples} != set(LOCALES):
+                raise ValueError('Projected publication has incomplete public-category locale canaries')
+            for entry in samples:
+                canaries.setdefault(entry['logical_key'], (entry['paper_template']['locale'], entry))
+            categories.add(category)
+            if len(categories) == 2:
+                break
     checked = []
-    for locale, entry in selected.items():
+    for locale, entry in canaries.values():
         descriptor = entry.get('paper_template', {})
         url = candidate.origin + '/' + entry['logical_key']
         # Cloudflare may reject urllib's implicit `Python-urllib` user agent

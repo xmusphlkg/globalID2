@@ -14,7 +14,17 @@ operations dashboard, and an Astro public site.
 - [Control center](docs/control-center/README.md): operators, API, deployment and troubleshooting.
 - [Changelog](CHANGELOG.md): version history.
 
-## Version 0.19.4
+## Version 0.20.2
+
+This patch repairs public directory pagination and recovery, geographic
+navigation, keyboard search, chart fullscreen layouts, missing-value heatmaps,
+and multilingual report and Research presentation. Publication checks now reject
+pages and article templates with missing styles or assets. Historical public
+papers follow the same access contract in the exporter and the serving Worker.
+Surveillance and Literature data continue through their independent publication
+workflows; see [the changelog](CHANGELOG.md) for the release scope.
+
+## Previous publication work
 
 Template releases now regenerate Research collections from current frozen JSON
 and templates, then verify every expected route before publishing. Article v3
@@ -139,6 +149,9 @@ Configuration, worker roles and systemd commands are in
 [Development and local operations](docs/operations/DEVELOPMENT.md).
 Run the checks appropriate to your changes; `make check` combines the repository,
 Python, dashboard, public-site and subscription checks and requires their dependencies.
+GitHub runs these checks once in `Project quality gates`. The `Control Center`
+workflow is a manual screenshot preview (`Actions → Control Center → Run workflow`);
+it does not repeat the automatic dashboard checks.
 
 ## Source and data repositories
 

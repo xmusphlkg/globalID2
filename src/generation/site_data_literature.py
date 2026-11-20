@@ -22,6 +22,7 @@ from sqlalchemy import String, any_, bindparam, func, select
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.country_library import get_country_display_name
 from src.domain import (
     LiteratureArticle,
     LiteratureCountryLink,
@@ -224,7 +225,8 @@ def _load_title_disease_aliases() -> dict[str, list[str]]:
             if isinstance(terms, list):
                 merged[str(disease_id)].update(str(term).strip() for term in terms if str(term).strip())
     try:
-        ontology = json.loads((ROOT / "configs" / "disease_ontology.json").read_text(encoding="utf-8"))
+        from src.ontology import read_ontology_document
+        ontology = read_ontology_document(ROOT / "configs" / "disease_ontology.json")
     except (OSError, json.JSONDecodeError):
         ontology = {}
     for concept in ontology.get("concepts", []) if isinstance(ontology, dict) else []:
@@ -679,11 +681,15 @@ async def collect_literature_export(
             "name_fr": disease.get("name_fr"),
             "confidence": link.confidence,
         })
+    country_names_zh: dict[str, str] = {}
     for link in country_links:
+        country_code = str(link.country_code or "").upper()
+        if country_code not in country_names_zh:
+            country_names_zh[country_code] = get_country_display_name(country_code, "zh")
         countries[link.article_id].append({
-            "code": link.country_code,
+            "code": country_code,
             "name_en": link.country_name,
-            "name_zh": None,
+            "name_zh": country_names_zh[country_code],
             "confidence": link.confidence,
         })
     for link in topic_links:

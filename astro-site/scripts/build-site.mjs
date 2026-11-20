@@ -181,6 +181,7 @@ if ((result.status ?? 1) === 0 && ((!independentResearch && JSON.stringify(sourc
 if ((result.status ?? 1) === 0) {
   process.stdout.write(`[build-timing] recheck source consistency ${elapsedSeconds(recheckStarted)}s\n`);
   const requiredPaths = ['index.html', 'zh/index.html', 'fr/index.html',
+    'country-disease/index.html', 'zh/country-disease/index.html', 'fr/country-disease/index.html',
     ...Object.values(snapshot.articles).flatMap(article => article.paths),
     ...Object.values(pageSnapshot.articles).flatMap(article => article.paths)];
   const css = validateStylesheets(result.stagingPath, { requiredPaths });

@@ -3,11 +3,26 @@ import test from 'node:test';
 import {
   buildPublishableReports,
   isReportV4,
+  localizedReportText,
   normalizeReportRouteSegment,
   reportArchiveCountries,
   reportDiseaseSlugs,
   reportsForCountry,
 } from './report-routes.ts';
+
+test('report cards use the published document translations instead of the index original language', () => {
+  const document = { title: { en: 'Japan surveillance brief', zh: '日本监测简报', fr: 'Note de surveillance du Japon' },
+    summary: { en: 'Observed signals.', zh: '监测信号。', fr: 'Signaux observés.' } };
+  for (const report of [{ title: '日本监测简报', report_document_v4: document }, { metadata: { report_document_v4: document } }]) {
+    for (const locale of ['en', 'zh', 'fr'] as const) {
+      assert.equal(localizedReportText(report, 'title', locale), document.title[locale]);
+      assert.equal(localizedReportText(report, 'summary', locale), document.summary[locale]);
+    }
+  }
+  assert.equal(localizedReportText({ title_en: 'Legacy English title' }, 'title', 'en'), 'Legacy English title');
+  assert.equal(localizedReportText({ title: '原文标题' }, 'title', 'en'), null);
+  assert.equal(localizedReportText({ report_document_v4: { title: { en: '  ' } } }, 'title', 'en'), null);
+});
 
 test('recognizes every report_v4 marker used by report detail routes', () => {
   assert.equal(isReportV4({ metadata: { report_layout: 'report_v4' } }), true);

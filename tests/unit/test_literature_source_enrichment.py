@@ -13,6 +13,7 @@ from src.domain import (
     LiteratureIngestRun,
     LiteratureStatusEvent,
 )
+from src.literature.classification import CLASSIFICATION_VERSION
 from src.literature.clients.crossref import CrossrefClient
 from src.literature.clients.openalex import OpenAlexClient
 from src.literature.clients.unpaywall import UnpaywallClient
@@ -856,7 +857,7 @@ async def test_repository_persists_openalex_id_and_does_not_downgrade_existing_o
     assert article.open_access_status == "open"
     assert article.open_access_url == "https://repository.example.org/existing"
     assert article.source_payload["europe_pmc"] == {"isOpenAccess": "Y"}
-    assert article.metadata_["classification_version"] == 5
+    assert article.metadata_["classification_version"] == CLASSIFICATION_VERSION
     assert article.metadata_["classification_evidence"] == {
         "diseases": {},
         "countries": {},

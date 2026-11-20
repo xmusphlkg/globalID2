@@ -11,6 +11,7 @@ import unicodedata
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from src.data.crawlers.mx_high_frequency import SOURCE_IDS,SOURCE_LABELS
+from src.services.mx_high_frequency_review import mx_source_label_icd_conflict
 
 
 def folded(value):
@@ -62,6 +63,10 @@ def main():
             target=next(iter(candidates)) if len(candidates)==1 and icd_matches else None
             reviewed_rule=supplementary.get((folded(row['RawDiseaseLabel']),icd_key(row['SourceICDCode'])))
             if reviewed_rule:target=reviewed_rule['target_code']
+            source_conflict=mx_source_label_icd_conflict(row['RawDiseaseLabel'],row['SourceICDCode'])
+            if source_conflict:
+                target=None
+                reviewed_rule=None
             dims=json.loads(row['Dimensions'])
             incident=(row['Measure']=='case_notifications' and row['Sex']=='all'
                 and dims.get('source_case_definition')!='estimated_source_formula')
@@ -74,6 +79,10 @@ def main():
             notes=((reviewed_rule['review_basis']+' Original ICD: '+row['SourceICDCode']+'. ') if reviewed_rule else
                 'Exact source-label target and original ICD agreement reused from unambiguous reviewed ICD-10 national all-sex count category. '
                 if target else 'No unambiguous reviewed current-ICD count-category target for the exact source label. ')
+            if source_conflict:
+                notes=('Unresolved original source label/ICD conflict: printed '+row['SourceICDCode']+
+                    ', expected '+source_conflict['expected_icd_code']+' for the printed label. '
+                    'No official correction has been verified; preserve original code and prohibit canonical projection. ')
             notes+=('Native monthly new notifications or source-verified table-specific weekly notifications. '
                 'Cumulative, sex-specific and estimated measurements cannot supply incident case curves. '
                 'Preserve source calendar, case definition, ICD label, explicit zeros and missingness; never sum states, strata, weekly/monthly/annual or reporting systems.')
@@ -98,7 +107,7 @@ def main():
                 'status':'upstream_available_ingestion_pending','reason_code':'official_originals_captured_offline_organization_verified',
                 'missing_value_policy':'missing_is_unknown'})
     ontology['summary']=counts
-    ontology['application_note']='Merge this independent patch via the shared ontology owner. Evidence covers actual 2025 monthly editions and W43 2026; W44 title graphics are archived and parser-blocked. Availability describes these explicit series, never all 69 monthly editions or all linked weekly reports.'
+    ontology['application_note']='Merge this independent patch via the shared ontology owner. Evidence covers only the captured monthly editions and source-verified weekly table periods. Unresolved source cells and label/ICD conflicts remain explicit in each source audit. Availability describes these explicit series, never all discovered archive editions or reports.'
     (ROOT/'configs/high_frequency_mexico_ontology.json').write_text(json.dumps(ontology,ensure_ascii=False,indent=2)+'\n')
     (ROOT/'configs/high_frequency_mexico_reviewed_mappings.json').write_text(json.dumps(mappings,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(counts))

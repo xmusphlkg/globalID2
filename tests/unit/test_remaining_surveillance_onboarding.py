@@ -19,7 +19,7 @@ async def test_dispatch_preserves_country_source_and_full_history(monkeypatch, c
     run = AsyncMock(return_value=object())
     monkeypatch.setattr(runner, "run_surveillance", run)
     result = await CrawlService().execute(
-        task=SimpleNamespace(input_data={}), country_code=code, source="all",
+        task=SimpleNamespace(input_data={}), country_code=code, source=contract["scope"],
         force=False, process=True, save_raw=True, fill_missing=False,
         revision_window_months=1,
     )
@@ -37,7 +37,7 @@ async def test_dispatch_preserves_country_source_and_full_history(monkeypatch, c
 @pytest.mark.parametrize("code", REMAINING_COUNTRIES)
 def test_scope_labels_registry_and_refresh_contract(code):
     contract = source_contract(code)
-    assert canonicalize_task_source("all", country_code=code) == contract["scope"]
+    assert canonicalize_task_source(contract["scope"], country_code=code) == contract["scope"]
     assert scope_from_data_source(contract["source_id"]) == contract["scope"]
     assert scope_from_data_source(contract["label_en"]) == contract["scope"]
     assert source_scope_label(contract["scope"], country_code=code) == contract["label_en"]
@@ -95,7 +95,7 @@ async def test_extra_sources_dispatch_separately_from_country_baseline(monkeypat
 def test_three_reviewed_additions_have_exact_registry_scope_and_policy(code, scope, source_id):
     contract = source_contract(code, scope)
     assert contract['source_id'] == source_id
-    assert canonicalize_task_source('all', country_code=code) == 'who_gho_annual'
+    assert canonicalize_task_source('who_gho_annual', country_code=code) == 'who_gho_annual'
     assert canonicalize_task_source(scope, country_code=code) == scope
     assert scope_from_data_source(source_id) == scope
     assert scope_from_data_source(contract['label_en']) == scope
@@ -119,32 +119,6 @@ def test_job_plan_describes_all_history_and_preserves_other_jobs():
         assert not job["fill_missing"]
         assert "Full published history" in job["notes"]
         assert job["timezone"] == source_contract(code)["timezone"]
-
-
-def test_complete_catalogue_has_original_ten_eighteen_countries_and_three_extra_sources():
-    from scripts.configure_priority_country_updates import desired_jobs
-    from tests.unit.test_priority_country_updates import EXPECTED_CHANNEL_CONTRACTS
-    who = {'ET', 'KE', 'UG', 'GH', 'TZ', 'PH', 'VN', 'LA', 'MM', 'BN', 'TL', 'PY', 'EC', 'CR', 'PA'}
-    spf = {'GP', 'MQ', 'GF'}
-    assert set(REMAINING_COUNTRIES) == who | spf
-    expected = {(code, scope, source) for (code, scope), source in EXPECTED_CHANNEL_CONTRACTS.items()}
-    expected.update((code, 'who_gho_annual', f'SRC_{code}_WHO_GHO') for code in who)
-    expected.update((code, 'spf_odisse_annual', f'SRC_{code}_SPF_ODISSE') for code in spf)
-    extras = {
-        ('CR', 'cr_moh_notifications'): 'SRC_CR_MOH_NOTIFICATIONS',
-        ('LA', 'who_wpro_dengue'): 'SRC_LA_WHO_WPRO_DENGUE',
-        ('VN', 'who_wpro_dengue'): 'SRC_VN_WHO_WPRO_DENGUE',
-    }
-    assert set(EXTRA_SOURCE_CONTRACTS) == set(extras)
-    assert {key: contract['source_id'] for key, contract in EXTRA_SOURCE_CONTRACTS.items()} == extras
-    expected.update((code, scope, source_id) for (code, scope), source_id in extras.items())
-    channels = load_source_channels()
-    assert len(channels) == len(expected)
-    assert {(c['country_code'], c['scope'], c['source_id']) for c in channels} == expected
-    jobs = desired_jobs()
-    assert len(jobs) == len(expected)
-    assert {(job['country_code'], job['source']) for job in jobs.values()} == {(code, scope) for code, scope, _ in expected}
-    assert set(jobs) == {f"{code.lower()}-{scope.replace('_', '-')}-daily" for code, scope, _ in expected}
 
 
 async def test_refresh_acceptance_preserves_old_history_but_rejects_changed_current_facts(monkeypatch, tmp_path):

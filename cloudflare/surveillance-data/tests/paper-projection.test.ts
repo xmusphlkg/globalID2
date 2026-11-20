@@ -14,14 +14,14 @@ function template(locale: 'en' | 'zh' | 'fr', footer = 'one'): ProjectionTemplat
   return { schema: 3, content_schema: 3, renderer: 'gids-evidence-v1', locale, scope_attributes: ['data-astro-cid-abcdef12'],
     shell: { schema: 1, chunks: [`<!doctype html><html lang="${locale}"><head>`, { field: 'head', index: 0 }, '</head><body>', { field: 'main' }, `<footer>${footer}</footer></body></html>`] } };
 }
-function fixture() {
+function fixture(paper: ProjectedPaper = record) {
   const objects = new Map<string, string>(), reads: string[] = [];
   const put = (group: string, value: unknown) => { const raw = JSON.stringify(value), hash = sha(raw); objects.set(`paper-template-v3/${group}/${hash}.json`, raw); return hash; };
   const env = { PAPERS_PROJECTION_V3: '1', DATA: { async get(key: string) {
     reads.push(key); const raw = objects.get(key); if (!raw) return null;
     return { size: Buffer.byteLength(raw), body: new Response(raw).body, httpMetadata: {}, text: async () => raw, json: async () => JSON.parse(raw) };
   } } } as unknown as Env;
-  const recordSha = put('records', record), assetsSha = put('assets', { schema: 1, items: [] });
+  const recordSha = put('records', paper), assetsSha = put('assets', { schema: 1, items: [] });
   function entry(locale: 'en' | 'zh' | 'fr', footer = 'one') {
     const templateSha = put('templates', template(locale, footer));
     return { logical_key: `${locale === 'en' ? '' : `${locale}/`}research/articles/article-a/`,
@@ -61,6 +61,40 @@ test('all three locales read v3 from the same research pointer with independent 
     assert.match(await response.text(), new RegExp(`<html lang="${locale}">`));
   }
   assert.equal(f.reads.filter(key => key.endsWith('/current.json')).length, 3);
+});
+
+test('already-public historical records without an editorial status remain readable in every locale', async () => {
+  for (const status of [undefined, null]) {
+    const historical = structuredClone(record);
+    historical.article_id = 'lit_hist_article-a';
+    historical.content.editorial_status = status;
+    historical.content.historical_baseline = true;
+    const f = fixture(historical);
+    for (const locale of ['en', 'zh', 'fr'] as const) {
+      const entry = f.entry(locale); f.activate(entry);
+      const response = await worker.fetch(new Request(`https://papers.globalinfectiousdisease.com/${entry.logical_key}`), f.env);
+      assert.equal(response.status, 200, `historical ${locale} record with status ${status}`);
+      assert.equal(response.headers.get('X-GIDS-Paper-Content-SHA256'), f.recordSha);
+      assert.match(await response.text(), /data-research-article-id="lit_hist_article-a"/);
+    }
+  }
+});
+
+test('historical compatibility does not publish drafts or records lacking explicit public provenance', () => {
+  const historical = structuredClone(record);
+  historical.article_id = 'lit_hist_article-a';
+  historical.content.editorial_status = undefined;
+  historical.content.historical_baseline = true;
+  for (const changes of [
+    { editorial_status: 'draft' }, { editorial_status: 'excluded' }, { editorial_status: '' },
+    { historical_baseline: false }, { historical_baseline: 'true' },
+    { indexable: false }, { indexable: undefined }, { indexable: 'true' },
+  ]) {
+    const item = { ...historical, content: { ...historical.content, ...changes } };
+    assert.throws(() => projectionFragments(template('en'), item, sha('record')), /not public/);
+  }
+  const ordinary = { ...historical, article_id: 'lit_article-a' };
+  assert.throws(() => projectionFragments(template('en'), ordinary, sha('record')), /not public/);
 });
 
 test('v3 is off by default and corrupt records or asset manifests fail closed', async () => {

@@ -89,14 +89,21 @@ def compare_points(expected, actual):
 
 
 def load_contracts(root=ROOT):
+    from src.ontology import ontology_document_paths, read_ontology_document
     series, mappings, hashes = {}, {}, {}
     for name in ("disease_ontology.json", *STATIC_PATCHES):
         path = root / "configs" / name
         if not path.exists():
             continue
-        payload = path.read_bytes()
-        hashes[str(path.relative_to(root))] = hashlib.sha256(payload).hexdigest()
-        series.update({r["id"]: r for r in json.loads(payload).get("source_series", [])})
+        if name == "disease_ontology.json":
+            document = read_ontology_document(path)
+            paths = ontology_document_paths(path)
+        else:
+            document = json.loads(path.read_bytes())
+            paths = (path,)
+        for item in paths:
+            hashes[str(item.relative_to(root))] = hashlib.sha256(item.read_bytes()).hexdigest()
+        series.update({r["id"]: r for r in document.get("source_series", [])})
     from src.services.disease_mapping_config import load_reviewed_source_category_mappings
     for r in load_reviewed_source_category_mappings():
         mappings[r.country_code, r.source_id, r.source_code, r.definition_version] = {

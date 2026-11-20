@@ -52,7 +52,7 @@ export function Figure({ number, caption, children, theme, lang, actions = true,
         border: `1px solid ${isLight ? '#e2e8f0' : '#1e293b'}`,
       }}
       data-chart-title={caption}
-      className={`panel-fullscreen p-4 md:p-6 ${isFullscreen ? 'comparison-shell-fullscreen' : ''}`}
+      className="panel-fullscreen chart-fullscreen-fill p-4 md:p-6"
     >
       {actions && (
         <div className="chart-result-actions-fill mb-3">
@@ -65,7 +65,7 @@ export function Figure({ number, caption, children, theme, lang, actions = true,
           />
         </div>
       )}
-      <div className="mb-3" ref={plotRef}>
+      <div className="chart-fullscreen-plot mb-3" ref={plotRef}>
         {children}
       </div>
       <figcaption

@@ -2,6 +2,7 @@
 
 import { toSeoSlug } from '../../lib/seo.ts';
 import { siteHref } from '../../lib/papers.ts';
+import { countryDiseaseRuntimeHref } from '../../lib/country-page-navigation.ts';
 import type { CountryGlance, DiseaseGlance, SeriesGlance, SiteIndex } from '../../utils/situationTypes.ts';
 
 const SPARK_LIMIT = 16;
@@ -121,7 +122,7 @@ export function buildSituationSite(input: {
       const key = seriesKey(code, diseaseId);
       const slug = toSeoSlug(entry.slug);
       if (slug && curves.has(`${code.toLowerCase()}:${slug}`)) {
-        built.curveHref = `${prefix}/countries/${code.toLowerCase()}/diseases/${slug}/`;
+        built.curveHref = countryDiseaseRuntimeHref(prefix, code, slug);
       }
       if (!sparks.has(key)) delete built.spark;
       series[key] = built;

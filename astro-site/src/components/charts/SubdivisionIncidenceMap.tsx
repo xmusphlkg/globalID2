@@ -106,8 +106,10 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       // Hawaii must remain real geographic features rather than inset art.
       echarts.registerMap(key, geometry);
       setMapName(key); setPopulation(populations); setCatalog(current);
-      const requested = diseaseId || saved.get('mapDisease');
-      setSelectedDisease(current.diseases.find(item => item.id === requested)?.id || (diseaseId ? '' : current.diseases.find(item => item.id === 'D028')?.id || current.diseases[0]?.id || ''));
+      const requested = saved.get('mapDisease') || diseaseId;
+      setSelectedDisease(current.diseases.find(item => item.id === requested)?.id
+        || current.diseases.find(item => item.id === diseaseId)?.id
+        || (diseaseId ? '' : current.diseases.find(item => item.id === 'D028')?.id || current.diseases[0]?.id || ''));
       setStatus('ready');
     })().catch(() => { if (!controller.signal.aborted) setStatus('error'); });
     return () => controller.abort();
@@ -122,9 +124,11 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       if (controller.signal.aborted) return;
       if (next.country_code !== code || next.disease_id !== selectedDisease || next.schema_version !== 1) throw new Error('Map disease mismatch');
       prepareMapDataset(next);
-      const countryYears = catalog.diseases.flatMap(item => item.years);
-      const bounds = dateBounds(next, countryYears), prior = retainedRange.current;
-      const restored = prior && prior.from >= bounds.from && prior.to <= bounds.to ? { ...prior } : restoreWindow(saved, defaultWindow(catalog, next, population), countryYears, bounds);
+      const bounds = dateBounds(next), prior = retainedRange.current;
+      const keepRange = prior && prior.from >= bounds.from && prior.to <= bounds.to
+        && resultsFor(catalog, next, population, prior).some(row => row.cases !== null);
+      const restored = keepRange ? { ...prior! }
+        : restoreWindow(prior ? new URLSearchParams() : saved, defaultWindow(catalog, next, population), next.years, bounds);
       if (cadenceRank[restored.view] < cadenceRank[next.cadence]) restored.view = next.cadence;
       setDataset(next); setWindow(restored);
       if (!comparisonRestored.current) {
@@ -197,7 +201,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   };
   const months = monthNames(lang);
   const basisLabel = (basis: string) => populationBasis[basis]?.[lang === 'zh' ? 1 : lang === 'fr' ? 2 : 0] || basis;
-  const bounds = dataset ? dateBounds(dataset, catalog.diseases.flatMap(item => item.years)) : { from: '2000-01-01', to: '2100-12-31' };
+  const bounds = dataset ? dateBounds(dataset) : { from: '2000-01-01', to: '2100-12-31' };
   const presetYear = Number(window?.from.slice(0, 4)) || Number(retainedRange.current?.from.slice(0, 4)) || (dataset ? Math.max(...dataset.years) : new Date().getUTCFullYear());
   const calendarYears = Array.from({ length: Number(bounds.to.slice(0, 4)) - Number(bounds.from.slice(0, 4)) + 1 }, (_, index) => Number(bounds.from.slice(0, 4)) + index).reverse();
   const expected = rows[0], comparedExpected = compareRows[0];

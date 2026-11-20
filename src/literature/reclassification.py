@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
+from concurrent.futures import Executor
 from datetime import datetime, timezone
+from functools import partial
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from src.core.config import get_config
 from src.core.database import get_db
@@ -27,7 +29,8 @@ from .classification import (
     classify_candidate,
     surveillance_relation_score_for_level,
 )
-from .pipeline import LiteraturePipeline, ROOT, _load_json
+from .pipeline import ROOT, LiteraturePipeline, _load_json
+from .query_batches import argument_batches
 from .repository import LiteratureRepository
 from .types import ArticleCandidate
 
@@ -77,6 +80,9 @@ async def reclassify_existing_literature(
     after_id: int | None = None,
     journals: list[str] | None = None,
     excluded_only: bool = False,
+    published_only: bool = False,
+    stale_only: bool = False,
+    executor: Executor | None = None,
 ) -> dict[str, Any]:
     """Re-run current rules over stored source metadata and replace only links.
 
@@ -89,6 +95,8 @@ async def reclassify_existing_literature(
     diseases, countries = await pipeline._classification_catalogues()
     taxonomy = _load_json(ROOT / config.taxonomy_path)
     async with get_db() as db:
+        if published_only and excluded_only:
+            raise ValueError("published_only and excluded_only are mutually exclusive")
         query = select(LiteratureArticle).order_by(LiteratureArticle.id)
         if after_id is not None:
             if after_id < 0:
@@ -98,12 +106,22 @@ async def reclassify_existing_literature(
             query = query.where(LiteratureArticle.journal.in_(journals))
         if excluded_only:
             query = query.where(LiteratureArticle.publication_status == "excluded")
+        if published_only:
+            query = query.where(LiteratureArticle.publication_status == "published")
+        if stale_only:
+            query = query.where(func.coalesce(
+                LiteratureArticle.metadata_["classification_version"].as_integer(), 0,
+            ) < CLASSIFICATION_VERSION)
         if dois is not None:
             if not dois:
                 raise ValueError("DOI scope must not be empty")
             query = query.where(LiteratureArticle.doi.in_([doi.strip().lower() for doi in dois]))
         if limit is not None:
             query = query.limit(limit)
+        if not dry_run:
+            # Freeze each bounded selection while replacing its classifier
+            # metadata and links; concurrent editorial updates must not be lost.
+            query = query.with_for_update()
         articles = (await db.execute(query)).scalars().all()
         article_ids = [article.article_id for article in articles]
         existing_diseases: dict[str, set[str]] = {article_id: set() for article_id in article_ids}
@@ -123,13 +141,16 @@ async def reclassify_existing_literature(
         countries_added = 0
         diseases_added = 0
         topics_added = 0
-        for article in articles:
+        countries_removed = 0
+        diseases_removed = 0
+        topics_removed = 0
+        def classify(article):
             metadata = dict(article.metadata_ or {})
             relation_score = float(
                 (metadata.get("discovery_score_evidence") or {}).get("surveillance_relation_score")
                 or 0.0
             )
-            classification = await asyncio.to_thread(
+            return partial(
                 classify_candidate,
                 candidate_from_stored_article(article),
                 diseases=diseases,
@@ -138,6 +159,18 @@ async def reclassify_existing_literature(
                 auto_publish_min_score=config.auto_publish_min_score,
                 surveillance_relation_score=relation_score,
             )
+        if executor is None:
+            classifications = [await asyncio.to_thread(classify(article)) for article in articles]
+        else:
+            # Only immutable classifier inputs cross the process boundary.
+            # Database ownership, editorial preservation and the dirty marker
+            # remain in this one bounded transaction in the parent process.
+            loop = asyncio.get_running_loop()
+            classifications = await asyncio.gather(*[
+                loop.run_in_executor(executor, classify(article)) for article in articles
+            ])
+        for article, classification in zip(articles, classifications, strict=True):
+            metadata = dict(article.metadata_ or {})
             # Reclassification updates discoverability evidence, never an
             # editor's publication decision.
             classification.publication_status = article.publication_status
@@ -154,6 +187,9 @@ async def reclassify_existing_literature(
             diseases_added += len(new_diseases - existing_diseases[article.article_id])
             countries_added += len(new_countries - existing_countries[article.article_id])
             topics_added += len(new_topics - existing_topics[article.article_id])
+            diseases_removed += len(existing_diseases[article.article_id] - new_diseases)
+            countries_removed += len(existing_countries[article.article_id] - new_countries)
+            topics_removed += len(existing_topics[article.article_id] - new_topics)
             if not dry_run:
                 await repository.replace_classification(article, classification)
                 if differs:
@@ -170,7 +206,7 @@ async def reclassify_existing_literature(
 
     # A scoped run must not modify links for the rest of the corpus. Those
     # links are reconciled by the regular scoped automation lifecycle.
-    signal_links = ({"skipped": "scoped_reclassification"} if dois is not None or after_id is not None or journals or excluded_only
+    signal_links = ({"skipped": "scoped_reclassification"} if dois is not None or after_id is not None or journals or excluded_only or published_only or stale_only
                     else await reconcile_automatic_signal_links(dry_run=dry_run))
     return {
         "dry_run": dry_run,
@@ -180,6 +216,9 @@ async def reclassify_existing_literature(
         "diseases_added": diseases_added,
         "countries_added": countries_added,
         "topics_added": topics_added,
+        "diseases_removed": diseases_removed,
+        "countries_removed": countries_removed,
+        "topics_removed": topics_removed,
         "classification_version": CLASSIFICATION_VERSION,
         "signal_links": signal_links,
     }

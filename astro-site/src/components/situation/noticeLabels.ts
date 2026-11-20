@@ -1,6 +1,7 @@
 /** Localised labels and number/date formatting shared by the server pages and the map island. */
 
 import type { AlertStatus, CountBasis, HostMetadata, HostType, Locale, SituationAlertRecord } from '../../utils/situationTypes.ts';
+import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames.ts';
 
 const TAG: Record<Locale, string> = { en: 'en-US', zh: 'zh-CN', fr: 'fr-FR' };
 
@@ -48,9 +49,12 @@ function regionName(code: string, locale: Locale): string | null {
 }
 
 type DiseaseNames = {
+  disease_id?: string | null;
+  disease_slug?: string | null;
   disease_label: string;
   disease_name_en: string;
   disease_name_zh?: string | null;
+  disease_name_fr?: string | null;
 };
 type CountryNames = {
   country_code: string;
@@ -64,6 +68,10 @@ type SourceNames = {
 };
 
 export function diseaseName(record: DiseaseNames, locale: Locale): string {
+  if (locale === 'fr') return record.disease_name_fr
+    || (record.disease_slug && DISEASE_NAMES_FR[record.disease_slug])
+    || (record.disease_id && DISEASE_NAMES_FR_BY_ID[record.disease_id])
+    || record.disease_name_en || record.disease_label;
   const zh = locale === 'zh' ? record.disease_name_zh : null;
   return zh || record.disease_name_en || record.disease_label;
 }

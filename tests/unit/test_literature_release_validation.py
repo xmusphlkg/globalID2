@@ -1,5 +1,6 @@
 import pytest
 
+from src.literature.classification import CLASSIFICATION_VERSION
 from src.literature.release_validation import (
     assert_public_research_payload,
     validate_public_research_payload,
@@ -17,7 +18,7 @@ def _article(article_id="lit-1", *, peer_review_status="peer_reviewed"):
         "editorial_status": "published",
         "integrity_status": "current",
         "indexable": True,
-        "classification_version": 5,
+        "classification_version": CLASSIFICATION_VERSION,
         "research_domain": "human_health",
         "summary": {"en": {"main_findings": "A"}, "zh": {"main_findings": "甲"}},
         "related_articles": [],
@@ -92,7 +93,7 @@ def test_release_validator_accepts_redacted_weekly_brief_index_projection():
 
 def test_release_validator_blocks_stale_classification_versions():
     article = _article()
-    article["classification_version"] = 4
+    article["classification_version"] = CLASSIFICATION_VERSION - 1
     payload = {
         "articles": [article],
         "preprints": [],

@@ -79,6 +79,73 @@ async function showResults(page: Page) {
   await expect(page.locator('.sit-detail.is-open')).toBeVisible();
 }
 
+for (const [locale, retryLabel] of [['en', 'Retry'], ['zh', '重试'], ['fr', 'Réessayer']]) {
+  const prefix = locale === 'en' ? '' : `/${locale}`;
+
+  test(`${locale} situation markers retry without losing the shared place and filters`, async ({ page }) => {
+    await mockHistory(page);
+    let unavailable = true;
+    let requests = 0;
+    await page.route('**/situation/map-data.json', route => {
+      requests += 1;
+      return unavailable ? route.fulfill({ status: 503 }) : route.fallback();
+    });
+    await page.goto(`${prefix}/situation/?disease=D049&place=history-latest&window=all`);
+    const retry = page.locator('.sit-note').getByRole('button', { name: retryLabel, exact: true });
+    await expect(retry).toBeVisible();
+    unavailable = false;
+    await retry.click();
+    await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
+    await expect(page.locator('.sit-filter-chip[data-filter="disease"]')).toBeVisible();
+    expect(new URL(page.url()).searchParams.get('place')).toBe('history-latest');
+    expect(new URL(page.url()).searchParams.get('window')).toBe('all');
+    expect(requests).toBe(2);
+  });
+
+  test(`${locale} selected place retries its failed timeline without reloading`, async ({ page }) => {
+    await mockHistory(page);
+    let unavailable = true;
+    let requests = 0;
+    await page.route('**/situation/outbreaks/OB-history-a.json', route => {
+      requests += 1;
+      return unavailable ? route.fulfill({ status: 503 }) : route.fallback();
+    });
+    await page.goto(`${prefix}/situation/?disease=D049&place=history-latest&window=all`);
+    await showResults(page);
+    const retry = page.locator('.sit-current-place').getByRole('button', { name: retryLabel, exact: true });
+    await expect(retry).toBeVisible();
+    unavailable = false;
+    await retry.click();
+    await expect(page.locator('.sit-current-place .sit-source-link')).toHaveCount(2);
+    await expect(retry).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.get('place')).toBe('history-latest');
+    expect(new URL(page.url()).searchParams.get('disease')).toBe('D049');
+    expect(requests).toBe(2);
+  });
+
+  test(`${locale} all events can recover a partially failed overview without changing its filters`, async ({ page }) => {
+    await mockHistory(page);
+    let unavailable = true;
+    let requests = 0;
+    await page.route('**/situation/outbreaks/OB-history-b.json', route => {
+      requests += 1;
+      return unavailable ? route.fulfill({ status: 503 }) : route.fallback();
+    });
+    await page.goto(`${prefix}/situation/?disease=D049&window=all&timeline=all`);
+    await showResults(page);
+    const overview = page.locator('.sit-overview');
+    await expect(overview).toHaveAttribute('aria-busy', 'false');
+    await expect(overview.locator('.sit-alert')).toHaveCount(1);
+    unavailable = false;
+    await overview.getByRole('button', { name: retryLabel, exact: true }).click();
+    await expect(overview.locator('.sit-alert')).toHaveCount(2);
+    await expect(overview.locator('.sit-overview-error')).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.get('disease')).toBe('D049');
+    expect(new URL(page.url()).searchParams.get('timeline')).toBe('all');
+    expect(requests).toBe(2);
+  });
+}
+
 test('disease selection opens all places, reopens after closing and shows an empty timeline when no reports match', async ({ page }) => {
   await mockHistory(page);
   await page.goto('/situation/');
@@ -118,6 +185,7 @@ test('a historical source remains selectable when the latest marker came from an
   await selectFilter(page, 'Source', 'older-feed');
   await expect(page.locator('.sit-item')).toHaveCount(1);
   await expect(page.locator('.sit-item')).toContainText('Saudi Arabia');
+  await page.locator('.sit-item').click();
   await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
   await expect(page.locator('.sit-current-place .sit-source-link')).toHaveAttribute('href', 'https://example.test/history-older');
   await expect(page).toHaveURL(/source=older-feed/);

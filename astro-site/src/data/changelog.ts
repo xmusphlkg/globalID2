@@ -3,6 +3,20 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.6', date: '2026-11-20',
+    titleEn: 'A consolidated and validated public release',
+    titleZh: '统一并完成校验的公开站版本',
+    titleFr: 'Une version publique consolidée et validée',
+    summaryEn: 'Consolidate the public-site reliability work with runtime long-tail pages, bounded static output, and broader publication checks.',
+    summaryZh: '整合公开站可靠性改进，采用运行时长尾页面、受控静态输出和更完整的发布校验。',
+    summaryFr: 'Consolidez les améliorations de fiabilité avec des pages longue traîne à l’exécution, une sortie statique bornée et des contrôles de publication élargis.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Keep the existing multilingual map and runtime country-disease behavior while validating generated assets and public navigation before publication.',
+      zh: '保留现有多语言地图和国家疾病运行时行为，并在发布前校验生成资源和公开导航。',
+      fr: 'Conservez le comportement cartographique multilingue et les pages pays-maladie à l’exécution, avec une validation des ressources et de la navigation avant publication.',
+    }] }],
+  },
+  {
     version: '0.20.5', date: '2026-11-20',
     titleEn: 'A smaller static site with runtime long-tail pages',
     titleZh: '更小的静态站点与运行时长尾页面',
@@ -63,6 +77,31 @@ export const changelogReleases: ChangelogRelease[] = [
       zh: '有新闻的地点列表采用紧凑行，在疾病名后用图标标注人类或动物宿主；未知宿主不额外占位。',
       fr: 'Les lieux avec des actualités utilisent des lignes compactes, avec des icônes d’hôte humain ou animal à côté du nom de la maladie. Les hôtes inconnus n’occupent pas d’espace supplémentaire.',
     }] }],
+  },
+  {
+    version: '0.20.2', date: '2026-11-17',
+    titleEn: 'Reliable navigation, charts and research pages',
+    titleZh: '修复导航、图表与文献页面',
+    titleFr: 'Navigation, graphiques et pages de recherche fiables',
+    summaryEn: 'Repair public directories, search, charts and research presentation across English, Chinese and French.',
+    summaryZh: '修复中英法公开页面的目录、搜索、图表与文献展示问题。',
+    summaryFr: 'Corrigez les répertoires, la recherche, les graphiques et la présentation des publications en anglais, chinois et français.',
+    sections: [{
+      kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections',
+      items: [{
+        en: 'Directories support pagination and recover after failed requests. Geographic navigation and keyboard search keep the selected context.',
+        zh: '目录支持分页与请求失败后的恢复；完善区域导航和键盘搜索，保持当前选择。',
+        fr: 'Les répertoires proposent une pagination et se rétablissent après un échec de requête. La navigation géographique et la recherche au clavier conservent la sélection.',
+      }, {
+        en: 'Charts fit fullscreen views, heatmaps distinguish missing observations, and map selectors and Situation history behave consistently.',
+        zh: '图表适配全屏显示，热力图区分缺失观测，地图选择器与态势历史保持一致的交互行为。',
+        fr: 'Les graphiques s’adaptent au plein écran, les cartes thermiques distinguent les observations manquantes, et les sélecteurs cartographiques et l’historique de situation fonctionnent de manière cohérente.',
+      }, {
+        en: 'Report cards use localized text. Research links, historical article access and page styles are checked during publication.',
+        zh: '报告卡片使用对应语言的文本；发布时校验文献链接、历史文章访问与页面样式。',
+        fr: 'Les cartes de rapport utilisent les textes traduits. Les liens de recherche, l’accès aux articles historiques et les styles sont vérifiés lors de la publication.',
+      }],
+    }],
   },
   {
     version: '0.20.1', date: '2026-11-17',

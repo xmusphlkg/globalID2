@@ -139,8 +139,11 @@ test('timeline shares filters, merges duplicates and keeps all report links', as
   await selectFilter(page, 'Source', '');
   await selectFilter(page, 'Time window', 'all');
   await selectFilter(page, 'Area', 'KE');
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+  await page.locator('.sit-item').first().click();
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toHaveAttribute('data-country', 'KE');
+  await openPlaceList(page);
   await page.locator('.sit-reset').click();
   await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
   await selectFilter(page, 'Area', 'KE');
@@ -256,9 +259,10 @@ test('committing a disease opens its timeline, scopes monitoring cards and resto
   await selectFilter(page, 'Area', 'KE');
   await expect(page.locator('.sit-monitor-card')).toHaveCount(1);
   await expect(page.locator('.sit-monitor-card')).toContainText('Ebola monitoring in Kenya');
-  await expect(page.locator('.sit-detail.is-open')).toHaveCount(1);
+  await expect(page.locator('.sit-detail.is-open')).toHaveCount(0);
+  await page.locator('.sit-item').first().click();
   await openPlaceList(page);
-  await expect(page.locator('.sit-current-place .sit-alert')).toHaveCount(1);
+  await expect(page.locator('.sit-alert')).toHaveCount(1);
   await disease.fill('unmatched query');
   await expect(page.getByRole('option')).toHaveCount(0);
   await disease.press('Escape');
@@ -304,7 +308,7 @@ test('MERS shared link groups identical cumulative figures across channels and d
 });
 
 for (const prefix of ['', '/zh', '/fr']) {
-  test(`disease-only links open the full timeline on load and reload in ${prefix || 'en'}`, async ({ page }) => {
+  test(`disease-only links open the full timeline without selecting a place on load and reload in ${prefix || 'en'}`, async ({ page }) => {
     await mockSituation(page);
     await page.goto(`${prefix}/situation/?disease=D050&window=all`, { waitUntil: 'domcontentloaded' });
     await openPlaceList(page);

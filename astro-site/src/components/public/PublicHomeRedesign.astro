@@ -19,10 +19,10 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const href = (path: string) => `${prefix}${path}`;
 const t = zh ? {
   eyebrow: '全球传染病数据与监测',
-  titleLines: ['洞察疫情动态，', '追溯科学证据。'],
+  titleLines: ['洞察疫情动态。', '追溯科学证据。'],
   sloganPrefix: '一个整合全球',
   sloganWords: ['传染病监测', '公共卫生数据', '科学研究', '开放数据'],
-  summary: '汇集全球传染病监测数据、疫情动态与科学研究，帮助你发现公共卫生信号，追踪疾病变化，比较不同国家和地区的监测趋势，并获取可追溯、可下载的研究数据。',
+  summary: '追踪全球疫情，比较监测趋势，探索来自官方数据与科学研究的证据。',
   searchLabel: '搜索 GIDS',
   searchPlaceholder: '搜索国家、地区、疾病、报告与研究……',
   search: '搜索',
@@ -45,22 +45,22 @@ const t = zh ? {
   methods: '了解数据来源与方法',
   review: '全球疫情动态与重点事件',
   attention: '追踪疾病事件与态势更新',
-  reviewText: '持续追踪全球重要传染病事件，整合国际和各国公共卫生机构发布的官方通报，帮助你了解疾病传播动态、重点地区及最新进展。疫情事件与统计监测信号均保留来源及背景信息；统计信号用于辅助发现和筛查，不等同于官方疫情确认。',
+  reviewText: '查看官方通报与监测信号，了解重点地区的最新进展。',
   events: '有新消息的地点',
   signals: '统计监测信号',
   reviewed: '贡献来源',
   fullReview: '打开态势地图',
   explore: '探索全球传染病数据',
-  exploreTitle: '按国家、地区、疾病和报告周期查找数据',
-  exploreText: '了解数据覆盖情况，按照地理区域或疾病查找监测记录，并追溯每一条数据的原始来源。',
+  exploreTitle: '从数据开始探索',
+  exploreText: '按地区或疾病查找数据，追溯原始来源。',
   countryPath: '按国家与地区探索',
-  countryPathText: '查看不同国家和地区的监测范围、报告体系、收录疾病及历史数据。',
+  countryPathText: '查看各地监测范围与历史记录。',
   diseasePath: '按疾病探索',
-  diseasePathText: '了解不同传染病的监测地区、数据来源及历史监测记录。',
+  diseasePathText: '查找疾病趋势与官方来源。',
   downloadPath: '下载与复用数据',
-  downloadPathText: '获取结构化监测数据，查阅元数据与使用限制，为科研和数据分析提供支持。',
-  researchPath: '从监测数据到科学研究',
-  researchPathText: '将监测数据与已发表的科学研究连接起来，发现相关文献、追踪研究趋势。',
+  downloadPathText: '获取数据集与元数据。',
+  researchPath: '探索科学研究',
+  researchPathText: '发现相关文献与研究趋势。',
   countryList: '数据覆盖较广的国家与地区',
   common: '常用疾病入口',
   viewAll: '查看全部',
@@ -73,13 +73,13 @@ const t = zh ? {
   curveLabel: '日本流感 · 中国流感',
   interactiveTool: '交互工具 / 01',
   compareFeature: '比较监测趋势',
-  compareFeatureText: '跨国家、跨地区比较疾病变化趋势，同时保留原始报告周期和指标定义。',
+  compareFeatureText: '在同一视图中比较不同地区的疾病趋势。',
 } : {
   eyebrow: 'GLOBAL INFECTIOUS DISEASE INTELLIGENCE',
   titleLines: ['See the signals.', 'Understand the evidence.'],
   sloganPrefix: 'A global platform for',
   sloganWords: ['surveillance', 'public health data', 'research evidence', 'open data'],
-  summary: 'Explore infectious disease surveillance data, track emerging public health events, compare trends across countries and diseases, and discover the research behind the numbers — all in one place.',
+  summary: 'Track disease events, compare surveillance trends, and explore evidence from official data and research.',
   searchLabel: 'Search GIDS',
   searchPlaceholder: 'Search countries, diseases, reports and research…',
   search: 'Search',
@@ -102,22 +102,22 @@ const t = zh ? {
   methods: 'Explore sources & methods',
   review: 'Disease events & situation updates',
   attention: 'Track current public health events',
-  reviewText: 'Stay informed about notable infectious disease events through a structured review of official public health reports and surveillance information. Reported events and statistical surveillance signals are presented with their sources and context; statistical signals are screening indicators, not confirmed outbreak declarations.',
+  reviewText: 'Follow official reports and surveillance signals from around the world.',
   events: 'Places with news',
   signals: 'Statistical signals',
   reviewed: 'Contributing sources',
   fullReview: 'Open the situation map',
   explore: 'Explore infectious disease data',
-  exploreTitle: 'Navigate surveillance data by geography, disease, and reporting period',
-  exploreText: 'Follow each dataset back to its original source, review coverage and definitions, and compare the evidence across places and diseases.',
+  exploreTitle: 'Start exploring the data',
+  exploreText: 'Find data by place or disease, with links to the original sources.',
   countryPath: 'Explore by country & region',
-  countryPathText: 'Review surveillance coverage, reporting systems, available diseases, and historical data across countries and territories.',
+  countryPathText: 'Browse local coverage and historical records.',
   diseasePath: 'Explore by disease',
-  diseasePathText: 'Discover where diseases are monitored and examine available surveillance records across different locations.',
+  diseasePathText: 'Find disease trends and official sources.',
   downloadPath: 'Download & reuse data',
-  downloadPathText: 'Access structured datasets, review metadata and limitations, and reuse public data for research and analysis.',
-  researchPath: 'Beyond surveillance: discover the research',
-  researchPathText: 'Connect surveillance data with published scientific evidence, research trends, and the wider context of infectious diseases.',
+  downloadPathText: 'Get datasets and their metadata.',
+  researchPath: 'Explore the research',
+  researchPathText: 'Discover related studies and research trends.',
   countryList: 'Countries & regions with broad coverage',
   common: 'Common disease entry points',
   viewAll: 'View all',
@@ -130,7 +130,7 @@ const t = zh ? {
   curveLabel: 'Japan influenza · China influenza',
   interactiveTool: 'Interactive tool / 01',
   compareFeature: 'Compare surveillance trends',
-  compareFeatureText: 'Compare disease patterns across countries and regions while retaining the original reporting periods and definitions.',
+  compareFeatureText: 'Compare disease trends across places in one view.',
 };
 
 // French is the shared interface language for France and Canada. Keep source
@@ -138,15 +138,15 @@ const t = zh ? {
 if (fr) Object.assign(t, {
   eyebrow: 'INTELLIGENCE MONDIALE SUR LES MALADIES INFECTIEUSES', titleLines: ['Détecter les signaux.', 'Comprendre les données.'],
   sloganPrefix: 'Une plateforme mondiale de', sloganWords: ['surveillance', 'données de santé publique', 'recherche scientifique', 'données ouvertes'],
-  summary: 'Explorez les données mondiales de surveillance des maladies infectieuses, suivez les événements de santé publique, comparez les tendances entre pays et maladies, et découvrez les travaux scientifiques qui éclairent ces données — sur une seule plateforme.',
+  summary: 'Suivez les événements sanitaires, comparez les tendances et explorez les données officielles et la recherche.',
   searchLabel: 'Rechercher dans GIDS', searchPlaceholder: 'Rechercher des pays, maladies, rapports et études…', search: 'Rechercher',
   situation: 'Explorer la surveillance mondiale', compare: 'Comparer les tendances', countries: 'Parcourir les pays et régions', diseasesLink: 'Explorer les maladies', downloads: 'Télécharger les données ouvertes', release: 'La surveillance mondiale en un coup d’œil',
   observations: 'Séries de surveillance', reportedCases: 'Cas déclarés', jurisdictions: 'Zones géographiques', diseases: 'Maladies suivies', sources: 'Sources officielles', through: 'Données jusqu’au',
   updated: 'Instantané généré', recentBoard: 'Périodes de déclaration les plus récentes', cadence: 'Fréquence de déclaration',
   sourceNote: 'Explorez les dernières données publiques de surveillance publiées par les autorités sanitaires du monde entier. La couverture, les périodes de déclaration et les définitions varient selon les sources ; une donnée manquante ne signifie pas nécessairement zéro cas.',
-  methods: 'Consulter les sources et les méthodes', review: 'Événements épidémiques et actualités sanitaires', attention: 'Suivre les événements de santé publique', reviewText: 'Suivez les principaux événements liés aux maladies infectieuses grâce à une veille structurée des rapports officiels et des informations de surveillance en santé publique. Les événements signalés et les signaux statistiques sont présentés avec leurs sources et leur contexte ; les signaux statistiques sont des indicateurs de dépistage, et non des déclarations officielles d’épidémie.', events: 'Lieux avec des nouvelles', signals: 'Signaux statistiques', reviewed: 'Sources contributrices', fullReview: 'Explorer la carte des événements',
-  explore: 'Explorer les données sur les maladies infectieuses', exploreTitle: 'Parcourir les données par pays, région, maladie et période de déclaration', exploreText: 'Chaque jeu de données conserve un lien vers sa source d’origine. Consultez la couverture et les définitions, puis comparez les tendances entre lieux et maladies.',
-  countryPath: 'Explorer par pays et région', countryPathText: 'Consultez la couverture de la surveillance, les systèmes de déclaration, les maladies suivies et les données historiques.', diseasePath: 'Explorer par maladie', diseasePathText: 'Découvrez les territoires où chaque maladie est surveillée et consultez les séries de données disponibles.', downloadPath: 'Télécharger et réutiliser les données', downloadPathText: 'Accédez aux jeux de données structurés, consultez leurs métadonnées et leurs limites, et réutilisez les données publiques à des fins de recherche et d’analyse.', researchPath: 'Au-delà de la surveillance : explorer la recherche', researchPathText: 'Mettez les données de surveillance en perspective avec les publications scientifiques et les tendances de la recherche.', countryList: 'Pays et régions bien couverts', common: 'Maladies courantes', viewAll: 'Tout voir', analysis: 'Données de surveillance et preuves scientifiques', latest: 'Derniers rapports de surveillance', research: 'Explorer le Radar de recherche', openReport: 'Ouvrir le rapport', unavailable: 'Indisponible', empty: 'Aucun rapport public disponible.', curveLabel: 'Grippe au Japon · grippe en Chine', interactiveTool: 'Outil interactif / 01', compareFeature: 'Comparer les tendances', compareFeatureText: 'Comparez l’évolution des maladies entre pays et régions, tout en conservant les périodes de déclaration et les définitions d’origine.',
+  methods: 'Consulter les sources et les méthodes', review: 'Événements épidémiques et actualités sanitaires', attention: 'Suivre les événements de santé publique', reviewText: 'Consultez les rapports officiels et les signaux de surveillance dans le monde.', events: 'Lieux avec des nouvelles', signals: 'Signaux statistiques', reviewed: 'Sources contributrices', fullReview: 'Explorer la carte des événements',
+  explore: 'Explorer les données sur les maladies infectieuses', exploreTitle: 'Explorez les données', exploreText: 'Trouvez les données par lieu ou maladie, avec leurs sources d’origine.',
+  countryPath: 'Explorer par pays et région', countryPathText: 'Consultez la couverture et les données historiques.', diseasePath: 'Explorer par maladie', diseasePathText: 'Retrouvez les tendances et les sources officielles.', downloadPath: 'Télécharger et réutiliser les données', downloadPathText: 'Accédez aux jeux de données et aux métadonnées.', researchPath: 'Explorer la recherche', researchPathText: 'Découvrez les études et les tendances de la recherche.', countryList: 'Pays et régions bien couverts', common: 'Maladies courantes', viewAll: 'Tout voir', analysis: 'Données de surveillance et preuves scientifiques', latest: 'Derniers rapports de surveillance', research: 'Explorer le Radar de recherche', openReport: 'Ouvrir le rapport', unavailable: 'Indisponible', empty: 'Aucun rapport public disponible.', curveLabel: 'Grippe au Japon · grippe en Chine', interactiveTool: 'Outil interactif / 01', compareFeature: 'Comparer les tendances', compareFeatureText: 'Comparez les tendances entre lieux dans une même vue.',
 });
 const latestReports = (reportsRaw as any[]).slice(0, 3);
 const preferredDiseases = ['covid-19', 'cholera', 'dengue', 'measles', 'malaria', 'tuberculosis', 'hepatitis-a', 'pertussis'];
@@ -160,21 +160,13 @@ const explorePaths = [
 ];
 ---
 
-<div class:list={['public-home-redesign', zh && 'is-zh']}>
+<div class:list={['public-home-redesign', `home-locale-${locale}`]} lang={locale}>
   <section class="home-hero">
     <HomeInfluenza client:idle language={locale} />
     <div class="page-wrap hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">{t.eyebrow}</p>
         <h1>{t.titleLines.map(line => <span>{line}</span>)}</h1>
-        <p class="animated-slogan" aria-label={`${t.sloganPrefix} ${t.sloganWords.join(', ')}`}>
-          <span>{t.sloganPrefix}</span>
-          <span class="slogan-window" aria-hidden="true">
-            {t.sloganWords.map((word, index) => (
-              <b style={`--i:${index}`}>{word}</b>
-            ))}
-          </span>
-        </p>
         <p class="lead">{t.summary}</p>
         <form class="home-search" action={href('/search/')} method="get">
           <label for={`home-search-${locale}`}>{t.searchLabel}</label>
@@ -186,9 +178,6 @@ const explorePaths = [
         <div class="actions" aria-label={zh ? '主要入口' : fr ? 'Accès rapides' : 'Primary entry points'}>
           <a class="primary" href={href('/situation/')}>{t.situation}</a>
           <a href={href('/compare/')}>{t.compare}</a>
-          <a href={href('/countries/')}>{t.countries}</a>
-          <a href={href('/diseases/')}>{t.diseasesLink}</a>
-          <a href={href('/downloads/')}>{t.downloads}</a>
         </div>
       </div>
 
@@ -198,14 +187,12 @@ const explorePaths = [
             <p class="eyebrow">{t.sources}</p>
             <h2 id={`home-console-${locale}`}>{t.release}</h2>
           </div>
-          <span class="release-pill"><i></i>{t.updated}</span>
         </header>
         <SurveillanceHomeSummary client:load dataUrl="/site-data/home-summary.json" mode="home-indicators" language={locale} reportCount={reportsRaw.length} />
         <div class="source-board">
           <h3>{t.recentBoard}</h3>
           <SurveillanceHomeSummary client:load dataUrl="/site-data/home-summary.json" mode="recent-countries" language={locale} />
         </div>
-        <p class="source-note">{t.sourceNote}</p>
         <a class="text-link console-link" href={href('/about/')}>{t.methods} <span aria-hidden="true">-&gt;</span></a>
       </aside>
     </div>
@@ -306,7 +293,7 @@ const explorePaths = [
   .public-home-redesign { color: rgb(var(--text)); }
   .page-wrap { width: min(1240px, calc(100% - 2rem)); margin-inline: auto; }
   .eyebrow { margin: 0 0 .65rem; color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
-  .home-hero { position: relative; display: grid; min-height: calc(100svh - 4.6rem); overflow: hidden; background: linear-gradient(90deg, rgb(var(--surface)) 0 52%, rgb(var(--bg-soft) / .78) 52% 100%); border-bottom: 1px solid rgb(var(--border)); }
+  .home-hero { position: relative; display: grid; overflow: hidden; background: linear-gradient(90deg, rgb(var(--surface)) 0 52%, rgb(var(--bg-soft) / .78) 52% 100%); border-bottom: 1px solid rgb(var(--border)); }
   .home-hero::before { position: absolute; inset: 0; z-index: 0; pointer-events: none; content: ''; background: linear-gradient(90deg, rgb(var(--surface) / .99) 0%, rgb(var(--surface) / .95) 36%, rgb(var(--surface) / .72) 58%, rgb(var(--bg-soft) / .34) 100%); }
   .home-hero::after { position: absolute; inset: auto 0 0; z-index: 0; height: 38%; pointer-events: none; content: ''; background: linear-gradient(180deg, transparent, rgb(var(--surface) / .88)); }
   .curve-field { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; color: rgb(var(--color-teal)); opacity: .74; }
@@ -320,14 +307,14 @@ const explorePaths = [
   .curve-line-b { stroke: rgb(var(--color-accent) / .42); stroke-width: 3; animation-delay: -8s; }
   .curve-annotation { position: absolute; right: max(1rem, calc((100vw - 1240px) / 2)); bottom: clamp(1.05rem, 3.2vw, 2.15rem); max-width: min(22rem, calc(100% - 2rem)); margin: 0; color: rgb(var(--text-muted)); font-size: .68rem; line-height: 1.25; letter-spacing: .04em; text-align: right; }
   .curve-annotation b { color: rgb(var(--text-muted)); font-weight: 700; }
-  .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(23rem, .98fr); gap: clamp(2rem, 4.4vw, 4.25rem); align-items: center; min-height: calc(100svh - 4.6rem); padding-block: clamp(2.5rem, 4.8vw, 4rem); }
+  .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(23rem, .98fr); gap: clamp(2rem, 4vw, 3.5rem); align-items: center; padding-block: clamp(2.5rem, 4.5vw, 4rem); }
   .hero-copy { padding-block: .5rem; }
-  h1 { display: grid; max-width: 12ch; margin: 0; color: rgb(var(--text-strong)); font-size: clamp(3rem, 5.4vw, 5.55rem); font-weight: 760; letter-spacing: 0; line-height: .98; text-wrap: balance; }
+  h1 { display: grid; gap: .12em; width: 100%; margin: 0; color: rgb(var(--text-strong)); font-size: clamp(2rem, 3.4vw, 3rem); font-weight: 760; letter-spacing: -.025em; line-height: 1.16; overflow-wrap: normal; word-break: normal; }
+  .home-locale-zh h1 { font-size: clamp(2rem, 3.5vw, 3rem); letter-spacing: .025em; line-height: 1.3; }
+  .home-locale-zh h1 span { white-space: nowrap; }
+  .home-locale-fr h1 { font-size: clamp(2rem, 3.1vw, 2.8rem); }
   h1 span { display: block; }
-  .animated-slogan { display: grid; gap: .2rem; min-height: 2.85em; margin: 1.05rem 0 0; color: rgb(var(--text-strong)); font-size: clamp(1.35rem, 2.6vw, 2rem); font-weight: 720; line-height: 1.18; }
-  .slogan-window { position: relative; display: block; width: min(100%, 19ch); height: 1.28em; color: rgb(var(--color-teal)); overflow: hidden; }
-  .slogan-window b { position: absolute; inset: 0 auto auto 0; opacity: 0; transform: translateY(85%); animation: slogan-cycle 12s cubic-bezier(.2, .7, .2, 1) infinite; animation-delay: calc(var(--i) * 3s); font: inherit; white-space: nowrap; }
-  .lead { max-width: 42rem; margin: 1.1rem 0 0; color: rgb(var(--text-muted)); font-size: clamp(.98rem, 1.35vw, 1.08rem); line-height: 1.68; }
+  .lead { max-width: 36rem; margin: 1.1rem 0 0; color: rgb(var(--text-muted)); font-size: clamp(.98rem, 1.35vw, 1.08rem); line-height: 1.68; }
   .home-search { max-width: 41rem; margin-top: 1.55rem; }
   .home-search label { display: block; margin-bottom: .45rem; color: rgb(var(--text-strong)); font-size: .78rem; font-weight: 700; }
   .home-search-row { display: grid; grid-template-columns: 1fr auto; border: 1px solid rgb(var(--border-soft)); background: rgb(var(--bg)); box-shadow: 0 18px 44px rgb(10 26 40 / .08); }
@@ -344,8 +331,6 @@ const explorePaths = [
   .data-console::after { position: absolute; inset: auto 1.05rem 0; height: 2px; content: ''; background: linear-gradient(90deg, rgb(var(--color-teal)), rgb(var(--color-accent)), transparent); opacity: .62; }
   .console-header { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid rgb(var(--border)); }
   .console-header h2 { margin: 0; color: rgb(var(--text-strong)); font-size: 1.18rem; line-height: 1.18; }
-  .release-pill { display: inline-flex; flex: 0 0 auto; align-items: center; gap: .38rem; margin-top: .1rem; color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 700; }
-  .release-pill i { width: .48rem; height: .48rem; background: #15803d; border-radius: 50%; }
   .asset-grid { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 0; padding: .85rem 1.05rem; border-bottom: 1px solid rgb(var(--border)); }
   .asset-grid div { position: relative; min-height: 4.8rem; padding: .8rem .85rem .72rem; overflow: hidden; background: rgb(var(--bg-soft) / .58); border: 1px solid rgb(var(--border) / .74); animation: metric-in .55s ease-out both; animation-delay: calc(var(--i) * 80ms); }
   .asset-grid div::after { position: absolute; right: .75rem; bottom: .6rem; width: 2.4rem; height: .22rem; content: ''; background: linear-gradient(90deg, rgb(var(--color-teal) / .15), rgb(var(--color-teal))); transform-origin: left; animation: metric-pulse 3.8s ease-in-out infinite; animation-delay: calc(var(--i) * 220ms); }
@@ -353,6 +338,8 @@ const explorePaths = [
   .asset-grid dd { margin: .38rem 0 0; color: rgb(var(--text-strong)); font-size: clamp(1.24rem, 2vw, 1.62rem); font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1; }
   .release-meta { position: relative; display: grid; grid-template-columns: 1fr 1.2fr; gap: .75rem; padding: .78rem 1.1rem; color: rgb(var(--text-muted)); border-bottom: 1px solid rgb(var(--border)); font-size: .72rem; }
   .release-meta strong { color: rgb(var(--text-strong)); font-weight: 750; }
+  .data-console :global(.home-summary > .figure-caption:not(.home-summary-status)) { display: none; }
+  .home-hero :global(.curve-annotation) { display: none; }
   .source-board { position: relative; padding: .9rem 1.1rem .35rem; }
   .source-board h3 { margin: 0 0 .5rem; color: rgb(var(--text-strong)); font-size: .82rem; }
   .source-board a { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .24rem .7rem; align-items: center; min-height: 3.05rem; padding-block: .44rem; color: rgb(var(--text-strong)); border-top: 1px solid rgb(var(--border)); text-decoration: none; }
@@ -361,12 +348,10 @@ const explorePaths = [
   .source-board strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
   .source-board small, .source-board time { color: rgb(var(--text-muted)); font-size: .66rem; }
   .source-board time { grid-column: 2; font-variant-numeric: tabular-nums; text-align: left; }
-  .source-note { position: relative; margin: .25rem 1.1rem 0; color: rgb(var(--text-muted)); font-size: .7rem; line-height: 1.5; }
   .text-link, .subheading a, .situation-grid > a { display: inline-flex; gap: .25rem; align-items: center; color: rgb(var(--color-teal)); font-size: .78rem; font-weight: 750; text-decoration: none; }
   .console-link { margin: .65rem 1.1rem 1rem; }
   .text-link:hover, .subheading a:hover, .situation-grid > a:hover { color: rgb(var(--color-accent)); }
   :global(html[data-theme='dark']) .eyebrow,
-  :global(html[data-theme='dark']) .slogan-window,
   :global(html[data-theme='dark']) .text-link,
   :global(html[data-theme='dark']) .subheading a,
   :global(html[data-theme='dark']) .compare-feature-copy small,
@@ -396,10 +381,10 @@ const explorePaths = [
   .compare-feature-copy > span { color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.55; }
   .compare-feature-arrow { flex: none; color: rgb(var(--color-teal)); font-size: 1.4rem; }
   .path-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 1.5rem; border-top: 1px solid rgb(var(--border)); border-left: 1px solid rgb(var(--border)); }
-  .path-card { display: grid; grid-template-rows: auto 1fr auto; min-height: 17rem; padding: 1rem; color: rgb(var(--text-strong)); background: rgb(var(--surface)); border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); text-decoration: none; transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease; }
+  .path-card { display: grid; grid-template-rows: auto 1fr auto; min-height: 14rem; padding: 1rem; color: rgb(var(--text-strong)); background: rgb(var(--surface)); border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); text-decoration: none; transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease; }
   .path-card:hover { background: rgb(var(--bg-soft)); box-shadow: 0 18px 36px rgb(10 26 40 / .08); transform: translateY(-3px); }
   .path-index { color: rgb(var(--color-accent)); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .72rem; font-weight: 750; }
-  .path-copy { display: grid; align-content: start; gap: .65rem; margin-top: 2.4rem; }
+  .path-copy { display: grid; align-content: start; gap: .65rem; margin-top: 1.4rem; }
   .path-copy strong { font-size: 1.05rem; line-height: 1.24; }
   .path-copy small { color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.6; }
   .path-stat { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; padding-top: .75rem; border-top: 1px solid rgb(var(--border)); }
@@ -427,11 +412,6 @@ const explorePaths = [
   .report-list b { grid-column: 1 / -1; margin-top: .7rem; color: rgb(var(--color-teal)); font-size: .74rem; }
   .empty-state { margin-top: 1.5rem; color: rgb(var(--text-muted)); }
 
-  @keyframes slogan-cycle {
-    0%, 24% { opacity: 1; transform: translateY(0); }
-    30% { opacity: 0; transform: translateY(-62%); }
-    30.01%, 100% { opacity: 0; transform: translateY(62%); }
-  }
   @keyframes curve-draw {
     0% { opacity: 0; stroke-dashoffset: 1; }
     18%, 64% { opacity: 1; stroke-dashoffset: 0; }
@@ -462,7 +442,7 @@ const explorePaths = [
 
   @media (max-width: 1060px) {
     .hero-grid, .explore-grid { grid-template-columns: 1fr; }
-    .hero-grid { min-height: calc(100svh - 4.6rem); }
+    .hero-copy { max-width: 46rem; }
     .home-hero { background: rgb(var(--surface)); }
     .home-hero::before { background: linear-gradient(180deg, rgb(var(--surface) / .97), rgb(var(--surface) / .82) 48%, rgb(var(--surface) / .64)); }
     .curve-field { inset: 0; width: 100%; height: 58rem; opacity: .56; }
@@ -477,11 +457,11 @@ const explorePaths = [
   }
 
   @media (max-width: 680px) {
-    .hero-grid { padding-block: 2.75rem; }
-    h1 { font-size: 2.28rem; }
-    .animated-slogan { font-size: 1.2rem; }
-    .home-search-row, .release-meta, .asset-grid, .path-grid, .country-grid, .report-list { grid-template-columns: 1fr; }
-    .home-search button { min-height: 3rem; }
+    .hero-grid { padding-block: 2rem; gap: 2rem; }
+    h1, .home-locale-fr h1 { font-size: clamp(1.6rem, 7.1vw, 2.25rem); }
+    .home-locale-zh h1 { font-size: clamp(1.85rem, 8vw, 2.5rem); }
+    .release-meta, .asset-grid, .path-grid, .country-grid, .report-list { grid-template-columns: 1fr; }
+    .home-search button { padding-inline: .9rem; }
     .actions { display: grid; }
     .actions a { justify-content: center; text-align: center; }
     .data-console::before { animation: none; opacity: 0; }
@@ -497,7 +477,5 @@ const explorePaths = [
   @media (prefers-reduced-motion: reduce) {
     .curve-bars rect, .curve-line, .data-console, .data-console::before, .asset-grid div, .asset-grid div::after, .path-card { animation: none; transition: none; }
     .curve-line { opacity: .55; stroke-dashoffset: 0; }
-    .slogan-window b { animation: none; opacity: 0; transform: none; }
-    .slogan-window b:first-child { opacity: 1; }
   }
 </style>

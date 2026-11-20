@@ -133,7 +133,9 @@ async def db(monkeypatch, tmp_path):
         f"sqlite+aiosqlite:///{tmp_path / 'situation.db'}",
         pool_size=1,
         max_overflow=0,
-        pool_timeout=0.5,
+        # Single-connection behavior is asserted directly below. Give queued
+        # writes time to finish on busy CI hosts instead of testing disk speed.
+        pool_timeout=5,
     )
     async with engine.begin() as conn:
         await conn.run_sync(lambda sync: Base.metadata.create_all(sync, tables=TABLES))
@@ -591,6 +593,7 @@ async def test_long_model_wait_renews_claim_in_short_transactions(db, monkeypatc
 async def test_reports_are_read_concurrently_up_to_the_limit(db):
     await _ready_reports("2026-DON660", "2026-DON661", "2026-DON662")
     running = peak = 0
+    first_wave_started = asyncio.Event()
 
     class Counting(Scripted):
         async def __call__(self, role, *args, **kwargs):
@@ -598,8 +601,14 @@ async def test_reports_are_read_concurrently_up_to_the_limit(db):
             if role == "author":
                 running += 1
                 peak = max(peak, running)
-                await asyncio.sleep(0.05)
-                running -= 1
+                if running == 2:
+                    first_wave_started.set()
+                # The first author waits for a second one, so concurrency is
+                # observed without depending on scheduler or SQLite speed.
+                try:
+                    await asyncio.wait_for(first_wave_started.wait(), timeout=5)
+                finally:
+                    running -= 1
             return await super().__call__(role, *args, **kwargs)
 
     counts = await extract_pending(

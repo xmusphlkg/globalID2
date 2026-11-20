@@ -80,7 +80,8 @@ def test_each_weekly_table_retains_its_own_verified_period(weekly):
     assert varicella['PeriodEnd']=='2026-10-24'
     assert json.loads(varicella['Dimensions'])['source_epi_week']==42
     assert cell(rows,'Infecciones respiratorias agudas')['Cases']=='342915'
-    assert any(f['page']==31 for f in audit['failures'])
+    assert not audit['failures']
+    assert len(audit['excluded_source_cells'])==8
     assert audit['status']=='partial'
 
 
@@ -191,11 +192,152 @@ def test_title_evidence_rejects_wrong_original_disagreement_and_changed_cutoff()
         verify_caption_evidence(changed,**kwargs)
 
 
+@pytest.fixture(scope='module')
+def weekly44_all_tables():
+    return parse_weekly_pdf((FIXTURES/'boletin-2026-week44.pdf').read_bytes(),
+        reference={'year':2026,'issue_week':44,'url':'https://www.gob.mx/cms/uploads/attachment/file/1116659/Boletin-4426.pdf'},
+        title_ocr=json.loads((FIXTURES/'boletin-2026-week44-all-titles-ocr.json').read_text()))
+
+
+def test_full_graphic_caption_replay_keeps_actual_cutoffs_and_unknown_cells(weekly44_all_tables):
+    rows,audit=weekly44_all_tables
+    assert len(rows)==635 and len(audit['pages'])==77 and not audit['failures']
+    assert len(audit['excluded_source_cells'])==8
+    assert cell(rows,'Herpes genital')['Cases']=='128'
+    assert cell(rows,'Vulvovaginitis')['Cases']=='11570'
+    assert cell(rows,'Vulvovaginitis','cumulative_case_notifications')['Cases']=='529945'
+    assert cell(rows,'Herpes genital')['Date']=='2026-10-25'
+    assert cell(rows,'Meningitis tuberculosa')['Date']=='2026-11-01'
+    # The original has duplicate glyph baselines near TOTAL; read its aligned
+    # value once, without concatenating the adjacent printed text as "4 4".
+    assert cell(rows,'Enfermedad invasiva por neumococo')['Cases']=='4'
+    assert cell(rows,'Enterobiasis')['Cases']=='161'
+    assert cell(rows,'Tifo murino','cumulative_case_notifications','male')['Cases']=='15'
+    assert cell(rows,'Cólera')['MissingValueStatus']=='source_missing'
+    identities=[(r['Date'],r['SourceDiseaseCode'],r['DefinitionVersion'],r['GeographyKey']) for r in rows]
+    assert len(identities)==len(set(identities))
+    meningitis=cell(rows,'Meningitis tuberculosa')
+    assert json.loads(meningitis['SourceProvenance'])['equivalent_source_pages']==[4,6]
+
+
+def test_special_layouts_and_explicit_caption_aliases_repair_real_source_weeks(weekly):
+    rows,audit=weekly
+    assert len(rows)==637 and not audit['failures']
+    assert cell(rows,'Vulvovaginitis')['Cases']=='12357'
+    assert cell(rows,'Hiperplasia de próstata')['Cases']=='2435'
+    assert cell(rows,'Tripanosomiasis americana (enfermedad de Chagas) aguda')['Cases']=='0'
+    assert cell(rows,'Tripanosomiasis americana (enfermedad de Chagas) crónica')['Cases']=='5'
+    assert cell(rows,'Tumor maligno de la mama','cumulative_case_notifications','male')['Cases']=='302'
+    assert cell(rows,'Tumor maligno de la mama','cumulative_case_notifications','female')['Cases']=='22532'
+    assert cell(rows,'Displasia cervical leve y moderada')['Cases']=='695'
+    assert cell(rows,'Tumor maligno del ovario')['Cases']=='76'
+    for label in ('&Influenza','&Covid 19','Meningoencefalitis amebiana primaria'):
+        matches=[r for r in rows if r['RawDiseaseLabel'].strip('§* ')==label]
+        assert len(matches)>=3 and {r['Date'] for r in matches}=={'2026-10-25'}
+    esavi=next(r for r in rows if '(ESAVI)' in r['RawDiseaseLabel'] and r['Measure']=='case_notifications')
+    assert esavi['Cases']=='275' and esavi['Date']=='2026-10-25'
+
+
+def test_clinical_stage_table_only_emits_explicit_weekly_total(weekly,weekly44_all_tables):
+    for result,expected,page in ((weekly,'426',32),(weekly44_all_tables,'358',27)):
+        rows,audit=result
+        hiv=cell(rows,'Infección por el virus de la inmunodeficiencia humana')
+        assert hiv['Cases']==expected
+        provenance=json.loads(hiv['SourceProvenance'])
+        assert page in provenance['equivalent_source_pages']
+        assert len(provenance['excluded_source_cells'])==8
+        excluded=audit['excluded_source_cells']
+        assert len(excluded)==8 and {r['clinical_stage'] for r in excluded}=={'1','2','3','4'}
+        assert {r['reason'] for r in excluded}=={'clinical_stage_temporal_measure_not_explicit'}
+
+
+def test_full_caption_evidence_rejects_invalid_exception_and_duplicate_page():
+    from copy import deepcopy
+    from src.data.crawlers.mx_title_ocr import verify_caption_evidence
+    evidence=json.loads((FIXTURES/'boletin-2026-week44-all-titles-ocr.json').read_text())
+    kwargs={'pdf_sha256':evidence['pdf_sha256'],'issue_year':2026,'issue_week':44}
+    assert set(verify_caption_evidence(evidence,**kwargs))==set(range(4,81))
+    changed=deepcopy(evidence)
+    item=changed['captions'][2]
+    item['caption']=item['caption'].replace('hasta la 44','hasta la 45')
+    item['independent_ocr_texts']=[item['caption']]*2
+    with pytest.raises(ValueError,match='exception cutoff'):
+        verify_caption_evidence(changed,**kwargs)
+    changed=deepcopy(evidence);changed['captions'].append(changed['captions'][0])
+    with pytest.raises(ValueError,match='duplicated'):
+        verify_caption_evidence(changed,**kwargs)
+
+
+def test_missing_weekly_heading_blocks_clinical_table():
+    import pdfplumber
+    from src.data.crawlers.mx_weekly_tables import parse_national_total
+    with pdfplumber.open(FIXTURES/'boletin-2026-week43.pdf') as document:
+        words=document.pages[31].dedupe_chars(tolerance=.7,extra_attrs=()).extract_words(x_tolerance=1,y_tolerance=2)
+    words=[w for w in words if w['text']!='Sem.']
+    with pytest.raises(MexicoDGEContractError,match='headers are not verified'):
+        parse_national_total(words,caption_evidence=None,issue_year=2026,issue_week=43,
+            issue_start=date(2026,10,25),issue_end=date(2026,10,31),page_number=32,
+            source_url='https://www.gob.mx/cms/uploads/attachment/file/1115232/sem43.pdf',
+            digest='a'*64,retrieved_at=None,legend_pages=[86])
+
+
+def test_conflicting_reprinted_national_totals_are_quarantined(weekly44_all_tables):
+    from src.data.crawlers.mx_high_frequency import deduplicate_rows
+    row=cell(weekly44_all_tables[0],'Meningitis tuberculosa')
+    kept,failures=deduplicate_rows([row,{**row,'Cases':'6','SourcePage':'6'}])
+    assert not kept and len(failures)==1
+    assert failures[0]['identity']==[row['Date'],row['SourceDiseaseCode'],row['DefinitionVersion'],row['GeographyKey']]
+
+
+def test_frozen_weekly_plan_rejects_missing_and_tampered_ocr_artifact(monkeypatch,tmp_path):
+    monkeypatch.chdir(tmp_path)
+    directory=Path('data/raw/mx');directory.mkdir(parents=True)
+    url='https://www.gob.mx/cms/uploads/attachment/file/1116659/Boletin-4426.pdf'
+    html=f'<h1>Boletín Epidemiológico 2026</h1><a href="{url}">Semana 44</a>'.encode()
+    refs=discover_weekly_links(html,page_url=WEEKLY_CURRENT_URL,start_year=2026,end_year=2026)
+    def artifact(payload,kind,url):
+        digest=hashlib.sha256(payload).hexdigest();path=directory/digest;path.write_bytes(payload)
+        return SimpleNamespace(kind=kind,source_url=url,sha256=digest,byte_size=len(payload),relative_path=str(path),metadata_={})
+    index=artifact(html,'mx_hf_index',WEEKLY_CURRENT_URL)
+    pdf=artifact((FIXTURES/'boletin-2026-week44.pdf').read_bytes(),'mx_hf_pdf',url)
+    ocr=artifact((FIXTURES/'boletin-2026-week44-all-titles-ocr.json').read_bytes(),'mx_hf_title_ocr',url)
+    plan={'scope':WEEKLY_SCOPE,'references':refs,'captured':[{'url':url,'sha256':pdf.sha256}],
+          'title_ocr_captured':[{'url':url,'sha256':ocr.sha256}],'failures':[],
+          'requested_start_year':2026,'requested_end_year':2026,'latest_reports':None,
+          'index_urls':[WEEKLY_CURRENT_URL]}
+    frozen=artifact(json.dumps(plan).encode(),'mx_hf_plan',WEEKLY_CURRENT_URL)
+    updater=MexicoDGEHighFrequencyUpdater(source=WEEKLY_SCOPE)
+    with pytest.raises(MexicoDGEContractError,match='OCR artifact manifest'):
+        ingestion.organize([index,pdf,frozen],updater=updater,source=WEEKLY_SCOPE)
+    Path(ocr.relative_path).write_bytes(b'changed OCR evidence')
+    with pytest.raises(ValueError):
+        ingestion.organize([index,pdf,ocr,frozen],updater=updater,source=WEEKLY_SCOPE)
+
+
+def test_direct_refresh_uses_verified_graphic_titles_without_claiming_complete_coverage(monkeypatch):
+    from src.data.crawlers.mx_high_frequency import MexicoDGEHighFrequencyCrawler
+    from src.data.crawlers import mx_title_ocr
+    evidence=json.loads((FIXTURES/'boletin-2026-week44-all-titles-ocr.json').read_text())
+    ref={'year':2026,'issue_week':44,'url':'https://www.gob.mx/cms/uploads/attachment/file/1116659/Boletin-4426.pdf'}
+    crawler=MexicoDGEHighFrequencyCrawler(source=WEEKLY_SCOPE)
+    monkeypatch.setattr(crawler,'discover',lambda **kwargs:([ref],[]))
+    monkeypatch.setattr(crawler,'download',lambda *args,**kwargs:((FIXTURES/'boletin-2026-week44.pdf').read_bytes(),{}))
+    monkeypatch.setattr(mx_title_ocr,'capture_summary_captions',lambda body:evidence)
+    try:
+        rows=crawler.fetch_rows(start_year=2026,end_year=2026)
+        assert len(rows)==635 and not crawler.last_audit['failures']
+        assert not crawler.last_audit['coverage_complete']
+        assert len(crawler.last_audit['reports'][0]['excluded_source_cells'])==8
+    finally:
+        crawler.close()
+
+
 def test_all_real_facts_resolve_one_registered_series_including_label_footnotes(monthly,weekly,weekly44):
     from src.data.storage.series_observation_store import SeriesObservationStore
     from src.ontology.disease import DiseaseOntology
     root=Path(__file__).resolve().parents[2]
-    document=json.loads((root/'configs/disease_ontology.json').read_text())
+    from src.ontology import read_ontology_document
+    document=read_ontology_document(root/'configs/disease_ontology.json')
     patch=json.loads((root/'configs/high_frequency_mexico_ontology.json').read_text())
     for key in ('sources','source_series','availability'):
         definitions={r['id']:r for r in document[key]};definitions.update({r['id']:r for r in patch[key]})

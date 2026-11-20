@@ -1,4 +1,4 @@
-"""BQ is a private geography of NL collection, with no independent crawl."""
+"""BQ shares NL collection; private refresh verification uses an explicit policy."""
 from types import SimpleNamespace
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -10,7 +10,6 @@ from src.core.country_library import get_country_bootstrap_config, get_country_p
 from src.data.crawlers.nl_notifiable import DEFAULT_SCOPE, ONTOLOGY_SOURCE_ID
 from src.data.processors.nl_notifiable import NLNotifiableAnnualUpdater
 from src.services.crawl_service import CrawlService
-from src.services.data_release.planning import plan_changes
 
 
 def test_bq_registration_keeps_parent_collection_and_source_identity():
@@ -29,19 +28,9 @@ def test_bq_registration_keeps_parent_collection_and_source_identity():
     assert profile.timezone == "America/Kralendijk"
 
 
-def test_bq_pending_changes_remain_private_and_parent_refresh_stays_scheduled():
+def test_bq_uses_parent_refresh_without_an_independent_scheduled_job():
     from scripts.configure_national_notifications import desired_jobs
 
-    config = get_country_bootstrap_config("BQ")
-    assert config["public_release_enabled"] is False
-    assert config["public_legacy_enabled"] is False
-    assert config["crawler_config"]["public_release_enabled"] is False
-    available = {code for code in ("NL", "BQ")
-                 if get_country_bootstrap_config(code).get("public_release_enabled", True)}
-    pending = SimpleNamespace(id=1, line="surveillance", scope_key="BQ", change_set=None)
-    plan = plan_changes([pending], available)
-    assert plan["country_codes"] == [] and plan["dirty_ids"] == []
-    assert plan["deferred_change_count"] == 1
     jobs = desired_jobs()
     parent = jobs["nl-rivm-notifiable-daily"]
     assert parent["country_code"] == "NL" and parent["source"] == DEFAULT_SCOPE
@@ -91,6 +80,7 @@ async def test_bq_refresh_rejects_deduplicated_task_from_another_job(monkeypatch
     from scripts import rephase_nl_refreshes as module
     from src.domain.task import TaskStatus
 
+    monkeypatch.setattr(module, "get_country_bootstrap_config", lambda code: {"public_release_enabled": False})
     now = datetime.now(timezone.utc)
     inputs = {"country_code": "NL", "source": "rivm_notifiable_annual",
               "automation_job_id": "nl-rivm-notifiable-daily", "scheduled_trigger": True}

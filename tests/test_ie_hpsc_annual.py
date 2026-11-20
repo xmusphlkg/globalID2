@@ -112,9 +112,8 @@ def test_annual_pdf_parser_preserves_zero_and_na(monkeypatch) -> None:
 
 def test_annual_registry_covers_live_observed_contract() -> None:
     root = Path(__file__).resolve().parents[1]
-    ontology = json.loads(
-        (root / "configs/disease_ontology.json").read_text(encoding="utf-8")
-    )
+    from src.ontology import read_ontology_document
+    ontology = read_ontology_document(root / "configs/disease_ontology.json")
     annual_series = [
         item
         for item in ontology["source_series"]

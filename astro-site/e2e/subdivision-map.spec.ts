@@ -90,3 +90,73 @@ test('regional navigation, compact filters, sortable selection, PNG and central 
   await map.getByRole('link', { name: '下载数据', exact: true }).click();
   await expect(page).toHaveURL(/\/zh\/downloads\/\?country=BR-AL&disease=D028$/);
 });
+
+test('regional map expands its canvas in fullscreen and restores on exit', async ({ page }) => {
+  await page.setViewportSize({ ...page.viewportSize()!, height: 1400 });
+  await page.goto('/countries/br/?mapDisease=D028', { waitUntil: 'domcontentloaded' });
+  await page.locator('#regional-distribution').scrollIntoViewIfNeeded();
+  const panel = page.locator('#regional-distribution .subdivision-map-workspace');
+  const canvas = panel.locator('.subdivision-map-canvas canvas').first();
+  await expect(canvas).toBeVisible();
+  const normal = (await canvas.boundingBox())!;
+  await panel.getByRole('button', { name: 'Enter full-screen', exact: true }).click();
+  await expect.poll(() => panel.evaluate(element => document.fullscreenElement === element)).toBe(true);
+  await expect.poll(async () => (await canvas.boundingBox())!.height).toBeGreaterThan(normal.height + 100);
+  expect(await panel.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+  await panel.getByRole('button', { name: 'Exit full-screen', exact: true }).click();
+  await expect.poll(async () => Math.abs((await canvas.boundingBox())!.height - normal.height)).toBeLessThanOrEqual(1);
+});
+
+test('China switches diseases and moves an unavailable old range into the new disease coverage', async ({ page }) => {
+  test.setTimeout(60_000);
+  const regions = [{ code: 'CN-BJ', name_en: 'Beijing', name_zh: '北京市' }, { code: 'CN-SH', name_en: 'Shanghai', name_zh: '上海市' }];
+  const root = '/site-data/subdivision-maps/cn';
+  const entries: Record<string, unknown> = {
+    'index.json': { countries: [{ code: 'CN', path: `${root}/index.json` }] },
+    'cn/index.json': {
+      schema_version: 1, country_code: 'CN', expected_regions: 2, regions,
+      boundary: { ...boundary, path: `${root}/boundary.json` }, population_path: `${root}/population.json`,
+      diseases: [
+        { id: 'D028', labels: { en: 'Pertussis', zh: '百日咳' }, years: [2025], cadence: 'monthly', path: `${root}/d028.json` },
+        { id: 'D021', labels: { en: 'Dengue', zh: '登革热' }, years: [2024], cadence: 'monthly', path: `${root}/d021.json` },
+        { id: 'D037', labels: { en: 'Measles', zh: '麻疹' }, years: [2025], cadence: 'monthly', path: `${root}/d037.json` },
+      ],
+    },
+    'cn/boundary.json': { type: 'FeatureCollection', features: regions.map((region, index) => ({ type: 'Feature', properties: { name: region.code }, geometry: { type: 'Polygon', coordinates: [[[110 + index, 30], [111 + index, 30], [111 + index, 31], [110 + index, 31], [110 + index, 30]]] } })) },
+    'cn/population.json': { schema_version: 1, country_code: 'CN', regions: Object.fromEntries(regions.map(region => [region.code, Object.fromEntries([2024, 2025].map(year => [year, { year, location_code: region.code, value: 100000, source: 'NBS', reference_date: `${year}-12-31`, basis: 'year_end_resident_population', source_url: 'https://www.stats.gov.cn/', version: 'fixture', method: 'same_calendar_year_no_interpolation' }]))])) },
+  };
+  for (const [id, year, title, count] of [['D028', 2025, 'Pertussis', 20], ['D021', 2024, 'Dengue', 0], ['D037', 2025, 'Measles', 5]] as const) {
+    entries[`cn/${id.toLowerCase()}.json`] = {
+      schema_version: 1, country_code: 'CN', disease_id: id, labels: { en: title, zh: id === 'D021' ? '登革热' : id === 'D037' ? '麻疹' : '百日咳' },
+      years: [year], cadence: 'monthly', comparison_key: 'same', case_basis: {},
+      regions: Object.fromEntries(regions.map(region => [region.code, { comparison_key: 'same', data_layer: 'series_registry', semantics: { metric: 'case_notifications', definition: 'v1', reporting_basis: 'notification', time_basis: 'notification_month', source_series: ['TEST'] }, points: [[`${year}-${id === 'D037' ? '12' : '02'}-01`, count, 'observed']] }])),
+    };
+  }
+  for (const [key, value] of Object.entries(entries)) await page.route(`**/site-data/subdivision-maps/${key}`, route => route.fulfill({ json: value }));
+  await page.goto('/zh/countries/cn/?mapDisease=D028&mapFrom=2025-02-01&mapTo=2025-02-28&mapMetric=rate', { waitUntil: 'domcontentloaded' });
+  const panel = page.locator('#regional-distribution');
+  await panel.scrollIntoViewIfNeeded();
+  const disease = panel.getByRole('combobox', { name: '疾病', exact: true });
+  await expect(disease).toHaveValue('D028');
+  await expect(panel.locator('.subdivision-region-scroll tbody tr').first().locator('td').first()).toContainText('20');
+  await disease.selectOption('D037');
+  await expect(disease).toHaveValue('D037');
+  await expect(panel.locator('input[type="date"]').first()).toHaveValue('2025-12-01');
+  await expect(panel.locator('.subdivision-map-workspace')).toHaveAttribute('data-chart-title', /麻疹/);
+  await disease.selectOption('D021');
+  await expect(disease).toHaveValue('D021');
+  await expect(panel.locator('input[type="date"]').first()).toHaveValue('2024-02-01');
+  await expect(panel.getByRole('combobox', { name: '年份', exact: true })).toHaveValue('2024');
+  await expect(panel.locator('.subdivision-map-workspace')).toHaveAttribute('data-chart-title', /登革热/);
+  await expect(panel.locator('.subdivision-region-scroll tbody tr').first().locator('td').first()).toHaveText('0');
+  await panel.getByRole('button', { name: '分享配置', exact: true }).click();
+  const shared = new URL(await panel.locator('.chart-share-link input').inputValue());
+  shared.pathname = '/zh/countries/cn/diseases/hepatitis-b/';
+  await page.goto(shared.toString(), { waitUntil: 'domcontentloaded' });
+  await panel.scrollIntoViewIfNeeded();
+  await expect(disease).toHaveValue('D021');
+  await expect(panel.locator('.subdivision-map-workspace')).toHaveAttribute('data-chart-title', /登革热/);
+  await disease.selectOption('D028');
+  await expect(panel.getByRole('combobox', { name: '年份', exact: true })).toHaveValue('2025');
+  await expect(panel.locator('.subdivision-map-workspace')).toHaveAttribute('data-chart-title', /百日咳/);
+});

@@ -277,6 +277,7 @@ function ExplorerWorkspace({
             showShareLink={false}
             pngFilename={`gids-surveillance-${result.id}.png`}
             pngSelector=".surveillance-plot"
+            pngDisabled={tab !== "chart" || !result.lines.length}
             showData={showData}
           />
         </div>
@@ -401,6 +402,7 @@ function ExplorerWorkspace({
                   catalog={catalog}
                   lang={lang}
                   panelPage={currentPanelPage}
+                  fullscreen={fullscreen}
                   onWindow={onWindow}
                 />
                 {panelCount > 4 && (

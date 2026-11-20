@@ -7,6 +7,9 @@ from collections import Counter, defaultdict
 from .site_data_views import _data_layer_summary
 
 INPUT_KEY = "_incremental_projection_inputs"
+# Version 1 summed missing cases as zero. It cannot distinguish an observed
+# zero from an unreported month, so those baselines need a full projection.
+INPUT_SCHEMA_VERSION = 2
 
 
 def input_summaries(records: list[dict], allowed: set[str]) -> dict:
@@ -22,19 +25,21 @@ def input_summaries(records: list[dict], allowed: set[str]) -> dict:
             item["first_date"] = min(item["first_date"] or when, when)
         month = row.get("year_month")
         if month:
-            item["monthly_cases"][month] = item["monthly_cases"].get(month, 0) + (row.get("cases") or 0)
+            item["monthly_cases"].setdefault(month, None)
+            if row.get("cases") is not None:
+                item["monthly_cases"][month] = (item["monthly_cases"][month] or 0) + row["cases"]
         source = row.get("incidence_rate_source") or "missing_population"
         item["incidence_sources"][source] = item["incidence_sources"].get(source, 0) + 1
     return grouped
 
 
 def attach_inputs(data: dict, records: list[dict]) -> None:
-    data[INPUT_KEY] = {"schema_version": 1, "diseases": input_summaries(records, set(data.get("disease_series") or {}))}
+    data[INPUT_KEY] = {"schema_version": INPUT_SCHEMA_VERSION, "diseases": input_summaries(records, set(data.get("disease_series") or {}))}
 
 
 def eligible_inputs(data: dict) -> bool:
     value = data.get(INPUT_KEY)
-    if not isinstance(value, dict) or value.get("schema_version") != 1 or not isinstance(value.get("diseases"), dict):
+    if not isinstance(value, dict) or value.get("schema_version") != INPUT_SCHEMA_VERSION or not isinstance(value.get("diseases"), dict):
         return False
     for did, series in (data.get("disease_series") or {}).items():
         summary = value["diseases"].get(did)
@@ -69,7 +74,7 @@ def merge_country_diseases(previous: dict, current: dict, disease_ids: set[str],
         "disease_count": len(active),
         "date_range": {"start": dates[0] if dates else None, "end": dates[-1] if dates else None},
         "data_layer_summary": _data_layer_summary(series),
-        INPUT_KEY: {"schema_version": 1, "diseases": summaries},
+        INPUT_KEY: {"schema_version": INPUT_SCHEMA_VERSION, "diseases": summaries},
     })
     sources = Counter()
     for item in active.values():
@@ -84,7 +89,11 @@ def merge_country_diseases(previous: dict, current: dict, disease_ids: set[str],
     ids = sorted(eligible, key=lambda did: series[did].get("total_cases") or 0, reverse=True)[:50]
     merged["heatmap"] = {
         "diseases": ids, "disease_labels": [series[did]["name_en"] for did in ids], "months": months,
-        "z": [[math.log10(eligible[did]["monthly_cases"].get(month, 0) + 1) for month in months] for did in ids],
+        "z": [[
+            math.log10(eligible[did]["monthly_cases"][month] + 1)
+            if eligible[did]["monthly_cases"].get(month) is not None else None
+            for month in months
+        ] for did in ids],
     }
     return merged
 

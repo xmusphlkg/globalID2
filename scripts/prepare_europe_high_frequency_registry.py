@@ -123,7 +123,8 @@ def main():
         for row in sorted(categories.values(), key=lambda r: r["SourceDiseaseCode"]):
             key = (cc, row["SourceICDCode"])
             append(cc, contract["source_id"], row, dictionary.get(key[1]), relation="narrower" if key in NARROWER else "exact", discovery=key in DISCOVERY_ONLY)
-    ontology = json.loads((ROOT / "configs/disease_ontology.json").read_bytes())
+    from src.ontology import read_ontology_document
+    ontology = read_ontology_document(ROOT / "configs/disease_ontology.json")
     active_concepts = {c["id"] for c in ontology["concepts"] if c["status"] == "active"}
     if any(s.get("concept_id") and s["concept_id"] not in active_concepts for s in patch["source_series"]):
         raise ValueError("New Europe mapping must target an active concept")

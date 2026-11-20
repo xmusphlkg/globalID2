@@ -276,21 +276,39 @@ export function resultsFor(catalog: MapCatalog, dataset: DiseaseDataset, populat
 }
 export function defaultWindow(catalog: MapCatalog, dataset: DiseaseDataset, populations: PopulationDataset): MapWindow {
   const years = [...dataset.years].sort((a, b) => b - a);
-  for (const requireAll of [true, false]) for (const year of years) {
+  for (const year of years) {
     const window: MapWindow = { from: `${year}-01-01`, to: `${year}-12-31`, metric: 'rate', view: dataset.cadence === 'weekly' ? 'monthly' : dataset.cadence };
     const rows = resultsFor(catalog, dataset, populations, window).filter(row => dataset.regions[row.region.code]?.comparison_key === dataset.comparison_key);
-    if (rows.length && (requireAll ? rows.every(row => row.value !== null) : rows.some(row => row.value !== null))) return window;
+    if (rows.length && rows.every(row => row.value !== null)) return window;
   }
-  // Sparse weekly series may have no complete full year. Prefer a complete
-  // recent quarter/month over an empty latest-year map, without filling gaps.
-  for (const metric of ['rate', 'cases'] as const) for (const year of years) {
-    const base: MapWindow = { from: `${year}-01-01`, to: `${year}-12-31`, metric, view: dataset.cadence === 'weekly' ? 'monthly' : dataset.cadence };
-    const candidates = [
-      ...(metric === 'cases' ? [base] : []),
-      ...(cadenceRank[dataset.cadence] <= 2 ? [4, 3, 2, 1].map(quarter => presetWindow(base, year, 'quarter', quarter)) : []),
-      ...(cadenceRank[dataset.cadence] <= 1 ? Array.from({ length: 12 }, (_, index) => presetWindow(base, year, 'month', 12 - index)) : []),
-    ];
-    for (const candidate of candidates) if (resultsFor(catalog, dataset, populations, candidate).some(row => row.value !== null)) return candidate;
+  // A full year available in only a few regions must not hide other regions
+  // with complete shorter periods. Within the latest available year, prefer
+  // the broadest comparable coverage, then the longer reporting window.
+  const covered = catalog.regions.filter(region => dataset.regions[region.code]?.comparison_key === dataset.comparison_key).length;
+  const weeks = dataset.cadence === 'weekly' ? [...new Map(Object.values(dataset.regions)
+    .filter(source => source.comparison_key === dataset.comparison_key)
+    .flatMap(source => periodsFor(source, dataset.cadence))
+    .filter((period): period is ReportPeriod => period !== null)
+    .map(period => [period.start, period])).values()].sort((a, b) => b.start.localeCompare(a.start)) : [];
+  for (const metric of ['rate', 'cases'] as const) {
+    for (const year of years) {
+      let best: MapWindow | null = null, bestCount = 0;
+      const base: MapWindow = { from: `${year}-01-01`, to: `${year}-12-31`, metric, view: dataset.cadence === 'weekly' ? 'monthly' : dataset.cadence };
+      const candidates = [
+        base,
+        ...(cadenceRank[dataset.cadence] <= 2 ? [4, 3, 2, 1].map(quarter => presetWindow(base, year, 'quarter', quarter)) : []),
+        ...(cadenceRank[dataset.cadence] <= 1 ? Array.from({ length: 12 }, (_, index) => presetWindow(base, year, 'month', 12 - index)) : []),
+        ...weeks.filter(period => period.reporting_year === year).map(period => ({
+          ...base, from: period.start, to: addDays(period.end_exclusive, -1), view: 'weekly' as const,
+        })),
+      ];
+      for (const candidate of candidates) {
+        const count = resultsFor(catalog, dataset, populations, candidate).filter(row => row.value !== null).length;
+        if (count > bestCount) { best = candidate; bestCount = count; }
+        if (count > 0 && count === covered) return candidate;
+      }
+      if (best) return best;
+    }
   }
   const year = years[0] ?? new Date().getUTCFullYear();
   return { from: `${year}-01-01`, to: `${year}-12-31`, metric: 'cases', view: dataset.cadence === 'weekly' ? 'monthly' : dataset.cadence };

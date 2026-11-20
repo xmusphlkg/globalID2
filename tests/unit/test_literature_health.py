@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from src.literature.classification import CLASSIFICATION_VERSION
 from src.literature.health import (
     HealthThresholds,
     ResearchRadarSnapshot,
@@ -64,7 +65,7 @@ def _article(article_id: str = "public-1") -> dict:
         "editorial_status": "published",
         "integrity_status": "current",
         "indexable": True,
-        "classification_version": 5,
+        "classification_version": CLASSIFICATION_VERSION,
         "research_domain": "human_health",
         "summary": {
             "en": {"main_findings": "Evidence"},
@@ -140,7 +141,7 @@ def _healthy_snapshot() -> ResearchRadarSnapshot:
                 "doi": "10.1000/one",
                 "openalex_id": "W1",
                 "source_payload": {"unpaywall": {"is_oa": True}},
-                "metadata_": {"classification_version": 5},
+                "metadata_": {"classification_version": CLASSIFICATION_VERSION},
                 "publication_status": "published",
                 "integrity_status": "current",
                 "peer_review_status": "peer_reviewed",

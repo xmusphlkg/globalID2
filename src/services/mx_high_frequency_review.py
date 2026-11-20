@@ -5,6 +5,22 @@ from datetime import date, datetime, timedelta
 import re
 
 
+def mx_source_label_icd_conflict(label: str, icd_code: str) -> dict | None:
+    """Describe an unresolved original-code conflict without correcting it."""
+    expected = {
+        "fiebre amarilla": "A95",
+        "encefalitis equina venezolana": "A92.2",
+    }.get(re.sub(r"\s+", " ", label.strip("§*• ")).casefold())
+    original = re.sub(r"\s+", "", icd_code).upper()
+    if expected is None or original == expected:
+        return None
+    return {
+        "source_label": label, "source_icd_code": icd_code,
+        "expected_icd_code": expected, "reason": "source_label_icd_conflict",
+        "policy": "retain_original_source_observations_without_canonical_projection",
+    }
+
+
 def reviewed_mx_high_frequency_record(record: dict, country_code: str) -> dict | None:
     """Admit only explicit national, all-sex, single-period case counts.
 
@@ -23,9 +39,7 @@ def reviewed_mx_high_frequency_record(record: dict, country_code: str) -> dict |
     if not label or dims.get("source_disease_label")!=label or not dims.get("source_icd_code"):return None
     # Some original weekly tables swap these two ICD codes. Preserve their
     # raw cells, but never trust a label-only mapping for contradictory codes.
-    explicit_icd = re.sub(r"\s+", "", str(dims["source_icd_code"])).upper()
-    if label.strip("§*• ").casefold()=="fiebre amarilla" and explicit_icd!="A95":return None
-    if label.strip("§*• ").casefold()=="encefalitis equina venezolana" and explicit_icd!="A92.2":return None
+    if mx_source_label_icd_conflict(label, str(dims["source_icd_code"])):return None
     if not re.fullmatch(r"dge_[a-f0-9]{20}__all__case_notifications",str(record.get("reviewed_source_code") or "")):return None
     when=record.get("date")
     try:
@@ -55,4 +69,4 @@ def reviewed_mx_high_frequency_record(record: dict, country_code: str) -> dict |
     return result
 
 
-__all__=["reviewed_mx_high_frequency_record"]
+__all__=["reviewed_mx_high_frequency_record", "mx_source_label_icd_conflict"]

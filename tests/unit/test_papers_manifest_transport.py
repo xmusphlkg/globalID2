@@ -72,7 +72,7 @@ def test_compressed_manifest_signs_encoded_payload_and_decodes_legacy_transports
     assert client.get_object(MANIFEST_KEY) == body
 
 
-def test_httpx_manifest_is_not_decoded_twice():
+def test_httpx_manifest_is_not_decoded_twice(monkeypatch):
     body = b'{"files":[]}'
     client = R2S3Client(CONFIG, object_index=False)
     if client._http is not None:
@@ -82,7 +82,7 @@ def test_httpx_manifest_is_not_decoded_twice():
             lambda request: httpx.Response(
                 200, content=gzip.compress(body), headers={"Content-Encoding": "gzip"}
             )
-        )
+        ),
     )
     try:
         assert client.get_object(MANIFEST_KEY) == body

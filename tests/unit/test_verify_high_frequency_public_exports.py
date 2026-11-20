@@ -23,7 +23,7 @@ def test_contracts_load_static_and_review_mapping_patches():
     series, mappings, hashes = load_contracts()
     assert series["SER_AT_AGES_RADAR_SOURCE_NATIVE"]["frequency"] == "monthly"
     assert mappings["AT", "SRC_AT_AGES_RADAR", "masern", "AT_AGES_RADAR_source_native"]["target_code"] == "D017"
-    assert hashes
+    assert "configs/ontology/sources/mx_dge_high_frequency.json" in hashes
 
 
 def test_expected_ages_points_use_native_static_identity_and_keep_coverage_gaps():

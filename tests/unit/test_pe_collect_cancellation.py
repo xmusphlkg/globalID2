@@ -1,5 +1,6 @@
 """Collection cancellation drains executor work and retains resumable source bytes."""
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from threading import Event, Lock
 from types import SimpleNamespace
 
@@ -11,8 +12,26 @@ from src.services.ingestion import runner
 from src.services.ingestion.countries import pe
 
 
+@pytest.fixture
+async def collection_executor():
+    # The collector starts eight downloads. CPU-limited CI runners can have
+    # fewer default executor threads; the test's readiness wait also uses one.
+    loop = asyncio.get_running_loop()
+    previous = getattr(loop, "_default_executor", None)
+    executor = ThreadPoolExecutor(max_workers=9)
+    loop.set_default_executor(executor)
+    try:
+        yield
+    finally:
+        if previous is None:
+            loop._default_executor = None
+        else:
+            loop.set_default_executor(previous)
+        executor.shutdown(wait=True, cancel_futures=True)
+
+
 @pytest.mark.asyncio
-async def test_dashboard_cancel_during_collect_drains_threads_and_preserves_partials(tmp_path, monkeypatch):
+async def test_dashboard_cancel_during_collect_drains_threads_and_preserves_partials(tmp_path, monkeypatch, collection_executor):
     monkeypatch.setattr(runner, 'ORGANIZE_CANCEL_POLL_SECONDS', 0.01)
     request_cancel = asyncio.Event()
     started, lock = Event(), Lock()
