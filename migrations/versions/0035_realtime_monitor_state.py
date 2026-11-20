@@ -26,6 +26,5 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_realtime_monitor_states_checked_at", table_name="realtime_monitor_states")
     op.drop_table("realtime_monitor_states")
 
