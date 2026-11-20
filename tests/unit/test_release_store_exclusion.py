@@ -180,7 +180,7 @@ async def test_running_static_release_still_blocks_json_claim(worker_database):
     assert await task_worker._claim_next_task_uuid("worker") is None
 
 
-async def test_queued_static_release_without_wait_still_blocks_json_claim(worker_database):
+async def test_queued_content_release_without_wait_allows_json_claim(worker_database):
     async with worker_database() as session:
         session.add_all([
             Task(task_uuid="queued-static", task_name="Site release",
@@ -194,7 +194,7 @@ async def test_queued_static_release_without_wait_still_blocks_json_claim(worker
 
     assert await task_worker._claim_next_task_uuid(
         "worker", blocked_task_types={TaskType.EXPORT_DATA}
-    ) is None
+    ) == ("json", TaskType.EXPORT_DATA)
 
 
 @pytest.mark.parametrize("active_status", [TaskStatus.RUNNING, TaskStatus.RETRYING])
@@ -212,8 +212,9 @@ async def test_queued_static_release_without_wait_still_blocks_json_claim(worker
     ({"data_only": True, "data_line": "situation"}, {"data_only": True}, set(), False),
 ])
 async def test_json_has_independent_single_slot_and_bypasses_full_regular_lanes(
-    worker_database, active_flags, queued_flags, blocked, expected, active_status,
+    worker_database, monkeypatch, active_flags, queued_flags, blocked, expected, active_status,
 ):
+    monkeypatch.setattr(task_worker, "is_automatic_json_paused", lambda _line: False)
     async with worker_database() as session:
         session.add_all([
             Task(task_uuid="active", task_type=TaskType.EXPORT_DATA, task_name="Active",

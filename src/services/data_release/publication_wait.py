@@ -62,6 +62,9 @@ def static_reservation_blocks_json(task: Any, now: datetime) -> bool:
     allowed to claim that parked row. Running exports always remain blockers;
     a due transient retry is also still an active reservation.
     """
+    input_data = dict(getattr(task, "input_data", None) or {})
+    if any(input_data.get(flag) for flag in ("content_only", "reports_only", "code_only", "situation_detached")):
+        return False
     if task.status == TaskStatus.RUNNING:
         return True
     return task.status in (TaskStatus.PENDING, TaskStatus.QUEUED) and claim_allowed(

@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.generation.release_projection_snapshot import write_projection_snapshot
+from src.generation.site_data_dependencies import file_identity
 from src.services.data_release import data_pipeline
 from src.services.data_release.pipeline import execute_release_task
 
@@ -22,6 +23,29 @@ def setup(tmp_path, monkeypatch):
     stored = SimpleNamespace(output_data=None)
     lines = ["surveillance"]
     countries = [("JP", True)]
+
+    baseline_state = tmp_path / "exports/surveillance-state"
+    baseline_public = tmp_path / "exports/surveillance-data"
+    (baseline_state / "countries").mkdir(parents=True, exist_ok=True)
+    baseline_public.mkdir(parents=True, exist_ok=True)
+    (baseline_state / "countries/jp.json").write_text('{"baseline":true}')
+    baseline_manifest = {"schema_version": 1, "release_id": "baseline", "files": {}}
+    baseline_current = baseline_public / "current.json"
+    baseline_current.write_text(json.dumps(baseline_manifest))
+    (baseline_state / "completed-generation.json").write_text(json.dumps({
+        "schema_version": 2,
+        "projection_version": "test-baseline",
+        "release_id": "baseline",
+        "manifest_sha256": hashlib.sha256(baseline_current.read_bytes()).hexdigest(),
+        "country_projection_versions": {"JP": "test-baseline"},
+        "state_files": {"countries/jp.json": file_identity(baseline_state / "countries/jp.json")},
+        "public_files": {"current.json": file_identity(baseline_current)},
+    }))
+    downloads = tmp_path / "exports/site-downloads"
+    downloads.mkdir(parents=True, exist_ok=True)
+    (downloads / "manifest.json").write_text(json.dumps({
+        "surveillance_release_id": "baseline",
+    }))
     def execute(statement):
         if "FROM publish_dirty" in str(statement):
             rows = [SimpleNamespace(id=11, line=line, scope_key="JP", published_at=None, published_task_uuid=None, change_set={"version": 1, "precise": True}) for line in lines]
@@ -160,8 +184,19 @@ async def test_retry_cannot_ack_a_different_selection_or_damaged_projection(setu
 async def test_incomplete_full_initialization_is_rejected_before_publication(setup):
     s = setup
     s.countries.append(("US", True))
+    s.task.input_data.update(
+        incremental_country_codes=["JP", "US"],
+        data_line="surveillance",
+        manual_trigger=True,
+        surveillance_rebuild_all=True,
+        publication_plan={
+            "execution_mode": "content",
+            "surveillance_rebuild_all": True,
+            "country_codes": ["JP", "US"],
+        },
+    )
     with pytest.raises(ValueError, match="all available"):
-        await execute_release_task(s.service, s.task, runtime=s.runtime)
+        await data_pipeline.execute_data_release(s.service, s.task, runtime=s.runtime)
     assert [name for name, _ in s.calls] == ["Capture Surveillance Publication Baseline", "Export Surveillance JSON"]
     s.commit.assert_not_awaited()
 

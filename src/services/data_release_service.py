@@ -1341,7 +1341,9 @@ class DataReleaseService:
                 now=datetime.now(timezone.utc), blocked_by=static.task_uuid,
                 recheck_seconds=int(getattr(self._config(), "poll_interval_seconds", 30) or 30),
             )
-        elif line == "surveillance":
+        if await self._yield_json_turn(job.job_id, line):
+            return
+        if waiting is None and line == "surveillance":
             try:
                 ready = await asyncio.to_thread(surveillance_baseline_ready, ROOT_DIR, downloads=False)
             except Exception:
@@ -1353,8 +1355,6 @@ class DataReleaseService:
                     now=datetime.now(timezone.utc), blocker_fingerprint="invalid",
                     recheck_seconds=int(getattr(self._config(), "poll_interval_seconds", 30) or 30),
                 )
-        if waiting is None and await self._yield_json_turn(job.job_id, line):
-            return
         kwargs = {"data_line": line} if line != "surveillance" else {}
         if waiting is None and await self._release_failure_cooldown_reason(job.job_id, data_only=True, **kwargs):
             return

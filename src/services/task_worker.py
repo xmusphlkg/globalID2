@@ -417,7 +417,6 @@ async def _claim_next_task_uuid(
                     wait_not_before <= datetime.now(timezone.utc).isoformat(),
                 ),
             ))
-            .where(or_(~or_(surveillance_data, situation_data, literature_data), not static_blocking))
             .where(or_(~health_operation, health_room))
             .order_by(
                 case(
@@ -499,6 +498,30 @@ async def _claim_next_task_uuid(
                for _uuid, task_type, _nonexclusive, _is_archive, _is_data, _is_legacy, is_situation_legacy, _line, _status in active_tasks):
             query = query.where(~situation_data)
         candidates = list((await db.execute(query)).scalars().all())
+        if static_blocking and candidates:
+            blocking_static = [
+                task for task in static_tasks
+                if static_reservation_blocks_json(task, datetime.now(timezone.utc))
+            ]
+            running_static = any(task.status == TaskStatus.RUNNING for task in blocking_static)
+
+            def task_order(task: Task) -> tuple[datetime, int]:
+                created = task.created_at or datetime.min.replace(tzinfo=timezone.utc)
+                if created.tzinfo is None:
+                    created = created.replace(tzinfo=timezone.utc)
+                return created, int(task.id or 0)
+
+            if running_static:
+                candidates = [
+                    task for task in candidates
+                    if not (task.input_data or {}).get("data_only")
+                ]
+            else:
+                candidates = [
+                    candidate for candidate in candidates
+                    if not (candidate.input_data or {}).get("data_only")
+                    or not any(task_order(blocker) <= task_order(candidate) for blocker in blocking_static)
+                ]
         if not candidates:
             return None
 
