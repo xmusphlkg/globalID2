@@ -44,6 +44,7 @@ from .ai_model_center import AIProviderConfig, AIModelConfig, AIModelCallLog
 from .automation_job import AutomationJob
 from .data_release_job import DataReleaseJob
 from .scheduled_job_state import ScheduledJobState
+from .realtime_monitor import RealtimeMonitorState
 from .knowledge import CountryBrief, DiseaseKnowledgeBrief, DiseaseKnowledgeSource
 from .disease_ontology import (
     DiseaseConceptAssignment,
@@ -119,6 +120,7 @@ __all__ = [
     "TaskStatus",
     "TaskType",
     "TaskPriority",
+    "RealtimeMonitorState",
     "StandardDisease",
     "DiseaseMapping",
     "DiseaseLearningSuggestion",

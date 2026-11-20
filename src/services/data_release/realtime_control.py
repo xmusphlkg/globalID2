@@ -1,6 +1,6 @@
 """Control-plane projections and safe actions for independent JSON publication.
 
-Reads only publication markers, task metadata and the local monitor receipt.
+Reads only publication markers, task metadata and the latest monitor state.
 Manual actions delegate to the existing transactional publication queue; this
 module never collects observations, acknowledges markers or reuses candidates.
 """
@@ -25,8 +25,10 @@ from src.domain import Country, Task, TaskStatus
 from src.domain.collection import PublishDirty
 from .realtime_monitor import ACTIVE, DATABASE_CHANNELS as CHANNELS, age, collect_database_snapshot, iso, task_channel_clause, timestamp
 from .planning import plan_changes
+from .realtime_state import load_monitor_report
 
 ROOT = Path(__file__).resolve().parents[3]
+# Kept only as a migration-window fallback for older deployments.
 MONITOR_PATH = ROOT / "logs/realtime-data-monitor/latest.json"
 MONITOR_STALE_SECONDS = 180
 _IDENTIFIER = re.compile(r"[A-Za-z0-9_.:-]{1,160}\Z")
@@ -210,7 +212,10 @@ class RealtimeControlService:
     async def overview(self, db, *, now=None):
         now = now or datetime.now(timezone.utc)
         snapshot = await collect_database_snapshot(db, now=now, channels=CHANNELS)
-        payload, monitor_error = await asyncio.to_thread(_monitor_receipt, self.monitor_path)
+        payload = await load_monitor_report(db)
+        monitor_error = None if payload is not None else "monitor_missing"
+        if payload is None:
+            payload, monitor_error = await asyncio.to_thread(_monitor_receipt, self.monitor_path)
         controls = self._controls()
         channels = {}
         for channel in CHANNELS:

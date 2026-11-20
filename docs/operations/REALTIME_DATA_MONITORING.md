@@ -39,7 +39,7 @@ HTML, template or asset. Its immutable catalogue/shard URLs must be publicly
 readable at the configured Papers origin; unavailable endpoints fail visibly.
 The bounded Literature probe makes one attempt per sampling cycle and shares
 the channel deadline across all requests. Its shard and immutable JSON samples
-use a persisted round-robin cursor when `--archive-dir` is enabled; the cursor
+use a persisted round-robin cursor when `--research-sampling-state-file` or `--archive-dir` is enabled; the cursor
 advances before probing and survives failed requests. Without an archive
 directory the same rotation is kept in the monitor process. The receipt records
 the selected sample and still states that article HTML is not fully verified.
@@ -112,13 +112,15 @@ venv/bin/python scripts/monitor_realtime_data.py \
 `--samples 5 --interval-seconds 30` performs five checks. `--watch` continues
 until interrupted. A bounded observation returns the worst status seen, so
 an early rollout failure remains visible even after recovery. Every check is
-printed immediately. Archives contain one UTC-dated `.ndjson` file and an
-atomically replaced `latest.json`. They contain only the same sanitized
-report. Keep release verification records with deployment evidence; rotate
-long-lived daily logs according to the host's retention policy.
+printed immediately. The scheduled service stores only the latest sanitized
+report in `realtime_monitor_states` with `--persist-state`, so it does not create an unbounded local
+JSON archive. Bounded CLI verification runs may still use `--archive-dir` when
+an operator explicitly requests an archive.
 
 The one-minute systemd timer writes local journals and
-`logs/realtime-data-monitor/`. It has no `OnFailure` notification, email or
+the `realtime_monitor_states` table in the application database. Older
+deployments may still expose `logs/realtime-data-monitor/` as a migration
+fallback. It has no `OnFailure` notification, email or
 Slack integration. Its `--warning-exit-zero` option keeps warnings visible in
 the report while marking the check itself successful; critical conditions and
 unexpected process failures still cause the service to fail. The CLI retains

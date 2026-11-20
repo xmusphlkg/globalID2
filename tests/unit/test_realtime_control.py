@@ -62,6 +62,19 @@ async def database(tmp_path, monkeypatch):
     await engine.dispose()
 
 
+@pytest.mark.asyncio
+async def test_monitor_keeps_latest_sample_when_an_older_check_finishes_late(database):
+    from src.domain import RealtimeMonitorState
+    from src.services.data_release.realtime_state import load_monitor_report, save_monitor_report
+
+    connection = await database.connection()
+    await connection.run_sync(RealtimeMonitorState.__table__.create)
+    latest = {"checked_at": NOW.isoformat(), "status": "ok"}
+    await save_monitor_report(database, latest)
+    await save_monitor_report(database, {"checked_at": (NOW - timedelta(minutes=1)).isoformat(), "status": "critical"})
+    assert await load_monitor_report(database) == latest
+
+
 def service(tmp_path, *, enabled=True, paused=False, release=None):
     if release is not None and not hasattr(release, "load_jobs"):
         release.load_jobs = AsyncMock(return_value=[SimpleNamespace(job_id="site-release", enabled=True)])
