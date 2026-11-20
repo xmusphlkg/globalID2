@@ -6830,7 +6830,7 @@ export interface components {
         /** RealtimeRetryOut */
         RealtimeRetryOut: {
             /** Category */
-            category?: ("permanent" | "transient_external" | "preflight" | "non_external_stage" | "unclassified_external" | "unknown") | null;
+            category?: ("permanent" | "transient_external" | "worker_interrupted" | "preflight" | "non_external_stage" | "unclassified_external" | "unknown") | null;
             /**
              * Exhausted
              * @default false

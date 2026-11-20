@@ -4,6 +4,7 @@ import echarts from '../../lib/echartsMap';
 import '../../lib/echartsSurveillance';
 import { GraphicComponent, LegendComponent } from 'echarts/components';
 import { surveillanceData } from '../../lib/surveillance-data';
+import { mapDataForCountry } from '../../lib/subdivision-map-publication';
 import { useChartTheme } from './chartPreferences';
 import ChartResultActions from './ChartResultActions';
 import { downloadCenterHref } from '../../lib/download-center-link';
@@ -72,6 +73,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const [comparison, setComparison] = useState<Comparison>('previous_year');
   const [customComparison, setCustomComparison] = useState({ from: '', to: '' });
   const [mapFocused, setMapFocused] = useState(code === 'JP');
+  const publication = useRef(surveillanceData);
   const [status, setStatus] = useState<'loading' | 'absent' | 'ready' | 'error'>('loading');
   const [failed, setFailed] = useState(false);
   const saved = useMemo(() => typeof globalThis.window === 'undefined' ? new URLSearchParams() : new URLSearchParams(globalThis.window.location.search), []);
@@ -95,15 +97,17 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
     setMapFocused(code === 'US' || code === 'JP');
     setStatus('loading'); setCatalog(null); setDataset(null); setWindow(null); setPopulation(null); setMapName('');
     void (async () => {
-      const index = await surveillanceData.read<{ countries: Array<{ code: string; path: string }> }>('/site-data/subdivision-maps/index.json', { signal: controller.signal });
+      const client = await mapDataForCountry(code, controller.signal);
+      const index = await client.read<{ countries: Array<{ code: string; path: string }> }>('/site-data/subdivision-maps/index.json', { signal: controller.signal });
       const entry = index.countries.find(item => item.code === code);
       if (!entry) { setStatus('absent'); return; }
-      const current = await surveillanceData.read<MapCatalog>(entry.path, { signal: controller.signal });
+      const current = await client.read<MapCatalog>(entry.path, { signal: controller.signal });
       const [populations, geometry] = await Promise.all([
-        surveillanceData.read<PopulationDataset>(current.population_path, { signal: controller.signal }),
-        surveillanceData.read<Geometry>(current.boundary.path, { signal: controller.signal }),
+        client.read<PopulationDataset>(current.population_path, { signal: controller.signal }),
+        client.read<Geometry>(current.boundary.path, { signal: controller.signal }),
       ]);
       if (controller.signal.aborted) return;
+      publication.current = client;
       if (current.schema_version !== 1 || current.country_code !== code || populations.country_code !== code) throw new Error('Map publication mismatch');
       const key = `subdivision-${code}-${current.boundary.version}`;
       echarts.registerMap(key, geometry, code === 'US' ? usInsetAreas : undefined);
@@ -122,7 +126,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
     setDataset(null); setWindow(null); setFailed(false);
     const entry = catalog?.diseases.find(item => item.id === selectedDisease);
     if (!entry || !catalog || !population) return () => controller.abort();
-    void surveillanceData.read<DiseaseDataset>(entry.path, { signal: controller.signal, retain: false }).then(next => {
+    void publication.current.read<DiseaseDataset>(entry.path, { signal: controller.signal, retain: false }).then(next => {
       if (controller.signal.aborted) return;
       if (next.country_code !== code || next.disease_id !== selectedDisease || next.schema_version !== 1) throw new Error('Map disease mismatch');
       prepareMapDataset(next);

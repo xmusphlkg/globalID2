@@ -11414,6 +11414,7 @@
                 "enum": [
                   "permanent",
                   "transient_external",
+                  "worker_interrupted",
                   "preflight",
                   "non_external_stage",
                   "unclassified_external",
