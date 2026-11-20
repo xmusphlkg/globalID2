@@ -127,6 +127,37 @@ test('response cache identity changes for template, assets and locale without ch
   assert.equal(await head.text(), ''); assert.equal(head.headers.get('etag'), response1.headers.get('etag'));
 });
 
+test('concurrent projection requests share immutable dependency fills', async t => {
+  const stored = new Map<string, Response>();
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'caches');
+  Object.defineProperty(globalThis, 'caches', { configurable: true, value: { default: {
+    async match(request: Request) { return stored.get(request.url)?.clone(); },
+    async put(request: Request, response: Response) { stored.set(request.url, response.clone()); },
+  } } });
+  t.after(() => { if (original) Object.defineProperty(globalThis, 'caches', original); else Reflect.deleteProperty(globalThis, 'caches'); });
+
+  const f = fixture(), entry = f.entry('en'), generation = sha('concurrent-generation');
+  const originalGet = f.env.DATA.get;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  f.env.DATA.get = async (key: string) => {
+    const value = await originalGet(key);
+    if (key.startsWith('paper-template-v3/')) await gate;
+    return value;
+  };
+  const request = () => templateArticleResponse(
+    new Request(`https://site.test/${entry.logical_key}`), f.env, entry, entry.logical_key, generation,
+  );
+  const pending = Promise.all(Array.from({ length: 8 }, request));
+  await new Promise<void>(resolve => setImmediate(resolve));
+  release();
+  const responses = await pending;
+  assert.ok(responses.every(response => response.status === 200));
+  const dependencyReads = f.reads.filter(key => key.startsWith('paper-template-v3/'));
+  assert.equal(dependencyReads.length, 3);
+  assert.equal(new Set(dependencyReads).size, 3);
+});
+
 test('editorial approval is locale-specific, unknown peer review is not a preprint, and topic links use stable slugs', () => {
   const item = structuredClone(record);
   item.content.peer_review_status = 'unknown';

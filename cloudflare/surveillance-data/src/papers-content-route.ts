@@ -3,6 +3,11 @@ import { templateArticleResponse } from './paper-template-content.ts';
 import { isResearchPagePath, isResearchResourcePath, researchPageUrl } from '../../../shared/research-urls.ts';
 const generationPath = /^\/research-publication\/([a-f0-9]{64})\/((?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]*\/?$)/;
 
+// Cache API writes are scheduled in the background. During a burst, several
+// requests can therefore observe the same cache miss before the first write
+// reaches the edge. Share that read/parse/write work within the isolate.
+const pendingCatalogueReads = new Map<string, Promise<unknown | null>>();
+
 export function papersContentPath(pathname: string): { generation: string; key: string } | null {
   const match = generationPath.exec(pathname);
   if (!match || !match[2] || match[2].split('/').some(part => part === '.' || part === '..')) return null;
@@ -38,20 +43,28 @@ async function catalogueJson<T>(request: Request, env: Env, key: string,
   try { cached = await cache?.match(cacheKey); }
   catch (error) { console.error(JSON.stringify({ event: 'research_catalogue_cache_read_failed', error_type: error instanceof Error ? error.name : 'Error' })); }
   if (cached) return cached.json<T>();
-  const object = await env.DATA.get(key);
-  if (!object) return null;
-  if (object.size > 2 * 1024 * 1024) throw new Error('Research catalogue too large');
-  const text = await object.text();
-  const value = JSON.parse(text) as T;
-  if (cache) {
-    const stored = new Response(text, { headers: { 'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=31536000, immutable' } });
-    const write = cache.put(cacheKey, stored).catch(error => {
-      console.error(JSON.stringify({ event: 'research_catalogue_cache_failed', error_type: error instanceof Error ? error.name : 'Error' }));
-    });
-    if (ctx) ctx.waitUntil(write); else await write;
+  const pendingKey = cacheKey.url;
+  let pending = pendingCatalogueReads.get(pendingKey);
+  if (!pending) {
+    pending = (async () => {
+      const object = await env.DATA.get(key);
+      if (!object) return null;
+      if (object.size > 2 * 1024 * 1024) throw new Error('Research catalogue too large');
+      const text = await object.text();
+      const value = JSON.parse(text) as T;
+      if (cache) {
+        const stored = new Response(text, { headers: { 'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=31536000, immutable' } });
+        const write = cache.put(cacheKey, stored).catch(error => {
+          console.error(JSON.stringify({ event: 'research_catalogue_cache_failed', error_type: error instanceof Error ? error.name : 'Error' }));
+        });
+        if (ctx) ctx.waitUntil(write); else await write;
+      }
+      return value;
+    })().finally(() => { pendingCatalogueReads.delete(pendingKey); });
+    pendingCatalogueReads.set(pendingKey, pending);
   }
-  return value;
+  return await pending as T | null;
 }
 
 /** Public navigation and SEO agree; only supporting resources use a generation. */
