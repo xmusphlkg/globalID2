@@ -3,6 +3,24 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.7', date: '2026-11-20',
+    titleEn: 'More reliable incremental publication',
+    titleZh: '更可靠的增量发布',
+    titleFr: 'Publication incrémentielle plus fiable',
+    summaryEn: 'Keep static content releases independent from JSON updates and preserve exact scoped surveillance baselines during retries.',
+    summaryZh: '让静态内容发布与 JSON 更新相互独立，并在重试时保留精确的监测范围基线。',
+    summaryFr: 'Les publications de contenu statique restent indépendantes des mises à jour JSON et les bases de surveillance ciblées sont conservées lors des reprises.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Content-only releases no longer block independent JSON channels, while legacy static releases keep their serialization guarantees.',
+      zh: '仅内容发布不再阻塞独立的 JSON 通道，同时保留旧式静态发布的串行保证。',
+      fr: 'Les publications de contenu ne bloquent plus les canaux JSON indépendants, tandis que la sérialisation des anciennes publications statiques est conservée.',
+    }, {
+      en: 'Incremental surveillance retries validate their published baseline and download manifest before acknowledging changes.',
+      zh: '监测增量重试会在确认变更前校验已发布基线和下载清单。',
+      fr: 'Les reprises de surveillance incrémentielle vérifient la base publiée et le manifeste de téléchargement avant de confirmer les changements.',
+    }] }],
+  },
+  {
     version: '0.20.6', date: '2026-11-20',
     titleEn: 'A consolidated and validated public release',
     titleZh: '统一并完成校验的公开站版本',
