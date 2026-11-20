@@ -47,13 +47,18 @@ if [[ -n "$tracked" ]]; then
   exit 1
 fi
 
+ignored="$(git check-ignore -- "${ignore_probes[@]}")" || [[ $? -eq 1 ]]
+missing_ignores=0
 for probe in "${ignore_probes[@]}"; do
-  if ! git check-ignore -q -- "$probe"; then
-    echo "Generated path is not protected by .gitignore: $probe" >&2
-    exit 1
+  if [[ $'\n'"$ignored"$'\n' != *$'\n'"$probe"$'\n'* ]]; then
+    printf 'Generated path is not protected by .gitignore: %s\n' "$probe" >&2
+    missing_ignores=1
   fi
 done
+if (( missing_ignores )); then
+  exit 1
+fi
 
-python3 scripts/check_repository_size.py
+python3 scripts/check_repository_size.py "$@"
 
 echo "Repository boundaries OK: generated data is ignored and new large artifacts are blocked."

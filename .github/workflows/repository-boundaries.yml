@@ -20,9 +20,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Verify repository boundaries
-        run: ./scripts/check_repository_boundaries.sh
-      - name: Check every object introduced by the pull request
-        run: >-
-          python3 scripts/check_repository_size.py
-          --revision-range '${{ github.event.pull_request.base.sha }}..HEAD'
+      - name: Verify repository boundaries and pull request history
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: ./scripts/check_repository_boundaries.sh --revision-range "${BASE_SHA}..HEAD"
