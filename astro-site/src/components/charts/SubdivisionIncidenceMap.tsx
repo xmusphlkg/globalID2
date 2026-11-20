@@ -18,10 +18,9 @@ echarts.use([GraphicComponent, LegendComponent]);
 
 type Geometry = Parameters<typeof echarts.registerMap>[1];
 interface Props { countryCode: string; diseaseId?: string; language?: Language; }
-const usInsetAreas = {
-  'US-AK': { left: -123, top: 31, width: 13, height: 7 },
-  'US-HI': { left: -112, top: 27, width: 6, height: 3.5 },
-};
+// The boundary file keeps the Aleutian chain continuous west of -180 degrees.
+const usStatesBounds = [[-192, 73], [-64, 17]];
+const contiguousUsBounds = [[-126, 50], [-66, 24]];
 const monthNames = (lang: Language) => Array.from({ length: 12 }, (_, index) => lang === 'zh' ? `${index + 1}月` : new Intl.DateTimeFormat(lang, { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2024, index, 1))));
 const labels = {
   en: { title: 'Regional distribution', disease: 'Disease', year: 'Year', start: 'First month', end: 'Last month', metric: 'Measure', rate: 'Reports per 100,000', cases: 'Reported cases', area: 'Region', population: 'Total resident population', observed: 'Reported months', source: 'Population source', reference: 'Reference date', basis: 'Population basis', version: 'Population version', download: 'Download filtered CSV', loading: 'Loading regional data…', unavailable: 'Regional map data are not available in this publication.', noDisease: 'No comparable regional counts are available for this disease.', zero: 'Zero', missing: 'Missing / suppressed', notAnnual: 'Selected-period crude report rates; not annualized or age standardized.', scale: 'The same disease, measure and month range share a color scale across years.', boundary: 'Boundaries', historical: 'Present monitoring units; historical boundary changes are not reconstructed.', formula: 'Period reports ÷ local population in the same year × 100,000. Missing years are not filled.', trend: 'Monthly reports in the selected region', complete: 'regions with a complete value', provisional: 'Provisional', unverified: 'Unverified', selected: 'Selected region', noPopulation: 'No verified local population for this year. Case counts remain available.', fullYear: 'Full year', firstQuarter: 'Jan–Mar' },
@@ -94,7 +93,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   useEffect(() => {
     const controller = new AbortController();
     retainedRange.current = null; comparisonRestored.current = false;
-    setMapFocused(code === 'US' || code === 'JP');
+    setMapFocused(code === 'JP');
     setStatus('loading'); setCatalog(null); setDataset(null); setWindow(null); setPopulation(null); setMapName('');
     void (async () => {
       const client = await mapDataForCountry(code, controller.signal);
@@ -110,7 +109,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       publication.current = client;
       if (current.schema_version !== 1 || current.country_code !== code || populations.country_code !== code) throw new Error('Map publication mismatch');
       const key = `subdivision-${code}-${current.boundary.version}`;
-      echarts.registerMap(key, geometry, code === 'US' ? usInsetAreas : undefined);
+      echarts.registerMap(key, geometry);
       setMapName(key); setPopulation(populations); setCatalog(current);
       const requested = saved.get('mapDisease') || diseaseId;
       setSelectedDisease(current.diseases.find(item => item.id === requested)?.id
@@ -174,7 +173,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
     visualMap: { type: 'continuous', show: false, min: 0, max: scaleValue(scale.maximum), calculable: false, inRange: { color: colors }, outOfRange: { color: missingColor }, seriesIndex: 0 },
     graphic: scaleGraphic(scale, colors, muted, dark ? '#8097a8' : '#94a7b6', missingColor, t.missing, value => value.toLocaleString(lang, { maximumFractionDigits: 0 })),
     series: [{ type: 'map', map: mapName, roam: true,
-      ...(mapFocused && code === 'US' ? { boundingCoords: [[-126, 50], [-66, 24]] } : mapFocused && code === 'JP' ? { boundingCoords: [[128, 46], [146, 30]] } : {}), layoutCenter: ['54%', '43%'], layoutSize: '87%', selectedMode: false,
+      ...(code === 'US' ? { boundingCoords: mapFocused ? contiguousUsBounds : usStatesBounds } : mapFocused && code === 'JP' ? { boundingCoords: [[128, 46], [146, 30]] } : {}), layoutCenter: ['54%', '43%'], layoutSize: '87%', selectedMode: false,
       itemStyle: { areaColor: dark ? '#354553' : '#e0e5e9', borderColor: dark ? '#10212e' : '#ffffff', borderWidth: .7 },
       emphasis: { label: { show: false }, itemStyle: { borderColor: '#e5a545', borderWidth: 2 } },
       data: rows.map(row => ({ name: row.region.code, value: row.value === null ? -1 : scaleValue(row.value),
