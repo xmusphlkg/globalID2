@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Configure TH/MY/NL national notification publication checks.
+"""Configure KR/TH/MY/NL national notification publication checks.
 
 Dry-run by default. --apply persists jobs; --enable explicitly resumes existing
 paused jobs. Country bootstrap and historical imports are separate operations.
 Managed jobs retain source revisions; current TH DDS uses bounded per-category
 recovery and the configured revision window rather than full-history downloads.
-All eleven managed sources use 30-minute control-plane checks.
+All managed sources use 30-minute control-plane checks.
 """
 from __future__ import annotations
 
@@ -34,6 +34,24 @@ def desired_jobs() -> dict[str, dict[str, object]]:
         "retry_threshold": 3, "interval_minutes": 30,
     }
     return {
+        "kr-kdca-monthly-daily": {
+            **shared, "name": "Korea KDCA Monthly 30-Minute Publication Check",
+            "country_code": "KR", "source": "kdca_open_api",
+            "daily_time": None, "timezone": "Asia/Seoul",
+            "notes": "Refresh Korea KDCA national monthly notifiable-disease cases. Preserve domestic/imported subtotals, provisional status and source revisions; API credentials or the verified portal fallback are required.",
+        },
+        "kr-kdca-region-annual-daily": {
+            **shared, "name": "Korea KDCA Regional Annual 30-Minute Publication Check",
+            "country_code": "KR", "source": "kdca_region_annual",
+            "daily_time": None, "timezone": "Asia/Seoul",
+            "notes": "Refresh KDCA Region01 annual city/province totals under separate KR-* geography keys. Do not add regional values to national monthly totals or reinterpret reporting area as residence.",
+        },
+        "kr-kdca-death-annual-daily": {
+            **shared, "name": "Korea KDCA Annual Death 30-Minute Publication Check",
+            "country_code": "KR", "source": "kdca_death_annual",
+            "daily_time": None, "timezone": "Asia/Seoul",
+            "notes": "Refresh the independent KDCA death01 annual series. Keep death observations separate from the monthly case source and preserve provisional source semantics.",
+        },
         "my-idengue-daily": {
             **shared, "name": "Malaysia iDengue 30-Minute Publication Check",
             "country_code": "MY", "source": "my_idengue_daily",

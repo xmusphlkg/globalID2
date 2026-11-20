@@ -14,7 +14,7 @@ from .au import AUMonthlyUpdater, AUWeeklyUpdater
 from .nz import NZDHBAnnualUpdater, NZMonthlyUpdater
 from .tw import TWMonthlyUpdater
 from .br import BRMonthlyUpdater
-from .kr import KRMonthlyUpdater
+from .kr import KRDeathAnnualUpdater, KRMonthlyUpdater, KRRegionAnnualUpdater
 from .hk import HKMonthlyUpdater
 from .ch import CHMonthlyUpdater
 from .ca import CAOntarioMonthlyUpdater
@@ -46,6 +46,8 @@ __all__ = [
     "TWMonthlyUpdater",
     "BRMonthlyUpdater",
     "KRMonthlyUpdater",
+    "KRDeathAnnualUpdater",
+    "KRRegionAnnualUpdater",
     "HKMonthlyUpdater",
     "CHMonthlyUpdater",
     "CAOntarioMonthlyUpdater",

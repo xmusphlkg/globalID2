@@ -9,6 +9,7 @@ from scripts import configure_national_notifications as setup
 from src.core.source_scopes import canonicalize_task_source
 
 HALF_HOUR_JOB_IDS = {
+    "kr-kdca-monthly-daily", "kr-kdca-region-annual-daily", "kr-kdca-death-annual-daily",
     "th-dds-tableau-daily", "th-dds-weekly-daily", "th-doe506-daily",
     "th-id-th-history-daily", "my-moh-std-daily", "nl-rivm-notifiable-daily",
     "my-idengue-daily", "my-who-flunet-daily", "my-who-gho-daily",
@@ -35,7 +36,12 @@ def job(job_id, **overrides):
 
 def test_jobs_have_distinct_sources_and_publication_checks():
     desired = setup.desired_jobs()
-    assert set(desired) == {"th-dds-tableau-daily", "th-dds-weekly-daily", "th-doe506-daily", "th-id-th-history-daily", "my-moh-std-daily", "nl-rivm-notifiable-daily", "my-idengue-daily", "my-who-flunet-daily", "my-who-gho-daily", "nl-rivm-virological-daily", "nl-rivm-respiratory-daily"}
+    assert set(desired) == {
+        "kr-kdca-monthly-daily", "kr-kdca-region-annual-daily", "kr-kdca-death-annual-daily",
+        "th-dds-tableau-daily", "th-dds-weekly-daily", "th-doe506-daily", "th-id-th-history-daily",
+        "my-moh-std-daily", "nl-rivm-notifiable-daily", "my-idengue-daily", "my-who-flunet-daily",
+        "my-who-gho-daily", "nl-rivm-virological-daily", "nl-rivm-respiratory-daily",
+    }
     assert {value["daily_time"] for value in desired.values()} == {None}
     for values in desired.values():
         assert canonicalize_task_source(values["source"], country_code=values["country_code"]) == values["source"]
@@ -44,7 +50,7 @@ def test_jobs_have_distinct_sources_and_publication_checks():
         assert not values["fill_missing"] and not values["force"]
 
 
-def test_all_eleven_jobs_use_half_hour_control_plane_intervals():
+def test_all_managed_jobs_use_half_hour_control_plane_intervals():
     desired = setup.desired_jobs()
     for job_id in HALF_HOUR_JOB_IDS:
         assert desired[job_id]["interval_minutes"] == 30

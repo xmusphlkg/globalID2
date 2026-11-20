@@ -176,6 +176,17 @@ def reusable_generation(root: Path, run: Path, config, *, research_source: Path)
         return None
 
 
+def retained_generation(run: Path, config, research_source: Path) -> dict:
+    """Keep the published Papers generation for an explicit Pages-only build."""
+    captured, body = _starting_baseline(run, config, PREFIX)
+    if not captured or body is None:
+        raise ValueError("Pages-only release requires a published research baseline")
+    pointer, _ = validate_manifest(body)
+    require_public_research_matches(research_source, pointer)
+    return {"schema": 1, "identity": _identity(pointer, config),
+            "baseline_sha256": hashlib.sha256(body).hexdigest()}
+
+
 def freeze_reuse(run: Path, value: dict) -> None:
     _atomic_receipt(Path(run) / REUSED, value)
 

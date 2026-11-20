@@ -90,6 +90,27 @@ def test_source_change_during_build_is_rejected(prepared):
         reuse.capture_render_inputs(root, run, settings=SETTINGS)
 
 
+def test_pages_only_retains_remote_papers_after_renderer_changes(prepared):
+    root, run, source, body = prepared
+    (root / reuse.COMMITTED).unlink()
+    value = reuse.retained_generation(run, CONFIG, source)
+    reuse.freeze_reuse(run, value)
+    assert reuse.load_reuse(run, CONFIG)["identity"]["release_id"] == "literature-published"
+    reuse.verify_reused_baseline(run, CONFIG, client=SimpleNamespace(get_object=lambda _: body))
+    put(source / "index.json", {"articles": []})
+    with pytest.raises(ValueError, match="published baseline"):
+        reuse.retained_generation(run, CONFIG, source)
+
+
+def test_pages_only_request_requires_explicit_template():
+    from dashboard.api.schemas.publication import PublicationPlanCreate
+
+    assert PublicationPlanCreate(kind="template", main_site_only=True).main_site_only
+    for kind in ("full", "auto", "content"):
+        with pytest.raises(ValueError, match="requires a template"):
+            PublicationPlanCreate(kind=kind, main_site_only=True)
+
+
 def test_recovery_does_not_depend_on_mutable_shared_receipt(prepared):
     root, run, source, _ = prepared
     value = reuse.reusable_generation(root, run, CONFIG, research_source=source)

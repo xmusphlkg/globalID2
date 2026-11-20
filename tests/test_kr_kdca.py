@@ -12,6 +12,9 @@ from src.data.crawlers.kr import (
     DEFAULT_DPORTAL_STATS_AJAX_URL,
     DEFAULT_PORTAL_SOURCE_NAME,
     aggregate_period_region_rows,
+    aggregate_region_annual_rows,
+    normalize_kdca_death_rows,
+    validate_kdca_death_rows,
     KoreaKDCAOpenAPICrawler,
     normalize_kdca_download_rows,
     parse_kdca_period_month,
@@ -104,6 +107,167 @@ def test_kdca_period_region_does_not_turn_missing_counts_into_zero():
 
     assert missing == []
     assert explicit_zero[0]["Cases"] == "0"
+
+
+def test_kdca_region01_aggregation_preserves_annual_province_identity():
+    rows = aggregate_region_annual_rows(
+        [
+            {
+                "year": "2025",
+                "icdGroupNm": "제3급",
+                "icdNm": "뎅기열",
+                "resultVal": "5",
+                "sidoCd": "11",
+                "sidoNm": "서울",
+            },
+            {
+                "year": "2025",
+                "icdGroupNm": "제3급",
+                "icdNm": "뎅기열",
+                "resultVal": "2",
+                "sidoCd": "11",
+                "sidoNm": "서울",
+            },
+            {
+                "year": "2025",
+                "icdGroupNm": "제3급",
+                "icdNm": "뎅기열",
+                "resultVal": "3",
+                "sidoCd": "26",
+                "sidoNm": "부산",
+            },
+        ],
+        years={2025},
+        source_url="https://example.test/Region01",
+    )
+
+    assert rows == [
+        {
+            "Date": "2025-01-01",
+            "RawDiseaseLabel": "뎅기열",
+            "DiseaseCode": "",
+            "DiseaseGroup": "제3급",
+            "Year": "2025",
+            "Month": "1",
+            "Cases": "7",
+            "LocalCases": "",
+            "ImportedCases": "",
+            "Source": "Korea KDCA EID Open API Region01",
+            "SourceURL": "https://example.test/Region01",
+            "Frequency": "annual",
+            "PeriodType": "year",
+            "Geography": "서울",
+            "GeographyKey": "country:KR-11:national",
+            "JurisdictionCode": "KR-11",
+            "ParentCountryCode": "KR",
+            "LocationType": "subdivision",
+            "Geocode": "11",
+        },
+        {
+            "Date": "2025-01-01",
+            "RawDiseaseLabel": "뎅기열",
+            "DiseaseCode": "",
+            "DiseaseGroup": "제3급",
+            "Year": "2025",
+            "Month": "1",
+            "Cases": "3",
+            "LocalCases": "",
+            "ImportedCases": "",
+            "Source": "Korea KDCA EID Open API Region01",
+            "SourceURL": "https://example.test/Region01",
+            "Frequency": "annual",
+            "PeriodType": "year",
+            "Geography": "부산",
+            "GeographyKey": "country:KR-26:national",
+            "JurisdictionCode": "KR-26",
+            "ParentCountryCode": "KR",
+            "LocationType": "subdivision",
+            "Geocode": "26",
+        },
+    ]
+
+
+def test_kdca_region01_aggregation_rejects_missing_region_or_count():
+    assert aggregate_region_annual_rows(
+        [
+            {"year": "2025", "icdNm": "뎅기열", "resultVal": "1", "sidoCd": "11"},
+            {"year": "2025", "icdNm": "뎅기열", "resultVal": "-", "sidoCd": "11", "sidoNm": "서울"},
+        ]
+    ) == []
+
+
+def test_kdca_region01_retains_numeric_zero():
+    rows = aggregate_region_annual_rows([
+        {"year": 2025, "icdNm": "Disease", "resultVal": 0, "sidoCd": 11, "sidoNm": "Seoul"}
+    ])
+    assert [row["Cases"] for row in rows] == ["0"]
+
+
+def test_kdca_death_rows_are_independent_annual_metric():
+    rows = normalize_kdca_death_rows([
+        {"year": "2024", "icdGroupNm": "제3급", "icdNm": "뎅기열", "resultVal": "3"},
+        {"year": "2024", "icdGroupNm": "제3급", "icdNm": "홍역", "resultVal": "0"},
+        {"year": "2025", "icdNm": "뎅기열", "resultVal": ""},
+    ], source_url="https://example.test/death01")
+
+    assert rows == [
+        {
+            "Date": "2024-01-01",
+            "RawDiseaseLabel": "뎅기열",
+            "SourceDiseaseCode": "뎅기열",
+            "DiseaseCode": "",
+            "DiseaseGroup": "제3급",
+            "Year": "2024",
+            "Month": "1",
+            "Cases": "3",
+            "Deaths": "3",
+            "Measure": "death_notifications",
+            "Frequency": "annual",
+            "PeriodType": "year",
+            "Unit": "count",
+            "Source": "Korea KDCA EID Death API",
+            "SourceURL": "https://example.test/death01",
+            "DatasetStatus": "provisional",
+            "IsProvisional": "true",
+            "RevisionSemantics": "authoritative_revision",
+            "AuthoritativeRevision": "true",
+        },
+        {
+            "Date": "2024-01-01",
+            "RawDiseaseLabel": "홍역",
+            "SourceDiseaseCode": "홍역",
+            "DiseaseCode": "",
+            "DiseaseGroup": "제3급",
+            "Year": "2024",
+            "Month": "1",
+            "Cases": "0",
+            "Deaths": "0",
+            "Measure": "death_notifications",
+            "Frequency": "annual",
+            "PeriodType": "year",
+            "Unit": "count",
+            "Source": "Korea KDCA EID Death API",
+            "SourceURL": "https://example.test/death01",
+            "DatasetStatus": "provisional",
+            "IsProvisional": "true",
+            "RevisionSemantics": "authoritative_revision",
+            "AuthoritativeRevision": "true",
+        },
+    ]
+    validate_kdca_death_rows(rows)
+
+
+def test_kdca_death_rows_reject_duplicate_identity():
+    rows = normalize_kdca_death_rows([
+        {"year": "2024", "icdNm": "뎅기열", "resultVal": "1"},
+        {"year": "2024", "icdNm": "뎅기열", "resultVal": "2"},
+    ])
+    try:
+        validate_kdca_death_rows(rows)
+    except ValueError as exc:
+        assert "Duplicate" in str(exc)
+    else:
+        raise AssertionError("duplicate death identity must fail closed")
 
 
 def test_kr_monthly_updater_loads_crawler_csv_shape(tmp_path):

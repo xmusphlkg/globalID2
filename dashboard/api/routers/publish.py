@@ -71,6 +71,7 @@ async def _create_plan(body: PublicationPlanCreate, *, db, rollback_of=None):
             job_configuration={column.name: getattr(job, column.name) for column in DataReleaseJob.__table__.columns},
             execution_service=data_release_service, requested_kind=body.kind, channel=body.channel, rollback_of=rollback_of,
             suppress_subscription_dispatch=body.suppress_subscription_dispatch,
+            **({"main_site_only": True} if body.main_site_only else {}),
             **({"rebuild_country_codes": rebuild_codes} if rebuild_codes is not None else {}),
         )
     except publication_execution.PublicationPlanError as exc:

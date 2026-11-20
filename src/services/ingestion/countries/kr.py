@@ -4,12 +4,16 @@ from __future__ import annotations
 import asyncio
 import json
 import tempfile
+from datetime import date
 from pathlib import Path
 
 from src.data.crawlers.kr import (
     KoreaKDCAOpenAPICrawler, _extract_items, aggregate_period_region_rows,
     normalize_kdca_download_rows, validate_kdca_national_rows,
     DEFAULT_PORTAL_SOURCE_NAME,
+    normalize_kdca_death_rows, validate_kdca_death_rows,
+    DEFAULT_DEATH_SOURCE_NAME,
+    aggregate_region_annual_rows,
 )
 from src.data.processors.kr import KRUpdateFetchResult
 from src.services.ingestion.artifacts import read_artifact
@@ -37,7 +41,21 @@ async def _reject_partial_live_fetch(writer, start):
     return writer.artifacts
 
 
-async def collect(writer, *, source, months, history_csv, source_file=None, source_dir=None):
+async def collect(writer, *, source, months=None, history_csv=None, start_year=None, end_year=None, source_file=None, source_dir=None):
+    if source == "kdca_death_annual":
+        return await collect_death(
+            writer, source=source,
+            start_year=start_year or 2001,
+            end_year=end_year or date.today().year,
+        )
+    if source == "kdca_region_annual":
+        return await collect_region(
+            writer, source=source,
+            start_year=start_year or 2001,
+            end_year=end_year or date.today().year,
+        )
+    if months is None or history_csv is None:
+        raise ValueError("KDCA monthly collection requires months and history_csv")
     crawler = KoreaKDCAOpenAPICrawler(save_raw=False)
     target = set(map(tuple, months))
     try:
@@ -84,7 +102,19 @@ async def collect(writer, *, source, months, history_csv, source_file=None, sour
         crawler.session.close()
 
 
-def organize(artifacts, *, updater, source, months, history_csv, source_file=None, source_dir=None):
+def organize(artifacts, *, updater, source, months=None, history_csv=None, start_year=None, end_year=None, source_file=None, source_dir=None):
+    if source == "kdca_death_annual":
+        return organize_death(
+            artifacts, updater=updater, source=source,
+            start_year=start_year, end_year=end_year,
+        )
+    if source == "kdca_region_annual":
+        return organize_region(
+            artifacts, updater=updater, source=source,
+            start_year=start_year, end_year=end_year,
+        )
+    if months is None or history_csv is None:
+        raise ValueError("KDCA monthly organization requires months and history_csv")
     crawler = KoreaKDCAOpenAPICrawler(save_raw=False)
     target = set(map(tuple, months))
     raw_api, live, prior, downloads = [], [], [], []
@@ -147,5 +177,90 @@ def organize(artifacts, *, updater, source, months, history_csv, source_file=Non
             if rows is prior:
                 logs.append(f"[recovery] using previous CSV snapshot with {len(rows)} rows")
             return KRUpdateFetchResult(rows, updater._latest_row_date(rows), Path(history_csv), logs, [source_audit])
+    finally:
+        crawler.session.close()
+
+
+async def collect_death(writer, *, source="kdca_death_annual", start_year, end_year):
+    """Capture the official annual death API response for offline replay."""
+    crawler = KoreaKDCAOpenAPICrawler(save_raw=False)
+    try:
+        if not crawler.service_key:
+            raise RuntimeError(
+                "DATA_GO_KR_SERVICE_KEY is required for KDCA annual death capture"
+            )
+        with capture_writer(writer) as capture:
+            await asyncio.to_thread(
+                crawler.fetch_death_annual,
+                start_year=int(start_year),
+                end_year=int(end_year),
+            )
+        return writer.artifacts
+    finally:
+        crawler.session.close()
+
+
+def organize_death(artifacts, *, updater, source="kdca_death_annual", start_year=None, end_year=None):
+    """Normalize captured ``death01`` envelopes without network access."""
+    crawler = KoreaKDCAOpenAPICrawler(save_raw=False)
+    rows = []
+    try:
+        for artifact in artifacts:
+            payload = read_artifact(artifact)
+            envelope = json.loads(payload)
+            rows.extend(normalize_kdca_death_rows(
+                _extract_items(envelope),
+                source_url=artifact.source_url or crawler.doc_url,
+                source_name=DEFAULT_DEATH_SOURCE_NAME,
+            ))
+        if start_year is not None or end_year is not None:
+            lower = int(start_year) if start_year is not None else 1900
+            upper = int(end_year) if end_year is not None else 9999
+            rows = [row for row in rows if lower <= int(row["Year"]) <= upper]
+        validate_kdca_death_rows(rows)
+        latest = max((row["Date"] for row in rows), default=None)
+        latest_date = date.fromisoformat(latest) if latest else None
+        return KRUpdateFetchResult(rows, latest_date, getattr(updater, "output_csv", Path("korea_deaths_annual.csv")), [], [])
+    finally:
+        crawler.session.close()
+
+
+async def collect_region(writer, *, source="kdca_region_annual", start_year, end_year):
+    """Capture the official annual Region01 response for offline replay."""
+    crawler = KoreaKDCAOpenAPICrawler(save_raw=False)
+    try:
+        if not crawler.service_key:
+            raise RuntimeError(
+                "DATA_GO_KR_SERVICE_KEY is required for KDCA annual regional capture"
+            )
+        with capture_writer(writer):
+            await asyncio.to_thread(
+                crawler.fetch_region_annual,
+                start_year=int(start_year),
+                end_year=int(end_year),
+            )
+        return writer.artifacts
+    finally:
+        crawler.session.close()
+
+
+def organize_region(artifacts, *, updater, source="kdca_region_annual", start_year=None, end_year=None):
+    """Normalize captured Region01 envelopes without network access."""
+    crawler = KoreaKDCAOpenAPICrawler(save_raw=False)
+    try:
+        raw_rows = []
+        for artifact in artifacts:
+            raw_rows.extend(_extract_items(json.loads(read_artifact(artifact))))
+        lower = int(start_year) if start_year is not None else 1900
+        upper = int(end_year) if end_year is not None else 9999
+        rows = aggregate_region_annual_rows(
+            raw_rows,
+            years=set(range(lower, upper + 1)),
+            source_url=crawler.doc_url,
+        )
+        if not rows:
+            raise ValueError("KDCA Region01 returned no annual observations")
+        latest = max(date.fromisoformat(row["Date"]) for row in rows)
+        return KRUpdateFetchResult(rows, latest, getattr(updater, "output_csv", Path("korea_region_annual.csv")), [], [])
     finally:
         crawler.session.close()

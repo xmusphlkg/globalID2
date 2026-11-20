@@ -206,8 +206,13 @@ async def execute_release_task(
             content="Preparing private published inputs and the renderer caches needed by this build.",
             content_type="text", metadata={"event": "template_workspace_preparing", **workspace_metadata},
         )
+        plan = task.input_data.get("publication_plan") or {}
+        prepare_options = {}
+        if plan.get("main_site_only"):
+            from .code_workspace import prepare_committed as prepare
+            prepare_options["revision"] = plan["source_revision"]
         private_astro = await asyncio.to_thread(prepare, runtime.root_dir, str(task.task_uuid),
-            recovery=recovery_workspace, independent_research=independent_research)
+            recovery=recovery_workspace, independent_research=independent_research, **prepare_options)
         workspace_metadata["elapsed_seconds"] = round(time.monotonic() - workspace_started, 3)
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid, entry_type="info", title="Template Workspace Ready",
@@ -271,6 +276,9 @@ async def _execute_release_task(
     if input_data.get("publish_dirty_before"):
         raise RuntimeError("Legacy release uses a timestamp cutoff; enqueue a new release with exact dirty IDs")
     code_only = bool(input_data.get("code_only"))
+    main_site_only = bool((input_data.get("publication_plan") or {}).get("main_site_only"))
+    if main_site_only and not code_only:
+        raise ValueError("Pages-only release requires a frozen template plan")
     isolated = runtime.astro_dir != runtime.root_dir / "astro-site"
     content_only = bool(input_data.get("content_only"))
     dispatch_subscriptions = not code_only and not bool(input_data.get("suppress_subscription_dispatch"))
@@ -412,6 +420,9 @@ async def _execute_release_task(
         # The isolated compiler preserves every non-country HTML byte and old
         # asset. No research/report bundle or publication pointer changes.
         r2_papers_enabled = r2_reports_enabled = False
+    if main_site_only and not (r2_papers_enabled and literature_detached
+            and (runtime.root_dir / "scripts/publish_papers_r2.py").is_file()):
+        raise ValueError("Pages-only release requires independently published research inputs")
     artifact_signature = None
     resumed_identity = None
     if artifact_checkpoint is not None and not recovery:
@@ -550,6 +561,13 @@ async def _execute_release_task(
             # still match afterwards. Background updates never get attested
             # merely because they happened before the deploy command ended.
             await asyncio.to_thread(stage_receipts.prepare_published_data, release_identity, data_paths)
+        if main_site_only:
+            from .release_binding import PAPERS_FIELDS, papers_binding_matches
+            prior = json.loads((runtime.root_dir / "exports/verified-pages-snapshot/release.json").read_bytes())
+            if (prior.get("release_id") != input_data["publication_plan"]["site_baseline"]
+                    or not papers_binding_matches(prior, prior)):
+                raise ValueError("Pages-only release lost its published Pages binding")
+            release_identity.update({key: prior[key] for key in PAPERS_FIELDS if key in prior})
         release_identity = await build_release_site(
             service=service, task=task, runtime=runtime, job=job, python_path=python_path,
             git_env=git_env, release_identity=release_identity,
@@ -569,12 +587,18 @@ async def _execute_release_task(
         from .surveillance_publish import STARTING_BASELINE
         from .site_research_reuse import (
             INPUTS, REUSED, capture_render_inputs, freeze_reuse, load_reuse,
-            reusable_generation, selected_literature_changes,
+            retained_generation, reusable_generation, selected_literature_changes,
         )
         baseline_name = f'.publication/{STARTING_BASELINE}'
         reuse_path = research_run / REUSED
         if resumed_identity is not None and reuse_path.exists():
             research_generation_reused = await asyncio.to_thread(load_reuse, research_run, service._r2_papers_config())
+        elif main_site_only:
+            if resumed_identity is not None:
+                raise ValueError("Pages-only recovery is missing its retained research baseline")
+            research_generation_reused = await asyncio.to_thread(retained_generation, research_run,
+                service._r2_papers_config(), runtime.astro_dir / 'public/site-data/research')
+            await asyncio.to_thread(freeze_reuse, research_run, research_generation_reused)
         elif resumed_identity is None and (research_run / INPUTS).is_file():
             # Verify the sources actually used by this build before considering
             # a no-op. An unknown/old input contract follows normal publication.
@@ -594,7 +618,8 @@ async def _execute_release_task(
                     hashlib.sha256((research_run / name).read_bytes()).hexdigest() for name in names})
             await runtime.task_manager.add_workbook_entry(task.task_uuid,
                 entry_type='info', title='Published Research Generation Reused',
-                content='Research data, renderer and projection inputs match the captured committed generation; no Papers candidate or upload is needed.',
+                content=('Pages-only release retained the existing Papers publication.'
+                         if main_site_only else 'Research data, renderer and projection inputs match the captured committed generation; no Papers candidate or upload is needed.'),
                 content_type='text', metadata={'event': 'site_research_generation_reused',
                     **research_generation_reused['identity']})
         elif resumed_identity is None:

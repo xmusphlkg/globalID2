@@ -153,7 +153,9 @@ def create_plan(*, root: Path, data_dir: Path, job_id: str, config: Any,
                 now: datetime | None = None, execution_service=None,
                 requested_kind: str = "auto", channel: str | None = None, rollback_of: str | None = None,
                 suppress_subscription_dispatch: bool = False,
-                rebuild_country_codes: list[str] | None = None) -> dict:
+                rebuild_country_codes: list[str] | None = None, main_site_only: bool = False) -> dict:
+    if main_site_only and requested_kind != "template":
+        raise ValueError("main_site_only requires a template plan")
     if rebuild_country_codes is not None and (
         requested_kind != "content" or channel != "surveillance" or not rebuild_country_codes
         or rebuild_country_codes != sorted(set(rebuild_country_codes))
@@ -242,6 +244,7 @@ def create_plan(*, root: Path, data_dir: Path, job_id: str, config: Any,
         "suppress_subscription_dispatch": suppress_subscription_dispatch,
         "surveillance_rebuild_all": rebuild_country_codes is not None,
         "country_codes": rebuild_country_codes or [],
+        **({"main_site_only": True} if main_site_only else {}),
     }
     if execution_service is not None:
         from .publication_execution import prepare_execution

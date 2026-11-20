@@ -31,6 +31,7 @@ from .base import BaseCrawler, CrawlerResult
 logger = get_logger(__name__)
 
 DEFAULT_SOURCE_NAME = "Korea KDCA EID Open API"
+DEFAULT_DEATH_SOURCE_NAME = "Korea KDCA EID Death API"
 DEFAULT_PORTAL_SOURCE_NAME = "Korea KDCA EID Portal Download"
 DEFAULT_KOSIS_SOURCE_NAME = "Korea KOSIS Download"
 DEFAULT_DOC_URL = "https://www.data.go.kr/data/15139178/openapi.do"
@@ -42,6 +43,7 @@ DEFAULT_DPORTAL_STATS_AJAX_URL = (
 DEFAULT_KOSIS_URL = "https://kosis.kr/index/index.do"
 DEFAULT_BASE_URL = "https://apis.data.go.kr/1790387/EIDAPIService"
 DEFAULT_SOURCE_SCOPE = "kdca_open_api"
+DEFAULT_DEATH_SOURCE_SCOPE = "kdca_death_annual"
 DEFAULT_SERVICE_KEY_ENV = "DATA_GO_KR_SERVICE_KEY"
 DEFAULT_DPORTAL_FILE_ENV = "KR_DPORTAL_FILE"
 DEFAULT_DPORTAL_DIR_ENV = "KR_DPORTAL_DIR"
@@ -685,6 +687,131 @@ def aggregate_period_region_rows(
     return output_rows
 
 
+def normalize_kdca_death_rows(
+    rows: Iterable[Dict[str, Any]],
+    *,
+    source_url: str = DEFAULT_DOC_URL,
+    source_name: str = DEFAULT_DEATH_SOURCE_NAME,
+) -> List[Dict[str, str]]:
+    """Normalize KDCA ``death01`` annual rows as an independent metric.
+
+    The death API is annual and must remain separate from the monthly case
+    feed.  Missing values are discarded rather than coerced to zero.
+    """
+    normalized: List[Dict[str, str]] = []
+    for row in rows:
+        year = _parse_int(_lookup(row, ["year", "Year", "년도"]))
+        disease = _first_text(row, ["icdNm", "Disease", "질병명", "감염병명"])
+        group = _first_text(row, ["icdGroupNm", "DiseaseGroup", "감염병급"])
+        value = _parse_int(_lookup(row, ["resultVal", "Deaths", "death", "사망자수", "결과값"]))
+        if year is None or year < 1900 or not disease or value is None or value < 0:
+            continue
+        normalized.append({
+            "Date": f"{year:04d}-01-01",
+            "RawDiseaseLabel": disease,
+            "SourceDiseaseCode": disease,
+            "DiseaseCode": "",
+            "DiseaseGroup": group,
+            "Year": str(year),
+            "Month": "1",
+            "Cases": str(value),
+            "Deaths": str(value),
+            "Measure": "death_notifications",
+            "Frequency": "annual",
+            "PeriodType": "year",
+            "Unit": "count",
+            "Source": source_name,
+            "SourceURL": source_url,
+            "DatasetStatus": "provisional",
+            "IsProvisional": "true",
+            "RevisionSemantics": "authoritative_revision",
+            "AuthoritativeRevision": "true",
+        })
+    normalized.sort(key=lambda item: (item["Date"], item["RawDiseaseLabel"]))
+    return normalized
+
+
+def validate_kdca_death_rows(rows: Iterable[Dict[str, str]]) -> None:
+    """Fail closed on malformed or duplicate annual death observations."""
+    seen: Set[Tuple[str, str]] = set()
+    count = 0
+    for row in rows:
+        date_text = _norm_text(row.get("Date"))
+        disease = _norm_text(row.get("SourceDiseaseCode") or row.get("RawDiseaseLabel"))
+        value = _parse_int(row.get("Deaths") or row.get("Cases"))
+        if not re.fullmatch(r"\d{4}-01-01", date_text) or not disease:
+            raise ValueError("KDCA death row has invalid year or disease")
+        if value is None or value < 0:
+            raise ValueError("KDCA death row has invalid count")
+        key = (date_text, disease)
+        if key in seen:
+            raise ValueError(f"Duplicate KDCA death row: {key}")
+        seen.add(key)
+        count += 1
+    if count == 0:
+        raise ValueError("KDCA death batch contains no normalized rows")
+
+
+def aggregate_region_annual_rows(
+    rows: Iterable[Dict[str, Any]],
+    *,
+    years: Optional[Set[int]] = None,
+    source_url: str = DEFAULT_DOC_URL,
+) -> List[Dict[str, str]]:
+    """Normalize KDCA Region01 rows to annual province-level rows.
+
+    Region01 is an annual API operation.  Its ``sidoCd`` and ``sidoNm``
+    fields identify the reporting province, while ``resultVal`` is the
+    reported count for the disease/year/province tuple.
+    """
+    aggregate: Dict[Tuple[int, str, str, str], int] = {}
+    labels: Dict[Tuple[int, str, str, str], str] = {}
+    for row in rows:
+        try:
+            year = int(_norm_text(row.get("year") or row.get("Year")))
+        except (TypeError, ValueError):
+            continue
+        if years is not None and year not in years:
+            continue
+        disease_name = _norm_text(row.get("icdNm") or row.get("Disease"))
+        disease_group = _norm_text(row.get("icdGroupNm") or row.get("DiseaseGroup"))
+        sido_code = _norm_text(row.get("sidoCd") or row.get("SidoCode"))
+        sido_name = _norm_text(row.get("sidoNm") or row.get("SidoName"))
+        count = _parse_int(_lookup(row, ["resultVal", "Cases"]))
+        if not disease_name or not sido_code or not sido_name or count is None or count < 0:
+            continue
+        key = (year, sido_code, disease_name, disease_group)
+        aggregate[key] = aggregate.get(key, 0) + count
+        labels[key] = sido_name
+
+    output_rows: List[Dict[str, str]] = []
+    for (year, sido_code, disease_name, disease_group), count in sorted(aggregate.items()):
+        output_rows.append(
+            {
+                "Date": f"{year}-01-01",
+                "RawDiseaseLabel": disease_name,
+                "DiseaseCode": "",
+                "DiseaseGroup": disease_group,
+                "Year": str(year),
+                "Month": "1",
+                "Cases": str(count),
+                "LocalCases": "",
+                "ImportedCases": "",
+                "Source": "Korea KDCA EID Open API Region01",
+                "SourceURL": source_url,
+                "Frequency": "annual",
+                "PeriodType": "year",
+                "Geography": labels[(year, sido_code, disease_name, disease_group)],
+                "GeographyKey": f"country:KR-{sido_code}:national",
+                "JurisdictionCode": f"KR-{sido_code}",
+                "ParentCountryCode": "KR",
+                "LocationType": "subdivision",
+                "Geocode": sido_code,
+            }
+        )
+    return output_rows
+
+
 class KoreaKDCAOpenAPICrawler(BaseCrawler):
     """Crawler for Korea KDCA notifiable infectious disease OpenAPI."""
 
@@ -1129,7 +1256,11 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
                 **params,
             }
             time.sleep(self.delay)
-            response = self.session.get(url, params=query, timeout=self.timeout)
+            try:
+                response = self.session.get(url, params=query, timeout=self.timeout)
+            except requests.RequestException as exc:
+                # requests errors can contain the prepared URL and service key.
+                raise RuntimeError(f"KR KDCA OpenAPI transport failed: {type(exc).__name__}") from None
             from src.services.ingestion.capture import capture_sync, is_capturing
             if is_capturing():
                 response._content = capture_sync(response.content, url, response.headers.get("content-type", ""))
@@ -1140,15 +1271,13 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
                 )
             try:
                 response.raise_for_status()
-            except requests.RequestException as exc:
-                raise RuntimeError(f"KR KDCA OpenAPI request failed: {exc}") from exc
+            except requests.RequestException:
+                raise RuntimeError(f"KR KDCA OpenAPI HTTP status {response.status_code}") from None
 
             try:
                 payload = response.json()
             except ValueError as exc:
-                raise RuntimeError(
-                    f"KR KDCA OpenAPI returned non-JSON response: {response_text[:200]}"
-                ) from exc
+                raise RuntimeError("KR KDCA OpenAPI returned a non-JSON response") from exc
 
             header = _extract_header(payload)
             result_code = _norm_text(header.get("resultCode"))
@@ -1186,6 +1315,37 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
             "PeriodRegion",
             params={
                 "searchPeriodType": "2",
+                "searchStartYear": str(start_year),
+                "searchEndYear": str(end_year),
+            },
+        )
+
+    def fetch_death_annual(
+        self,
+        *,
+        start_year: int,
+        end_year: int,
+    ) -> List[Dict[str, Any]]:
+        """Fetch annual disease-specific deaths from KDCA ``death01``."""
+        return self.fetch_operation(
+            "death01",
+            params={
+                "searchStartYear": str(start_year),
+                "searchEndYear": str(end_year),
+            },
+        )
+
+    def fetch_region_annual(
+        self,
+        *,
+        start_year: int,
+        end_year: int,
+    ) -> List[Dict[str, Any]]:
+        """Fetch annual province-level counts from the official Region01 API."""
+        return self.fetch_operation(
+            "Region01",
+            params={
+                "searchType": "1",
                 "searchStartYear": str(start_year),
                 "searchEndYear": str(end_year),
             },

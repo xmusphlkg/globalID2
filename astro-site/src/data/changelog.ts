@@ -3,6 +3,20 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.8', date: '2026-11-20',
+    titleEn: 'Disease selection on regional maps',
+    titleZh: '地区地图的疾病切换',
+    titleFr: 'Sélection des maladies sur les cartes régionales',
+    summaryEn: 'Regional maps list the diseases available in each country’s published data.',
+    summaryZh: '各国地区地图根据已发布的数据列出可选疾病。',
+    summaryFr: 'Les cartes régionales proposent les maladies disponibles dans les données publiées de chaque pays.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'The disease selector on the map of China includes the available provincial series.',
+      zh: '中国地图的疾病选择器包含已有省级数据的疾病。',
+      fr: 'Le sélecteur de la carte de Chine inclut les maladies pour lesquelles des données provinciales sont disponibles.',
+    }] }],
+  },
+  {
     version: '0.20.7', date: '2026-11-20',
     titleEn: 'More reliable incremental publication',
     titleZh: '更可靠的增量发布',

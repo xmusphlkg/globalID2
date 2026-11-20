@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only publication health samples; exit 0/1/2 for ok/warn/error."""
+"""Publication health samples with a database-backed latest state."""
 from __future__ import annotations
 
 import argparse
@@ -28,6 +28,7 @@ with redirect_stderr(io.StringIO()):
         CHANNELS, DATABASE_CHANNELS, LEVEL, MonitorThresholds, assemble_report, collect_database_snapshot,
         probe_public_manifest, report_text, validate_public_url,
     )
+    from src.services.data_release.realtime_state import save_monitor_report
 logger.remove()
 
 DEFAULT_OBJECT_LIMIT_BYTES = 8 * 1024 * 1024
@@ -47,6 +48,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--watch", action="store_true", help="Continue until interrupted or duration expires")
     result.add_argument("--duration-seconds", type=float, help="Bound observation duration (also enables watch)")
     result.add_argument("--archive-dir", type=Path, help="Append UTC-dated NDJSON and atomic latest.json locally")
+    result.add_argument("--persist-state", action="store_true", help="Save this sample as the dashboard's latest monitor report")
     result.add_argument("--research-sampling-state-file", type=Path,
         help="Persist Literature round-robin position; default <archive-dir>/research-sampling.json")
     result.add_argument("--warning-exit-zero", action="store_true", help="Report warnings normally but return 0 (critical errors still fail)")
@@ -132,6 +134,13 @@ async def observe(args, thresholds) -> int:
                                 headers={"User-Agent": "GlobalID-Realtime-Monitor/1"}) as client:
         while True:
             report = await check_once(args, thresholds, client=client)
+            if args.persist_state:
+                try:
+                    async with get_session_maker()() as db:
+                        await asyncio.wait_for(save_monitor_report(db, report), args.timeout_seconds)
+                except Exception:
+                    report["state_persistence_error_code"] = "monitor_state_persistence_failed"
+                    report["status"] = "critical"
             if args.archive_dir:
                 try:
                     archive_report(args.archive_dir, report)

@@ -50,7 +50,7 @@ async def database(tmp_path, monkeypatch):
             Task(task_uuid="situation-retry", task_type=TaskType.EXPORT_DATA, task_name="Situation JSON", status=TaskStatus.RETRYING,
                 input_data={"data_only": True, "data_line": "situation", "release_job_id": "site-release", "publish_dirty_ids": [5], "continuation_dirty_ids": [7, 8]},
                 metadata_={"automatic_retry": {"status": "scheduled", "scheduled_attempts": 2, "max_attempts": 3,
-                    "next_attempt_at": (NOW + timedelta(minutes=5)).isoformat(), "category": "transient_external", "last_error": SECRET},
+                    "next_attempt_at": (NOW + timedelta(minutes=5)).isoformat(), "category": "worker_interrupted", "last_error": SECRET},
                     "release_continuation": {"status": "queued", "task_uuid": "child-run"}}, created_at=NOW),
             Task(task_uuid="static-newest", task_type=TaskType.EXPORT_DATA, task_name="Static", status=TaskStatus.COMPLETED,
                 input_data={"content_only": True}, output_data={"release_id": "static-secret"},
@@ -60,6 +60,19 @@ async def database(tmp_path, monkeypatch):
     async with maker() as db:
         yield db
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_monitor_keeps_latest_sample_when_an_older_check_finishes_late(database):
+    from src.domain import RealtimeMonitorState
+    from src.services.data_release.realtime_state import load_monitor_report, save_monitor_report
+
+    connection = await database.connection()
+    await connection.run_sync(RealtimeMonitorState.__table__.create)
+    latest = {"checked_at": NOW.isoformat(), "status": "ok"}
+    await save_monitor_report(database, latest)
+    await save_monitor_report(database, {"checked_at": (NOW - timedelta(minutes=1)).isoformat(), "status": "critical"})
+    assert await load_monitor_report(database) == latest
 
 
 def service(tmp_path, *, enabled=True, paused=False, release=None):
@@ -121,6 +134,7 @@ async def test_run_pages_isolate_legacy_json_and_never_expose_errors_or_static_t
     assert older["items"][0]["progress"] == 100
     situation = await control.runs(database, "situation", statuses=[TaskStatus.RETRYING])
     run = RealtimeRunOut.model_validate(situation["items"][0])
+    assert run.retry.category == "worker_interrupted"
     assert run.retry.scheduled_attempts == 2 and run.continuation.remaining_count == 2
     assert run.continuation.task_uuid == "child-run"
     assert run.href == "/publish/tasks?detail=situation-retry"

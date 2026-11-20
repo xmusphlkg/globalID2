@@ -9999,6 +9999,11 @@
             "title": "Kind",
             "type": "string"
           },
+          "main_site_only": {
+            "default": false,
+            "title": "Main Site Only",
+            "type": "boolean"
+          },
           "suppress_subscription_dispatch": {
             "default": false,
             "title": "Suppress Subscription Dispatch",
@@ -10157,6 +10162,11 @@
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "main_site_only": {
+            "default": false,
+            "title": "Main Site Only",
+            "type": "boolean"
           },
           "pages_deploy_required": {
             "title": "Pages Deploy Required",
@@ -11414,6 +11424,7 @@
                 "enum": [
                   "permanent",
                   "transient_external",
+                  "worker_interrupted",
                   "preflight",
                   "non_external_stage",
                   "unclassified_external",

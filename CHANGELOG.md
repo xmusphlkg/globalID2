@@ -4,6 +4,13 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.8] - 2026-11-20
+
+### Fixed
+
+- Load the disease choices for each country's subdivision map from its published data.
+- Keep the control panel's publication overview available after a worker interruption.
+
 ## [0.20.7] - 2026-11-20
 
 ### Fixed

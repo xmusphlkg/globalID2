@@ -39,9 +39,12 @@ class PublicationPlanCreate(BaseModel):
     channel: Literal["surveillance", "situation", "literature"] | None = None
     suppress_subscription_dispatch: bool = False
     surveillance_rebuild_all: bool = False
+    main_site_only: bool = False
 
     @model_validator(mode="after")
     def validate_surveillance_rebuild(self):
+        if self.main_site_only and self.kind != "template":
+            raise ValueError("main_site_only requires a template plan")
         if self.surveillance_rebuild_all and (
             self.kind != "content" or self.channel != "surveillance"
         ):
@@ -93,6 +96,7 @@ class PublicationPlanOut(BaseModel):
     suppress_subscription_dispatch: bool = False
     surveillance_rebuild_all: bool = False
     country_codes: list[str] = Field(default_factory=list)
+    main_site_only: bool = False
 
 
 class PublicationServiceUsageOut(BaseModel):

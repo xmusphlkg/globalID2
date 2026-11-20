@@ -176,7 +176,12 @@ class CrawlService:
         "CZ": "SRC_CZ_ECDC_ATLAS",
         "GR": "SRC_GR_ECDC_ATLAS",
         "RO": "SRC_RO_ECDC_ATLAS",
-        "KR": "SRC_KR_KDCA",
+        "KR": {
+            "Korea KDCA EID Open API": "SRC_KR_KDCA",
+            "Korea KDCA EID Regional Annual API": "SRC_KR_KDCA_REGION_ANNUAL",
+            "Korea KDCA EID Annual Death API": "SRC_KR_KDCA_DEATH",
+            "Korea KDCA EID Death API": "SRC_KR_KDCA_DEATH",
+        },
         "BR": "SRC_BR_SINAN",
         "CH": "SRC_CH_FOPH_IDD",
         "CA-ON": "SRC_CA_ON_PHO_IDTO",
@@ -279,7 +284,9 @@ class CrawlService:
             IEWeeklyUpdater,
             ISMultiFrequencyUpdater,
             JPWeeklyUpdater,
+            KRDeathAnnualUpdater,
             KRMonthlyUpdater,
+            KRRegionAnnualUpdater,
             NOMonthlyUpdater,
             NZDHBAnnualUpdater,
             NZMonthlyUpdater,
@@ -303,7 +310,9 @@ class CrawlService:
             "IEWeeklyUpdater": IEWeeklyUpdater,
             "ISMultiFrequencyUpdater": ISMultiFrequencyUpdater,
             "JPWeeklyUpdater": JPWeeklyUpdater,
+            "KRDeathAnnualUpdater": KRDeathAnnualUpdater,
             "KRMonthlyUpdater": KRMonthlyUpdater,
+            "KRRegionAnnualUpdater": KRRegionAnnualUpdater,
             "NOMonthlyUpdater": NOMonthlyUpdater,
             "NZDHBAnnualUpdater": NZDHBAnnualUpdater,
             "NZMonthlyUpdater": NZMonthlyUpdater,
@@ -443,7 +452,7 @@ class CrawlService:
             preferred = get_country_bootstrap_config(normalized_country).get("crawler_config", {}).get("preferred_source")
             if preferred:
                 source = normalized_source = str(preferred)
-        if normalized_country in {"AR", "TH", *SOUTH_ASIA_SOURCES}:
+        if normalized_country in {"AR", "TH", "KR", *SOUTH_ASIA_SOURCES}:
             from src.core.source_scopes import canonicalize_task_source
             source = canonicalize_task_source(source, country_code=normalized_country)
             normalized_source = source
@@ -475,6 +484,10 @@ class CrawlService:
             pipeline = _PipelineSpec("_execute_nl_weekly", "NLVirologicalWeeklyUpdater")
         elif normalized_country == "NL" and normalized_source == "rivm_respiratory_weekly":
             pipeline = _PipelineSpec("_execute_nl_weekly", "NLRespiratoryWeeklyUpdater")
+        elif normalized_country == "KR" and normalized_source == "kdca_region_annual":
+            pipeline = _PipelineSpec("_execute_kr_annual", "KRRegionAnnualUpdater")
+        elif normalized_country == "KR" and normalized_source == "kdca_death_annual":
+            pipeline = _PipelineSpec("_execute_kr_annual", "KRDeathAnnualUpdater")
         elif normalized_country == "TH" and normalized_source == "th_dds_tableau":
             pipeline = _PipelineSpec("_execute_th_tableau", "ThailandDDSTableauUpdater")
         elif normalized_country == "TH" and normalized_source == "th_id_th_history":
@@ -1604,6 +1617,55 @@ class CrawlService:
         months = updater._resolve_requested_months(months)
         options = {"months": months, "history_csv": updater.output_csv, "source_file": (task.input_data or {}).get("source_file"), "source_dir": (task.input_data or {}).get("source_dir")}
         return await run_surveillance(self, task=task, updater=updater, connector=kr, source=source, force=force, process=process, connector_options=options)
+
+
+    async def _execute_kr_annual(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Run one of Korea's annual source-native KDCA feeds."""
+        from src.services.ingestion.countries import kr
+        from src.services.ingestion.runner import run_surveillance
+
+        if fill_missing:
+            raise ValueError("Korea annual sources do not support fill_missing")
+        config = get_country_bootstrap_config("KR").get("crawler_config", {})
+        default_start = int(config.get("full_history_start_year") or 2001)
+        raw_start = (task.input_data or {}).get("start_year")
+        raw_end = (task.input_data or {}).get("end_year")
+        try:
+            start_year = int(raw_start) if raw_start is not None else default_start
+        except (TypeError, ValueError):
+            start_year = default_start
+        try:
+            end_year = int(raw_end) if raw_end is not None else datetime.now().year
+        except (TypeError, ValueError):
+            end_year = datetime.now().year
+        options = {"start_year": start_year, "end_year": end_year}
+        connector = kr
+        if source == "kdca_death_annual":
+            connector_options = options
+        elif source == "kdca_region_annual":
+            connector_options = options
+        else:
+            raise ValueError(f"Unsupported Korea annual source: {source}")
+        return await run_surveillance(
+            self,
+            task=task,
+            updater=updater,
+            connector=connector,
+            source=source,
+            force=force,
+            process=process,
+            connector_options=connector_options,
+        )
 
 
 

@@ -44,7 +44,7 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     "TW": ["nidss_open_data"],
     "HK": ["chp_notifiable"],
     "BR": ["sinan_datasus"],
-    "KR": ["kdca_open_api"],
+    "KR": ["kdca_open_api", "kdca_region_annual", "kdca_death_annual"],
     "CH": ["foph_idd"],
     "NO": ["fhi_msis"],
     "SE": ["fohm_sminet"],
@@ -191,6 +191,14 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
     "kdca_open_api": {
         "en": "Korea KDCA EID",
         "zh": "韩国 KDCA EID",
+    },
+    "kdca_death_annual": {
+        "en": "Korea KDCA EID Annual Death API",
+        "zh": "韩国 KDCA EID 年度死亡 API",
+    },
+    "kdca_region_annual": {
+        "en": "Korea KDCA EID Regional Annual API",
+        "zh": "韩国 KDCA EID 地区年度 API",
     },
     "foph_idd": {
         "en": "Switzerland FOPH IDD",
@@ -386,6 +394,8 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "brazil datasus sinan open data": "sinan_datasus",
     "brazil datasus sinan": "sinan_datasus",
     "korea kdca eid open api": "kdca_open_api",
+    "korea kdca eid regional annual api": "kdca_region_annual",
+    "korea kdca eid annual death api": "kdca_death_annual",
     "korea kdca eid portal download": "kdca_open_api",
     "korea kosis download": "kdca_open_api",
     "korea kdca eid": "kdca_open_api",
@@ -525,6 +535,14 @@ _TASK_SOURCE_ALIASES = {
     "br": "sinan_datasus",
     "kdca": "kdca_open_api",
     "kdca_open_api": "kdca_open_api",
+    "kdca_region_annual": "kdca_region_annual",
+    "kdca regional": "kdca_region_annual",
+    "korea kdca regional": "kdca_region_annual",
+    "korea kdca eid regional annual api": "kdca_region_annual",
+    "kdca_death_annual": "kdca_death_annual",
+    "kdca deaths": "kdca_death_annual",
+    "korea kdca deaths": "kdca_death_annual",
+    "korea kdca eid annual death api": "kdca_death_annual",
     "kr": "kdca_open_api",
     "korea": "kdca_open_api",
     "data_go_kr": "kdca_open_api",
@@ -838,6 +856,10 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
     text = (data_source or "").strip().lower()
     if text in _EXACT_SCOPE_BY_DATA_SOURCE:
         return _EXACT_SCOPE_BY_DATA_SOURCE[text]
+    if text in {"kdca_region_annual", "kdca regional", "korea kdca regional"}:
+        return "kdca_region_annual"
+    if text in {"kdca_death_annual", "kdca deaths", "korea kdca deaths"}:
+        return "kdca_death_annual"
 
     if "pubmed" in text:
         return "pubmed"
@@ -853,6 +875,16 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "chp_notifiable"
     if "sinan" in text or "datasus" in text:
         return "sinan_datasus"
+    if (
+        "death" in text
+        and ("kdca" in text or "korea" in text or "data.go.kr" in text)
+    ):
+        return "kdca_death_annual"
+    if (
+        ("regional" in text or "region01" in text or "region 01" in text)
+        and ("kdca" in text or "korea" in text or "data.go.kr" in text)
+    ):
+        return "kdca_region_annual"
     if "kdca" in text or "korea" in text or "data.go.kr" in text:
         return "kdca_open_api"
     if "foph" in text or "bag" in text or "idd" in text or "switzerland" in text:
@@ -971,6 +1003,10 @@ def canonical_data_source_label(
         "korea kdca",
     }:
         return "Korea KDCA EID"
+    if text in {"korea kdca eid regional annual api", "korea kdca regional", "kdca regional", "kdca_region_annual"}:
+        return "Korea KDCA EID Regional Annual"
+    if text in {"korea kdca eid annual death api", "korea kdca deaths", "kdca death annual", "kdca_death_annual"}:
+        return "Korea KDCA EID Annual Death"
     if text in {
         "switzerland foph idd mandatory reporting system",
         "switzerland foph idd",

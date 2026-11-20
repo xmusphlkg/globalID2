@@ -39,7 +39,7 @@ class RealtimeRetryOut(BaseModel):
     next_attempt_at: str | None = None
     retryable: bool = False
     exhausted: bool = False
-    category: Literal["permanent", "transient_external", "preflight", "non_external_stage", "unclassified_external", "unknown"] | None = None
+    category: Literal["permanent", "transient_external", "worker_interrupted", "preflight", "non_external_stage", "unclassified_external", "unknown"] | None = None
 
 
 class RealtimeContinuationOut(BaseModel):
