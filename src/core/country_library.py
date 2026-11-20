@@ -1003,7 +1003,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         "data_source_url": "https://www.data.go.kr/data/15139178/openapi.do",
         "data_source_type": "open_api_or_portal_download",
         "crawler_config": {
-            "sources": ["kdca_open_api"],
+            "sources": ["kdca_open_api", "kdca_region_annual", "kdca_death_annual"],
             "cadence": "monthly",
             "base_url": "https://apis.data.go.kr/1790387/EIDAPIService",
             "portal_url": "https://dportal.kdca.go.kr/pot/is/inftnsdsEDW.do",
@@ -1018,6 +1018,10 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "refresh_recent_months": 3,
             "full_history_start_year": 2001,
             "reporting_area": "national",
+            "source_policies": {
+                "kdca_region_annual": {"cadence": "annual", "reporting_area": "subdivision"},
+                "kdca_death_annual": {"cadence": "annual", "reporting_area": "national"},
+            },
         },
         "parser_config": {
             "primary": "kr_kdca_period_region_monthly",

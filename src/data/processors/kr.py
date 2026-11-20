@@ -515,3 +515,138 @@ class KRMonthlyUpdater:
             source_latest_date=source_latest_date,
             imported_new_data=imported > 0,
         )
+
+
+class KRDeathAnnualUpdater:
+    """Prepare and persist KDCA annual death notifications as source series.
+
+    Annual deaths have a different reporting cadence and meaning from the
+    monthly case feed.  This updater therefore has no legacy ``disease_records``
+    projection.  The crawl service still calls ``import_rows`` as part of its
+    atomic dual-write contract, where the no-op result is intentional.
+    """
+
+    country_code = "KR"
+    series_country_code = "KR"
+    ontology_source_id = "SRC_KR_KDCA_DEATH"
+    source_scope = "kdca_death_annual"
+    series_geography_key = "country:KR:national"
+    series_registered_rows_only = True
+    source_name = "Korea KDCA EID Death API"
+    output_csv = ROOT / "data/current/kr/korea_deaths_annual.csv"
+
+    def __init__(self, *, output_csv: Optional[Path] = None) -> None:
+        self.output_csv = Path(output_csv) if output_csv is not None else self.output_csv
+
+    async def get_db_latest_date(self, db: AsyncSession) -> Optional[date]:
+        """Annual source-native feeds have no legacy disease-record cursor."""
+        return None
+
+    def refresh_source(
+        self,
+        *,
+        start_year: int,
+        end_year: int,
+        save_raw: bool = False,
+        raw_dir: Optional[Path] = None,
+    ) -> KRUpdateFetchResult:
+        from src.data.crawlers.kr import (
+            DEFAULT_DEATH_SOURCE_NAME,
+            normalize_kdca_death_rows,
+            validate_kdca_death_rows,
+        )
+
+        crawler = KoreaKDCAOpenAPICrawler(save_raw=save_raw, raw_dir=raw_dir)
+        try:
+            payload_rows = crawler.fetch_death_annual(
+                start_year=int(start_year), end_year=int(end_year)
+            )
+            rows = normalize_kdca_death_rows(
+                payload_rows,
+                source_url=crawler.doc_url,
+                source_name=DEFAULT_DEATH_SOURCE_NAME,
+            )
+            validate_kdca_death_rows(rows)
+        finally:
+            crawler.session.close()
+
+        self.output_csv.parent.mkdir(parents=True, exist_ok=True)
+        fields = sorted({key for row in rows for key in row})
+        with self.output_csv.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            writer.writerows(rows)
+        latest = self._latest_row_date(rows)
+        return KRUpdateFetchResult(rows, latest, self.output_csv, [], [])
+
+    @staticmethod
+    def _latest_row_date(rows: List[Dict[str, str]]) -> Optional[date]:
+        dates = []
+        for row in rows:
+            try:
+                dates.append(datetime.strptime(row["Date"], "%Y-%m-%d").date())
+            except (KeyError, ValueError):
+                continue
+        return max(dates) if dates else None
+
+    async def import_rows(
+        self,
+        db: AsyncSession,
+        rows: List[Dict[str, str]],
+        *,
+        db_latest_date: Optional[date],
+        source_latest_date: Optional[date],
+        force: bool = False,
+    ) -> KRUpdateImportResult:
+        """Return a no-op legacy result while source-series storage persists facts."""
+        return KRUpdateImportResult(
+            inserted_or_updated=0,
+            skipped_unmapped=0,
+            db_latest_date=db_latest_date,
+            source_latest_date=source_latest_date,
+            imported_new_data=False,
+        )
+
+
+class KRRegionAnnualUpdater(KRDeathAnnualUpdater):
+    """Persist KDCA Region01 annual province observations as source facts."""
+
+    ontology_source_id = "SRC_KR_KDCA_REGION_ANNUAL"
+    source_scope = "kdca_region_annual"
+    series_geography_key = None
+    series_geography_from_rows = True
+    source_name = "Korea KDCA EID Regional Annual API"
+    output_csv = ROOT / "data/current/kr/korea_region_annual.csv"
+
+    def refresh_source(
+        self,
+        *,
+        start_year: int,
+        end_year: int,
+        save_raw: bool = False,
+        raw_dir: Optional[Path] = None,
+    ) -> KRUpdateFetchResult:
+        from src.data.crawlers.kr import aggregate_region_annual_rows
+
+        crawler = KoreaKDCAOpenAPICrawler(save_raw=save_raw, raw_dir=raw_dir)
+        try:
+            payload_rows = crawler.fetch_region_annual(
+                start_year=int(start_year), end_year=int(end_year)
+            )
+            rows = aggregate_region_annual_rows(
+                payload_rows,
+                years=set(range(int(start_year), int(end_year) + 1)),
+                source_url=crawler.doc_url,
+            )
+        finally:
+            crawler.session.close()
+        if not rows:
+            raise ValueError("KDCA Region01 returned no annual observations")
+        self.output_csv.parent.mkdir(parents=True, exist_ok=True)
+        fields = sorted({key for row in rows for key in row})
+        with self.output_csv.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            writer.writerows(rows)
+        latest = self._latest_row_date(rows)
+        return KRUpdateFetchResult(rows, latest, self.output_csv, [], [])
