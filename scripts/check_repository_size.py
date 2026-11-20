@@ -203,7 +203,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if violations:
         print("New forbidden or oversized Git objects:", file=sys.stderr)
-        for violation in violations:
+        for violation in dict.fromkeys(violations):
             blob = violation.blob
             print(
                 f"- {blob.path} ({blob.size} bytes, {blob.oid}): "
