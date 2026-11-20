@@ -598,7 +598,8 @@ async def test_summary_prechecks_advance_cursor_without_model_work(workflow_db):
     assert totals["cursor"] == 3 and totals["exhausted"]
     async with env.database() as db:
         assert await db.scalar(select(func.count(AIWorkItem.id))) == 0
-        assert await db.scalar(select(func.count(PublishDirty.id))) == 1
+        # Private summary archive decisions do not change a public article or collection.
+        assert await db.scalar(select(func.count(PublishDirty.id))) == 0
 
 
 async def test_coordinator_wait_releases_connection_and_restart_preserves_work(
@@ -1200,15 +1201,15 @@ async def test_batch_archives_and_completed_summary_reviews_apply_together(
         original = governance._mark_review_dirty
         calls = 0
 
-        async def fail_second(*args, **kwargs):
+        async def fail_marker(*args, **kwargs):
             nonlocal calls
             calls += 1
-            if calls == 2:
-                raise RuntimeError("second application marker failed")
+            if calls == 1:
+                raise RuntimeError("application marker failed")
             await original(*args, **kwargs)
 
-        monkeypatch.setattr(governance, "_mark_review_dirty", fail_second)
-        with pytest.raises(RuntimeError, match="second application marker failed"):
+        monkeypatch.setattr(governance, "_mark_review_dirty", fail_marker)
+        with pytest.raises(RuntimeError, match="application marker failed"):
             await env.repo.advance_many("parent", ids[::-1])
     else:
         assert await env.repo.advance_many("parent", ids[::-1]) == 2
