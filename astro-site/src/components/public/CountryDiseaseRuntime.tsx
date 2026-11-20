@@ -36,7 +36,10 @@ export default function CountryDiseaseRuntime({ language = 'en' }: Props) {
   const validRoute = Boolean(country && disease);
 
   if (!isBrowser) {
-    return <section className="mx-auto max-w-5xl px-4 py-16" aria-busy="true"><GIDSLoader language={language} /></section>;
+    return <section className="mx-auto max-w-5xl px-4 py-16" aria-busy="true">
+      <h1 className="academic-title">{pick(language, 'Country disease surveillance', '国家疾病监测', 'Surveillance par pays et maladie')}</h1>
+      <GIDSLoader language={language} />
+    </section>;
   }
 
   if (!validRoute) {

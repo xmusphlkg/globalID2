@@ -78,6 +78,15 @@ from .literature import (
 from .collection import PublishDirty, RunStage, SourceArtifact
 from .ai_work_item import AIWorkItem
 from .ai_review_workflow import AIReviewDrain, AIReviewWorkflow
+from .r2_publication import (
+    r2_objects,
+    r2_publication_channels,
+    r2_publication_garbage,
+    r2_publication_releases,
+    r2_publication_refs,
+    r2_reservations,
+    r2_targets,
+)
 
 __all__ = [
     # Base classes

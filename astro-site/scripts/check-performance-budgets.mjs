@@ -217,9 +217,10 @@ export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCach
         assetCount: selected.size,
       };
     }
-    // Compare is a chart workspace, same class as disease, country, situation,
-    // and research pages. Brochure routes stay on the ordinary cap.
-    const isChartRoute = /^\/(?:(?:zh|fr)\/)?(?:compare|countries|diseases|situation|research)\//.test(routePath);
+    // Compare and country-disease are chart workspaces, in the same class as
+    // disease, country, Situation, and Research pages. Brochure routes stay
+    // on the ordinary cap.
+    const isChartRoute = /^\/(?:(?:zh|fr)\/)?(?:compare|country-disease|countries|diseases|situation|research)\//.test(routePath);
     if (!isChartRoute && gzipBytes > largestOrdinaryRoute.gzipBytes) {
       largestOrdinaryRoute = { path: routePath, gzipBytes, assetCount: selected.size };
     }

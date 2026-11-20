@@ -87,12 +87,12 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table("r2_publication_garbage")
-    op.drop_index("ix_r2_publication_refs_key", table_name="r2_publication_refs")
-    op.drop_table("r2_publication_refs")
-    op.drop_table("r2_publication_releases")
-    op.drop_table("r2_publication_channels")
-    op.drop_index("ix_r2_objects_target_etag", table_name="r2_objects")
-    op.drop_table("r2_reservations")
-    op.drop_table("r2_objects")
-    op.drop_table("r2_targets")
+    op.drop_table("r2_publication_garbage", if_exists=True)
+    op.drop_index("ix_r2_publication_refs_key", table_name="r2_publication_refs", if_exists=True)
+    op.drop_table("r2_publication_refs", if_exists=True)
+    op.drop_table("r2_publication_releases", if_exists=True)
+    op.drop_table("r2_publication_channels", if_exists=True)
+    op.drop_index("ix_r2_objects_target_etag", table_name="r2_objects", if_exists=True)
+    op.drop_table("r2_reservations", if_exists=True)
+    op.drop_table("r2_objects", if_exists=True)
+    op.drop_table("r2_targets", if_exists=True)
