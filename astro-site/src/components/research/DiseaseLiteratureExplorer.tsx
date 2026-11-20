@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import GIDSLoader from '../GIDSLoader';
-import { articleHref, siteHref } from '../../lib/papers';
+import ResearchArticleCard from './ResearchArticleCard';
+import { siteHref } from '../../lib/papers';
 import { emptyLiteratureFilters, filterLiterature, literatureTrend, literatureYearRangeError, literatureIndexRecord, literaturePage, type LiteratureFilters, type LiteratureLocale } from '../../lib/research-literature';
 import { localizedRegionName, localizedResearchTopic, localizedStudyType } from '../../utils/i18n';
 import { createLiteraturePageClient, type LiteratureIndex } from '../../lib/research-literature-client';
@@ -80,7 +81,6 @@ export default function DiseaseLiteratureExplorer({ diseaseId, initialArticles, 
   const pageError = loaded && cardState.key === pageKey && cardState.status === 'error';
   const previewAllowed = page === 1 && filterKeys.every(key => filters[key] === emptyLiteratureFilters[key]);
   const cards = !loaded ? previewAllowed ? initialArticles : [] : cardState.key === pageKey && cardState.status === 'ready' ? cardState.articles : [];
-  const sourceUrl = (article: any) => article.doi ? `https://doi.org/${article.doi}` : article.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/` : article.open_access_url;
   const range = trend.length ? `${trend[0].year}–${trend.at(-1)!.year}` : '—';
   return <div className="disease-literature-explorer" data-literature-explorer data-catalogue-ready={loaded ? 'true' : 'false'}>
     <section className="literature-trends" aria-labelledby="literature-trend-title">
@@ -113,18 +113,9 @@ export default function DiseaseLiteratureExplorer({ diseaseId, initialArticles, 
       <p className="literature-result-count" role="status" aria-live="polite">{loaded ? text(`${filtered.length.toLocaleString(locale)} matching records · page ${selectedPage.page} of ${selectedPage.totalPages}`, `符合条件 ${filtered.length.toLocaleString(locale)} 篇 · 第 ${selectedPage.page} / ${selectedPage.totalPages} 页`, `${filtered.length.toLocaleString(locale)} publications · page ${selectedPage.page} sur ${selectedPage.totalPages}`) : text(`Previewing ${initialArticles.length} of ${total.toLocaleString(locale)} records`, `先展示 ${total.toLocaleString(locale)} 篇中的 ${initialArticles.length} 篇`, `Aperçu de ${initialArticles.length} publications sur ${total.toLocaleString(locale)}`)}</p>
       {loadingPage && <GIDSLoader language={locale} label={text('Loading this page…', '正在读取本页文献…', 'Chargement de cette page…')} compact />}
       {pageError && <p className="literature-load-error" role="status">{text('This page could not be loaded.', '本页文献暂时无法读取。', 'Cette page est indisponible.')} <button type="button" onClick={() => setPageAttempt(value => value + 1)}>{text('Retry page', '重试本页', 'Réessayer cette page')}</button></p>}
-      <div className="literature-list" id="disease-literature-list" aria-busy={loadingPage}>{cards.map(article => {
-        const hasSummary = article.detail_available !== false;
-        const href = hasSummary && article.slug ? articleHref(article.slug, locale) : sourceUrl(article);
-        const title = locale === 'zh' ? article.title_zh || article.title : locale === 'fr' ? article.title_fr || article.title : article.title;
-        return <article className="research-card literature-card" key={article.article_id || article.doi || article.slug} data-literature-record>
-          <div className="literature-card-meta"><span>{localizedStudyType(locale, article.study_type)}</span><time dateTime={article.published_at}>{String(article.published_at ?? '').slice(0, 10) || text('Date unavailable', '发表日期暂缺', 'Date indisponible')}</time>{article.peer_review_status === 'preprint' && <span>{text('Preprint · not peer reviewed', '预印本 · 尚未经同行评议', 'Prépublication · sans évaluation par les pairs')}</span>}{article.open_access_status === 'open' && <span className="literature-open">{text('Open access', '开放获取', 'Accès ouvert')}</span>}</div>
-          <h3 className="research-card-title">{href ? <a href={href} {...(!hasSummary ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{title}</a> : title}</h3>
-          <p className="literature-authors">{(article.authors ?? []).slice(0, 3).join(locale === 'zh' ? '、' : ', ')}{(article.authors ?? []).length > 3 && text(' et al.', ' 等', ' et al.')}<span>{article.journal}</span></p>
-          <p className="literature-locations">{(article.countries ?? []).slice(0, 4).map((row: any) => localizedRegionName(locale, row.code, { en: row.name_en, zh: row.name_zh, fr: row.name_fr })).join(' · ')}</p>
-          <div className="literature-card-links">{hasSummary && article.slug && <a href={articleHref(article.slug, locale)}>{text('Read evidence summary', '阅读证据摘要', 'Lire la synthèse')}</a>}{article.doi && <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">DOI ↗</a>}{article.pmid && <a href={`https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`} target="_blank" rel="noopener noreferrer">PubMed ↗</a>}{article.open_access_status === 'open' && article.open_access_url && <a href={article.open_access_url} target="_blank" rel="noopener noreferrer">{text('Full text', '查看全文', 'Texte intégral')} ↗</a>}{!hasSummary && <small>{text('Bibliographic record · no GIDS summary', '书目记录，暂无 GIDS 证据摘要', 'Fiche bibliographique sans synthèse GIDS')}</small>}</div>
-        </article>;
-      })}</div>
+      <div className="research-list" id="disease-literature-list" aria-busy={loadingPage}>
+        {cards.map(article => <ResearchArticleCard key={article.article_id || article.doi || article.slug || article.pmid} article={article} locale={locale} literatureRecord />)}
+      </div>
       {loaded && !filtered.length && <div className="literature-empty"><h3>{text('No matching publications', '没有符合条件的文献', 'Aucune publication correspondante')}</h3><p>{text('Try fewer filters or another search term.', '可减少筛选条件，或尝试其他关键词。', 'Essayez moins de filtres ou un autre terme.')}</p></div>}
       {loaded && <nav className="literature-pagination" aria-label={text('Literature pagination', '文献分页', 'Pagination des publications')}>
         <button type="button" disabled={selectedPage.page <= 1 || loadingPage} onClick={() => goToPage(selectedPage.page - 1)} aria-controls="disease-literature-list">{text('Previous page', '上一页', 'Page précédente')}</button>
