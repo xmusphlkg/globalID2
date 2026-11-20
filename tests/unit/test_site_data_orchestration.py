@@ -343,6 +343,8 @@ def test_incremental_export_reuses_unchanged_browser_projections(tmp_path) -> No
 
     assert json.loads(country_path.read_text(encoding="utf-8")) == {"old": True}
     assert json.loads(disease_path.read_text(encoding="utf-8")) == {"old": True}
+    assert (public / "countries" / "xx-summary.json").is_file()
+    assert (public / "diseases" / "d_test-summary.json").is_file()
     assert (output / "research" / "index.json").is_file()
     assert not (output / "countries" / "xx.json").exists()
     assert not (output / "diseases" / "d_test.json").exists()
