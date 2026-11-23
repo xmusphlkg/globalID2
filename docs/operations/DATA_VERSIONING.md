@@ -14,10 +14,9 @@ release branches.
 | `globalID-data-archive` | `main` | Append-only raw source archive |
 | Local cache and generated workspaces | None | Ignored runtime files; never a Git repository unless a publisher creates an isolated ignored working clone |
 
-Only `development` and `master` are persistent branches in the source-code
-repository. Temporary pull-request branches, when unavoidable, must be deleted
-after merge. Recovery branches are local, short-lived safety tools and must not
-be left on the remote.
+The source-code repository uses two branches: `development` and `master`.
+Commit and push routine changes directly to `development`. Open release pull
+requests from `development` to `master`.
 
 The fixed data branches are intentional and do not belong to the source-code
 branch model. The public download repository keeps generated time partitions
