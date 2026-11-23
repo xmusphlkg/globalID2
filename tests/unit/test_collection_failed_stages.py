@@ -1,6 +1,7 @@
 """Overview failed stages are current task failures, not historical stage rows."""
 
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -12,9 +13,61 @@ from dashboard.api.routers.collection import (
 )
 from src.domain import Base, Task, TaskStatus, TaskType
 from src.domain.collection import RunStage
+from src.control_plane.overview import ControlPlaneOverviewService
+from src.control_plane.runtime import REQUIRED_RUNTIME_SERVICES, runtime_registry
 
 STARTED = datetime(2026, 10, 30, 12, 0, tzinfo=timezone.utc)
 FINISHED = datetime(2026, 10, 30, 12, 5, tzinfo=timezone.utc)
+
+
+@pytest.mark.parametrize("change,recovered", [
+    ({}, True),
+    ({"input_data": {"process": True, "source": "who_flunet_weekly", "country_code": "BN"}}, True),
+    ({"input_data": {"source": "who_flunet_weekly", "country_code": "BN", "process": False}}, False),
+    ({"input_data": {"source": "who_flunet_weekly", "country_code": "BN", "process": True, "start_year": 2025}}, False),
+    ({"input_data": {"source": "other_source", "country_code": "BN", "process": True}}, False),
+    ({"country_id": 2}, False),
+    ({"status": TaskStatus.RUNNING}, False),
+    ({"status": TaskStatus.FAILED}, False),
+    ({"status": TaskStatus.CANCELLED}, False),
+    ({"task_type": TaskType.PROCESS_DATA}, False),
+    ({"id": 5}, False),
+    ({"task_name": "[smoke] BN import"}, False),
+    ({"tags": ["test"]}, False),
+])
+async def test_renamed_success_resolves_only_identical_collection_inputs(monkeypatch, change, recovered):
+    engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
+    async with engine.begin() as connection:
+        await connection.run_sync(lambda sync: Base.metadata.create_all(
+            sync, tables=[Task.__table__, RunStage.__table__]))
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+    monkeypatch.setattr(runtime_registry, "list_services", AsyncMock(return_value=(
+        [{"service": name} for name in REQUIRED_RUNTIME_SERVICES], True)))
+    inputs = {"source": "who_flunet_weekly", "country_code": "BN", "process": True}
+    try:
+        async with maker() as db:
+            failed = Task(id=10, task_uuid="original-import", task_name="BN full history import",
+                          task_type=TaskType.CRAWL_DATA, country_id=1,
+                          status=TaskStatus.FAILED, input_data=inputs)
+            db.add(failed)
+            await db.flush()
+            db.add(RunStage(task_uuid=failed.task_uuid, stage="store", attempt=1,
+                            status="failed", error="Availability assertion missing",
+                            started_at=STARTED, finished_at=FINISHED))
+            fields = dict(task_uuid="verified-import", task_name="BN verified import",
+                          task_type=TaskType.CRAWL_DATA, country_id=1,
+                          status=TaskStatus.COMPLETED, input_data=inputs)
+            fields.update(change)
+            db.add(Task(**fields))
+            await db.commit()
+            stages = await list_unresolved_failed_stages(db)
+            actions = await ControlPlaneOverviewService(db).action_items()
+            assert ("original-import" not in [row["task_uuid"] for row in stages]) is recovered
+            assert ("original-import" not in [row["resource_id"] for row in actions]) is recovered
+            await db.refresh(failed)
+            assert failed.status == TaskStatus.FAILED  # History is never rewritten.
+    finally:
+        await engine.dispose()
 
 
 def test_public_stage_error_drops_the_trailing_json_document():

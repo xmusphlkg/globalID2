@@ -10,6 +10,7 @@ from src.control_plane.operations import (
     SourceOperationsService,
     schedule_application_service,
 )
+from src.control_plane.task_recovery import recovered_crawl_task_ids
 from src.domain.collection import LINES, PublishDirty, RunStage, SourceArtifact
 from src.domain.country import Country
 from src.domain.task import Task, TaskStatus, TaskType
@@ -82,8 +83,9 @@ async def pending_scope_counts(db: AsyncSession) -> dict[str, int]:
 async def list_unresolved_failed_stages(db: AsyncSession, limit: int = 20) -> list[dict]:
     """Latest failed stage of the newest task for each job name.
 
-    A newer run of the same job replaces older failures in this list. Recovered
-    attempts, completed or cancelled tasks, and stage rows with no task are omitted.
+    A newer run of the same job replaces older failures in this list. A renamed
+    crawl with identical inputs also resolves a failure after successful completion.
+    Recovered attempts, cancelled tasks and stage rows with no task are omitted.
     """
     latest_attempt = (
         select(
@@ -99,7 +101,7 @@ async def list_unresolved_failed_stages(db: AsyncSession, limit: int = 20) -> li
     )
     rows = (
         await db.execute(
-            select(RunStage, Task.task_name, Task.task_type, Task.status)
+            select(RunStage, Task)
             .join(
                 latest_attempt,
                 and_(
@@ -113,22 +115,22 @@ async def list_unresolved_failed_stages(db: AsyncSession, limit: int = 20) -> li
             .where(RunStage.status == "failed")
             .where(Task.status == TaskStatus.FAILED)
             .order_by(RunStage.finished_at.desc(), RunStage.started_at.desc())
-            .limit(limit)
         )
     ).all()
+    recovered = await recovered_crawl_task_ids(db, [task for _, task in rows])
     return [
         {
             "task_uuid": stage.task_uuid,
-            "task_name": task_name,
-            "task_type": value(task_type),
-            "task_status": value(task_status),
+            "task_name": task.task_name,
+            "task_type": value(task.task_type),
+            "task_status": value(task.status),
             "stage": stage.stage,
             "attempt": stage.attempt,
             "error": public_stage_error(stage.error),
             "finished_at": stage.finished_at.isoformat() if stage.finished_at else None,
         }
-        for stage, task_name, task_type, task_status in rows
-    ]
+        for stage, task in rows if task.id not in recovered
+    ][:limit]
 
 
 def task_line(task):
