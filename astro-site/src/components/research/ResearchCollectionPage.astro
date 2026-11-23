@@ -1,8 +1,9 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchArticleCard from './ResearchArticleCard';
-import { buildAlternatePaths, clampSeoTitle, isIndexableResearchCollection } from '../../lib/seo';
-import { absoluteSiteUrl } from '../../lib/papers';
+import { buildAlternatePaths, clampSeoTitleWithSuffix, isIndexableResearchCollection } from '../../lib/seo';
+import { buildResearchItemList } from '../../lib/research-seo';
+import type { JsonLdNode } from '../../lib/seo';
 
 interface Props {
   eyebrow: string;
@@ -11,6 +12,7 @@ interface Props {
   title: string;
   titleZh: string;
   titleFr: string;
+  seoTitle?: string;
   description: string;
   descriptionZh: string;
   descriptionFr: string;
@@ -26,6 +28,7 @@ interface Props {
   clientCollectionScope?: 'disease' | 'country' | 'topic' | 'week';
   clientCollectionValue?: string;
   locale?: 'en' | 'zh' | 'fr';
+  additionalStructuredData?: JsonLdNode[];
 }
 
 const {
@@ -35,6 +38,7 @@ const {
   title,
   titleZh,
   titleFr,
+  seoTitle,
   description,
   descriptionZh,
   descriptionFr,
@@ -50,6 +54,7 @@ const {
   clientCollectionScope,
   clientCollectionValue,
   locale = 'en',
+  additionalStructuredData = [],
 } = Astro.props;
 const zh = locale === 'zh';
 const fr = locale === 'fr';
@@ -69,21 +74,12 @@ const countryCount = new Set(articles.flatMap((article: any) => (article.countri
 const topicCount = new Set(articles.flatMap((article: any) => (article.topics ?? []).map((item: any) => item.name))).size;
 const localizedTitle = zh ? titleZh : fr ? titleFr : title;
 const localizedResearchLabel = zh ? '研究雷达' : fr ? 'Radar de recherche' : 'Research Radar';
-const pageSeoTitle = clampSeoTitle(`${localizedTitle} | ${localizedResearchLabel} | GIDS`);
+const pageSeoTitle = seoTitle ?? clampSeoTitleWithSuffix(localizedTitle, `| ${localizedResearchLabel} | GIDS`);
 const structuredData = {
   '@type': 'CollectionPage',
   name: zh ? titleZh : fr ? titleFr : title,
   description: zh ? descriptionZh : fr ? descriptionFr : description,
-  mainEntity: {
-    '@type': 'ItemList',
-    numberOfItems: articles.length,
-    itemListElement: articles.slice(0, 100).map((article: any, index: number) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      name: article.title,
-      url: absoluteSiteUrl(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
-    })),
-  },
+  mainEntity: buildResearchItemList(articles, Astro.site ?? Astro.url.origin, locale, initialVisibleArticles),
 };
 ---
 
@@ -100,7 +96,7 @@ const structuredData = {
     pageType: 'CollectionPage',
     noindex: !collectionIndexable,
   }}
-  structuredData={structuredData}
+  structuredData={[structuredData, ...additionalStructuredData]}
   breadcrumbs={[
     { label: 'Research Radar', labelZh: '研究雷达', labelFr: 'Radar de recherche', href: localeHref('/research/') },
     { label: title, labelZh: titleZh, labelFr: titleFr },

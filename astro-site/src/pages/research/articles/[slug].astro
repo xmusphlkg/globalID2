@@ -5,7 +5,8 @@ import ReportLayout from '../../../layouts/ReportLayout.astro';
 import researchRoutes from '../../../data/research/routes.json';
 import { groupResearchSignals } from '../../../lib/research-signal-groups';
 import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/research-integrity';
-import { buildAlternatePaths, clampSeoDescription, clampSeoTitle, normalizeDiseaseHref } from '../../../lib/seo';
+import { buildAlternatePaths, normalizeDiseaseHref } from '../../../lib/seo';
+import { buildResearchArticleSeo } from '../../../lib/research-article-seo';
 import { absoluteSiteUrl } from '../../../lib/papers';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/diseaseNames';
 import { localizedRegionName, translateUi } from '../../../utils/i18n';
@@ -115,16 +116,18 @@ const originalUrl = article.source_urls?.doi ?? article.source_urls?.publisher;
 const isHistoricalBaseline = article.source_kind === 'historical_seed' || article.historical_baseline;
 const canonicalPath = localeHref(`/research/articles/${article.slug}/`);
 const canonicalUrl = absoluteSiteUrl(canonicalPath, Astro.site ?? Astro.url.origin).toString();
+const articleSeo = buildResearchArticleSeo(article, locale);
 const structuredArticle = {
   '@type': 'ScholarlyArticle',
   url: canonicalUrl,
   mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
   headline: article.title,
+  abstract: articleSeo.abstract,
   datePublished: article.published_at,
   dateModified: article.updated_at,
   author: (article.authors ?? []).map((name: string) => ({ '@type': 'Person', name })),
   isPartOf: article.journal ? { '@type': 'Periodical', name: article.journal } : undefined,
-  identifier: article.doi ? `https://doi.org/${article.doi}` : article.pmid ? `PMID:${article.pmid}` : article.article_id,
+  identifier: articleSeo.identifier,
   sameAs: originalUrl,
   about: (article.diseases ?? []).map((disease: any) => ({ '@type': 'MedicalCondition', name: disease.name_en })),
   inLanguage: zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en',
@@ -157,20 +160,8 @@ const relatedArticles = article.related_articles ?? [];
 const isIndexableEvidencePage = article.indexable !== false
   && Boolean(article.summary?.en)
   && Boolean(article.summary?.zh);
-const whyItMatters = pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en, article.why_it_matters_fr ?? summaryFr.public_health_relevance);
-const descriptionContext = zh
-  ? '本页提供研究设计、主要发现、重要局限、来源标识及相关监测背景。'
-  : fr
-    ? 'Consultez le plan de l’étude, les résultats principaux, les limites, les identifiants de source et le contexte de surveillance associé.'
-    : 'Review the study design, main findings, important limitations, source identifiers, and related surveillance context.';
-const pageDescription = clampSeoDescription(`${whyItMatters} ${descriptionContext}`);
-const titleSuffix = zh ? ' | GIDS 中文证据摘要' : fr ? ' | GIDS — résumé français' : ' | GIDS';
-const doiSuffix = article.doi ? String(article.doi).split('/').filter(Boolean).at(-1) : '';
-const shortIdentifier = doiSuffix && [...doiSuffix].length <= 18
-  ? doiSuffix
-  : (article.pmid ? `PMID ${article.pmid}` : String(article.slug).slice(-8));
-const titleDisambiguator = ` · ${shortIdentifier}`;
-const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - titleDisambiguator.length)}${titleDisambiguator}${titleSuffix}`;
+const pageDescription = articleSeo.description;
+const pageSeoTitle = articleSeo.title;
 ---
 
 <ReportLayout

@@ -3,6 +3,24 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.9', date: '2026-11-23',
+    titleEn: 'Find research evidence and related literature',
+    titleZh: '更便捷地发现研究证据与相关文献',
+    titleFr: 'Trouver des preuves de recherche et des publications associées',
+    summaryEn: 'Clearer research page titles, disease and topic overviews, and links between evidence collections and weekly briefs.',
+    summaryZh: '完善研究页面标题、疾病与主题概览，以及证据专题和每周简报之间的关联链接。',
+    summaryFr: 'Des titres plus clairs, des aperçus par maladie et thème, et des liens entre les collections de preuves et les briefs hebdomadaires.',
+    sections: [{ kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'Research pages describe their literature coverage and connect readers to related diseases, topics and weekly briefs in English, Chinese and French.',
+      zh: '研究页面展示文献覆盖情况，并以中英法三语连接相关疾病、主题和每周简报。',
+      fr: 'Les pages de recherche décrivent leur couverture bibliographique et relient les maladies, les thèmes et les briefs en anglais, chinois et français.',
+    }, {
+      en: 'Weekly briefs include an introduction and links to adjacent available issues; article summaries and source identifiers are easier for search engines to interpret.',
+      zh: '每周简报增加内容引言与相邻期次导航，并完善便于搜索引擎理解的文章证据摘要与来源标识。',
+      fr: 'Les briefs comportent une introduction et des liens vers les numéros voisins disponibles ; les synthèses et identifiants de source sont mieux décrits pour les moteurs de recherche.',
+    }] }],
+  },
+  {
     version: '0.20.8', date: '2026-11-20',
     titleEn: 'Disease selection on regional maps',
     titleZh: '地区地图的疾病切换',

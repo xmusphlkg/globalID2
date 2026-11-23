@@ -4,6 +4,19 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.9] - 2026-11-23
+
+### Improved
+
+- Improve Research Radar titles and descriptions for infectious disease research, disease evidence, public-health topics and weekly briefs in English, Chinese and French.
+- Add catalogue coverage summaries and links between disease hubs, topics and weekly briefs, with previous/next navigation for available briefs.
+- Describe weekly briefs with Report structured data and add clearly attributed GIDS evidence abstracts and DOI identifiers to article structured data.
+- Share article metadata between Astro and the production Papers renderer, and advance its response-cache revision so deployed article pages receive the changes.
+
+### Fixed
+
+- Limit collection structured data to initially displayed records and link bibliographic-only records to their DOI or PubMed source instead of inventing evidence-page URLs.
+
 ## [0.20.8] - 2026-11-20
 
 ### Fixed
