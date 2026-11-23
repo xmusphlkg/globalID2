@@ -16052,10 +16052,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "group_id": "G_UNMAPPED_SOURCE_CATEGORIES",
       "local_codes": [
-        "710"
+        "710",
+        "Systemisk gruppe B streptokokksykdom (GBS)"
       ],
       "local_labels": [
-        "Syst. gr. B streptokokksykdom"
+        "Syst. gr. B streptokokksykdom",
+        "Systemisk gruppe B streptokokksykdom (GBS)"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
@@ -16080,10 +16082,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "group_id": "G_UNMAPPED_SOURCE_CATEGORIES",
       "local_codes": [
-        "111"
+        "111",
+        "Tuberkulose - forebyggende behandling"
       ],
       "local_labels": [
-        "Tuberkulose forebyggende behandling"
+        "Tuberkulose forebyggende behandling",
+        "Tuberkulose - forebyggende behandling"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
@@ -17816,10 +17820,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "concept_id": "D100",
       "local_codes": [
-        "103"
+        "103",
+        "Systemisk H. influenzae-sykdom"
       ],
       "local_labels": [
-        "Syst. H. influenzae-sykdom"
+        "Syst. H. influenzae-sykdom",
+        "Systemisk H. influenzae-sykdom"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
@@ -17872,10 +17878,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "concept_id": "D025",
       "local_codes": [
-        "102"
+        "102",
+        "Tuberkulose - aktiv sykdom"
       ],
       "local_labels": [
-        "Tuberkulose"
+        "Tuberkulose",
+        "Tuberkulose - aktiv sykdom"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
@@ -18068,10 +18076,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "concept_id": "D096",
       "local_codes": [
-        "309"
+        "309",
+        "Cryptosporidiose"
       ],
       "local_labels": [
-        "Cryptosporidose"
+        "Cryptosporidose",
+        "Cryptosporidiose"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
@@ -19076,10 +19086,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "concept_id": "D157",
       "local_codes": [
-        "709"
+        "709",
+        "Systemisk gruppe A streptokokksykdom (GAS)"
       ],
       "local_labels": [
-        "Syst. gr. A streptokokksykdom"
+        "Syst. gr. A streptokokksykdom",
+        "Systemisk gruppe A streptokokksykdom (GAS)"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
@@ -19104,10 +19116,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "concept_id": "D110",
       "local_codes": [
-        "707"
+        "707",
+        "Systemisk meningokokksykdom"
       ],
       "local_labels": [
-        "Syst. meningokokksykdom"
+        "Syst. meningokokksykdom",
+        "Systemisk meningokokksykdom"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
@@ -19132,10 +19146,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "concept_id": "D106",
       "local_codes": [
-        "708"
+        "708",
+        "Systemisk pneumokokksykdom"
       ],
       "local_labels": [
-        "Syst. pneumokokksykdom"
+        "Syst. pneumokokksykdom",
+        "Systemisk pneumokokksykdom"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
@@ -19300,10 +19316,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "concept_id": "D162",
       "local_codes": [
-        "902"
+        "902",
+        "Hivinfeksjon"
       ],
       "local_labels": [
-        "Hiv-infeksjon"
+        "Hiv-infeksjon",
+        "Hivinfeksjon"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
@@ -19384,10 +19402,12 @@
       "source_id": "SRC_NO_FHI_MSIS",
       "concept_id": "D242",
       "local_codes": [
-        "910"
+        "910",
+        "Lymfogranuloma venereum (LGV)"
       ],
       "local_labels": [
-        "Lymfogranuloma venerum (LGV)"
+        "Lymfogranuloma venerum (LGV)",
+        "Lymfogranuloma venereum (LGV)"
       ],
       "frequency": "monthly",
       "measure": "case_notifications",

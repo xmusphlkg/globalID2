@@ -47,3 +47,41 @@ def test_offline_transport_rejects_changed_artifact_bytes(tmp_path, monkeypatch)
             crawler.get(saved.source_url)
     finally:
         crawler.session.close()
+
+
+def test_redirect_alias_preserves_final_url_and_http_errors(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    saved = artifact(tmp_path)
+    saved.metadata_.update(request_url='https://old.test/data?year=2026', status_code=404)
+    crawler = offline_crawler_type(NorwayMSISCrawler, [saved])(delay=0)
+    try:
+        with pytest.raises(requests.HTTPError) as caught:
+            crawler.get('https://old.test/data', params={'year': 2026, 'api_key': 'secret'})
+        assert caught.value.response.status_code == 404
+        assert caught.value.response.url == saved.source_url
+        assert 'secret' not in str(caught.value)
+        with pytest.raises(RuntimeError, match='No captured') as missing:
+            crawler.get('https://old.test/data?year=2025&token=secret')
+        assert 'secret' not in str(missing.value)
+    finally:
+        crawler.session.close()
+
+
+def test_readonly_json_post_replay_matches_body_and_method(tmp_path, monkeypatch):
+    from src.services.ingestion.capture import json_request_digest
+    monkeypatch.chdir(tmp_path)
+    saved = artifact(tmp_path)
+    body = {'months': ['2026-10'], 'geography': 'national'}
+    saved.metadata_.update(request_method='POST', request_body_sha256=json_request_digest(body))
+    crawler = offline_crawler_type(NorwayMSISCrawler, [saved])(delay=0)
+    try:
+        assert crawler.post(saved.source_url, json=body).json() == {'value': 0}
+        assert crawler.session.request('POST', saved.source_url, json=dict(reversed(list(body.items())))).json() == {'value': 0}
+        with pytest.raises(RuntimeError, match='No captured'):
+            crawler.post(saved.source_url, json={**body, 'months': ['2026-09']})
+        with pytest.raises(RuntimeError, match='No captured'):
+            crawler.get(saved.source_url)
+        with pytest.raises(RuntimeError, match='captured JSON'):
+            crawler.post(saved.source_url, data='uncaptured')
+    finally:
+        crawler.session.close()

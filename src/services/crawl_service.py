@@ -687,8 +687,10 @@ class CrawlService:
         from src.services.ingestion.countries import cn_province
         from src.services.ingestion.runner import run_surveillance
         known_case_months, recently_attempted_months = (set(), set())
+        image_recovery = (task.input_data or {}).get("province_image_recovery")
         bounded_backfill = bool(fill_missing and source == "cn_province_monthly_report"
-                                and not force and (task.input_data or {}).get("start_year") is None)
+                                and not force and not image_recovery
+                                and (task.input_data or {}).get("start_year") is None)
         if bounded_backfill:
             known_case_months, recently_attempted_months = await self._cn_province_backfill_state(task, updater.country_code)
         options = {
@@ -700,6 +702,9 @@ class CrawlService:
             "known_case_months": sorted(known_case_months),
             "recently_attempted_months": sorted(recently_attempted_months),
         }
+        if image_recovery:
+            options["image_recovery"] = image_recovery
+            options["image_panel_size"] = image_recovery["panel_size"]
         return await run_surveillance(
             self, task=task, updater=updater, connector=cn_province,
             source=source, force=force, process=process,

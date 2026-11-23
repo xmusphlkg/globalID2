@@ -3,29 +3,30 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict, dataclass
-from datetime import datetime, time, timedelta
 import html
 import json
+from dataclasses import asdict, dataclass
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 
+from src.control_plane.schedule_state import schedule_state_repository
 from src.core import get_config, get_database, get_logger
-from src.core.source_scopes import canonicalize_task_source
 from src.core.source_credentials import source_credential_blocker
+from src.core.source_scopes import canonicalize_task_source
 from src.core.task_manager import task_manager
 from src.domain import AutomationJob, Country, Task, TaskStatus, TaskType, TaskWorkbook
 from src.services.crawl_task_service import crawl_task_service
+from src.services.ingestion_health import latest_source_audit_statuses
 from src.services.ingestion_resilience import (
     automatic_ingestion_trigger_eligible,
     classify_ingestion_failure,
 )
-from src.services.smtp_email_service import smtp_email_service
 from src.services.settings_service import system_settings_service
-from src.control_plane.schedule_state import schedule_state_repository
+from src.services.smtp_email_service import smtp_email_service
 
 logger = get_logger(__name__)
 
@@ -92,6 +93,7 @@ def _ingestion_job_health(
     latest_success: Optional[Task],
     *,
     now: Optional[datetime] = None,
+    source_audit_status: str | None = None,
 ) -> dict[str, Any]:
     """Return an operator-independent health verdict for one source job."""
 
@@ -146,6 +148,11 @@ def _ingestion_job_health(
                               f"{detail}; {PROVINCE_SOURCE_STALE_MONTHS}-month monitoring budget, not an official publication deadline")
         elif province_status in {"partial", "narrative_sparse", "death_only"}:
             status, reason = "partial", f"province source coverage is {province_status}; inspect the task source audit"
+        elif source_audit_status in {"needs_review", "no_verified_observations", "numerical_contract_unverified",
+                                     "source_access_blocked", "documents_only", "failed"}:
+            status, reason = "needs_review", f"source audit is {source_audit_status}; inspect the task source audit"
+        elif source_audit_status in {"partial", "partial_year", "parsed_with_gaps", "narrative_sparse", "death_only"}:
+            status, reason = "partial", f"source coverage is {source_audit_status}; inspect the task source audit"
         elif success_at is None:
             status, reason = "unknown", "latest task has no completed success timestamp"
         elif age_minutes is not None and age_minutes > stale_after_minutes:
@@ -368,7 +375,9 @@ class AutomationService:
             now = datetime.now(ZoneInfo(tz_name))
             if (job.source == "cn_province_monthly_report"
                     and state.last_task_uuid is None and state.last_started_at is None):
-                from src.data.crawlers.cn_province_adapters import province_adapter_registry
+                from src.data.crawlers.cn_province_adapters import (
+                    province_adapter_registry,
+                )
 
                 codes = sorted(province_adapter_registry())
                 offset = codes.index(job.country_code) if job.country_code in codes else len(codes)
@@ -472,6 +481,12 @@ class AutomationService:
         # first source every slot. Honor the oldest unfulfilled schedule first.
         for _due_at, job_id in sorted(due_jobs):
             await self.trigger_job(job_id, manual=False)
+        if any(job.enabled and job.source == "cn_province_monthly_report" for job in jobs):
+            from src.services.cn_province_image_recovery import (
+                recover_pending_image_reviews,
+            )
+
+            await recover_pending_image_reviews(jobs)
 
     def _automatic_retry_delays(self) -> tuple[int, int]:
         cfg = self._config()
@@ -880,6 +895,7 @@ class AutomationService:
         job_ids = {job.job_id for job in jobs}
         latest_task_by_job_id: dict[str, Task] = {}
         latest_success_by_job_id: dict[str, Task] = {}
+        source_audit_status_by_task: dict[str, str] = {}
         if job_ids:
             job_key = Task.input_data["automation_job_id"].as_string()
 
@@ -901,6 +917,15 @@ class AutomationService:
             async with get_database() as db:
                 latest_tasks = await latest_per_job(db, completed_only=False)
                 latest_successes = await latest_per_job(db, completed_only=True)
+                # Province health includes store-time revision review in task
+                # metadata. Other sources expose quality in the organize stage.
+                general_job_ids = {job.job_id for job in jobs
+                                   if job.source != "cn_province_monthly_report"}
+                source_audit_status_by_task = await latest_source_audit_statuses(db, [
+                    task.task_uuid for task in latest_tasks
+                    if task.status == TaskStatus.COMPLETED
+                    and (task.input_data or {}).get("automation_job_id") in general_job_ids
+                ])
             for task in latest_tasks:
                 inp = task.input_data if isinstance(task.input_data, dict) else {}
                 job_id = str(inp.get("automation_job_id") or "").strip()
@@ -927,7 +952,11 @@ class AutomationService:
             jobs_payload.append(
                 {
                     **asdict(job),
-                    **_ingestion_job_health(job, latest_task, latest_success),
+                    **_ingestion_job_health(
+                        job, latest_task, latest_success,
+                        source_audit_status=source_audit_status_by_task.get(latest_task.task_uuid)
+                        if latest_task is not None else None,
+                    ),
                     "next_run_at": _iso(state.next_run_at),
                     "last_started_at": _iso(state.last_started_at),
                     "last_finished_at": _iso(state.last_finished_at),

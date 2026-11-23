@@ -1,9 +1,13 @@
 """Offline source adapters: existing parsers consume captured response bytes."""
 
 from __future__ import annotations
+
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
 import requests
+
 from .artifacts import read_artifact
+from .capture import json_request_digest, safe_source_url
 
 
 def request_key(url, params=None):
@@ -39,7 +43,9 @@ class ArtifactReplayMixin:
             def request(self, method, url, **options):
                 if str(method).upper() == "GET":
                     return owner.get(url, **options)
-                raise RuntimeError("Offline source transport refuses non-GET request")
+                if str(method).upper() == "POST":
+                    return owner.post(url, **options)
+                raise RuntimeError("Offline source transport refuses unsupported request")
 
             def send(self, *args, **options):
                 raise RuntimeError(
@@ -56,20 +62,28 @@ class ArtifactReplayMixin:
         self.session = OfflineSession()
 
     def get(self, url, **kwargs):
-        key = request_key(url, kwargs.get("params"))
+        return self._replay_response("GET", url, **kwargs)
+
+    def _replay_response(self, method, url, **kwargs):
+        key = request_key(safe_source_url(request_key(url, kwargs.get("params"))))
+        digest = json_request_digest(kwargs["json"]) if method == "POST" else None
         candidates = [
             artifact
             for artifact in self.replay_artifacts
-            if artifact.source_url and request_key(artifact.source_url) == key
+            if (artifact.metadata_ or {}).get("request_method", "GET") == method
+            and (method != "POST" or (artifact.metadata_ or {}).get("request_body_sha256") == digest)
+            and any(value and request_key(value) == key for value in (
+                artifact.source_url, (artifact.metadata_ or {}).get("request_url"),
+            ))
         ]
         if not candidates:
             raise RuntimeError(
-                f"No captured source artifact for offline request: {key}"
+                f"No captured source artifact for offline request: {safe_source_url(key)}"
             )
         # Repeated metadata requests are common. All bytes still pass digest validation.
         artifact = candidates[-1]
         response = requests.Response()
-        response.status_code = 200
+        response.status_code = int((artifact.metadata_ or {}).get("status_code", 200))
         response.url = artifact.source_url
         response._content = read_artifact(artifact)
         response._content_consumed = True
@@ -82,12 +96,13 @@ class ArtifactReplayMixin:
                 else "application/json"
             )
         response.headers["Content-Type"] = media_type
+        response.raise_for_status()
         return response
 
     def post(self, url, **kwargs):
-        raise RuntimeError(
-            "Offline POST requires a source-specific captured request key"
-        )
+        if "json" not in kwargs:
+            raise RuntimeError("Offline POST requires a captured JSON request key")
+        return self._replay_response("POST", url, **kwargs)
 
 
 def offline_crawler_type(crawler_type, artifacts):

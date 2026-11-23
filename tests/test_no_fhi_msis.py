@@ -214,6 +214,7 @@ def test_updater_recent_window_uses_three_closed_months_across_year_boundary(
     tmp_path,
 ):
     updater = NOMonthlyUpdater(
+        crawler_type=NorwayMSISCrawler,
         output_csv=tmp_path / "norway.csv",
         today_provider=lambda: date(2026, 1, 10),
     )
@@ -227,6 +228,7 @@ def test_updater_recent_window_uses_three_closed_months_across_year_boundary(
 
 def test_updater_history_defaults_to_1977_and_last_closed_month(tmp_path):
     updater = NOMonthlyUpdater(
+        crawler_type=NorwayMSISCrawler,
         output_csv=tmp_path / "norway.csv",
         today_provider=lambda: date(2026, 8, 7),
     )

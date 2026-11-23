@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 
 import pytest
 import requests
+from src.data.crawlers.no import NorwayMSISCrawler
 from src.data.processors.no import NOMonthlyUpdater
 from src.data.storage.series_observation_store import SeriesObservationStore
 from src.services.ingestion.countries import no
@@ -68,6 +69,7 @@ async def test_no_offline_contract_preserves_closed_months_and_explicit_zero(
     monkeypatch.chdir(tmp_path)
     install(monkeypatch)
     updater = NOMonthlyUpdater(
+        crawler_type=NorwayMSISCrawler,
         output_csv=tmp_path / "source.csv",
         include_current_month=include_current,
         today_provider=lambda: date(2026, 8, 7),
@@ -144,6 +146,7 @@ async def test_no_source_failure_keeps_validated_cache(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     install(monkeypatch)
     updater = NOMonthlyUpdater(
+        crawler_type=NorwayMSISCrawler,
         output_csv=tmp_path / "source.csv", today_provider=lambda: date(2026, 8, 7)
     )
     expected = updater.refresh_source(months=[(2026, 7)])
@@ -157,6 +160,8 @@ async def test_no_source_failure_keeps_validated_cache(tmp_path, monkeypatch):
     )
     actual = no.organize(saved, updater=updater, source="fhi_msis", months=[(2026, 7)])
     assert actual.rows == expected.rows
+    assert actual.store_rows == []  # Old authoritative snapshots cannot overwrite current facts.
+    assert actual.source_audit["status"] == "partial"
     assert any("previous CSV snapshot" in entry for entry in actual.script_logs)
 
 
@@ -167,3 +172,21 @@ def test_no_pipeline_retains_country_local_dispatch():
     source = inspect.getsource(execute_no_pipeline)
     assert "run_surveillance" in source
     assert "_execute_configured_monthly" not in source
+
+
+async def test_no_cache_miss_keeps_the_original_collection_failure(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    install(monkeypatch)
+    updater = NOMonthlyUpdater(crawler_type=NorwayMSISCrawler,
+        output_csv=tmp_path / 'source.csv', today_provider=lambda: date(2026, 8, 7))
+    updater.refresh_source(months=[(2026, 7)])
+
+    def offline(*args, **kwargs):
+        raise requests.ConnectionError('source offline at https://fixture.test/?token=secret')
+
+    monkeypatch.setattr(requests.Session, 'get', offline)
+    saved = await no.collect(Writer(), source='fhi_msis', updater=updater, months=[(2026, 6)])
+    with pytest.raises(RuntimeError, match='ConnectionError: source offline') as caught:
+        no.organize(saved, updater=updater, source='fhi_msis')
+    assert 'No captured' not in str(caught.value)
+    assert 'secret' not in str(caught.value)

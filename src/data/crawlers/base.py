@@ -107,8 +107,17 @@ class BaseCrawler(ABC):
         
         try:
             response = self.session.get(url, timeout=self.timeout, **kwargs)
+            history = getattr(response, "history", None) or []
+            first_response = history[0] if history else response
+            original_request = getattr(first_response, "request", None)
+            request_url = getattr(original_request, "url", None) or requests.Request(
+                "GET", url, params=kwargs.get("params"),
+            ).prepare().url
+            response._content = capture_sync(
+                response.content, response.url, response.headers.get("content-type", ""),
+                request_url=request_url, status_code=response.status_code,
+            )
             response.raise_for_status()
-            response._content = capture_sync(response.content, response.url, response.headers.get("content-type", ""))
             logger.debug(f"GET {url} - Status: {response.status_code}")
             return response
         except requests.RequestException as e:
@@ -126,14 +135,29 @@ class BaseCrawler(ABC):
         Returns:
             ``requests.Response`` object.
         """
-        from src.services.ingestion.capture import assert_source_access, capture_sync
+        from src.services.ingestion.capture import (
+            assert_source_access,
+            capture_sync,
+            json_request_digest,
+        )
         assert_source_access()
         time.sleep(self.delay)
         
         try:
             response = self.session.post(url, timeout=self.timeout, **kwargs)
+            history = getattr(response, "history", None) or []
+            first_response = history[0] if history else response
+            original_request = getattr(first_response, "request", None)
+            request_url = getattr(original_request, "url", None) or requests.Request(
+                "POST", url, params=kwargs.get("params"),
+            ).prepare().url
+            response._content = capture_sync(
+                response.content, response.url, response.headers.get("content-type", ""),
+                request_url=request_url, status_code=response.status_code,
+                request_method="POST",
+                request_body_sha256=json_request_digest(kwargs["json"]) if "json" in kwargs else None,
+            )
             response.raise_for_status()
-            response._content = capture_sync(response.content, response.url, response.headers.get("content-type", ""))
             logger.debug(f"POST {url} - Status: {response.status_code}")
             return response
         except requests.RequestException as e:
