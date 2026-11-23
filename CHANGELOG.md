@@ -16,6 +16,7 @@ This file records release-level changes to the GIDS application and its data ope
 ### Fixed
 
 - Limit collection structured data to initially displayed records and link bibliographic-only records to their DOI or PubMed source instead of inventing evidence-page URLs.
+- Derive related weekly links from existing publication dates, preserving the immutable literature-card format and avoiding a catalogue-wide shard rewrite.
 
 ## [0.20.8] - 2026-11-20
 

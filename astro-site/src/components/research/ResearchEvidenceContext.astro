@@ -1,6 +1,6 @@
 ---
 import researchRoutes from '../../data/research/routes.json';
-import { researchCoverage } from '../../lib/research-seo';
+import { researchCoverage, researchPublicationWeek } from '../../lib/research-seo';
 import { siteHref } from '../../lib/papers';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedResearchTopic } from '../../utils/i18n';
@@ -12,7 +12,7 @@ const prefix = locale === 'en' ? '' : `/${locale}`;
 const coverage = researchCoverage(articles);
 const facets = (researchRoutes as any).facets ?? {};
 const diseaseIds = new Set(articles.flatMap(article => (article.diseases ?? []).map((disease: any) => disease.disease_id)));
-const weeks = new Set(articles.map(article => article.publication_week || ''));
+const weeks = new Set(articles.map(researchPublicationWeek).filter(Boolean));
 const topTopics = coverage.topics.slice(0, 4).map(([name]) => localizedResearchTopic(locale, name));
 const links = [
   ...(facets.diseases ?? []).filter((disease: any) => diseaseIds.has(disease.disease_id) && disease.url !== currentPath).slice(0, 4).map((disease: any) => ({ href: disease.url, label: localizedDiseaseName(disease, locale) })),

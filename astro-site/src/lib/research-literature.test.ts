@@ -19,9 +19,8 @@ test('complete catalogue filters and trend apply the same combined criteria', ()
   assert.equal(filterLiterature(articles, { ...emptyLiteratureFilters, sort: 'oldest' }).at(-1).title, 'Undated paper');
 });
 test('bibliographic projection preserves source IDs without full summaries', () => {
-  const row = literatureArticle({ pmid: '123', publication_week: '2026-W47', detail_available: false, summary: { en: { main_findings: 'large' } } });
+  const row = literatureArticle({ pmid: '123', detail_available: false, summary: { en: { main_findings: 'large' } } });
   assert.equal(row.detail_available, false); assert.equal(row.pmid, '123'); assert.equal('summary' in row, false);
-  assert.equal(row.publication_week, '2026-W47');
   const fullAuthors = literatureArticle({ authors: ['A', 'B', 'C', 'D', 'Fifth Author'], title: 'Study' });
   assert.equal(filterLiterature([fullAuthors], { ...emptyLiteratureFilters, query: 'Fifth Author' }).length, 1);
 });
