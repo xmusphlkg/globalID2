@@ -1,9 +1,65 @@
 from __future__ import annotations
 
-import pytest
+import json
 from types import SimpleNamespace
 
+import pytest
+
 from scripts import restart_task_runtime
+
+
+@pytest.fixture
+def virtual_clock(monkeypatch):
+    clock = SimpleNamespace(elapsed=0.0)
+    real_sleep = restart_task_runtime.asyncio.sleep
+
+    async def advance(seconds):
+        clock.elapsed += seconds
+        # Yield so concurrent timers would begin while the first unit drains.
+        await real_sleep(0)
+
+    monkeypatch.setattr(restart_task_runtime, "time", SimpleNamespace(
+        monotonic=lambda: clock.elapsed,
+    ))
+    monkeypatch.setattr(restart_task_runtime.asyncio, "sleep", advance)
+    return clock
+
+
+@pytest.mark.parametrize("terminal_state", ["inactive", "failed"])
+async def test_worker_stop_observed_at_deadline_is_not_reported_as_timeout(
+    monkeypatch, virtual_clock, terminal_state,
+):
+    monkeypatch.setattr(restart_task_runtime, "_unit_property", lambda *_: (
+        terminal_state if virtual_clock.elapsed >= 30 else "deactivating"
+    ))
+    assert await restart_task_runtime._wait_unit_stopped("worker.service", 30) == terminal_state
+    assert virtual_clock.elapsed == 30
+
+
+async def test_worker_drain_timeout_stays_bounded_without_forcing_stop(monkeypatch, virtual_clock):
+    calls = []
+    monkeypatch.setattr(restart_task_runtime, "_unit_property", lambda *_: "deactivating")
+    monkeypatch.setattr(restart_task_runtime, "_run_systemctl", lambda *args: calls.append(args))
+    with pytest.raises(TimeoutError, match="worker.service.*no force kill"):
+        await restart_task_runtime._wait_unit_stopped("worker.service", 30)
+    assert virtual_clock.elapsed == 30
+    assert calls == []
+
+
+def test_maintenance_timeout_leaves_scheduler_stopped(monkeypatch, capsys):
+    calls = []
+
+    async def timeout(_args):
+        raise TimeoutError("worker still draining")
+
+    monkeypatch.setattr(restart_task_runtime, "_restart", timeout)
+    monkeypatch.setattr(restart_task_runtime, "_run_systemctl", lambda *args: calls.append(args))
+    monkeypatch.setattr(restart_task_runtime, "_unit_property", lambda *_: "inactive")
+    assert restart_task_runtime.main([]) == 2
+    assert calls == [("stop", restart_task_runtime.SCHEDULER_UNIT)]
+    assert json.loads(capsys.readouterr().out) == {
+        "event": "maintenance_failed", "error_type": "TimeoutError", "scheduler_left_stopped": True,
+    }
 
 
 @pytest.mark.asyncio
@@ -57,8 +113,9 @@ async def test_ready_probe_retries_transient_socket_startup(monkeypatch):
 
 
 @pytest.mark.parametrize("replaced_ai_owner", [False, True])
+@pytest.mark.parametrize("dependency_delayed_stop", [False, True])
 async def test_restart_drains_and_recovers_both_roles_before_starting_scheduler(
-    monkeypatch, replaced_ai_owner
+    monkeypatch, replaced_ai_owner, dependency_delayed_stop, virtual_clock,
 ):
     calls = []
     lease_reads = {}
@@ -77,6 +134,14 @@ async def test_restart_drains_and_recovers_both_roles_before_starting_scheduler(
     def property(unit, name):
         if name == "MainPID":
             return "111" if unit == restart_task_runtime.WORKER_UNIT else "222"
+        if name == "ActiveState":
+            if unit == restart_task_runtime.WORKER_UNIT:
+                return "deactivating" if virtual_clock.elapsed < 56 else "inactive"
+            # The AI stop is waiting in systemd until the general unit exits,
+            # then needs another 56 seconds of its own 60-second drain budget.
+            if virtual_clock.elapsed < 56:
+                return "active"
+            return "deactivating" if virtual_clock.elapsed < 112 else "inactive"
         return "success"
 
     async def stopped(unit, timeout):
@@ -94,7 +159,8 @@ async def test_restart_drains_and_recovers_both_roles_before_starting_scheduler(
         restart_task_runtime.runtime_registry, "release_stopped_instance", release
     )
     monkeypatch.setattr(restart_task_runtime, "_unit_property", property)
-    monkeypatch.setattr(restart_task_runtime, "_wait_unit_stopped", stopped)
+    if not dependency_delayed_stop:
+        monkeypatch.setattr(restart_task_runtime, "_wait_unit_stopped", stopped)
     monkeypatch.setattr(restart_task_runtime, "_pid_is_alive", lambda pid: False)
     monkeypatch.setattr(
         restart_task_runtime,
@@ -117,6 +183,8 @@ async def test_restart_drains_and_recovers_both_roles_before_starting_scheduler(
         assert not any(call[0] in {"recover", "start"} for call in calls)
         return
     assert await restart_task_runtime._restart(args) == 0
+    if dependency_delayed_stop:
+        assert virtual_clock.elapsed == 112
     stop = (
         "stop",
         "--no-block",
@@ -124,6 +192,7 @@ async def test_restart_drains_and_recovers_both_roles_before_starting_scheduler(
         restart_task_runtime.AI_WORKER_UNIT,
     )
     assert stop in calls
+    assert not any(call[0] == "kill" for call in calls)
     assert {call[1] for call in calls if call[0] == "recover"} == set(owners.values())
     latest_release = max(i for i, call in enumerate(calls) if call[0] == "release")
     earliest_recover = min(i for i, call in enumerate(calls) if call[0] == "recover")

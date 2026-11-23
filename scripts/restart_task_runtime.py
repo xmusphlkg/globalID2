@@ -69,17 +69,20 @@ def _pid_is_alive(pid: int) -> bool:
 async def _wait_unit_stopped(unit: str, timeout_seconds: int) -> str:
     deadline = time.monotonic() + timeout_seconds
     last_reported = ""
-    while time.monotonic() < deadline:
+    while True:
         state = _unit_property(unit, "ActiveState")
         if state in {"inactive", "failed"}:
             return state
         if state != last_reported:
             _emit("worker_draining", unit=unit, state=state)
             last_reported = state
-        await asyncio.sleep(2)
-    raise TimeoutError(
-        "worker drain deadline exceeded; scheduler remains stopped and no force kill was issued"
-    )
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"worker drain deadline exceeded for {unit}; "
+                "scheduler remains stopped and no force kill was issued"
+            )
+        await asyncio.sleep(min(2, remaining))
 
 
 async def _wait_runtime_service(
@@ -158,12 +161,12 @@ async def _restart(args: argparse.Namespace) -> int:
     _run_systemctl("stop", SCHEDULER_UNIT)
     _emit("scheduler_frozen")
     _run_systemctl("stop", "--no-block", *WORKER_UNITS.values())
-    await asyncio.gather(
-        *(
-            _wait_unit_stopped(unit, args.drain_timeout_seconds)
-            for unit in WORKER_UNITS.values()
-        )
-    )
+    # The general unit starts After the AI unit, so systemd stops it first.
+    # An AI stop job can wait for the entire general drain before receiving
+    # SIGTERM. Give each role its own wait budget in that shutdown order;
+    # concurrent timers would spend the AI budget before its drain even starts.
+    for unit in (WORKER_UNIT, AI_WORKER_UNIT):
+        await _wait_unit_stopped(unit, args.drain_timeout_seconds)
     for service, unit in WORKER_UNITS.items():
         owner, pid = previous[service]
         if _pid_is_alive(pid):
@@ -228,8 +231,8 @@ def _parser() -> argparse.ArgumentParser:
         type=int,
         default=900,
         help=(
-            "maximum time to observe cooperative worker drain; the systemd unit "
-            "retains its own hard stop deadline"
+            "maximum wait per worker role, observed in dependency shutdown order; "
+            "each systemd unit retains its own hard stop deadline"
         ),
     )
     parser.add_argument("--readiness-timeout-seconds", type=int, default=60)
