@@ -1,8 +1,9 @@
 import { groupResearchSignals } from '../../../astro-site/src/lib/research-signal-groups.ts';
+import { buildResearchArticleSeo } from '../../../astro-site/src/lib/research-article-seo.ts';
 
 /** Versioned renderer for public structured paper records; no private fields or raw HTML. */
 // Bump on any renderer behavior change so deployed response caches cannot reuse old HTML.
-export const PROJECTION_RENDERER_REVISION = 'gids-evidence-v1.20261117.1';
+export const PROJECTION_RENDERER_REVISION = 'gids-evidence-v1.20261123.1';
 export type ProjectedPaper = { schema: 3; slug: string; article_id: string; content: Record<string, unknown> };
 export type ProjectionTemplate = {
   schema: 3; content_schema: 3; renderer: 'gids-evidence-v1'; locale: 'en' | 'zh' | 'fr';
@@ -46,6 +47,7 @@ export function projectionFragments(template: ProjectionTemplate, record: Projec
   const prefix = locale === 'en' ? '' : `/${locale}`;
   const canonical = `https://papers.globalinfectiousdisease.com${prefix}/research/articles/${record.slug}/`;
   const description = string(data[`why_it_matters_${locale}`]) || string(summary.public_health_relevance) || data.title;
+  const seo = buildResearchArticleSeo({ ...data, slug: record.slug, article_id: record.article_id }, locale);
   const authors = Array.isArray(data.authors) ? data.authors.filter(value => typeof value === 'string') : [];
   const sourceUrls = object(data.source_urls) ? data.source_urls : {};
   const pick = (en: string, zh: string, fr: string) => locale === 'zh' ? zh : locale === 'fr' ? fr : en;
@@ -53,7 +55,7 @@ export function projectionFragments(template: ProjectionTemplate, record: Projec
   const language = locale === 'zh' ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en';
   const socialImage = `https://globalinfectiousdisease.com/og-default.png`;
   const structuredArticle = { '@type': 'ScholarlyArticle', headline: data.title,
-    identifier: string(data.doi) || record.article_id, url: canonical, inLanguage: locale,
+    identifier: seo.identifier, abstract: seo.abstract, url: canonical, inLanguage: language,
     datePublished: string(data.published_at) || undefined, dateModified: string(data.updated_at) || undefined,
     author: authors.map(name => ({ '@type': 'Person', name })),
     sameAs: safeUrl(sourceUrls.doi) || safeUrl(sourceUrls.publisher) || undefined,
@@ -72,10 +74,10 @@ export function projectionFragments(template: ProjectionTemplate, record: Projec
   const json = JSON.stringify(structured).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
   const alternates = ([['en', 'en'], ['zh', 'zh'], ['zh-CN', 'zh'], ['fr', 'fr'], ['fr-FR', 'fr']] as const)
     .map(([hreflang, lang]) => `<link rel="alternate" hreflang="${hreflang}" href="https://papers.globalinfectiousdisease.com${lang === 'en' ? '' : `/${lang}`}/research/articles/${record.slug}/">`).join('');
-  const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(data.title)} | GIDS</title><meta name="description" content="${escape(description.slice(0, 240))}"><link rel="canonical" href="${canonical}">`
+  const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(seo.title)}</title><meta name="description" content="${escape(seo.description)}"><link rel="canonical" href="${canonical}">`
     + alternates + `<link rel="alternate" hreflang="x-default" href="https://papers.globalinfectiousdisease.com/research/articles/${record.slug}/">`
-    + `<meta name="robots" content="${data.indexable === false ? 'noindex,follow' : 'index,follow'}"><meta property="og:type" content="article"><meta property="og:site_name" content="GIDS"><meta property="og:locale" content="${locale === 'zh' ? 'zh_CN' : locale === 'fr' ? 'fr_FR' : 'en_US'}"><meta property="og:title" content="${escape(data.title)}"><meta property="og:description" content="${escape(description.slice(0, 240))}"><meta property="og:image" content="${socialImage}"><meta property="og:image:alt" content="${escape(data.title)}"><meta property="og:url" content="${canonical}">`
-    + `<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escape(data.title)}"><meta name="twitter:description" content="${escape(description.slice(0, 240))}"><meta name="twitter:image" content="${socialImage}"><meta name="twitter:image:alt" content="${escape(data.title)}">`
+    + `<meta name="robots" content="${data.indexable === false ? 'noindex,follow' : 'index,follow'}"><meta property="og:type" content="article"><meta property="og:site_name" content="GIDS"><meta property="og:locale" content="${locale === 'zh' ? 'zh_CN' : locale === 'fr' ? 'fr_FR' : 'en_US'}"><meta property="og:title" content="${escape(seo.title)}"><meta property="og:description" content="${escape(seo.description)}"><meta property="og:image" content="${socialImage}"><meta property="og:image:alt" content="${escape(data.title)}"><meta property="og:url" content="${canonical}">`
+    + `<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escape(seo.title)}"><meta name="twitter:description" content="${escape(seo.description)}"><meta name="twitter:image" content="${socialImage}"><meta name="twitter:image:alt" content="${escape(data.title)}">`
     + (data.published_at ? `<meta property="article:published_time" content="${escape(data.published_at)}">` : '')
     + (data.updated_at ? `<meta property="article:modified_time" content="${escape(data.updated_at)}">` : '')
     + `<script type="application/ld+json">${json}</script>`;

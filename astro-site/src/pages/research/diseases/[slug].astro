@@ -1,8 +1,10 @@
 ---
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import DiseaseLiteratureExplorer from '../../../components/research/DiseaseLiteratureExplorer';
+import ResearchEvidenceContext from '../../../components/research/ResearchEvidenceContext.astro';
+import { buildResearchItemList } from '../../../lib/research-seo';
 import { shouldBuildPage } from '../../../lib/page-build-plan';
-import { buildAlternatePaths, clampSeoTitle, isIndexableResearchCollection } from '../../../lib/seo';
+import { buildAlternatePaths, clampSeoTitleWithSuffix, isIndexableResearchCollection } from '../../../lib/seo';
 import { diseaseLiteratureCatalogue } from '../../../lib/research-literature-server';
 import { diseaseLiteratureSearchStrategy, literatureTrend } from '../../../lib/research-literature';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
@@ -21,9 +23,9 @@ const articles = byDisease.get(String(facet.disease_id).toLowerCase()) ?? [];
 const prefix = locale === 'en' ? '' : `/${locale}`;
 const pick = (en: string, zh: string, fr: string) => locale === 'zh' ? zh : locale === 'fr' ? fr : en;
 const name = locale === 'zh' ? facet.name_zh || facet.name_en : locale === 'fr' ? localizedDiseaseName(facet, 'fr') : facet.name_en;
-const title = pick(`${name} literature`, `${name}文献`, `Publications sur ${name}`);
-const seoTitle = clampSeoTitle(pick(`Literature: ${name} | GIDS`, `${name}文献 | GIDS`, `Publications : ${name} | GIDS`));
-const description = pick(`Browse all ${name} publications indexed by GIDS. Filter by date, area, topic, study type and access, explore publication trends, and continue searching PubMed with a built-in query.`, `集中浏览 GIDS 收录的${name}相关文献，按年份、地区、主题、研究类型和全文获取方式筛选，查看发文趋势，并使用内置检索式继续检索 PubMed 等数据库。`, `Consultez les publications sur ${name} répertoriées par GIDS, filtrez les résultats et explorez leur évolution, puis poursuivez dans PubMed avec une requête intégrée.`);
+const title = pick(`${name} research evidence & literature`, `${name}研究文献与证据摘要`, `Recherche et publications sur ${name}`);
+const seoTitle = clampSeoTitleWithSuffix(pick(`${name} Research Evidence & Literature`, `${name}研究文献与证据摘要`, `Recherche sur ${name}`), pick('| Research Radar | GIDS', '| 研究雷达 | GIDS', '| Radar de recherche | GIDS'));
+const description = pick(`Explore ${name} research evidence and literature with study summaries, publication trends and official surveillance links. Filter by topic, area and study design.`, `浏览${name}研究文献与证据摘要，比较研究设计、主要发现与局限，查看发文趋势并关联官方疫情监测数据；支持按地区、主题、年份及全文获取方式筛选。`, `Explorez la recherche sur ${name} : synthèses, tendances des publications et liens de surveillance officielle, par thème, zone et plan d’étude.`);
 const canonicalPath = `${prefix}/research/diseases/${facet.slug}/`;
 const countries = new Map<string, any>();
 for (const article of articles) for (const country of article.countries ?? []) if (country.code) countries.set(country.code, country);
@@ -32,7 +34,7 @@ const strategy = diseaseLiteratureSearchStrategy(facet);
 const rss = researchFeedCatalogue().definitions.find(row => row.scope === 'diseases' && row.value === facet.slug);
 const summaryCount = articles.filter(row => row.detail_available !== false).length;
 ---
-<ReportLayout title={seoTitle} description={description} initialLanguage={locale} seo={{ title: seoTitle, description, locale, canonicalPath, alternatePaths: buildAlternatePaths(canonicalPath, locale), pageType: 'CollectionPage', noindex: !isIndexableResearchCollection(articles.length) }} structuredData={{ '@type': 'CollectionPage', name: title, description, mainEntity: { '@type': 'ItemList', numberOfItems: articles.length } }} breadcrumbs={[{ label: 'Research Radar', labelZh: '研究雷达', labelFr: 'Radar de recherche', href: `${prefix}/research/` }, { label: `${facet.name_en} literature`, labelZh: `${facet.name_zh || facet.name_en}文献`, labelFr: `Publications sur ${localizedDiseaseName(facet, 'fr')}` }]}>
+<ReportLayout title={seoTitle} description={description} initialLanguage={locale} seo={{ title: seoTitle, description, locale, canonicalPath, alternatePaths: buildAlternatePaths(canonicalPath, locale), pageType: 'CollectionPage', noindex: !isIndexableResearchCollection(articles.length) }} structuredData={{ '@type': 'CollectionPage', name: title, description, mainEntity: buildResearchItemList(articles, Astro.site ?? Astro.url.origin, locale, 24) }} breadcrumbs={[{ label: 'Research Radar', labelZh: '研究雷达', labelFr: 'Radar de recherche', href: `${prefix}/research/` }, { label: `${facet.name_en} literature`, labelZh: `${facet.name_zh || facet.name_en}文献`, labelFr: `Publications sur ${localizedDiseaseName(facet, 'fr')}` }]}>
   <div class="disease-literature-page">
     <header class="academic-hero literature-hero">
       <p class="academic-kicker">{pick('Disease literature', '疾病文献专题', 'Publications par maladie')}</p>
@@ -42,6 +44,7 @@ const summaryCount = articles.filter(row => row.detail_available !== false).leng
       <dl class="literature-hero-metrics"><div><dt>{pick('Related publications', '相关文献', 'Publications associées')}</dt><dd>{articles.length.toLocaleString(locale)}</dd></div><div><dt>{pick('With GIDS evidence summaries', '附证据摘要', 'Avec synthèse GIDS')}</dt><dd>{summaryCount.toLocaleString(locale)}</dd></div><div><dt>{pick('Bibliographic records', '书目记录', 'Fiches bibliographiques')}</dt><dd>{(articles.length - summaryCount).toLocaleString(locale)}</dd></div><div><dt>{pick('Geographic areas', '关联地理区域', 'Zones géographiques')}</dt><dd>{countries.size.toLocaleString(locale)}</dd></div></dl>
       <p class="literature-catalogue-note">{pick('Disease links reflect catalogue classification. Bibliographic records link directly to their source and do not imply a GIDS evidence review.', '疾病关联依据文献目录分类。仅有书目信息的记录直接链接原始来源，不表示 GIDS 已完成证据解读。', 'Les associations proviennent de la classification du catalogue. Les fiches bibliographiques renvoient à la source sans impliquer une analyse GIDS.')}{generatedAt && <> {pick('Catalogue updated', '目录更新于', 'Catalogue mis à jour le')} {String(generatedAt).slice(0, 10)}</>}</p>
     </header>
+    <ResearchEvidenceContext articles={articles} locale={locale} currentPath={`/research/diseases/${facet.slug}/`} />
     <DiseaseLiteratureExplorer client:load diseaseId={facet.disease_id} initialArticles={articles.slice(0, 24)} total={articles.length} initialTrend={literatureTrend(articles)} facets={facets} locale={locale} />
     <section class="literature-strategy" id="literature-strategy" aria-labelledby="literature-strategy-title">
       <p class="academic-kicker">{pick('Continue the search', '继续检索', 'Poursuivre la recherche')}</p><h2 id="literature-strategy-title">{pick('Search databases with a built-in strategy', '数据库检索与内置检索式', 'Bases de données et requêtes intégrées')}</h2>

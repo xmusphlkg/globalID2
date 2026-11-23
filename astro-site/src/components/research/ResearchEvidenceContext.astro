@@ -1,0 +1,38 @@
+---
+import researchRoutes from '../../data/research/routes.json';
+import { researchCoverage } from '../../lib/research-seo';
+import { siteHref } from '../../lib/papers';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { localizedResearchTopic } from '../../utils/i18n';
+
+interface Props { articles: any[]; locale: 'en' | 'zh' | 'fr'; currentPath: string }
+const { articles, locale, currentPath } = Astro.props;
+const pick = (en: string, zh: string, fr: string) => locale === 'zh' ? zh : locale === 'fr' ? fr : en;
+const prefix = locale === 'en' ? '' : `/${locale}`;
+const coverage = researchCoverage(articles);
+const facets = (researchRoutes as any).facets ?? {};
+const diseaseIds = new Set(articles.flatMap(article => (article.diseases ?? []).map((disease: any) => disease.disease_id)));
+const weeks = new Set(articles.map(article => article.publication_week || ''));
+const topTopics = coverage.topics.slice(0, 4).map(([name]) => localizedResearchTopic(locale, name));
+const links = [
+  ...(facets.diseases ?? []).filter((disease: any) => diseaseIds.has(disease.disease_id) && disease.url !== currentPath).slice(0, 4).map((disease: any) => ({ href: disease.url, label: localizedDiseaseName(disease, locale) })),
+  ...coverage.topics.flatMap(([name]) => {
+    const facet = (facets.topics ?? []).find((topic: any) => topic.name === name);
+    return facet && facet.url !== currentPath ? [{ href: facet.url, label: localizedResearchTopic(locale, name) }] : [];
+  }).slice(0, 4),
+  ...(facets.weeks ?? []).filter((week: any) => weeks.has(week.week) && week.url !== currentPath).slice(0, 3).map((week: any) => ({ href: week.url, label: pick(`Research brief ${week.week}`, `研究周报 ${week.week}`, `Brief de recherche ${week.week}`) })),
+];
+---
+{articles.length > 0 && <section class="card evidence-context" aria-labelledby="evidence-context-title">
+  <h2 id="evidence-context-title">{pick('Research evidence and surveillance context', '研究证据与监测背景', 'Preuves de recherche et contexte de surveillance')}</h2>
+  <p>{pick(`This collection contains ${articles.length} publications`, `本专题收录 ${articles.length} 篇文献`, `Cette collection contient ${articles.length} publications`)}{coverage.startYear && <> · {coverage.startYear}{coverage.endYear !== coverage.startYear && `–${coverage.endYear}`}</>}{locale === 'zh' ? '。' : '.'} {topTopics.length > 0 && pick(`The most represented topics are ${topTopics.join(', ')}.`, `收录最多的主题包括${topTopics.join('、')}。`, `Les thèmes les plus représentés sont ${topTopics.join(', ')}.`)}</p>
+  <p>{pick('Use the evidence summaries to compare study designs, findings and limitations, then follow surveillance links for official reporting context. Counts describe this catalogue’s coverage; they do not measure disease incidence or establish a research consensus.', '可通过证据摘要比较研究设计、主要发现和局限，再结合官方监测链接理解公共卫生背景。文献数量仅反映本站目录覆盖情况，不代表疾病发病水平，也不能据此判定研究共识。', 'Comparez les plans d’étude, les résultats et les limites dans les synthèses, puis consultez les liens de surveillance pour le contexte officiel. Les volumes reflètent la couverture du catalogue, sans mesurer l’incidence ni établir un consensus scientifique.')}</p>
+  {links.length > 0 && <nav aria-label={pick('Related research collections', '相关研究专题', 'Collections de recherche associées')}>{links.map(link => <a href={siteHref(`${prefix}${link.href}`)}>{link.label} →</a>)}</nav>}
+</section>}
+<style>
+  .evidence-context { margin-top: 1.5rem; padding: clamp(1.25rem, 3vw, 2rem); }
+  .evidence-context h2 { color: rgb(var(--text-strong)); font-size: 1.3rem; font-weight: 600; }
+  .evidence-context p { max-width: 65rem; margin-top: .8rem; color: rgb(var(--text-muted)); font-size: .85rem; line-height: 1.8; }
+  .evidence-context nav { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; margin-top: .8rem; }
+  .evidence-context a { display: inline-flex; align-items: center; min-height: 44px; color: rgb(var(--color-teal)); font-size: .82rem; }
+</style>

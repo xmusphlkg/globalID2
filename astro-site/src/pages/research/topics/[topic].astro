@@ -2,9 +2,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
+import ResearchEvidenceContext from '../../../components/research/ResearchEvidenceContext.astro';
 import researchData from '../../../data/research/routes.json';
 import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { localizedResearchTopic } from '../../../utils/i18n';
+import { clampSeoTitleWithSuffix } from '../../../lib/seo';
 
 export function getStaticPaths() {
   return ((researchData as any).facets?.topics ?? []).filter((facet: any) => shouldBuildPage(`research:topics:${facet.slug}`)).map((facet: any) => ({ params: { topic: facet.slug }, props: { facet, topic: facet.slug, locale: 'en' } }));
@@ -17,18 +19,25 @@ const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.top
 const file = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/topics/${facet.slug}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
 const topicNameFr = localizedResearchTopic('fr', facet.name);
-const description = `Published Research Radar records connected to the ${facet.name} topic through the auditable classification pipeline.`;
-const descriptionZh = `通过可审计分类流程与“${facet.name}”主题关联的研究雷达已发布记录。`;
-const descriptionFr = `Références publiées du Radar de recherche reliées au thème « ${topicNameFr} » par la classification auditable.`;
+const topicNameZh = localizedResearchTopic('zh', facet.name);
+const description = `Explore ${facet.name.toLowerCase()} research in infectious diseases, with evidence summaries, study limitations and links to disease surveillance and related literature.`;
+const descriptionZh = `浏览传染病${topicNameZh}研究文献与证据摘要，比较研究设计、主要发现及局限，关联疾病监测数据、相关疾病专题和每周研究简报。`;
+const descriptionFr = `Explorez la recherche sur les maladies infectieuses liée au thème « ${topicNameFr} » : synthèses, limites et liens de surveillance.`;
+const seoTitle = locale === 'zh'
+  ? clampSeoTitleWithSuffix(`${topicNameZh}研究文献`, '| 传染病研究雷达 | GIDS')
+  : locale === 'fr'
+    ? clampSeoTitleWithSuffix(topicNameFr, '| Recherche infectieuse | GIDS')
+    : clampSeoTitleWithSuffix(facet.name, '| Infectious Disease Research | GIDS');
 ---
 
 <ResearchCollectionPage
   eyebrow="Public-health topic"
   eyebrowZh="公共卫生主题"
   eyebrowFr="Thème de santé publique"
-  title={facet.name}
-  titleZh={facet.name}
-  titleFr={topicNameFr}
+  title={`${facet.name} research in infectious diseases`}
+  titleZh={`传染病${topicNameZh}研究文献`}
+  titleFr={`${topicNameFr} : recherche infectieuse`}
+  seoTitle={seoTitle}
   description={description}
   descriptionZh={descriptionZh}
   descriptionFr={descriptionFr}
@@ -37,4 +46,6 @@ const descriptionFr = `Références publiées du Radar de recherche reliées au 
   clientCollectionScope="topic"
   clientCollectionValue={facet.slug}
   locale={locale}
-/>
+>
+  <ResearchEvidenceContext slot="context" articles={payload.articles ?? []} locale={locale} currentPath={`/research/topics/${facet.slug}/`} />
+</ResearchCollectionPage>

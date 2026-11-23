@@ -63,6 +63,25 @@ test('all three locales read v3 from the same research pointer with independent 
   assert.equal(f.reads.filter(key => key.endsWith('/current.json')).length, 3);
 });
 
+test('production article metadata includes localized evidence and bounded search snippets', () => {
+  const item = structuredClone(record);
+  item.content.title = 'Long infectious disease research title '.repeat(10);
+  item.content.doi = '10.1234/paper';
+  for (const locale of ['en', 'zh', 'fr'] as const) {
+    const head = projectionFragments(template(locale), item, sha('record')).head[0];
+    const title = /<title>(.*?)<\/title>/.exec(head)![1];
+    const description = /<meta name="description" content="([^"]*)"/.exec(head)![1];
+    assert.ok(title.length <= 70);
+    assert.ok(description.length <= 160);
+    const graph = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/.exec(head)![1])['@graph'];
+    const article = graph.find((node: Record<string, unknown>) => node['@type'] === 'ScholarlyArticle');
+    assert.equal(article.identifier.propertyID, 'DOI');
+    assert.equal(article.identifier.value, '10.1234/paper');
+    assert.ok(article.abstract);
+    assert.match(head, /rel="canonical"/);
+  }
+});
+
 test('already-public historical records without an editorial status remain readable in every locale', async () => {
   for (const status of [undefined, null]) {
     const historical = structuredClone(record);

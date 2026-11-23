@@ -132,15 +132,17 @@ const itemList = {
     })),
   },
 };
+const pageSeoTitle = pick('Infectious Disease Research & Evidence | Research Radar | GIDS', '传染病研究文献与证据摘要 | 研究雷达 | GIDS', 'Recherche infectieuse et preuves | Radar de recherche | GIDS');
+const pageDescription = pick('Discover infectious disease research with evidence summaries, weekly briefs and official surveillance links. Explore curated papers and why they matter now.', '追踪传染病研究文献，浏览疾病证据专题与每周研究简报，比较研究设计、主要发现和局限，并关联官方疫情监测数据，理解研究的公共卫生意义。', 'Découvrez la recherche infectieuse : synthèses de preuves, briefs hebdomadaires et liens de surveillance officielle, par maladie et thème de santé publique.');
 ---
 
 <ReportLayout
   title={pick('Research Radar', '研究雷达', 'Radar de recherche')}
-  description={pick('Track newly published infectious disease research across journals, diseases, areas, and public-health topics.', '按期刊、疾病、区域和公共卫生主题追踪最新发表的传染病研究。', 'Suivez les nouvelles recherches sur les maladies infectieuses par revue, maladie, zone et thème de santé publique.')}
+  description={pageDescription}
   initialLanguage={locale}
   seo={{
-    title: pick('Research Radar | GIDS', '研究雷达 | GIDS', 'Radar de recherche | GIDS'),
-    description: pick('Track newly published infectious disease research across journals, diseases, areas, and public-health topics.', '按期刊、疾病、区域和公共卫生主题追踪最新发表的传染病研究。', 'Suivez les nouvelles recherches sur les maladies infectieuses par revue, maladie, zone et thème de santé publique.'),
+    title: pageSeoTitle,
+    description: pageDescription,
     locale,
     canonicalPath: `${prefix}/research/`,
     alternatePaths: buildAlternatePaths(`${prefix}/research/`, locale),
