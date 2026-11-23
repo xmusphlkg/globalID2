@@ -96,6 +96,7 @@ test('evidence graph ships a compact payload and renders only visible nodes', ()
   assert.match(graph, /data-graph-src="\/site-data\/research-graph\.json"/);
   assert.match(graph, /await fetch\(root\.dataset\.graphSrc/);
   assert.match(graphEndpoint, /const edges: any\[\] = \(graph\.edges \?\? \[\]\)\.map/);
+  assert.match(graphEndpoint, /edge\.confidence == null && edge\.provenance/);
   assert.match(graph, /nodeList\.replaceChildren\(fragment\)/);
   assert.match(graph, /matching\.slice\(0, visibleLimit\)/);
   assert.doesNotMatch(graph, /\{nodes\.map\(node => \(/);

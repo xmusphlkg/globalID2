@@ -27,7 +27,11 @@ const edges: any[] = (graph.edges ?? []).map((edge: any) => ({
   relation: edge.relation,
   target: edge.target,
   ...(edge.confidence == null ? {} : { confidence: edge.confidence }),
-  ...(edge.provenance ? { provenance: edge.provenance } : {}),
+  // Keep provenance for mapping-only edges, where the UI displays it instead
+  // of a confidence score. Confidence-bearing edges already carry their
+  // numeric evidence and omitting duplicate provenance keeps this public JSON
+  // below Cloudflare Pages' single-file upload limit as the graph grows.
+  ...(edge.confidence == null && edge.provenance ? { provenance: edge.provenance } : {}),
 }));
 
 return new Response(JSON.stringify({ nodes, edges }), {
