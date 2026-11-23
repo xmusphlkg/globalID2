@@ -1,0 +1,17 @@
+---
+import { researchDiseaseOverview } from '../../lib/research-seo';
+interface Props { name: string; articles: any[]; locale: 'en' | 'zh' | 'fr' }
+const { name, articles, locale } = Astro.props;
+const heading = locale === 'zh' ? '该疾病研究的当前重点与证据缺口' : locale === 'fr' ? 'Priorités actuelles et lacunes des preuves' : 'Current research focus and evidence gaps';
+const text = researchDiseaseOverview({ name, articles, locale });
+---
+<section class="card disease-overview" aria-labelledby="disease-overview-title">
+  <p class="academic-kicker">{locale === 'zh' ? '专题综述' : locale === 'fr' ? 'Synthèse du catalogue' : 'Catalogue synthesis'}</p>
+  <h2 id="disease-overview-title">{heading}</h2>
+  <p>{text}</p>
+</section>
+<style>
+  .disease-overview { margin-top: 1.5rem; padding: clamp(1.25rem, 3vw, 2rem); }
+  .disease-overview h2 { margin-top: .35rem; color: rgb(var(--text-strong)); font: 600 1.35rem/1.2 'IBM Plex Sans', sans-serif; }
+  .disease-overview p:last-child { max-width: 72rem; margin-top: .8rem; color: rgb(var(--text-muted)); font-size: .88rem; line-height: 1.85; }
+</style>

@@ -2,6 +2,7 @@
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import DiseaseLiteratureExplorer from '../../../components/research/DiseaseLiteratureExplorer';
 import ResearchEvidenceContext from '../../../components/research/ResearchEvidenceContext.astro';
+import ResearchDiseaseOverview from '../../../components/research/ResearchDiseaseOverview.astro';
 import { buildResearchItemList } from '../../../lib/research-seo';
 import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { buildAlternatePaths, clampSeoTitleWithSuffix, isIndexableResearchCollection } from '../../../lib/seo';
@@ -34,7 +35,7 @@ const strategy = diseaseLiteratureSearchStrategy(facet);
 const rss = researchFeedCatalogue().definitions.find(row => row.scope === 'diseases' && row.value === facet.slug);
 const summaryCount = articles.filter(row => row.detail_available !== false).length;
 ---
-<ReportLayout title={seoTitle} description={description} initialLanguage={locale} seo={{ title: seoTitle, description, locale, canonicalPath, alternatePaths: buildAlternatePaths(canonicalPath, locale), pageType: 'CollectionPage', noindex: !isIndexableResearchCollection(articles.length) }} structuredData={{ '@type': 'CollectionPage', name: title, description, mainEntity: buildResearchItemList(articles, Astro.site ?? Astro.url.origin, locale, 24) }} breadcrumbs={[{ label: 'Research Radar', labelZh: '研究雷达', labelFr: 'Radar de recherche', href: `${prefix}/research/` }, { label: `${facet.name_en} literature`, labelZh: `${facet.name_zh || facet.name_en}文献`, labelFr: `Publications sur ${localizedDiseaseName(facet, 'fr')}` }]}>
+<ReportLayout title={seoTitle} description={description} initialLanguage={locale} seo={{ title: seoTitle, description, locale, canonicalPath, alternatePaths: buildAlternatePaths(canonicalPath, locale), pageType: 'CollectionPage', noindex: !isIndexableResearchCollection(articles.length) }} structuredData={{ '@type': 'CollectionPage', name: title, description, about: { '@type': 'MedicalCondition', name }, mainEntity: buildResearchItemList(articles, Astro.site ?? Astro.url.origin, locale, 24) }} breadcrumbs={[{ label: 'Research Radar', labelZh: '研究雷达', labelFr: 'Radar de recherche', href: `${prefix}/research/` }, { label: `${facet.name_en} literature`, labelZh: `${facet.name_zh || facet.name_en}文献`, labelFr: `Publications sur ${localizedDiseaseName(facet, 'fr')}` }]}>
   <div class="disease-literature-page">
     <header class="academic-hero literature-hero">
       <p class="academic-kicker">{pick('Disease literature', '疾病文献专题', 'Publications par maladie')}</p>
@@ -44,6 +45,7 @@ const summaryCount = articles.filter(row => row.detail_available !== false).leng
       <dl class="literature-hero-metrics"><div><dt>{pick('Related publications', '相关文献', 'Publications associées')}</dt><dd>{articles.length.toLocaleString(locale)}</dd></div><div><dt>{pick('With GIDS evidence summaries', '附证据摘要', 'Avec synthèse GIDS')}</dt><dd>{summaryCount.toLocaleString(locale)}</dd></div><div><dt>{pick('Bibliographic records', '书目记录', 'Fiches bibliographiques')}</dt><dd>{(articles.length - summaryCount).toLocaleString(locale)}</dd></div><div><dt>{pick('Geographic areas', '关联地理区域', 'Zones géographiques')}</dt><dd>{countries.size.toLocaleString(locale)}</dd></div></dl>
       <p class="literature-catalogue-note">{pick('Disease links reflect catalogue classification. Bibliographic records link directly to their source and do not imply a GIDS evidence review.', '疾病关联依据文献目录分类。仅有书目信息的记录直接链接原始来源，不表示 GIDS 已完成证据解读。', 'Les associations proviennent de la classification du catalogue. Les fiches bibliographiques renvoient à la source sans impliquer une analyse GIDS.')}{generatedAt && <> {pick('Catalogue updated', '目录更新于', 'Catalogue mis à jour le')} {String(generatedAt).slice(0, 10)}</>}</p>
     </header>
+    <ResearchDiseaseOverview name={name} articles={articles} locale={locale} />
     <ResearchEvidenceContext articles={articles} locale={locale} currentPath={`/research/diseases/${facet.slug}/`} />
     <DiseaseLiteratureExplorer client:load diseaseId={facet.disease_id} initialArticles={articles.slice(0, 24)} total={articles.length} initialTrend={literatureTrend(articles)} facets={facets} locale={locale} />
     <section class="literature-strategy" id="literature-strategy" aria-labelledby="literature-strategy-title">
