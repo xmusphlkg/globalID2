@@ -139,6 +139,8 @@ def is_account_quota_exhausted(error: Any) -> bool:
             "insufficient_quota",
             "insufficient account balance",
             "account balance is insufficient",
+            "额度已用尽",
+            "额度已耗尽",
         )
     )
 
