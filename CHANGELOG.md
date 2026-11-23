@@ -4,6 +4,14 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.10] - 2026-11-23
+
+### Improved
+
+- Add localized disease-hub synthesis paragraphs covering catalogue trends, study designs, surveillance context and evidence gaps.
+- Include leading disease keywords in weekly Research Radar titles so each brief exposes its most relevant indexed subjects.
+- Keep the existing multilingual meta descriptions and CollectionPage, Report and ScholarlyArticle structured data explicit in the rendered research templates.
+
 ## [0.20.9] - 2026-11-23
 
 ### Improved

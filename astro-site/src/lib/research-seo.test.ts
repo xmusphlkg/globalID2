@@ -2,6 +2,7 @@ import { buildResearchArticleSeo } from './research-article-seo.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildResearchItemList, researchCoverage, researchPublicationWeek } from './research-seo.ts';
+import { researchDiseaseOverview } from './research-seo.ts';
 
 test('related weekly links use publication dates without changing immutable card records', () => {
   const record = { published_at: '2021-01-01' };
@@ -11,6 +12,19 @@ test('related weekly links use publication dates without changing immutable card
   assert.equal(researchPublicationWeek({ published_at: '2026-02-31' }), undefined);
   assert.equal(researchPublicationWeek({}), undefined);
   assert.equal(researchPublicationWeek({ publication_week: '2026-W47' }), '2026-W47');
+});
+
+test('disease overviews provide substantive localized catalogue context', () => {
+  const articles = [
+    { detail_available: true, published_at: '2026-01-01', study_type: 'Cohort study', countries: [{ code: 'TH' }], related_surveillance: [{ url: '/diseases/dengue/' }], topics: [{ name: 'Surveillance' }] },
+    { detail_available: false, published_at: '2025-01-01', study_type: 'Cohort study', countries: [{ code: 'VN' }], related_surveillance: [], topics: [{ name: 'Treatment' }] },
+  ];
+  for (const locale of ['en', 'zh', 'fr'] as const) {
+    const overview = researchDiseaseOverview({ name: locale === 'zh' ? '登革热' : 'Dengue', articles, locale });
+    assert.ok(overview.length >= 100);
+    assert.match(overview, /Dengue|登革热/);
+    assert.ok(!overview.includes('undefined'));
+  }
 });
 
 test('article metadata preserves identifiers and localized evidence within snippet limits', () => {

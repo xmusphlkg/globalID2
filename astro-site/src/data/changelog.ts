@@ -3,6 +3,24 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.10', date: '2026-11-23',
+    titleEn: 'Deeper disease hubs and more specific weekly titles',
+    titleZh: '更深入的疾病专题与更具体的周报标题',
+    titleFr: 'Des pôles par maladie plus riches et des titres hebdomadaires plus précis',
+    summaryEn: 'Disease hubs now explain catalogue focus and evidence gaps, while weekly titles include leading diseases.',
+    summaryZh: '疾病专题现在说明目录重点与证据缺口，每周周报标题也包含主要疾病。',
+    summaryFr: 'Les pôles par maladie expliquent les priorités et lacunes du catalogue ; les titres hebdomadaires indiquent les maladies principales.',
+    sections: [{ kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'Localized synthesis paragraphs describe publication coverage, study designs, surveillance context and remaining evidence gaps for disease literature hubs.',
+      zh: '疾病文献专题新增本地化综述，说明文献覆盖、研究设计、监测背景和剩余证据缺口。',
+      fr: 'Des synthèses localisées décrivent la couverture, les plans d’étude, le contexte de surveillance et les lacunes restantes.',
+    }, {
+      en: 'Weekly Research Radar titles include the leading diseases in each brief, while existing meta descriptions and structured data remain explicit in the rendered HTML.',
+      zh: 'Research Radar 周报标题现在包含每期主要疾病，渲染 HTML 继续明确输出 Meta Description 和结构化数据。',
+      fr: 'Les titres des briefs indiquent les maladies principales et le HTML rendu conserve les meta descriptions et les données structurées explicites.',
+    }] }],
+  },
+  {
     version: '0.20.9', date: '2026-11-23',
     titleEn: 'Find research evidence and related literature',
     titleZh: '更便捷地发现研究证据与相关文献',

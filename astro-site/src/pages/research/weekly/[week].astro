@@ -9,6 +9,7 @@ import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 import { localizedRegionName, localizedResearchTopic } from '../../../utils/i18n';
 import { absoluteSiteUrl, siteHref } from '../../../lib/papers';
+import { clampSeoTitleWithSuffix } from '../../../lib/seo';
 
 export function getStaticPaths() {
   return ((researchData as any).facets?.weeks ?? []).filter((facet: any) => shouldBuildPage(`research:weekly:${facet.week}`)).map((facet: any) => ({ params: { week: facet.week }, props: { facet, week: facet.week, locale: 'en' } }));
@@ -34,15 +35,31 @@ const leadingTopics = (payload.top_topics ?? []).slice(0, 3);
 const topicsEn = leadingTopics.join(', ');
 const topicsZh = leadingTopics.map((topic: string) => localizedResearchTopic('zh', topic)).join('、');
 const topicsFr = leadingTopics.map((topic: string) => localizedResearchTopic('fr', topic)).join(', ');
+const diseaseCounts = new Map<string, { en: string; zh: string; fr: string; count: number }>();
+for (const article of briefArticles) for (const disease of article.diseases ?? []) {
+  const key = String(disease.disease_id ?? disease.name_en ?? '').toLowerCase();
+  if (!key) continue;
+  const previous = diseaseCounts.get(key);
+  diseaseCounts.set(key, { en: disease.name_en ?? key, zh: disease.name_zh ?? disease.name_en ?? key, fr: disease.name_fr ?? disease.name_en ?? key, count: (previous?.count ?? 0) + 1 });
+}
+const leadingDiseases = [...diseaseCounts.values()].sort((a, b) => b.count - a.count || a.en.localeCompare(b.en)).slice(0, 2);
+const diseasesEn = leadingDiseases.map(disease => disease.en).join(', ');
+const diseasesZh = leadingDiseases.map(disease => disease.zh).join('、');
+const diseasesFr = leadingDiseases.map(disease => disease.fr).join(', ');
 const description = `Weekly infectious disease research brief ${facet.week}: ${briefArticles.length} papers${topicsEn ? ` on ${topicsEn}` : ''}, with evidence summaries and surveillance context.`;
 const descriptionZh = `传染病研究周报 ${facet.week}：汇集 ${briefArticles.length} 篇研究文献${topicsZh ? `，涵盖${topicsZh}` : ''}，提供有引用的证据摘要、研究局限及相关疫情监测背景。`;
 const descriptionFr = `Brief de recherche infectieuse ${facet.week} : ${briefArticles.length} publications${topicsFr ? ` sur ${topicsFr}` : ''}, synthèses et contexte de surveillance.`;
 const introductionEn = `This weekly infectious disease research brief brings together ${briefArticles.length} publications dated ${payload.start_date ?? facet.start_date} through ${payload.end_date ?? facet.end_date}.${topicsEn ? ` Leading catalogue topics include ${topicsEn}.` : ''} Follow the cited findings to individual evidence summaries and compare the available surveillance context and evidence gaps below.`;
 const introductionZh = `本期传染病研究周报汇集 ${payload.start_date ?? facet.start_date} 至 ${payload.end_date ?? facet.end_date} 发表的 ${briefArticles.length} 篇文献。${topicsZh ? `主要收录主题包括${topicsZh}。` : ''}可从有引用的发现进入单篇证据摘要，并结合下方已提供的监测背景及证据缺口阅读。`;
 const introductionFr = `Ce brief hebdomadaire réunit ${briefArticles.length} publications datées du ${payload.start_date ?? facet.start_date} au ${payload.end_date ?? facet.end_date}.${topicsFr ? ` Les principaux thèmes du catalogue comprennent ${topicsFr}.` : ''} Consultez les résultats cités, les synthèses individuelles et le contexte de surveillance disponible ci-dessous.`;
-const briefTitle = `Infectious Disease Research Brief ${facet.week}`;
-const briefTitleZh = `传染病研究周报 ${facet.week}`;
-const briefTitleFr = `Brief de recherche infectieuse ${facet.week}`;
+const briefTitle = `Infectious Disease Research Week ${facet.week}: ${diseasesEn || topicsEn || 'Key papers'}`;
+const briefTitleZh = `传染病研究周报 ${facet.week}${diseasesZh ? `：${diseasesZh}` : topicsZh ? `：${topicsZh}` : ''}`;
+const briefTitleFr = `Semaine de recherche infectieuse ${facet.week}${diseasesFr ? ` : ${diseasesFr}` : topicsFr ? ` : ${topicsFr}` : ''}`;
+const seoBriefTitle = locale === 'zh'
+  ? clampSeoTitleWithSuffix(briefTitleZh, '| 研究雷达 | GIDS')
+  : locale === 'fr'
+    ? clampSeoTitleWithSuffix(briefTitleFr, '| Radar de recherche | GIDS')
+    : clampSeoTitleWithSuffix(briefTitle, '| Research Radar | GIDS');
 const sortedWeeks = [...((researchData as any).facets?.weeks ?? [])].sort((a: any, b: any) => a.week.localeCompare(b.week));
 const weekIndex = sortedWeeks.findIndex((row: any) => row.week === facet.week);
 const previousWeek = weekIndex > 0 ? sortedWeeks[weekIndex - 1] : null;
@@ -99,6 +116,7 @@ const frenchGeography = (item: any) => localizedRegionName('fr', item.code, { en
   title={briefTitle}
   titleZh={briefTitleZh}
   titleFr={briefTitleFr}
+  seoTitle={seoBriefTitle}
   description={description}
   descriptionZh={descriptionZh}
   descriptionFr={descriptionFr}

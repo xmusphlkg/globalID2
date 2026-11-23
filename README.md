@@ -14,13 +14,12 @@ operations dashboard, and an Astro public site.
 - [Control center](docs/control-center/README.md): operators, API, deployment and troubleshooting.
 - [Changelog](CHANGELOG.md): version history.
 
-## Version 0.20.9
+## Version 0.20.10
 
-This patch improves Research Radar discovery with multilingual search metadata,
-disease and topic evidence overviews, related collection links, and weekly brief
-navigation. Article metadata is shared by Astro and the production Papers
-renderer; structured data describes evidence summaries, DOI identifiers and
-weekly reports. Bibliographic-only records link to their original sources.
+This patch adds localized disease-hub synthesis paragraphs and subject keywords
+to weekly brief titles. Research pages retain multilingual search metadata,
+catalogue overviews, related collection links and explicit structured data for
+evidence summaries, DOI identifiers and weekly reports.
 See [the changelog](CHANGELOG.md) for the release scope.
 
 ## Previous publication work
