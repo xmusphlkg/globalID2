@@ -304,6 +304,7 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
             monkeypatch.setenv('GIDS_RESEARCH_PUBLICATION_ENABLED', '0' if research_mode == 'detached' else '1')
             def prepare_workspace(*_args, **kwargs):
                 assert kwargs['independent_research'] is (research_mode == 'detached')
+                assert kwargs['full_render'] is True
                 assert workbook[-1]['metadata']['event'] == 'template_workspace_preparing'
                 assert progress[-1] == 2
                 return runtime.astro_dir

@@ -8,7 +8,8 @@ import { writeBuildRedirects } from './build-redirects.mjs';
 import { astroAssetCacheRoot, incrementalBuildEnabled, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, summarizeBuildPlan, writePending } from './research-build-cache.mjs';
 import { pageSourceSnapshot, planSitePages, pagePlanPath, sitePageCacheRoot, writePagePending } from './page-build-cache.mjs';
 import { preparePublicBuildInputs } from './public-build-inputs.mjs';
-import { promoteBuildOutput, validateStylesheets } from './build-output.mjs';
+import { discardImportedRenderCache, privateFullRender } from './private-render-cache.mjs';
+import { cleanAbandonedBuilds, promoteBuildOutput, validateStylesheets } from './build-output.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
 const settingsPath = resolve(projectRoot, 'data', 'system-settings.json');
@@ -35,6 +36,8 @@ if (process.env.GIDS_RESEARCH_BUILD_LOCKED !== '1') {
   }
   process.exit(locked.status ?? 1);
 }
+
+cleanAbandonedBuilds(resolve(import.meta.dirname, '..'));
 
 function configuredMeasurementId() {
   if (process.env.PUBLIC_GA4_MEASUREMENT_ID !== undefined) {
@@ -77,6 +80,8 @@ const astroBinary = resolve(
   process.platform === 'win32' ? 'astro.cmd' : 'astro',
 );
 const planningStarted = performance.now();
+const privateFull = privateFullRender(projectRoot);
+if (privateFull) discardImportedRenderCache(projectRoot);
 const independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1';
 const snapshot = independentResearch ? { schema: 1, shared: 'independent', articles: {} } : sourceSnapshot();
 const directoryStats = {};
@@ -131,7 +136,7 @@ const runAstro = (selectedPath, selectedPagePath) => {
     stdio: 'inherit',
   }); } finally { publicInputs.cleanup(); }
   process.stdout.write(`[build-timing] Astro render ${elapsedSeconds(started)}s status=${result.status ?? 'error'} signal=${result.signal ?? 'none'}\n`);
-  if ((result.status ?? 1) !== 0) process.stderr.write(`Incomplete build retained at ${stagingPath}; dist was not replaced.\n`);
+  if ((result.status ?? 1) !== 0) process.stderr.write(`Incomplete build retained at ${stagingPath} until the next build.\n`);
   return { ...result, stagingPath };
 };
 let result = runAstro(plan.mode === 'incremental' ? planPath : null, pagePlan.mode === 'incremental' ? pagePlanPath : null);
@@ -187,11 +192,10 @@ if ((result.status ?? 1) === 0) {
   const css = validateStylesheets(result.stagingPath, { requiredPaths });
   process.stdout.write(`[stylesheets] PASS ${JSON.stringify(css)}\n`);
   const cacheStarted = performance.now();
-  const cachedAssets = replaceAstroAssetCache(
-    resolve(result.stagingPath, '_astro'),
-    assetCachePath,
-  );
-  process.stdout.write(`[asset-cache] saved ${cachedAssets} shared assets\n`);
+  if (!privateFull) {
+    const cachedAssets = replaceAstroAssetCache(resolve(result.stagingPath, '_astro'), assetCachePath);
+    process.stdout.write(`[asset-cache] saved ${cachedAssets} shared assets\n`);
+  }
   if (!independentResearch) writePending(plan);
   writePagePending(pagePlan);
   promoteBuildOutput(result.stagingPath, distPath);

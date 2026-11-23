@@ -212,6 +212,17 @@ def test_research_mode_change_rebuilds_nonfrozen_workspace_but_recovery_preserve
     assert (recovered.parent / 'data/cache/research-pages/article.html').read_text() == 'legacy cache'
 
 
+def test_full_render_does_not_import_page_or_asset_caches(tmp_path):
+    baseline(tmp_path)
+    cache = tmp_path / 'data/cache'
+    for name in ('site-pages', 'astro-assets', 'research-pages'):
+        (cache / name).mkdir(parents=True)
+        (cache / name / 'asset').write_text('previous render')
+    work = code_workspace.prepare(tmp_path, 'full-template', full_render=True)
+    assert not (work.parent / 'data/cache').exists()
+    assert (work / 'src/data/meta.json').read_text() == '{"published":1}'
+
+
 def test_nonfrozen_retry_reloads_changed_rendering_configuration(tmp_path):
     baseline(tmp_path)
     settings = tmp_path / 'data/system-settings.json'

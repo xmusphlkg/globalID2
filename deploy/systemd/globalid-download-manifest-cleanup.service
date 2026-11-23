@@ -1,0 +1,16 @@
+[Unit]
+Description=Reclaim archived download manifests from completed GlobalID publications
+After=globalid-docker.service
+
+[Service]
+Type=oneshot
+User=__RUN_AS_USER__
+Group=__RUN_AS_GROUP__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=-__PROJECT_DIR__/.env
+ExecStart=__PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/cleanup_download_manifests.py --apply
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=infinity
+UMask=0077

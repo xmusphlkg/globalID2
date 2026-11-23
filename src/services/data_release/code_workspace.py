@@ -21,7 +21,8 @@ def _workspace_inputs(root: Path, revision: str | None = None) -> str:
     return _fingerprint({'source': revision or source_fingerprint(root), 'rendering': rendering_configuration(root)})
 
 
-def prepare_committed(root: Path, task_uuid: str, *, revision: str, recovery=False, independent_research=False) -> Path:
+def prepare_committed(root: Path, task_uuid: str, *, revision: str, recovery=False, independent_research=False,
+                      full_render=False) -> Path:
     """Copy authored renderer inputs from the commit selected by the panel."""
     if not isinstance(revision, str) or not re.fullmatch(r"[a-f0-9]{40}", revision):
         raise ValueError("Main site template requires a frozen Git commit")
@@ -35,10 +36,10 @@ def prepare_committed(root: Path, task_uuid: str, *, revision: str, recovery=Fal
                 with tarfile.open(fileobj=archive) as snapshot:
                     snapshot.extractall(directory, filter="data")
         return prepare(root, task_uuid, recovery=recovery, independent_research=independent_research,
-                       source_root=Path(directory), revision=revision)
+                       source_root=Path(directory), revision=revision, full_render=full_render)
 
 
-def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_research: bool = False,
+def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_research: bool = False, full_render: bool = False,
             source_root: Path | None = None, revision: str | None = None) -> Path:
     if Path(task_uuid).name != task_uuid or task_uuid in {"", ".", ".."}:
         raise ValueError("Invalid template task identity")
@@ -115,23 +116,21 @@ def prepare(root: Path, task_uuid: str, *, recovery: bool = False, independent_r
     # Only validated renderer caches are imported, as independent bytes. The
     # renderer still checks source fingerprints, page digests and references;
     # incomplete/changed cache entries are ordinary misses, never authority.
-    published = json.loads(marker_body)
-    previous_task = str(published.get('task_uuid') or '')
-    previous_work = root / 'exports/code-workspaces' / previous_task
-    cache_source = (previous_work if previous_task not in {'', '.', '..'} and Path(previous_task).name == previous_task
-                    and (previous_work / 'workspace.json').is_file() else root) / 'data/cache'
-    # build_stage derives GIDS_RESEARCH_PUBLICATION_ENABLED from the same
-    # configuration flag. In that mode build-site/finalize skip article HTML
-    # caches entirely; importing them would copy gigabytes of unused old pages.
-    cache_names = ['site-page-manifest.json', 'site-pages', 'astro-assets']
-    if not independent_research:
-        cache_names += ['research-build-manifest.json', 'research-pages']
-    for name in cache_names:
-        source, target = cache_source / name, work / 'data/cache' / name
-        if source.is_file():
-            clone_file(source, target)
-        elif source.is_dir():
-            copy_tree(source, target)
+    if not full_render:
+        published = json.loads(marker_body)
+        previous_task = str(published.get('task_uuid') or '')
+        previous_work = root / 'exports/code-workspaces' / previous_task
+        cache_source = (previous_work if previous_task not in {'', '.', '..'} and Path(previous_task).name == previous_task
+                        and (previous_work / 'workspace.json').is_file() else root) / 'data/cache'
+        cache_names = ['site-page-manifest.json', 'site-pages', 'astro-assets']
+        if not independent_research:
+            cache_names += ['research-build-manifest.json', 'research-pages']
+        for name in cache_names:
+            source, target = cache_source / name, work / 'data/cache' / name
+            if source.is_file():
+                clone_file(source, target)
+            elif source.is_dir():
+                copy_tree(source, target)
     # Dependencies are used only for compilation; no install runs here.
     astro_modules = root / "astro-site/node_modules"
     worker_modules = root / worker / "node_modules"

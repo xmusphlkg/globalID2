@@ -3,6 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameS
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileHash, fileFingerprints, gitSourceIdentities, sourceIdentity } from './file-fingerprints.mjs';
 import { createSourceDependencyFingerprinter } from './source-dependencies.mjs';
+import { privateFullRender } from './private-render-cache.mjs';
 import researchPublishing from '../../shared/research-publishing.json' with { type: 'json' };
 
 export const siteRoot = resolve(import.meta.dirname, '..');
@@ -229,9 +230,20 @@ export function finalizeResearchSnapshot(snapshot, {
   sourcePending = pendingPath,
   pageCache = pageCacheRoot,
   label = 'research-cache',
+  persist = !privateFullRender(projectRoot),
 } = {}) {
   if (snapshot?.schema !== 1 || !snapshot.articles || typeof snapshot.articles !== 'object') {
     throw new Error('Invalid research build snapshot');
+  }
+  if (!persist) {
+    for (const article of Object.values(snapshot.articles)) {
+      for (const path of article.paths) {
+        const output = resolve(outputRoot, path);
+        if (!statSync(output, { throwIfNoEntry: false })?.isFile()) throw new Error(`Missing research output: ${path}`);
+      }
+    }
+    rmSync(sourcePending, { force: true });
+    return;
   }
   let previous;
   try { previous = JSON.parse(readFileSync(targetManifest, 'utf8')); } catch { /* first build */ }

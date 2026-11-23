@@ -61,7 +61,10 @@ def test_installer_manifest_and_dry_run_include_every_systemd_template(
     assert (output_dir / "globalid-notify-failure@.service").is_file()
     for template in TEMPLATE_DIR.glob("*.service.d/*.conf"):
         rendered = output_dir / template.relative_to(TEMPLATE_DIR)
-        assert rendered.read_text() == template.read_text()
+        assert rendered.read_text() == template.read_text().replace("__PROJECT_DIR__", str(REPO_ROOT))
+    cleanup = (output_dir / "globalid-download-manifest-cleanup.service").read_text()
+    assert f"ExecStart={REPO_ROOT}/venv/bin/python {REPO_ROOT}/scripts/cleanup_download_manifests.py --apply" in cleanup
+    assert "OnCalendar=hourly" in (output_dir / "globalid-download-manifest-cleanup.timer").read_text()
     dispatch = output_dir / "globalid-dashboard-worker.service.d/70-model-dispatch.conf"
     assert "Wants=globalid-ai-worker.service" in dispatch.read_text()
     ai = (output_dir / "globalid-ai-worker.service").read_text()

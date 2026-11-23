@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from scripts.publish_research_candidate import publish
+from scripts.publish_research_candidate import _discard_build_inputs, publish
 from src.generation.literature_publication import freeze_literature_json, select_index_artifacts
 from src.services.data_release import literature_projection
 from src.services.data_release.literature_artifacts import build_research_papers_manifest
@@ -30,6 +30,21 @@ def write(path, value):
     body = json.dumps(value, ensure_ascii=False, sort_keys=True).encode()
     path.write_bytes(body)
     return hashlib.sha256(body).hexdigest()
+
+
+@pytest.mark.parametrize('retained', ['.', 'template-baseline/inputs.json', 'projection-build-baseline.json'])
+def test_cleanup_preserves_overlapping_publication_inputs(tmp_path, retained):
+    run = tmp_path / 'run'
+    stage = tmp_path / 'stage'
+    candidate = SimpleNamespace(root=stage.resolve(), template_root=(run / 'projection-v3').resolve())
+    baseline = run / 'template-baseline/inputs.json'
+    marker = run / 'projection-build-baseline.json'
+    paper = run / 'paper-templates/paper.json'
+    for path in (baseline, marker, paper):
+        write(path, {'retained': path.name})
+    _discard_build_inputs(run, stage, candidate, keep=(run / retained,))
+    assert baseline.is_file() and marker.is_file()
+    assert paper.exists() == (retained == '.')
 
 
 def snapshot_and_collections(tmp_path, articles, *, release_id='next', collection='new'):
@@ -202,6 +217,7 @@ def test_full_snapshot_managed_publish_updates_index_and_recovers_failed_public_
     with pytest.raises(ValueError, match='public verification pending'):
         publish(**kwargs, projection_verifier=verify)
     assert not (run / 'published.json').exists()
+    assert Path(marker['candidate']).is_file()
     pointer = json.loads(store.objects[f'{RESEARCH_PREFIX}/current.json'])
     assert pointer['release_id'] == 'next'
     assert pointer['files']['index.json']['sha256'] != json.loads((old_run / 'current.json').read_bytes())['files']['index.json']['sha256']
@@ -212,6 +228,11 @@ def test_full_snapshot_managed_publish_updates_index_and_recovers_failed_public_
     assert result['projection']['deleted_slugs'] == ['paper-a', 'paper-b']
     assert result['json']['pointer_changed'] is False
     assert result['stage_timing']['public_verification_seconds'] >= 0
+    assert not (run / 'template-baseline').exists()
+    assert not (run / 'projection-build-baseline.json').exists()
+    assert (run / 'projection-v3/candidate.json').is_file()
+    assert publish(**kwargs, projection_verifier=verify)['papers'] == result['papers']
+    assert Path(publish(**kwargs, prepare_build=True)['candidate']).is_file()
 
 
 def test_empty_snapshot_canary_checks_current_three_locale_landing_pages(tmp_path):
