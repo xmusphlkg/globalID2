@@ -1,6 +1,19 @@
 import { absoluteSiteUrl } from './papers.ts';
 import { normalizeSeoText, type SeoLocale } from './seo.ts';
 
+/** Derive hub links without adding fields to immutable literature card shards. */
+export function researchPublicationWeek(article: { publication_week?: string; published_at?: string | null }): string | undefined {
+  if (/^\d{4}-W(?:0[1-9]|[1-4]\d|5[0-3])$/.test(article.publication_week ?? '')) return article.publication_week;
+  const day = String(article.published_at ?? '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return undefined;
+  const date = new Date(`${day}T00:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== day) return undefined;
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const year = date.getUTCFullYear();
+  const week = Math.ceil(((date.getTime() - Date.UTC(year, 0, 1)) / 86400000 + 1) / 7);
+  return `${year}-W${String(week).padStart(2, '0')}`;
+}
+
 /** Describe only the records rendered on the initial page, including source-only records. */
 export function buildResearchItemList(articles: any[], siteOrigin: string | URL, locale: SeoLocale, limit: number) {
   const prefix = locale === 'en' ? '' : `/${locale}`;

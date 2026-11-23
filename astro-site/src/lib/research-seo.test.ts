@@ -1,7 +1,17 @@
 import { buildResearchArticleSeo } from './research-article-seo.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildResearchItemList, researchCoverage } from './research-seo.ts';
+import { buildResearchItemList, researchCoverage, researchPublicationWeek } from './research-seo.ts';
+
+test('related weekly links use publication dates without changing immutable card records', () => {
+  const record = { published_at: '2021-01-01' };
+  assert.equal(researchPublicationWeek(record), '2020-W53');
+  assert.deepEqual(record, { published_at: '2021-01-01' });
+  assert.equal(researchPublicationWeek({ published_at: '2026-11-23' }), '2026-W48');
+  assert.equal(researchPublicationWeek({ published_at: '2026-02-31' }), undefined);
+  assert.equal(researchPublicationWeek({}), undefined);
+  assert.equal(researchPublicationWeek({ publication_week: '2026-W47' }), '2026-W47');
+});
 
 test('article metadata preserves identifiers and localized evidence within snippet limits', () => {
   for (const locale of ['en', 'zh', 'fr'] as const) {

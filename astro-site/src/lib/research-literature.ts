@@ -21,8 +21,8 @@ export function literatureYearRangeError(filters: Pick<LiteratureFilters, 'from'
 
 /** A list projection deliberately excludes full summaries and knowledge graphs. */
 export function literatureArticle(article: any) {
-  const { article_id, slug, title, title_zh, title_fr, doi, pmid, journal, study_type, published_at, publication_week, open_access_status, open_access_url, detail_available, discovery_score, peer_review_status } = article;
-  return { article_id, slug, title, title_zh, title_fr, doi, pmid, journal, study_type, published_at, publication_week, open_access_status, open_access_url, detail_available, discovery_score, peer_review_status,
+  const { article_id, slug, title, title_zh, title_fr, doi, pmid, journal, study_type, published_at, open_access_status, open_access_url, detail_available, discovery_score, peer_review_status } = article;
+  return { article_id, slug, title, title_zh, title_fr, doi, pmid, journal, study_type, published_at, open_access_status, open_access_url, detail_available, discovery_score, peer_review_status,
     authors: article.authors ?? [], diseases: article.diseases ?? [], countries: article.countries ?? [], topics: article.topics ?? [],
   };
 }
