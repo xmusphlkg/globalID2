@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 
 from src.core import get_config, get_database, get_logger
 from src.core.source_scopes import canonicalize_task_source
+from src.core.source_credentials import source_credential_blocker
 from src.core.task_manager import task_manager
 from src.domain import AutomationJob, Country, Task, TaskStatus, TaskType, TaskWorkbook
 from src.services.crawl_task_service import crawl_task_service
@@ -108,6 +109,8 @@ def _ingestion_job_health(
 
     if not job.enabled:
         status, reason = "disabled", "job is disabled"
+    elif blocker := source_credential_blocker(job.country_code, job.source):
+        status, reason = "needs_review", blocker
     elif latest_task is None:
         status, reason = "never_run", "no scheduler-created task has been observed"
     else:
@@ -464,8 +467,10 @@ class AutomationService:
                 self._sync_state_schedule(job, state, reset=False)
                 now = datetime.now(ZoneInfo(job.timezone or self._config().timezone))
                 if job.enabled and state.next_run_at and now >= state.next_run_at:
-                    due_jobs.append(job.job_id)
-        for job_id in due_jobs:
+                    due_jobs.append((state.next_run_at, job.job_id))
+        # Country-level enqueue serialization must not give the alphabetically
+        # first source every slot. Honor the oldest unfulfilled schedule first.
+        for _due_at, job_id in sorted(due_jobs):
             await self.trigger_job(job_id, manual=False)
 
     def _automatic_retry_delays(self) -> tuple[int, int]:
@@ -786,6 +791,14 @@ class AutomationService:
             state.last_status = "running"
 
             try:
+                blocker = source_credential_blocker(job.country_code, job.source)
+                if blocker:
+                    state.last_finished_at = datetime.now(ZoneInfo(tz_name))
+                    state.last_status = "skipped"
+                    state.last_error = blocker
+                    state.skipped_count += 1
+                    state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
+                    return {"job_id": job.job_id, "status": "skipped", "reason": blocker}
                 result = await crawl_task_service.enqueue_crawl_task(
                     country_code=job.country_code,
                     source=job.source,
@@ -805,8 +818,8 @@ class AutomationService:
                     },
                 )
                 state.last_finished_at = datetime.now(ZoneInfo(tz_name))
-                state.last_task_uuid = result.task.task_uuid
                 if result.created:
+                    state.last_task_uuid = result.task.task_uuid
                     state.run_count += 1
                     state.last_status = "queued"
                     state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
@@ -819,7 +832,18 @@ class AutomationService:
                 state.skipped_count += 1
                 state.last_status = "skipped"
                 state.last_error = result.skipped_reason or "Task already running"
-                state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
+                active_input = result.task.input_data or {}
+                active_source = canonicalize_task_source(
+                    str(active_input.get("source") or "all"), country_code=job.country_code,
+                )
+                other_source_running = result.skipped_reason == "already_running" and active_source != job.source
+                if not other_source_running:
+                    state.last_task_uuid = result.task.task_uuid
+                # A different source does not satisfy this job's scheduled run.
+                # Leave it overdue so the next idle country slot goes to it;
+                # same-source deduplication keeps the normal cadence.
+                state.next_run_at = (expected_next_run_at if other_source_running and not manual
+                                    else self._compute_next_run(job, now=state.last_finished_at))
                 return {
                     "job_id": job.job_id,
                     "status": "skipped",

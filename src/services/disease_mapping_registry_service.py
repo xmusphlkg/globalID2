@@ -54,6 +54,27 @@ _coverage_cache: tuple[float, dict[str, Any]] | None = None
 _coverage_lock = asyncio.Lock()
 
 
+def mapping_ai_scope_allowed(source_id: str, source_code: str) -> bool:
+    """Return whether a source category needs an independent AI mapping.
+
+    Some feeds preserve source dimensions in the category identity. Mexico's
+    annual DGE feed emits age/sex/rate cells alongside the all-age, all-sex
+    case total. Those cells inherit the disease meaning from the source
+    category and must not each consume a model call.
+    """
+
+    source = str(source_id).upper()
+    code = str(source_code).casefold()
+    if source == "SRC_MX_DGE_ANNUAL":
+        return code.endswith("__all__all__cases")
+    if source == "SRC_PE_CDC":
+        # The reviewed Peru contract maps only unclassified weekly national
+        # case totals. Cumulative, death, confirmed and probable variants
+        # retain source-native meaning and must not open separate AI reviews.
+        return code.endswith("__weekly_cases")
+    return True
+
+
 async def _enable_parallel_aggregate(db: AsyncSession) -> None:
     """Let one large surveillance aggregate use the server's parallel workers.
 
@@ -343,7 +364,11 @@ class DiseaseMappingRegistryService:
                     first_seen_at=now,
                     last_seen_at=now,
                     occurrence_count=int(item["count"]),
-                    ai_status="pending",
+                    ai_status=(
+                        "pending"
+                        if mapping_ai_scope_allowed(resolved_source, source_code)
+                        else "not_required"
+                    ),
                     metadata_={"discovered_by": "fact_ingestion_v3"},
                 )
                 db.add(existing)
@@ -1899,6 +1924,7 @@ disease_mapping_registry_service = DiseaseMappingRegistryService()
 __all__ = [
     "DiseaseMappingRegistryService",
     "disease_mapping_registry_service",
+    "mapping_ai_scope_allowed",
     "normalize_source_text",
     "PROMPT_VERSION",
 ]

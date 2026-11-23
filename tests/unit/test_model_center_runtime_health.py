@@ -23,8 +23,11 @@ from src.ai.catalogue.health import (
     ("Insufficient user quota, remaining quota: -0.000516", None, 900),
     ("{'error': {'code': 'insufficient_user_quota'}}", 10, 900),
     ("insufficient_quota", 1800, 1800),
+    ('upstream rate limit reached; retry in 22s - {"code":14018,"msg":"额度已用尽，请购买加量包"}', 22, 900),
+    ('upstream rate limit reached; retry in 9s - {"code":14012,"msg":"个人额度已耗尽，将于周期结束后自动重置"}', 9, 900),
     ("Too many requests", None, 10),
     ("Per-minute quota exceeded", 60, 60),
+    ("每分钟请求额度超限，请稍后重试", 10, 10),
 ])
 async def test_account_credit_exhaustion_parks_only_affected_model(
     monkeypatch, message, retry_after, expected

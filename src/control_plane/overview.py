@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.task_progress import displayed_progress
 from src.control_plane.runtime import REQUIRED_RUNTIME_SERVICES, runtime_registry
+from src.control_plane.task_recovery import recovered_crawl_task_ids
 from src.control_plane.system_resources import proxy_location, system_resources
 from src.domain import AutomationJob, DataReleaseJob, Task, TaskStatus, TaskType
 
@@ -129,7 +130,10 @@ class ControlPlaneOverviewService:
         ).scalars().all()
 
         grouped: dict[tuple[str, str], dict[str, Any]] = {}
+        recovered = await recovered_crawl_task_ids(self.db, tasks)
         for task in tasks:
+            if task.id in recovered:
+                continue
             signature = _failure_signature(task)
             if signature in grouped:
                 grouped[signature]["count"] += 1

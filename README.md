@@ -156,6 +156,8 @@ it does not repeat the automatic dashboard checks.
 ## Source and data repositories
 
 `development` is the integration branch; `master` is the stable release branch.
+Commit routine changes directly to `development` and open release pull requests
+from `development` to `master`.
 Download datasets and raw archives use separate repositories with their own
 `main` branches. Generated data must not be committed to this application
 repository. See [data versioning](docs/operations/DATA_VERSIONING.md) and

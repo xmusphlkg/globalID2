@@ -114,6 +114,63 @@ async def test_panel_cadence_change_is_observed_without_scheduler_restart(instan
     env.enqueue.assert_awaited_once()
 
 
+async def test_country_sources_take_turns_after_blocked_schedule(instances, monkeypatch):
+    env = instances
+    jobs = [replace(env.job, job_id=name, country_code="TH", source=source, interval_minutes=30)
+            for name, source in (("a-tableau", "th_dds_tableau"),
+                                 ("b-weekly", "th_dds_weekly"),
+                                 ("c-monthly", "th_doe506_monthly"))]
+    due = env.clock.current
+    for job in jobs:
+        env.persisted[job.job_id] = {**deepcopy(env.persisted[env.job.job_id]),
+                                    "next_run_at": due, "last_task_uuid": None}
+    monkeypatch.setattr(env.scheduler, "load_jobs", AsyncMock(return_value=jobs))
+    active = None
+    created = []
+
+    async def enqueue(**kwargs):
+        nonlocal active
+        if active is not None:
+            return SimpleNamespace(created=False, task=active, skipped_reason="already_running")
+        active = SimpleNamespace(task_uuid=f"task-{kwargs['source']}",
+                                 input_data={"source": kwargs["source"]})
+        created.append(kwargs["source"])
+        return SimpleNamespace(created=True, task=active)
+
+    env.enqueue.side_effect = enqueue
+    await env.scheduler._run_tick()
+    # A blocked source retains its place, not the other source's task identity.
+    assert env.persisted["b-weekly"]["next_run_at"] == due
+    assert env.persisted["b-weekly"]["last_task_uuid"] is None
+    # The first run lasts beyond the polling cadence. Its now-due repeat must
+    # not overtake either waiting source when the country becomes available.
+    for _ in range(2):
+        env.clock.current += timedelta(minutes=31)
+        active = None
+        await env.scheduler._run_tick()
+    assert created == ["th_dds_tableau", "th_dds_weekly", "th_doe506_monthly"]
+
+
+@pytest.mark.parametrize("manual", [False, True])
+@pytest.mark.parametrize("other_source", [False, True])
+async def test_source_contention_preserves_only_automatic_unfulfilled_schedule(instances, manual, other_source):
+    env = instances
+    due = env.clock.current - timedelta(seconds=1)
+    env.persisted[env.job.job_id]["next_run_at"] = due
+    env.enqueue.return_value = SimpleNamespace(
+        created=False, skipped_reason="already_running",
+        task=SimpleNamespace(task_uuid="active-task", input_data={
+            "source": "who_flunet_weekly" if other_source else env.job.source,
+        }),
+    )
+    result = await env.scheduler.trigger_job(env.job.job_id, manual=manual)
+    assert result["status"] == "skipped"
+    saved = env.persisted[env.job.job_id]
+    assert saved["next_run_at"] == (due if other_source and not manual
+                                   else env.clock.current + timedelta(minutes=env.job.interval_minutes))
+    assert saved["last_task_uuid"] == ("previous-task" if other_source else "active-task")
+
+
 def test_new_province_jobs_first_run_staggered_without_changing_later_cadence(instances):
     env = instances
     job = AutomationJobConfig(job_id="cn-bj-monthly-weekly", name="Beijing", country_code="CN-BJ",
@@ -280,3 +337,32 @@ async def test_explicit_manual_run_does_not_resume_a_paused_job(instances):
     assert result["status"] == "queued"
     assert env.enqueue.call_args.kwargs["metadata"]["manual_trigger"] is True
     assert env.persisted[env.job.job_id]["next_run_at"] is None
+
+
+@pytest.mark.parametrize("source", ["kdca_death_annual", "kdca_region_annual"])
+@pytest.mark.parametrize("manual", [False, True])
+async def test_missing_credentials_skip_dispatch_and_resume_when_supplied(instances, monkeypatch, source, manual):
+    env = instances
+    env.job.country_code = "KR"
+    env.job.source = source
+    env.job.interval_minutes = 30
+    monkeypatch.delenv("DATA_GO_KR_SERVICE_KEY", raising=False)
+    monkeypatch.delenv("KDCA_EID_SERVICE_KEY", raising=False)
+    env.persisted[env.job.job_id]["next_run_at"] = env.clock.current
+
+    result = await env.scheduler.trigger_job(env.job.job_id, manual=manual)
+    assert result["status"] == "skipped"
+    assert "DATA_GO_KR_SERVICE_KEY" in result["reason"]
+    env.enqueue.assert_not_awaited()
+    state = env.scheduler._states[env.job.job_id]
+    assert (state.run_count, state.skipped_count) == (7, 3)
+    assert env.persisted[env.job.job_id]["last_task_uuid"] == "previous-task"
+    assert env.persisted[env.job.job_id]["last_status"] == "skipped"
+    assert env.persisted[env.job.job_id]["next_run_at"] == env.clock.current + timedelta(minutes=30)
+
+    monkeypatch.setenv("KDCA_EID_SERVICE_KEY", "test-key")
+    env.clock.current += timedelta(minutes=30)
+    result = await env.scheduler.trigger_job(env.job.job_id, manual=manual)
+    assert result["status"] == "queued"
+    env.enqueue.assert_awaited_once()
+    assert (state.run_count, state.skipped_count) == (8, 3)

@@ -8,6 +8,14 @@ const encoder = new TextEncoder();
 const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
+// Cache API writes are scheduled in the background. Keep a small per-isolate
+// promise fan-in so a burst does not read, hash, parse, and assemble the same
+// immutable dependency or HTML response repeatedly before the first cache put
+// completes. Keys include the cache URL, which keeps host-specific caches
+// isolated while still sharing work for concurrent requests at one edge.
+const pendingImmutableJson = new Map<string, Promise<unknown>>();
+const pendingProjectionHtml = new Map<string, Promise<string>>();
+
 async function digest(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))]
     .map(value => value.toString(16).padStart(2, '0')).join('');
@@ -47,26 +55,35 @@ async function immutableJson(request: Request, env: Env, group: 'templates' | 'r
   try { cached = await cache?.match(cacheKey); }
   catch (cause) { console.error(JSON.stringify({ event: 'paper_template_cache_read_failed',
     error_type: cause instanceof Error ? cause.name : 'Error' })); }
-  let bytes: Uint8Array<ArrayBuffer>;
-  if (cached?.body) bytes = await boundedBytes(cached.body, limit);
-  else {
-    const object = await env.DATA.get(key);
-    if (!object || object.size > limit) throw new Error('Missing or oversized paper template object');
-    const encoding = object.httpMetadata?.contentEncoding;
-    if (encoding && encoding !== 'gzip') throw new Error('Unsupported paper template encoding');
-    const stream = encoding === 'gzip' ? object.body.pipeThrough(new DecompressionStream('gzip')) : object.body;
-    bytes = await boundedBytes(stream, limit);
+  if (cached?.body) {
+    const bytes = await boundedBytes(cached.body, limit);
+    if (await digest(bytes) !== sha256) throw new Error('Paper template object integrity failure');
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(bytes));
   }
-  if (await digest(bytes) !== sha256) throw new Error('Paper template object integrity failure');
-  const value: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(bytes));
-  if (!cached && cache) {
-    const write = cache.put(cacheKey, new Response(bytes, { headers: {
-      'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=31536000, immutable',
-    } })).catch(cause => console.error(JSON.stringify({ event: 'paper_template_cache_write_failed',
-      error_type: cause instanceof Error ? cause.name : 'Error' })));
-    if (ctx) ctx.waitUntil(write); else await write;
+  const pendingKey = cacheKey.url;
+  let pending = pendingImmutableJson.get(pendingKey);
+  if (!pending) {
+    pending = (async () => {
+      const object = await env.DATA.get(key);
+      if (!object || object.size > limit) throw new Error('Missing or oversized paper template object');
+      const encoding = object.httpMetadata?.contentEncoding;
+      if (encoding && encoding !== 'gzip') throw new Error('Unsupported paper template encoding');
+      const stream = encoding === 'gzip' ? object.body.pipeThrough(new DecompressionStream('gzip')) : object.body;
+      const bytes = await boundedBytes(stream, limit);
+      if (await digest(bytes) !== sha256) throw new Error('Paper template object integrity failure');
+      const value: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(bytes));
+      if (cache) {
+        const write = cache.put(cacheKey, new Response(bytes, { headers: {
+          'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=31536000, immutable',
+        } })).catch(cause => console.error(JSON.stringify({ event: 'paper_template_cache_write_failed',
+          error_type: cause instanceof Error ? cause.name : 'Error' })));
+        if (ctx) ctx.waitUntil(write); else await write;
+      }
+      return value;
+    })().finally(() => { pendingImmutableJson.delete(pendingKey); });
+    pendingImmutableJson.set(pendingKey, pending);
   }
-  return value;
+  return await pending;
 }
 
 export async function templateArticleResponse(request: Request, env: Env, entry: Record<string, unknown>,
@@ -102,26 +119,34 @@ async function projectedArticleResponse(request: Request, env: Env, entry: Recor
   let cached: Response | undefined;
   try { cached = await cache?.match(cacheKey); } catch { /* Eviction or cache outage is harmless. */ }
   if (!cached) {
-    const [rawTemplate, rawRecord, rawAssets] = await Promise.all([
-      immutableJson(request, env, 'templates', templateSha, 1024 * 1024, ctx, 'paper-template-v3'),
-      immutableJson(request, env, 'records', recordSha, 2 * 1024 * 1024, ctx, 'paper-template-v3'),
-      immutableJson(request, env, 'assets', assetsSha, 1024 * 1024, ctx, 'paper-template-v3'),
-    ]);
-    if (!isObject(rawTemplate) || rawTemplate.locale !== descriptor.locale || !isObject(rawRecord)
-        || rawRecord.slug !== descriptor.slug || !isObject(rawAssets) || rawAssets.schema !== 1 || !Array.isArray(rawAssets.items)
-        || rawAssets.items.some(item => !isObject(item) || typeof item.path !== 'string' || !/^_astro\/[A-Za-z0-9._/-]+$/.test(item.path)
-          || item.path.split('/').some(part => part === '..' || part === '.') || typeof item.sha256 !== 'string' || !HASH.test(item.sha256)
-          || typeof item.key !== 'string' || !new RegExp(`^releases/sha256/objects/${item.sha256}/[a-f0-9]{16}$`).test(item.key)
-          || !Number.isSafeInteger(item.bytes) || (item.bytes as number) < 0)) throw new Error('Invalid projected paper dependency closure');
-    const template = rawTemplate as ProjectionTemplate, record = rawRecord as ProjectedPaper;
-    const fragments = projectionFragments(template, record, recordSha);
-    const html = assemblePaper(template.shell, { schema: 1, slug: record.slug, ...fragments });
-    if (encoder.encode(html).byteLength > 3 * 1024 * 1024) throw new Error('Projected paper response exceeds limit');
-    cached = new Response(html, { headers });
-    if (cache) {
-      const write = cache.put(cacheKey, cached.clone()).catch(() => undefined);
-      if (ctx) ctx.waitUntil(write); else await write;
+    const pendingKey = cacheKey.url;
+    let pending = pendingProjectionHtml.get(pendingKey);
+    if (!pending) {
+      pending = (async () => {
+        const [rawTemplate, rawRecord, rawAssets] = await Promise.all([
+          immutableJson(request, env, 'templates', templateSha, 1024 * 1024, ctx, 'paper-template-v3'),
+          immutableJson(request, env, 'records', recordSha, 2 * 1024 * 1024, ctx, 'paper-template-v3'),
+          immutableJson(request, env, 'assets', assetsSha, 1024 * 1024, ctx, 'paper-template-v3'),
+        ]);
+        if (!isObject(rawTemplate) || rawTemplate.locale !== descriptor.locale || !isObject(rawRecord)
+            || rawRecord.slug !== descriptor.slug || !isObject(rawAssets) || rawAssets.schema !== 1 || !Array.isArray(rawAssets.items)
+            || rawAssets.items.some(item => !isObject(item) || typeof item.path !== 'string' || !/^_astro\/[A-Za-z0-9._/-]+$/.test(item.path)
+              || item.path.split('/').some(part => part === '..' || part === '.') || typeof item.sha256 !== 'string' || !HASH.test(item.sha256)
+              || typeof item.key !== 'string' || !new RegExp(`^releases/sha256/objects/${item.sha256}/[a-f0-9]{16}$`).test(item.key)
+              || !Number.isSafeInteger(item.bytes) || (item.bytes as number) < 0)) throw new Error('Invalid projected paper dependency closure');
+        const template = rawTemplate as ProjectionTemplate, record = rawRecord as ProjectedPaper;
+        const fragments = projectionFragments(template, record, recordSha);
+        const html = assemblePaper(template.shell, { schema: 1, slug: record.slug, ...fragments });
+        if (encoder.encode(html).byteLength > 3 * 1024 * 1024) throw new Error('Projected paper response exceeds limit');
+        if (cache) {
+          const write = cache.put(cacheKey, new Response(html, { headers })).catch(() => undefined);
+          if (ctx) ctx.waitUntil(write); else await write;
+        }
+        return html;
+      })().finally(() => { pendingProjectionHtml.delete(pendingKey); });
+      pendingProjectionHtml.set(pendingKey, pending);
     }
+    cached = new Response(await pending, { headers });
   }
   if (request.headers.get('If-None-Match')?.split(',').map(value => value.trim()).includes(etag)) return new Response(null, { status: 304, headers });
   return new Response(request.method === 'HEAD' ? null : cached.body, { headers });
