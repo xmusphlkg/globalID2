@@ -280,3 +280,32 @@ async def test_explicit_manual_run_does_not_resume_a_paused_job(instances):
     assert result["status"] == "queued"
     assert env.enqueue.call_args.kwargs["metadata"]["manual_trigger"] is True
     assert env.persisted[env.job.job_id]["next_run_at"] is None
+
+
+@pytest.mark.parametrize("source", ["kdca_death_annual", "kdca_region_annual"])
+@pytest.mark.parametrize("manual", [False, True])
+async def test_missing_credentials_skip_dispatch_and_resume_when_supplied(instances, monkeypatch, source, manual):
+    env = instances
+    env.job.country_code = "KR"
+    env.job.source = source
+    env.job.interval_minutes = 30
+    monkeypatch.delenv("DATA_GO_KR_SERVICE_KEY", raising=False)
+    monkeypatch.delenv("KDCA_EID_SERVICE_KEY", raising=False)
+    env.persisted[env.job.job_id]["next_run_at"] = env.clock.current
+
+    result = await env.scheduler.trigger_job(env.job.job_id, manual=manual)
+    assert result["status"] == "skipped"
+    assert "DATA_GO_KR_SERVICE_KEY" in result["reason"]
+    env.enqueue.assert_not_awaited()
+    state = env.scheduler._states[env.job.job_id]
+    assert (state.run_count, state.skipped_count) == (7, 3)
+    assert env.persisted[env.job.job_id]["last_task_uuid"] == "previous-task"
+    assert env.persisted[env.job.job_id]["last_status"] == "skipped"
+    assert env.persisted[env.job.job_id]["next_run_at"] == env.clock.current + timedelta(minutes=30)
+
+    monkeypatch.setenv("KDCA_EID_SERVICE_KEY", "test-key")
+    env.clock.current += timedelta(minutes=30)
+    result = await env.scheduler.trigger_job(env.job.job_id, manual=manual)
+    assert result["status"] == "queued"
+    env.enqueue.assert_awaited_once()
+    assert (state.run_count, state.skipped_count) == (8, 3)

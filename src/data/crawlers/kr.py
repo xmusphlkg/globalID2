@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
-from urllib.parse import unquote
 
 import requests
 
@@ -851,10 +850,9 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
         self.kosis_file_env = str(
             crawler_cfg.get("kosis_file_env") or DEFAULT_KOSIS_FILE_ENV
         )
-        resolved_key = service_key or os.getenv(self.service_key_env) or os.getenv(
-            "KDCA_EID_SERVICE_KEY"
-        )
-        self.service_key = unquote(resolved_key.strip()) if resolved_key else ""
+        from src.core.source_credentials import kdca_service_key
+
+        self.service_key = kdca_service_key(service_key=service_key, env_name=self.service_key_env)
         self.save_raw = save_raw
         self.raw_dir = Path(raw_dir) if raw_dir else Path("data/raw/kr")
 

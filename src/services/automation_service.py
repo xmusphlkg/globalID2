@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 
 from src.core import get_config, get_database, get_logger
 from src.core.source_scopes import canonicalize_task_source
+from src.core.source_credentials import source_credential_blocker
 from src.core.task_manager import task_manager
 from src.domain import AutomationJob, Country, Task, TaskStatus, TaskType, TaskWorkbook
 from src.services.crawl_task_service import crawl_task_service
@@ -108,6 +109,8 @@ def _ingestion_job_health(
 
     if not job.enabled:
         status, reason = "disabled", "job is disabled"
+    elif blocker := source_credential_blocker(job.country_code, job.source):
+        status, reason = "needs_review", blocker
     elif latest_task is None:
         status, reason = "never_run", "no scheduler-created task has been observed"
     else:
@@ -786,6 +789,14 @@ class AutomationService:
             state.last_status = "running"
 
             try:
+                blocker = source_credential_blocker(job.country_code, job.source)
+                if blocker:
+                    state.last_finished_at = datetime.now(ZoneInfo(tz_name))
+                    state.last_status = "skipped"
+                    state.last_error = blocker
+                    state.skipped_count += 1
+                    state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
+                    return {"job_id": job.job_id, "status": "skipped", "reason": blocker}
                 result = await crawl_task_service.enqueue_crawl_task(
                     country_code=job.country_code,
                     source=job.source,
