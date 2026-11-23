@@ -55,6 +55,7 @@ from src.domain import (
 from src.services.disease_mapping_registry_service import (
     PROMPT_VERSION,
     disease_mapping_registry_service,
+    mapping_ai_scope_allowed,
     normalize_source_text,
 )
 from src.services.settings_service import system_settings_service
@@ -146,6 +147,17 @@ class DiseaseMappingAIService:
             raise ValueError(f"Unknown source disease category: {category_id}")
         if category.ai_status not in {"pending", "failed", "no_model", "processing"}:
             return {"category_id": category.id, "status": category.ai_status, "created": 0}
+        if not mapping_ai_scope_allowed(category.source_id, category.source_code):
+            category.ai_status = "not_required"
+            category.ai_last_error = None
+            category.ai_next_attempt_at = None
+            await db.commit()
+            return {
+                "category_id": category.id,
+                "status": "not_required",
+                "created": 0,
+                "reason": "Source dimensions inherit the source-category mapping",
+            }
 
         category.ai_status = "processing"
         category.ai_attempts = int(category.ai_attempts or 0) + 1

@@ -22,7 +22,11 @@ from src.services.disease_mapping_automation_service import (
     _is_provider_circuit_error,
     _route_signature,
 )
-from src.services.disease_mapping_registry_service import DiseaseMappingRegistryService, normalize_source_text
+from src.services.disease_mapping_registry_service import (
+    DiseaseMappingRegistryService,
+    mapping_ai_scope_allowed,
+    normalize_source_text,
+)
 from src.services.mapping_notification_service import (
     MappingEmailTransport,
     _next_digest_at,
@@ -44,6 +48,25 @@ def _disease(disease_id: str, name: str) -> StandardDisease:
 def test_source_normalization_is_unicode_and_whitespace_stable():
     assert normalize_source_text("  Ｔyphus\n") == "typhus"
     assert normalize_source_text("Hépatite\u00a0 A") == "hépatite a"
+
+
+def test_dimension_cells_do_not_each_trigger_mapping_ai():
+    assert mapping_ai_scope_allowed(
+        "SRC_MX_DGE_ANNUAL", "dge_abc__all__all__cases"
+    )
+    assert not mapping_ai_scope_allowed(
+        "SRC_MX_DGE_ANNUAL", "dge_abc__female__15to19__cases"
+    )
+    assert not mapping_ai_scope_allowed(
+        "SRC_MX_DGE_ANNUAL", "dge_abc__all__all__rate"
+    )
+    assert mapping_ai_scope_allowed("SRC_PE_CDC", "pe_disease__weekly_cases")
+    assert not mapping_ai_scope_allowed(
+        "SRC_PE_CDC", "pe_disease__weekly_cases__confirmed"
+    )
+    assert not mapping_ai_scope_allowed(
+        "SRC_PE_CDC", "pe_disease__cumulative_cases"
+    )
 
 
 def test_covid_exact_name_is_a_unique_deterministic_candidate():
