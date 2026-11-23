@@ -53,6 +53,18 @@ export function validateStylesheets(root, { requiredPaths = [] } = {}) {
   return { pages, styledPages, stylesheets: assets.size };
 }
 
+// Call with the site build lock held, before creating this build's candidate.
+export function cleanAbandonedBuilds(site) {
+  for (const entry of readdirSync(site, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !/^\.dist-build-\d+-\d+$/.test(entry.name)) continue;
+    const candidate = resolve(site, entry.name);
+    // An interrupted promotion can leave the previous dist beside the candidate.
+    if (existsSync(candidate + '.previous')) continue;
+    try { rmSync(candidate, { recursive: true, force: true }); }
+    catch (error) { console.warn(`Could not remove abandoned build ${candidate}: ${error.message}`); }
+  }
+}
+
 export function promoteBuildOutput(candidate, destination, {
   rename = renameSync, remove = rmSync, warn = console.warn,
 } = {}) {

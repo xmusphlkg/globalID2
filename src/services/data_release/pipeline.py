@@ -203,7 +203,7 @@ async def execute_release_task(
         await runtime.task_manager.update_task_progress(task.task_uuid, 2)
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid, entry_type="info", title="Prepare Template Workspace",
-            content="Preparing private published inputs and the renderer caches needed by this build.",
+            content="Preparing private published inputs for the template build.",
             content_type="text", metadata={"event": "template_workspace_preparing", **workspace_metadata},
         )
         plan = task.input_data.get("publication_plan") or {}
@@ -212,7 +212,7 @@ async def execute_release_task(
             from .code_workspace import prepare_committed as prepare
             prepare_options["revision"] = plan["source_revision"]
         private_astro = await asyncio.to_thread(prepare, runtime.root_dir, str(task.task_uuid),
-            recovery=recovery_workspace, independent_research=independent_research, **prepare_options)
+            recovery=recovery_workspace, independent_research=independent_research, full_render=True, **prepare_options)
         workspace_metadata["elapsed_seconds"] = round(time.monotonic() - workspace_started, 3)
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid, entry_type="info", title="Template Workspace Ready",

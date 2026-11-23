@@ -34,6 +34,8 @@ UNIT_NAMES=(
   globalid-realtime-data-monitor.timer
   globalid-public-updates.service
   globalid-public-updates.timer
+  globalid-download-manifest-cleanup.service
+  globalid-download-manifest-cleanup.timer
   globalid-notify-failure@.service
 )
 
@@ -141,8 +143,8 @@ if [[ "$UNINSTALL_SERVICES" == "1" ]]; then
 
   systemctl stop globalid-stack.target >/dev/null 2>&1 || true
   systemctl disable globalid-stack.target >/dev/null 2>&1 || true
-  systemctl disable --now globalid-population-refresh.timer globalid-br-subdivisions.timer globalid-realtime-data-monitor.timer globalid-public-updates.timer >/dev/null 2>&1 || true
-  systemctl stop globalid-population-refresh.service globalid-br-subdivisions.service globalid-realtime-data-monitor.service globalid-public-updates.service >/dev/null 2>&1 || true
+  systemctl disable --now globalid-population-refresh.timer globalid-br-subdivisions.timer globalid-realtime-data-monitor.timer globalid-public-updates.timer globalid-download-manifest-cleanup.timer >/dev/null 2>&1 || true
+  systemctl stop globalid-population-refresh.service globalid-br-subdivisions.service globalid-realtime-data-monitor.service globalid-public-updates.service globalid-download-manifest-cleanup.service >/dev/null 2>&1 || true
 
   for unit_name in "${UNIT_NAMES[@]}"; do
     rm -f "$SYSTEMD_DIR/$unit_name"
@@ -202,12 +204,12 @@ fi
 systemctl daemon-reload
 
 if [[ "$ENABLE_SERVICES" == "1" ]]; then
-  systemctl enable globalid-stack.target globalid-population-refresh.timer globalid-br-subdivisions.timer globalid-realtime-data-monitor.timer globalid-public-updates.timer
+  systemctl enable globalid-stack.target globalid-population-refresh.timer globalid-br-subdivisions.timer globalid-realtime-data-monitor.timer globalid-public-updates.timer globalid-download-manifest-cleanup.timer
 fi
 
 if [[ "$START_SERVICES" == "1" ]]; then
   systemctl restart globalid-stack.target
-  systemctl start globalid-population-refresh.timer globalid-br-subdivisions.timer globalid-realtime-data-monitor.timer globalid-public-updates.timer
+  systemctl start globalid-population-refresh.timer globalid-br-subdivisions.timer globalid-realtime-data-monitor.timer globalid-public-updates.timer globalid-download-manifest-cleanup.timer
 fi
 
 echo "Installed GlobalID systemd units into $SYSTEMD_DIR"

@@ -4,9 +4,41 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, wri
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
+import { discardImportedRenderCache, privateFullRender } from './private-render-cache.mjs';
 import { articlePaths, finalizeResearchSnapshot, incrementalBuildEnabled, mergeAstroAssetTree, planResearchBuild, replaceAstroAssetCache, reusedAssetReferencesAvailable, summarizeBuildPlan } from './research-build-cache.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
+
+test('private full builds discard imported renderer hints and validate outputs without caching them', t => {
+  const base = mkdtempSync(join(tmpdir(), 'gids-private-render-'));
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const root = join(base, 'exports', 'code-workspaces', 'task');
+  const cache = join(root, 'data', 'cache');
+  const pages = join(cache, 'site-pages');
+  mkdirSync(pages, { recursive: true });
+  writeFileSync(join(pages, 'index.html'), 'cached');
+  writeFileSync(join(cache, 'research-public-artifacts.lock'), '');
+  const full = { GIDS_FORCE_FULL_RENDER: '1' };
+  assert.equal(privateFullRender(root, full), false);
+  writeFileSync(join(root, 'workspace.json'), JSON.stringify({ schema: 1, task_uuid: 'task' }));
+  assert.equal(privateFullRender(root, {}), false);
+  assert.equal(privateFullRender(base, full), false);
+  assert.equal(privateFullRender(root, full), true);
+  discardImportedRenderCache(root);
+  assert.equal(existsSync(pages), false);
+  assert.equal(existsSync(join(cache, 'research-public-artifacts.lock')), true);
+  const sourcePending = join(cache, 'pending.json');
+  const targetManifest = join(cache, 'manifest.json');
+  writeFileSync(sourcePending, '{}');
+  const snapshot = { schema: 1, articles: { p: { paths: ['page.html'] } } };
+  const options = { outputRoot: root, sourcePending, targetManifest, pageCache: pages, persist: false };
+  assert.throws(() => finalizeResearchSnapshot(snapshot, options), /Missing research output/);
+  assert.equal(existsSync(sourcePending), true);
+  writeFileSync(join(root, 'page.html'), 'fresh');
+  finalizeResearchSnapshot(snapshot, options);
+  for (const path of [sourcePending, targetManifest, pages]) assert.equal(existsSync(path), false);
+  assert.equal(readFileSync(join(root, 'page.html'), 'utf8'), 'fresh');
+});
 
 test('explicit full rendering overrides a release identity and warm site/report HTML caches', t => {
   const root = mkdtempSync(join(tmpdir(), 'gids-force-render-'));

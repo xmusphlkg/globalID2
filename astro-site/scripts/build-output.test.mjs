@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
-import { promoteBuildOutput, validateStylesheets } from './build-output.mjs';
+import { cleanAbandonedBuilds, promoteBuildOutput, validateStylesheets } from './build-output.mjs';
 
 function fixture(run) {
   const root = mkdtempSync(join(tmpdir(), 'gids-build-output-'));
@@ -22,6 +22,21 @@ function fixture(run) {
 
 const page = (links = '') => `<html><head>${links}</head><body><header class="site-header sticky">GIDS</header></body></html>`;
 const cssLink = '<link href="/_astro/base.css" rel="stylesheet">';
+
+test('cleans only abandoned build directories and preserves interrupted promotions', () => fixture(({ candidate, dist }) => {
+  const site = resolve(dist, '..');
+  const abandoned = join(site, '.dist-build-42-1000');
+  const interrupted = join(site, '.dist-build-43-1001');
+  const link = join(site, '.dist-build-44-1002');
+  mkdirSync(abandoned);
+  mkdirSync(interrupted);
+  mkdirSync(interrupted + '.previous');
+  symlinkSync(dist, link, 'dir');
+  cleanAbandonedBuilds(site);
+  cleanAbandonedBuilds(site);
+  assert.equal(existsSync(abandoned), false);
+  for (const path of [candidate, dist, interrupted, interrupted + '.previous', link]) assert.ok(existsSync(path));
+}));
 
 test('theme-only HTML and missing routes cannot replace the previous build', () => fixture(({ candidate, dist, write }) => {
   write('index.html', page('<link rel="stylesheet" href="https://theme.example/theme.css"><style>astro-island{display:contents}</style>'));

@@ -147,6 +147,7 @@ def test_managed_candidate_freezes_and_resumes_without_a_second_upload(tmp_path,
                 projection_verifier=lambda _candidate: {'status': 'verified'})
     first = publish(**args)
     assert first['release_id'] == 'research-test'
+    assert not (run / 'paper-templates').exists()
     writes = list(store.writes)
     second = publish(**args)
     assert second['json']['pointer_changed'] is False

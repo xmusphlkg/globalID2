@@ -6,8 +6,10 @@ import argparse
 from datetime import datetime, timezone
 import fcntl
 import json
+import logging
 import os
 from pathlib import Path
+import shutil
 import sys
 import time
 
@@ -69,7 +71,6 @@ def _write_v3_marker(run: Path, candidate) -> None:
 
 
 def _project_stage(*, run: Path, stage: Path, snapshot: Path, manifest: dict, release_id: str, origin: str):
-    import shutil
     template_dir = run / 'paper-templates'
     base = prepare_papers_content_from_manifest(stage, manifest, papers_origin=origin,
         release_id=release_id, template_dir=template_dir)
@@ -86,6 +87,30 @@ def _project_stage(*, run: Path, stage: Path, snapshot: Path, manifest: dict, re
     assert_v3_candidate(candidate)
     _write_v3_marker(run, candidate)
     return candidate
+
+
+def _discard_build_inputs(run: Path, stage: Path, candidate, *, keep: tuple[Path, ...]) -> None:
+    if candidate.root != stage.resolve() or candidate.template_root != (run / 'projection-v3').resolve():
+        return
+    retained = (candidate.root, candidate.template_root, *(path.resolve() for path in keep))
+    baseline_marker = run / 'projection-build-baseline.json'
+    for name in ('template-baseline', 'paper-templates'):
+        path = run / name
+        if not path.is_dir() or path.is_symlink():
+            continue
+        targets = [path.resolve()]
+        if name == 'template-baseline':
+            targets.append(baseline_marker.resolve())
+        if any(root.is_relative_to(target) or target.is_relative_to(root)
+               for target in targets for root in retained):
+            continue
+        try:
+            if name == 'template-baseline':
+                # A later explicit prepare-build must freeze a fresh baseline.
+                baseline_marker.unlink(missing_ok=True)
+            shutil.rmtree(path)
+        except OSError:
+            logging.getLogger(__name__).warning('Could not remove published build inputs %s', path, exc_info=True)
 
 
 def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Path,
@@ -194,7 +219,6 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
                 if directory.is_symlink():
                     raise ValueError('Invalid projection directory')
                 if directory.exists():
-                    import shutil
                     shutil.rmtree(directory)
                 projected, _projection_receipt = prepare_full_snapshot_candidate(base, articles=articles,
                     static=static, directory=directory, release_id=release_id, locale_shells=shells)
@@ -223,6 +247,8 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
         root = project_root(run)
         if root is not None:
             record_committed_inputs(root, run, config)
+        if not direct_update:
+            _discard_build_inputs(run, stage, projected, keep=(snapshot, shared, receipt))
         return result
 
 
