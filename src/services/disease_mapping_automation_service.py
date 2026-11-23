@@ -8,7 +8,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-from sqlalchemy import case, exists, func, or_, select
+from sqlalchemy import case, exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.model_center import get_active_model_routes
@@ -188,8 +188,42 @@ class DiseaseMappingAutomationService:
             self._ai_circuit_until and now < self._ai_circuit_until
         )
         category_ids: list[int] = []
+        ai_not_required = 0
         if not circuit_open:
             async with get_database() as db:
+                # Older imports created dimension-level MX/PE categories before
+                # the scope guard existed. Retire every non-terminal claim,
+                # including a claim interrupted while its worker was running,
+                # so it cannot keep feeding the model queue forever.
+                retired = await db.execute(
+                    update(SourceDiseaseCategory)
+                    .where(
+                        SourceDiseaseCategory.ai_status.in_(
+                            ["pending", "failed", "no_model", "processing"]
+                        ),
+                        or_(
+                            (
+                                (SourceDiseaseCategory.source_id == "SRC_MX_DGE_ANNUAL")
+                                & ~SourceDiseaseCategory.source_code.endswith(
+                                    "__all__all__cases"
+                                )
+                            ),
+                            (
+                                (SourceDiseaseCategory.source_id == "SRC_PE_CDC")
+                                & ~SourceDiseaseCategory.source_code.endswith(
+                                    "__weekly_cases"
+                                )
+                            ),
+                        ),
+                    )
+                    .values(
+                        ai_status="not_required",
+                        ai_last_error=None,
+                        ai_next_attempt_at=None,
+                        updated_at=now,
+                    )
+                )
+                ai_not_required = int(retired.rowcount or 0)
                 exact_standard_name = exists(
                     select(StandardDisease.id).where(
                         StandardDisease.is_active.is_(True),
@@ -261,6 +295,7 @@ class DiseaseMappingAutomationService:
         cycle = {
             "at": datetime.now(timezone.utc).isoformat(),
             "ai_claimed": len(category_ids),
+            "ai_not_required": ai_not_required,
             "ai_completed": ai_completed,
             "ai_deferred": ai_deferred,
             "ai_failed": ai_failed,
