@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Type
@@ -25,6 +25,7 @@ from src.data.crawlers.no import (
     previous_closed_month,
     validate_no_national_rows,
 )
+from src.data.crawlers.no_statistikk import NorwayStatisticsCrawler
 from src.data.processors.mapping_lookup import (
     load_country_mapping_dict,
     normalize_mapping_key,
@@ -44,6 +45,8 @@ class NOUpdateFetchResult:
     source_latest_date: Optional[date]
     source_csv: Path
     script_logs: List[str]
+    source_audit: dict = field(default_factory=dict)
+    store_rows: list[dict[str, str]] | None = None
 
 
 @dataclass
@@ -111,7 +114,7 @@ class NOMonthlyUpdater:
         refresh_recent_months: int = DEFAULT_REFRESH_RECENT_MONTHS,
         full_history_start_year: int = DEFAULT_HISTORY_START_YEAR,
         include_current_month: bool = False,
-        crawler_type: Type[NorwayMSISCrawler] = NorwayMSISCrawler,
+        crawler_type: Type[NorwayMSISCrawler] = NorwayStatisticsCrawler,
         today_provider: Callable[[], date] = _norway_today,
     ) -> None:
         self.country_code = country_code.upper()
@@ -271,6 +274,8 @@ class NOMonthlyUpdater:
             if save_raw:
                 logs.append(f"[crawler] raw JSON provenance archived under {actual_raw_dir}")
         except Exception as exc:
+            # A parsed batch is unusable if its requested-month validation failed.
+            live_rows = []
             live_error = exc
             logs.append(f"[crawler] live fetch failed: {type(exc).__name__}: {exc}")
 
@@ -312,6 +317,11 @@ class NOMonthlyUpdater:
             source_latest_date=self._latest_row_date(selected_rows),
             source_csv=self.output_csv,
             script_logs=logs,
+            store_rows=selected_rows if selected_label == "live fetch" else [],
+            source_audit=(dict(getattr(crawler, "source_audit", {}) or {})
+                          if selected_label == "live fetch" else
+                          {"status": "partial", "recovery": "validated_cache",
+                           "reason": "Live source failed; only previously validated requested months were retained"}),
         )
 
     def _load_rows(self, csv_path: Path) -> List[Dict[str, str]]:

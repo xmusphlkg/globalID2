@@ -8,7 +8,7 @@ import httpx
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from src.core import database
@@ -60,10 +60,12 @@ async def test_blocking_capture_waits_for_durable_bytes_and_metadata(db):
 async def test_ontario_live_collection_archives_before_decoding_and_excludes_auth(db, monkeypatch):
     import base64
     import json
+
     import requests
+
+    from src.data.crawlers.ca import DEFAULT_REPORT_ID
     from src.services.ingestion.artifacts import ArtifactWriter
     from src.services.ingestion.countries import ca_on
-    from src.data.crawlers.ca import DEFAULT_REPORT_ID
     fixture = Path(__file__).resolve().parents[1] / "fixtures/ingestion/CA-ON"
     metadata = (fixture / "metadata.json").read_bytes()
     query = (fixture / "query.json").read_bytes()
@@ -98,6 +100,7 @@ async def test_ontario_live_collection_archives_before_decoding_and_excludes_aut
 async def test_nz_real_artifact_registration_accepts_sitemap_date(db, monkeypatch):
     from datetime import date
     from types import SimpleNamespace
+
     from src.data.crawlers.nz import NewZealandPHFCrawler
     from src.data.processors.nz import NZMonthlyUpdater
     from src.services.ingestion.artifacts import ArtifactWriter
@@ -123,13 +126,14 @@ async def test_monthly_artifact_failure_cannot_become_successful_cache_recovery(
     from datetime import date, datetime, timezone
     from importlib import import_module
     from types import SimpleNamespace
+
+    from src.data.crawlers.at import AGESIssue, AustriaAGESRadarCrawler
     from src.data.crawlers.au import AustraliaNINDSSCrawler
-    from src.data.crawlers.hk import HongKongCHPCrawler
-    from src.data.crawlers.tw import TaiwanNIDSSCrawler, TWDiseaseSource
-    from src.data.crawlers.nz import NewZealandPHFCrawler
     from src.data.crawlers.fi import FinlandTHLCrawler, parse_dimension_catalog
-    from src.data.crawlers.at import AustriaAGESRadarCrawler, AGESIssue
+    from src.data.crawlers.hk import HongKongCHPCrawler
+    from src.data.crawlers.nz import NewZealandPHFCrawler
     from src.data.crawlers.se import SwedenSmiNetCrawler
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler, TWDiseaseSource
     fixtures = Path(__file__).resolve().parents[1] / "fixtures/ingestion"
     monkeypatch.chdir(tmp_path)
     output = tmp_path / "prior.csv"
@@ -179,3 +183,49 @@ async def test_monthly_artifact_failure_cannot_become_successful_cache_recovery(
     connector = import_module("src.services.ingestion.countries." + code)
     with pytest.raises(OSError, match="artifact storage unavailable"):
         await connector.collect(Writer(), **options)
+
+
+@pytest.mark.parametrize('status', [200, 404])
+async def test_base_crawler_captures_redirect_identity_and_http_error(db, monkeypatch, status):
+    import requests
+
+    from src.data.crawlers.no import NorwayMSISCrawler
+    from src.services.ingestion.replay import offline_crawler_type
+
+    old = 'https://old.test/api?year=2026&api_key=secret'
+    final = 'https://new.test/api?year=2026&token=hidden'
+    redirect = requests.Response()
+    redirect.status_code = 301
+    redirect.request = requests.Request('GET', old).prepare()
+    response = requests.Response()
+    response.status_code = status
+    response.url = final
+    response.history = [redirect]
+    response.headers['Content-Type'] = 'application/json'
+    response._content = b'{"value": 3}'
+    response._content_consumed = True
+    monkeypatch.setattr(requests.Session, 'get', lambda *a, **kw: response)
+    crawler = NorwayMSISCrawler(delay=0)
+    try:
+        with capture_sources(str(uuid4()), 1, 'surveillance') as captured:
+            if status == 404:
+                with pytest.raises(requests.HTTPError):
+                    await asyncio.to_thread(crawler.get, old)
+            else:
+                assert (await asyncio.to_thread(crawler.get, old)).json() == {'value': 3}
+        [saved] = captured.writer.artifacts
+        assert saved.source_url == 'https://new.test/api?year=2026'
+        assert saved.metadata_['request_url'] == 'https://old.test/api?year=2026'
+        assert saved.metadata_['status_code'] == status
+        assert 'secret' not in str(saved.metadata_) and 'hidden' not in str(saved.metadata_)
+        offline = offline_crawler_type(NorwayMSISCrawler, [saved])(delay=0)
+        try:
+            if status == 404:
+                with pytest.raises(requests.HTTPError):
+                    offline.get(old)
+            else:
+                assert offline.get(old).json() == {'value': 3}
+        finally:
+            offline.session.close()
+    finally:
+        crawler.session.close()

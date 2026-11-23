@@ -424,6 +424,7 @@ class NorwayMSISCrawler(BaseCrawler):
         payload: Any,
         retrieved_at: str,
         response_sha256: str,
+        request_body: dict | None = None,
     ) -> str:
         if not self.save_raw:
             return ""
@@ -433,12 +434,13 @@ class NorwayMSISCrawler(BaseCrawler):
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
         output_path = folder / f"{endpoint_name}_{stamp}.json"
         envelope = {
-            "contract_version": OBSERVED_CONTRACT_VERSION,
+            "contract_version": getattr(self, "contract_version", OBSERVED_CONTRACT_VERSION),
             "retrieved_at": retrieved_at,
             "request": {
-                "method": "GET",
+                "method": "POST" if request_body is not None else "GET",
                 "url": request_url,
                 "params": [[key, value] for key, value in params],
+                **({"json": request_body} if request_body is not None else {}),
             },
             "response": {
                 "status_code": int(getattr(response, "status_code", 200)),

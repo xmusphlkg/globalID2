@@ -1226,14 +1226,14 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
     },
     "NO": {
         "public_release_enabled": True,
-        "data_source_url": "https://allvis.fhi.no/msis",
+        "data_source_url": "https://statistikk.fhi.no/msis",
         "data_source_type": "official_json_api",
         "crawler_config": {
             "sources": ["fhi_msis"],
             "cadence": "monthly",
             "source_update_cadence": "daily",
-            "diagnoses_url": "https://allvis.fhi.no/api/msis/kodeverk/diagnoser",
-            "monthly_url": "https://allvis.fhi.no/api/msis/etterDiagnoseFordeltPaaMaaned",
+            "menu_url": "https://statistikk-data.fhi.no/api/internal/msis/Menu/default",
+            "monthly_url_template": "https://statistikk-data.fhi.no/api/open/v1/msis/Table/{table_id}/data",
             "full_history_start_year": 1977,
             "refresh_recent_months": 3,
             "supports_current_month": True,
@@ -1243,7 +1243,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "publish_closed_months_only": False,
             "reporting_area": "national",
             "geography_key": "country:NO:national",
-            "api_contract": "unversioned_official_frontend",
+            "api_contract": "fhi-msis-statistikk-jsonstat2-v1-observed-2026-11",
         },
         "parser_config": {"primary": "no_fhi_msis_monthly"},
         "disease_mapping_rules": {
@@ -1251,7 +1251,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "fallback": "learning_suggestions",
         },
         "report_config": {"default_type": "MONTHLY", "lang": "nb-NO"},
-        "notes": "Norway FHI MSIS national monthly notifications from the official Allvis frontend API; adapter contract checks guard the unversioned endpoint.",
+        "notes": "Norway FHI MSIS national monthly case notifications from the official Statistikk JSON-stat2 tables; explicit national totals, overlapping-table checks, and unknown/suppressed cells are audited. Isolate counts and preventive treatment are excluded.",
     },
     "SE": {
         "public_release_enabled": True,

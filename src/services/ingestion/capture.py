@@ -9,6 +9,8 @@ explicit adapter executors must use copy_context().run too.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 from contextlib import contextmanager
 from contextvars import ContextVar
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -16,6 +18,27 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from .artifacts import ArtifactWriter, read_artifact, run_artifact_io
 
 _current: ContextVar[SourceCapture | None] = ContextVar("source_capture", default=None)
+
+
+def safe_source_url(url: str) -> str:
+    """Keep source identity without credentials or URL fragments."""
+    parsed = urlsplit(str(url))
+    query = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if key.lower() not in {
+            "api_key", "apikey", "key", "token", "access_token", "servicekey",
+            "service_key", "subscription-key", "password",
+        }
+    ]
+    return urlunsplit((parsed.scheme, parsed.netloc.rsplit("@", 1)[-1],
+                       parsed.path, urlencode(query), ""))
+
+
+def json_request_digest(payload) -> str:
+    """Match read-only JSON POSTs without persisting request bodies."""
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                                     ensure_ascii=False).encode("utf-8")).hexdigest()
 
 
 class SourceCapture:
@@ -27,7 +50,11 @@ class SourceCapture:
         self.stage = "collect"
         self.lock = asyncio.Lock()
 
-    async def capture(self, payload: bytes, url: str, media_type: str = "") -> bytes:
+    async def capture(
+        self, payload: bytes, url: str, media_type: str = "", *,
+        request_url: str | None = None, status_code: int | None = None,
+        request_method: str = "GET", request_body_sha256: str | None = None,
+    ) -> bytes:
         try:
             if asyncio.get_running_loop() is not self.loop:
                 raise RuntimeError(
@@ -59,27 +86,18 @@ class SourceCapture:
                     "html_report",
                 )
             async with self.lock:
-                parsed = urlsplit(url)
-                safe_query = [
-                    (key, value)
-                    for key, value in parse_qsl(parsed.query, keep_blank_values=True)
-                    if key.lower()
-                    not in {"api_key", "apikey", "key", "token", "access_token"}
-                ]
-                safe_url = urlunsplit(
-                    (
-                        parsed.scheme,
-                        parsed.netloc,
-                        parsed.path,
-                        urlencode(safe_query),
-                        "",
-                    )
-                )
+                metadata = {"media_type": media_type, "request_method": request_method}
+                if request_body_sha256 is not None:
+                    metadata["request_body_sha256"] = request_body_sha256
+                if request_url is not None:
+                    metadata["request_url"] = safe_source_url(request_url)
+                if status_code is not None:
+                    metadata["status_code"] = int(status_code)
                 artifact = await self.writer.write(
                     payload,
-                    source_url=safe_url,
+                    source_url=safe_source_url(url),
                     kind=kind,
-                    metadata={"media_type": media_type},
+                    metadata=metadata,
                 )
             return await run_artifact_io(read_artifact, artifact)
         except asyncio.CancelledError:
@@ -135,12 +153,23 @@ def is_capturing() -> bool:
     return _current.get() is not None
 
 
-async def capture_async(payload: bytes, url: str, media_type: str = "") -> bytes:
+async def capture_async(
+    payload: bytes, url: str, media_type: str = "", *,
+    request_url: str | None = None, status_code: int | None = None,
+    request_method: str = "GET", request_body_sha256: str | None = None,
+) -> bytes:
     capture = _current.get()
-    return await capture.capture(payload, url, media_type) if capture else payload
+    return await capture.capture(
+        payload, url, media_type, request_url=request_url, status_code=status_code,
+        request_method=request_method, request_body_sha256=request_body_sha256,
+    ) if capture else payload
 
 
-def capture_sync(payload: bytes, url: str, media_type: str = "") -> bytes:
+def capture_sync(
+    payload: bytes, url: str, media_type: str = "", *,
+    request_url: str | None = None, status_code: int | None = None,
+    request_method: str = "GET", request_body_sha256: str | None = None,
+) -> bytes:
     """Capture from a blocking worker thread while the owning loop is running.
 
     Event-loop threads must await capture_async instead. Context must propagate
@@ -162,7 +191,10 @@ def capture_sync(payload: bytes, url: str, media_type: str = "") -> bytes:
         if capture.loop.is_closed() or not capture.loop.is_running():
             raise RuntimeError("SourceCapture owning event loop is not running")
         # Wait for both durable bytes and committed metadata before parsing.
-        coroutine = capture.capture(payload, url, media_type)
+        coroutine = capture.capture(
+            payload, url, media_type, request_url=request_url, status_code=status_code,
+            request_method=request_method, request_body_sha256=request_body_sha256,
+        )
         try:
             future = asyncio.run_coroutine_threadsafe(coroutine, capture.loop)
         except BaseException:

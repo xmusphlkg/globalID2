@@ -291,8 +291,15 @@ def _collect(session, *, country_code, source, force, start_year, recent_months,
 
 
 async def collect(writer, *, source, country_code, force=False, start_year=None, recent_months=3,
-                  fill_missing=False, known_case_months=(), recently_attempted_months=()):
+                  fill_missing=False, known_case_months=(), recently_attempted_months=(),
+                  image_recovery=None, image_panel_size=3):
     validate_scope(country_code, source)
+    if image_recovery is not None:
+        from src.services.cn_province_image_recovery import copy_recovery_artifacts
+
+        return await copy_recovery_artifacts(
+            writer, recovery=image_recovery, country_code=country_code, source=source,
+        )
     cancel_event = Event()
     with _RecordingSession(writer, asyncio.get_running_loop(), cancel_event) as session:
         work = asyncio.create_task(asyncio.to_thread(
