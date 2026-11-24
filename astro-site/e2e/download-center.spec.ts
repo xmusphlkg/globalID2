@@ -42,6 +42,29 @@ async function publication(page: Page, parts = baseParts) {
   return { files: files as Record<string, { url: string }>, bodies };
 }
 
+for (const [language, now] of [['zh', '至今'], ['en', 'now'], ['fr', 'aujourd’hui']]) {
+  for (const year of [2026, 2030]) {
+    test(`${language} time filters and file titles follow the calendar in ${year}`, async ({ page }) => {
+      await page.clock.setFixedTime(new Date(`${year}-01-01T12:00:00+08:00`));
+      await publication(page, [part('JP', 'D038'), ...(year === 2030 ? [part('JP', 'D038', '2030-2034')] : [])]);
+      await page.goto(`${language === 'en' ? '' : `/${language}`}/downloads/?country=JP&format=csv`);
+      const center = page.locator('[data-download-center]');
+      const timeFilter = center.locator('[data-download-time-filter]');
+      const bridgeLabel = year === 2026 ? `2026–${now}` : '2026–2029';
+      await expect(timeFilter.locator('option[value="2026-2029"]')).toHaveText(bridgeLabel);
+      await expect(center.locator('[data-download-time="JP/D038/2026-2029"] h3')).toContainText(bridgeLabel);
+      if (year === 2030) {
+        await expect(timeFilter.locator('option[value="2030-2034"]')).toHaveText(`2030–${now}`);
+        await expect(center.locator('[data-download-time="JP/D038/2030-2034"] h3')).toContainText(`2030–${now}`);
+      }
+      await timeFilter.selectOption('2026-2029');
+      await expect(center.locator('[data-download-file]')).toHaveCount(1);
+      await expect(page).toHaveURL(/window=2026-2029/);
+      await expect(center.locator('[data-download-file] a')).toHaveAttribute('href', 'https://files.example.test/cells/jp/d038/2026-2029.csv');
+    });
+  }
+}
+
 test('country deep link shows multiple diseases and downloads the selected cell', async ({ page }) => {
   await publication(page);
   await page.goto('/zh/downloads/?country=JP');

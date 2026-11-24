@@ -3,6 +3,20 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.20.11', date: '2026-11-24',
+    titleEn: 'Download time ranges that follow the calendar',
+    titleZh: '随年份自动切换的下载时间范围',
+    titleFr: 'Des périodes de téléchargement adaptées au calendrier',
+    summaryEn: 'The current download window ends in “now”, and completed windows display their fixed year range automatically.',
+    summaryZh: '当前下载分段显示“至今”，已结束的分段随年份自动显示完整年份区间。',
+    summaryFr: 'La période de téléchargement en cours se termine par « aujourd’hui » ; les périodes terminées affichent automatiquement leurs années fixes.',
+    sections: [{ kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Time filters and file titles show 2026–now today; from 2030, they show 2026–2029 and 2030–now once the new data files are published.',
+      zh: '时间筛选和文件标题目前显示 2026–至今；进入 2030 年后，旧分段显示 2026–2029，新年份数据文件发布后显示 2030–至今。',
+      fr: 'Les filtres et titres affichent actuellement 2026–aujourd’hui ; à partir de 2030, ils affichent 2026–2029 et 2030–aujourd’hui après publication des nouveaux fichiers.',
+    }] }],
+  },
+  {
     version: '0.20.10', date: '2026-11-23',
     titleEn: 'Deeper disease hubs and more specific weekly titles',
     titleZh: '更深入的疾病专题与更具体的周报标题',
