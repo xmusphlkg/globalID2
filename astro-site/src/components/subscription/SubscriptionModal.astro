@@ -18,6 +18,7 @@ const pick = subscriptionText(locale);
         <span>GIDS Alerts &lt;noreply@globalinfectiousdisease.com&gt;</span>
       </div>
       <p class="subscribe-modal-help">{pick('Add this sender to your contacts or allowlist so future GIDS updates are not filtered as spam.', '可将发件人加入联系人或白名单，避免后续更新被误判为垃圾邮件。')}</p>
+      <div id="subscription-resend-turnstile" class="subscribe-field" hidden></div>
       <div class="subscribe-modal-actions">
         <button id="subscription-resend" class="subscribe-modal-secondary" type="button">
           <span>{pick('Resend confirmation', '再次发送确认邮件')}</span>

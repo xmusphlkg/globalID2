@@ -20,6 +20,18 @@ test("subscription options propagate D1 failures to the worker boundary", async 
   await assert.rejects(listSubscriptionOptions(new Request("https://example.test/api/subscriptions/options"), env), /D1 unavailable/);
 });
 
+test("public options report formal delivery separately from registration availability", async () => {
+  const DB = database(() => ({ results: [] }));
+  for (const [mode, expected] of [["full", "full"], ["pilot", "pilot"], [undefined, "pilot"]] as const) {
+    const response = await listSubscriptionOptions(new Request("https://example.test/api/subscriptions/options"), {
+      DB, DELIVERY_MODE: mode,
+    });
+    const result = await response.json() as { delivery_mode: string; pilot_mode: boolean };
+    assert.equal(result.delivery_mode, expected);
+    assert.equal(result.pilot_mode, expected === "pilot");
+  }
+});
+
 test("subscription options expose Research Radar lists and filter dimensions", async () => {
   const env: Env = { DB: database((query, operation) => {
     if (operation !== "all") return null;

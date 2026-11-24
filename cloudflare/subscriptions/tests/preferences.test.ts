@@ -62,6 +62,29 @@ function post(data: Record<string, string>) {
   });
 }
 
+test("management link requests require Turnstile before creating mail or rate-limit records", async () => {
+  const f = await fixture();
+  const protectedEnv = { ...f.env, ENVIRONMENT: "production", TURNSTILE_SITE_KEY: "public-key",
+    TURNSTILE_SECRET_KEY: "secret", TURNSTILE_HOSTNAMES: "example.test" };
+  const page = await f.handlers.get(new Request("https://example.test/api/subscriptions/manage"), protectedEnv);
+  const html = await page.text();
+  assert.match(html, /data-action="manage_link"/);
+  const nonce = /<script nonce="([a-f0-9]{32})"/.exec(html)?.[1];
+  assert.ok(nonce);
+  assert.ok(page.headers.get("content-security-policy")?.includes(`'nonce-${nonce}'`));
+  assert.match(page.headers.get("content-security-policy") || "", /frame-src https:\/\/challenges.cloudflare.com/);
+  const rejected = await f.handlers.post(post({ email: "reader@example.test" }), protectedEnv);
+  assert.equal(rejected.status, 403);
+  assert.match(await rejected.text(), /value="reader@example.test"/);
+  assert.equal(f.sqlite.prepare("SELECT count(*) AS n FROM management_email_outbox").get()?.n, 0);
+  assert.equal(f.sqlite.prepare("SELECT count(*) AS n FROM preference_link_limits").get()?.n, 0);
+  assert.equal(f.deliveries, 0);
+  // Existing signed links continue to support preference changes and unsubscribe.
+  const signed = await f.token();
+  assert.equal((await f.handlers.post(post({ token: signed, action: "pause", revision: f.revision() }), protectedEnv)).status, 200);
+  f.sqlite.close();
+});
+
 test("management tokens cannot be replaced by unsubscribe links, and preferences can be saved, paused and resumed", async () => {
   const f = await fixture();
   const { sqlite, env, handlers, secret } = f;

@@ -109,7 +109,33 @@ If Turnstile is enabled on the subscribe form:
 
 ```env
 SUBSCRIPTIONS__TURNSTILE_SECRET_KEY=...
+SUBSCRIPTIONS__TURNSTILE_SITE_KEY=...
+SUBSCRIPTIONS__TURNSTILE_ENABLED=true
 ```
+
+The public options endpoint supplies only the sitekey and enabled state. The
+three subscription pages and their confirmation-resend dialog render separate
+managed widgets with action `subscribe`; the management-link request page uses
+`manage_link`. Each submission consumes a fresh token. Failed requests retain
+the visitor's input and reset the widget for retry. Signed preference updates,
+confirmation links, and unsubscribe do not require a new challenge.
+
+Server-side Siteverify has a ten-second deadline and requires `success === true`,
+the expected action, and an exact approved frontend hostname. Runtime
+`TURNSTILE_HOSTNAMES` is generated from `ALLOWED_ORIGINS` and `PUBLIC_BASE_URL`;
+production never accepts localhost tokens. Local verification is off by default;
+enable `SUBSCRIPTIONS_LOCAL__TURNSTILE_ENABLED` only with local backend secrets
+and a widget registered for the local hostname.
+
+For rollout, first deploy the backend with `SUBSCRIPTIONS__TURNSTILE_ENABLED=false`,
+store the secret on the existing Worker, publish the compatible frontend, and
+then enable verification. Disabling that flag and redeploying is the immediate
+rollback. Keep the existing SMTP, delivery mode, D1 data, and signing secrets.
+This is form verification; it does not enable WAF pre-clearance or reduce
+requests from bots that only read public pages.
+
+Deployment and test evidence for the initial production activation is recorded
+in [the Turnstile acceptance report](../../docs/diagnostics/2026-11-24-turnstile.md).
 
 The subscription Worker can send confirmation emails through the same SMTP
 settings used by the local automation service. If `SUBSCRIPTIONS__SMTP_*`
@@ -832,4 +858,23 @@ architecture rather than raising batch limits past D1's per-invocation budget.
 SUBSCRIPTIONS__ALLOW_SECRET_SYNC=production ./scripts/wrangler-env.sh sync-pilot production
 ```
 
-修改管理员通知邮箱后需要重新同步。公开 options 的 `pilot_mode` 和 health 的 `delivery_mode` 显示当前模式，但不公开邮箱。试运行期间公众可以登记订阅并接收确认及管理邮件，内容投递仍限管理员；已经排队的非管理员历史内容投递会保留到全量模式。试运行新建的通知只为管理员建立投递记录，自动任务使用 `pilot:` 幂等键及独立水位，后续正式运行不会复用试运行任务。仅在试运行通过并明确决定开放后，将 `SUBSCRIPTIONS__DELIVERY_MODE` 显式设为 `full` 并部署；切换前检查待恢复的历史队列和自动任务水位。
+修改管理员通知邮箱后需要重新同步。公开 options 的 `delivery_mode`、兼容字段 `pilot_mode` 和 health 的 `delivery_mode` 显示当前模式，但不公开邮箱。试运行期间公众可以登记订阅并接收确认及管理邮件，内容投递仍限管理员；已经排队的非管理员历史内容投递会保留到全量模式。试运行新建的通知只为管理员建立投递记录，自动任务使用 `pilot:` 幂等键及独立水位，后续正式运行不会复用试运行任务。仅在试运行通过并明确决定开放后，将 `SUBSCRIPTIONS__DELIVERY_MODE` 显式设为 `full` 并部署；切换前检查待恢复的历史队列和自动任务水位。
+
+### 正式上线
+
+正式开放内容投递必须显式配置 `SUBSCRIPTIONS__DELIVERY_MODE=full`，同步根 `.env`、
+Worker 绑定和读取该配置的上游订阅调度进程。配置生成器只接受 `pilot` 或 `full`，
+避免错误值被运行时当成受限模式。默认保留 `pilot`，以保护未配置的新环境。
+上线后核对 `/health` 和 `/api/subscriptions/options` 的 `delivery_mode` 均为 `full`，
+且 `pilot_mode=false`；页面不应再显示试运行限制。
+
+切换前只读统计 campaign、Situation、确认/管理 outbox 的待投递及不确定状态。
+旧的普通 campaign 在 full 下可能继续投递，不能只删除页面提示。对非空历史积压
+逐项确认保留或取消；`unknown` 不得直接重发。新正式调度使用独立
+`exports/subscription-outbox/full/`，保留既有激活标记和各通道首次基线逻辑，
+不复制 `pilot/` 目录到 `full/`，也不重置 `.activation.json` 来追发试运行历史。
+
+2026-11-24 切换前的只读聚合证据在
+`exports/subscription-launch-readonly-20261124.json`。当次所有 campaign 已完成，
+Situation 无待投递记录，确认/管理 outbox 和事务邮件也没有未决任务，
+不需要清理或取消历史记录。

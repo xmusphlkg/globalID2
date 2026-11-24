@@ -25,9 +25,7 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
             <span class="subscribe-service-badge">{pick('Official GIDS service', 'GIDS 官方服务')}</span>
           </div>
 
-          <p id="subscription-pilot-notice" class="subscribe-status" role="status" hidden>
-            {pick('You can subscribe now and confirm your email. Public updates will begin when the subscription service launches.', '你可以先确认订阅偏好，邮件更新将在服务正式开放后开始发送。', 'Vous pouvez vous inscrire et confirmer votre adresse. Les envois publics commenceront au lancement du service.')}
-          </p>
+          <p id="subscription-pilot-notice" class="subscribe-status" role="status" hidden></p>
 
           <div class="subscribe-field">
             <label for="subscriber-email">{pick('Email address', '邮箱地址')}</label>
@@ -48,9 +46,14 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
             <div class="subscribe-segmented" id="locale-options"></div>
           </fieldset>
 
-          <fieldset class="subscribe-field">
-              <legend>{pick('Updates to receive', '接收内容')}</legend>
+          <fieldset class="subscribe-field subscribe-content-field" aria-describedby="subscription-content-help">
+            <legend>{pick('Choose your updates', '选择接收内容', 'Choisissez vos mises à jour')}</legend>
+            <div class="subscribe-content-intro">
+              <p id="subscription-content-help">{pick('Select one or more. Each update follows the schedule shown below.', '可选择一项或多项，各类内容按下方标注的频率投递。', 'Choisissez une ou plusieurs catégories. La fréquence d’envoi est indiquée pour chacune.')}</p>
+              <span id="subscription-selection-count" class="subscribe-selection-count" role="status" aria-live="polite"></span>
+            </div>
             <div class="subscribe-option-grid" id="list-options"></div>
+            <p id="subscription-content-overlap" class="subscribe-content-note" hidden>{pick('Surveillance reports and the weekly report digest both include reports. You can choose either or both.', '“监测报告”和“报告周摘要”均包含报告内容，可按需要选择其中一项或同时订阅。', 'Les rapports de surveillance et leur récapitulatif hebdomadaire contiennent tous deux des rapports. Vous pouvez choisir l’un ou les deux.')}</p>
           </fieldset>
 
           <fieldset class="subscribe-field">
@@ -111,6 +114,7 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
             </span>
           </label>
 
+          <div id="subscription-turnstile" class="subscribe-field" hidden></div>
           <div id="subscription-loading" hidden><GIDSLoading language={locale} compact /></div>
           <div id="subscription-status" class="subscribe-status" role="status" aria-live="polite" hidden></div>
 

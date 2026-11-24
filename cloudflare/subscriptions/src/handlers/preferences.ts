@@ -2,6 +2,7 @@ import { escapeHtml, normalizeEmail } from "../lib/input.ts";
 import { HttpError, publicBaseUrl } from "../lib/http.ts";
 import { buildManagementEmail } from "../lib/email.ts";
 import { secureTextEqual, sha256Hex } from "../lib/security.ts";
+import { publicTurnstile, verifyTurnstileIfConfigured } from "../lib/turnstile.ts";
 import type { Env } from "../types.ts";
 
 type SmtpConfig = {
@@ -51,19 +52,23 @@ function frequencyLabel(value: string, zh: boolean): string {
   return FREQUENCY_LABELS[value]?.[zh ? "zh" : "en"] || value;
 }
 
-function page(title: string, content: string, status = 200, lang = "en"): Response {
+function page(title: string, content: string, status = 200, lang = "en", turnstileNonce = ""): Response {
   return new Response(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)} | GIDS</title><style>body{font:16px/1.5 system-ui,sans-serif;background:#f7faf9;color:#172a2a;margin:0}main{max-width:720px;margin:3rem auto;padding:1.5rem;background:white;border:1px solid #d7e4e1}label{display:block;margin:1.2rem 0 .3rem;font-weight:600}input,select,button{font:inherit;padding:.7rem;box-sizing:border-box;max-width:100%}select{width:100%}select[multiple]{min-height:9rem}button{background:#087b70;color:white;border:0;cursor:pointer;margin:.6rem .5rem .6rem 0}a{color:#087b70}small{color:#526462}</style></head><body><main><h1>${escapeHtml(title)}</h1>${content}</main></body></html>`, {
     status,
     headers: {
       "content-type": "text/html; charset=utf-8", "cache-control": "no-store",
       "referrer-policy": "no-referrer", "x-content-type-options": "nosniff",
-      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+        + (turnstileNonce ? `; script-src 'nonce-${turnstileNonce}' 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com https://cloudflareinsights.com` : ""),
     },
   });
 }
 
-function requestPage(message = ""): Response {
-  return page("Manage your subscription / 管理订阅", `${message ? `<p>${escapeHtml(message)}</p>` : ""}<p>Enter your email to receive a short-lived management link. / 输入邮箱获取短时有效的管理链接。</p><form method="post" action="/api/subscriptions/manage"><label for="email">Email / 邮箱</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"><button type="submit">Send link / 发送链接</button></form><p><a href="https://globalinfectiousdisease.com/subscribe/">Subscription center / 订阅中心</a></p>`);
+function requestPage(env: Env, message = "", status = 200, email = ""): Response {
+  const config = publicTurnstile(env);
+  const nonce = config.enabled ? crypto.randomUUID().replaceAll("-", "") : "";
+  const widget = config.enabled ? `<script nonce="${nonce}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script><div class="cf-turnstile" data-sitekey="${escapeHtml(config.sitekey)}" data-action="manage_link" data-size="flexible"></div><noscript>Enable JavaScript to verify your request. / 请启用 JavaScript 完成验证。</noscript>` : "";
+  return page("Manage your subscription / 管理订阅", `${message ? `<p role="status">${escapeHtml(message)}</p>` : ""}<p>Enter your email to receive a short-lived management link. / 输入邮箱获取短时有效的管理链接。</p><form method="post" action="/api/subscriptions/manage"><label for="email">Email / 邮箱</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254" value="${escapeHtml(email)}">${widget}<button type="submit">Send link / 发送链接</button></form><p><a href="https://globalinfectiousdisease.com/subscribe/">Subscription center / 订阅中心</a></p>`, status, "en", nonce);
 }
 
 async function consumeLimit(env: Env, key: string, max: number): Promise<boolean> {
@@ -121,7 +126,7 @@ export function createPreferenceHandlers(deps: Dependencies) {
   }
 
   async function render(request: Request, env: Env, token: string, notice = ""): Promise<Response> {
-    if (!token) return requestPage(notice);
+    if (!token) return requestPage(env, notice);
     const row = await findSubscription(env, token);
     const zh = row.locale === "zh";
     const options = await env.DB.prepare(
@@ -149,6 +154,14 @@ export function createPreferenceHandlers(deps: Dependencies) {
 
   async function requestLink(request: Request, env: Env, form: FormData, ctx?: ExecutionContext): Promise<Response> {
     const email = normalizeEmail(String(form.get("email") || ""));
+    try {
+      await verifyTurnstileIfConfigured({ "cf-turnstile-response": form.get("cf-turnstile-response") }, request, env, "manage_link");
+    } catch (error) {
+      if (!(error instanceof HttpError)) throw error;
+      return requestPage(env, error.status === 503
+        ? "Verification is temporarily unavailable. Please try again. / 验证暂时不可用，请稍后重试。"
+        : "Complete the security verification and try again. / 请完成人机验证后重试。", error.status, email);
+    }
     const message = "If this address has an eligible subscription, a management link will be sent. / 如果该邮箱有可管理的订阅，我们会发送管理链接。";
     try {
       // Persist before returning: waitUntil alone can be interrupted and is not a queue.
@@ -162,7 +175,7 @@ export function createPreferenceHandlers(deps: Dependencies) {
       // Never reveal whether an address exists, including on storage errors.
       console.error(JSON.stringify({ message: "subscription_management_enqueue_failed" }));
     }
-    return requestPage(message);
+    return requestPage(env, message);
   }
 
   async function enqueueManagementLink(request: Request, env: Env, email: string): Promise<void> {
@@ -366,7 +379,7 @@ export function createPreferenceHandlers(deps: Dependencies) {
         return await render(request, env, new URL(request.url).searchParams.get("token") || "");
       } catch (error) {
         if (error instanceof HttpError && error.status === 400) {
-          return requestPage("This link is invalid or expired. Request a new link below. / 链接无效或已过期，请重新申请。");
+          return requestPage(env, "This link is invalid or expired. Request a new link below. / 链接无效或已过期，请重新申请。");
         }
         throw error;
       }

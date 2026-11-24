@@ -1,4 +1,5 @@
 import { deliveryMode, recipientSql } from "../lib/pilot.ts";
+import { publicTurnstile } from "../lib/turnstile.ts";
 import { SUPPORTED_LOCALES, boundedText, normalizeCode, valueAsString } from "../lib/input.ts";
 import { HttpError, configInt, json, publicBaseUrl, requireAdmin, type JsonValue } from "../lib/http.ts";
 import { FREQUENCIES, LOCALE_LABELS, SUBSCRIPTION_STATUSES, escapeLike, maskEmail, normalizeFilter, parseFilterGroups, pendingCutoff, rowsToCounts } from "../lib/subscriptions.ts";
@@ -61,7 +62,9 @@ export async function listSubscriptionOptions(request: Request, env: Env): Promi
 
   return json({
     ok: true,
+    delivery_mode: deliveryMode(env),
     pilot_mode: deliveryMode(env) === "pilot",
+    turnstile: publicTurnstile(env),
     lists: (lists.results || []).map((list) => ({
       code: list.code,
       name_en: list.name,

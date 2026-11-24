@@ -2,6 +2,7 @@ import { isRecord, valueAsString } from "./lib/input.ts";
 import { sha256Hex, secureTextEqual } from "./lib/security.ts";
 
 import { deliveryMode } from "./lib/pilot.ts";
+import { verifyTurnstileIfConfigured } from "./lib/turnstile.ts";
 import { sendSmtpEmail, smtpConfig } from "./lib/smtp.ts";
 import { HttpError, configInt, corsHeaders, json, requireAdmin } from "./lib/http.ts";
 
@@ -220,28 +221,4 @@ async function readPayload(request: Request): Promise<Payload> {
   }
 
   return {};
-}
-
-async function verifyTurnstileIfConfigured(payload: Payload, request: Request, env: Env): Promise<void> {
-  if (!env.TURNSTILE_SECRET_KEY) return;
-
-  const token = valueAsString(payload.turnstileToken) || valueAsString(payload["cf-turnstile-response"]);
-  if (!token) {
-    throw new HttpError(400, "turnstile_token_required");
-  }
-
-  const form = new FormData();
-  form.append("secret", env.TURNSTILE_SECRET_KEY);
-  form.append("response", token);
-  const ip = request.headers.get("CF-Connecting-IP");
-  if (ip) form.append("remoteip", ip);
-
-  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    body: form,
-  });
-  const result = await response.json() as { success?: boolean };
-  if (!result.success) {
-    throw new HttpError(400, "turnstile_verification_failed");
-  }
 }

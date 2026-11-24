@@ -171,6 +171,9 @@ if binding != "DB":
 
 def runtime_vars(environment):
     is_local = environment == "local"
+    delivery_mode = value("SUBSCRIPTIONS__DELIVERY_MODE", "pilot")
+    if delivery_mode not in {"pilot", "full"}:
+        raise SystemExit("SUBSCRIPTIONS__DELIVERY_MODE must be exactly pilot or full.")
     public_url = (
         value("SUBSCRIPTIONS_LOCAL__PUBLIC_BASE_URL", "http://localhost:8787")
         if is_local else value("SUBSCRIPTIONS__PUBLIC_BASE_URL")
@@ -197,8 +200,14 @@ def runtime_vars(environment):
         "ENVIRONMENT": environment,
         "PUBLIC_BASE_URL": public_url,
         "ALLOWED_ORIGINS": allowed,
+        "TURNSTILE_ENABLED": "true" if boolean("SUBSCRIPTIONS_LOCAL__TURNSTILE_ENABLED" if is_local else "SUBSCRIPTIONS__TURNSTILE_ENABLED", False) else "false",
+        "TURNSTILE_SITE_KEY": value("SUBSCRIPTIONS__TURNSTILE_SITE_KEY"),
+        "TURNSTILE_HOSTNAMES": ",".join(dict.fromkeys(
+            [urlsplit(origin.strip()).hostname for origin in allowed.split(",") if origin.strip()]
+            + [urlsplit(public_url).hostname]
+        )),
         "DEBUG_RETURN_TOKENS": "true" if debug_tokens else "false",
-        "DELIVERY_MODE": value("SUBSCRIPTIONS__DELIVERY_MODE", "pilot"),
+        "DELIVERY_MODE": delivery_mode,
         "PENDING_EXPIRY_DAYS": integer("SUBSCRIPTIONS__PENDING_EXPIRY_DAYS", 14, 1, 365),
         "SUBMISSION_RATE_LIMIT_PER_HOUR": integer("SUBSCRIPTIONS__SUBMISSION_RATE_LIMIT_PER_HOUR", 30, 1, 10_000),
         "CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES": integer("SUBSCRIPTIONS__CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES", 2, 1, 100),
