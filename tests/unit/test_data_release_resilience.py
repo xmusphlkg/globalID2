@@ -85,6 +85,20 @@ def test_classifier_retries_only_allowlisted_transient_external_failures():
     ).retryable
 
 
+@pytest.mark.parametrize("reason", [
+    "Surveillance projection implementation changed during export; retry with one version",
+    "Surveillance projection implementation changed while freezing outputs; retry",
+])
+def test_projection_change_is_retryable_only_in_the_surveillance_export(reason):
+    from src.services.data_release.publication_wait import failure_kind
+
+    message = f"ValueError: {reason}\nExport Surveillance JSON failed with exit code 1."
+    error = _command_error(message, stage="surveillance_json_export")
+    assert failure_kind(error) is None
+    assert classify_release_failure(error).category == "projection_version_changed"
+    assert not classify_release_failure(_command_error(message, stage="astro_build")).retryable
+
+
 @pytest.mark.parametrize("returncode", [-15, -2])
 def test_classifier_retries_controlled_worker_interruptions(returncode):
     result = classify_release_failure(

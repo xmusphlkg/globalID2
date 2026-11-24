@@ -120,6 +120,20 @@ def classify_release_failure(exc: BaseException) -> ReleaseFailureClassification
             reason="code, contract, configuration, validation, or credential failure",
         )
 
+    if stage == "surveillance_json_export" and any(
+        line.strip() in {
+            "ValueError: Surveillance projection implementation changed during export; retry with one version",
+            "ValueError: Surveillance projection implementation changed while freezing outputs; retry",
+        }
+        for line in text.splitlines()
+    ):
+        return ReleaseFailureClassification(
+            retryable=True,
+            category="projection_version_changed",
+            stage=stage,
+            reason="surveillance generation code changed during this export",
+        )
+
     # Only SQLAlchemy's own pool-exhaustion error qualifies. Generic timeouts
     # in local validation or build stages must stay terminal.
     cursor: BaseException | None = exc

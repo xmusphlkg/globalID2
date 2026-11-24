@@ -15,7 +15,7 @@ from typing import Any, Optional
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 
 from src.core import get_config, get_database, get_logger
 from src.core.data_share import (
@@ -102,6 +102,18 @@ def _data_enabled(config, input_data: dict[str, Any]) -> bool:
     return bool(getattr(config, f"{_data_line(input_data)}_json_enabled", False))
 
 
+def _parked_json_reservation(line: str):
+    return and_(
+        Task.task_type == TaskType.EXPORT_DATA,
+        Task.status == TaskStatus.QUEUED,
+        Task.input_data["data_only"].as_boolean().is_(True),
+        func.coalesce(Task.input_data["data_line"].as_string(), "surveillance") == line,
+        Task.metadata_["publication_wait"]["kind"].as_string().in_(
+            ("contract_blocked", "baseline_invalid", "blocked_by_static")
+        ).is_(True),
+    )
+
+
 def _release_conflict_clause(input_data: dict[str, Any]):
     """Channel reservation, including legacy surveillance-exporting sites."""
     archive = Task.input_data["raw_archive_only"].as_boolean().is_(True)
@@ -120,6 +132,7 @@ def _release_conflict_clause(input_data: dict[str, Any]):
             return and_(~archive, or_(literature, ~data))
         conflict = and_(~archive, ~literature, or_(data, ~static_safe))
         other = "surveillance" if _data_line(input_data) == "situation" else "situation"
+        conflict = and_(conflict, ~_parked_json_reservation(other))
         if is_automatic_json_paused(other):
             other_line = (Task.input_data["data_line"].as_string().is_distinct_from("situation")
                           if other == "surveillance" else
@@ -610,7 +623,8 @@ class DataReleaseService:
                 metadata["publication_wait"] = build_wait(
                     kind=kind if kind in {"blocked_by_static", "baseline_invalid", "contract_blocked", "transient_backoff"} else "contract_blocked",
                     channel=channel or "static",
-                    reason=wait_reason(kind if kind in {"blocked_by_static", "baseline_invalid"} else "contract_blocked", channel or "static", blocked_by=wait.get("blocked_by"), detail=str(wait.get("reason") or "")),
+                    reason=(wait["reason"] if previous_kind == kind and wait.get("reason")
+                            else wait_reason(kind, channel or "static", blocked_by=wait.get("blocked_by"))),
                     now=now,
                     blocked_by=wait.get("blocked_by"),
                     blocker_fingerprint=wait.get("blocker_fingerprint"),
@@ -1384,8 +1398,10 @@ class DataReleaseService:
                 Task.task_type == TaskType.EXPORT_DATA,
                 Task.input_data["data_only"].as_boolean().is_(True),
             ).order_by(Task.created_at.desc(), Task.id.desc()).limit(1))).scalar_one_or_none()
-        if latest is None or _data_line(latest.input_data or {}) != line:
-            return False
+            if latest is None or _data_line(latest.input_data or {}) != line:
+                return False
+            if await db.scalar(select(select(Task.id).where(_parked_json_reservation(other)).exists())):
+                return False
         kwargs = {"data_line": other} if other != "surveillance" else {}
         return not await self._release_failure_cooldown_reason(job_id, data_only=True, **kwargs)
 
