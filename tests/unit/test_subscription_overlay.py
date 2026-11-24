@@ -53,3 +53,16 @@ def test_overlay_rejects_unverified_baseline_and_hashed_asset_collisions(tmp_pat
     with pytest.raises(ValueError, match='asset_url_collision'):
         overlay.prepare(base, build, tmp_path / 'bad2', identity, root)
     assert verified_snapshot(base, identity)
+
+
+def test_overlay_accepts_pilot_contract_in_a_referenced_astro_module(tmp_path, monkeypatch):
+    base, build, root, identity = fixtures(tmp_path, monkeypatch)
+    for page in overlay.PAGES:
+        path = build / page
+        path.write_text(path.read_text().replace('pilot_mode', '<script type="module" src="/_astro/subscribe.js"></script>'))
+    (build / '_astro/subscribe.js').write_text('const pilot = options.pilot_mode === true;')
+    result = overlay.prepare(base, build, tmp_path / 'candidate', identity, root)
+    assert verified_snapshot(tmp_path / 'candidate', result)
+    (build / '_astro/subscribe.js').write_text('unrelated module')
+    with pytest.raises(ValueError, match='page_missing_subscription_contract'):
+        overlay.prepare(base, build, tmp_path / 'bad', identity, root)

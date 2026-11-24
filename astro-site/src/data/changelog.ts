@@ -3,6 +3,24 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.21.0', date: '2026-11-24',
+    titleEn: 'Public email subscriptions',
+    titleZh: '邮件订阅正式开放',
+    titleFr: 'Ouverture des abonnements par courriel',
+    summaryEn: 'Choose the updates you want to receive and confirm your email address to start your subscription.',
+    summaryZh: '选择你希望接收的更新，并通过确认邮件开通订阅。',
+    summaryFr: 'Choisissez les mises à jour qui vous intéressent et confirmez votre adresse pour activer votre abonnement.',
+    sections: [{ kind: 'new', labelEn: 'Added', labelZh: '新增', labelFr: 'Nouveautés', items: [{
+      en: 'Choose from surveillance reports, official outbreak notices, the weekly report digest and Research Radar. Each option shows its delivery schedule.',
+      zh: '可订阅监测报告、官方疫情通报、报告周摘要和研究雷达。每项内容都标明投递频率。',
+      fr: 'Choisissez les rapports de surveillance, les avis officiels sur les épidémies, le récapitulatif hebdomadaire des rapports ou le Radar de la recherche. La fréquence est indiquée pour chaque option.',
+    }, {
+      en: 'Human verification protects subscription requests, confirmation email resends and requests for a link to manage your preferences.',
+      zh: '提交订阅、重发确认邮件和申请订阅管理链接时，系统会进行人机验证。',
+      fr: 'Une vérification humaine protège les demandes d’abonnement, le renvoi du courriel de confirmation et les demandes de lien de gestion.',
+    }] }],
+  },
+  {
     version: '0.20.11', date: '2026-11-24',
     titleEn: 'Download time ranges that follow the calendar',
     titleZh: '随年份自动切换的下载时间范围',

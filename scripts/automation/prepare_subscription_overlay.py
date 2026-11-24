@@ -48,7 +48,16 @@ def prepare(base: Path, build: Path, target: Path, live: dict, root: Path) -> di
     baseline = json.loads((base / "release.json").read_text())
     for page in PAGES:
         html = (build / page).read_text(encoding="utf-8")
-        if "pilot_mode" not in html or "consent" not in html:
+        scripts = re.findall(r'<script\b[^>]*\bsrc="(/_astro/[^"?#]+)', html)
+        # Astro can extract the controller into a hashed module. Verify the
+        # same pilot contract in that referenced entry, not only inline HTML.
+        pilot_runtime = "pilot_mode" in html or any(
+            (build / path.lstrip("/")).resolve().is_relative_to(build)
+            and (build / path.lstrip("/")).is_file()
+            and "pilot_mode" in (build / path.lstrip("/")).read_text(encoding="utf-8")
+            for path in scripts
+        )
+        if not pilot_runtime or "consent" not in html:
             raise ValueError(f"page_missing_subscription_contract:{page}")
         for asset in re.findall(r'(?:src|href)="(/_astro/[^"?#]+)', html):
             if not (build / asset.lstrip("/")).is_file() and not (base / asset.lstrip("/")).is_file():

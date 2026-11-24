@@ -1,5 +1,6 @@
-import { subscriptionMessages as copy } from './messages';
+import { subscriptionMessages as copy, subscriptionContent } from './messages';
 import { requestedSubscriptionTopic, findSubscriptionTopic, subscriptionPayload } from './form-model.js';
+import { createTurnstileGuard } from './turnstile.js';
 
 export function initializeSubscription(subscriptionCountryNames) {
 const form = document.getElementById('subscription-form');
@@ -19,6 +20,8 @@ const resendStatus = document.getElementById('subscription-resend-status');
 const allCountries = document.getElementById('all-countries');
 const localeOptions = document.getElementById('locale-options');
 const listOptions = document.getElementById('list-options');
+const selectionCount = document.getElementById('subscription-selection-count');
+const contentOverlap = document.getElementById('subscription-content-overlap');
 const countryOptions = document.getElementById('country-options');
 const diseaseOptions = document.getElementById('disease-options');
 const diseaseSearch = document.getElementById('disease-search');
@@ -37,6 +40,9 @@ const optionState = {
   peerReviewStatuses: [],
 };
 let lastSubmittedPayload = null;
+let turnstileSitekey = '';
+let subscriptionGuard;
+let resendGuard;
 const selectedDiseases = new Set();
 
 
@@ -68,6 +74,10 @@ function showModal(message) {
   if (modalMessage) modalMessage.textContent = message;
   if (resendStatus) resendStatus.textContent = '';
   modal.hidden = false;
+  if (turnstileSitekey) {
+    resendGuard?.remove();
+    resendGuard = createTurnstileGuard(document.getElementById('subscription-resend-turnstile'), turnstileSitekey, currentLang(), copy[currentLang()]);
+  }
   document.documentElement.classList.add('subscribe-modal-open');
   resendButton?.focus();
 }
@@ -75,6 +85,8 @@ function showModal(message) {
 function closeModal() {
   if (!modal) return;
   modal.hidden = true;
+  resendGuard?.remove();
+  resendGuard = undefined;
   document.documentElement.classList.remove('subscribe-modal-open');
 }
 
@@ -146,21 +158,33 @@ function renderListOptions() {
     const title = document.createElement('strong');
     const detail = document.createElement('small');
     const schedule = document.createElement('small');
-    label.className = 'subscribe-check';
+    label.className = 'subscribe-check subscribe-content-option';
+    label.dataset.listCode = item.code;
+    body.className = 'subscribe-check-body';
+    detail.className = 'subscribe-check-description';
+    schedule.className = 'subscribe-check-frequency';
     input.type = 'checkbox';
     input.name = 'list_codes';
     input.value = item.code;
     input.disabled = item.available === false;
     input.defaultChecked = !input.disabled && (index === 0 || item.code === 'reports');
     input.checked = !input.disabled && (hasSelection ? selected.has(item.code) : input.defaultChecked);
-    title.textContent = labelFor(item);
-    detail.textContent = descriptionFor(item);
+    const content = subscriptionContent[currentLang()][item.code];
+    title.textContent = content?.title || labelFor(item);
+    detail.textContent = content?.description || descriptionFor(item);
     const frequency = item.code === 'alerts' ? 'instant' : 'weekly';
     schedule.textContent = input.disabled ? copy[currentLang()].unavailable : copy[currentLang()][frequency];
     body.append(title, detail, schedule);
     label.append(input, body);
     listOptions.append(label);
   });
+  updateListSummary();
+}
+
+function updateListSummary() {
+  const selected = checkedValues('list_codes');
+  if (selectionCount) selectionCount.textContent = copy[currentLang()].selectedCount(selected.size);
+  if (contentOverlap) contentOverlap.hidden = !(selected.has('reports') && selected.has('weekly_digest'));
 }
 
 function renderChipOptions(container, name, items, disabled = false, selected = checkedValues(name)) {
@@ -237,6 +261,11 @@ async function loadOptions() {
     if (!response.ok || result.error) {
       throw new Error(result.error || 'options_failed');
     }
+    if (result.turnstile?.enabled === true) {
+      if (typeof result.turnstile.sitekey !== 'string' || !result.turnstile.sitekey.trim()) throw new Error('turnstile_not_configured');
+      turnstileSitekey = result.turnstile.sitekey;
+      subscriptionGuard = createTurnstileGuard(document.getElementById('subscription-turnstile'), turnstileSitekey, currentLang(), messages);
+    }
     optionState.locales = Array.isArray(result.locales) ? result.locales : [];
     optionState.frequencies = Array.isArray(result.frequencies) ? result.frequencies : [];
     optionState.lists = Array.isArray(result.lists) ? result.lists : [];
@@ -269,6 +298,7 @@ function syncCountryInputs() {
 }
 
 allCountries?.addEventListener('change', syncCountryInputs);
+listOptions?.addEventListener('change', updateListSummary);
 diseaseSearch?.addEventListener('input', renderDiseaseOptions);
 diseaseOptions?.addEventListener('change', (event) => {
   const input = event.target;
@@ -304,6 +334,11 @@ form.addEventListener('submit', async (event) => {
   }
 
     const payload = subscriptionPayload(data, lang, Boolean(allCountries?.checked), selectedDiseases);
+  const turnstileToken = subscriptionGuard?.token();
+  if (subscriptionGuard && !turnstileToken) {
+    setStatus('error', messages.turnstileRequired);
+    return;
+  }
 
   setSubmitting(true);
   setStatus('pending', messages.submitting);
@@ -313,12 +348,12 @@ form.addEventListener('submit', async (event) => {
     const response = await fetch(`${apiBase}/api/subscriptions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, ...(turnstileToken ? { turnstileToken } : {}) }),
     });
     const result = await response.json().catch(() => ({}));
 
     if (!response.ok || result.error) {
-      setStatus('error', result.error === 'rate_limited' ? messages.rateLimited : result.error === 'subscription_pilot_only' ? messages.pilotOnly : (result.error || messages.failed));
+      setStatus('error', result.error?.startsWith('turnstile_') ? messages.turnstileFailed : result.error === 'rate_limited' ? messages.rateLimited : result.error === 'subscription_pilot_only' ? messages.pilotOnly : (result.error || messages.failed));
       return;
     }
 
@@ -346,6 +381,7 @@ form.addEventListener('submit', async (event) => {
   } catch (error) {
     setStatus('error', messages.network);
   } finally {
+    subscriptionGuard?.reset();
     setSubmitting(false);
   }
 });
@@ -357,6 +393,11 @@ resendButton?.addEventListener('click', async () => {
     if (resendStatus) resendStatus.textContent = messages.resendUnavailable;
     return;
   }
+  const turnstileToken = resendGuard?.token();
+  if (turnstileSitekey && !turnstileToken) {
+    if (resendStatus) resendStatus.textContent = messages.turnstileRequired;
+    return;
+  }
 
   resendButton.disabled = true;
   if (resendStatus) resendStatus.textContent = messages.resendSending;
@@ -365,11 +406,11 @@ resendButton?.addEventListener('click', async () => {
     const response = await fetch(`${apiBase}/api/subscriptions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...lastSubmittedPayload, source: 'website-subscribe-page-resend' }),
+      body: JSON.stringify({ ...lastSubmittedPayload, source: 'website-subscribe-page-resend', ...(turnstileToken ? { turnstileToken } : {}) }),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || result.error) {
-      if (resendStatus) resendStatus.textContent = result.error === 'rate_limited' ? messages.rateLimited : result.error === 'subscription_pilot_only' ? messages.pilotOnly : (result.error || messages.failed);
+      if (resendStatus) resendStatus.textContent = result.error?.startsWith('turnstile_') ? messages.turnstileFailed : result.error === 'rate_limited' ? messages.rateLimited : result.error === 'subscription_pilot_only' ? messages.pilotOnly : (result.error || messages.failed);
       return;
     }
     const emailStatus = result?.email?.status || result?.notification?.status || '';
@@ -388,6 +429,7 @@ resendButton?.addEventListener('click', async () => {
   } catch (error) {
     if (resendStatus) resendStatus.textContent = messages.network;
   } finally {
+    resendGuard?.reset();
     resendButton.disabled = false;
   }
 });

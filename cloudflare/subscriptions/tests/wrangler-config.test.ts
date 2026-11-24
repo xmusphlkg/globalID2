@@ -41,6 +41,12 @@ test("remote availability flags require valid activation watermarks", () => {
   const check = (extra: Record<string, string>) => spawnSync(helper, ["config-path", "production"], {
     cwd: root, env: { ...baseline, ...extra }, encoding: "utf8",
   });
+  for (const value of ["FULL", "production", ""]) {
+    const result = check({ SUBSCRIPTIONS__DELIVERY_MODE: value });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /must be exactly pilot or full/);
+  }
+  assert.equal(check({ SUBSCRIPTIONS__DELIVERY_MODE: "full" }).status, 0);
   for (const name of ["RESEARCH_DIGEST", "REPORT_DIGEST"]) {
     for (const value of ["", "2026-W00", "2026-W54", "2026-01"]) {
       const result = check({ [`SUBSCRIPTIONS__${name}_ENABLED`]: "true", [`SUBSCRIPTIONS__${name}_START_WEEK`]: value });
