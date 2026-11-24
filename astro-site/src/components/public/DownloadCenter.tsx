@@ -69,7 +69,8 @@ export default function DownloadCenter({ language = 'en' }: { language?: Languag
   const diseaseNames = new Map(diseases.map(row => [row.disease_id, label(row, language)]));
   const named = (names: Map<string, string>, code: string) => names.has(code) ? `${names.get(code)} (${code})` : code;
   const data = dataset?.key === key ? dataset.data : undefined;
-  const selection = downloadCenterSelection(data?.parts || [], filters);
+  const windowOptions = { language };
+  const selection = downloadCenterSelection(data?.parts || [], filters, windowOptions);
   const files = selection.parts.flatMap(part => formats.filter(format => !filters.format || filters.format === format).flatMap(format => {
     const file = part.files?.[format];
     const url = safeUrl(file?.url);
@@ -102,7 +103,7 @@ export default function DownloadCenter({ language = 'en' }: { language?: Languag
     {key && !loading && !error && data && <>
       <p className="download-center__count" role="status">{number(files.length, language)} {text('matching files', '个匹配文件', 'fichiers correspondants')} · {text('Download snapshot', '文件更新日期', 'Version des téléchargements')}: {String(data.generated_at || '—').slice(0, 10)}</p>
       <div className="download-file-grid">{files.slice(visiblePage * pageSize, (visiblePage + 1) * pageSize).map(({ part, format, file }) => <DownloadFileCard key={`${downloadPartKey(part)}-${format}`} part={part} file={file} format={format} language={language}
-        title={`${named(countryNames, part.country_code || '')} · ${named(diseaseNames, part.disease_id || '')} · ${downloadWindowLabel(part)}`} />)}</div>
+        title={`${named(countryNames, part.country_code || '')} · ${named(diseaseNames, part.disease_id || '')} · ${downloadWindowLabel(part, windowOptions)}`} />)}</div>
       {!files.length && <p>{text('No files match these filters.', '没有符合筛选条件的文件。', 'Aucun fichier ne correspond à ces filtres.')}</p>}
       {pages > 1 && <nav className="download-center__pages" aria-label={text('File pages', '文件分页', 'Pages de fichiers')}>
         <button type="button" className="site-action-secondary" disabled={visiblePage === 0} onClick={() => setPage(visiblePage - 1)}>{text('Previous', '上一页', 'Précédent')}</button>

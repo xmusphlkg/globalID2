@@ -47,6 +47,34 @@ test('center applies country, disease and window together without losing shared-
 });
 
 test('historical archive labels never imply coverage through today', () => {
-  assert.equal(downloadWindowLabel({ id: '2020-2025', label: 'D038 · 2020–now' }), '2020–2025');
-  assert.equal(downloadWindowLabel({ id: '2026-2029', label: 'D038 · 2026–now' }), '2026–2029');
+  const options = { currentYear: 2030 };
+  assert.equal(downloadWindowLabel({ id: '2020-2025', label: 'D038 · 2020–now', is_current: true }, options), '2020–2025');
+  assert.equal(downloadWindowLabel({ id: '2026-2029', label: 'D038 · 2026–now', is_current: true }, options), '2026–2029');
+});
+
+test('current calendar windows use localized now labels without changing their IDs', () => {
+  for (const currentYear of [2026, 2029]) {
+    const part = { id: '2026-2029', label: 'D038 · 2026–2029', is_current: false };
+    assert.equal(downloadWindowLabel(part, { currentYear }), '2026–now');
+    assert.equal(downloadWindowLabel(part, { currentYear, language: 'zh' }), '2026–至今');
+    assert.equal(downloadWindowLabel(part, { currentYear, language: 'fr' }), '2026–aujourd’hui');
+    assert.equal(part.id, '2026-2029');
+  }
+  assert.equal(downloadWindowLabel({ id: '2030-2034' }, { currentYear: 2029 }), '2030–2034');
+});
+
+test('filters and file labels roll over automatically in 2030 and every five years after', () => {
+  const archives = ['2026-2029', '2030-2034', '2035-2039'].map(id => ({ id }));
+  for (const currentYear of [2030, 2034, 2035]) {
+    const options = { currentYear, language: 'zh' as const };
+    const filters = readDownloadFilters('?window=2030-2034');
+    const selection = downloadCenterSelection(archives, filters, options);
+    assert.deepEqual(selection.windows, [
+      { id: '2026-2029', label: '2026–2029' },
+      { id: '2030-2034', label: currentYear <= 2034 ? '2030–至今' : '2030–2034' },
+      { id: '2035-2039', label: currentYear >= 2035 ? '2035–至今' : '2035–2039' },
+    ]);
+    assert.deepEqual(selection.parts, [archives[1]]);
+    assert.equal(downloadWindowLabel(selection.parts[0], options), selection.windows[1].label);
+  }
 });

@@ -4,6 +4,14 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.20.11] - 2026-11-24
+
+### Fixed
+
+- Show the current download time window as “至今”, “now” or “aujourd’hui” in Chinese, English and French filters and file titles.
+- Switch completed windows to their fixed year range automatically: in 2030, show `2026–2029` and `2030–now`; continue every five years thereafter.
+- Preserve download filenames, URLs and shared filter links, with regression coverage for calendar rollover on desktop and mobile.
+
 ## [0.20.10] - 2026-11-23
 
 ### Improved
