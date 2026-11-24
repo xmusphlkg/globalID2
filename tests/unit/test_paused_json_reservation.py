@@ -40,6 +40,39 @@ def _pause(monkeypatch, paused):
         monkeypatch.setattr(module, "is_automatic_json_paused", lambda line: line in paused)
 
 
+@pytest.mark.parametrize("parked_line,other", [
+    ("surveillance", "situation"), ("situation", "surveillance"),
+])
+async def test_parked_contract_does_not_block_repeated_other_publications(
+    release_db, monkeypatch, parked_line, other,
+):
+    maker, service, _ = release_db
+    _pause(monkeypatch, set())
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(
+        timezone="UTC", surveillance_json_enabled=True, situation_json_enabled=True,
+        auto_failure_cooldown_minutes=0,
+    ))
+    parked = _owner(parked_line, TaskStatus.QUEUED, legacy=parked_line == "surveillance")
+    parked.metadata_ = {"release_job_id": "site-release", "publication_wait": {
+        "kind": "contract_blocked", "reason": "unchanged", "stuck": True}}
+    async with maker() as db:
+        db.add(parked)
+        db.add(Task(task_name="Last successful JSON", task_type=TaskType.EXPORT_DATA,
+                    status=TaskStatus.COMPLETED, input_data=_input(other)))
+        for line in (parked_line, other):
+            db.add(PublishDirty(line=line, scope_key="US" if line == "surveillance" else "*",
+                                source_task_uuid="source", marked_at=datetime.now(timezone.utc)))
+        await db.commit()
+    assert not await service._yield_json_turn("site-release", other)
+    job = DataReleaseJobConfig(job_id="site-release", name="Site")
+    for line, expected in ((parked_line, "skipped"), (other, "queued")):
+        result = await service._enqueue_release_task(
+            job, manual=False, trigger="upstream_completion", trigger_task_uuid=None,
+            data_only=True, data_line=line,
+        )
+        assert result["status"] == expected
+
+
 @pytest.mark.parametrize("parked_line,legacy", [
     ("surveillance", False), ("surveillance", True), ("situation", False),
 ])
