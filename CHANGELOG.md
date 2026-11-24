@@ -4,6 +4,14 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-24
+
+### Added
+
+- Open email subscriptions to the public. Readers can confirm their email address and choose surveillance reports, official outbreak notices, the weekly report digest and Research Radar.
+- Show the delivery schedule for each list and explain the overlap between surveillance reports and the weekly report digest in English, Chinese and French.
+- Verify subscription requests, confirmation email resends and management link requests with Cloudflare Turnstile.
+
 ## [0.20.11] - 2026-11-24
 
 ### Fixed

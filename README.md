@@ -14,12 +14,12 @@ operations dashboard, and an Astro public site.
 - [Control center](docs/control-center/README.md): operators, API, deployment and troubleshooting.
 - [Changelog](CHANGELOG.md): version history.
 
-## Version 0.20.10
+## Version 0.21.0
 
-This patch adds localized disease-hub synthesis paragraphs and subject keywords
-to weekly brief titles. Research pages retain multilingual search metadata,
-catalogue overviews, related collection links and explicit structured data for
-evidence summaries, DOI identifiers and weekly reports.
+Email subscriptions are open to the public. Readers can choose surveillance
+reports, official outbreak notices, the weekly report digest and Research Radar.
+Each option shows its delivery schedule in English, Chinese and French.
+Turnstile protects subscription requests, resends and management links.
 See [the changelog](CHANGELOG.md) for the release scope.
 
 ## Previous publication work
@@ -92,8 +92,8 @@ actual deployment result. Its date range and daily chart include acknowledged
 data publications and selected website versions; they do not measure email
 delivery. Canada and Belgium were traced from ingestion through dirty-marker
 acknowledgement to matching public update events after the latest restart.
-Email subscriptions remain in pilot mode; maintenance releases suppress delivery
-and this acceptance did not test actual email receipt. Source-specific failures
+Email subscriptions were in pilot mode during that acceptance, and maintenance
+releases suppressed delivery. Actual email receipt was outside its scope. Source-specific failures
 and Literature review backlog remain open.
 
 ```mermaid
