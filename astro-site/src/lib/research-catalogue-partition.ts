@@ -13,3 +13,12 @@ export function partitionResearchCatalogue<T extends { study_type?: string; deta
     return Array.from({ length: Math.ceil(group.length / size) }, (_, i) => group.slice(i * size, (i + 1) * size));
   });
 }
+
+export function countCatalogueDiseases(articles: Array<{ diseases?: Array<{ disease_id?: string }> }>) {
+  const counts: Record<string, number> = {};
+  for (const article of articles) {
+    const ids = new Set((article.diseases ?? []).map(item => item.disease_id?.toLowerCase()));
+    for (const id of ids) if (id) counts[id] = (counts[id] ?? 0) + 1;
+  }
+  return counts;
+}

@@ -25,6 +25,23 @@ from src.services.data_release.publication_usage import run_usage_collector
 logger = get_logger(__name__)
 
 
+async def _wait_for_scheduler_tasks(
+    stop_event: asyncio.Event, tasks: list[asyncio.Task],
+) -> None:
+    """Fail the process when a required loop exits so systemd can recover it."""
+    stopped = asyncio.create_task(stop_event.wait(), name="scheduler-stop-wait")
+    try:
+        completed, _ = await asyncio.wait([stopped, *tasks], return_when=asyncio.FIRST_COMPLETED)
+        if stop_event.is_set():
+            return
+        task = next(task for task in tasks if task in completed)
+        error = None if task.cancelled() else task.exception()
+        raise RuntimeError(f"Required scheduler loop stopped: {task.get_name()}") from error
+    finally:
+        stopped.cancel()
+        await asyncio.gather(stopped, return_exceptions=True)
+
+
 async def _monitor_worker(
     stop_event: asyncio.Event,
     worker_unavailable: asyncio.Event,
@@ -116,29 +133,33 @@ async def run_scheduler() -> None:
 
     logger.info("Control-plane scheduler starting")
     usage_collector = asyncio.create_task(run_usage_collector(stop_event), name="publication-usage-collector")
+    services = (
+        automation_service, data_release_service, disease_mapping_automation_service,
+        literature_service, knowledge_automation_service, idle_backlog_service,
+        situation_schedule_service, report_schedule_service,
+    )
     try:
-        await automation_service.start()
-        await data_release_service.start()
-        await disease_mapping_automation_service.start()
-        await literature_service.start()
-        await knowledge_automation_service.start()
-        await idle_backlog_service.start()
-        await situation_schedule_service.start()
-        await report_schedule_service.start()
+        for service in services:
+            await service.start()
         await control_plane_events.publish(
             "runtime.started", resource_type="runtime", resource_id=instance_id
         )
-        await stop_event.wait()
+        required = [heartbeat, lease_maintenance, worker_monitor]
+        for service in services:
+            for attribute in ("_task", "_subscription_task"):
+                task = getattr(service, attribute, None)
+                if isinstance(task, asyncio.Task):
+                    required.append(task)
+        await _wait_for_scheduler_tasks(stop_event, required)
     finally:
         stop_event.set()
-        await situation_schedule_service.stop()
-        await report_schedule_service.stop()
-        await idle_backlog_service.stop()
-        await knowledge_automation_service.stop()
-        await literature_service.stop()
-        await disease_mapping_automation_service.stop()
-        await data_release_service.stop()
-        await automation_service.stop()
+        for service in reversed(services):
+            try:
+                await service.stop()
+            except Exception:
+                # An already-failed loop must not skip stopping the remaining
+                # services or releasing the singleton lease during recovery.
+                logger.exception("Scheduler service cleanup failed: {}", type(service).__name__)
         # Metrics must not delay stopping business schedulers after lease loss.
         # A pending read-only HTTP thread may finish later; it cannot enqueue work.
         try:
@@ -148,9 +169,7 @@ async def run_scheduler() -> None:
         except Exception:
             logger.warning("Publication usage collector stopped with an error")
         stop_event.set()
-        await worker_monitor
-        await lease_maintenance
-        await heartbeat
+        await asyncio.gather(worker_monitor, lease_maintenance, heartbeat, return_exceptions=True)
         await control_plane_events.publish(
             "runtime.stopped", resource_type="runtime", resource_id=instance_id
         )

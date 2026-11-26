@@ -3,6 +3,32 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.21.1', date: '2026-11-26',
+    titleEn: 'Faster literature search and more reliable updates',
+    titleZh: '更快的文献检索与更稳定的数据更新',
+    titleFr: 'Recherche bibliographique plus rapide et mises à jour plus fiables',
+    summaryEn: 'Filtered research results load eight records at a time, with improvements to dashboard counts, model management and data publication.',
+    summaryZh: '文献筛选结果每页加载 8 篇，同时优化后台统计、模型管理和数据发布。',
+    summaryFr: 'Les résultats filtrés se chargent par pages de huit, avec des améliorations des statistiques, de la gestion des modèles et de la publication.',
+    sections: [{ kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'Browse filtered literature page by page, reuse previously loaded results and retry a failed page. Dashboard literature counts are calculated in the database.',
+      zh: '筛选文献后按页浏览，已读页面可复用，加载失败可重试。后台文献数量由数据库直接统计。',
+      fr: 'Parcourez les résultats par page, réutilisez les pages déjà chargées et réessayez en cas d’échec. Les statistiques bibliographiques sont calculées dans la base de données.',
+    }, {
+      en: 'Restore disabled models from discovery or manual entry, with clearer provider identification and operation feedback.',
+      zh: '发现模型或手动添加时可恢复已停用模型，并更清楚地标识供应商和操作结果。',
+      fr: 'Réactivez les modèles désactivés depuis la découverte ou la saisie manuelle, avec une identification plus claire des fournisseurs et des résultats.',
+    }] }, { kind: 'fixed', labelEn: 'Fixed', labelZh: '修复', labelFr: 'Corrections', items: [{
+      en: 'Improve scheduling recovery, concurrent publication and interrupted research builds, and honor upstream retry delays.',
+      zh: '改进调度恢复、并发发布和中断文献构建的恢复，并遵循上游重试等待时间。',
+      fr: 'Améliorez la reprise des tâches planifiées, la publication simultanée et les compilations interrompues, en respectant les délais de nouvelle tentative des fournisseurs.',
+    }, {
+      en: 'Improve Japan population workbook parsing, recovery of relocated population snapshots, Colombia proxy access and retries for unavailable Thailand and New Zealand sources.',
+      zh: '改进日本人口表解析、迁移后的人口快照恢复、哥伦比亚代理访问，以及泰国和新西兰不可用数据源的重试。',
+      fr: 'Améliorez la lecture des tableaux démographiques japonais, la récupération des instantanés déplacés, l’accès au proxy colombien et les tentatives sur les sources thaïlandaises et néo-zélandaises indisponibles.',
+    }] }],
+  },
+  {
     version: '0.21.0', date: '2026-11-24',
     titleEn: 'Public email subscriptions',
     titleZh: '邮件订阅正式开放',

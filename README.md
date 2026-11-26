@@ -14,13 +14,13 @@ operations dashboard, and an Astro public site.
 - [Control center](docs/control-center/README.md): operators, API, deployment and troubleshooting.
 - [Changelog](CHANGELOG.md): version history.
 
-## Version 0.21.0
+## Version 0.21.1
 
-Email subscriptions are open to the public. Readers can choose surveillance
-reports, official outbreak notices, the weekly report digest and Research Radar.
-Each option shows its delivery schedule in English, Chinese and French.
-Turnstile protects subscription requests, resends and management links.
-See [the changelog](CHANGELOG.md) for the release scope.
+Research search loads results page by page, and dashboard literature counts
+are calculated in the database. Model management supports restoring disabled
+models and clearer import and deletion feedback. This release also improves
+scheduler recovery, concurrent data publication, source-request cooldowns and
+population snapshot recovery. See [the changelog](CHANGELOG.md) for details.
 
 ## Previous publication work
 

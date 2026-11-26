@@ -92,13 +92,32 @@ def test_retry_after_honors_fractional_delays_and_http_dates():
     assert extract_retry_after_seconds(dated, now=now) == 17
 
 
+@pytest.mark.parametrize("status", [500, 502, 503, 504])
+def test_upstream_failure_keeps_provider_retry_after(status):
+    failure = classify_failure(
+        ProviderError("server failed", status, headers={"Retry-After": "90"})
+    )
+    assert failure.kind is FailureKind.UPSTREAM
+    assert failure.retryable
+    assert failure.retry_after_seconds == 90
+
+
+def test_channel_failure_keeps_provider_retry_after():
+    failure = classify_failure(
+        ProviderError("no available channel; retry later", 503,
+                      headers={"Retry-After": "90"})
+    )
+    assert failure.kind is FailureKind.CHANNEL_UNAVAILABLE
+    assert failure.retry_after_seconds == 90
+
+
 @pytest.mark.parametrize(
     "page",
     [
-        "<!DOCTYPE html><html><head><title>Attention Required! | Cloudflare</title>"
-        "</head><body>Access denied</body></html>",
-        "<html><head><title>Just a moment...</title></head><body>"
-        '<script src="/cdn-cgi/challenge-platform/example.js"></script></body></html>',
+        ("<!DOCTYPE html><html><head><title>Attention Required! | Cloudflare</title>"
+         "</head><body>Access denied</body></html>"),
+        ("<html><head><title>Just a moment...</title></head><body>"
+         '<script src="/cdn-cgi/challenge-platform/example.js"></script></body></html>'),
     ],
 )
 @pytest.mark.parametrize(

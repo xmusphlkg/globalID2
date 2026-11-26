@@ -58,7 +58,9 @@ def classify_failure(error: Any) -> ProviderFailure:
             max(_EDGE_BLOCK_RETRY_SECONDS, extract_retry_after_seconds(error) or 0),
         )
     if is_model_channel_failure(error):
-        return ProviderFailure(FailureKind.CHANNEL_UNAVAILABLE, True, "model")
+        return ProviderFailure(
+            FailureKind.CHANNEL_UNAVAILABLE, True, "model", extract_retry_after_seconds(error)
+        )
     if is_account_quota_exhausted(error) or is_rate_limit_error(error):
         return ProviderFailure(
             FailureKind.RATE_LIMIT, True, "model", extract_retry_after_seconds(error)
@@ -67,7 +69,9 @@ def classify_failure(error: Any) -> ProviderFailure:
         return ProviderFailure(FailureKind.MODEL_UNAVAILABLE, False, "model")
     transport = _runtime_failure_kind(error)
     if transport is not None:
-        return ProviderFailure(FailureKind(transport), True, "model")
+        return ProviderFailure(
+            FailureKind(transport), True, "model", extract_retry_after_seconds(error)
+        )
     invalid_request = _http_status(error) in {400, 422}
     if invalid_request:
         return ProviderFailure(FailureKind.INVALID_REQUEST, False, "request")

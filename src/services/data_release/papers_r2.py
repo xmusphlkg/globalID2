@@ -212,6 +212,8 @@ class R2S3Client:
         self._index_checked_at = 0.0
         self._publication_mutex = threading.RLock()
         self._publication_depth = 0
+        self._publication_handle = None
+        self._publication_channel = None
         # Preserve production's per-thread pools: one slow transfer must not
         # hold the shared HTTP pool lock for the entire publication.
         self._http = None  # Optional injected HTTP transport for protocol tests.
@@ -309,30 +311,82 @@ class R2S3Client:
                 fcntl.flock(handle, fcntl.LOCK_UN)
 
     @contextmanager
-    def publication_session(self):
-        """Serialize complete publications and single-version cleanup locally.
+    def publication_session(self, *, channel: str | None = None):
+        """Serialize each channel while fencing bucket-wide cleanup.
 
-        This lock is distinct from the inventory lock. Upload pool threads use
-        their owning client's session; nested research JSON publication reuses
-        it. The caller must join all uploads before leaving the session.
+        Independent channels may upload together under a shared bucket fence.
+        Maintenance callers without a channel retain the exclusive bucket lock.
+        The caller must join all upload threads before leaving the session.
         """
         if self.object_index is None:
             yield
             return
         with self._publication_mutex:
-            handle = None
+            handle = channel_handle = None
             if self._publication_depth == 0:
+                if channel is not None:
+                    identity = hashlib.sha256(channel.encode()).hexdigest()
+                    path = self.object_index.lock_dir / f"r2-channel-{self.object_index.target}-{identity}.lock"
+                    channel_handle = path.open("a")
+                    try:
+                        fcntl.flock(channel_handle, fcntl.LOCK_EX)
+                    except BaseException:
+                        channel_handle.close()
+                        raise
                 path = self.object_index.lock_dir / f"r2-publication-{self.object_index.target}.lock"
-                handle = path.open("a")
-                fcntl.flock(handle, fcntl.LOCK_EX)
+                try:
+                    handle = path.open("a")
+                    fcntl.flock(handle, fcntl.LOCK_SH if channel is not None else fcntl.LOCK_EX)
+                except BaseException:
+                    if handle is not None:
+                        handle.close()
+                    if channel_handle is not None:
+                        channel_handle.close()
+                    raise
+                self._publication_handle, self._publication_channel = handle, channel
+            elif self._publication_channel is not None and channel != self._publication_channel:
+                raise ValueError("Nested publication cannot change channels")
             self._publication_depth += 1
             try:
                 yield
             finally:
                 self._publication_depth -= 1
                 if handle is not None:
+                    self._publication_handle, self._publication_channel = None, None
                     fcntl.flock(handle, fcntl.LOCK_UN)
                     handle.close()
+                if channel_handle is not None:
+                    fcntl.flock(channel_handle, fcntl.LOCK_UN)
+                    channel_handle.close()
+
+    @contextmanager
+    def publication_cleanup_session(self):
+        """Collect only with an exclusive bucket fence; defer during uploads.
+
+        The channel lock remains held while upgrading, so its pointer cannot
+        advance. Staged references protect the candidate while the shared fence
+        is released. Failure to upgrade leaves garbage queued for a later run.
+        """
+        handle = self._publication_handle
+        if self.object_index is None or (handle is not None and self._publication_channel is None):
+            yield True
+            return
+        if handle is None:
+            raise RuntimeError("Publication cleanup requires a publication session")
+        fcntl.flock(handle, fcntl.LOCK_UN)
+        acquired = False
+        try:
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+            except BlockingIOError:
+                # Do not spend the release timeout waiting for another channel's
+                # multi-hour upload after this pointer has already committed.
+                fcntl.flock(handle, fcntl.LOCK_SH)
+            yield acquired
+        finally:
+            if acquired:
+                fcntl.flock(handle, fcntl.LOCK_SH)
 
     @contextmanager
     def _publication_operation(self):

@@ -1,8 +1,12 @@
 """Exercise source isolation and durable publication retries, without network."""
 import csv
+import hashlib
 from pathlib import Path
+import shutil
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+
+import pytest
 
 from scripts import update_population_automatically as scheduler
 
@@ -82,6 +86,32 @@ def test_dry_run_does_not_modify_applied_receipt_or_queue_publication(tmp_path, 
     scheduler.refresh_sources(output=tmp_path, sources=['CN'], apply=False, queue_release=False, runner=source_runner(), now=NOW)
     assert scheduler.read_json(tmp_path / 'latest.json', {}) == {'untouched': True}
     release.assert_not_called()
+
+
+def test_scheduler_recovers_verified_snapshots_after_moving_the_data_tree(tmp_path):
+    old = tmp_path / "old"
+    new = tmp_path / "new"
+    scheduler.refresh_sources(output=old, sources=['CN'], apply=True, queue_release=False,
+                              runner=source_runner(), now=NOW)
+    state_path = old / "scheduler-status.json"
+    state = scheduler.read_json(state_path, {})
+    source_csv = Path(state["sources"]["CN"]["last_success_snapshot"]) / "population.csv"
+    state["sources"]["CN"]["last_success_sha256"] = hashlib.sha256(source_csv.read_bytes()).hexdigest()
+    scheduler.write_json(state_path, state)
+    shutil.move(old, new)
+
+    scheduler.refresh_sources(output=new, sources=['CN'], apply=True, queue_release=False,
+                              runner=source_runner(failures=['CN']), now=NOW + '1')
+    receipt = scheduler.read_json(new / "latest.json", {})
+    assert receipt["locations"] == 1
+    assert receipt["source_statuses"]["CN"]["status"] == "failed"
+
+    relocated = new / "sources" / "cn" / "snapshot" / "population.csv"
+    relocated.write_bytes(b"mismatched")
+    with pytest.raises(ValueError, match="Cannot verify relocated population snapshot"):
+        scheduler.refresh_sources(output=new, sources=['CN'], apply=True, queue_release=False,
+                                  runner=source_runner(failures=['CN']), now=NOW + '2')
+    assert scheduler.read_json(new / "latest.json", {}) == receipt
 
 
 async def test_changed_population_requests_surveillance_data_release_only(monkeypatch):

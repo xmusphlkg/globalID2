@@ -5,10 +5,12 @@ import { type ThinkingMode } from "@/features/ai/api";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
 
 import { type ModelCenterController } from "../hooks/use-model-center";
-import { ActionButton, Field, FormSection, inputClass } from "./form-controls";
+import { mutationErrorText } from "../presentation";
+import { ActionButton, AlertBox, Field, FormSection, inputClass } from "./form-controls";
 
 export function ModelForm({ controller }: { controller: ModelCenterController }) {
-  const { models, createModel, updateModel, modelDrawerMode, setModelDrawerMode, modelForm, setModelForm, copy, providerOptions, resetModelForm, submitModel } = controller;
+  const { lang, models, createModel, updateModel, existingFormModel, modelDrawerMode, setModelDrawerMode, modelForm, setModelForm, copy, providerOptions, resetModelForm, submitModel } = controller;
+  const error = existingFormModel || modelDrawerMode === "edit" ? updateModel.error : createModel.error;
 
   return (<>
       <DetailDrawer
@@ -29,6 +31,13 @@ export function ModelForm({ controller }: { controller: ModelCenterController })
               <Field label={copy.modelName}>
                 <input className={inputClass} value={modelForm.model_name} disabled={modelDrawerMode === "edit"} required onChange={(event) => setModelForm((prev) => ({ ...prev, model_name: event.target.value }))} />
               </Field>
+            </div>
+            {existingFormModel ? (
+              <p role="status" className="text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                {existingFormModel.is_enabled ? copy.alreadyConfigured : copy.restoreModelHint} <code>{existingFormModel.model_key}</code>
+              </p>
+            ) : (<>
+            <div className="grid gap-3 sm:grid-cols-2">
               <Field label={copy.displayName}>
                 <input className={inputClass} value={modelForm.display_name} onChange={(event) => setModelForm((prev) => ({ ...prev, display_name: event.target.value }))} />
               </Field>
@@ -120,11 +129,13 @@ export function ModelForm({ controller }: { controller: ModelCenterController })
                 {copy.defaultModel}
               </label>
             </div>
+            </>)}
           </FormSection>
+          {error ? <AlertBox tone="danger"><span role="alert">{mutationErrorText(error, lang)}</span></AlertBox> : null}
           <div className="flex justify-end gap-2">
             <ActionButton onClick={resetModelForm}>{copy.reset}</ActionButton>
-            <ActionButton type="submit" tone="primary" disabled={createModel.isPending || updateModel.isPending}>
-              {modelDrawerMode === "edit" ? copy.save : copy.create}
+            <ActionButton type="submit" tone="primary" disabled={!models || createModel.isPending || updateModel.isPending || existingFormModel?.is_enabled}>
+              {modelDrawerMode === "edit" ? copy.save : existingFormModel ? (existingFormModel.is_enabled ? copy.alreadyConfigured : copy.restoreModel) : copy.create}
             </ActionButton>
           </div>
         </form>

@@ -5,6 +5,19 @@ from sqlalchemy.orm import Load
 from src.domain import LiteratureArticle, LiteratureSignalArticleLink, LiteratureSummary
 from src.literature.summary_contracts import SUMMARY_FIELDS
 
+def automation_snapshot_counts(status, metadata, policy_version: str):
+    """Count policy markers in SQL so the dashboard only receives one row."""
+    version = metadata[("autopilot", "policy_version")].as_string()
+    decision = metadata[("autopilot", "decision")].as_string()
+    review = status == "review"
+    return select(
+        func.count().filter(status == "published", version == policy_version).label("automatic"),
+        func.count().filter(review).label("review"),
+        func.count().filter(review, decision == "defer").label("deferred"),
+        func.count().filter(review, decision == "archive").label("archive_decisions"),
+    ).where(status.in_(("published", "review")))
+
+
 def _link_reconciliation_statement(
     *, after_id: int = 0, batch_size: int = 100, article_ids: tuple[str, ...] | None = None,
 ):

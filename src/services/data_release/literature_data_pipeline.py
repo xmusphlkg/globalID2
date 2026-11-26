@@ -101,8 +101,9 @@ async def execute_literature_data_release(service, task, *, runtime) -> dict:
         if not (stage.is_dir() and build_receipt.is_file()):
             if stage.is_symlink():
                 raise ValueError('Invalid literature stage directory')
-            if stage.exists():
-                await asyncio.to_thread(shutil.rmtree, stage)
+            # The explicit prepare-build subprocess archives incomplete local
+            # output and refreshes changed renderer inputs before rebuilding.
+            # It refuses to touch any frozen or already published candidate.
             await command(title='Freeze Literature Template Baseline',
                 cmd=[str(python), 'scripts/publish_research_candidate.py', '--run', str(run), '--snapshot', str(snapshot),
                      '--stage', str(stage), '--release-id', release_id, '--prepare-build'], cwd=root, env=env,

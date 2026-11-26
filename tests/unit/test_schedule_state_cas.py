@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from src.control_plane import schedule_state as module
@@ -93,3 +94,34 @@ async def test_sql_case_preserves_concurrent_panel_next_but_records_result(
     assert actual.last_task_uuid == "actual-dispatch"
     assert actual.last_status == "queued"
     assert actual.last_finished_at == result.last_finished_at
+
+
+@pytest.mark.parametrize("operation", ["load", "save", "save_result", "reschedule", "schedule_earlier", "remove"])
+async def test_pool_exhaustion_is_recoverable_and_next_read_keeps_persisted_schedule(
+    repository, monkeypatch, operation,
+):
+    repo, _ = repository
+    overdue = datetime(2026, 11, 25, 18, 9)
+    await repo.reschedule("literature", "research-radar", overdue)
+    database = module.get_database
+
+    @asynccontextmanager
+    async def unavailable():
+        raise PoolTimeoutError("QueuePool limit reached")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(module, "get_database", unavailable)
+    state = SimpleNamespace(next_run_at=overdue)
+    if operation == "load":
+        assert await repo.load("literature") == {}
+    elif operation in {"save", "save_result"}:
+        kwargs = {"expected_next_run_at": overdue} if operation == "save_result" else {}
+        await getattr(repo, operation)("literature", "research-radar", state, **kwargs)
+    elif operation in {"reschedule", "schedule_earlier"}:
+        await getattr(repo, operation)("literature", "research-radar", overdue)
+    else:
+        await repo.remove("literature", "research-radar")
+
+    monkeypatch.setattr(module, "get_database", database)
+    restored = await repo.load("literature")
+    assert restored["research-radar"]["next_run_at"] == overdue

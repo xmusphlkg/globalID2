@@ -14,7 +14,7 @@ import { IconActionButton, LastCheckCell, SkeletonRows } from "./form-controls";
 import { formatDateTime, statusTone } from "../presentation";
 
 export function ProviderPanel({ controller }: { controller: ModelCenterController }) {
-  const { isZh, providers, loadingProviders, models, updateProvider, deleteProvider, testProvider, discoverProviderModels, activeView, deletingProviderId, copy, modelCountByProvider, filteredProviders, openEditProvider, onDeleteProvider, onDiscoverProviderModels } = controller;
+  const { isZh, providers, loadingProviders, isImportingDiscoveredModels, updateProvider, deleteProvider, testProvider, discoverProviderModels, activeView, deletingProviderId, copy, modelCountByProvider, filteredProviders, openEditProvider, onDeleteProvider, onDiscoverProviderModels } = controller;
   const providerColumns = useMemo<DataTableColumn<AIProviderItem>[]>(
     () => [
       {
@@ -104,7 +104,7 @@ export function ProviderPanel({ controller }: { controller: ModelCenterControlle
         render: (provider) => (
           <div className="flex justify-end gap-1">
             <IconActionButton
-              disabled={discoverProviderModels.isPending}
+              disabled={discoverProviderModels.isPending || isImportingDiscoveredModels}
               onClick={() => onDiscoverProviderModels(provider)}
               icon={<Search className="h-4 w-4" />}
               label={copy.discoverModels}
@@ -136,7 +136,7 @@ export function ProviderPanel({ controller }: { controller: ModelCenterControlle
         ),
       },
     ],
-    [copy, deleteProvider.isPending, deletingProviderId, discoverProviderModels.isPending, isZh, modelCountByProvider, testProvider.isPending, updateProvider],
+    [copy, deleteProvider.isPending, deletingProviderId, discoverProviderModels.isPending, isImportingDiscoveredModels, isZh, modelCountByProvider, testProvider.isPending, updateProvider],
   );
 
   return (<>
@@ -168,7 +168,7 @@ export function ProviderPanel({ controller }: { controller: ModelCenterControlle
                       </div>
                       <p className="truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{provider.base_url || "-"}</p>
                       <div className="flex justify-end gap-1 border-t border-tremor-border pt-3 dark:border-dark-tremor-border">
-                        <IconActionButton disabled={discoverProviderModels.isPending} onClick={() => onDiscoverProviderModels(provider)} icon={<Search className="h-4 w-4" />} label={copy.discoverModels} />
+                        <IconActionButton disabled={discoverProviderModels.isPending || isImportingDiscoveredModels} onClick={() => onDiscoverProviderModels(provider)} icon={<Search className="h-4 w-4" />} label={copy.discoverModels} />
                         <IconActionButton disabled={testProvider.isPending} onClick={() => testProvider.mutate(provider.provider_key)} icon={<ShieldCheck className="h-4 w-4" />} label={copy.test} />
                         <IconActionButton onClick={() => openEditProvider(provider)} icon={<Pencil className="h-4 w-4" />} label={copy.edit} />
                         <IconActionButton onClick={() => updateProvider.mutate({ providerKey: provider.provider_key, payload: { is_active: !provider.is_active } })} icon={<Power className="h-4 w-4" />} label={provider.is_active ? copy.disable : copy.enable} />

@@ -42,6 +42,7 @@ from src.services.data_release.publication_wait import (
 )
 from src.services.data_release.global_selection import read_selected_batch, selection_batches
 from src.services.data_release.planning import publishable_scope_keys
+from src.services.data_release.literature_schedule import literature_publication_due_at
 from src.services.data_release.public_changelog import (
     missing_public_changelog_versions,
     public_changelog_blocker,
@@ -1315,8 +1316,9 @@ class DataReleaseService:
             return
         if latest is not None and latest.status in {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}:
             interval = int(getattr(self._config(), "literature_publish_interval_minutes", 360))
-            last = _as_aware_utc(latest.completed_at or latest.created_at)
-            if last and datetime.now(ZoneInfo("UTC")) < last + timedelta(minutes=interval):
+            due = literature_publication_due_at(created_at=latest.created_at, completed_at=latest.completed_at,
+                status=latest.status, interval_minutes=interval)
+            if due and datetime.now(ZoneInfo("UTC")) < due:
                 return
         elif latest is not None:
             return

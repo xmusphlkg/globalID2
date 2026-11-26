@@ -1,3 +1,4 @@
+import { countCatalogueDiseases } from '../../../lib/research-catalogue-partition';
 import { researchCatalogue } from '../../../lib/research-catalogue-shards';
 
 export function GET() {
@@ -14,6 +15,7 @@ export function GET() {
     schema_version: 2,
     generated_at: researchCatalogueGeneratedAt,
     total: researchCatalogueArticles.length,
+    disease_counts: countCatalogueDiseases(researchCatalogueArticles),
     chunks: researchCatalogueChunks.map((articles, index) => ({ path: `/research/catalogue/${researchCatalogueChunkNames[index]}.json`, count: articles.length, reviewed_count: articles.filter(article => article.detail_available !== false).length, facets: facets(articles) })),
   }), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 }

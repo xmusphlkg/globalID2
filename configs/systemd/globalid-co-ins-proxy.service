@@ -2,10 +2,15 @@
 Description=GlobalID INS-only HTTPS gateway through Colombia
 Requires=globalid-co-ins-egress.service
 After=globalid-co-ins-egress.service
+PartOf=globalid-co-ins-egress.service
 
 [Service]
 Type=simple
 WorkingDirectory=/home/likangguo/globalID/globalID2
+# Keep the resolver symlink target stable when the host replaces its stub.
+TemporaryFileSystem=/run/systemd/resolve:ro
+BindReadOnlyPaths=/etc/netns/gids-co-ins/resolv.conf:/run/systemd/resolve/stub-resolv.conf
+BindReadOnlyPaths=/etc/netns/gids-co-ins/resolv.conf:/run/systemd/resolve/resolv.conf
 ExecStart=/usr/bin/ip netns exec gids-co-ins /usr/sbin/runuser -u likangguo -- /home/likangguo/globalID/globalID2/venv/bin/python -m src.services.ingestion.co_ins_proxy
 Restart=on-failure
 RestartSec=5

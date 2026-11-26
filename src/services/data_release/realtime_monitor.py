@@ -22,6 +22,7 @@ from src.domain import Country, Task, TaskStatus, TaskType
 from src.domain.collection import PublishDirty
 from .planning import plan_changes, publishable_scope_keys
 from .surveillance_publish import validate_manifest
+from .literature_schedule import literature_publication_due_at
 
 CHANNELS = ("surveillance", "situation")
 DATABASE_CHANNELS = (*CHANNELS, "literature")
@@ -217,16 +218,18 @@ async def collect_database_snapshot(db, *, now: datetime, channels=CHANNELS,
             config = settings or get_config().data_release
             result[channel]["last_completed"] = await _research_publication_state(
                 db, result[channel]["last_completed"], now=now, root=root, settings=config)
-            latest_created = (await db.execute(select(Task.created_at).where(*clauses)
-                .order_by(Task.created_at.desc(), Task.id.desc()).limit(1))).scalar_one_or_none()
-            last = timestamp(latest_created)
+            latest = (await db.execute(select(Task.created_at, Task.completed_at, Task.status).where(*clauses)
+                .order_by(Task.created_at.desc(), Task.id.desc()).limit(1))).first()
             interval = int(config.literature_publish_interval_minutes)
-            due = last + timedelta(minutes=interval) if last and last <= now else None
+            created, completed, status = latest if latest is not None else (None, None, None)
+            due = literature_publication_due_at(created_at=created, completed_at=completed,
+                status=status, interval_minutes=interval)
             pending = result[channel]["publishable_pending"]
             oldest = timestamp(pending["oldest_at"])
             pending_due = max(oldest, due) if oldest and due else oldest
             result[channel]["schedule"] = {"interval_minutes": interval,
-                "last_task_created_at": iso(last), "next_due_at": iso(due),
+                "last_task_created_at": iso(created), "last_task_completed_at": iso(completed),
+                "next_due_at": iso(due),
                 "pending_due_at": iso(pending_due), "pending_overdue_seconds": age(pending_due, now),
                 "waiting_for_schedule": bool(pending["count"] and due and due > now)}
     return result

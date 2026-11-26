@@ -276,7 +276,10 @@ def publish_papers_content(candidate: PapersContentCandidate, *, client: Any,
                     pending.add(pool.submit(function, item))
                 if not pending:
                     break
-                done, pending = wait(pending, return_when=FIRST_COMPLETED)
+                done, pending = wait(pending, timeout=15, return_when=FIRST_COMPLETED)
+                if not done:
+                    logger.info("Research papers transfer waiting: in_flight={} elapsed_seconds={:.2f}",
+                                len(pending), time.monotonic() - started)
                 for future in done:
                     yield future.result()
         finally:

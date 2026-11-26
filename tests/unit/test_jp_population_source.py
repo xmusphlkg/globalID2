@@ -78,6 +78,33 @@ def test_japan_moved_columns_follow_the_total_header_not_the_old_column_position
     assert rows[0].population == 100_000
 
 
+@pytest.mark.parametrize('complete', [True, False])
+def test_japan_age_table_uses_the_all_resident_both_sexes_all_ages_column(complete):
+    book = Workbook()
+    sheet = book.active
+    sheet.append(['第２表 都道府県、年齢（５歳階級）、男女別人口（2025年10月1日現在）'])
+    sheet.append(['（単位 千人）'])
+    for label, size, start in [
+        ('総 人 口  男 女 計', 47 if complete else 46, 100),
+        ('総 人 口  男', 47, 48),
+        ('日本人人口 男女計', 47, 90),
+    ]:
+        sheet.append([None, None, None, None, label])
+        sheet.append(['都道府県', None, '総 数', '０～４歳', '５～９歳'])
+        for index, name in enumerate(list(JP_PREFECTURES)[:size]):
+            sheet.append([f'{index + 1:02d}', name, start + index, 20, 21])
+    body = io.BytesIO()
+    book.save(body)
+    url = 'https://www.stat.go.jp/age-table.xlsx'
+    if complete:
+        rows = parse_workbook(body.getvalue(), 2025, url)
+        assert len(rows) == 47
+        assert [rows[0].population, rows[-1].population] == [100_000, 146_000]
+    else:
+        with pytest.raises(ValueError, match='complete 47-prefecture'):
+            parse_workbook(body.getvalue(), 2025, url)
+
+
 def test_new_current_year_is_discovered_and_a_missing_formal_workbook_fails():
     from scripts.population_sources import jp
     class Today:

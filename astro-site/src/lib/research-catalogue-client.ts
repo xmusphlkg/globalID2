@@ -4,7 +4,7 @@ import { researchQueryScopes, type ResearchQueryEntity } from './research-query-
 type CatalogueScope = 'disease' | 'country' | 'topic' | 'study' | 'week';
 export type CatalogueFacets = Partial<Record<CatalogueScope, string>>;
 type CatalogueChunk = { path: string; count: number; reviewed_count?: number; facets?: Partial<Record<CatalogueScope, string[]>> };
-type CatalogueManifest = { chunks: CatalogueChunk[] };
+type CatalogueManifest = { chunks: CatalogueChunk[]; disease_counts?: Record<string, number> };
 export type CatalogueProgress = { mode: 'catalogue' | 'collection'; completed: number; total: number };
 type CatalogueRequest = { limit?: number; scope?: CatalogueScope; value?: string; facets?: CatalogueFacets; includeBibliographic?: boolean; signal?: AbortSignal; onProgress?: (progress: CatalogueProgress) => void };
 export const researchCatalogueConcurrency = 4;
@@ -40,7 +40,7 @@ function queueChunkRequest<T>(task: () => Promise<T>): Promise<T> {
 let manifestPromise: Promise<CatalogueManifest> | null = null;
 const chunkPromises = new Map<string, Promise<any[]>>();
 
-export async function loadResearchCatalogue({ limit, scope, value, facets, includeBibliographic = false, signal, onProgress }: CatalogueRequest = {}): Promise<any[]> {
+async function selectCatalogueChunks({ scope, value, facets, includeBibliographic, signal }: CatalogueRequest) {
   signal?.throwIfAborted();
   manifestPromise ??= fetch(researchVersionedHref('/research/catalogue/manifest.json'), { cache: 'no-store' })
     .then(response => {
@@ -54,11 +54,62 @@ export async function loadResearchCatalogue({ limit, scope, value, facets, inclu
   if (scope && allowedFacets.has(scope) && typeof value === 'string' && value.trim()) requested.push([scope, value]);
   // Missing or malformed old metadata cannot prove a chunk is irrelevant.
   // These are safe candidate prefilters; callers still filter actual records.
-  let selected = manifest.chunks.filter(chunk => (includeBibliographic || chunk.reviewed_count !== 0) && requested.every(([key, candidate]) => {
+  const chunks = manifest.chunks.filter(chunk => (includeBibliographic || chunk.reviewed_count !== 0) && requested.every(([key, candidate]) => {
     const values = chunk.facets?.[key];
     if (!Array.isArray(values) || !values.every(item => typeof item === 'string')) return true;
     return values.some(item => item.trim().toLowerCase() === candidate.trim().toLowerCase());
   }));
+  return { chunks, diseaseCounts: manifest.disease_counts };
+}
+
+function readCatalogueChunk(chunk: CatalogueChunk, signal?: AbortSignal) {
+  let promise = chunkPromises.get(chunk.path);
+  if (!promise) {
+    promise = queueChunkRequest(async () => {
+      const response = await fetch(researchVersionedHref(chunk.path));
+      if (!response.ok) throw new Error(`Research catalogue chunk failed: ${response.status}`);
+      const payload = await response.json();
+      if (!Array.isArray(payload.articles) || payload.articles.length !== chunk.count) throw new Error('Incomplete research catalogue chunk');
+      return payload.articles as any[];
+    }).catch(error => { chunkPromises.delete(chunk.path); throw error; });
+    chunkPromises.set(chunk.path, promise);
+  }
+  return waitForCatalogueRequest(promise, signal);
+}
+
+/** Keep the position and matching rows for one set of filters. A failed read can
+ * resume at its chunk, and returning to an earlier page requires no requests. */
+export function createResearchCataloguePager(facets: CatalogueFacets, matches: (article: any) => boolean, pageSize: number, onlyDisease?: string) {
+  const rows: any[] = [];
+  let selection: Awaited<ReturnType<typeof selectCatalogueChunks>> | undefined;
+  let nextChunk = 0;
+  return async (requestedPage: number, signal: AbortSignal) => {
+    signal.throwIfAborted();
+    selection ??= await selectCatalogueChunks({ facets, includeBibliographic: true, signal });
+    const { chunks, diseaseCounts } = selection;
+    const knownTotal = onlyDisease ? diseaseCounts?.[onlyDisease] : undefined;
+    const end = requestedPage * pageSize;
+    const target = Math.min(end, knownTotal ?? end);
+    let batchSize = 1;
+    while (rows.length < target && nextChunk < chunks.length) {
+      const batch = chunks.slice(nextChunk, nextChunk + batchSize);
+      const results = await Promise.all(batch.map(chunk => readCatalogueChunk(chunk, signal)));
+      signal.throwIfAborted();
+      for (const articles of results) rows.push(...articles.filter(matches));
+      nextChunk += batch.length;
+      batchSize = researchCatalogueConcurrency;
+    }
+    const finished = nextChunk === chunks.length;
+    const total = finished ? rows.length : knownTotal;
+    const page = Math.min(requestedPage, Math.max(1, Math.ceil(rows.length / pageSize)));
+    return { page, articles: rows.slice((page - 1) * pageSize, page * pageSize), total,
+      hasNext: total === undefined ? !finished || rows.length > end : total > page * pageSize };
+  };
+}
+
+export async function loadResearchCatalogue({ limit, onProgress, ...request }: CatalogueRequest = {}): Promise<any[]> {
+  const { signal, includeBibliographic } = request;
+  let { chunks: selected } = await selectCatalogueChunks(request);
   if (limit !== undefined) {
     let count = 0;
     selected = selected.filter(chunk => {
@@ -76,18 +127,7 @@ export async function loadResearchCatalogue({ limit, scope, value, facets, inclu
         signal?.throwIfAborted();
         const position = next++;
         const chunk = selected[position];
-        let promise = chunkPromises.get(chunk.path);
-        if (!promise) {
-          promise = queueChunkRequest(async () => {
-            const response = await fetch(researchVersionedHref(chunk.path));
-            if (!response.ok) throw new Error(`Research catalogue chunk failed: ${response.status}`);
-            const payload = await response.json();
-            if (!Array.isArray(payload.articles) || payload.articles.length !== chunk.count) throw new Error('Incomplete research catalogue chunk');
-            return payload.articles as any[];
-          }).catch(error => { chunkPromises.delete(chunk.path); throw error; });
-          chunkPromises.set(chunk.path, promise);
-        }
-        chunks[position] = await waitForCatalogueRequest(promise, signal);
+        chunks[position] = await readCatalogueChunk(chunk, signal);
         // A sibling may have failed, or the caller may have changed filters,
         // while this shared chunk was in flight. Do not schedule another batch.
         if (stopped) return;

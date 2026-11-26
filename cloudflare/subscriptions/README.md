@@ -135,7 +135,8 @@ This is form verification; it does not enable WAF pre-clearance or reduce
 requests from bots that only read public pages.
 
 Deployment and test evidence for the initial production activation is recorded
-in [the Turnstile acceptance report](../../docs/diagnostics/2026-11-24-turnstile.md).
+under the ignored `exports/turnstile-2026-11-24/` directory. Keep new verification
+receipts under `exports/` and maintain reusable setup instructions here.
 
 The subscription Worker can send confirmation emails through the same SMTP
 settings used by the local automation service. If `SUBSCRIPTIONS__SMTP_*`

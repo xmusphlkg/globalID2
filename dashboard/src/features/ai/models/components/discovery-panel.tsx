@@ -12,7 +12,7 @@ import { ActionButton } from "./form-controls";
 import { statusTone } from "../presentation";
 
 export function DiscoveryPanel({ controller }: { controller: ModelCenterController }) {
-  const { models, discoveryResult, setDiscoveryResult, discoverySelection, setDiscoverySelection, discoveryImportResults, isImportingDiscoveredModels, copy, configuredDiscoveredModels, selectableDiscoveredModels, onAddDiscoveredModels } = controller;
+  const { models, discoveryResult, setDiscoveryResult, discoverySelection, setDiscoverySelection, discoveryImportResults, isImportingDiscoveredModels, copy, configuredDiscoveredModels, selectableDiscoveredModels, onAddDiscoveredModels, onRestoreDiscoveredModel } = controller;
 
   return (<>
       <DetailDrawer
@@ -36,14 +36,14 @@ export function DiscoveryPanel({ controller }: { controller: ModelCenterControll
                     <input
                       type="checkbox"
                       checked={selectableDiscoveredModels.length > 0 && discoverySelection.length === selectableDiscoveredModels.length}
-                      disabled={isImportingDiscoveredModels || selectableDiscoveredModels.length === 0}
+                      disabled={!models || isImportingDiscoveredModels || selectableDiscoveredModels.length === 0}
                       onChange={(event) => setDiscoverySelection(event.target.checked ? selectableDiscoveredModels : [])}
                     />
                     {copy.selectAll}
                   </label>
                   <ActionButton
                     tone="primary"
-                    disabled={isImportingDiscoveredModels || discoverySelection.length === 0}
+                    disabled={!models || isImportingDiscoveredModels || discoverySelection.length === 0}
                     onClick={() => void onAddDiscoveredModels()}
                     icon={<CheckCircle2 className="h-4 w-4" />}
                   >
@@ -52,21 +52,30 @@ export function DiscoveryPanel({ controller }: { controller: ModelCenterControll
                 </div>
                 <ul className="divide-y divide-tremor-border border-b border-tremor-border dark:divide-dark-tremor-border dark:border-dark-tremor-border">
                   {discoveryResult.result.models.map((model) => {
-                    const isConfigured = configuredDiscoveredModels.has(model);
+                    const configured = configuredDiscoveredModels?.get(model);
                     const importResult = discoveryImportResults[model];
                     return (
                       <li key={model} className="flex min-h-11 items-center gap-3 px-3 py-2">
                         <input
                           type="checkbox"
-                          checked={isConfigured || discoverySelection.includes(model)}
-                          disabled={isConfigured || isImportingDiscoveredModels || Boolean(importResult)}
-                          onChange={(event) => setDiscoverySelection((current) => (
-                            event.target.checked ? [...current, model] : current.filter((item) => item !== model)
-                          ))}
+                          checked={Boolean(configured?.is_enabled) || discoverySelection.includes(model)}
+                          disabled={!models || Boolean(configured) || isImportingDiscoveredModels}
+                          onChange={(event) => setDiscoverySelection(
+                            event.target.checked ? [...discoverySelection, model] : discoverySelection.filter((item) => item !== model)
+                          )}
                           aria-label={model}
                         />
                         <span className="min-w-0 flex-1 truncate font-mono text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">{model}</span>
-                        {isConfigured ? <StatusBadge tone="neutral">{copy.alreadyConfigured}</StatusBadge> : null}
+                        {configured ? <StatusBadge tone="neutral">{configured.is_enabled ? copy.alreadyConfigured : copy.modelDisabled}</StatusBadge> : null}
+                        {configured && !configured.is_enabled ? (
+                          <ActionButton
+                            disabled={isImportingDiscoveredModels}
+                            onClick={() => void onRestoreDiscoveredModel(configured)}
+                            title={configured.model_key}
+                          >
+                            {copy.restoreAndTest}
+                          </ActionButton>
+                        ) : null}
                         {importResult ? (
                           <span className="flex max-w-[260px] items-center gap-2">
                             <StatusBadge tone={statusTone(importResult.status)}>{importResult.status}</StatusBadge>

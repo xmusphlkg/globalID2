@@ -125,10 +125,10 @@ def publish(*, run: Path, snapshot: Path, stage: Path, shared: Path, receipt: Pa
     if os.environ.get('GIDS_PAPERS_PROJECTION_V3') != '1':
         raise ValueError('Papers v3 publication requires the explicit projection feature gate')
     if prepare_build:
-        from src.services.data_release.site_research_reuse import capture_render_inputs, project_root
+        from src.services.data_release.site_research_reuse import prepare_render_inputs, project_root
         root = project_root(run)
         if root is not None:
-            capture_render_inputs(root, run)
+            prepare_render_inputs(root, run, stage=stage)
         return freeze_projection_build_baseline(run=run,
             previous=validate_manifest(previous)[0] if previous else None, origin=config.public_base_url)
     projected = None

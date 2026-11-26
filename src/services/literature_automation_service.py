@@ -9,6 +9,7 @@ editorial decisions always win and are never rewritten by this service.
 from __future__ import annotations
 
 from src.literature.automation_queries import (
+    automation_snapshot_counts,
     _link_reconciliation_statement as _link_reconciliation_statement,
     _article_reconciliation_statement as _article_reconciliation_statement,
     _summary_reconciliation_statement as _summary_reconciliation_statement,
@@ -781,75 +782,23 @@ class LiteratureAutomationService:
     async def snapshot(self) -> dict[str, Any]:
         config = get_config().literature
         async with get_db() as db:
-            article_metadata = (
-                await db.execute(
-                    select(LiteratureArticle.metadata_).where(
-                        LiteratureArticle.publication_status == "published"
-                    )
-                )
-            ).scalars().all()
-            auto_articles = sum(
-                1 for metadata in article_metadata
-                if (metadata or {}).get("autopilot", {}).get("policy_version") == POLICY_VERSION
-            )
-            auto_links = int((await db.execute(
-                select(func.count()).select_from(LiteratureSignalArticleLink).where(
-                    LiteratureSignalArticleLink.reviewed_by == AUTOPILOT_ACTOR,
-                    LiteratureSignalArticleLink.status == "confirmed",
-                )
-            )).scalar_one() or 0)
-            summary_metadata = (
-                await db.execute(
-                    select(LiteratureSummary.generation_metadata).where(
-                        LiteratureSummary.status == "published"
-                    )
-                )
-            ).scalars().all()
-            auto_summaries = sum(
-                1 for metadata in summary_metadata
-                if (metadata or {}).get("autopilot", {}).get("policy_version") == POLICY_VERSION
-            )
-            review_article_metadata = (
-                await db.execute(
-                    select(LiteratureArticle.metadata_).where(
-                        LiteratureArticle.publication_status == "review"
-                    )
-                )
-            ).scalars().all()
-            deferred_articles = sum(
-                1 for metadata in review_article_metadata
-                if _persisted_autopilot_decision(metadata) == "defer"
-            )
-            archived_decision_articles = sum(
-                1 for metadata in review_article_metadata
-                if _persisted_autopilot_decision(metadata) == "archive"
-            )
-            exception_articles = (
-                len(review_article_metadata) - deferred_articles - archived_decision_articles
-            )
-            exception_links = int((await db.execute(
-                select(func.count()).select_from(LiteratureSignalArticleLink).where(
-                    LiteratureSignalArticleLink.status == "review"
-                )
-            )).scalar_one() or 0)
-            review_summary_metadata = (
-                await db.execute(
-                    select(LiteratureSummary.generation_metadata).where(
-                        LiteratureSummary.status == "review"
-                    )
-                )
-            ).scalars().all()
-            deferred_summaries = sum(
-                1 for metadata in review_summary_metadata
-                if _persisted_autopilot_decision(metadata) == "defer"
-            )
-            archived_decision_summaries = sum(
-                1 for metadata in review_summary_metadata
-                if _persisted_autopilot_decision(metadata) == "archive"
-            )
-            exception_summaries = (
-                len(review_summary_metadata) - deferred_summaries - archived_decision_summaries
-            )
+            articles = (await db.execute(automation_snapshot_counts(
+                LiteratureArticle.publication_status, LiteratureArticle.metadata_, POLICY_VERSION,
+            ))).one()
+            summaries = (await db.execute(automation_snapshot_counts(
+                LiteratureSummary.status, LiteratureSummary.generation_metadata, POLICY_VERSION,
+            ))).one()
+            exception_articles = articles.review - articles.deferred - articles.archive_decisions
+            exception_summaries = summaries.review - summaries.deferred - summaries.archive_decisions
+            auto_links, exception_links = (await db.execute(
+                select(
+                    func.count().filter(
+                        LiteratureSignalArticleLink.reviewed_by == AUTOPILOT_ACTOR,
+                        LiteratureSignalArticleLink.status == "confirmed",
+                    ),
+                    func.count().filter(LiteratureSignalArticleLink.status == "review"),
+                ).where(LiteratureSignalArticleLink.status.in_(("confirmed", "review")))
+            )).one()
             archived_summaries = int((await db.execute(
                 select(func.count()).select_from(LiteratureSummary).where(LiteratureSummary.status == "archived")
             )).scalar_one() or 0)
@@ -874,9 +823,9 @@ class LiteratureAutomationService:
                 "summary_min_quality": config.autopilot_summary_min_quality,
             },
             "automatic": {
-                "published_articles": auto_articles,
+                "published_articles": articles.automatic,
                 "confirmed_links": auto_links,
-                "published_summaries": auto_summaries,
+                "published_summaries": summaries.automatic,
             },
             "exceptions": {
                 "articles": exception_articles,
@@ -885,14 +834,14 @@ class LiteratureAutomationService:
                 "total": exception_articles + exception_links + exception_summaries,
             },
             "deferred": {
-                "articles": deferred_articles,
-                "summaries": deferred_summaries,
-                "total": deferred_articles + deferred_summaries,
+                "articles": articles.deferred,
+                "summaries": summaries.deferred,
+                "total": articles.deferred + summaries.deferred,
             },
             "archived": {
                 "summaries": archived_summaries,
-                "review_article_decisions": archived_decision_articles,
-                "review_summary_decisions": archived_decision_summaries,
+                "review_article_decisions": articles.archive_decisions,
+                "review_summary_decisions": summaries.archive_decisions,
             },
             "last_run": (
                 {

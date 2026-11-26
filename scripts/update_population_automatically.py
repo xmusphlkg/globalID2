@@ -38,18 +38,35 @@ def write_json(path: Path, value) -> None:
     temporary.replace(path)
 
 
+def population_csv(snapshot: str, directory: Path, checksum: str | None = None) -> Path:
+    path = Path(snapshot) / "population.csv"
+    if path.is_file():
+        return path
+    # Scheduled snapshots are copied with the data tree when the checkout moves.
+    relocated = directory / Path(snapshot).name / "population.csv"
+    if not relocated.is_file():
+        raise FileNotFoundError(f"Population snapshot is missing: {path} (also checked {relocated})")
+    if checksum is None:
+        checksum = read_json(relocated.with_name("report.json"), {}).get("input_sha256")
+    if not checksum or hashlib.sha256(relocated.read_bytes()).hexdigest() != checksum:
+        raise ValueError(f"Cannot verify relocated population snapshot: {relocated}")
+    return relocated
+
+
 def combine_successful_snapshots(output: Path, statuses: dict, *, now: str) -> None:
     """Attest an effective snapshot without throwing away a failed source's data."""
     previous = read_json(output / "latest.json", {})
     rows = {}
     if previous.get("snapshot"):
-        with (Path(previous["snapshot"]) / "population.csv").open() as stream:
+        csv_path = population_csv(previous["snapshot"], output / "scheduled", previous.get("input_sha256"))
+        with csv_path.open() as stream:
             rows.update(((row["country_code"], row["year"]), row) for row in csv.DictReader(stream))
-    for state in statuses.values():
+    for code, state in statuses.items():
         snapshot = state.get("last_success_snapshot")
         if not snapshot:
             continue
-        with (Path(snapshot) / "population.csv").open() as stream:
+        csv_path = population_csv(snapshot, output / "sources" / code.lower(), state.get("last_success_sha256"))
+        with csv_path.open() as stream:
             rows.update(((row["country_code"], row["year"]), row) for row in csv.DictReader(stream))
     if not rows:
         return
@@ -106,7 +123,7 @@ def refresh_sources(*, output: Path, sources: list[str], apply: bool, queue_rele
             source_changes = report.get("changes") or {}
             changed.update(source_changes.get("changed_country_codes") or [])
             pending = pending or bool(changed)
-            state.update({"status": "healthy", "last_success_at": now, "last_success_snapshot": report["snapshot"], "rows": report["rows"], "coverage": report["coverage"], "official_sources": report["sources"], "changed_rows": source_changes.get("changed_rows", 0), "consecutive_failures": 0, "last_error": None})
+            state.update({"status": "healthy", "last_success_at": now, "last_success_snapshot": report["snapshot"], "last_success_sha256": report.get("input_sha256"), "rows": report["rows"], "coverage": report["coverage"], "official_sources": report["sources"], "changed_rows": source_changes.get("changed_rows", 0), "consecutive_failures": 0, "last_error": None})
             print(f"{code}: checked official publications, {source_changes.get('changed_rows', 0)} population rows changed", flush=True)
         except (RuntimeError, ValueError, OSError, subprocess.TimeoutExpired) as error:
             failures.append(code)

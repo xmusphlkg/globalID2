@@ -90,6 +90,86 @@ def test_source_change_during_build_is_rejected(prepared):
         reuse.capture_render_inputs(root, run, settings=SETTINGS)
 
 
+def test_explicit_preparation_archives_interrupted_build_after_renderer_change(prepared):
+    root, run, _, _ = prepared
+    stage = root / "exports/research-stage-interrupted"
+    put(stage / "partial.html", "incomplete old output")
+    put(run / "snapshot/article-inputs.json", "frozen facts")
+    put(run / "context.json", "frozen public context")
+    put(run / "projection-build-baseline.json", {"schema": 1, "old": True})
+    put(run / "template-baseline/candidate.json", "old template receipt")
+    original = (run / reuse.INPUTS).read_bytes()
+    baseline = (run / ".publication/starting-baseline.json").read_bytes()
+    put(root / "astro-site/src/pages/research/index.astro", "fixed renderer")
+
+    current = reuse.prepare_render_inputs(root, run, stage=stage, settings=SETTINGS)
+
+    assert not stage.exists()
+    assert not (run / "projection-build-baseline.json").exists()
+    archive, = (run / "build-recovery").iterdir()
+    assert (archive / reuse.INPUTS).read_bytes() == original
+    assert (archive / "stage/partial.html").read_text() == "incomplete old output"
+    assert (archive / "template-baseline/candidate.json").read_text() == "old template receipt"
+    assert json.loads((archive / "recovery.json").read_text())["reason"] == "renderer_inputs_changed"
+    assert (run / "snapshot/article-inputs.json").read_text() == "frozen facts"
+    assert (run / "context.json").read_text() == "frozen public context"
+    assert (run / ".publication/starting-baseline.json").read_bytes() == baseline
+    assert reuse.capture_render_inputs(root, run, settings=SETTINGS) == current
+
+
+@pytest.mark.parametrize("marker", ["ready.json", "papers-prepared.json", "current.json", "authority-committed.json",
+    "published.json", "research-reused.json", "papers-build-manifest.json", "projection-v3"])
+def test_explicit_preparation_never_rewrites_frozen_or_committed_candidates(prepared, marker):
+    root, run, _, _ = prepared
+    stage = root / "exports/research-stage-frozen"
+    put(stage / "partial.html", "old output")
+    put(run / marker, "frozen candidate evidence")
+    original = (run / reuse.INPUTS).read_bytes()
+    put(root / "astro-site/src/pages/research/index.astro", "fixed renderer")
+    with pytest.raises(ValueError, match="Frozen research candidate"):
+        reuse.prepare_render_inputs(root, run, stage=stage, settings=SETTINGS)
+    assert (run / reuse.INPUTS).read_bytes() == original
+    assert (stage / "partial.html").read_text() == "old output"
+    assert not (run / "build-recovery").exists()
+
+
+def test_explicit_preparation_cannot_replace_complete_build(prepared):
+    root, run, _, _ = prepared
+    stage = root / "exports/research-stage-complete"
+    put(stage / "index.html", "complete output")
+    put(Path(f"{stage}.inputs.json"), {"schema": 1})
+    with pytest.raises(ValueError, match="Completed research build"):
+        reuse.prepare_render_inputs(root, run, stage=stage, settings=SETTINGS)
+
+
+def test_preparation_rejects_snapshot_as_stage_before_moving_frozen_facts(prepared):
+    root, run, _, _ = prepared
+    stage = run / "snapshot"
+    put(stage / "article-inputs.json", "frozen facts")
+    original = (run / reuse.INPUTS).read_bytes()
+    put(root / "astro-site/src/pages/research/index.astro", "fixed renderer")
+    with pytest.raises(ValueError, match="paths overlap"):
+        reuse.prepare_render_inputs(root, run, stage=stage, settings=SETTINGS)
+    assert (stage / "article-inputs.json").read_text() == "frozen facts"
+    assert (run / reuse.INPUTS).read_bytes() == original
+    assert not (run / "build-recovery").exists()
+
+
+def test_prepare_build_subprocess_path_refreshes_unfrozen_renderer_contract(prepared, monkeypatch):
+    from scripts.publish_research_candidate import publish
+
+    root, run, _, _ = prepared
+    monkeypatch.setenv("GIDS_PAPERS_PROJECTION_V3", "1")
+    put(root / "src/generation/site_data_literature.py", "fixed projection implementation")
+    result = publish(run=run, snapshot=run / "snapshot", stage=root / "exports/research-stage-retry",
+        shared=root / "exports/research-json", receipt=root / "data/cache/papers.json",
+        release_id="literature-retry", config=CONFIG, prepare_build=True)
+    assert result["schema"] == 1
+    assert (run / "projection-build-baseline.json").is_file()
+    assert reuse.capture_render_inputs(root, run) is not None
+    assert len(list((run / "build-recovery").iterdir())) == 1
+
+
 def test_pages_only_retains_remote_papers_after_renderer_changes(prepared):
     root, run, source, body = prepared
     (root / reuse.COMMITTED).unlink()

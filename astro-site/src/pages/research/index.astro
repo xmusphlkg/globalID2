@@ -363,7 +363,7 @@ const pageDescription = pick('Discover infectious disease research with evidence
         <label><span>{pick('Collection', '文献集合')}</span><select class="site-control-input" id="research-publication-collection"><option value="peer_reviewed">{pick('Peer reviewed', '同行评议')}</option><option value="preprint">{pick('Approved preprints', '已审核预印本')}</option></select></label>
         <label class="oa-filter"><input id="research-oa" type="checkbox" /><span>{pick('Open access only', '仅开放获取')}</span></label>
       </form>
-      <p id="research-result-count" class="result-count" data-total={catalogueCount} aria-live="polite">{initialResultCount}</p>
+      <p id="research-result-count" tabindex="-1" class="result-count" data-total={catalogueCount} aria-live="polite">{initialResultCount}</p>
       <div id="research-loading" hidden><GIDSLoading language={locale} label={pick('Filtering research publications…', '正在筛选研究文献…', 'Filtrage des publications…')} compact /></div>
       <div id="research-load-error" role="alert" hidden>
         <p>{pick('The catalogue could not be loaded. Please try again.', '文献目录加载失败，请重试。', 'Le catalogue n’a pas pu être chargé. Veuillez réessayer.')}</p>
@@ -380,6 +380,10 @@ const pageDescription = pick('Discover infectious disease research with evidence
         data-topic-name-map={JSON.stringify(Object.fromEntries(Object.entries(RESEARCH_TOPIC_LABELS).map(([key, labels]) => [key, labels[locale]])))}
       >{articles.slice(0, initialVisibleArticles).map((article: any, index: number) => <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} />)}</div>
       {catalogueCount > initialVisibleArticles && <button id="research-load-more" class="research-load-more" type="button" aria-controls="research-list" data-load-more-research>{pick('Load more publications', '加载更多论文')}</button>}
+      <nav id="research-pagination" aria-label={pick('Search results pages', '检索结果分页', 'Pages de résultats')} hidden>
+        <button id="research-prev" class="research-load-more" type="button" aria-controls="research-list">{pick('Previous page', '上一页', 'Page précédente')}</button>
+        <button id="research-next" class="research-load-more" type="button" aria-controls="research-list">{pick('Next page', '下一页', 'Page suivante')}</button>
+      </nav>
       <div id="research-empty" class:list={['research-empty', articles.length > 0 && 'hidden']}>
         <div class="empty-orbit" aria-hidden="true"></div>
         <h3>{pick(articles.length ? 'No matching research' : 'Research Radar is ready', articles.length ? '没有匹配的研究' : '研究雷达已就绪')}</h3>
@@ -390,7 +394,7 @@ const pageDescription = pick('Discover infectious disease research with evidence
   </div>
 
   <script>
-  import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
+  import { createResearchCataloguePager, loadResearchCatalogue } from '../../lib/research-catalogue-client';
   import { normalizeSearchText } from '../../lib/disease-search';
     import { renderResearchList } from '../../components/research/renderResearchList';
     import { readResearchFilterValues, writeResearchFilterValues, type ResearchFilterValues } from '../../lib/research-filter-url';
@@ -425,6 +429,11 @@ const pageDescription = pick('Discover infectious disease research with evidence
     const diseaseNameMap = parseMap(list?.dataset.diseaseNameMap);
     const regionNameMap = parseMap(list?.dataset.regionNameMap);
     const topicNameMap = parseMap(list?.dataset.topicNameMap);
+    const pagination = document.querySelector<HTMLElement>('#research-pagination')!;
+    const previous = document.querySelector<HTMLButtonElement>('#research-prev')!;
+    const next = document.querySelector<HTMLButtonElement>('#research-next')!;
+    let page = 1;
+    let readPage: ReturnType<typeof createResearchCataloguePager> | undefined;
     let visibleLimit = initialVisible;
     const query = new URLSearchParams(location.search);
     const restoredFilters = readResearchFilterValues(query);
@@ -477,20 +486,9 @@ const pageDescription = pick('Discover infectious disease research with evidence
       populationText: (article.populations ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     });
     const articleSearchText = (article: any, tokens = articleTokens(article)) => normalizeSearchText(`${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText} ${tokens.pathogenText} ${tokens.populationText}`);
-    const filtersAreActive = () => Boolean(
-      (search?.value.trim() ?? '')
-      || disease?.value
-      || country?.value
-      || study?.value
-      || topic?.value
-      || pathogenType?.value
-      || population?.value
-      || journalFilter?.value
-      || publisherFilter?.value
-      || publishedFrom?.value
-      || publishedTo?.value
-      || oa?.checked
-    );
+    const otherFiltersAreActive = () => [search, country, study, topic, pathogenType, population, journalFilter, publisherFilter, publishedFrom, publishedTo]
+      .some(control => control?.value.trim()) || Boolean(oa?.checked);
+    const filtersAreActive = () => Boolean(disease?.value) || otherFiltersAreActive();
     const updateShareableUrl = () => {
       const values: ResearchFilterValues = {
         disease: disease?.value ?? '',
@@ -542,6 +540,7 @@ const pageDescription = pick('Discover infectious disease research with evidence
       activeRequest?.abort();
       activeRequest = undefined;
       if (loadError) loadError.hidden = true;
+      pagination.hidden = true;
       if (!requireCatalogue) {
         if (loading) loading.hidden = true;
         if (list) { list.hidden = false; list.setAttribute('aria-busy', 'false'); }
@@ -560,26 +559,30 @@ const pageDescription = pick('Discover infectious disease research with evidence
         : currentLang() === 'fr' ? 'Filtrage des publications…' : 'Filtering research publications…';
       empty?.classList.add('hidden');
       if (loadMore) loadMore.hidden = true;
-      let loadingActive = true;
       const controller = new AbortController();
       activeRequest = controller;
       try {
-        const activeFilters = filtersAreActive();
-        const articles = await loadResearchCatalogue({
-          signal: controller.signal,
-          limit: activeFilters ? undefined : visibleLimit,
-          includeBibliographic: true,
-          facets: { disease: disease?.value, country: country?.value, topic: topic?.value, study: study?.value },
-          onProgress: ({ completed, total }) => {
-            if (!loadingActive || version !== requestVersion || !count) return;
-            count.textContent = currentLang() === 'zh' ? `正在载入文献（${completed} / ${total}）…`
-              : currentLang() === 'fr' ? `Chargement des publications (${completed} / ${total})…`
-              : `Loading publications (${completed} / ${total})…`;
-          },
-        });
-        if (version !== requestVersion) return;
-        const matching = articles.filter(matchesFilters);
-        renderArticles(matching, activeFilters ? matching.length : totalArticles);
+        if (filtersAreActive()) {
+          const facets = { disease: disease?.value, country: country?.value, topic: topic?.value, study: study?.value };
+          readPage ??= createResearchCataloguePager(facets, matchesFilters, initialVisible, otherFiltersAreActive() ? undefined : disease?.value);
+          const result = await readPage(page, controller.signal);
+          if (version !== requestVersion) return;
+          page = result.page;
+          if (list) renderResearchList(list, result.articles, currentLang());
+          const total = result.total?.toLocaleString(currentLang());
+          if (count) count.textContent = currentLang() === 'zh'
+            ? `第 ${page} 页${total === undefined ? '' : ` · 共 ${total} 篇文献`}`
+            : currentLang() === 'fr' ? `Page ${page}${total === undefined ? '' : ` · ${total} publications`}`
+            : `Page ${page}${total === undefined ? '' : ` · ${total} publications`}`;
+          empty?.classList.toggle('hidden', result.articles.length > 0);
+          pagination.hidden = page === 1 && !result.hasNext;
+          previous.disabled = page === 1;
+          next.disabled = !result.hasNext;
+        } else {
+          const articles = await loadResearchCatalogue({ signal: controller.signal, limit: visibleLimit, includeBibliographic: true });
+          if (version !== requestVersion) return;
+          renderArticles(articles, totalArticles);
+        }
         if (list) list.hidden = false;
       } catch (error) {
         if (version !== requestVersion) return;
@@ -588,7 +591,6 @@ const pageDescription = pick('Discover infectious disease research with evidence
           : currentLang() === 'fr' ? 'Échec du chargement. Veuillez réessayer.' : 'Loading failed. Please retry.';
         if (loadMore) loadMore.hidden = true;
       } finally {
-        loadingActive = false;
         if (version === requestVersion) {
           activeRequest = undefined;
           if (loading) loading.hidden = true;
@@ -603,9 +605,18 @@ const pageDescription = pick('Discover infectious disease research with evidence
     });
     [search, disease, country, study, topic, pathogenType, population, journalFilter, publisherFilter, publishedFrom, publishedTo, oa].forEach(control => control?.addEventListener(control instanceof HTMLInputElement && control.type === 'search' ? 'input' : 'change', () => {
       visibleLimit = initialVisible;
+      page = 1;
+      readPage = undefined;
       updateShareableUrl();
       void applyFilters(true);
     }));
+    const goToPage = (number: number) => {
+      page = number;
+      count?.focus();
+      void applyFilters(true);
+    };
+    previous.addEventListener('click', () => goToPage(page - 1));
+    next.addEventListener('click', () => goToPage(page + 1));
     loadMore?.addEventListener('click', () => {
       visibleLimit += initialVisible;
       void applyFilters(true);
@@ -712,6 +723,9 @@ const pageDescription = pick('Discover infectious disease research with evidence
   .research-filters .oa-filter > span { margin: 0; color: rgb(var(--text-muted)); letter-spacing: 0; text-transform: none; }
   .result-count { margin-top: .82rem; color: rgb(var(--text-faint)); font: 500 .64rem/1 ui-monospace, monospace; }
   .research-load-more { display: inline-flex; align-items: center; justify-content: center; min-height: 2.5rem; margin-top: 1rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .48); padding: 0 1rem; color: rgb(var(--color-brand)); font-size: .74rem; font-weight: 650; }
+  #research-pagination { display: flex; gap: .75rem; }
+  #research-pagination[hidden] { display: none; }
+  #research-pagination button:disabled { opacity: .45; }
   .research-load-more:hover { border-color: rgb(var(--color-brand) / .5); }
   .research-load-more[hidden] { display: none; }
   .research-empty { display: grid; place-items: center; min-height: 16rem; text-align: center; }

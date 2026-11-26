@@ -1,11 +1,14 @@
 """A committed publication retains its complete closure and no old managed version."""
 from dataclasses import replace
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 import json
 
 import pytest
 
 from src.services.data_release.r2_single_version import managed_publication, seed_active
 from src.services.data_release.papers_r2 import R2S3Error
+from src.services.data_release.r2_object_index import R2StorageBudgetExceeded
 from tests.unit.test_r2_indexed_client import CONFIG, Remote, key_for, make_client, put
 
 
@@ -169,3 +172,101 @@ def test_literature_keeps_one_combined_papers_and_json_closure(make_client, tmp_
         assert json.loads(body)['papers']['papers_generation_sha256'] == candidate.generation
         previous = body
     assert result['retention']['deleted_objects'] > 3
+
+
+def test_independent_channel_commits_during_long_upload_and_defers_cleanup(make_client):
+    remote = Remote()
+    research, _ = make_client(remote)
+    surveillance, _ = make_client(remote)
+    old, new = key_for(b'old'), key_for(b'new')
+    channel = 'site-data/surveillance'
+    publish(surveillance, channel, b'first', {old: b'old'})
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with managed_publication(research, channel='site-data/research-publication') as staged:
+            staged.stage(b'still-uploading', {key_for(b'pending-paper')})
+            result = pool.submit(publish, surveillance, channel, b'second', {new: b'new'}).result(timeout=5)
+            assert remote.objects[f'{channel}/current.json']['body'] == b'second'
+            assert result == {'deleted_objects': 0, 'pending_cleanup_objects': 1}
+            assert old in remote.objects
+    # Deferred garbage is collected by the next publication with no active
+    # uploader. Staged objects from the other channel stay protected.
+    result = publish(surveillance, channel, b'second', {new: b'new'})
+    assert result == {'deleted_objects': 1, 'pending_cleanup_objects': 0}
+    assert old not in remote.objects and new in remote.objects
+
+
+def test_same_channel_still_serializes_publishers(make_client):
+    remote = Remote()
+    first, _ = make_client(remote)
+    second, _ = make_client(remote)
+    attempting, entered = Event(), Event()
+
+    def enter():
+        attempting.set()
+        with managed_publication(second, channel='site-data/surveillance'):
+            entered.set()
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with managed_publication(first, channel='site-data/surveillance'):
+            future = pool.submit(enter)
+            assert attempting.wait(timeout=5)
+            assert not entered.is_set()
+        future.result(timeout=5)
+    assert entered.is_set()
+
+
+def test_legacy_bucket_maintenance_fences_channel_publishers(make_client):
+    remote = Remote()
+    maintenance, _ = make_client(remote)
+    publisher, _ = make_client(remote)
+    attempting, entered = Event(), Event()
+
+    def enter():
+        attempting.set()
+        with managed_publication(publisher, channel='site-data/surveillance'):
+            entered.set()
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with maintenance.publication_session():
+            future = pool.submit(enter)
+            assert attempting.wait(timeout=5)
+            assert not entered.is_set()
+        future.result(timeout=5)
+    assert entered.is_set()
+
+
+def test_scoped_publication_cannot_enter_nested_bucket_maintenance(make_client):
+    client, _ = make_client(Remote())
+    with managed_publication(client, channel='site-data/surveillance'):
+        with pytest.raises(ValueError, match='Nested publication cannot change channels'):
+            with client.publication_session():
+                pytest.fail('Maintenance cannot borrow a shared upload fence')
+
+
+def test_deferred_garbage_is_reclaimed_before_next_candidate_capacity_check(make_client, tmp_path):
+    from src.services.data_release.surveillance_publish import publication_upload_sizes, publish_surveillance_data
+    from tests.unit.test_surveillance_publish import PREFIX, generation
+
+    remote = Remote()
+    research, _ = make_client(remote)
+    surveillance, index = make_client(remote)
+    generation(tmp_path, value='old' * 100, release='first')
+    publish_surveillance_data(tmp_path, CONFIG, client=surveillance)
+    generation(tmp_path, value='new' * 100, release='second')
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        with managed_publication(research, channel='site-data/research-publication'):
+            result = pool.submit(publish_surveillance_data, tmp_path, CONFIG,
+                                 client=surveillance).result(timeout=5)
+    assert result['retention']['pending_cleanup_objects'] == 3
+    previous = remote.objects[f'{PREFIX}/current.json']['body']
+    generation(tmp_path, value='third' * 100, release='third')
+    sizes = publication_upload_sizes((tmp_path / 'current.json').read_bytes(), prefix=PREFIX, previous=previous)
+    growth = sum(size for key, size in sizes.items() if index.get(key) is None)
+    surveillance.max_total_bytes = index.total_bytes() + growth - 1
+    with pytest.raises(R2StorageBudgetExceeded):
+        surveillance.preflight_objects(sizes)
+    # Publication can recover on its own after concurrent uploads finish: it
+    # stages the new closure, collects old garbage, then rechecks capacity.
+    result = publish_surveillance_data(tmp_path, CONFIG, client=surveillance)
+    assert result['retention'] == {'deleted_objects': 6, 'pending_cleanup_objects': 0}
+    assert len(remote.objects) == 4

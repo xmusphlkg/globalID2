@@ -21,6 +21,7 @@ import re
 import zipfile
 
 import requests
+from requests.adapters import HTTPAdapter
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -28,6 +29,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.core import get_logger
 from .base import BaseCrawler, CrawlerResult
+from .request_cooldown import RequestFailureCooldown
 
 logger = get_logger(__name__)
 
@@ -231,6 +233,30 @@ class NewZealandPHFCrawler(BaseCrawler):
         super().__init__(timeout=60, max_retries=3, delay=2.0)
         self.save_raw = save_raw
         self.raw_dir = Path(raw_dir) if raw_dir else Path("data/raw/nz")
+        self.dhb_failures = RequestFailureCooldown(
+            self.config.cache_dir / "nz-dhb-unavailable", ttl_seconds=15 * 60,
+        )
+        # These URLs have independent mirrors. Fail over once instead of
+        # spending four 60-second attempts on the same unavailable host.
+        for url in DHB_TOTAL_CSV_MIRRORS:
+            self.session.mount(url, HTTPAdapter(max_retries=0))
+
+    def get(self, url, **kwargs):
+        if url not in DHB_TOTAL_CSV_MIRRORS:
+            return super().get(url, **kwargs)
+        self.dhb_failures.check(url)
+        try:
+            kwargs.setdefault("timeout", (10, 30))
+            response = super().get(url, **kwargs)
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            self.dhb_failures.record(url, reason=type(exc).__name__)
+            raise
+        except requests.HTTPError as exc:
+            if exc.response is not None and (exc.response.status_code == 429 or exc.response.status_code >= 500):
+                self.dhb_failures.record(url, reason=f"http_{exc.response.status_code}")
+            raise
+        self.dhb_failures.clear(url)
+        return response
 
     # ── Phase 1: Discover available reports ──────────────────────────────────
 

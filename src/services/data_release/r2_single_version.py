@@ -1,7 +1,7 @@
 """Keep only the current managed publication using durable local references.
 
-Publication sessions serialize all channels in a bucket. Upload the staged
-closure, switch and verify its pointer, commit these references, then delete
+Publication sessions serialize each channel and fence bucket-wide cleanup.
+Upload the staged closure, switch and verify its pointer, commit references, then delete
 unreferenced previous objects. Unmanaged bucket objects are never collected.
 """
 from __future__ import annotations
@@ -205,6 +205,16 @@ class SingleVersionPublication:
         """
         if type(batch_size) is not int or not 1 <= batch_size <= 1000:
             raise ValueError('Cleanup batch size must be 1–1000')
+        fence = getattr(self.client, 'publication_cleanup_session', None)
+        with fence() if callable(fence) else nullcontext(True) as acquired:
+            if not acquired:
+                pending = self.db.execute('SELECT COUNT(*) FROM r2_publication_garbage WHERE target=?',
+                                          (self.target,)).fetchone()[0]
+                return {'deleted_objects': 0, 'pending_cleanup_objects': pending}
+            return self._cleanup(batch_size=batch_size)
+
+    def _cleanup(self, *, batch_size: int) -> dict[str, int]:
+        """Run only under the exclusive bucket cleanup fence."""
         removed = 0
         while True:
             rows = self.db.execute('''SELECT g.key FROM r2_publication_garbage g WHERE g.target=?
@@ -226,9 +236,9 @@ class SingleVersionPublication:
 
 @contextmanager
 def managed_publication(client, *, channel: str):
-    """Use one bucket publisher lock and ledger; legacy injected clients opt out."""
+    """Use a channel publisher lock and ledger; legacy injected clients opt out."""
     session = getattr(client, 'publication_session', None)
-    with session() if callable(session) else nullcontext():
+    with session(channel=channel) if callable(session) else nullcontext():
         if not isinstance(getattr(client, 'object_index', None), R2ObjectIndex):
             yield None
             return
@@ -245,7 +255,7 @@ def seed_active(client, *, channel: str, pointer_key: str, body: bytes, keys: It
     This records ownership only; it never deletes remote objects.
     """
     session = getattr(client, 'publication_session', None)
-    with session() if callable(session) else nullcontext():
+    with session(channel=channel) if callable(session) else nullcontext():
         publication = SingleVersionPublication(client, channel=channel, pointer_key=pointer_key)
         try:
             publication.stage(body, keys)
