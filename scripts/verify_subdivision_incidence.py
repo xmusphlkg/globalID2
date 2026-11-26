@@ -14,6 +14,7 @@ from scripts.import_subdivision_population import (
     load_abs_population,
     load_cn_population,
 )
+from scripts.update_population_automatically import population_csv
 
 
 def main() -> int:
@@ -25,7 +26,9 @@ def main() -> int:
     if snapshot is None and latest_path.exists():
         latest = json.loads(latest_path.read_text())
         if latest.get("applied"):
-            snapshot = Path(latest["snapshot"]) / "population.csv"
+            snapshot = population_csv(
+                latest["snapshot"], latest_path.parent / "scheduled", latest.get("input_sha256")
+            )
     rows = (
         load_cn_population(snapshot)
         if snapshot

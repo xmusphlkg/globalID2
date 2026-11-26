@@ -319,10 +319,10 @@ def _write_runtime_failure(
         ).isoformat()
     else:
         state.pop("runtime_cooldown_until", None)
-    if retry_after_seconds and (
-        current_health["runtime_failure_active"]
-        or streak >= _MODEL_TRANSPORT_CIRCUIT_THRESHOLD
-    ):
+    # An explicit provider retry deadline applies on the first failure too.
+    # Waiting for the local circuit threshold lets other dispatchers immediately
+    # send more requests to a route that has already asked them to back off.
+    if retry_after_seconds:
         instructed_until = occurred_at + timedelta(seconds=max(1, retry_after_seconds))
         previous_until = _parse_datetime(state.get("runtime_retry_after_until"))
         state["runtime_retry_after_until"] = max(

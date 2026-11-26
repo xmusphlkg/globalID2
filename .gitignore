@@ -78,6 +78,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # IDE / Editor
+/.codex/
 .vscode/
 *.code-workspace
 .idea/
@@ -114,6 +115,14 @@ pnpm-debug.log*
 /site/
 /tests/fixtures/ai_test_data/
 /docs/benchmarks/
+
+# Local incident notes, dated audit snapshots, and generated evidence.
+# Keep reusable guidance in the topic docs; these rules do not untrack history.
+/docs/diagnostics/
+/docs/audits/*-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md
+/docs/audits/data/
+/docs/acceptance/evidence/
+/docs/data-sources/evidence/
 
 # Local databases and temp files
 *.db

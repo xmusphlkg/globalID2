@@ -121,10 +121,18 @@ remain available in Git history; they are not active deployment instructions.
 - [增量生成优化验收：2026-10-30](acceptance/INCREMENTAL_GENERATION_20261030.md)
 - [人口数据增量更新验收：2026-10-30](acceptance/POPULATION_INCREMENTAL_20261030.md)
 
-## Incident diagnostics
+## Documentation maintenance
 
-- [2026-11-06 重启和近 24 小时失败分析](diagnostics/2026-11-06-restart-and-failures.md)
-- [2026-11-07 文献同步修复与验证](diagnostics/2026-11-07-literature-sync-repair.md)
+Keep reusable instructions in the topic guides above. Historical incident notes
+record conditions at the time and must not be used as current service status.
+The retired November 6–7 runtime snapshots are available in Git history;
+literature recovery instructions are maintained in the Research Radar guide.
+
+New incident notes in `diagnostics/`, dated audit snapshots matching
+`audits/*-YYYY-MM-DD.md`, and generated evidence in `audits/data/`,
+`acceptance/evidence/`, and `data-sources/evidence/` are ignored by default.
+Existing tracked records remain versioned. Promote lasting findings into the
+relevant guide and store new run receipts under ignored `exports/` or `reports/`.
 
 ## Communication assets
 

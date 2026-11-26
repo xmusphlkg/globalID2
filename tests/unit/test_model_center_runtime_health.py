@@ -203,9 +203,7 @@ def test_upstream_retry_after_survives_success_until_instructed_deadline():
             cooldown_seconds=60,
             retry_after_seconds=600,
         )
-        assert _runtime_health_state(payload, at)["runtime_failure_active"] == (
-            index == 2
-        )
+        assert _runtime_health_state(payload, at)["runtime_failure_active"]
     assert _runtime_health_state(payload, now + timedelta(seconds=200))[
         "runtime_failure_active"
     ]
@@ -223,6 +221,42 @@ def test_upstream_retry_after_survives_success_until_instructed_deadline():
         recovered, occurred_at=now + timedelta(seconds=603), duration_seconds=1
     )
     assert "runtime_retry_after_until" not in after["routing_state"]
+
+
+async def test_first_upstream_failure_persists_retry_after_for_other_dispatchers(monkeypatch):
+    import httpx
+    from openai import InternalServerError
+
+    now = _utcnow()
+    model = SimpleNamespace(extra_params={})
+
+    class DB:
+        async def get(self, entity, model_id, *, with_for_update):
+            assert model_id == 173 and with_for_update
+            return model
+
+        async def commit(self):
+            pass
+
+    @asynccontextmanager
+    async def database():
+        yield DB()
+
+    monkeypatch.setattr(model_center, "get_db", database)
+    monkeypatch.setattr(model_center.health, "_utcnow", lambda: now)
+    error = InternalServerError(
+        "upstream overloaded",
+        response=httpx.Response(
+            503,
+            request=httpx.Request("POST", "https://provider.invalid/chat/completions"),
+            headers={"retry-after": "180"},
+        ),
+        body=None,
+    )
+    result = await model_center.record_route_runtime_failure({"model_id": 173}, error)
+    assert result["cooldown_seconds"] == 180
+    assert _runtime_health_state(model.extra_params, now)["runtime_failure_active"]
+    assert not _runtime_health_state({}, now)["runtime_failure_active"]
 
 
 def test_repeated_runtime_timeouts_open_model_circuit_and_success_records_latency() -> (

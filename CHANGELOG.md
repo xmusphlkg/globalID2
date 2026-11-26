@@ -4,6 +4,24 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-11-26
+
+### Improved
+
+- Load filtered Research Radar results in pages of eight, reuse earlier pages, and retry failed page reads. Count disease records in the catalogue manifest.
+- Aggregate literature automation counts in SQL to reduce dashboard metadata transfer and application memory use.
+- Restore disabled models through discovery and manual entry, identify providers in deletion prompts, and refresh model lists after mutations.
+- Add the Shenzhen CDC technical exchange briefing and consolidate documentation maintenance guidance.
+
+### Fixed
+
+- Recover scheduler loops after transient database failures and calculate literature publication deadlines from task completion.
+- Serialize same-channel R2 publication, coordinate cross-channel uploads and garbage collection, recover committed pointers, and resume unfinished research builds after renderer changes.
+- Respect provider retry deadlines and bound repeated requests for unavailable Thailand reports and New Zealand source files.
+- Recognize Japan population workbooks with age-table headings and verify relocated population snapshots by checksum.
+- Stabilize the Colombia INS proxy resolver and connect scheduled microdata refreshes through that proxy.
+- Flag the French-language mismatch in the affected weekly literature review.
+
 ## [0.21.0] - 2026-11-24
 
 ### Added

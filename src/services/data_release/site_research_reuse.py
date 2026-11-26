@@ -12,6 +12,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 import re
+import tempfile
 
 from src.generation.published_research_reuse import require_public_research_matches
 from .artifact_index import ArtifactIndex
@@ -112,6 +113,61 @@ def capture_render_inputs(root: Path, run: Path, *, astro_dir: Path | None = Non
             raise ValueError("Research renderer inputs changed after preparation")
     else:
         _atomic_receipt(path, value)
+    return value
+
+
+def prepare_render_inputs(root: Path, run: Path, *, stage: Path,
+                          astro_dir: Path | None = None, settings=None) -> dict | None:
+    """Restart an unfinished local build after a renderer change, with evidence.
+
+    Only the explicit prepare-build phase may refresh these inputs. A ready,
+    prepared or remotely committed candidate keeps its original contract, even
+    when its build directory is missing. Snapshot facts and the captured public
+    baseline are never replaced by this recovery.
+    """
+    root, run, stage = Path(root).resolve(), Path(run), Path(stage)
+    if run.is_symlink() or stage.is_symlink():
+        raise ValueError("Invalid research build recovery directory")
+    run, stage = run.resolve(), stage.resolve()
+    if (not run.resolve().is_relative_to(root) or not stage.resolve().is_relative_to(root)
+            or run.is_relative_to(stage) or stage.is_relative_to(run)):
+        raise ValueError("Research build recovery paths overlap or leave the project")
+    frozen = ("ready.json", "papers-prepared.json", "current.json", "authority-committed.json",
+              "published.json", "research-reused.json", "papers-build-manifest.json", "projection-v3")
+    if os.environ.get("GIDS_PUBLICATION_RECOVERY_ONLY") == "1" or any(
+            (run / name).exists() or (run / name).is_symlink() for name in frozen):
+        raise ValueError("Frozen research candidate cannot restart preparation")
+    build_receipt = Path(f"{stage}.inputs.json")
+    if build_receipt.is_symlink():
+        raise ValueError("Invalid research build input receipt")
+    if stage.is_dir() and build_receipt.is_file():
+        raise ValueError("Completed research build cannot restart preparation")
+    value = render_inputs(root, astro_dir=astro_dir, settings=settings)
+    if value is None:
+        return None
+    path = run / INPUTS
+    changed = (path.exists() or path.is_symlink()) and _read(path) != value
+    artifacts = [("stage", stage), ("stage.inputs.json", build_receipt)]
+    if changed:
+        artifacts += [(INPUTS, path), ("projection-build-baseline.json", run / "projection-build-baseline.json"),
+                      ("template-baseline", run / "template-baseline")]
+    artifacts = [(name, source) for name, source in artifacts if source.exists() or source.is_symlink()]
+    if any(source.is_symlink() for _name, source in artifacts):
+        raise ValueError("Symlink in research build recovery artifacts")
+    if artifacts:
+        archive = run / "build-recovery"
+        if archive.is_symlink():
+            raise ValueError("Invalid research build recovery archive")
+        archive.mkdir(exist_ok=True)
+        backup = Path(tempfile.mkdtemp(prefix="prepare-", dir=archive))
+        moves = [{"source": str(source.relative_to(root)), "backup": name} for name, source in artifacts]
+        _atomic_receipt(backup / "recovery.json", {"schema": 1,
+            "reason": "renderer_inputs_changed" if changed else "interrupted_build",
+            "created_at": datetime.now(timezone.utc).isoformat(), "moves": moves,
+            "new_render_inputs": value})
+        for name, source in artifacts:
+            source.rename(backup / name)
+    _atomic_receipt(path, value)
     return value
 
 

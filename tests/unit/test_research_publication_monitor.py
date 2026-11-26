@@ -165,18 +165,38 @@ def test_receipt_accepts_normal_and_historical_canaries_but_requires_unique_urls
 
 
 @pytest.mark.asyncio
-async def test_literature_schedule_uses_independent_task_creation_and_preserves_pending_age(tmp_path):
-    last_created = NOW - timedelta(hours=2)
-    db = Database([[('*', 150, NOW - timedelta(hours=3), 1)], [], [], 0, None, None, [], last_created])
+@pytest.mark.parametrize("status", ["completed", "failed", "cancelled"])
+async def test_literature_schedule_waits_from_completion_of_long_running_release(tmp_path, status):
+    last_created, completed = NOW - timedelta(hours=7), NOW - timedelta(hours=1)
+    db = Database([[('*', 150, NOW - timedelta(hours=3), 1)], [], [], 0, None, None, [],
+                   (last_created, completed, status)])
     state = (await collect_database_snapshot(db, now=NOW, channels=("literature",),
         root=tmp_path, settings=SETTINGS))["literature"]
-    assert state["schedule"]["next_due_at"] == (last_created + timedelta(hours=6)).isoformat()
+    assert state["schedule"]["next_due_at"] == (completed + timedelta(hours=6)).isoformat()
+    assert state["schedule"]["last_task_created_at"] == last_created.isoformat()
+    assert state["schedule"]["last_task_completed_at"] == completed.isoformat()
     assert state["schedule"]["waiting_for_schedule"] is True
     assert state["publishable_pending"]["oldest_age_seconds"] == 10800
     assert state["publishable_pending"]["count"] == 150
     assert "pending_changes_delayed" not in codes(evaluate(state))
     assert "created_at DESC" in db.statements[-1]
     assert "literature" in db.statements[-1] and "data_only" in db.statements[-1]
+
+
+@pytest.mark.asyncio
+async def test_active_literature_release_has_no_new_schedule_deadline(tmp_path):
+    db = Database([[], [], [], 0, None, None, [], (NOW - timedelta(hours=7), None, "running")])
+    state = (await collect_database_snapshot(db, now=NOW, channels=("literature",),
+        root=tmp_path, settings=SETTINGS))["literature"]
+    assert state["schedule"]["next_due_at"] is None
+
+
+def test_legacy_terminal_publication_cadence_falls_back_to_creation():
+    from src.domain import TaskStatus
+    from src.services.data_release.literature_schedule import literature_publication_due_at
+
+    assert literature_publication_due_at(created_at=NOW.replace(tzinfo=None), completed_at=None,
+        status=TaskStatus.COMPLETED, interval_minutes=120) == NOW + timedelta(hours=2)
 
 
 @pytest.mark.parametrize("due_offset,expected", [(3600, None), (-119, None), (-120, "warning"), (-600, "critical")])

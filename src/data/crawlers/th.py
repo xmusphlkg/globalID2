@@ -14,8 +14,10 @@ import re
 from urllib.parse import parse_qs, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
+import requests
 
 from .base import BaseCrawler
+from .request_cooldown import RequestFailureCooldown
 
 DEFAULT_SCOPE = "th_doe506_monthly"
 DEFAULT_SOURCE_NAME = "Thailand DOE Report 506 Monthly History"
@@ -359,6 +361,26 @@ class ThailandDOE506Crawler(BaseCrawler):
 
     def __init__(self):
         super().__init__(timeout=40, delay=0.25)
+        self.report_failures = RequestFailureCooldown(
+            self.config.cache_dir / "th-doe506-unavailable", ttl_seconds=24 * 3600,
+        )
+        self.force_refresh = False
+
+    def get(self, url, **kwargs):
+        # Only linked report files are negative-cached. Discovery stays live,
+        # and a changed URL is immediately eligible for a fresh request.
+        report = urlsplit(url).path.lower().endswith(".rtf")
+        if report and not self.force_refresh:
+            self.report_failures.check(url)
+        try:
+            response = super().get(url, **kwargs)
+        except requests.HTTPError as exc:
+            if report and exc.response is not None and exc.response.status_code == 404:
+                self.report_failures.record(url, reason="http_404")
+            raise
+        if report:
+            self.report_failures.clear(url)
+        return response
 
     async def crawl(self, **kwargs):
         raise NotImplementedError("Use ingestion.countries.th.collect to archive source bytes")

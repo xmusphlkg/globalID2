@@ -220,6 +220,13 @@ function invalidateAIModelQueries(queryClient: ReturnType<typeof useQueryClient>
   queryClient.invalidateQueries({ queryKey: ["ai-runtime-routes"] });
 }
 
+function cacheSavedModel(queryClient: ReturnType<typeof useQueryClient>, saved: AIModelItem) {
+  queryClient.setQueryData<AIModelItem[]>(["ai-models"], (models) =>
+    models && [...models.filter((model) => model.model_key !== saved.model_key), saved],
+  );
+  invalidateAIModelQueries(queryClient);
+}
+
 export function useAIProviders() {
   return useQuery<AIProviderItem[]>({
     queryKey: ["ai-providers"],
@@ -360,7 +367,7 @@ export function useCreateAIModel() {
         method: "POST",
         body: JSON.stringify(payload),
       }),
-    onSuccess: () => invalidateAIModelQueries(queryClient),
+    onSuccess: (model) => cacheSavedModel(queryClient, model),
   });
 }
 
@@ -368,11 +375,11 @@ export function useUpdateAIModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ modelKey, payload }: { modelKey: string; payload: ModelUpdatePayload }) =>
-      apiFetch(`/ai/models/${encodeURIComponent(modelKey)}`, {
+      apiFetch<AIModelItem>(`/ai/models/${encodeURIComponent(modelKey)}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),
-    onSuccess: () => invalidateAIModelQueries(queryClient),
+    onSuccess: (model) => cacheSavedModel(queryClient, model),
   });
 }
 
@@ -388,7 +395,12 @@ export function useDeleteAIModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (modelKey: string) => apiFetch(`/ai/models/${encodeURIComponent(modelKey)}`, { method: "DELETE" }),
-    onSuccess: () => invalidateAIModelQueries(queryClient),
+    onSuccess: (_result, modelKey) => {
+      queryClient.setQueryData<AIModelItem[]>(["ai-models"], (models) =>
+        models?.filter((model) => model.model_key !== modelKey),
+      );
+      invalidateAIModelQueries(queryClient);
+    },
   });
 }
 

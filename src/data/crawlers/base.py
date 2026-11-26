@@ -106,7 +106,7 @@ class BaseCrawler(ABC):
         time.sleep(self.delay)
         
         try:
-            response = self.session.get(url, timeout=self.timeout, **kwargs)
+            response = self.session.get(url, timeout=kwargs.pop("timeout", self.timeout), **kwargs)
             history = getattr(response, "history", None) or []
             first_response = history[0] if history else response
             original_request = getattr(first_response, "request", None)

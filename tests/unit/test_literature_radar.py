@@ -61,6 +61,31 @@ from dashboard.api.routers.literature import _publication_blockers
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_dashboard_counts_preserve_legacy_and_unmarked_review_records():
+    from sqlalchemy import JSON, Column, MetaData, String, Table, create_engine
+    from src.literature.automation_queries import automation_snapshot_counts
+
+    engine = create_engine("sqlite://")
+    records = Table("records", MetaData(), Column("status", String), Column("metadata", JSON))
+    with engine.begin() as db:
+        records.create(db)
+        statement = automation_snapshot_counts(records.c.status, records.c.metadata, "current")
+        assert tuple(db.execute(statement).one()) == (0, 0, 0, 0)
+        db.execute(records.insert(), [
+            {"status": "published", "metadata": {"autopilot": {"policy_version": "current"}}},
+            {"status": "published", "metadata": {"autopilot": {"policy_version": "older"}}},
+            {"status": "published", "metadata": {}},
+            {"status": "review", "metadata": {"autopilot": {"decision": "defer"}}},
+            {"status": "review", "metadata": {"autopilot": {"decision": "archive"}}},
+            {"status": "review", "metadata": {"autopilot": {"decision": "hold"}}},
+            {"status": "review", "metadata": None},
+            {"status": "review", "metadata": {"autopilot": "legacy"}},
+            {"status": "excluded", "metadata": {"autopilot": {"decision": "archive"}}},
+        ])
+        counts = db.execute(statement).one()
+        assert (counts.automatic, counts.review, counts.deferred, counts.archive_decisions) == (1, 5, 1, 1)
+
+
 @pytest.mark.parametrize("title", [
     "Vaccination surveillance and genomic epidemiology",
     "ONE HEALTH: zoonotic animal reservoir monitoring",
@@ -973,7 +998,7 @@ def test_pipeline_funnel_distinguishes_status_and_public_catalogue_counts():
 def test_research_collection_source_keeps_structured_data_and_render_caps():
     source = (ROOT / "astro-site/src/components/research/ResearchCollectionPage.astro").read_text(encoding="utf-8")
     assert "const initialVisibleArticles = 30" in source
-    assert "articles.slice(0, 100).map" in source
+    assert "buildResearchItemList(articles, Astro.site ?? Astro.url.origin, locale, initialVisibleArticles)" in source
     assert "data-load-more-collection" in source
 
 

@@ -51,14 +51,36 @@ def parse_workbook(content: bytes, year: int, source_url: str) -> list[Subdivisi
         years |= {2018 + int(value) for value in re.findall(r'令和(\d+)年10月1日', header_text)}
         if years != {year}:
             continue
-        total_headers = [(r, c) for r, row in enumerate(header) for c, cell in enumerate(row) if cell == '総人口']
-        for header_row, col in total_headers:
-            if not any(col < len(row) and row[col] == '男女計' for row in header[header_row + 1:]):
+        total_blocks = [
+            (r + 1, len(records), c)
+            for r, row in enumerate(header)
+            for c, cell in enumerate(row)
+            if cell == '総人口' and any(other[c] == '男女計' for other in header[r + 1:])
+        ]
+        # The age-table format places all residents and both sexes in a
+        # section heading, with a separate all-ages "総数" column.
+        age_sections = [
+            (r, cell)
+            for r, row in enumerate(records)
+            for value in row
+            if re.fullmatch(r'(総人口|日本人人口)(男女計|男|女)', cell := clean(value))
+        ]
+        for (r, label), (end, _) in zip(age_sections, age_sections[1:] + [(len(records), '')]):
+            if label != '総人口男女計':
                 continue
+            total_columns = [
+                (i + 1, end, c)
+                for i, row in enumerate(records[r + 1:min(r + 10, end)], r + 1)
+                for c, value in enumerate(row)
+                if clean(value) == '総数'
+            ]
+            if len(total_columns) == 1:
+                total_blocks.extend(total_columns)
+        for start, end, col in total_blocks:
             observed = {}
             # Census-year workbooks repeat gender/nationality sections. The
             # first complete block under the explicit totals heading is used.
-            for row in records[header_row + 1:]:
+            for row in records[start:end]:
                 labels = [clean(cell) for cell in row]
                 names = [name for name in JP_PREFECTURES if name in labels]
                 if not names:

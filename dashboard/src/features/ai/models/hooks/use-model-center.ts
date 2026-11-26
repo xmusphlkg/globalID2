@@ -17,7 +17,7 @@ export function useModelCenter() {
   const isZh = lang === "zh";
 
   const { data: providers, isLoading: loadingProviders } = useAIProviders();
-  const { data: models, isLoading: loadingModels } = useAIModels();
+  const { data: models, isLoading: loadingModels, error: modelsError } = useAIModels();
   const { data: runtimeRoutes, isLoading: loadingRuntimeRoutes, error: runtimeRoutesError } = useAIRuntimeRoutes();
 
   const createProvider = useCreateAIProvider();
@@ -53,7 +53,7 @@ export function useModelCenter() {
   const [deletingProviderId, setDeletingProviderId] = useState<string | null>(null);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [discoveryResult, setDiscoveryResult] = useState<{ provider: AIProviderItem; result: ProviderModelDiscoveryResult } | null>(null);
-  const [discoverySelection, setDiscoverySelection] = useState<string[]>([]);
+  const [requestedSelection, setDiscoverySelection] = useState<string[] | null>(null);
   const [discoveryImportResults, setDiscoveryImportResults] = useState<Record<string, DiscoveryImportResult>>({});
   const [isImportingDiscoveredModels, setIsImportingDiscoveredModels] = useState(false);
 
@@ -156,21 +156,37 @@ export function useModelCenter() {
     [healthFilter, runtimeRoutes, searchQuery],
   );
 
-  const configuredDiscoveredModels = useMemo(
-    () => new Set(
-      discoveryResult
-        ? (models ?? []).filter((model) => model.provider_id === discoveryResult.provider.id).map((model) => model.model_name)
-        : [],
-    ),
-    [discoveryResult, models],
-  );
+  const modelsByProvider = useMemo(() => {
+    const byProvider = new Map<number, Map<string, AIModelItem>>();
+    for (const model of models ?? []) {
+      const byName = byProvider.get(model.provider_id) ?? new Map<string, AIModelItem>();
+      const existing = byName.get(model.model_name);
+      // Legacy routes can use different keys for the same upstream model.
+      if (!existing || (!existing.is_enabled && model.is_enabled)
+        || (existing.is_enabled === model.is_enabled && model.model_key === `${model.provider_key}:${model.model_name}`)) {
+        byName.set(model.model_name, model);
+      }
+      byProvider.set(model.provider_id, byName);
+    }
+    return byProvider;
+  }, [models]);
+
+  const existingFormModel = modelDrawerMode === "create"
+    ? modelsByProvider.get(modelForm.provider_id)?.get(modelForm.model_name.trim())
+    : undefined;
+  const configuredDiscoveredModels = modelsByProvider.get(discoveryResult?.provider.id ?? 0);
 
   const selectableDiscoveredModels = useMemo(
-    () => discoveryResult?.result.models.filter((model) => !configuredDiscoveredModels.has(model) && !discoveryImportResults[model]) ?? [],
-    [configuredDiscoveredModels, discoveryImportResults, discoveryResult],
+    () => discoveryResult?.result.models.filter((model) => !configuredDiscoveredModels?.has(model)) ?? [],
+    [configuredDiscoveredModels, discoveryResult],
   );
+  const discoverySelection = requestedSelection === null
+    ? selectableDiscoveredModels
+    : selectableDiscoveredModels.filter((name) => requestedSelection.includes(name));
 
   const operationError =
+    deleteModel.error ??
+    modelsError ??
     createProvider.error ??
     updateProvider.error ??
     deleteProvider.error ??
@@ -239,12 +255,20 @@ export function useModelCenter() {
     setProviderDrawerMode("edit");
   };
 
+  const clearModelErrors = () => {
+    for (const mutation of [createModel, updateModel, deleteModel, testModel]) {
+      if (mutation.isError) mutation.reset();
+    }
+  };
+
   const openCreateModel = () => {
+    clearModelErrors();
     resetModelForm();
     setModelDrawerMode("create");
   };
 
   const openEditModel = (model: AIModelItem) => {
+    clearModelErrors();
     setEditingModelId(model.model_key);
     setModelForm({
       provider_id: model.provider_id,
@@ -304,7 +328,16 @@ export function useModelCenter() {
 
   const submitModel = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!modelForm.provider_id) return;
+    if (!modelForm.provider_id || !models) return;
+    if (existingFormModel) {
+      if (!existingFormModel.is_enabled) {
+        updateModel.mutate(
+          { modelKey: existingFormModel.model_key, payload: { is_enabled: true } },
+          { onSuccess: () => setModelDrawerMode(null) },
+        );
+      }
+      return;
+    }
 
     const payload = {
       display_name: modelForm.display_name.trim() || modelForm.model_name.trim(),
@@ -348,9 +381,10 @@ export function useModelCenter() {
   };
 
   const onDeleteModel = (model: AIModelItem) => {
+    const modelLabel = `${model.display_name} (${model.provider_key}, ${model.model_key})`;
     const confirmText = isZh
-      ? `确认删除模型 ${model.display_name}？${model.is_default ? "\n\n这是默认模型，删除后系统会自动选择下一个模型作为默认。" : ""}`
-      : `Delete model ${model.display_name}?${model.is_default ? "\n\nThis is the default model. A replacement default will be selected automatically." : ""}`;
+      ? `确认删除模型 ${modelLabel}？${model.is_default ? "\n\n这是默认模型，删除后系统会自动选择下一个模型作为默认。" : ""}`
+      : `Delete model ${modelLabel}?${model.is_default ? "\n\nThis is the default model. A replacement default will be selected automatically." : ""}`;
     if (!window.confirm(confirmText)) return;
     setDeletingModelId(model.model_key);
     deleteModel.mutate(model.model_key, { onSettled: () => setDeletingModelId(null) });
@@ -362,40 +396,40 @@ export function useModelCenter() {
   };
 
   const onDiscoverProviderModels = (provider: AIProviderItem) => {
+    clearModelErrors();
     setDiscoveryResult(null);
-    setDiscoverySelection([]);
+    setDiscoverySelection(null);
     setDiscoveryImportResults({});
     discoverProviderModels.mutate(provider.provider_key, {
-      onSuccess: (result) => {
-        const configuredModels = new Set(
-          (models ?? []).filter((model) => model.provider_id === provider.id).map((model) => model.model_name),
-        );
-        setDiscoverySelection(result.models.filter((model) => !configuredModels.has(model)));
-        setDiscoveryResult({ provider, result });
-      },
+      onSuccess: (result) => setDiscoveryResult({ provider, result }),
     });
   };
 
-  const onAddDiscoveredModels = async () => {
-    if (!discoveryResult || !discoverySelection.length) return;
+  const importDiscoveredModels = async (selectedModels: string[], restore?: AIModelItem) => {
+    if (!discoveryResult || !selectedModels.length || isImportingDiscoveredModels) return;
 
     const { provider } = discoveryResult;
-    const selectedModels = [...discoverySelection];
     setIsImportingDiscoveredModels(true);
-    setDiscoveryImportResults({});
 
     for (const modelName of selectedModels) {
       setDiscoveryImportResults((current) => ({ ...current, [modelName]: { status: "checking", message: copy.importing } }));
       try {
-        const createdModel = await createModel.mutateAsync({
-          provider_key: provider.provider_key,
-          model_name: modelName,
-          display_name: modelName,
-          model_type: "chat",
-          is_enabled: true,
-          priority: provider.priority,
-        });
-        const checkResult = await testModel.mutateAsync(createdModel.model_key) as { success?: boolean; status?: string; message?: string };
+        let modelKey: string;
+        if (restore) {
+          await updateModel.mutateAsync({ modelKey: restore.model_key, payload: { is_enabled: true } });
+          modelKey = restore.model_key;
+        } else {
+          const createdModel = await createModel.mutateAsync({
+            provider_key: provider.provider_key,
+            model_name: modelName,
+            display_name: modelName,
+            model_type: "chat",
+            is_enabled: true,
+            priority: provider.priority,
+          });
+          modelKey = createdModel.model_key;
+        }
+        const checkResult = await testModel.mutateAsync(modelKey) as { success?: boolean; status?: string; message?: string };
         setDiscoveryImportResults((current) => ({
           ...current,
           [modelName]: {
@@ -411,11 +445,17 @@ export function useModelCenter() {
       }
     }
 
-    setDiscoverySelection([]);
+    if (!restore) setDiscoverySelection([]);
     setIsImportingDiscoveredModels(false);
   };
 
-  return { lang, isZh, providers, loadingProviders, models, loadingModels, runtimeRoutes, loadingRuntimeRoutes, runtimeRoutesError, createProvider, updateProvider, deleteProvider, testProvider, discoverProviderModels, rebuildProviders, createModel, updateModel, testModel, deleteModel, checkAll, providerDrawerMode, setProviderDrawerMode, modelDrawerMode, setModelDrawerMode, editingProviderId, setEditingProviderId, editingModelId, setEditingModelId, search, setSearch, healthFilter, setHealthFilter, activeView, setActiveView, callLogProvider, setCallLogProvider, callLogStatus, setCallLogStatus, callLogPageNumber, setCallLogPageNumber, callLogPage, loadingCallLogs, callLogsError, callLogs, callLogTotalPages, deletingProviderId, setDeletingProviderId, deletingModelId, setDeletingModelId, discoveryResult, setDiscoveryResult, discoverySelection, setDiscoverySelection, discoveryImportResults, setDiscoveryImportResults, isImportingDiscoveredModels, setIsImportingDiscoveredModels, providerForm, setProviderForm, modelForm, setModelForm, copy, modelCountByProvider, providerOptions, summary, runtimeRouteByModelKey, searchQuery, filteredProviders, filteredModels, filteredRuntimeRoutes, configuredDiscoveredModels, selectableDiscoveredModels, operationError, resetProviderForm, resetModelForm, openCreateProvider, openEditProvider, openCreateModel, openEditModel, submitProvider, submitModel, onDeleteProvider, onDeleteModel, onRebuildFromEnv, onDiscoverProviderModels, onAddDiscoveredModels };
+  const onAddDiscoveredModels = () => importDiscoveredModels(discoverySelection);
+  const onRestoreDiscoveredModel = (model: AIModelItem) => {
+    if (model.is_enabled || model.provider_id !== discoveryResult?.provider.id) return;
+    return importDiscoveredModels([model.model_name], model);
+  };
+
+  return { lang, isZh, providers, loadingProviders, models, loadingModels, runtimeRoutes, loadingRuntimeRoutes, runtimeRoutesError, createProvider, updateProvider, deleteProvider, testProvider, discoverProviderModels, rebuildProviders, createModel, updateModel, testModel, deleteModel, checkAll, providerDrawerMode, setProviderDrawerMode, modelDrawerMode, setModelDrawerMode, editingProviderId, setEditingProviderId, editingModelId, setEditingModelId, search, setSearch, healthFilter, setHealthFilter, activeView, setActiveView, callLogProvider, setCallLogProvider, callLogStatus, setCallLogStatus, callLogPageNumber, setCallLogPageNumber, callLogPage, loadingCallLogs, callLogsError, callLogs, callLogTotalPages, deletingProviderId, setDeletingProviderId, deletingModelId, setDeletingModelId, discoveryResult, setDiscoveryResult, discoverySelection, setDiscoverySelection, discoveryImportResults, setDiscoveryImportResults, isImportingDiscoveredModels, setIsImportingDiscoveredModels, providerForm, setProviderForm, modelForm, setModelForm, copy, modelCountByProvider, providerOptions, summary, runtimeRouteByModelKey, searchQuery, filteredProviders, filteredModels, filteredRuntimeRoutes, existingFormModel, configuredDiscoveredModels, selectableDiscoveredModels, operationError, resetProviderForm, resetModelForm, openCreateProvider, openEditProvider, openCreateModel, openEditModel, submitProvider, submitModel, onDeleteProvider, onDeleteModel, onRebuildFromEnv, onDiscoverProviderModels, onAddDiscoveredModels, onRestoreDiscoveredModel };
 }
 
 export type ModelCenterController = ReturnType<typeof useModelCenter>;

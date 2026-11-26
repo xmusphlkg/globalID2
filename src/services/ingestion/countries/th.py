@@ -35,6 +35,7 @@ async def collect(writer, *, source=DEFAULT_SCOPE, start_year=DEFAULT_START_YEAR
     contracts = selected_contracts(disease_codes)
     effective_mode = mode or ("history" if backfill_history else "incremental")
     crawler = ThailandDOE506Crawler()
+    crawler.force_refresh = bool(options.get("force", False))
     errors, histories = [], {}
     try:
         response = await asyncio.to_thread(crawler.get, INDEX_URL)

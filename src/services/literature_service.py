@@ -9,6 +9,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, or_, select, union
+from sqlalchemy.exc import DBAPIError, TimeoutError as PoolTimeoutError
 
 from src.ai.catalogue.errors import is_provider_authentication_error
 from src.control_plane.schedule_state import schedule_state_repository
@@ -154,48 +155,56 @@ class LiteratureService:
         assert self._stop_event is not None
         cfg = self._config()
         while not self._stop_event.is_set():
-            # A worker can pull the next core run forward after committing a
-            # truncated checkpoint. Refresh that one persisted timestamp so a
-            # six-hour-old in-memory cadence cannot suppress catch-up work.
-            if cfg.schedule_enabled and getattr(cfg, "catch_up_enabled", False):
-                persisted = (await schedule_state_repository.load("literature")).get(
-                    self.JOB_ID,
-                    {},
-                )
-                if persisted.get("next_run_at") is not None:
-                    self._state.next_run_at = persisted["next_run_at"]
-            now = datetime.now(ZoneInfo(cfg.timezone))
-            if self._state.next_run_at is None:
-                self._state.next_run_at = self._next_run(now)
-            if cfg.schedule_enabled and self._state.next_run_at and now >= self._state.next_run_at:
-                try:
-                    await self.trigger_job(self.JOB_ID, manual=False)
-                except Exception:
-                    logger.exception("Research Radar scheduled synchronization failed")
-            if (cfg.ai_enrichment_enabled or cfg.weekly_ai_review_enabled) and cfg.ai_enrichment_schedule_enabled:
-                enrichment_persisted = (
-                    await schedule_state_repository.load("literature")
-                ).get(self.ENRICHMENT_JOB_ID, {})
-                if enrichment_persisted.get("next_run_at") is not None:
-                    self._enrichment_state.next_run_at = enrichment_persisted["next_run_at"]
-                if self._enrichment_state.next_run_at is None:
-                    self._enrichment_state.next_run_at = self._next_enrichment_run(now)
-                if now >= self._enrichment_state.next_run_at:
-                    try:
-                        await self.trigger_enrichment(manual=False)
-                    except Exception:
-                        logger.exception("Research Radar scheduled enrichment failed")
-            if cfg.gap_discovery_schedule_enabled and self._gap_state.next_run_at is None:
-                self._gap_state.next_run_at = self._next_gap_run(now)
-            if cfg.gap_discovery_schedule_enabled and self._gap_state.next_run_at and now >= self._gap_state.next_run_at:
-                try:
-                    await self.trigger_gap_discovery(manual=False)
-                except Exception:
-                    logger.exception("Research Radar scheduled evidence-gap discovery failed")
+            try:
+                await self._run_tick(cfg)
+            except (DBAPIError, PoolTimeoutError):
+                # Retry transient database failures at the ordinary poll cadence.
+                # Unexpected failures propagate to the process supervisor.
+                logger.exception("Research Radar scheduler database operation failed; retrying next tick")
             try:
                 await asyncio.wait_for(self._stop_event.wait(), timeout=cfg.poll_interval_seconds)
             except asyncio.TimeoutError:
                 pass
+
+    async def _run_tick(self, cfg) -> None:
+        # A worker can pull the next core run forward after committing a
+        # truncated checkpoint. Refresh that one persisted timestamp so a
+        # six-hour-old in-memory cadence cannot suppress catch-up work.
+        if cfg.schedule_enabled and getattr(cfg, "catch_up_enabled", False):
+            persisted = (await schedule_state_repository.load("literature")).get(
+                self.JOB_ID,
+                {},
+            )
+            if persisted.get("next_run_at") is not None:
+                self._state.next_run_at = persisted["next_run_at"]
+        now = datetime.now(ZoneInfo(cfg.timezone))
+        if self._state.next_run_at is None:
+            self._state.next_run_at = self._next_run(now)
+        if cfg.schedule_enabled and self._state.next_run_at and now >= self._state.next_run_at:
+            try:
+                await self.trigger_job(self.JOB_ID, manual=False)
+            except Exception:
+                logger.exception("Research Radar scheduled synchronization failed")
+        if (cfg.ai_enrichment_enabled or cfg.weekly_ai_review_enabled) and cfg.ai_enrichment_schedule_enabled:
+            enrichment_persisted = (
+                await schedule_state_repository.load("literature")
+            ).get(self.ENRICHMENT_JOB_ID, {})
+            if enrichment_persisted.get("next_run_at") is not None:
+                self._enrichment_state.next_run_at = enrichment_persisted["next_run_at"]
+            if self._enrichment_state.next_run_at is None:
+                self._enrichment_state.next_run_at = self._next_enrichment_run(now)
+            if now >= self._enrichment_state.next_run_at:
+                try:
+                    await self.trigger_enrichment(manual=False)
+                except Exception:
+                    logger.exception("Research Radar scheduled enrichment failed")
+        if cfg.gap_discovery_schedule_enabled and self._gap_state.next_run_at is None:
+            self._gap_state.next_run_at = self._next_gap_run(now)
+        if cfg.gap_discovery_schedule_enabled and self._gap_state.next_run_at and now >= self._gap_state.next_run_at:
+            try:
+                await self.trigger_gap_discovery(manual=False)
+            except Exception:
+                logger.exception("Research Radar scheduled evidence-gap discovery failed")
 
     def _next_run(self, now: datetime | None = None) -> datetime:
         cfg = self._config()

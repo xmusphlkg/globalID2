@@ -15,7 +15,7 @@ import re
 import os
 import tempfile
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 
 from .artifact_index import ArtifactIndex
@@ -195,7 +195,13 @@ def publish_surveillance_data(
     active = client or R2S3Client(config)
     try:
         retention = managed_publication(active, channel=prefix) if manage_retention else nullcontext(None)
+        lock_started = time.monotonic()
+        logger.info("JSON publication waiting for channel: release={} channel={} objects={}",
+                    manifest["release_id"], prefix, len(objects))
         with retention as publication:
+            logger.info("JSON publication channel acquired: release={} channel={} wait_seconds={:.2f}",
+                        manifest["release_id"], prefix, time.monotonic() - lock_started)
+            cleanup_before_upload = 0
             with _publication_lock(directory, config, prefix):
                 captured, starting_previous = _starting_baseline(directory, config, prefix)
                 if require_starting_baseline and not captured:
@@ -209,6 +215,12 @@ def publish_surveillance_data(
                     raise R2S3Error("Public JSON changed since the starting baseline was captured before generation", status=412)
                 if publication is not None:
                     publication.stage(body, publication_upload_sizes(body, prefix=prefix, previous=previous))
+                    # Reclaim previously deferred garbage before the capacity
+                    # check; otherwise a full bucket could never reach cleanup
+                    # after its next successful upload. New references are
+                    # already staged and protected from this collection.
+                    if previous != body:
+                        cleanup_before_upload = publication.cleanup()['deleted_objects']
                 if previous == body:
                     result = {"release_id": manifest["release_id"], "uploaded": 0,
                             "unchanged": len(objects), "bytes_uploaded": 0, "pointer_changed": False,
@@ -216,6 +228,7 @@ def publish_surveillance_data(
                     if publication is not None:
                         publication.commit(body)
                         result['retention'] = publication.cleanup()
+                        result['retention']['deleted_objects'] += cleanup_before_upload
                     return result
                 candidate_sha = hashlib.sha256(body).hexdigest()
                 baseline_sha = hashlib.sha256(previous).hexdigest() if previous is not None else None
@@ -279,7 +292,21 @@ def publish_surveillance_data(
 
                 upload_started = time.monotonic()
                 with ThreadPoolExecutor(max_workers=workers) as pool:
-                    results = list(pool.map(upload, selected))
+                    pending = {pool.submit(upload, item) for item in selected}
+                    results = []
+                    last_progress = upload_started
+                    try:
+                        while pending:
+                            done, pending = wait(pending, timeout=15, return_when=FIRST_COMPLETED)
+                            results.extend(future.result() for future in done)
+                            if time.monotonic() - last_progress >= 15:
+                                logger.info("JSON object upload progress: release={} completed={} total={} elapsed_seconds={:.2f}",
+                                            manifest["release_id"], len(results), len(selected),
+                                            time.monotonic() - upload_started)
+                                last_progress = time.monotonic()
+                    finally:
+                        for future in pending:
+                            future.cancel()
                 object_upload_seconds = time.monotonic() - upload_started
                 uploaded = sum(count for count, _ in results)
                 transferred = sum(size for _, size in results)
@@ -312,6 +339,7 @@ def publish_surveillance_data(
                 if publication is not None:
                     publication.commit(body)
                     result['retention'] = publication.cleanup()
+                    result['retention']['deleted_objects'] += cleanup_before_upload
                 return result
     finally:
         if client is None:

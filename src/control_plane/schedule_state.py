@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import case, delete, or_, select, update
-from sqlalchemy.exc import DBAPIError, IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError, TimeoutError as PoolTimeoutError
 
 from src.core import get_database, get_logger
 from src.domain import ScheduledJobState
@@ -53,7 +53,7 @@ class ScheduleStateRepository:
                             *predicate
                         ).values(next_run_at=next_run_at))
                 await db.commit()
-        except DBAPIError as exc:
+        except (DBAPIError, PoolTimeoutError) as exc:
             logger.warning("Unable to reschedule job state: {}", exc)
 
     async def save_result(
@@ -85,7 +85,7 @@ class ScheduleStateRepository:
                 next_run_at = result.scalar_one_or_none()
                 await db.commit()
                 return next_run_at
-        except DBAPIError as exc:
+        except (DBAPIError, PoolTimeoutError) as exc:
             logger.warning("Unable to persist job dispatch result: {}", exc)
             return state.next_run_at
 
@@ -108,8 +108,8 @@ class ScheduleStateRepository:
                 }
                 for row in rows
             }
-        except DBAPIError as exc:
-            logger.warning("Schedule state table is unavailable; run Alembic upgrade: {}", exc)
+        except (DBAPIError, PoolTimeoutError) as exc:
+            logger.warning("Unable to read schedule state; retry on the next scheduler tick: {}", exc)
             return {}
 
     async def save(self, job_kind: str, job_id: str, state: Any) -> None:
@@ -136,7 +136,7 @@ class ScheduleStateRepository:
                 ):
                     setattr(row, field, getattr(state, field, None))
                 await db.commit()
-        except DBAPIError as exc:
+        except (DBAPIError, PoolTimeoutError) as exc:
             logger.warning("Unable to persist schedule state: {}", exc)
 
     async def schedule_earlier(
@@ -163,7 +163,7 @@ class ScheduleStateRepository:
                 )
                 await db.commit()
                 return bool(result.rowcount)
-        except DBAPIError as exc:
+        except (DBAPIError, PoolTimeoutError) as exc:
             logger.warning("Unable to advance schedule state: {}", exc)
             return False
 
@@ -177,7 +177,7 @@ class ScheduleStateRepository:
                     )
                 )
                 await db.commit()
-        except DBAPIError as exc:
+        except (DBAPIError, PoolTimeoutError) as exc:
             logger.warning("Unable to remove schedule state: {}", exc)
 
 

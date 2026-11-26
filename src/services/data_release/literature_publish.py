@@ -63,6 +63,7 @@ def publish_literature_candidate(*, run: Path, objects_dir: Path, papers: Papers
     result = None
     try:
         with managed_publication(active, channel=PREFIX) as publication:
+            cleanup_before_upload = 0
             current = active.get_object(f"{PREFIX}/current.json")
             if current not in (previous, body):
                 raise R2S3Error("Research publication baseline changed before upload", status=412)
@@ -70,6 +71,10 @@ def publish_literature_candidate(*, run: Path, objects_dir: Path, papers: Papers
             sizes.update(publication_upload_sizes(body, prefix=PREFIX, previous=previous))
             if publication is not None:
                 publication.stage(body, sizes)
+                # Deferred cross-channel garbage must not fill the budget and
+                # prevent every subsequent publication from reaching cleanup.
+                if current != body:
+                    cleanup_before_upload = publication.cleanup()['deleted_objects']
             destination = _target(config, PREFIX)
             if current == body:
                 # A crash after the pointer commit must not trigger thousands of
@@ -82,6 +87,7 @@ def publish_literature_candidate(*, run: Path, objects_dir: Path, papers: Papers
                 if publication is not None:
                     publication.commit(body)
                     result['retention'] = publication.cleanup()
+                    result['retention']['deleted_objects'] += cleanup_before_upload
                 return result
             previous_manifest = validate_manifest(previous)[0] if previous is not None else None
             known = (read_committed_papers_receipt(receipt, pointer=previous_manifest, target=destination)
@@ -107,6 +113,7 @@ def publish_literature_candidate(*, run: Path, objects_dir: Path, papers: Papers
             if publication is not None:
                 publication.commit(body)
                 result['retention'] = publication.cleanup()
+                result['retention']['deleted_objects'] += cleanup_before_upload
             return result
     finally:
         operations = getattr(active, 'operation_counts', None)
