@@ -178,3 +178,58 @@ def test_ecdc_complete_empty_responses_authorize_empty_window(tmp_path, monkeypa
     fetched = ecdc.organize(artifacts, updater=ECDCAnnualUpdater("FR"), start_year=2020)
     assert fetched.rows == []
     assert fetched.authoritative_window_start_year == 2020
+
+
+@pytest.mark.parametrize("failure", ["transient_empty", "persistent_empty", "changed_contract"])
+async def test_ecdc_retries_only_empty_indicator_metadata_and_keeps_capture(tmp_path, monkeypatch, failure):
+    monkeypatch.chdir(tmp_path)
+    requests = fixture_requests("FR")
+    history = tmp_path / "history.csv"
+    previous = b"Date,SourceDiseaseCode,Cases\n2020-01-01,anth,3\n"
+    history.write_bytes(previous)
+    lookup = {(r["endpoint"], tuple(sorted(r["params"].items()))): r["payload"] for r in requests}
+    measure_endpoint = "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation"
+    first = next(r for r in requests if r["endpoint"] == measure_endpoint)
+    failing_key = (measure_endpoint, tuple(sorted(first["params"].items())))
+    calls = []
+    sleeps = AsyncMock()
+    monkeypatch.setattr(ecdc.asyncio, "sleep", sleeps)
+
+    class Writer:
+        def __init__(self):
+            self.artifacts = []
+
+        async def write(self, raw, **kwargs):
+            self.artifacts.append(save_artifact(raw, kwargs["metadata"], len(self.artifacts)))
+
+    def get(self, url, params):
+        key = (url.split("/")[-1], tuple(sorted(params.items())))
+        calls.append(key)
+        payload = lookup[key]
+        if key == failing_key:
+            if failure == "persistent_empty" or (failure == "transient_empty" and calls.count(key) == 1):
+                payload = {"Measures": []}
+            elif failure == "changed_contract":
+                payload = {"Measures": [{"Code": "ALL.RATE", "Unit": "N/100000", "Label": "Notification rate"}]}
+        return SimpleNamespace(content=json.dumps(payload).encode(), url=url)
+
+    monkeypatch.setattr(ECDCAtlasCrawler, "get", get)
+    writer = Writer()
+    if failure == "transient_empty":
+        artifacts = await ecdc.collect(writer, country_code="FR", start_year=2020)
+        captured = [a for a in artifacts if (a.metadata_["endpoint"], tuple(sorted(a.metadata_["params"].items()))) == failing_key]
+        assert len(captured) == 2
+        assert json.loads(Path(captured[0].relative_path).read_text()) == {"Measures": []}
+        assert json.loads(Path(captured[1].relative_path).read_text())["Measures"]
+        fetched = ecdc.organize(artifacts, updater=ECDCAnnualUpdater("FR"), start_year=2020)
+        assert fetched.rows
+        sleeps.assert_awaited_once_with(1)
+    else:
+        with pytest.raises(ECDCContractError, match="topic=ANTH, population='Confirmed cases'"):
+            await ecdc.collect(writer, country_code="FR", history_csv=history)
+        assert not any(key[0] == "GetMeasureResultsForTimeUnitAndGeoRegion" for key in calls)
+        attempts = ecdc.EMPTY_MEASURE_ATTEMPTS if failure == "persistent_empty" else 1
+        assert calls.count(failing_key) == attempts
+        assert len(writer.artifacts) == 1 + attempts
+        assert sleeps.await_count == attempts - 1
+        assert history.read_bytes() == previous

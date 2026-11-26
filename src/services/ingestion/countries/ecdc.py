@@ -13,15 +13,21 @@ from pathlib import Path
 from src.data.crawlers.ecdc import (
     API_BASE,
     DATASET_ID,
+    EMPTY_MEASURE_ATTEMPTS,
     DEFAULT_SCOPE,
     TOPIC_CONTRACTS,
     ECDCAtlasCrawler,
     ECDCContractError,
     _annual_count_measure,
+    _empty_indicator_measures,
     _text,
 )
+from src.core import get_logger
 from src.data.processors.ecdc import ECDCUpdateFetchResult
 from src.services.ingestion.artifacts import read_artifact
+
+
+logger = get_logger(__name__)
 
 
 def normalize_source(source):
@@ -42,19 +48,28 @@ async def collect(
     crawler = ECDCAtlasCrawler(country_code)
 
     async def request(endpoint, **params):
-        response = await asyncio.to_thread(
-            crawler.get, f"{API_BASE}{endpoint}", params=params
-        )
-        await writer.write(
-            response.content,
-            source_url=response.url,
-            kind="archive_json",
-            metadata={"endpoint": endpoint, "params": params},
-        )
-        payload = json.loads(response.content)
-        if not isinstance(payload, dict):
-            raise ECDCContractError(f"ECDC {endpoint} returned a non-object payload")
-        return payload
+        for attempt in range(1, EMPTY_MEASURE_ATTEMPTS + 1):
+            response = await asyncio.to_thread(
+                crawler.get, f"{API_BASE}{endpoint}", params=params
+            )
+            # Retain unsuccessful metadata responses too. Offline organization
+            # selects the last response for these exact parameters.
+            await writer.write(
+                response.content,
+                source_url=response.url,
+                kind="archive_json",
+                metadata={"endpoint": endpoint, "params": params},
+            )
+            payload = json.loads(response.content)
+            if not isinstance(payload, dict):
+                raise ECDCContractError(f"ECDC {endpoint} returned a non-object payload")
+            if not _empty_indicator_measures(endpoint, payload) or attempt == EMPTY_MEASURE_ATTEMPTS:
+                return payload
+            logger.warning(
+                "ECDC returned empty indicator metadata; retry {}/{} | topic={} population={!r}",
+                attempt, EMPTY_MEASURE_ATTEMPTS - 1, params.get("healthtopicId"), params.get("measurePopulation"),
+            )
+            await asyncio.sleep(attempt)
 
     try:
         topics = await request("GetHealthTopicsForDataset", datasetId=DATASET_ID)
@@ -72,7 +87,7 @@ async def collect(
                     healthtopicId=int(topic["Id"]),
                     measurePopulation=population,
                 )
-                measure = _annual_count_measure(measures.get("Measures") or [])
+                measure = _annual_count_measure(measures.get("Measures") or [], topic_code=contract.code, population=population)
                 await request(
                     "GetMeasureResultsForTimeUnitAndGeoRegion",
                     measureId=int(measure["Id"]),
@@ -142,7 +157,7 @@ def organize(
                     healthtopicId=topic_id,
                     measurePopulation=population,
                 )
-                measure = _annual_count_measure(measures.get("Measures") or [])
+                measure = _annual_count_measure(measures.get("Measures") or [], topic_code=contract.code, population=population)
                 results = payload(
                     "GetMeasureResultsForTimeUnitAndGeoRegion",
                     measureId=int(measure["Id"]),

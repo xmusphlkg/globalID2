@@ -7,6 +7,7 @@ This file records release-level changes to the GIDS application and its data ope
 ### Fixed
 
 - Reconcile report subscriptions against the verified public catalogue, so unpublished local template builds cannot block report digests. Retain index and page hash verification and delivery idempotency.
+- Retry transient empty ECDC indicator metadata with bounded backoff, preserve captured responses, and identify the affected disease and case group when the contract still fails.
 
 ## [0.21.1] - 2026-11-26
 

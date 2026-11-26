@@ -214,3 +214,22 @@ def test_authoritative_window_refresh_removes_withdrawn_cells(tmp_path: Path) ->
         ("1989-01-01", "1"),
         ("2021-01-01", "4"),
     ]
+
+
+def test_ecdc_legacy_fetch_retries_empty_metadata_without_retrying_empty_observations(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from src.data.crawlers import ecdc
+
+    responses = iter([{"Measures": []}, _measure(101), {"MeasureResults": []}])
+    get = Mock(side_effect=lambda *a, **kw: SimpleNamespace(json=lambda: next(responses)))
+    sleep = Mock()
+    monkeypatch.setattr(ecdc.time, "sleep", sleep)
+    crawler = ECDCAtlasCrawler("FR")
+    monkeypatch.setattr(crawler, "get", get)
+    contract = ECDCTopicContract("ANTH", "Anthrax", ("Confirmed cases",), "D023")
+    rows, _ = crawler._topic_rows(contract, 1, start_year=2020)
+    assert rows == []
+    assert get.call_count == 3
+    sleep.assert_called_once_with(1)
+    crawler.session.close()
