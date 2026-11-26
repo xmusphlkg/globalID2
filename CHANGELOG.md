@@ -11,7 +11,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Load filtered Research Radar results in pages of eight, reuse earlier pages, and retry failed page reads. Count disease records in the catalogue manifest.
 - Aggregate literature automation counts in SQL to reduce dashboard metadata transfer and application memory use.
 - Restore disabled models through discovery and manual entry, identify providers in deletion prompts, and refresh model lists after mutations.
-- Add the Shenzhen CDC technical exchange briefing and consolidate documentation maintenance guidance.
+- Consolidate documentation maintenance guidance and runtime recovery notes.
 
 ### Fixed
 
