@@ -272,6 +272,7 @@ async def test_release_hook_is_off_by_default_and_passes_config_when_enabled(tmp
         assert await release.dispatch_if_enabled(service, runtime, reports_origin=ORIGIN) == {"status": "baseline_recorded"}
     assert mocked.call_args.kwargs["start_week"] == "2026-W45"
     assert mocked.call_args.kwargs["reports_base_url"] == ORIGIN
+    assert mocked.call_args.kwargs["reports_dir"] is None
 
     # A notification outage must not fail a report bundle already uploaded to R2.
     with patch.object(release, "dispatch_after_release", side_effect=release.ReportSubscriptionError("worker_transport_error:TimeoutError")):
@@ -293,3 +294,53 @@ def test_pilot_report_observations_and_campaign_keys_are_separate(tmp_path):
     # turn existing reports into a historical mailing to everyone.
     assert release.dispatch_after_release(**args, now=MONDAY, mode='full')['status'] == 'baseline_recorded'
     assert len(published.worker_calls) == 2
+
+
+def test_public_reconciliation_ignores_unpublished_build_and_preserves_delivery_idempotency(tmp_path):
+    published = PublishedReports(tmp_path / "reports")
+    published.publish([report(1)])
+    args = dict(root=tmp_path, reports_dir=None, worker_base_url=WORKER,
+                reports_base_url=ORIGIN, token="test-only", start_week="2026-W45", opener=published)
+    assert release.dispatch_after_release(**args, now=WEDNESDAY)["status"] == "baseline_recorded"
+    published.publish([report(1), report(2)])
+    # Template-only builds overwrite this directory without publishing reports.
+    # They may contain older data or new reports that are not publicly readable.
+    published.reports_dir.joinpath("site-data/reports/index.json").write_text(json.dumps([report(99)]))
+    published.reports_dir.joinpath("reports-manifest.json").write_text("{}")
+    published.reports_dir.joinpath("countries/jp/reports/2/index.html").unlink()
+    assert release.dispatch_after_release(**args, now=WEDNESDAY)["status"] == "no_completed_reports"
+    observations = json.loads((tmp_path / "exports/subscription-outbox/full/reports/observations.json").read_text())
+    assert set(observations["observations"]) == {"1", "2"}
+    assert published.worker_calls == []
+    assert release.dispatch_after_release(**args, now=MONDAY)["completed_weeks"] == ["2026-W45"]
+    assert len(published.worker_calls) == 2
+    assert all([item["id"] for item in payload["content_items"]] == ["2"] for payload in published.worker_calls)
+    assert release.dispatch_after_release(**args, now=MONDAY)["status"] == "no_completed_reports"
+    assert len(published.worker_calls) == 2
+
+
+@pytest.mark.parametrize("corruption,reason", [
+    ("index", "report_public_index_mismatch"),
+    ("page", "report_public_page_manifest_mismatch"),
+    ("missing_page", "report_public_page_not_published"),
+])
+def test_public_reconciliation_refuses_inconsistent_published_content(tmp_path, corruption, reason):
+    published = PublishedReports(tmp_path / "reports")
+    published.publish([report(1)])
+    args = dict(root=tmp_path, reports_dir=None, worker_base_url=WORKER,
+                reports_base_url=ORIGIN, token="test-only", start_week="2026-W45", opener=published)
+    release.dispatch_after_release(**args, now=WEDNESDAY)
+    published.publish([report(1), report(2)])
+    release.dispatch_after_release(**args, now=WEDNESDAY)
+    if corruption == "index":
+        published.remote[f"{ORIGIN}/site-data/reports/index.json"] = b"[]"
+    elif corruption == "page":
+        published.remote[f"{ORIGIN}/countries/jp/reports/2/"] = b"<html>unpublished replacement</html>"
+    else:
+        url = f"{ORIGIN}/reports-manifest.json"
+        manifest = json.loads(published.remote[url])
+        manifest["files"] = [row for row in manifest["files"] if row["path"] != "countries/jp/reports/2/index.html"]
+        published.remote[url] = json.dumps(manifest).encode()
+    with pytest.raises(release.ReportSubscriptionError, match=reason):
+        release.dispatch_after_release(**args, now=MONDAY)
+    assert published.worker_calls == []
