@@ -67,24 +67,27 @@ def _manifest_index(manifest: Any, origin: str) -> dict[str, Mapping[str, Any]]:
     return result
 
 
-def _verified_catalogue(reports_dir: Path, origin: str, opener: Callable[..., Any]) -> tuple[list[dict[str, Any]], dict[str, Mapping[str, Any]]]:
-    local = _manifest_index(_load_json(reports_dir / "reports-manifest.json", "report_manifest_invalid"), origin)
+def _verified_catalogue(reports_dir: Path | None, origin: str, opener: Callable[..., Any]) -> tuple[list[dict[str, Any]], dict[str, Mapping[str, Any]]]:
+    # Scheduled reconciliation follows the public publication, not a mutable
+    # build directory that template-only or failed releases can overwrite.
+    local = (_manifest_index(_load_json(reports_dir / "reports-manifest.json", "report_manifest_invalid"), origin)
+             if reports_dir is not None else None)
     try:
         remote = _manifest_index(json.loads(_get(origin + "/reports-manifest.json", opener, limit=10_000_000)), origin)
     except (UnicodeDecodeError, ValueError) as exc:
         raise ReportSubscriptionError("report_public_verification_failed") from exc
     key = "site-data/reports/index.json"
-    index = reports_dir / key
-    if key not in local or key not in remote or local[key]["sha256"] != remote[key]["sha256"]:
+    if key not in remote or (local is not None and (key not in local or local[key]["sha256"] != remote[key]["sha256"])):
         raise ReportSubscriptionError("report_public_manifest_mismatch")
-    try:
-        data = index.read_bytes()
-    except OSError as exc:
-        raise ReportSubscriptionError("report_index_unavailable") from exc
-    if hashlib.sha256(data).hexdigest() != local[key]["sha256"]:
-        raise ReportSubscriptionError("report_index_manifest_mismatch")
-    public_index = _get(origin + "/site-data/reports/index.json", opener, limit=10_000_000)
-    if hashlib.sha256(public_index).hexdigest() != local[key]["sha256"]:
+    if reports_dir is not None:
+        try:
+            data = (reports_dir / key).read_bytes()
+        except OSError as exc:
+            raise ReportSubscriptionError("report_index_unavailable") from exc
+        if hashlib.sha256(data).hexdigest() != local[key]["sha256"]:
+            raise ReportSubscriptionError("report_index_manifest_mismatch")
+    data = _get(origin + "/site-data/reports/index.json", opener, limit=10_000_000)
+    if hashlib.sha256(data).hexdigest() != remote[key]["sha256"]:
         raise ReportSubscriptionError("report_public_index_mismatch")
     try:
         rows = json.loads(data)
@@ -92,6 +95,8 @@ def _verified_catalogue(reports_dir: Path, origin: str, opener: Callable[..., An
         raise ReportSubscriptionError("report_index_invalid") from exc
     if not isinstance(rows, list) or len(rows) > 100_000 or not all(isinstance(row, dict) for row in rows):
         raise ReportSubscriptionError("report_index_invalid")
+    if local is None:
+        return rows, remote
     return rows, {path: item for path, item in local.items()
                   if path in remote and item["sha256"] == remote[path]["sha256"]}
 
@@ -174,18 +179,19 @@ def _undo_cloudflare_html_transforms(body: bytes) -> bytes:
     return re.sub(challenge, b'', body)
 
 
-def _verify_pages(items: list[dict[str, Any]], reports_dir: Path, manifest: Mapping[str, Mapping[str, Any]], opener: Callable[..., Any]) -> None:
+def _verify_pages(items: list[dict[str, Any]], reports_dir: Path | None, manifest: Mapping[str, Mapping[str, Any]], opener: Callable[..., Any]) -> None:
     for item in items:
         path = item["path"]
         entry = manifest.get(path)
         if not entry:
             raise ReportSubscriptionError("report_public_page_not_published")
-        try:
-            local = (reports_dir / path).read_bytes()
-        except OSError as exc:
-            raise ReportSubscriptionError("report_public_page_not_built") from exc
-        if len(local) > 10_000_000 or hashlib.sha256(local).hexdigest() != entry["sha256"]:
-            raise ReportSubscriptionError("report_public_page_manifest_mismatch")
+        if reports_dir is not None:
+            try:
+                local = (reports_dir / path).read_bytes()
+            except OSError as exc:
+                raise ReportSubscriptionError("report_public_page_not_built") from exc
+            if len(local) > 10_000_000 or hashlib.sha256(local).hexdigest() != entry["sha256"]:
+                raise ReportSubscriptionError("report_public_page_manifest_mismatch")
         live = _get(item["url"], opener, limit=10_000_000)
         if hashlib.sha256(_undo_cloudflare_html_transforms(live)).hexdigest() != entry["sha256"]:
             raise ReportSubscriptionError("report_public_page_manifest_mismatch")
@@ -222,7 +228,7 @@ def _payload(week: str, items: list[dict[str, Any]], list_code: str) -> dict[str
     }
 
 
-def dispatch_after_release(*, root: Path, reports_dir: Path, worker_base_url: str, reports_base_url: str,
+def dispatch_after_release(*, root: Path, reports_dir: Path | None, worker_base_url: str, reports_base_url: str,
                            token: str, start_week: str, now: datetime | None = None,
                            opener: Callable[..., Any] = urlopen, mode: str = "full", guard_activation: bool = False,
                            integrated_week_start: str = "") -> dict[str, Any]:
@@ -350,7 +356,7 @@ def dispatch_after_release(*, root: Path, reports_dir: Path, worker_base_url: st
 
 
 async def dispatch_if_enabled(service: Any, runtime: Any, *, reports_origin: str) -> dict[str, Any] | None:
-    """Observe reports only after the release has successfully published them."""
+    """Observe the verified public catalogue independently of local builds."""
     env_value = getattr(service, "_env_value", lambda _name, default="": default)
     if env_value("SUBSCRIPTIONS__REPORT_DIGEST_ENABLED", "false").lower() not in {"1", "true", "yes", "on"}:
         return None
@@ -358,7 +364,7 @@ async def dispatch_if_enabled(service: Any, runtime: Any, *, reports_origin: str
         return await asyncio.to_thread(
             dispatch_after_release,
             root=runtime.root_dir,
-            reports_dir=service._reports_site_dir(),
+            reports_dir=None,
             worker_base_url=env_value("SUBSCRIPTIONS__PUBLIC_BASE_URL"),
             reports_base_url=reports_origin,
             token=env_value("SUBSCRIPTIONS__ADMIN_API_TOKEN"),

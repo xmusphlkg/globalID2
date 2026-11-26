@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -21,6 +22,7 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence
 from urllib.parse import urlencode
 
 from .base import BaseCrawler, CrawlerResult
+from src.core import get_logger
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES, source_geo_code
 
 DEFAULT_SCOPE = "ecdc_atlas_annual"
@@ -34,6 +36,15 @@ CONTRACT_VERSION = "ecdc-atlas-current-general-annual-v1-observed-2026-10"
 ATTRIBUTION = "Data provided by ECDC based on data reported by EU/EEA Member States."
 REUSE_TERMS_URL = "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties"
 TARGET_COUNTRIES = ECDC_BASELINE_COUNTRY_CODES
+INDICATOR_MEASURES_ENDPOINT = "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation"
+EMPTY_MEASURE_ATTEMPTS = 3
+logger = get_logger(__name__)
+
+
+def _empty_indicator_measures(endpoint: str, payload: dict) -> bool:
+    # Atlas intermittently returns HTTP 200 with no indicators for an existing
+    # population. Do not confuse this with an empty (valid) observation series.
+    return endpoint == INDICATOR_MEASURES_ENDPOINT and payload.get("Measures") == []
 
 
 class ECDCContractError(ValueError):
@@ -136,7 +147,9 @@ def _normalized(value: object) -> str:
     return _text(value).replace("–", "-").casefold()
 
 
-def _annual_count_measure(measures: Sequence[Mapping[str, object]]) -> Mapping[str, object]:
+def _annual_count_measure(
+    measures: Sequence[Mapping[str, object]], *, topic_code: str = "", population: str = "",
+) -> Mapping[str, object]:
     candidates: list[Mapping[str, object]] = []
     for measure in measures:
         resolutions = ((measure.get("ResolutionList") or {}).get("Resolutions") or [])  # type: ignore[union-attr]
@@ -154,7 +167,8 @@ def _annual_count_measure(measures: Sequence[Mapping[str, object]]) -> Mapping[s
         ):
             candidates.append(measure)
     if not candidates:
-        raise ECDCContractError("ECDC population exposes no annual country count measure")
+        context = f" (topic={topic_code}, population={population!r})" if topic_code or population else ""
+        raise ECDCContractError("ECDC population exposes no annual country count measure" + context)
     candidates.sort(key=lambda item: (not bool(item.get("IsDefault")), int(item.get("Index") or 999999)))
     return candidates[0]
 
@@ -171,17 +185,24 @@ class ECDCAtlasCrawler(BaseCrawler):
         self.raw_dir = Path(raw_dir or f"data/raw/{code.casefold()}")
 
     def _json(self, path: str, **params) -> dict:
-        response = self.get(f"{API_BASE}{path}", params=params)
-        payload = response.json()
-        if not isinstance(payload, dict):
-            raise ECDCContractError(f"ECDC {path} returned a non-object payload")
-        return payload
+        for attempt in range(1, EMPTY_MEASURE_ATTEMPTS + 1):
+            response = self.get(f"{API_BASE}{path}", params=params)
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ECDCContractError(f"ECDC {path} returned a non-object payload")
+            if not _empty_indicator_measures(path, payload) or attempt == EMPTY_MEASURE_ATTEMPTS:
+                return payload
+            logger.warning(
+                "ECDC returned empty indicator metadata; retry {}/{} | topic={} population={!r}",
+                attempt, EMPTY_MEASURE_ATTEMPTS - 1, params.get("healthtopicId"), params.get("measurePopulation"),
+            )
+            time.sleep(attempt)
 
     def _topic_rows(self, contract: ECDCTopicContract, topic_id: int, *, start_year: int) -> tuple[list[dict], dict]:
         payloads = []
         for population in contract.populations:
             measures = self._json("GetIndicatorMeasuresForHealthTopicDatasetAndPopulation", datasetId=DATASET_ID, healthtopicId=topic_id, measurePopulation=population)
-            measure = _annual_count_measure(measures.get("Measures") or [])
+            measure = _annual_count_measure(measures.get("Measures") or [], topic_code=contract.code, population=population)
             results = self._json("GetMeasureResultsForTimeUnitAndGeoRegion", measureId=int(measure["Id"]), timeUnit="Y", geoCode=self.source_geo_code)
             payloads.append((population, measures, results))
         return self.parse_topic_payloads(contract, topic_id, payloads, start_year=start_year)
@@ -192,7 +213,7 @@ class ECDCAtlasCrawler(BaseCrawler):
         measure_meta: list[dict] = []
         raw_results: list[dict] = []
         for population, measures_payload, result_payload in payloads:
-            measure = _annual_count_measure(measures_payload.get("Measures") or [])
+            measure = _annual_count_measure(measures_payload.get("Measures") or [], topic_code=contract.code, population=population)
             if not isinstance(result_payload, dict) or not isinstance(result_payload.get("MeasureResults"), list):
                 raise ECDCContractError("ECDC annual response requires a MeasureResults array")
             values: dict[int, float] = {}
