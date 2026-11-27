@@ -28,6 +28,7 @@ def test_papers_path_classification() -> None:
     assert is_papers_relative_path("fr/research/articles/slug/index.html")
     assert is_papers_relative_path("research/cards/slug.png")
     assert is_papers_relative_path("site-data/research/index.json")
+    assert is_papers_relative_path("site-data/research-graph.json")
     assert is_papers_relative_path("zh/research/diseases/influenza/index.html")
     assert is_papers_relative_path("research/countries/cn/index.html")
     assert is_papers_relative_path("zh/research/weekly/2026-W01/index.html")

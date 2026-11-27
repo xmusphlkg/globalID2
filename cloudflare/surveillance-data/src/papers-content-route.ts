@@ -16,6 +16,7 @@ export function papersContentPath(pathname: string): { generation: string; key: 
 
 /** Stable public URLs resolve through the current pointer without changing it. */
 export function researchCurrentPath(pathname: string): string | null {
+  if (pathname === '/site-data/research-graph.json') return pathname.slice(1);
   if (!/^\/(?:(?:zh\/|fr\/)?research(?:\/|$)|site-data\/research\/)/.test(pathname)
       || !/^\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]*\/?$/.test(pathname)
       || pathname.split('/').some(part => part === '.' || part === '..')) return null;

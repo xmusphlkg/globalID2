@@ -194,6 +194,8 @@ def is_papers_relative_path(relative_path: str) -> bool:
     """Return True when a dist-relative path belongs on the papers host."""
 
     normalized = relative_path.replace("\\", "/").lstrip("./")
+    if normalized == "site-data/research-graph.json":
+        return True
     return any(normalized == prefix.rstrip("/") or normalized.startswith(prefix) for prefix in PAPERS_PREFIXES)
 
 
