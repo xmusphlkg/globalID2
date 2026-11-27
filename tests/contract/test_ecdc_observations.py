@@ -121,7 +121,7 @@ async def test_ecdc_collect_records_bytes_before_business_parser(tmp_path, monke
 
     def get(self, url, params):
         payload = lookup[(url.split("/")[-1], tuple(sorted(params.items())))]
-        return SimpleNamespace(content=json.dumps(payload).encode(), url=url)
+        return SimpleNamespace(content=json.dumps(payload).encode(), url=url, cookies={})
 
     monkeypatch.setattr(ECDCAtlasCrawler, "get", get)
     monkeypatch.setattr(
@@ -211,7 +211,7 @@ async def test_ecdc_retries_only_empty_indicator_metadata_and_keeps_capture(tmp_
                 payload = {"Measures": []}
             elif failure == "changed_contract":
                 payload = {"Measures": [{"Code": "ALL.RATE", "Unit": "N/100000", "Label": "Notification rate"}]}
-        return SimpleNamespace(content=json.dumps(payload).encode(), url=url)
+        return SimpleNamespace(content=json.dumps(payload).encode(), url=url, cookies={})
 
     monkeypatch.setattr(ECDCAtlasCrawler, "get", get)
     writer = Writer()

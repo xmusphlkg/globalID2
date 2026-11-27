@@ -37,7 +37,7 @@ ATTRIBUTION = "Data provided by ECDC based on data reported by EU/EEA Member Sta
 REUSE_TERMS_URL = "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties"
 TARGET_COUNTRIES = ECDC_BASELINE_COUNTRY_CODES
 INDICATOR_MEASURES_ENDPOINT = "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation"
-EMPTY_MEASURE_ATTEMPTS = 3
+EMPTY_MEASURE_ATTEMPTS = 10
 logger = get_logger(__name__)
 
 
@@ -184,19 +184,39 @@ class ECDCAtlasCrawler(BaseCrawler):
         self.save_raw = save_raw
         self.raw_dir = Path(raw_dir or f"data/raw/{code.casefold()}")
 
+        self._measure_routes: dict[int, str] = {}
+
+    def get_atlas_response(self, endpoint: str, params: dict):
+        if endpoint == "GetMeasureResultsForTimeUnitAndGeoRegion":
+            route = self._measure_routes.get(params["measureId"])
+            if route:
+                return self.get(f"{API_BASE}{endpoint}", params=params, cookies={"INGRESSCOOKIE": route})
+        return self.get(f"{API_BASE}{endpoint}", params=params)
+
+    def remember_measure_route(self, endpoint: str, response, payload: dict) -> None:
+        # Atlas sets Path=/public/(.*), which does not match its REST URLs.
+        # Keep the result lookup on the replica that advertised this measure.
+        if endpoint == INDICATOR_MEASURES_ENDPOINT and payload.get("Measures"):
+            route = response.cookies.get("INGRESSCOOKIE")
+            if route:
+                for measure in payload["Measures"]:
+                    if measure.get("Id") is not None:
+                        self._measure_routes[int(measure["Id"])] = route
+
     def _json(self, path: str, **params) -> dict:
         for attempt in range(1, EMPTY_MEASURE_ATTEMPTS + 1):
-            response = self.get(f"{API_BASE}{path}", params=params)
+            response = self.get_atlas_response(path, params)
             payload = response.json()
             if not isinstance(payload, dict):
                 raise ECDCContractError(f"ECDC {path} returned a non-object payload")
+            self.remember_measure_route(path, response, payload)
             if not _empty_indicator_measures(path, payload) or attempt == EMPTY_MEASURE_ATTEMPTS:
                 return payload
             logger.warning(
                 "ECDC returned empty indicator metadata; retry {}/{} | topic={} population={!r}",
                 attempt, EMPTY_MEASURE_ATTEMPTS - 1, params.get("healthtopicId"), params.get("measurePopulation"),
             )
-            time.sleep(attempt)
+            time.sleep(min(attempt, 2))
 
     def _topic_rows(self, contract: ECDCTopicContract, topic_id: int, *, start_year: int) -> tuple[list[dict], dict]:
         payloads = []

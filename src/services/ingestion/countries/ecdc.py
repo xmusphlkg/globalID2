@@ -11,7 +11,6 @@ from datetime import date
 from pathlib import Path
 
 from src.data.crawlers.ecdc import (
-    API_BASE,
     DATASET_ID,
     EMPTY_MEASURE_ATTEMPTS,
     DEFAULT_SCOPE,
@@ -50,7 +49,7 @@ async def collect(
     async def request(endpoint, **params):
         for attempt in range(1, EMPTY_MEASURE_ATTEMPTS + 1):
             response = await asyncio.to_thread(
-                crawler.get, f"{API_BASE}{endpoint}", params=params
+                crawler.get_atlas_response, endpoint, params
             )
             # Retain unsuccessful metadata responses too. Offline organization
             # selects the last response for these exact parameters.
@@ -63,13 +62,14 @@ async def collect(
             payload = json.loads(response.content)
             if not isinstance(payload, dict):
                 raise ECDCContractError(f"ECDC {endpoint} returned a non-object payload")
+            crawler.remember_measure_route(endpoint, response, payload)
             if not _empty_indicator_measures(endpoint, payload) or attempt == EMPTY_MEASURE_ATTEMPTS:
                 return payload
             logger.warning(
                 "ECDC returned empty indicator metadata; retry {}/{} | topic={} population={!r}",
                 attempt, EMPTY_MEASURE_ATTEMPTS - 1, params.get("healthtopicId"), params.get("measurePopulation"),
             )
-            await asyncio.sleep(attempt)
+            await asyncio.sleep(min(attempt, 2))
 
     try:
         topics = await request("GetHealthTopicsForDataset", datasetId=DATASET_ID)

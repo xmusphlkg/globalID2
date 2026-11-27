@@ -222,7 +222,7 @@ def test_ecdc_legacy_fetch_retries_empty_metadata_without_retrying_empty_observa
     from src.data.crawlers import ecdc
 
     responses = iter([{"Measures": []}, _measure(101), {"MeasureResults": []}])
-    get = Mock(side_effect=lambda *a, **kw: SimpleNamespace(json=lambda: next(responses)))
+    get = Mock(side_effect=lambda *a, **kw: SimpleNamespace(json=lambda: next(responses), cookies={}))
     sleep = Mock()
     monkeypatch.setattr(ecdc.time, "sleep", sleep)
     crawler = ECDCAtlasCrawler("FR")
@@ -233,3 +233,19 @@ def test_ecdc_legacy_fetch_retries_empty_metadata_without_retrying_empty_observa
     assert get.call_count == 3
     sleep.assert_called_once_with(1)
     crawler.session.close()
+
+
+def test_result_uses_replica_that_advertised_measure(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from src.data.crawlers.ecdc import API_BASE, INDICATOR_MEASURES_ENDPOINT
+
+    crawler = ECDCAtlasCrawler("BG")
+    response = SimpleNamespace(json=lambda: _measure(101), cookies={"INGRESSCOOKIE": "route-a"})
+    get = Mock(return_value=response)
+    monkeypatch.setattr(crawler, "get", get)
+    crawler._json(INDICATOR_MEASURES_ENDPOINT, healthtopicId=45, measurePopulation="All cases")
+    params = {"measureId": 101, "timeUnit": "Y", "geoCode": "BG"}
+    endpoint = "GetMeasureResultsForTimeUnitAndGeoRegion"
+    crawler.get_atlas_response(endpoint, params)
+    get.assert_called_with(API_BASE + endpoint, params=params, cookies={"INGRESSCOOKIE": "route-a"})
