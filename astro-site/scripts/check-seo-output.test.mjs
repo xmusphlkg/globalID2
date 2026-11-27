@@ -201,3 +201,14 @@ test('parallel audit preserves global uniqueness, sitemap membership and cross-w
     for (const workers of [0, 17, 1.5, NaN]) await assert.rejects(auditSeoParallel(dist, { workers }));
   } finally { rmSync(dist, { recursive: true, force: true }); }
 });
+
+test('the current graph download requires the graph payload in the build', () => {
+  const dist = mkdtempSync(join(tmpdir(), 'seo-graph-'));
+  try {
+    mkdirSync(join(dist, 'site-data'));
+    writeFileSync(join(dist, '_redirects'), '/site-data/research-graph.json /site-data/research/graph.json 302\n');
+    assert.ok(auditSeoOutput(dist).errors.some(message => message.includes('points to missing')));
+    writeFileSync(join(dist, 'site-data/research-graph.json'), '{"nodes":[],"edges":[]}');
+    assert.ok(!auditSeoOutput(dist).errors.some(message => message.includes('points to missing')));
+  } finally { rmSync(dist, { recursive: true, force: true }); }
+});
