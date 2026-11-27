@@ -10,26 +10,24 @@ from datetime import date, timedelta
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from src.data.crawlers.us import (
-    DEFAULT_CSV_API_URL, NNDSS_ARCHIVE_YEARS, SOCRATA_CATALOG_URL,
-    SOCRATA_PAGE_SIZE, USNNDSSCrawler, USNHSSHIVCrawler,
+    DEFAULT_CSV_API_URL, NNDSS_ARCHIVE_YEARS, NNDSS_REPORTING_AREAS, RESIDENT_MEASLES_ARCHIVES,
+    RESIDENT_MEASLES_LABELS, SOCRATA_CATALOG_URL,
+    SOCRATA_PAGE_SIZE, USNNDSSCrawler, USNHSSHIVCrawler, nndss_archive_tables,
 )
 from src.services.ingestion.artifacts import read_artifact
 
 
-async def completed_archive_years(db, *, country_code):
-    """A successful store, rather than national facts, proves archive coverage.
-
-    Archived tables only produce subdivision facts. A national collection
-    stores all of those subdivisions; a subdivision collection covers itself.
-    Failed attempts and collection-only runs must never advance coverage.
-    """
+async def archive_coverage(db, *, country_code):
+    """Find completed full years and previously skipped measles tables."""
     from sqlalchemy import Integer, and_, cast, or_, select
     from src.domain.collection import RunStage, SourceArtifact
 
     scopes = {"us", country_code.lower()}
     year = cast(SourceArtifact.metadata_["year"].as_string(), Integer)
-    return set((await db.execute(
-        select(year).distinct().join(RunStage, and_(
+    repaired = SourceArtifact.metadata_["measles_cells_preserved"].as_boolean()
+    partial = SourceArtifact.metadata_["measles_only"].as_boolean()
+    receipts = (await db.execute(
+        select(year, repaired, partial).distinct().join(RunStage, and_(
             RunStage.task_uuid == SourceArtifact.task_uuid,
             RunStage.attempt == SourceArtifact.attempt,
             RunStage.stage == "store",
@@ -40,7 +38,14 @@ async def completed_archive_years(db, *, country_code):
             year.in_(NNDSS_ARCHIVE_YEARS),
             or_(*(SourceArtifact.relative_path.startswith(f"data/raw/{scope}/") for scope in sorted(scopes))),
         )
-    )).scalars().all())
+    )).all()
+    stored = {year for year, _, partial in receipts if not partial}
+    # Older store receipts covered subdivisions but omitted flag-only cells
+    # and national residents. A single Table 1V replay upgrades each year.
+    missing_measles = (stored & RESIDENT_MEASLES_ARCHIVES.keys()) - {
+        year for year, preserved, _ in receipts if preserved
+    }
+    return stored, missing_measles
 
 
 def mmwr_lower_bound(day: date) -> tuple[int, int]:
@@ -84,18 +89,17 @@ async def plan_collection(db, *, country_code, source, force=False, fill_missing
         .where(*ledger_filters)
     )).scalar_one()
     latest = ledger_latest.date() if ledger_latest is not None else None
-    if latest is None:
-        completed = await completed_archive_years(db, country_code=country_code)
-        return {"nndss_start": None, "archive_years": tuple(year for year in NNDSS_ARCHIVE_YEARS if year not in completed)}
-    revision_start = latest - timedelta(weeks=NNDSS_REVISION_LOOKBACK_WEEKS)
-    lower = mmwr_lower_bound(revision_start)
-    # A latest week in an old source archive still needs its revision window;
-    # the current CSV does not contain the 2014–2021 historical datasets.
-    archives = {year for year in NNDSS_ARCHIVE_YEARS if year >= lower[0]}
-    if fill_missing:
-        completed = await completed_archive_years(db, country_code=country_code)
+    lower = mmwr_lower_bound(latest - timedelta(weeks=NNDSS_REVISION_LOOKBACK_WEEKS)) if latest else None
+    archives = {year for year in NNDSS_ARCHIVE_YEARS if lower and year >= lower[0]}
+    options = {"nndss_start": None if fill_missing else lower}
+    if fill_missing or latest is None:
+        completed, missing_measles = await archive_coverage(db, country_code=country_code)
+        tables_only = missing_measles - archives
+        if tables_only:
+            options["measles_only_years"] = tuple(sorted(tables_only))
         archives.update(set(NNDSS_ARCHIVE_YEARS) - completed)
-    return {"nndss_start": None if fill_missing else lower, "archive_years": tuple(sorted(archives))}
+        archives.update(missing_measles)
+    return {**options, "archive_years": tuple(sorted(archives))}
 
 
 def csv_page_url(*, offset, nndss_start=None):
@@ -130,7 +134,7 @@ def normalize_source(source):
     return source
 
 
-async def collect(writer, *, source="all", subdivision=False, nndss_start=None, archive_years=None, task_uuid=None, force=False):
+async def collect(writer, *, source="all", subdivision=False, nndss_start=None, archive_years=None, measles_only_years=(), task_uuid=None, force=False):
     source = normalize_source(source)
     if source in {"all", "nndss_api"}:
         crawler = USNNDSSCrawler()
@@ -152,18 +156,12 @@ async def collect(writer, *, source="all", subdivision=False, nndss_start=None, 
                 response = await asyncio.to_thread(crawler.get, SOCRATA_CATALOG_URL, params={"q": f"NNDSS - {year}", "domains": "data.cdc.gov", "limit": 1000})
                 await writer.write(response.content, source_url=response.url, kind="archive_json", metadata={"catalog_year": year})
                 await _check_cancelled(task_uuid)
-                matches = {}
-                title_re = re.compile(r"^NNDSS\s*-\s*(Table\s+[^\r\n]+?)\s*-\s*" + str(year) + r"\.", re.I)
-                for result in response.json().get("results", []):
-                    resource = result.get("resource", {})
-                    match = title_re.search(str(resource.get("description") or ""))
-                    if match:
-                        key = " ".join(match[1].split()).casefold()
-                        if key not in matches or str(resource.get("updatedAt") or "") > str(matches[key].get("updatedAt") or ""):
-                            matches[key] = resource
-                if not matches:
-                    raise RuntimeError(f"[US-NNDSS] CDC archive catalog has no tables for {year}")
-                for resource in matches.values():
+                resources = nndss_archive_tables(response.json(), year)
+                if year in measles_only_years:
+                    resources = [r for r in resources if r.get("id") == RESIDENT_MEASLES_ARCHIVES[year]]
+                    if not resources:
+                        raise RuntimeError(f"[US-NNDSS] Missing measles archive table for {year}")
+                for resource in resources:
                     if not resource.get("id") or not any(re.search(r",?\s*Current week\s*$", str(label).strip(), re.I) for label in resource.get("columns_name", [])):
                         continue
                     offset = 0
@@ -174,7 +172,11 @@ async def collect(writer, *, source="all", subdivision=False, nndss_start=None, 
                             fetch_archive_page, crawler, resource, offset=offset,
                             page_size=SOCRATA_PAGE_SIZE, force=force,
                         )
-                        await writer.write(payload, source_url=source_url, kind="archive_json", metadata={"year": year, "resource": resource, "cache_hit": cached})
+                        metadata = {"year": year, "resource": resource, "cache_hit": cached}
+                        if resource["id"] == RESIDENT_MEASLES_ARCHIVES.get(year):
+                            metadata["measles_cells_preserved"] = True
+                            metadata["measles_only"] = year in measles_only_years
+                        await writer.write(payload, source_url=source_url, kind="archive_json", metadata=metadata)
                         await _check_cancelled(task_uuid)
                         if len(json.loads(payload)) < SOCRATA_PAGE_SIZE:
                             break
@@ -198,11 +200,12 @@ async def collect(writer, *, source="all", subdivision=False, nndss_start=None, 
     return writer.artifacts
 
 
-def organize(artifacts, *, updater, source, subdivision=False, nndss_start=None, archive_years=None, task_uuid=None, force=False):
+def organize(artifacts, *, updater, source, subdivision=False, nndss_start=None, archive_years=None, measles_only_years=(), task_uuid=None, force=False):
     source = normalize_source(source)
     nndss_rows, archive_refs = [], {}
     nhss = None
     archive_counts = {}
+    measles_weeks = {}
     for artifact in artifacts:
         payload = read_artifact(artifact)
         if artifact.kind == "csv_page":
@@ -213,6 +216,16 @@ def organize(artifacts, *, updater, source, subdivision=False, nndss_start=None,
             year = artifact.metadata_["year"]
             resource = artifact.metadata_["resource"]
             rows = USNNDSSCrawler.parse_archive_table(resource, json.loads(payload), year)
+            if artifact.metadata_.get("measles_cells_preserved"):
+                from src.data.processors.us import _canonical_nndss_reporting_area
+                weeks = measles_weeks.setdefault(year, set())
+                weeks.update(
+                    (_canonical_nndss_reporting_area(row["Reporting Area"]), row["Label"], int(row["MMWR WEEK"]))
+                    for row in rows if row["Label"] in RESIDENT_MEASLES_LABELS
+                    and int(row["Current MMWR Year"]) == year
+                )
+            if year in measles_only_years:
+                rows = [row for row in rows if row["Label"] in RESIDENT_MEASLES_LABELS]
             nndss_rows.extend(rows)
             archive_counts[year] = archive_counts.get(year, 0) + len(rows)
             archive_refs.setdefault(year, {})[resource["id"]] = f"https://data.cdc.gov/d/{resource['id']}"
@@ -220,6 +233,13 @@ def organize(artifacts, *, updater, source, subdivision=False, nndss_start=None,
     for year in expected_years:
         if not archive_counts.get(year):
             raise RuntimeError(f"[US-NNDSS] CDC archive tables for {year} contained no usable rows")
+    for year, observed in measles_weeks.items():
+        from src.data.processors.us import _canonical_nndss_reporting_area, _mmwr_week_end_date
+        areas = {_canonical_nndss_reporting_area(area) for area in NNDSS_REPORTING_AREAS - {"TOTAL"}}
+        week_count = (_mmwr_week_end_date(year + 1, 1) - _mmwr_week_end_date(year, 1)).days // 7
+        if any((area, label, week) not in observed for area in areas
+               for label in RESIDENT_MEASLES_LABELS for week in range(1, week_count + 1)):
+            raise ValueError(f"Incomplete CDC measles archive for {year}")
     refs = [DEFAULT_CSV_API_URL] + [ref for tables in archive_refs.values() for ref in tables.values()]
     nndss = (nndss_rows, " | ".join(refs)) if source in {"all", "nndss_api"} else None
     return updater.organize_sources(source, nndss=nndss, nhss=nhss)

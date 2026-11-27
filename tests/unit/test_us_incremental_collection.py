@@ -99,7 +99,7 @@ async def test_default_does_not_repair_absent_archive_years(database):
     assert result["archive_years"] == ()
 
 
-async def test_fill_missing_recognizes_successful_archives_without_national_archive_facts(database):
+async def test_fill_missing_replays_old_subdivision_only_receipt_for_resident_archive(database):
     database.add_all([
         fact(date(2026, 1, 10)),
         fact(date(2015, 1, 3), year=2014, geography="country:US-CA:national"),
@@ -109,7 +109,8 @@ async def test_fill_missing_recognizes_successful_archives_without_national_arch
     await database.commit()
     result = await us.plan_collection(database, country_code="US", source="nndss_api", fill_missing=True)
     assert result["nndss_start"] is None
-    assert result["archive_years"] == tuple(year for year in NNDSS_ARCHIVE_YEARS if year not in {2014, 2020})
+    assert result["archive_years"] == tuple(year for year in NNDSS_ARCHIVE_YEARS if year != 2014)
+    assert result["measles_only_years"] == (2020,)
 
 
 @pytest.mark.parametrize("overrides", [
@@ -135,9 +136,23 @@ async def test_subdivision_accepts_own_and_national_receipts_but_not_another_sta
 async def test_all_completed_archives_are_not_repeated_during_explicit_fill(database):
     database.add(fact(date(2026, 1, 10)))
     for year in NNDSS_ARCHIVE_YEARS:
-        database.add_all(archive_receipt(year))
+        artifact, stage = archive_receipt(year)
+        if year in us.RESIDENT_MEASLES_ARCHIVES:
+            artifact.metadata_ = {**artifact.metadata_, "measles_cells_preserved": True}
+        database.add_all([artifact, stage])
     await database.commit()
     assert (await us.plan_collection(database, country_code="US", source="nndss_api", fill_missing=True))["archive_years"] == ()
+
+
+async def test_table_only_or_state_only_receipts_do_not_certify_a_full_national_archive(database):
+    table, stage = archive_receipt(2020)
+    table.metadata_ = {**table.metadata_, "measles_cells_preserved": True, "measles_only": True}
+    state, state_stage = archive_receipt(2021, scope="us-tx")
+    state.metadata_ = {**state.metadata_, "measles_cells_preserved": True}
+    database.add_all([table, stage, state, state_stage])
+    await database.commit()
+    assert await us.archive_coverage(database, country_code="US") == (set(), set())
+    assert await us.archive_coverage(database, country_code="US-TX") == ({2021}, set())
 
 
 async def test_old_checkpoint_collects_revision_archive_and_newer_years(database):

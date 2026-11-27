@@ -77,6 +77,9 @@ def _period_date(value: Any) -> date:
 
 
 def _source_series_code(series: dict) -> str | None:
+    if series.get("projection_policy") == "sum_disjoint":
+        # A derived total has no single source-series identity.
+        return None
     selected = [
         str(code)
         for code in (series.get("selected_series_codes") or [])

@@ -448,7 +448,9 @@ class USWeeklyUpdater:
                     )
                 series_rows.extend(subdivision_rows)
             else:
-                normalized_rows.extend(resident_rows)
+                # Archive Table 1V has two source components per disease/week.
+                # Only their distinct source-series identities preserve both.
+                normalized_rows.extend(row for row in resident_rows if not row["ArchiveTableID"])
                 series_rows.extend(resident_rows)
                 series_rows.extend(total_rows)
                 series_rows.extend(subdivision_rows)

@@ -47,6 +47,10 @@ DEFAULT_CSV_API_URL = (
 SOCRATA_PAGE_SIZE = 50_000
 SOCRATA_CATALOG_URL = "https://api.us.socrata.com/api/catalog/v1"
 NNDSS_ARCHIVE_YEARS = tuple(range(2014, 2022))
+# Complete CDC Table 1V releases with national US-resident transmission subtypes.
+# A second 2019 release (hjax-h34q) ends at week 21.
+RESIDENT_MEASLES_ARCHIVES = {2019: "jf8m-mtc3", 2020: "7xhe-mv2e", 2021: "9k8a-cbgx"}
+RESIDENT_MEASLES_LABELS = ("Measles§, Imported", "Measles§, Indigenous")
 
 NHSS_RELEASE_PAGE_URL = (
     "https://www.cdc.gov/hiv-data/nhss/hiv-diagnoses-deaths-prevalence.html"
@@ -97,6 +101,27 @@ def _parse_rate(value: object) -> str:
         return str(float(text)).rstrip("0").rstrip(".")
     except (TypeError, ValueError):
         return ""
+
+
+def nndss_archive_tables(catalog, year):
+    """Select a revision per table, including the full resident Table 1V."""
+    matches = {}
+    title_re = re.compile(r"^NNDSS\s*-\s*(Table\s+[^\r\n]+?)\s*-\s*" + str(year) + r"\.", re.I)
+    def priority(resource):
+        return (resource.get("id") == RESIDENT_MEASLES_ARCHIVES.get(year),
+                str(resource.get("updatedAt") or ""))
+
+    for result in catalog.get("results", []):
+        resource = result.get("resource", {})
+        match = title_re.search(str(resource.get("description") or ""))
+        if match:
+            key = " ".join(match[1].split()).casefold()
+            if key not in matches or priority(resource) > priority(matches[key]):
+                matches[key] = resource
+    if not matches:
+        raise RuntimeError(f"[US-NNDSS] CDC archive catalog has no tables for {year}")
+    return matches.values()
+
 
 
 class USNNDSSCrawler(BaseCrawler):
@@ -161,26 +186,9 @@ class USNNDSSCrawler(BaseCrawler):
                 "limit": 1000,
             },
         ).json()
-        matches: Dict[str, Dict[str, object]] = {}
-        title_re = re.compile(r"^NNDSS\s*-\s*(Table\s+[^\r\n]+?)\s*-\s*" + str(year) + r"\.", re.I)
-        for result in catalog.get("results", []):
-            resource = result.get("resource", {})
-            description = str(resource.get("description") or "")
-            match = title_re.search(description)
-            if not match:
-                continue
-            table_title = " ".join(match.group(1).split()).casefold()
-            existing = matches.get(table_title)
-            stamp = str(resource.get("updatedAt") or "")
-            if existing is None or stamp > str(existing.get("updatedAt") or ""):
-                matches[table_title] = resource
-
-        if not matches:
-            raise RuntimeError(f"[US-NNDSS] CDC archive catalog has no tables for {year}")
-
         archive_rows: List[Dict[str, object]] = []
         refs: List[str] = []
-        for resource in matches.values():
+        for resource in nndss_archive_tables(catalog, year):
             view_id = str(resource.get("id") or "")
             if not view_id:
                 continue
@@ -227,20 +235,31 @@ class USNNDSSCrawler(BaseCrawler):
         for label, field_name in pairs:
             normalized = str(label).strip()
             if re.search(r",?\s*Current week\s*$", normalized, re.I) and not re.search(r"flag\s*$", normalized, re.I):
-                disease_fields.append((re.sub(r",?\s*Current week\s*$", "", normalized, flags=re.I).strip(" ,"), field_name, normalized))
+                disease = re.sub(r",?\s*Current week\s*$", "", normalized, flags=re.I).strip(" ,")
+                flag_field = next((field for label, field in pairs
+                                   if label.strip().casefold() == (normalized + ", flag").casefold()), None)
+                disease_fields.append((disease, field_name, flag_field))
+        resident_fields = [
+            fields for fields in disease_fields
+            if fields[0] in RESIDENT_MEASLES_LABELS
+        ] if RESIDENT_MEASLES_ARCHIVES.get(year) == view_id else []
+        if RESIDENT_MEASLES_ARCHIVES.get(year) == view_id and (
+            len(resident_fields) != 2 or not all(field[2] for field in resident_fields)
+        ):
+            raise ValueError(f"CDC archive {view_id} lacks a measles current-week value or flag column")
         for source_row in table_rows:
             area = _normalize_text(source_row.get("reporting_area") or source_row.get(" Reporting Area"))
-            if area.upper() not in NNDSS_REPORTING_AREAS - {"U.S. RESIDENTS", "US RESIDENTS", "TOTAL"}:
-                # Archive tables also contain national/region aggregates
-                # and New York City. The current ingestion contract only
-                # admits state and territory subdivisions from this feed.
+            resident = area.upper() in {"U.S. RESIDENTS", "US RESIDENTS"}
+            if area.upper() not in NNDSS_REPORTING_AREAS or area.upper() == "TOTAL":
                 continue
             year_value = source_row.get("mmwr_year") or source_row.get("mmwr_year_1") or year
             week_value = source_row.get("mmwr_week")
             if not area or not week_value:
                 continue
-            for disease, field_name, display_name in disease_fields:
-                if field_name not in source_row:
+            for disease, field_name, flag_field in (resident_fields if resident else disease_fields):
+                # Socrata omits null fields. Keep both measles cells defined
+                # by the table schema, including blank values and their flags.
+                if field_name not in source_row and (disease, field_name, flag_field) not in resident_fields:
                     continue
                 row: Dict[str, object] = {
                     "Reporting Area": area,
@@ -254,7 +273,6 @@ class USNNDSSCrawler(BaseCrawler):
                         json.dumps(source_row, sort_keys=True, ensure_ascii=False).encode("utf-8")
                     ).hexdigest()[:20],
                 }
-                flag_field = next((field for label, field in pairs if label.strip().casefold() == (display_name + ", flag").casefold()), None)
                 if flag_field:
                     row["Current week, flag"] = source_row.get(flag_field)
                 rows.append(row)

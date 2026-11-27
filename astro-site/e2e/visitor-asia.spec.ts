@@ -25,6 +25,8 @@ test('editing a shared analysis survives a language switch and reload', async ({
   const shared = await curve.locator('.surveillance-share input').inputValue();
   await page.goto(shared, { waitUntil: 'commit' });
   await page.locator('#trends').scrollIntoViewIfNeeded();
+  await curve.locator('.chart-time-panel summary').waitFor();
+  if (!await curve.locator('.chart-time-panel').evaluate(el => el.hasAttribute('open'))) await curve.locator('.chart-time-panel summary').click();
   await curve.getByLabel('Start date', { exact: true }).fill('2026-01-01');
   await page.locator('.site-language-selector summary').click();
   await page.locator('.site-language-selector a[hreflang="zh-CN"]').click();

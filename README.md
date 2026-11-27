@@ -14,13 +14,11 @@ operations dashboard, and an Astro public site.
 - [Control center](docs/control-center/README.md): operators, API, deployment and troubleshooting.
 - [Changelog](CHANGELOG.md): version history.
 
-## Version 0.21.1
+## Version 0.22.0
 
-Research search loads results page by page, and dashboard literature counts
-are calculated in the database. Model management supports restoring disabled
-models and clearer import and deletion feedback. This release also improves
-scheduler recovery, concurrent data publication, source-request cooldowns and
-population snapshot recovery. See [the changelog](CHANGELOG.md) for details.
+Regional trend charts support multi-region comparisons, shared selections and PNG export.
+The release also updates US weekly surveillance curves and Brazilian HIV and AIDS
+notification totals. See the [changelog](CHANGELOG.md) for details.
 
 ## Previous publication work
 

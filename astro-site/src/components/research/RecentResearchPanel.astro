@@ -1,0 +1,25 @@
+---
+import ResearchArticleCard from './ResearchArticleCard';
+
+interface Props {
+  articles: any[];
+  total: number;
+  href: string;
+  locale: 'en' | 'zh' | 'fr';
+  focusDiseaseId?: string;
+}
+const { articles, total, href, locale, focusDiseaseId } = Astro.props;
+const zh = locale === 'zh';
+const fr = locale === 'fr';
+const count = total.toLocaleString(locale);
+---
+
+<section class:list={['figure-panel', { 'disease-research-panel': focusDiseaseId }]}>
+  <div class="figure-panel-heading">
+    <h2 class="figure-title">{zh ? '近期相关研究' : fr ? 'Recherches récentes associées' : 'Recent related research'}</h2>
+    <a class="intl-panel-action" href={href}>{zh ? `查看全部 ${count} 篇文献 →` : fr ? `Voir les ${count} publications →` : `View all ${count} publications →`}</a>
+  </div>
+  <div class="panel-card-grid">
+    {articles.slice(0, 6).map(article => <ResearchArticleCard article={article} compact locale={locale} focusDiseaseId={focusDiseaseId} />)}
+  </div>
+</section>

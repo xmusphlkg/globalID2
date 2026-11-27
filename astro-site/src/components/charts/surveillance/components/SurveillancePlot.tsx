@@ -4,7 +4,6 @@ import echarts from "../../../../lib/echartsSurveillance";
 import { useChartTheme } from "../../chartPreferences";
 import { DAY, periodFor } from "../domain/calendar";
 import {
-  fingerprint,
   type AnalysisResult,
   type Catalog,
   type DateWindow,
@@ -13,21 +12,8 @@ import {
 } from "../domain/types";
 import { label, lineName, number } from "../presentation/labels";
 
-const PALETTE = [
-  "#0072b2",
-  "#d55e00",
-  "#009e73",
-  "#cc79a7",
-  "#e69f00",
-  "#56b4e9",
-  "#7f3c8d",
-  "#777777",
-  "#bc5090",
-  "#4e79a7",
-];
-export function seriesColor(id: string) {
-  return PALETTE[parseInt(fingerprint(id), 36) % PALETTE.length];
-}
+import { axisColors, seriesColor } from "../presentation/seriesColors";
+
 const escape = (value: string) =>
   value.replace(
     /[&<>"']/g,
@@ -113,8 +99,7 @@ export default function SurveillancePlot({
   const height = fullscreen ? Math.max(minHeight, plotHeight) : minHeight;
   const option = useMemo(() => {
     const dark = theme === "dark";
-    const ink = dark ? "#a4b1c1" : "#556070",
-      grid = dark ? "#344a64" : "#d9d2c7";
+    const { ink, grid } = axisColors(dark);
     const count = Math.max(1, visiblePanels.length);
     const slot = (height - 85) / count;
     const gridIndexes = visiblePanels.map((_, index) => index);

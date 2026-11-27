@@ -8,9 +8,12 @@ import { mapDataForCountry } from '../../lib/subdivision-map-publication';
 import { useChartTheme } from './chartPreferences';
 import ChartResultActions from './ChartResultActions';
 import { downloadCenterHref } from '../../lib/download-center-link';
-import { prepareMapDataset, resultsFor, defaultWindow, sharedScale, restoreWindow, validWindow, comparisonWindow, presetWindow, shiftWindowYear, trendFor, dateBounds, cadenceRank, type MapCatalog, type PopulationDataset, type DiseaseDataset, type Language, type MapWindow, type MissingReason, type RegionResult, type Cadence, type Comparison } from './subdivision-map/model';
+import { prepareMapDataset, resultsFor, defaultWindow, sharedScale, restoreWindow, validWindow, comparisonWindow, presetWindow, shiftWindowYear, shiftYear, addDays, dateBounds, cadenceRank, type MapCatalog, type PopulationDataset, type DiseaseDataset, type Language, type MapWindow, type MissingReason, type RegionResult, type Cadence, type Comparison } from './subdivision-map/model';
 import './surveillance/components/surveillance.css';
 import './subdivision-map/map.css';
+import ChartTabs from './surveillance/components/ChartTabs';
+import TimeRangePanel from './surveillance/components/TimeRangePanel';
+import RegionalTrend, { type RegionalTrendHandle } from './subdivision-map/RegionalTrend';
 import RegionList from './subdivision-map/RegionList';
 import { continuousScale, scaleGraphic, scaleValue } from './subdivision-map/scale';
 
@@ -34,9 +37,9 @@ const calendarLabels = {
 };
 const cadenceLabels: Record<Language, Record<Cadence, string>> = { en: { weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', annual: 'Annual' }, zh: { weekly: '周度', monthly: '月度', quarterly: '季度', annual: '年度' }, fr: { weekly: 'Hebdomadaire', monthly: 'Mensuel', quarterly: 'Trimestriel', annual: 'Annuel' } };
 const workspaceLabels = {
-  en: { map: 'Map', trend: 'Trend', table: 'Data', methods: 'Sources and methods', available: 'regions available', shortRate: 'Not annualized or age standardized', periodDifference: 'Unequal source-period counts', population: 'Population' },
-  zh: { map: '地图', trend: '趋势', table: '数据', methods: '来源与计算口径', available: '地区可用', shortRate: '未年化 · 未年龄标化', periodDifference: '两段报告期数量不同', population: '人口' },
-  fr: { map: 'Carte', trend: 'Tendance', table: 'Données', methods: 'Sources et méthode', available: 'régions disponibles', shortRate: 'Non annualisé, sans standardisation par âge', periodDifference: 'Nombre de périodes différent', population: 'Population' },
+  en: { preset: 'Quick dates', presetChoice: 'Choose a period', seeTrend: 'View regional trend', map: 'Map', trend: 'Trend', table: 'Data', methods: 'Sources and methods', available: 'regions available', shortRate: 'Not annualized or age standardized', periodDifference: 'Unequal source-period counts', population: 'Population' },
+  zh: { preset: '快捷日期', presetChoice: '选择时段', seeTrend: '查看该地区趋势', map: '地图', trend: '趋势', table: '数据', methods: '来源与计算口径', available: '地区可用', shortRate: '未年化 · 未年龄标化', periodDifference: '两段报告期数量不同', population: '人口' },
+  fr: { preset: 'Période rapide', presetChoice: 'Choisir une période', seeTrend: 'Voir la tendance régionale', map: 'Carte', trend: 'Tendance', table: 'Données', methods: 'Sources et méthode', available: 'régions disponibles', shortRate: 'Non annualisé, sans standardisation par âge', periodDifference: 'Nombre de périodes différent', population: 'Population' },
 };
 const reasonLabels: Record<Language, Record<MissingReason, string>> = {
   en: { not_covered: 'Not covered', not_comparable: 'Different case definition', missing_period: 'Missing source period', suppressed: 'Missing or suppressed value', missing_population: 'No same-year local population', overlap: 'Overlapping report periods', incomplete: 'Incomplete reports', no_complete_period: 'No whole source period in this range', invalid_period: 'Unverified report period' },
@@ -58,6 +61,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const lang = language, t = { ...labels[lang], ...calendarLabels[lang] }, code = countryCode.toUpperCase();
   const uid = useId().replace(/:/g, '');
   const shell = useRef<HTMLDivElement>(null), mapRef = useRef<any>(null);
+  const trendRef = useRef<RegionalTrendHandle>(null);
   const [tab, setTab] = useState<'map' | 'trend' | 'table'>('map');
   const [fullscreen, setFullscreen] = useState(false);
   const retainedRange = useRef<MapWindow | null>(null), comparisonRestored = useRef(false);
@@ -67,7 +71,8 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const [mapName, setMapName] = useState('');
   const [dataset, setDataset] = useState<DiseaseDataset | null>(null);
   const [selectedDisease, setSelectedDisease] = useState('');
-  const [window, setWindow] = useState<MapWindow | null>(null);
+  const [baseWindow, setBaseWindow] = useState<MapWindow | null>(null);
+  const [explicitDates, setExplicitDates] = useState(false);
   const [selected, setSelected] = useState('');
   const [comparison, setComparison] = useState<Comparison>('previous_year');
   const [customComparison, setCustomComparison] = useState({ from: '', to: '' });
@@ -80,6 +85,8 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
     const requested = saved.get('mapTab');
     if (requested === 'map' || requested === 'trend' || requested === 'table') setTab(requested);
   }, [saved]);
+  const [defaultTrendCodes, setDefaultTrendCodes] = useState<string[]>([]);
+  const [trendSelection, setTrendSelection] = useState<string[] | null>(null);
   const name = (region: { code: string; name_en: string; name_zh?: string }) => lang === 'zh' ? region.name_zh || region.name_en : region.name_en;
   const number = (value: number | null | undefined, digits = 1) => value == null ? '—' : value.toLocaleString(lang, digits === 1 && value !== 0 && Math.abs(value) < .1 ? { maximumSignificantDigits: 2 } : { maximumFractionDigits: digits });
   const reason = (row: RegionResult) => row.reasons.filter(item => window?.metric === 'rate' || item !== 'missing_population').map(item => reasonLabels[lang][item]).join(' · ');
@@ -93,8 +100,11 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   useEffect(() => {
     const controller = new AbortController();
     retainedRange.current = null; comparisonRestored.current = false;
+    setExplicitDates(saved.has('mapFrom') || saved.has('mapTo') || saved.has('mapYear'));
     setMapFocused(code === 'JP');
-    setStatus('loading'); setCatalog(null); setDataset(null); setWindow(null); setPopulation(null); setMapName('');
+    const sharedRegions = saved.get('mapRegions') ?? saved.get('mapRegion');
+    setTrendSelection(sharedRegions === null ? null : sharedRegions.split(',').filter(Boolean));
+    setStatus('loading'); setCatalog(null); setDataset(null); setBaseWindow(null); setPopulation(null); setMapName('');
     void (async () => {
       const client = await mapDataForCountry(code, controller.signal);
       const index = await client.read<{ countries: Array<{ code: string; path: string }> }>('/site-data/subdivision-maps/index.json', { signal: controller.signal });
@@ -122,7 +132,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
 
   useEffect(() => {
     const controller = new AbortController();
-    setDataset(null); setWindow(null); setFailed(false);
+    setDataset(null); setBaseWindow(null); setFailed(false);
     const entry = catalog?.diseases.find(item => item.id === selectedDisease);
     if (!entry || !catalog || !population) return () => controller.abort();
     void publication.current.read<DiseaseDataset>(entry.path, { signal: controller.signal, retain: false }).then(next => {
@@ -135,7 +145,12 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       const restored = keepRange ? { ...prior! }
         : restoreWindow(prior ? new URLSearchParams() : saved, defaultWindow(catalog, next, population), next.years, bounds);
       if (cadenceRank[restored.view] < cadenceRank[next.cadence]) restored.view = next.cadence;
-      setDataset(next); setWindow(restored);
+      const covered = resultsFor(catalog, next, population, restored)
+        .filter(row => next.regions[row.region.code]?.comparison_key === next.comparison_key)
+        .sort((a, b) => Number(b.value !== null) - Number(a.value !== null) || b.observed - a.observed)
+        .map(row => row.region.code);
+      setDefaultTrendCodes(covered.slice(0, 3));
+      setDataset(next); setBaseWindow(restored);
       if (!comparisonRestored.current) {
         comparisonRestored.current = true;
         const mode = saved.get('mapCompare');
@@ -143,12 +158,22 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
         const previous = comparisonWindow(restored, 'previous_year')!;
         setCustomComparison({ from: saved.get('mapCompareFrom') || previous.from, to: saved.get('mapCompareTo') || previous.to });
       }
-      setSelected(previous => catalog.regions.find(item => item.code === previous)?.code || catalog.regions.find(item => item.code === saved.get('mapRegion'))?.code || catalog.regions.find(item => next.regions[item.code])?.code || '');
+      setSelected(previous => catalog.regions.find(item => item.code === previous)?.code || catalog.regions.find(item => item.code === saved.get('mapRegion'))?.code || covered[0] || catalog.regions[0]?.code || '');
     }).catch(() => { if (!controller.signal.aborted) setFailed(true); });
     return () => controller.abort();
   }, [catalog, population, code, selectedDisease, saved]);
 
-  useEffect(() => { if (window && validWindow(window)) retainedRange.current = window; }, [window]);
+  useEffect(() => { if (baseWindow && validWindow(baseWindow)) retainedRange.current = baseWindow; }, [baseWindow]);
+  const window = useMemo(() => {
+    if (!baseWindow || !dataset || tab !== 'trend' || explicitDates) return baseWindow;
+    // A map often opens on the latest complete month. Give an unfiltered
+    // trend enough history to show movement, within the published coverage.
+    const years = baseWindow.view === 'annual' ? 5 : 1;
+    const trailingStart = addDays(shiftYear(baseWindow.to, -years), 1);
+    const earliest = dateBounds(dataset).from;
+    const from = trailingStart < earliest ? earliest : trailingStart;
+    return from < baseWindow.from ? { ...baseWindow, from } : baseWindow;
+  }, [baseWindow, dataset, tab, explicitDates]);
 
   const rangeValid = !!window && validWindow(window);
   const compareWindow = useMemo(() => rangeValid && window ? comparisonWindow(window, comparison, customComparison) : null, [window, rangeValid, comparison, customComparison]);
@@ -162,7 +187,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const active = rowByCode.get(selected);
   const dark = theme === 'dark';
   const colors = dark ? ['#284f53', '#326d74', '#44989f', '#75c4cb', '#b7e9e9'] : ['#e0f0f1', '#afd4d8', '#75b4bd', '#398293', '#15566d'];
-  const text = dark ? '#e2eaf0' : '#18344a', muted = dark ? '#a5b9c9' : '#536c80';
+  const muted = dark ? '#a5b9c9' : '#536c80';
   const missingColor = dark ? '#45505e' : '#d1d7df';
   const chartOption = useMemo(() => ({
     animation: false,
@@ -183,25 +208,29 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
         } })),
     }],
   }), [rows, mapName, selected, scale, dark, lang, window?.metric, mapFocused, code]);
-  const trend = useMemo(() => active && dataset && population && window && rangeValid ? trendFor(active.region, dataset, population, window) : [], [active, dataset, population, window, rangeValid]);
-  const compareTrend = useMemo(() => active && dataset && population && compareWindow ? trendFor(active.region, dataset, population, compareWindow) : [], [active, dataset, population, compareWindow]);
-  const trendOption = useMemo(() => ({
-    animation: false, grid: { top: 40, left: 55, right: 20, bottom: 55 },
-    tooltip: { trigger: 'axis', renderMode: 'richText', confine: true, formatter: (items: Array<{ seriesIndex: number; dataIndex: number; seriesName: string; value: number | null }>) => items.map(item => { const point = (item.seriesIndex === 0 ? trend : compareTrend)[item.dataIndex]; return point ? `${item.seriesName}: ${point.from} – ${point.to}\n${number(point.value)}` : ''; }).filter(Boolean).join('\n') }, legend: { textStyle: { color: muted } },
-    xAxis: { type: 'category', data: Array.from({ length: Math.max(trend.length, compareTrend.length) }, (_, index) => trend[index]?.label || `${t.previous}: ${compareTrend[index]?.label || ''}`), axisLabel: { color: muted, rotate: trend.length > 14 ? 35 : 0 } },
-    yAxis: { type: 'value', axisLabel: { color: muted }, splitLine: { lineStyle: { color: dark ? '#354858' : '#e1e7ed' } } },
-    series: [{ type: 'line', name: t.current, data: trend.map(point => point.value), connectNulls: false, symbolSize: 5, itemStyle: { color: dark ? '#75c4cb' : '#236f83' }, lineStyle: { width: 2 } },
-      ...(compareWindow ? [{ type: 'line', name: t.previous, data: compareTrend.map(point => point.value), connectNulls: false, symbolSize: 5, lineStyle: { width: 2, type: 'dashed' }, itemStyle: { color: dark ? '#e8bd77' : '#a36b24' } }] : [])], textStyle: { color: text },
-  }), [trend, compareTrend, compareWindow, lang, dark]);
-
+  const trendCodes = useMemo(() => {
+    if (!catalog || !dataset) return [];
+    if (trendSelection !== null) {
+      return catalog.regions.filter(region => trendSelection.includes(region.code)).map(region => region.code);
+    }
+    return [...new Set([selected, ...defaultTrendCodes].filter(Boolean))].slice(0, 3);
+  }, [catalog, dataset, selected, defaultTrendCodes, trendSelection]);
   if (status === 'absent') return null;
   if (status === 'loading') return <section id="regional-distribution" data-subdivision-country={code} className="figure-panel subdivision-map scroll-mt-24" aria-label={t.title}><p role="status">{t.loading}</p></section>;
   if (status === 'error' || !catalog) return <section id="regional-distribution" className="figure-panel subdivision-map scroll-mt-24"><h2 className="figure-title">{t.title}</h2><p role="status" className="figure-caption">{t.unavailable}</p></section>;
-  const setRange = (patch: Partial<MapWindow>) => setWindow(previous => previous ? { ...previous, ...patch } : null);
+  const setWindow = (next: MapWindow) => {
+    setExplicitDates(true);
+    setBaseWindow(next);
+  };
+  const setRange = (patch: Partial<MapWindow>) => {
+    if (!baseWindow || !window) return;
+    if ('from' in patch || 'to' in patch) setWindow({ ...window, ...patch });
+    else setBaseWindow({ ...baseWindow, ...patch });
+  };
   const share = () => {
     const url = new URL(globalThis.window.location.href);
     for (const key of ['mapYear', 'mapStart', 'mapEnd']) url.searchParams.delete(key);
-    if (window) for (const [key, value] of Object.entries({ mapDisease: selectedDisease, mapFrom: window.from, mapTo: window.to, mapView: window.view, mapMetric: window.metric, mapRegion: selected, mapCompare: comparison, mapCompareFrom: customComparison.from, mapCompareTo: customComparison.to, mapTab: tab })) url.searchParams.set(key, String(value));
+    if (window) for (const [key, value] of Object.entries({ mapDisease: selectedDisease, mapFrom: window.from, mapTo: window.to, mapView: window.view, mapMetric: window.metric, mapRegion: selected, mapRegions: trendCodes.join(','), mapCompare: comparison, mapCompareFrom: customComparison.from, mapCompareTo: customComparison.to, mapTab: tab })) url.searchParams.set(key, String(value));
     url.hash = 'regional-distribution'; return url.href;
   };
   const months = monthNames(lang);
@@ -217,6 +246,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
   const ui = workspaceLabels[lang];
   const diseaseLabel = dataset?.labels[lang] || dataset?.labels.en || selectedDisease;
   const metricLabel = window?.metric === 'rate' ? t.rate : t.cases;
+  const downloadRegion = tab === 'trend' ? (trendCodes.length === 1 ? trendCodes[0] : code) : selected || code;
   const caseSource = ({ AU: 'NINDSS', BR: 'SINAN', CN: 'Provincial statutory reports', JP: 'IDWR', SE: 'FHM SmiNet', US: 'CDC NNDSS' } as Record<string, string>)[code];
   const populationSources = [...new Set(rows.flatMap(row => row.annual.flatMap(item => item.population ? [item.population.source] : [])))];
   const selectedSource = dataset?.regions[selected];
@@ -237,15 +267,22 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
       <div><dt>{ui.population}</dt><dd>{active.annual.length > 1 ? active.annual.map(item => item.year).join(' / ') : number(active.population?.value, 0)}{active.population ? ` (${active.population.year})` : ''}</dd></div>
       <div><dt>{t.observed}</dt><dd>{active.observed}/{active.expected}</dd></div>
     </dl>
+    <button type="button" className="region-detail-trend" onClick={() => {
+      setTrendSelection([selected]);
+      setTab('trend');
+      document.getElementById(`${uid}-trend`)?.focus();
+    }}>{ui.seeTrend} →</button>
     <p className="subdivision-map-source">{active.population ? <a href={active.population.source_url} target="_blank" rel="noopener noreferrer">{active.population.source} ↗</a> : ui.methods}{window.metric === 'rate' && <> · {ui.shortRate}</>}</p>
   </div>;
   return <section id="regional-distribution" className="figure-panel subdivision-map scroll-mt-24" data-subdivision-country={code}>
     <div ref={shell} className={`surveillance-explorer panel-fullscreen subdivision-map-workspace ${fullscreen ? 'is-fullscreen' : ''}`}
-      data-chart-title={`${code} · ${t.title} · ${diseaseLabel} · ${metricLabel}${tab === 'trend' && active ? ` · ${name(active.region)}` : ''}`}
+      data-chart-title={`${code} · ${t.title} · ${diseaseLabel} · ${metricLabel}${tab === 'trend' ? ` · ${catalog.regions.filter(region => trendCodes.includes(region.code)).map(name).join(', ')}` : ''}`}
       data-disease-names={dataset ? JSON.stringify(dataset.labels) : undefined}
       data-source-label={`${caseSource} · ${populationSources.join(' / ')} · ${catalog.boundary.source} (${catalog.boundary.license})`}
       data-source-coverage={window ? `${window.from} – ${window.to}${tab === 'trend' && compareWindow ? ` · ${t.previous}: ${compareWindow.from} – ${compareWindow.to}` : ''}${window.metric === 'rate' ? ` · ${ui.shortRate}` : ''}` : undefined}>
       <h2 className="figure-title">{t.title}</h2>
+      <div className="surveillance-controls-panel">
+
       <div className="subdivision-map-toolbar">
         <div className="subdivision-map-controls">
           <label htmlFor={`${uid}-disease`}>{t.disease}<select id={`${uid}-disease`} aria-label={t.disease} value={selectedDisease} onChange={event => setSelectedDisease(event.target.value)}>
@@ -254,55 +291,63 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
           </select></label>
           {window && dataset && <>
             <label htmlFor={`${uid}-metric`}>{t.metric}<select id={`${uid}-metric`} aria-label={t.metric} value={window.metric} onChange={event => setRange({ metric: event.target.value as MapWindow['metric'] })}><option value="rate">{t.rate}</option><option value="cases">{t.cases}</option></select></label>
-            <label htmlFor={`${uid}-year`}>{t.year}<select id={`${uid}-year`} aria-label={t.year} value={presetYear} onChange={event => { const year = Number(event.target.value); setWindow(validWindow(window) ? shiftWindowYear(window, year - Number(window.from.slice(0, 4))) : presetWindow(window, year, 'year')); }}>{calendarYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label>
-            <label htmlFor={`${uid}-view`}>{t.view}<select id={`${uid}-view`} aria-label={t.view} value={window.view} onChange={event => setRange({ view: event.target.value as Cadence })}>{(Object.keys(cadenceRank) as Cadence[]).map(cadence => <option key={cadence} value={cadence} disabled={cadenceRank[cadence] < cadenceRank[dataset.cadence]}>{cadenceLabels[lang][cadence]}</option>)}</select></label>
           </>}
         </div>
         <div className="subdivision-map-actions">
           <ChartResultActions lang={lang} shellRef={shell} onShare={share}
             pngFilename={`${code}-${selectedDisease}-${window?.from}-${window?.to}-${tab}.png`}
+            getPng={tab === 'trend' ? () => trendRef.current?.exportPng() : undefined}
             pngSelector={tab === 'trend' ? '.subdivision-map-trend' : '.subdivision-map-plot'}
-            pngDisabled={!rangeValid || !dataset || tab === 'table'}
-            dataHref={downloadCenterHref(lang, { country: selected || code, disease: selectedDisease })} />
+            pngDisabled={!rangeValid || !dataset || tab === 'table' || (tab === 'trend' && !trendCodes.length)}
+            dataHref={downloadCenterHref(lang, { country: downloadRegion, disease: selectedDisease })} />
         </div>
       </div>
-      {!selectedDisease ? <p className="surveillance-note" role="status">{t.noDisease}</p> : !dataset || !window ? <p role="status">{failed ? t.unavailable : t.loading}</p> : <>
+      {dataset && window && <div className="regional-period-row">
+        <label htmlFor={`${uid}-year`}>{t.year}<select id={`${uid}-year`} aria-label={t.year} value={presetYear} onChange={event => { const year = Number(event.target.value); setWindow(validWindow(window) ? shiftWindowYear(window, year - Number(window.from.slice(0, 4))) : presetWindow(window, year, 'year')); }}>{calendarYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label>
+        <TimeRangePanel lang={lang} from={window.from} to={window.to}
+        comparison={comparison === 'custom' ? `${t.custom} · ${customComparison.from || '—'} – ${customComparison.to || '—'}` : t[comparison]}>
         <div className="subdivision-map-range surveillance-time">
-          <label htmlFor={`${uid}-from`}><span className="sr-only">{t.from}</span><input type="date" id={`${uid}-from`} aria-label={t.from} min={bounds.from} max={bounds.to} value={window.from} onChange={event => setRange({ from: event.target.value })} /></label>
-          <span aria-hidden="true">–</span>
-          <label htmlFor={`${uid}-to`}><span className="sr-only">{t.to}</span><input type="date" id={`${uid}-to`} aria-label={t.to} min={bounds.from} max={bounds.to} value={window.to} onChange={event => setRange({ to: event.target.value })} /></label>
-          {cadenceRank[dataset.cadence] <= 1 && <label><span className="sr-only">{t.monthPreset}</span><select aria-label={t.monthPreset} value="" onChange={event => { if (event.target.value) setWindow(presetWindow(window, presetYear, 'month', Number(event.target.value))); }}><option value="">{t.monthPreset}</option>{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select></label>}
-          {cadenceRank[dataset.cadence] <= 2 && <label><span className="sr-only">{t.quarterPreset}</span><select aria-label={t.quarterPreset} value="" onChange={event => { if (event.target.value) setWindow(presetWindow(window, presetYear, 'quarter', Number(event.target.value))); }}><option value="">{t.quarterPreset}</option>{[1, 2, 3, 4].map(quarter => <option key={quarter} value={quarter}>Q{quarter}</option>)}</select></label>}
-          <button type="button" onClick={() => setWindow(presetWindow(window, presetYear, 'year'))}>{t.yearPreset}</button>
-          <label htmlFor={`${uid}-comparison`}><span className="sr-only">{t.compare}</span><select id={`${uid}-comparison`} aria-label={t.compare} value={comparison} onChange={event => setComparison(event.target.value as Comparison)}>{(['none', 'previous_year', 'previous_period', 'custom'] as Comparison[]).map(mode => <option key={mode} value={mode}>{t[mode]}</option>)}</select></label>
+          <label htmlFor={`${uid}-from`}><span>{t.from}</span><input type="date" id={`${uid}-from`} aria-label={t.from} min={bounds.from} max={bounds.to} value={window.from} onChange={event => setRange({ from: event.target.value })} /></label>
+          <label htmlFor={`${uid}-to`}><span>{t.to}</span><input type="date" id={`${uid}-to`} aria-label={t.to} min={bounds.from} max={bounds.to} value={window.to} onChange={event => setRange({ to: event.target.value })} /></label>
+          <label>{ui.preset}
+            <select aria-label={ui.preset} value="" onChange={event => {
+              const [unit, index] = event.target.value.split('/');
+              setWindow(presetWindow(window, presetYear, unit as 'year' | 'quarter' | 'month', Number(index) || 1));
+            }}>
+              <option value="" disabled>{ui.presetChoice}</option>
+              <option value="year">{t.yearPreset}</option>
+              {cadenceRank[dataset.cadence] <= 2 && <optgroup label={t.quarterPreset}>{[1, 2, 3, 4].map(q => <option key={q} value={`quarter/${q}`}>Q{q}</option>)}</optgroup>}
+              {cadenceRank[dataset.cadence] <= 1 && <optgroup label={t.monthPreset}>{months.map((month, i) => <option key={month} value={`month/${i + 1}`}>{month}</option>)}</optgroup>}
+            </select>
+          </label>
+          <label htmlFor={`${uid}-comparison`}><span>{t.compare}</span><select id={`${uid}-comparison`} aria-label={t.compare} value={comparison} onChange={event => setComparison(event.target.value as Comparison)}>{(['none', 'previous_year', 'previous_period', 'custom'] as Comparison[]).map(mode => <option key={mode} value={mode}>{t[mode]}</option>)}</select></label>
           {comparison === 'custom' && <>
             <label>{t.compareFrom}<input aria-label={t.compareFrom} type="date" value={customComparison.from} onChange={event => setCustomComparison(previous => ({ ...previous, from: event.target.value }))} /></label>
             <label>{t.compareTo}<input aria-label={t.compareTo} type="date" value={customComparison.to} onChange={event => setCustomComparison(previous => ({ ...previous, to: event.target.value }))} /></label>
           </>}
         </div>
+      </TimeRangePanel>
+      </div>}
+      </div>
+      {!selectedDisease ? <p className="surveillance-note" role="status">{t.noDisease}</p> : !dataset || !window ? <p role="status">{failed ? t.unavailable : t.loading}</p> : <>
         {(!rangeValid || (comparison === 'custom' && !compareWindow)) && <p role="alert" className="surveillance-status">{t.invalid}</p>}
         <div className="subdivision-map-views">
-          <div className="surveillance-tabs" role="tablist" aria-label={t.title} onKeyDown={event => {
-            const index = tabs.indexOf(tab);
-            const next = event.key === 'ArrowRight' ? tabs[(index + 1) % tabs.length] : event.key === 'ArrowLeft' ? tabs[(index + tabs.length - 1) % tabs.length] : event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[2] : null;
-            if (!next) return;
-            event.preventDefault(); setTab(next); document.getElementById(`${uid}-${next}`)?.focus();
-          }}>
-            {tabs.map(value => <button key={value} id={`${uid}-${value}`} role="tab" type="button" aria-selected={tab === value} aria-controls={`${uid}-panel`} tabIndex={tab === value ? 0 : -1} onClick={() => setTab(value)}>{ui[value]}</button>)}
-          </div>
-          <label className="chart-measure">{t.area}<select aria-label={t.selected} value={selected} onChange={event => setSelected(event.target.value)}>{catalog.regions.map(region => <option key={region.code} value={region.code}>{name(region)}</option>)}</select></label>
+          <ChartTabs id={uid} label={t.title} tabs={tabs} value={tab} title={value => ui[value]} onChange={setTab} />
+          {tab === 'trend' && <label className="chart-measure" htmlFor={`${uid}-view`}>{t.view}<select id={`${uid}-view`} aria-label={t.view} value={window.view} onChange={event => setRange({ view: event.target.value as Cadence })}>{(Object.keys(cadenceRank) as Cadence[]).map(cadence => <option key={cadence} value={cadence} disabled={cadenceRank[cadence] < cadenceRank[dataset.cadence]}>{cadenceLabels[lang][cadence]}</option>)}</select></label>}
+          {tab === 'map' && <label className="chart-measure">{t.area}<select aria-label={t.selected} value={selected} onChange={event => setSelected(event.target.value)}>{catalog.regions.map(region => <option key={region.code} value={region.code}>{name(region)}</option>)}</select></label>}
           {tab === 'map' && (code === 'US' || code === 'JP') && <button type="button" aria-pressed={mapFocused} onClick={() => setMapFocused(!mapFocused)}>{mapFocused ? t.reset : t.focus}</button>}
         </div>
-        <p className="subdivision-map-status" aria-live="polite">{rows.filter(row => row.value !== null).length}/{catalog.expected_regions} {ui.available} · {cadenceLabels[lang][dataset.cadence]}{compareWindow && expected?.expected !== comparedExpected?.expected && <> · {ui.periodDifference}</>}</p>
+        {tab !== 'trend' && <p className="subdivision-map-status" aria-live="polite">{rows.filter(row => row.value !== null).length}/{catalog.expected_regions} {ui.available} · {cadenceLabels[lang][dataset.cadence]}{compareWindow && expected?.expected !== comparedExpected?.expected && <> · {ui.periodDifference}</>}</p>}
         <div role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-${tab}`}>
           {tab === 'map' && <div className="subdivision-map-content">
-            <div className="subdivision-map-plot"><div className="subdivision-map-canvas" role="img" aria-label={`${t.title} · ${metricLabel}. ${scale.ticks.map(tick => tick.value.toLocaleString(lang, { maximumFractionDigits: 0 })).join('; ')}; ${t.missing}`}><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /><div className="subdivision-map-zoom" role="group" aria-label={zoomLabels.group}><button type="button" onClick={() => zoom(1.25)} aria-label={zoomLabels.in}>+</button><button type="button" onClick={() => zoom(.8)} aria-label={zoomLabels.out}>−</button><button type="button" onClick={resetZoom} aria-label={zoomLabels.reset}>↺</button></div></div></div>
+            <div className="subdivision-map-plot"><div className="subdivision-map-canvas"><div className="subdivision-map-image" role="img" aria-label={`${t.title} · ${metricLabel}. ${scale.ticks.map(tick => tick.value.toLocaleString(lang, { maximumFractionDigits: 0 })).join('; ')}; ${t.missing}`}><EChartsReact ref={mapRef} echarts={echarts} option={chartOption} notMerge style={{ height: '100%', width: '100%', position: 'relative', zIndex: 1 }} onEvents={{ click: (event: { name: string }) => { if (rowByCode.has(event.name)) setSelected(event.name); } }} /></div><div className="subdivision-map-zoom" role="group" aria-label={zoomLabels.group}><button type="button" onClick={() => zoom(1.25)} aria-label={zoomLabels.in}>+</button><button type="button" onClick={() => zoom(.8)} aria-label={zoomLabels.out}>−</button><button type="button" onClick={resetZoom} aria-label={zoomLabels.reset}>↺</button></div></div></div>
             <RegionList rows={rows} previous={compareByCode} comparison={!!compareWindow} lang={lang} selected={selected} onSelect={setSelected} metricLabel={metricLabel} number={number} reason={reason}>{detail}</RegionList>
           </div>}
-          {tab === 'trend' && active && <>
-            <div className="subdivision-map-trend"><EChartsReact echarts={echarts} option={trendOption} notMerge style={{ height: fullscreen ? '55vh' : 300, minHeight: 240, width: '100%' }} /></div>
-            {detail}
-          </>}
+          {tab === 'trend' && population && rangeValid && <RegionalTrend ref={trendRef}
+            regions={catalog.regions} codes={trendCodes} onChange={setTrendSelection} dataset={dataset}
+            population={population} range={window} comparison={compareWindow} lang={lang} dark={dark}
+            fullscreen={fullscreen} metric={metricLabel} cadence={cadenceLabels[lang][window.view]}
+            currentLabel={t.current} comparisonLabel={t.previous} />}
           {tab === 'table' && <div className="subdivision-map-table" role="region" aria-label={t.area}>
             <table><thead><tr><th scope="col">{t.area}</th><th scope="col">{metricLabel}</th>{compareWindow && <><th scope="col">{t.previous}</th><th scope="col">{t.change}</th></>}</tr></thead><tbody>
               {[...rows].sort((a, b) => (b.value ?? -1) - (a.value ?? -1)).map(row => <tr key={row.region.code} data-selected={selected === row.region.code || undefined}><th scope="row"><button type="button" aria-pressed={selected === row.region.code} onClick={() => { setSelected(row.region.code); setTab('map'); }}>{name(row.region)}</button></th><td>{row.value === null ? <span className="subdivision-map-unavailable">{reason(row)}</span> : number(row.value)}{row.provisional && <span className="sr-only"> {t.provisional}</span>}{row.unverified && <span className="sr-only"> {t.unverified}</span>}</td>{compareWindow && <><td>{number(compareByCode.get(row.region.code)?.value)}</td><td>{change(row)}</td></>}</tr>)}
@@ -320,7 +365,7 @@ export default function SubdivisionIncidenceMap({ countryCode, diseaseId, langua
           {compareWindow && <p>{t.alignment}</p>}
           {dataset.cadence === 'weekly' && window.view !== 'weekly' && <p>{t.weeklyGrouping}</p>}
           {active?.reasons.includes('missing_population') && <p>{t.noPopulation}</p>}
-          {active && <div className="subdivision-map-populations"><h4>{t.annualPopulations}</h4><table><thead><tr><th>{t.year}</th><th>{t.cases}</th><th>{t.population}</th><th>{t.source}</th><th>{t.reference}</th><th>{t.basis}</th><th>{t.rate}</th></tr></thead><tbody>{active.annual.map(item => <tr key={item.year}><th scope="row">{item.year}</th><td>{number(item.cases, 0)}</td><td>{number(item.population?.value, 0)}</td><td>{item.population ? <a href={item.population.source_url} target="_blank" rel="noopener noreferrer">{item.population.source} ↗</a> : '—'}</td><td>{item.population?.reference_date || '—'}</td><td>{item.population ? basisLabel(item.population.basis) : '—'}</td><td>{number(item.rate)}</td></tr>)}</tbody></table></div>}
+          {active && <div className="subdivision-map-populations"><h4>{name(active.region)} · {t.annualPopulations}</h4><table><thead><tr><th>{t.year}</th><th>{t.cases}</th><th>{t.population}</th><th>{t.source}</th><th>{t.reference}</th><th>{t.basis}</th><th>{t.rate}</th></tr></thead><tbody>{active.annual.map(item => <tr key={item.year}><th scope="row">{item.year}</th><td>{number(item.cases, 0)}</td><td>{number(item.population?.value, 0)}</td><td>{item.population ? <a href={item.population.source_url} target="_blank" rel="noopener noreferrer">{item.population.source} ↗</a> : '—'}</td><td>{item.population?.reference_date || '—'}</td><td>{item.population ? basisLabel(item.population.basis) : '—'}</td><td>{number(item.rate)}</td></tr>)}</tbody></table></div>}
           {code === 'JP' && <p>{t.populationPrecision}</p>}
           {selectedSource?.semantics.source_labels?.length ? <p>{selectedSource.semantics.source_labels.join(' · ')}{selectedSource.source_url && <> · <a href={selectedSource.source_url} target="_blank" rel="noopener noreferrer">{t.source} ↗</a></>}</p> : null}
           <p>{t.boundary}: <a href={catalog.boundary.source_url} target="_blank" rel="noopener noreferrer">{catalog.boundary.source}</a> · <a href={catalog.boundary.license_url} target="_blank" rel="noopener noreferrer">{catalog.boundary.license}</a>. {t.historical}</p>

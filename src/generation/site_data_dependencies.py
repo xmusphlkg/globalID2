@@ -37,6 +37,8 @@ def dependency_version() -> str:
         "generation/site_export/provenance_views.py",
         "generation/site_data_views.py", "generation/site_data_queries.py",
         "generation/site_series_projection.py", "generation/site_data_catalogue.py",
+        "generation/us_nndss_projection.py", "generation/br_sinan_projection.py",
+        "generation/site_incidence.py",
         "generation/site_data_about.py", "generation/country_projection_inputs.py",
         "generation/site_subdivision_maps.py",
         "generation/country_projection_workers.py", "core/reporting_period.py",

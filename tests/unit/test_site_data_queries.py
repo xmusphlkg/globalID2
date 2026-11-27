@@ -816,7 +816,10 @@ async def test_subdivision_registry_uses_parent_but_population_uses_local_id(cod
     session = FakeSession(FakeRows([]))
     await site_data_queries.fetch_disease_series_records(session, code, True)
     sql, params = session.calls[0]
-    assert params == {"code": parent, "geography_key": f"country:{code}:national", "population_code": code}
+    expected = {"code": parent, "geography_key": f"country:{code}:national", "population_code": code}
+    if parent == "US":
+        expected["nndss_labels"] = sorted(site_data_queries.US_MEASLES_LABELS)
+    assert params == expected
     assert "pr.country_id = registry_country.id" in sql
     assert "pr.year = EXTRACT(YEAR FROM dso.time)::int" in sql
     assert "lower(pr.source) || '_computed'" in sql

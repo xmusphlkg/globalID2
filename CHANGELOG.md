@@ -2,7 +2,17 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
-## [Unreleased]
+## [0.22.0] - 2026-11-27
+
+### Added
+
+- Compare multiple regions on a surveillance trend chart, highlight a region, share the selection and export the chart as PNG.
+
+### Improved
+
+- Bring recent research and official notices together on country and disease pages, and group chart and time-range controls.
+- Preserve CDC current-week flags and raw values in source downloads. Build reviewed US weekly curves using disease-specific totals and component rules.
+- Combine Brazilian SINAN adult and child HIV and AIDS notifications only for months with both counts. Calculate aggregate incidence only with a shared population denominator.
 
 ### Fixed
 

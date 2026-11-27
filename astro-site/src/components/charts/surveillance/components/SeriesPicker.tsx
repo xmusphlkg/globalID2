@@ -80,6 +80,10 @@ export default function SeriesPicker({
       dimensions.push(["dimension", sourceDimension]);
     const selected = config.selectionIds.includes(selection.id);
     const firstSeries = catalog.series[selection.seriesIds[0]];
+    const entity = catalog.entities[selection.entityId];
+    const isMeaslesTotal = entity?.diseaseId === "D017"
+      && (entity.geographyId === "US" || entity.parentId === "US")
+      && firstSeries?.provenance.policy === "sum_disjoint";
     return (
       <label
         className={`surveillance-choice surveillance-source-choice ${selected ? "is-selected" : ""}`}
@@ -95,7 +99,7 @@ export default function SeriesPicker({
         <span>
           <strong>
             {selection.isDefault
-              ? label("published", lang)
+              ? label(isMeaslesTotal ? "measlesTotal" : "published", lang)
               : selection.sourceLabel}
           </strong>
           <small>

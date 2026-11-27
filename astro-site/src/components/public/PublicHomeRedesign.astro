@@ -19,7 +19,7 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const href = (path: string) => `${prefix}${path}`;
 const t = zh ? {
   eyebrow: '全球传染病数据与监测',
-  titleLines: ['洞察疫情动态。', '追溯科学证据。'],
+  titleLines: ['洞察疫情动态', '追溯科学证据'],
   sloganPrefix: '一个整合全球',
   sloganWords: ['传染病监测', '公共卫生数据', '科学研究', '开放数据'],
   summary: '追踪全球疫情，比较监测趋势，探索来自官方数据与科学研究的证据。',
@@ -76,7 +76,7 @@ const t = zh ? {
   compareFeatureText: '在同一视图中比较不同地区的疾病趋势。',
 } : {
   eyebrow: 'GLOBAL INFECTIOUS DISEASE INTELLIGENCE',
-  titleLines: ['See the signals.', 'Understand the evidence.'],
+  titleLines: ['See the signals', 'Understand the evidence'],
   sloganPrefix: 'A global platform for',
   sloganWords: ['surveillance', 'public health data', 'research evidence', 'open data'],
   summary: 'Track disease events, compare surveillance trends, and explore evidence from official data and research.',
@@ -136,7 +136,7 @@ const t = zh ? {
 // French is the shared interface language for France and Canada. Keep source
 // names and disease names intact, while translating the surrounding controls.
 if (fr) Object.assign(t, {
-  eyebrow: 'INTELLIGENCE MONDIALE SUR LES MALADIES INFECTIEUSES', titleLines: ['Détecter les signaux.', 'Comprendre les données.'],
+  eyebrow: 'INTELLIGENCE MONDIALE SUR LES MALADIES INFECTIEUSES', titleLines: ['Détecter les signaux', 'Comprendre les données'],
   sloganPrefix: 'Une plateforme mondiale de', sloganWords: ['surveillance', 'données de santé publique', 'recherche scientifique', 'données ouvertes'],
   summary: 'Suivez les événements sanitaires, comparez les tendances et explorez les données officielles et la recherche.',
   searchLabel: 'Rechercher dans GIDS', searchPlaceholder: 'Rechercher des pays, maladies, rapports et études…', search: 'Rechercher',
@@ -167,6 +167,15 @@ const explorePaths = [
       <div class="hero-copy">
         <p class="eyebrow">{t.eyebrow}</p>
         <h1>{t.titleLines.map(line => <span>{line}</span>)}</h1>
+        <p class="animated-slogan">
+          <span>{t.sloganPrefix}</span>
+          <span class="sr-only">{t.sloganWords.join(zh ? '、' : ', ')}</span>
+          <span class="slogan-window" aria-hidden="true">
+            {t.sloganWords.map((word, index) => (
+              <span style={{ animationDelay: `${(index - t.sloganWords.length) * 3}s` }}>{word}</span>
+            ))}
+          </span>
+        </p>
         <p class="lead">{t.summary}</p>
         <form class="home-search" action={href('/search/')} method="get">
           <label for={`home-search-${locale}`}>{t.searchLabel}</label>
@@ -314,6 +323,9 @@ const explorePaths = [
   .home-locale-zh h1 span { white-space: nowrap; }
   .home-locale-fr h1 { font-size: clamp(2rem, 3.1vw, 2.8rem); }
   h1 span { display: block; }
+  .animated-slogan { display: grid; gap: .2rem; margin: 1.05rem 0 0; color: rgb(var(--text-strong)); font-size: clamp(1.2rem, 2.6vw, 2rem); font-weight: 720; line-height: 1.25; }
+  .slogan-window { display: grid; overflow: hidden; color: rgb(var(--color-teal)); }
+  .slogan-window > span { grid-area: 1 / 1; opacity: 0; animation: slogan-cycle 12s ease-in-out infinite; }
   .lead { max-width: 36rem; margin: 1.1rem 0 0; color: rgb(var(--text-muted)); font-size: clamp(.98rem, 1.35vw, 1.08rem); line-height: 1.68; }
   .home-search { max-width: 41rem; margin-top: 1.55rem; }
   .home-search label { display: block; margin-bottom: .45rem; color: rgb(var(--text-strong)); font-size: .78rem; font-weight: 700; }
@@ -412,6 +424,12 @@ const explorePaths = [
   .report-list b { grid-column: 1 / -1; margin-top: .7rem; color: rgb(var(--color-teal)); font-size: .74rem; }
   .empty-state { margin-top: 1.5rem; color: rgb(var(--text-muted)); }
 
+  @keyframes slogan-cycle {
+    0%, 21% { opacity: 1; transform: translateY(0); }
+    25% { opacity: 0; transform: translateY(-100%); }
+    26%, 96% { opacity: 0; transform: translateY(100%); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
   @keyframes curve-draw {
     0% { opacity: 0; stroke-dashoffset: 1; }
     18%, 64% { opacity: 1; stroke-dashoffset: 0; }
@@ -475,6 +493,8 @@ const explorePaths = [
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .slogan-window > span { animation: none; }
+    .slogan-window > span:first-child { opacity: 1; }
     .curve-bars rect, .curve-line, .data-console, .data-console::before, .asset-grid div, .asset-grid div::after, .path-card { animation: none; transition: none; }
     .curve-line { opacity: .55; stroke-dashoffset: 0; }
   }
