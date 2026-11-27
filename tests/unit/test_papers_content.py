@@ -265,3 +265,15 @@ def test_inventory_verification_rejects_changed_local_payload(tmp_path):
     (candidate.template_root / record['path']).write_text('{}')
     with pytest.raises(ValueError, match='source changed'):
         verified_existing_objects(candidate, {record['key']: {'bytes': 2, 'etag': 'abc'}})
+
+
+def test_current_graph_alias_shares_the_versioned_object(tmp_path):
+    graph = tmp_path / "site-data/research-graph.json"
+    graph.parent.mkdir()
+    graph.write_text('{"nodes":[],"edges":[]}')
+    candidate = prepare_papers_content_from_manifest(tmp_path,
+        build_papers_manifest(tmp_path, papers_origin="https://papers.example"),
+        papers_origin="https://papers.example", release_id="graph")
+    entries = {item["logical_key"]: item for item in candidate.entries}
+    assert entries["site-data/research/graph.json"]["key"] == entries["site-data/research-graph.json"]["key"]
+    assert len(candidate.object_keys) == 1
