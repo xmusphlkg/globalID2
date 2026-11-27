@@ -10,7 +10,6 @@ const labels = pathogenResourceLabels[locale];
 {profile && (
   <section id="pathogen-resources" class="figure-panel scroll-mt-24" aria-labelledby="pathogen-resources-title">
     <h2 id="pathogen-resources-title" class="figure-title">{labels.title}</h2>
-    <p class="figure-caption mt-2">{labels.intro}</p>
     <p class="pathogen-identity"><span>{labels.pathogen}:</span> <strong>{profile.pathogen}</strong> <a href={profile.taxonomyUrl} target="_blank" rel="noopener noreferrer">{labels.taxonomy} ↗</a></p>
     <ul class="pathogen-resource-list">
       <li>
@@ -21,7 +20,6 @@ const labels = pathogenResourceLabels[locale];
         <li>
           <a href={profile.gisaidUrl} target="_blank" rel="noopener noreferrer">{labels.gisaid} ↗</a>
           <span class="resource-access">{labels.account}</span>
-          <p>{labels.gisaidDescription}</p>
         </li>
       )}
       <li>

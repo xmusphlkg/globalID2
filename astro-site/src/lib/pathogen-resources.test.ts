@@ -32,13 +32,9 @@ test('public searches and account-based resources remain distinct and on officia
   assert.equal(new URL(IPSN_RESOURCE_URL).hostname, 'www.who.int');
 });
 
-test('all three locales explain sequence-count limits and GISAID account access', () => {
-  assert.match(pathogenResourceLabels.en.intro, /sequence counts do not measure case numbers/);
-  assert.match(pathogenResourceLabels.zh.intro, /序列数量不代表病例数/);
-  assert.match(pathogenResourceLabels.fr.intro, /nombre de séquences ne mesure ni les cas/);
+test('all three locales label GISAID account access and WHO resources', () => {
   for (const locale of ['en', 'zh', 'fr'] as const) {
     assert.ok(pathogenResourceLabels[locale].account);
-    assert.ok(pathogenResourceLabels[locale].gisaidDescription.includes('GISAID'));
     assert.ok(pathogenResourceLabels[locale].ipsnDescription);
   }
 });

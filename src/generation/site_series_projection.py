@@ -14,6 +14,7 @@ from collections import defaultdict
 from datetime import date, datetime
 
 from src.core.disease_cutover import get_disease_cutover_config
+from src.generation.site_incidence import aggregate_incidence
 from src.core.reporting_period import (
     report_date,
     report_period_key,
@@ -211,6 +212,9 @@ def _source_series_details(records: list[dict]) -> list[dict]:
                 ),
             }
         )
+        if any("current_week_flag" in item for item in dated_records):
+            details[-1]["current_week_flags"] = [item.get("current_week_flag") for item in dated_records]
+            details[-1]["source_values_raw"] = [item.get("source_value_raw") for item in dated_records]
         # Older stored FluNet captures predate the explicit raw observation
         # kind field. A reviewed weekly interval metric has an unambiguous
         # interval meaning; infer it at export time while keeping YTD and
@@ -844,6 +848,70 @@ def apply_series_first_projection(
     return projected_records
 
 
+US_MEASLES_LABELS = {
+    "Measles, Imported": "imported",
+    "Measles, Indigenous": "indigenous",
+    "Measles§, Imported": "imported",
+    "Measles§, Indigenous": "indigenous",
+}
+
+
+def _us_measles_weekly_totals(records: list[dict], country: str) -> list[dict]:
+    """Sum the two current-week components within one CDC reporting area."""
+    weeks = defaultdict(dict)
+    components = []
+    for row in records:
+        label = US_MEASLES_LABELS.get(row.get("source_label"))
+        if (row.get("source_system") != "SRC_US_NNDSS"
+                or row.get("geography_key") != f"country:{country}:national"
+                or row.get("dimension_key") != "all"
+                or row.get("temporal_granularity") != "weekly"
+                or label is None
+                or not _series_is_case_count(row)):
+            continue
+        components.append(row)
+        week = weeks[row["date"]]
+        if label in week:
+            raise ValueError(f"Duplicate US measles component for {row['date']}: {label}")
+        value = row.get("cases")
+        if (value is None and row.get("current_week_flag") == "-"
+                and row.get("source_value_raw") in (None, "", "-")):
+            value = 0
+        week[label] = (row, value)
+
+    sources = _source_series_details(components)
+    selected_codes = sorted({row["series_code"] for row in components})
+    context = {
+        "data_layer": SERIES_DATA_LAYER, "projection_policy": "sum_disjoint",
+        "period_granularity": "weekly", "loss_risk": None,
+        "available_series_count": len(selected_codes),
+        "selected_series_codes": selected_codes,
+        "source_series": sources, "coverage_status": "registry_only",
+        "metric_layers": {"cases": SERIES_DATA_LAYER, "deaths": "not_available",
+                          "recoveries": "not_available"},
+        "note_en": "Weekly notifications combine imported and indigenous measles in this CDC reporting area. Both components are required. A dash in a blank CDC current-week cell means zero reported cases.",
+        "note_zh": "该报告地区每周麻疹报告数为输入性与本土病例之和。两项齐全时才计算合计。CDC 当周数值为空且标记为短横线时按零例报告计算。",
+    }
+    projected = []
+    for week in weeks.values():
+        if len(week) != 2 or any(value is None for _, value in week.values()):
+            continue
+        row, _ = week["indigenous"]
+        cases = sum(value for _, value in week.values())
+        incidence_rate, incidence_source = aggregate_incidence(cases, [part for part, _ in week.values()])
+        projected.append({
+            "date": row["date"], "year_month": row["date"][:7], "disease_id": "D017",
+            "cases": cases, "deaths": None, "recoveries": None, "mortality_rate": None,
+            "series_code": None, "temporal_granularity": "weekly",
+            "data_quality": row.get("quality_status"), "metric_type": "case_notifications",
+            "reporting_basis": "notification", "definition_version": row.get("definition_version"),
+            "comparability": "conditional", "incidence_rate_source": incidence_source,
+            "incidence_rate": incidence_rate,
+            "data_layer": SERIES_DATA_LAYER, "_series_context": context,
+        })
+    return projected
+
+
 def apply_disease_cutover_projection(
     legacy_records: list[dict], series_records: list[dict], *, country_code: str
 ) -> list[dict]:
@@ -870,7 +938,41 @@ def apply_disease_cutover_projection(
     ]
     accepted: list[dict] = []
     checked_contexts: dict[tuple[str, int], tuple[dict, bool]] = {}
-    for record in apply_series_first_projection(filtered_legacy, filtered_series):
+    custom_ids = set()
+    custom_records = []
+    registry_ids = {key for key, policy in policies.items() if policy.read_mode != "legacy"}
+    if country == "US" or country.startswith("US-"):
+        if "D017" in registry_ids:
+            custom_ids.add("D017")
+            custom_records.extend(_us_measles_weekly_totals(
+                [row for row in filtered_series if row["disease_id"] == "D017"], country
+            ))
+        if country == "US":
+            from .us_nndss_projection import US_NNDSS_WEEKLY_LABELS, project_us_nndss_weekly
+
+            weekly_ids = registry_ids.intersection(US_NNDSS_WEEKLY_LABELS)
+            if weekly_ids:
+                custom_ids.update(weekly_ids)
+                custom_records.extend(project_us_nndss_weekly(
+                    [row for row in filtered_legacy if row["disease_id"] in weekly_ids],
+                    [row for row in filtered_series if row["disease_id"] in weekly_ids],
+                ))
+    elif country == "BR":
+        from .br_sinan_projection import br_sinan_age_totals
+
+        age_ids = registry_ids.intersection({"D005", "D162"})
+        if age_ids:
+            custom_ids.update(age_ids)
+            custom_records.extend(br_sinan_age_totals(
+                [row for row in filtered_series if row["disease_id"] in age_ids]
+            ))
+    if custom_ids:
+        filtered_series = [row for row in filtered_series if row["disease_id"] not in custom_ids]
+        filtered_legacy = [row for row in filtered_legacy if row["disease_id"] not in custom_ids]
+    projected = apply_series_first_projection(filtered_legacy, filtered_series)
+    if custom_records:
+        projected = sorted([*projected, *custom_records], key=lambda r: (r["date"], r["disease_id"]))
+    for record in projected:
         disease_id = str(record.get("disease_id") or "").strip().upper()
         policy = policies[disease_id]
         context = record.get("_series_context") or {}

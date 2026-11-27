@@ -18,8 +18,10 @@ import { useExplorerAnalysis } from "../state/useExplorerAnalysis";
 import { label, lineName } from "../presentation/labels";
 import ChartResultActions from "../../ChartResultActions";
 import SeriesPicker from "./SeriesPicker";
-import { MeasureSelect, PrimaryControls } from "./ExplorerControls";
-import SurveillancePlot, { seriesColor } from "./SurveillancePlot";
+import { MeasureSelect, TimeControls, SelectionControls } from "./ExplorerControls";
+import { seriesColor } from "../presentation/seriesColors";
+import ChartTabs from "./ChartTabs";
+import SurveillancePlot from "./SurveillancePlot";
 import {
   DataPanel,
   Diagnostics,
@@ -233,6 +235,9 @@ function ExplorerWorkspace({
     const next = { ...dateValue, [field]: value };
     if (next.startDate <= next.endDate) patch({ window: next });
   };
+  const countryPanel = context.kind === "country";
+  const timeControls = <TimeControls collapsible={countryPanel} lang={lang} config={config} result={result}
+    chooseWindow={chooseWindow} dateValue={dateValue} setDate={setDate} />;
   return (
     <div
       className={`surveillance-explorer panel-fullscreen ${expanded ? "is-expanded" : "is-compact"} ${fullscreen ? "is-fullscreen" : ""}`}
@@ -245,6 +250,7 @@ function ExplorerWorkspace({
       data-source-coverage={!dataUrl || catalog.snapshot ? sourceMeta?.coverage || undefined : undefined}
       data-source-updated={!dataUrl || catalog.snapshot ? sourceMeta?.updatedAt || undefined : undefined}
     >
+      <div className={countryPanel ? "surveillance-controls-panel" : undefined}>
       <div className="surveillance-heading">
         {(title || presentation === "compact") && <strong>{title ?? label("title", lang)}</strong>}
         <div className="surveillance-actions">
@@ -287,17 +293,9 @@ function ExplorerWorkspace({
           {label(reportComparison ? "reportSnapshotComparison" : catalog.snapshot ? "reportSnapshot" : "reportLatest", lang)}
         </p>
       )}
-      <PrimaryControls
-        expanded={expanded}
-        config={config}
-        result={result}
-        catalog={catalog}
-        lang={lang}
-        patch={patch}
-        chooseWindow={chooseWindow}
-        dateValue={dateValue}
-        setDate={setDate}
-      />
+      {timeControls}
+      <SelectionControls expanded={expanded} config={config} catalog={catalog} lang={lang} patch={patch} />
+      </div>
       {notice && (
         <p role="status" className="surveillance-note">
           {notice}
@@ -323,46 +321,8 @@ function ExplorerWorkspace({
           </aside>
         )}
         <div className="surveillance-result">
-          <div
-            className="surveillance-tabs"
-            role="tablist"
-            aria-label={label("title", lang)}
-            onKeyDown={(event) => {
-              const tabs = ["chart", "table"] as const;
-              const index = tabs.indexOf(tab);
-              const next =
-                event.key === "ArrowRight"
-                  ? tabs[(index + 1) % tabs.length]
-                  : event.key === "ArrowLeft"
-                    ? tabs[(index + tabs.length - 1) % tabs.length]
-                    : event.key === "Home"
-                      ? tabs[0]
-                      : event.key === "End"
-                        ? tabs.at(-1)
-                        : null;
-              if (!next) return;
-              event.preventDefault();
-              setTab(next);
-              document.getElementById(`${controlId}-${next}`)?.focus();
-            }}
-          >
-            {(["chart", "table"] as const).map(
-              (value) => (
-                <button
-                  type="button"
-                  role="tab"
-                  id={`${controlId}-${value}`}
-                  aria-controls={`${controlId}-panel`}
-                  aria-selected={tab === value}
-                  tabIndex={tab === value ? 0 : -1}
-                  onClick={() => setTab(value)}
-                  key={value}
-                >
-                  {label(value, lang)}
-                </button>
-              ),
-            )}
-          </div>
+          <ChartTabs id={controlId} label={label("title", lang)} tabs={["chart", "table"] as const}
+            value={tab} title={value => label(value, lang)} onChange={setTab} />
           {result.diagnostics.length > 0 && (
             <div className="surveillance-status" role="status">
               {label(

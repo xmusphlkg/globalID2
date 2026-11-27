@@ -530,3 +530,93 @@
     display: block;
   }
 }
+
+/* Country figures share the same filter surface, view navigation and series controls. */
+.surveillance-controls-panel {
+  padding: clamp(10px, 1.3vw, 18px);
+  margin-bottom: 18px;
+  background: rgb(var(--surface-raised) / .58);
+  border: 1px solid var(--sv-border);
+}
+.surveillance-controls-panel .surveillance-heading { margin: 0; }
+.surveillance-controls-panel .surveillance-time {
+  align-items: end;
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+}
+.surveillance-controls-panel .surveillance-time > span { align-self: center; }
+.surveillance-controls-panel .surveillance-time label,
+.surveillance-controls-panel .chart-measure {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  font-size: 12px;
+}
+.surveillance-controls-panel .surveillance-selected:empty { display: none; }
+.surveillance-controls-panel .surveillance-selected { margin: 12px 0 0; }
+.surveillance-explorer:has(.surveillance-controls-panel) .surveillance-tabs {
+  border: 0;
+  border-bottom: 1px solid var(--sv-border);
+}
+.surveillance-explorer:has(.surveillance-controls-panel) .surveillance-tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: rgb(var(--text-muted));
+}
+.surveillance-explorer:has(.surveillance-controls-panel) .surveillance-tabs button[aria-selected="true"] {
+  border-bottom-color: rgb(var(--color-brand));
+  background: rgb(var(--color-brand) / .08);
+  color: rgb(var(--text-strong));
+}
+.regional-trend-selection button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .surveillance-controls-panel .surveillance-time label { flex: 1 1 110px; min-width: 0; }
+  .surveillance-controls-panel .surveillance-time input { width: 100%; min-width: 0; }
+}
+
+
+.surveillance-controls-panel > .chart-time-field,
+.surveillance-controls-panel > .regional-period-row {
+  border-top: 1px solid var(--sv-border);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.chart-time-field > strong,
+.surveillance-controls-panel label,
+.subdivision-map-views .chart-measure {
+  color: rgb(var(--text-strong));
+  font-weight: 700;
+  font-size: 13px;
+}
+.chart-time-field > strong { display: block; margin-bottom: 5px; }
+.surveillance-controls-panel .surveillance-time label,
+.surveillance-controls-panel .chart-measure,
+.surveillance-controls-panel .subdivision-map-controls label {
+  color: rgb(var(--text-strong));
+  font-weight: 700;
+  font-size: 13px;
+}
+.surveillance-controls-panel :is(select, input), .subdivision-map-views select { font-weight: 400; }
+.chart-time-panel summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: fit-content; max-width: 100%; min-height: 38px; padding: 7px 11px;
+  border: 1px solid var(--sv-border); background: rgb(var(--surface));
+  font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.chart-time-panel summary time { white-space: nowrap; }
+.chart-time-panel summary::-webkit-details-marker { display: none; }
+.chart-time-panel summary::after {
+  content: ''; flex: 0 0 7px; height: 7px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+.chart-time-panel[open] summary::after { transform: rotate(225deg); }
+@media (max-width: 760px) {
+  .chart-time-panel summary { min-height: 44px; width: 100%; }
+}

@@ -1025,3 +1025,103 @@ def test_us_hiv_canary_never_falls_back_to_legacy() -> None:
     assert (
         apply_disease_cutover_projection(legacy, [], country_code="US") == []
     )
+
+
+def test_us_measles_chart_sums_only_complete_resident_weeks_and_preserves_source_rows():
+    from copy import deepcopy
+
+    def component(day, label, cases, flag=""):
+        return {
+            **_series("D017", label, day, cases, temporal_granularity="weekly"),
+            "source_system": "SRC_US_NNDSS", "source_label": f"Measles, {label}",
+            "geography_key": "country:US:national", "dimension_key": "all",
+            "current_week_flag": flag, "population": 100000, "population_source": "WPP",
+        }
+
+    sources = [
+        component("2025-03-15", "Imported", 1, "-"),
+        component("2025-03-15", "Indigenous", 27),
+        component("2025-03-22", "Imported", None, "-"),
+        component("2025-03-22", "Indigenous", 22),
+        component("2025-03-29", "Indigenous", 46),
+        {**component("2025-03-29", "Imported", 12), "geography_key": "country:US-TX:national"},
+        component("2025-04-05", "Imported", None, "U"),
+        component("2025-04-05", "Indigenous", 5),
+        component("2025-04-12", "Imported", None, "-"),
+        component("2025-04-12", "Indigenous", None, "-"),
+        {**component("2025-04-19", "Imported", None, "-"), "source_value_raw": "U"},
+        component("2025-04-19", "Indigenous", 3),
+        {**component("2019-01-05", "Imported", 1), "source_label": "Measles§, Imported"},
+        {**component("2019-01-05", "Indigenous", 2), "source_label": "Measles§, Indigenous"},
+    ]
+    original = deepcopy(sources)
+    result = apply_disease_cutover_projection(
+        [_legacy("D017", "2025-03-29", 46)], sources, country_code="US",
+    )
+    assert [(r["date"], r["cases"], r["incidence_rate"]) for r in result] == [
+        ("2019-01-05", 3, 3), ("2025-03-15", 28, 28),
+        ("2025-03-22", 22, 22), ("2025-04-12", 0, 0),
+    ]
+    assert result[0]["_series_context"]["projection_policy"] == "sum_disjoint"
+    assert sources == original
+
+
+@pytest.mark.parametrize(("country", "local_cases"), [("US-TX", 10), ("US-OH", 5), ("US-OK", 3)])
+def test_subdivision_measles_only_combines_two_local_cells(country, local_cases):
+    day = "2025-03-22"
+
+    def observation(area, label, cases, flag=""):
+        return {
+            **_series("D017", label, day, cases, temporal_granularity="weekly"),
+            "source_label": f"Measles, {label}", "source_system": "SRC_US_NNDSS",
+            "geography_key": f"country:{area}:national", "dimension_key": "all",
+            "current_week_flag": flag,
+        }
+
+    rows = [observation(country, "Indigenous", local_cases), observation("US", "Imported", 30)]
+    legacy = [_legacy("D017", day, local_cases)]
+    assert apply_disease_cutover_projection(legacy, rows, country_code=country) == []
+    rows.append(observation(country, "Imported", None, "-"))
+    result = apply_disease_cutover_projection(legacy, rows, country_code=country)
+    assert [(row["date"], row["cases"]) for row in result] == [(day, local_cases)]
+    assert rows[-1]["cases"] is None
+
+
+def test_us_measles_downloads_keep_the_cdc_value_and_flag_separate_from_the_total():
+    import csv
+    from io import BytesIO, StringIO
+
+    from openpyxl import load_workbook
+    from src.generation.public_series_store import build_public_series_row
+    from src.generation.direct_download.formats import _csv_bytes, _xlsx_bytes
+    from src.generation.direct_download.rows import build_country_download_rows, build_disease_download_rows
+
+    day = "2025-03-22"
+    sources = [
+        {
+            **_series("D017", label, day, cases, temporal_granularity="weekly"),
+            "source_system": "SRC_US_NNDSS", "source_label": f"Measles, {label}",
+            "geography_key": "country:US:national", "dimension_key": "all",
+            "current_week_flag": flag, "source_value_raw": raw_value,
+        }
+        for label, cases, flag, raw_value in [("Imported", None, "-", ""), ("Indigenous", 22, "", "22.0")]
+    ]
+    chart = apply_disease_cutover_projection([], sources, country_code="US")
+    country = build_country_data("US", "United States", chart, {"D017": {}}, source_records=sources)
+    series = country["disease_series"]["D017"]
+    published = build_public_series_row("US", "D017", series, source_high_water=None)
+    assert published["source_series_code"] is None
+    disease = {"disease_id": "D017", "country_series": {"US": series}}
+    for rows in [build_country_download_rows(country, {}), build_disease_download_rows(disease, {}, {})]:
+        raw = {row["series_code"]: row for row in rows if row["record_kind"] == "source_series_observation"}
+        assert [(row["cases"], row["current_week_flag"], row["source_value_raw"])
+                for row in (raw["Imported"], raw["Indigenous"])] == [(None, "-", ""), (22, "", "22.0")]
+        assert [r["cases"] for r in rows if r["record_kind"] == "public_projection"] == [22]
+        csv_rows = list(csv.DictReader(StringIO(_csv_bytes(rows).decode())))
+        assert next(r for r in csv_rows if r["series_code"] == "Imported")["current_week_flag"] == "-"
+        workbook = load_workbook(BytesIO(_xlsx_bytes({}, rows)), read_only=True)
+        header, *cells = workbook["records"].values
+        imported = next(row for row in cells if row[header.index("series_code")] == "Imported")
+        assert imported[header.index("cases")] is None
+        assert imported[header.index("current_week_flag")] == "-"
+        workbook.close()

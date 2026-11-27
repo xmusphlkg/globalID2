@@ -3,6 +3,24 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.22.0', date: '2026-11-27',
+    titleEn: 'Regional trend comparisons and surveillance totals',
+    titleZh: '多地区趋势对比与监测病例汇总',
+    titleFr: 'Comparaison des tendances régionales et totaux de surveillance',
+    summaryEn: 'Compare regions over time and explore recent studies and official notices on country and disease pages.',
+    summaryZh: '可按时间对比多个地区，并在国家和疾病页面查看近期研究与官方通报。',
+    summaryFr: 'Comparez les régions dans le temps et consultez les études récentes et les avis officiels sur les pages des pays et des maladies.',
+    sections: [{ kind: 'new', labelEn: 'Added', labelZh: '新增', labelFr: 'Nouveautés', items: [{
+      en: 'Select and highlight regions, share your selection and save the trend chart as a PNG.',
+      zh: '选择地区并突出显示趋势线，可分享当前选择或将图表导出为 PNG。',
+      fr: 'Sélectionnez des régions, mettez une courbe en évidence, partagez votre sélection et enregistrez le graphique au format PNG.',
+    }] }, { kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations', items: [{
+      en: 'US weekly curves use reviewed CDC categories and downloads retain the original reporting flags. Monthly Brazilian HIV and AIDS totals require both adult and child counts.',
+      zh: '美国周趋势采用经核对的 CDC 报告分类，下载文件保留原始报告标记。巴西 HIV 和艾滋病月度数据仅在成人与儿童报告数齐全时计算合计。',
+      fr: 'Les courbes hebdomadaires américaines utilisent les catégories vérifiées des CDC et les téléchargements conservent les indicateurs de déclaration. Au Brésil, les totaux mensuels du VIH et du sida exigent les effectifs adultes et pédiatriques.',
+    }] }],
+  },
+  {
     version: '0.21.1', date: '2026-11-26',
     titleEn: 'Faster literature search and more reliable updates',
     titleZh: '更快的文献检索与更稳定的数据更新',

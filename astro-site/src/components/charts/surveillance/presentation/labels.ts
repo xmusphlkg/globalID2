@@ -189,6 +189,7 @@ const words = {
     "选择筛选结果的默认序列",
     "Choisir les séries par défaut filtrées",
   ],
+  measlesTotal: ["Weekly total (imported + indigenous)", "每周合计（输入性＋本土）", "Total hebdomadaire (cas importés et autochtones)"],
   published: ["Published default", "发布默认序列", "Série publiée par défaut"],
   sourceOptions: ["Source options", "查看来源", "Options de source"],
   retry: ["Retry", "重试", "Réessayer"],

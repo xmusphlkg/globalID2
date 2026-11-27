@@ -1,40 +1,22 @@
 ---
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import ResearchArticleCard from './ResearchArticleCard';
+import RecentResearchPanel from './RecentResearchPanel.astro';
 import { diseaseLiteratureCatalogue } from '../../lib/research-literature-server';
 import { siteHref } from '../../lib/papers';
 
 interface Props { diseaseId: string; locale?: 'en' | 'zh' | 'fr' }
 const { diseaseId, locale = 'en' } = Astro.props;
-const zh = locale === 'zh';
-const fr = locale === 'fr';
-const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
+const prefix = locale === 'en' ? '' : `/${locale}`;
 const file = resolve(process.env.GIDS_SITE_DATA_ROOT || './src/data', `research/diseases/${diseaseId.toLowerCase()}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
 const articles = payload?.articles ?? [];
-const previewArticles = articles.slice(0, 6);
 const { byDisease, diseaseFacets } = diseaseLiteratureCatalogue();
 const allArticles = byDisease.get(diseaseId.toLowerCase()) ?? [];
 const diseaseFacet = diseaseFacets.get(diseaseId.toLowerCase());
 ---
 
 {allArticles.length > 0 && diseaseFacet && (
-  <section class="figure-panel disease-research-panel">
-    <div class="research-panel-heading">
-      <div>
-        <p class="academic-kicker">{zh ? '研究雷达' : fr ? 'Radar de recherche' : 'Research Radar'}</p>
-        <h2 class="figure-title mt-1">{zh ? '近期相关研究' : fr ? 'Recherches récentes associées' : 'Recent related research'}</h2>
-      </div>
-      <a href={siteHref(`${prefix}/research/diseases/${diseaseFacet.slug}/`)}>{zh ? `查看全部 ${allArticles.length.toLocaleString('zh-CN')} 篇文献 →` : fr ? `Voir les ${allArticles.length.toLocaleString('fr-FR')} publications →` : `View all ${allArticles.length.toLocaleString('en-US')} publications →`}</a>
-    </div>
-    <div class="research-panel-list mt-5">{previewArticles.map((article: any) => <ResearchArticleCard article={article} compact locale={locale} focusDiseaseId={diseaseId} />)}</div>
-  </section>
+  <RecentResearchPanel articles={articles} total={allArticles.length} locale={locale} focusDiseaseId={diseaseId}
+    href={siteHref(`${prefix}/research/diseases/${diseaseFacet.slug}/`)} />
 )}
-
-<style>
-  .research-panel-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
-  .research-panel-heading > a { flex: none; color: rgb(var(--color-brand)); font-size: .78rem; font-weight: 650; }
-  .research-panel-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: .6rem; }
-  @media (max-width: 640px) { .research-panel-heading { align-items: start; flex-direction: column; } }
-</style>

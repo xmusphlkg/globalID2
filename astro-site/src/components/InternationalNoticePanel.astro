@@ -8,6 +8,7 @@ import type { Locale, SituationAlertRecord } from '../utils/situationTypes';
 import { noticeSnapshotBadges } from '../utils/internationalSnapshot';
 import { alertSummary, countryName, countsLine, diseaseName, formatDay, sourceLabel, STATUS_LABELS } from './situation/labels';
 import RuntimeNoticePanel from './situation/RuntimeNoticePanel';
+import { noticePreview } from './situation/noticePreview';
 
 interface Props {
   alerts?: SituationAlertRecord[];
@@ -42,7 +43,7 @@ const COPY = {
 
 const copy = COPY[locale];
 const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
-const rows = alerts;
+const rows = noticePreview(alerts, diseaseId);
 const badgesFor = (alert: SituationAlertRecord) =>
   noticeSnapshotBadges(
     {
@@ -63,23 +64,7 @@ const PANEL_CSS = `  .intl-panel {
     background: rgb(var(--surface));
   }
   html[data-theme='light'] .intl-panel { --intl-panel-accent: var(--color-teal); }
-  .intl-panel-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
   .intl-panel-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
-  .intl-panel-heading { margin-top: 0; }
-  .intl-panel-list {
-    display: grid;
-    gap: 0.6rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
   .intl-panel-item {
     position: relative;
     min-width: 0;
@@ -128,24 +113,6 @@ const PANEL_CSS = `  .intl-panel {
     font-size: 0.65rem;
   }
   .intl-panel-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.8rem; }
-  .intl-panel-action {
-    display: inline-flex;
-    align-items: center;
-    min-height: 2rem;
-    max-width: 100%;
-    padding: 0.3rem 0.65rem;
-    border: 1px solid rgb(var(--intl-panel-accent) / 0.4);
-    border-radius: 0;
-    background: rgb(var(--intl-panel-accent) / 0.04);
-    color: rgb(var(--intl-panel-accent));
-    font-size: 0.7rem;
-    font-weight: 650;
-    line-height: 1.4;
-    text-decoration: none;
-    overflow-wrap: anywhere;
-  }
-  .intl-panel-action:hover { border-color: rgb(var(--intl-panel-accent) / 0.75); background: rgb(var(--intl-panel-accent) / 0.09); }
-  .intl-panel-action:focus-visible,
   .intl-panel-title:focus-visible { outline: 2px solid rgb(var(--intl-panel-accent)); outline-offset: 3px; }
   .intl-panel-summary {
     margin: 0.4rem 0 0;
@@ -191,13 +158,13 @@ const PANEL_CSS = `  .intl-panel {
     <>
       <style set:html={PANEL_CSS} />
       <section class="intl-panel" aria-labelledby="intl-panel-heading">
-        <div class="intl-panel-header">
+        <div class="figure-panel-heading">
           <div>
-            <h2 id="intl-panel-heading" class="figure-title intl-panel-heading">{copy.heading}</h2>
+            <h2 id="intl-panel-heading" class="figure-title">{copy.heading}</h2>
           </div>
           {mapHref && <a class="intl-panel-action" href={mapHref}>{copy.map}</a>}
         </div>
-        <ul class="intl-panel-list">
+        <ul class="panel-card-grid">
           {rows.map((alert) => (
             <li class="intl-panel-item">
               <p class="intl-panel-meta">

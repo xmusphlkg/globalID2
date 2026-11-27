@@ -81,7 +81,7 @@ export default function ResearchArticleCard({ article, locale = 'en', compact, f
         {(reviewed || preprint) && <span className="research-badge research-badge-peer">{reviewed ? text('Peer reviewed', '同行评议', 'Évalué par les pairs') : text('Preprint', '预印本', 'Prépublication')}</span>}
         {historical && <span className="research-badge research-badge-history">{text('Historical baseline', '历史基线', 'Référence historique')}</span>}
         {openAccess && <span className="research-badge research-badge-oa">{text('Open access', '开放获取', 'Accès ouvert')}</span>}
-        {focusMatch && <span className="research-badge" title={text(`Disease-classifier match confidence: ${confidence.toFixed(2)}; this is not a study-quality score.`, `疾病分类器关联置信度 ${confidence.toFixed(2)}；这不是研究质量评分。`, `Confiance du classement de l’association à la maladie : ${confidence.toFixed(2)} ; ce n’est pas une évaluation de la qualité de l’étude.`)}>
+        {focusMatch && <span className="research-badge" title={text(`Disease-classifier match confidence: ${confidence.toFixed(2)}.`, `疾病分类器关联置信度 ${confidence.toFixed(2)}。`, `Confiance du classement de l’association à la maladie : ${confidence.toFixed(2)}.`)}>
           {confidence >= 0.78 ? text('Strong disease match', '疾病关联较强', 'Association forte à la maladie') : text('Possible disease match', '疾病关联待核对', 'Association à vérifier')}
         </span>}
         {visibleDiseases.slice(0, compact ? 1 : 2).map((item: any) => <span key={item.disease_id} className="research-badge">{localizedDiseaseName(item, locale)}</span>)}

@@ -579,21 +579,16 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
           )}
         </span>
       </div>
-      <p className="disease-coverage-note" style={{ color: palette.muted }}>
-        {activeMetric === 'coverage'
-          ? ui(
-              lang,
-              'Shaded locations publish surveillance data for this disease. Regional series are rolled up into their parent area.',
-              '着色地区表示该疾病已有监测数据；地区级数据已汇总至上级区域。',
-              'Les lieux colorés publient des données de surveillance pour cette maladie. Les séries régionales sont agrégées à leur zone parente.',
-            )
-          : ui(
-              lang,
-              'Totals use a logarithmic scale so that smaller programmes stay visible next to national totals.',
-              '总量采用对数刻度，以便小规模数据在大国数据旁仍然可见。',
-              'Les totaux utilisent une échelle logarithmique pour rester visibles face aux totaux nationaux.',
-            )}
-      </p>
+      {activeMetric !== 'coverage' && (
+        <p className="disease-coverage-note" style={{ color: palette.muted }}>
+          {ui(
+            lang,
+            'Totals use a logarithmic scale.',
+            '总量采用对数刻度。',
+            'Les totaux utilisent une échelle logarithmique.',
+          )}
+        </p>
+      )}
     </div>
   );
 

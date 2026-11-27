@@ -6,6 +6,7 @@ import {
   type Language,
   type Measure,
 } from "../domain/types";
+import TimeRangePanel from "./TimeRangePanel";
 import { label } from "../presentation/labels";
 
 interface MeasureProps {
@@ -77,21 +78,18 @@ interface PrimaryProps {
   dateValue: DateWindow | null;
   setDate: (field: "startDate" | "endDate", value: string) => void;
 }
-export function PrimaryControls({
-  expanded,
+export function TimeControls({
+  collapsible,
   config,
   result,
-  catalog,
   lang,
-  patch,
   chooseWindow,
   dateValue,
   setDate,
-}: PrimaryProps) {
-  return (
-    <>
+}: Pick<PrimaryProps, "config" | "result" | "lang" | "chooseWindow" | "dateValue" | "setDate"> & { collapsible: boolean }) {
+  const controls = (
       <div className="surveillance-time">
-        <span>{label("time", lang)}</span>
+        {!collapsible && <strong>{label("time", lang)}</strong>}
         {[6, 12, 36].map((months) => (
           <button
             type="button"
@@ -131,6 +129,12 @@ export function PrimaryControls({
             </small>
           )}
       </div>
+  );
+  return collapsible ? <TimeRangePanel lang={lang} from={dateValue?.startDate} to={dateValue?.endDate}>{controls}</TimeRangePanel> : controls;
+}
+
+export function SelectionControls({ expanded, config, catalog, lang, patch }: Pick<PrimaryProps, "expanded" | "config" | "catalog" | "lang" | "patch">) {
+  return (
       <div
         className="surveillance-selected"
         aria-label={label("selected", lang)}
@@ -171,6 +175,5 @@ export function PrimaryControls({
           </button>
         )}
       </div>
-    </>
   );
 }

@@ -73,12 +73,19 @@ DOWNLOAD_FIELDS = [
 _XLSX_TIMESTAMP = (2000, 1, 1, 0, 0, 0)
 
 
+def _download_fields(rows: list[dict]) -> list[str]:
+    if any("current_week_flag" in row for row in rows):
+        return [*DOWNLOAD_FIELDS, "current_week_flag", "source_value_raw"]
+    return DOWNLOAD_FIELDS
+
+
 def _csv_bytes(rows: list[dict]) -> bytes:
     stream = StringIO(newline="")
-    writer = csv.DictWriter(stream, fieldnames=DOWNLOAD_FIELDS, lineterminator="\n")
+    fields = _download_fields(rows)
+    writer = csv.DictWriter(stream, fieldnames=fields, lineterminator="\n")
     writer.writeheader()
     writer.writerows(
-        {field: row.get(field) for field in DOWNLOAD_FIELDS} for row in rows
+        {field: row.get(field) for field in fields} for row in rows
     )
     return stream.getvalue().encode("utf-8")
 
@@ -104,9 +111,10 @@ def _xlsx_bytes(metadata: dict, rows: list[dict]) -> bytes:
     workbook.properties.created = fixed
     workbook.properties.modified = fixed
     records_sheet = workbook.create_sheet("records")
-    records_sheet.append(DOWNLOAD_FIELDS)
+    fields = _download_fields(rows)
+    records_sheet.append(fields)
     for row in rows:
-        records_sheet.append([_xlsx_cell(row.get(field)) for field in DOWNLOAD_FIELDS])
+        records_sheet.append([_xlsx_cell(row.get(field)) for field in fields])
     metadata_sheet = workbook.create_sheet("metadata")
     metadata_sheet.append(["field", "value"])
     for key in sorted(metadata):

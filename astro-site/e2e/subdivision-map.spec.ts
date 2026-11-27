@@ -44,6 +44,7 @@ test('regional navigation, compact filters, sortable selection, PNG and central 
   await list.getByRole('searchbox').fill('');
   await list.getByRole('button', { name: '排序 · 变化' }).click();
   await expect(list.locator('thead th').last()).toHaveAttribute('aria-sort', 'descending');
+  if (!await map.locator('.chart-time-panel').evaluate(el => el.hasAttribute('open'))) await map.locator('.chart-time-panel summary').click();
   await map.getByRole('combobox', { name: '对比范围' }).selectOption('none');
   await list.getByRole('button', { name: '排序 · 报告病例数' }).click();
   await expect(list.locator('thead th').last()).toHaveAttribute('aria-sort', 'ascending');
@@ -159,4 +160,60 @@ test('China switches diseases and moves an unavailable old range into the new di
   await disease.selectOption('D028');
   await expect(panel.getByRole('combobox', { name: '年份', exact: true })).toHaveValue('2025');
   await expect(panel.locator('.subdivision-map-workspace')).toHaveAttribute('data-chart-title', /百日咳/);
+});
+
+test('regional trends compare distinct region colors, preserve missing values and restore selections', async ({ page }) => {
+  await page.goto('/countries/br/?mapTab=trend&mapFrom=2025-01-01&mapTo=2025-01-31&mapMetric=cases#regional-distribution', { waitUntil: 'domcontentloaded' });
+  const panel = page.locator('#regional-distribution');
+  await panel.scrollIntoViewIfNeeded();
+  const plot = panel.locator('.subdivision-map-trend');
+  await expect(plot.locator('canvas')).toBeVisible();
+  const series = () => plot.evaluate(async el => {
+    const modulePath = '/src/lib/echartsMap.ts';
+    const { default: echarts } = await import(modulePath);
+    const chart = echarts.getInstanceByDom(el.querySelector('[_echarts_instance_]'));
+    return chart.getOption().series.map((line: { id: string; itemStyle: { color: string }; lineStyle: { type: string }; data: Array<number | null> }) => ({
+      id: line.id, color: line.itemStyle.color, style: line.lineStyle.type, values: line.data,
+    }));
+  });
+  const original = await series();
+  expect(original).toHaveLength(6);
+  expect(new Set(original.map((line: { color: string }) => line.color)).size).toBe(3);
+  expect(original[0]).toMatchObject({ id: 'BR-AC/current', style: 'solid', values: [0] });
+  expect(original[1]).toMatchObject({ id: 'BR-AC/comparison', style: 'dashed', color: original[0].color });
+  await panel.getByRole('button', { name: 'Remove Acre', exact: true }).click();
+  await panel.getByRole('button', { name: 'Choose regions' }).click();
+  const picker = panel.getByRole('dialog');
+  await picker.getByRole('searchbox').fill('br-ap');
+  await picker.getByRole('checkbox', { name: /Amapa/ }).check();
+  await picker.getByRole('button', { name: 'Done' }).click();
+  const highlight = panel.getByRole('button', { name: 'Highlight Amapa' });
+  await highlight.click();
+  await expect(highlight).toHaveAttribute('aria-pressed', 'true');
+  const pendingDownload = page.waitForEvent('download');
+  await panel.getByRole('button', { name: 'Download PNG' }).click();
+  expect((await pendingDownload).suggestedFilename()).toMatch(/-trend\.png$/);
+  await plot.evaluate(async el => {
+    const modulePath = '/src/lib/echartsMap.ts';
+    const { default: echarts } = await import(modulePath);
+    echarts.getInstanceByDom(el.querySelector('[_echarts_instance_]')).dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex: 0 });
+  });
+  const tooltip = plot.locator('.regional-tooltip');
+  await expect(tooltip.getByRole('columnheader').nth(1)).toContainText('2025-01-01');
+  await expect(tooltip.getByRole('columnheader').nth(2)).toContainText('2024-01-01');
+  await expect(tooltip.getByRole('row').filter({ hasText: 'Amapa' }).getByRole('cell').first()).toHaveText('—');
+  if (!await panel.locator('.chart-time-panel').evaluate(el => el.hasAttribute('open'))) await panel.locator('.chart-time-panel summary').click();
+  await expect.poll(async () => (await series()).at(-2)).toMatchObject({ id: 'BR-AP/current', values: [null] });
+  expect((await series())[0].color).toBe(original[2].color);
+  await panel.getByRole('combobox', { name: 'Compare with' }).selectOption('none');
+  await expect.poll(async () => (await series()).length).toBe(3);
+  await panel.getByRole('button', { name: 'Share configuration' }).click();
+  const shared = await panel.locator('.chart-share-link input').inputValue();
+  await page.goto(shared, { waitUntil: 'domcontentloaded' });
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.getByRole('button', { name: 'Remove Amapa' })).toBeVisible();
+  await expect(plot.locator('canvas')).toBeVisible();
+  expect((await series())[0]).toEqual(original[2]);
+  for (const region of ['Alagoas', 'Amazonas', 'Amapa']) await panel.getByRole('button', { name: `Remove ${region}`, exact: true }).click();
+  await expect(panel.getByText('Select a region to see its trend.')).toBeVisible();
 });

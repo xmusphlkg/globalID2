@@ -151,6 +151,7 @@ def _compact_source_series_metadata(source_series: list[dict]) -> list[dict]:
         "dates", "values", "quality_statuses", "point_quality_statuses",
         "incidence_rates", "incidence_sources", "population_values",
         "population_sources", "period_starts", "period_ends_exclusive",
+        "current_week_flags", "source_values_raw",
     }
     return [
         {key: value for key, value in item.items() if key not in omitted}

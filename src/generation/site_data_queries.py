@@ -24,6 +24,7 @@ from src.services.surveillance_onboarding_review import (
 )
 from src.generation.site_data_catalogue import use_public_concept
 from src.generation.site_series_projection import (
+    US_MEASLES_LABELS,
     _normalise_count,
     apply_disease_cutover_projection,
 )
@@ -573,6 +574,28 @@ async def fetch_disease_series_records(
              AND mapping_release.status = 'active'
         """
         reviewed_mapping_join += reviewed_assertions_join
+    # Only reviewed NNDSS labels need blank cells and original week flags.
+    # Scope them by target as well as geography for incremental exports.
+    nndss_labels_by_disease = {}
+    if series_country_code == "US":
+        nndss_labels_by_disease["D017"] = US_MEASLES_LABELS
+        if country_code == "US":
+            from .us_nndss_projection import US_NNDSS_SOURCE_LABELS
+
+            nndss_labels_by_disease.update(US_NNDSS_SOURCE_LABELS)
+    nndss_labels = {
+        label for target, labels in nndss_labels_by_disease.items()
+        if disease_ids is None or target in disease_ids
+        for label in labels
+    }
+
+    def nndss_cells(alias: str) -> str:
+        if not nndss_labels:
+            return ""
+        return f""" OR ({alias}.source_system = 'SRC_US_NNDSS'
+            AND {alias}.source_label IN :nndss_labels
+            AND dso.dimension_key = 'all')"""
+
     population_eligible = _population_count_condition(
         "dso.value", "dss.metric_type", "dss.reporting_basis", "dso.unit", "dso.dimension_key",
         excluded=jp_sentinel_series_condition,
@@ -685,14 +708,15 @@ async def fetch_disease_series_records(
     if use_population_table:
         query_params["population_code"] = country_code
 
+    denominator_eligible = f"({population_eligible}{nndss_cells('dss')})"
     population_expr = (
-        f"CASE WHEN {population_eligible} THEN pr.population::double precision "
+        f"CASE WHEN {denominator_eligible} THEN pr.population::double precision "
         "ELSE NULL::double precision END"
         if use_population_table
         else "NULL::double precision"
     )
     population_source_expr = (
-        f"CASE WHEN {population_eligible} THEN pr.source ELSE NULL::text END"
+        f"CASE WHEN {denominator_eligible} THEN pr.source ELSE NULL::text END"
         if use_population_table
         else "NULL::text"
     )
@@ -720,6 +744,7 @@ async def fetch_disease_series_records(
                 SELECT dso.time, dso.series_code, dso.geography_key,
                        dso.dimension_key, dso.dimensions, dso.metadata,
                        jsonb_build_object(
+                           {"'CurrentWeekFlag', dso.raw_data->>'CurrentWeekFlag', 'SourceValueRaw', dso.raw_data->>'SourceValueRaw'," if nndss_labels else ""}
                            'PeriodStart', dso.raw_data::jsonb->>'PeriodStart',
                            'PeriodEnd', dso.raw_data::jsonb->>'PeriodEnd',
                            'Calendar', dso.raw_data::jsonb->>'Calendar',
@@ -738,7 +763,7 @@ async def fetch_disease_series_records(
                 WHERE export_series.country_code = :code
                   AND dso.geography_key = :geography_key
                   AND dso.suppressed IS FALSE
-                  AND dso.value IS NOT NULL
+                  AND (dso.value IS NOT NULL{nndss_cells("export_series")})
                   AND dso.unit = export_series.unit
                   AND dso.quality_status <> 'rejected'
             ), export_identities AS MATERIALIZED (
@@ -852,6 +877,7 @@ async def fetch_disease_series_records(
                 to_char(timezone('UTC', dso.time), 'YYYY-MM') AS year_month,
                 {disease_id_expr} AS disease_id,
                 dso.value::double precision AS cases,
+                {"dso.raw_data->>'CurrentWeekFlag' AS current_week_flag, dso.raw_data->>'SourceValueRaw' AS source_value_raw," if nndss_labels else ""}
                 NULL::bigint AS deaths,
                 NULL::bigint AS recoveries,
                 {incidence_expr} AS incidence_rate,
@@ -926,7 +952,7 @@ async def fetch_disease_series_records(
               {source_filter}
               AND dso.geography_key = :geography_key
               AND dso.suppressed IS FALSE
-              AND (dso.value IS NOT NULL OR (
+              AND (dso.value IS NOT NULL{nndss_cells("dss")} OR (
                   dss.country_code = 'CO'
                   AND dso.raw_data::jsonb ->> 'MissingValueStatus' = 'source_missing'))
               AND dso.unit = dss.unit
@@ -943,6 +969,9 @@ async def fetch_disease_series_records(
     if _excluded_source_systems:
         statement = statement.bindparams(bindparam("excluded_sources", expanding=True))
         query_params["excluded_sources"] = sorted(_excluded_source_systems)
+    if nndss_labels:
+        statement = statement.bindparams(bindparam("nndss_labels", expanding=True))
+        query_params["nndss_labels"] = sorted(nndss_labels)
     rows = _iter_query_rows(
         session,
         statement,
@@ -962,6 +991,12 @@ async def fetch_disease_series_records(
     result: list[dict] = []
     async for row in rows:
         record = dict(row._mapping)
+        if nndss_labels and not (
+            record["source_system"] == "SRC_US_NNDSS"
+            and record["source_label"] in nndss_labels_by_disease.get(record["disease_id"], ())
+        ):
+            record.pop("current_week_flag", None)
+            record.pop("source_value_raw", None)
         record = reviewed_public_record(record, country_code)
         if record is None:
             continue

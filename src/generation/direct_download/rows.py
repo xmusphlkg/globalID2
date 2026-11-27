@@ -102,6 +102,10 @@ def _source_observation_rows(
                 {
                     **base_columns,
                     "record_kind": "source_series_observation",
+                    **({
+                        "current_week_flag": source_series["current_week_flags"][index],
+                        "source_value_raw": source_series["source_values_raw"][index],
+                    } if "current_week_flags" in source_series else {}),
                     "date": value_date,
                     "year_month": value_date[:7] if value_date else None,
                     "value": value,
