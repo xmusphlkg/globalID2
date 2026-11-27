@@ -3,7 +3,7 @@ export type { ChangeKind, ChangelogSection, ChangelogRelease } from '../lib/chan
 
 export const changelogReleases: ChangelogRelease[] = [
   {
-    version: '0.22.0', date: '2026-11-27',
+    version: '0.21.2', date: '2026-11-27',
     titleEn: 'Regional trend comparisons and surveillance totals',
     titleZh: '多地区趋势对比与监测病例汇总',
     titleFr: 'Comparaison des tendances régionales et totaux de surveillance',

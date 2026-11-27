@@ -14,7 +14,7 @@ operations dashboard, and an Astro public site.
 - [Control center](docs/control-center/README.md): operators, API, deployment and troubleshooting.
 - [Changelog](CHANGELOG.md): version history.
 
-## Version 0.22.0
+## Version 0.21.2
 
 Regional trend charts support multi-region comparisons, shared selections and PNG export.
 The release also updates US weekly surveillance curves and Brazilian HIV and AIDS
