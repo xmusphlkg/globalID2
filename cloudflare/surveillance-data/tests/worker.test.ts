@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import worker, { objectPath } from '../src/index.ts';
+import worker, { dataRoute, objectPath } from '../src/index.ts';
 import pages from '../src/pages.ts';
 import { createHash } from 'node:crypto';
 
@@ -190,4 +190,10 @@ test('public update files use a restricted namespace and are never cached', asyn
     assert.equal((await worker.fetch(new Request(`https://site.test/site-data/updates/${name}`), f.env)).status, 404);
   }
   assert.deepEqual(f.keys, ['site-data/updates/latest.json', 'site-data/updates/2026-11.json', 'site-data/updates/changelog.json']);
+});
+
+test('the public evidence graph resolves through the current Papers generation', () => {
+  assert.deepEqual(dataRoute('/site-data/research-graph.json'), {
+    channel: 'research-current', key: 'site-data/research-graph.json',
+  });
 });

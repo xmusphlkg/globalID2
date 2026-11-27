@@ -12,6 +12,7 @@
     "/site-data/home-summary.json",
     "/site-data/situation/*",
     "/site-data/research-publication/*",
+    "/site-data/research-graph.json",
     "/research-publication/*",
     "/site-data/updates/*",
     "/situation/map-data.json",
