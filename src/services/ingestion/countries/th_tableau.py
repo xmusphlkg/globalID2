@@ -17,6 +17,7 @@ from src.data.crawlers.th_tableau import (
     DEFAULT_SCOPE,
     VIEW_URL,
     TableauContractError,
+    TableauResponseIndexError,
     ThailandDDSTableauCrawler,
     build_row,
     card_filter_models,
@@ -123,6 +124,7 @@ async def _collect_year(writer, *, source=DEFAULT_SCOPE, basis="report", year=No
             raise TableauContractError("No verified closed source week in the selected year")
         retrieved_at = datetime.now(ZoneInfo("Asia/Bangkok")).isoformat()
         def capture():
+            nonlocal crawler
             catalog = crawler.load()
             active_labels = list(catalog["labels"] if selected_labels is None else selected_labels)
             if not set(active_labels) <= set(catalog["labels"]):
@@ -140,18 +142,39 @@ async def _collect_year(writer, *, source=DEFAULT_SCOPE, basis="report", year=No
                 selected_weeks[:] = sorted({week for selected in requests_by_label.values() for week in selected})
                 if not selected_weeks:
                     return None, 0
-            crawler.select("ปี", year + 543, parameter=True)
-            crawler.select("วัน/สถานที่", BASIS_LABELS[basis])
+            def select_context():
+                crawler.select("ปี", year + 543, parameter=True)
+                crawler.select("วัน/สถานที่", BASIS_LABELS[basis])
+
+            select_context()
+            reset_required = False
             errors = []
             for week in selected_weeks:
-                crawler.select("สัปดาห์", str(week))
+                if not reset_required:
+                    crawler.select("สัปดาห์", str(week))
                 for label in active_labels:
                     if requests_by_label is not None and week not in requests_by_label[label]:
                         continue
-                    try:
-                        crawler.select("โรค", label, report=True, year=year, basis=basis, week=week, label=label)
-                    except (requests.RequestException, TableauContractError, KeyError, ValueError) as exc:
-                        errors.append({"label": label, "year": year, "week": week, "error": str(exc)})
+                    for attempt in range(2):
+                        if reset_required:
+                            entries = crawler.entries
+                            crawler.close()
+                            crawler = ThailandDDSTableauCrawler()
+                            crawler.entries = entries
+                            if crawler.load() != catalog:
+                                raise TableauContractError("Tableau inventory changed during recovery")
+                            select_context()
+                            crawler.select("สัปดาห์", str(week))
+                            reset_required = False
+                        try:
+                            crawler.select("โรค", label, report=True, year=year, basis=basis, week=week, label=label)
+                            break
+                        except (requests.RequestException, KeyError, ValueError) as exc:
+                            reset_required = True
+                            if isinstance(exc, TableauResponseIndexError) and attempt == 0:
+                                continue
+                            errors.append({"label": label, "year": year, "week": week, "error": str(exc)})
+                            break
             plan = {"as_of": today.isoformat(), "year": year, "basis": basis, "weeks": selected_weeks,
                 "labels": active_labels, "catalog": catalog, "collection_errors": errors,
                 "retrieved_at": retrieved_at, "default_covers_entire_inventory": labels is None}
@@ -202,17 +225,7 @@ def _organize_year(artifacts, *, updater, source=DEFAULT_SCOPE, basis="report", 
     calendar = parse_calendar_workbook(read_artifact(calendars[0]), year=year)
     if closed_weeks(calendar, as_of=today, weeks=plan["weeks"]) != plan["weeks"]:
         raise TableauContractError("Captured week plan is not closed")
-    bootstraps = [entry for entry in entries if entry["metadata"]["operation"] == "bootstrap"]
-    configs = [entry for entry in entries if entry["metadata"]["operation"] == "public_config"]
-    if len(bootstraps) != 1 or len(configs) != 1 or entries[:2] != [configs[0], bootstraps[0]]:
-        raise TableauContractError("Unexpected Tableau initial capture sequence")
-    config = json.loads(configs[0]["payload"])
-    if config.get("is_guest") is not True or config.get("allow_summary") is not True:
-        raise TableauContractError("Source was not an anonymous permitted summary session")
-    scraper, workbook = offline_workbook(bootstraps[0]["payload"])
-    catalog = inventory(workbook)
-    if catalog != plan["catalog"] or year not in catalog["years"]:
-        raise TableauContractError("Captured source inventory or year plan changed")
+    catalog = plan["catalog"]
     expected = ({(item["label"], int(item["week"])) for item in plan["requested_reports"]}
         if "requested_reports" in plan else {(label, week) for label in plan["labels"] for week in plan["weeks"]})
     if any(label not in plan["labels"] or week not in plan["weeks"] for label, week in expected):
@@ -221,44 +234,65 @@ def _organize_year(artifacts, *, updater, source=DEFAULT_SCOPE, basis="report", 
         raise TableauContractError("Invalid captured category plan")
     if plan["default_covers_entire_inventory"] and set(plan["labels"]) != set(catalog["labels"]):
         raise TableauContractError("Default refresh must cover every published category")
-    filters = filter_models(bootstraps[0]["payload"])
-    card_filters = card_filter_models(bootstraps[0]["payload"])
     rows, seen, errors = [], set(), list(plan["collection_errors"])
-    state = {}
-    for entry in entries[2:]:
-        metadata, payload = entry["metadata"], entry["payload"]
-        operation, field, value = metadata["operation"], metadata.get("field"), metadata.get("value")
-        allowed = {"ปี": year + 543, "วัน/สถานที่": BASIS_LABELS[basis]}
-        if operation == "parameter":
-            if field != "ปี" or value != allowed[field]:
-                raise TableauContractError("Unexpected parameter mutation in captured source session")
-        elif operation == "filter":
-            if field not in {"วัน/สถานที่", "สัปดาห์", "โรค"}:
-                raise TableauContractError("Unexpected dimension mutation in captured national source session")
-            if field == "วัน/สถานที่" and value != allowed[field] or field == "สัปดาห์" and int(value) not in plan["weeks"] or field == "โรค" and value not in plan["labels"]:
-                raise TableauContractError("Source filter mutation differs from captured plan")
-        else:
-            raise TableauContractError("Unexpected raw source operation")
-        workbook = replay_response(scraper, workbook, payload)
-        filters.update(filter_models(payload))
-        for card, models in card_filter_models(payload).items():
-            card_filters[card].update(models)
-        state[field] = value
-        if not metadata.get("report"):
-            continue
-        key = (metadata["label"], int(metadata["week"]))
-        if key not in expected or key in seen or metadata["year"] != year or metadata["basis"] != basis or state != {"ปี": year + 543, "วัน/สถานที่": BASIS_LABELS[basis], "สัปดาห์": str(key[1]), "โรค": key[0]}:
-            raise TableauContractError("Duplicate/unplanned report or source session selection mismatch")
-        seen.add(key)
-        try:
-            snapshot = national_snapshot(workbook, year=year, basis=basis, week=key[1],
-                                         provinces=catalog["provinces"], label=key[0], filters=filters,
-                                         card_filters=card_filters)
-            rows.append(build_row(snapshot, label=key[0], year=year, week=key[1], basis=basis,
-                calendar=calendar, as_of=today, raw_sha256=entry["sha256"], retrieved_at=plan["retrieved_at"]))
-        except TableauContractError as exc:
-            errors.append({"label": key[0], "week": key[1], "error": str(exc)})
-    for label, week in sorted(expected - seen):
+    starts = [i for i, entry in enumerate(entries) if entry["metadata"]["operation"] == "public_config"]
+    if not starts or starts[0] != 0:
+        raise TableauContractError("Unexpected Tableau initial capture sequence")
+    for start, end in zip(starts, [*starts[1:], len(entries)]):
+        session = entries[start:end]
+        if len(session) < 2 or session[1]["metadata"]["operation"] != "bootstrap":
+            raise TableauContractError("Missing Tableau session bootstrap")
+        config = json.loads(session[0]["payload"])
+        if config.get("is_guest") is not True or config.get("allow_summary") is not True:
+            raise TableauContractError("Source was not an anonymous permitted summary session")
+        bootstrap = session[1]["payload"]
+        scraper, workbook = offline_workbook(bootstrap)
+        if inventory(workbook) != catalog or year not in catalog["years"]:
+            raise TableauContractError("Captured source inventory or year plan changed")
+        filters = filter_models(bootstrap)
+        card_filters = card_filter_models(bootstrap)
+        state = {}
+        for index, entry in enumerate(session[2:], start=2):
+            metadata, payload = entry["metadata"], entry["payload"]
+            operation, field, value = metadata["operation"], metadata.get("field"), metadata.get("value")
+            if operation == "rejected_response":
+                # This delta may have partially mutated the live workbook. Only a
+                # new bootstrap can establish state after it.
+                if index != len(session) - 1:
+                    raise TableauContractError("Commands follow a rejected Tableau response")
+                continue
+            allowed = {"ปี": year + 543, "วัน/สถานที่": BASIS_LABELS[basis]}
+            if operation == "parameter":
+                if field != "ปี" or value != allowed[field]:
+                    raise TableauContractError("Unexpected parameter mutation in captured source session")
+            elif operation == "filter":
+                if field not in {"วัน/สถานที่", "สัปดาห์", "โรค"}:
+                    raise TableauContractError("Unexpected dimension mutation in captured national source session")
+                if field == "วัน/สถานที่" and value != allowed[field] or field == "สัปดาห์" and int(value) not in plan["weeks"] or field == "โรค" and value not in plan["labels"]:
+                    raise TableauContractError("Source filter mutation differs from captured plan")
+            else:
+                raise TableauContractError("Unexpected raw source operation")
+            workbook = replay_response(scraper, workbook, payload)
+            filters.update(filter_models(payload))
+            for card, models in card_filter_models(payload).items():
+                card_filters[card].update(models)
+            state[field] = value
+            if not metadata.get("report"):
+                continue
+            key = (metadata["label"], int(metadata["week"]))
+            if key not in expected or key in seen or metadata["year"] != year or metadata["basis"] != basis or state != {"ปี": year + 543, "วัน/สถานที่": BASIS_LABELS[basis], "สัปดาห์": str(key[1]), "โรค": key[0]}:
+                raise TableauContractError("Duplicate/unplanned report or source session selection mismatch")
+            seen.add(key)
+            try:
+                snapshot = national_snapshot(workbook, year=year, basis=basis, week=key[1],
+                                             provinces=catalog["provinces"], label=key[0], filters=filters,
+                                             card_filters=card_filters)
+                rows.append(build_row(snapshot, label=key[0], year=year, week=key[1], basis=basis,
+                    calendar=calendar, as_of=today, raw_sha256=entry["sha256"], retrieved_at=plan["retrieved_at"]))
+            except TableauContractError as exc:
+                errors.append({"label": key[0], "week": key[1], "error": str(exc)})
+    failed = {(item["label"], item["week"]) for item in errors if "label" in item and "week" in item}
+    for label, week in sorted(expected - seen - failed):
         errors.append({"label": label, "week": week, "error": "Captured single-week national response missing"})
     if not rows and plan.get("refresh_policy") != "bounded_per_category_recovery_and_revision":
         raise TableauContractError("No valid closed-week national source summaries: " + json.dumps(errors, ensure_ascii=False))

@@ -207,3 +207,66 @@ def test_organize_replays_raw_controls_without_network(monkeypatch):
     assert result.source_audit["source_inventory_categories"] == 64
     assert result.source_audit["national_evidence"] == "explicit_national_cards"
     assert ThailandDDSTableauUpdater.mapping_notifications_enabled is False
+
+
+@pytest.mark.parametrize("failures", [1, 2])
+async def test_parser_failure_starts_fresh_session_and_replays_verified_rows(monkeypatch, failures):
+    import json
+    import requests
+    from src.data.crawlers import th_tableau as crawler_module
+
+    entries, _ = th_tableau.unpack_bundle(RAW)
+    sessions = []
+    rejected = []
+    artifacts = []
+
+    def post(session, url, **kwargs):
+        if url.endswith("/startSession/viewing"):
+            sessions.append(session)
+            session.responses = iter(entries[1:])
+            config = json.loads(entries[0]["payload"])
+            config.update(sessionid="offline", sheetId="sheet", vizql_root="/vizql")
+            payload = json.dumps(config).encode()
+        else:
+            payload = next(session.responses)["payload"]
+        response = requests.Response()
+        response._content = payload
+        session.last_response = response
+        return response
+
+    def apply_delta(scraper, workbook, payload):
+        updated = replay_response(scraper, workbook, payload)
+        if payload == entries[-1]["payload"] and len(rejected) < failures:
+            rejected.append(payload)
+            raise IndexError("list index out of range")
+        return updated
+
+    async def write(payload, *, metadata, **kwargs):
+        artifacts.append(SimpleNamespace(payload=payload, metadata_=metadata))
+
+    async def calendar(writer, crawler, *, year):
+        parent = (FIXTURE / "dds/calendar_2026.rar").read_bytes()
+        await write(parent, metadata={"endpoint": "calendar_rar", "year": year})
+        await write((FIXTURE / "dds/calendar_2026.xlsx").read_bytes(), metadata={
+            "endpoint": "calendar_workbook", "year": year, "parent_raw_sha256": hashlib.sha256(parent).hexdigest()})
+        return CALENDAR
+
+    monkeypatch.setattr(crawler_module.TimedSession, "post", post)
+    monkeypatch.setattr(crawler_module.api, "delayExecution", lambda scraper: None)
+    monkeypatch.setattr(crawler_module, "replay_response", apply_delta)
+    monkeypatch.setattr(th_tableau, "capture_calendar", calendar)
+    monkeypatch.setattr(th_tableau, "read_artifact", lambda a: a.payload)
+    labels = [FLU] if failures == 1 else ["Anthrax", FLU]
+    await th_tableau.collect(SimpleNamespace(write=write, artifacts=artifacts), as_of=date(2026, 11, 15),
+                             year=2026, weeks=[46], labels=labels)
+    assert len(set(sessions)) == failures + 1
+    captured, plan = th_tableau.unpack_bundle(artifacts[-1].payload)
+    diagnostics = [entry for entry in captured if entry["metadata"]["operation"] == "rejected_response"]
+    assert [entry["payload"] for entry in diagnostics] == rejected
+    assert all(entry["metadata"]["label"] == labels[0] for entry in diagnostics)
+    result = th_tableau.organize(artifacts, updater=ThailandDDSTableauUpdater())
+    assert [(row["RawDiseaseLabel"], row["Cases"]) for row in result.rows] == [(FLU, "32529")]
+    assert result.source_audit["status"] == ("validated" if failures == 1 else "partial")
+    assert len(plan["collection_errors"]) == failures - 1
+    if failures == 2:
+        assert plan["collection_errors"][0]["label"] == "Anthrax"

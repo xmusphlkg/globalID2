@@ -24,6 +24,10 @@ class TableauContractError(ValueError):
     pass
 
 
+class TableauResponseIndexError(TableauContractError):
+    """A command delta could not be applied to the session dictionary."""
+
+
 def source_code(label):
     """Technical label identity, not a guessed numeric DDS code or disease mapping."""
     return "label_sha256_" + hashlib.sha256(label.encode()).hexdigest()[:20]
@@ -268,14 +272,17 @@ class ThailandDDSTableauCrawler:
         if "vqlCmdResponse" not in self.session.last_response.json():
             raise TableauContractError(f"Source did not acknowledge {field} selection")
         self.source_filters.update(filter_models(raw))
-        self.workbook = replay_response(self.scraper, self.workbook, raw)
-        self.save(self.session.last_response.content, operation="parameter" if parameter else "filter",
-                  field=field, value=value, **metadata)
+        try:
+            self.workbook = replay_response(self.scraper, self.workbook, raw)
+        except IndexError as exc:
+            self.save(raw, operation="rejected_response", field=field, value=value, **metadata)
+            raise TableauResponseIndexError(f"Tableau worksheet index error: {exc}") from exc
         if parameter:
             if str(scalar(self.workbook, "ปี", "ปี-alias")) != str(value):
                 raise TableauContractError("Source did not acknowledge the requested year parameter")
         elif selected_values(self.source_filters.get(field, {})) != ([value] if not isinstance(value, list) else value):
             raise TableauContractError(f"Source did not acknowledge the exact {field} values")
+        self.save(raw, operation="parameter" if parameter else "filter", field=field, value=value, **metadata)
         return self.workbook
 
     def close(self):
