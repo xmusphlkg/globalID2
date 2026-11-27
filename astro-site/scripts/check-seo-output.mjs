@@ -100,6 +100,10 @@ export function auditSeoOutput(distDirectory, { files, partial = false, catalogu
   const redirectSources = new Map();
   const hasTarget = pathname => {
     if (independentResearch && isIndependentResearchRoute(pathname)) return true;
+    if (pathname === '/site-data/research/graph.json') {
+      // Papers registers this logical key against the generated graph at publication.
+      return independentResearch || targetExists('/site-data/research-graph.json', dist);
+    }
     if (workerDynamicLinks.has(pathname)) return true;
     if (!targets.has(pathname)) targets.set(pathname, targetExists(pathname, dist));
     return targets.get(pathname);
