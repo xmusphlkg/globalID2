@@ -162,6 +162,9 @@ def _prepare(root: Path, origin: str, files: tuple[ImmutablePapersFile, ...], *,
             entry['key'] = f"paper-template-v2/records/{descriptor['record_sha256']}.json"
             entry['paper_template'] = descriptor
         entries.append(entry)
+        if item.logical_key == "site-data/research-graph.json":
+            # The existing /site-data/research/* route follows the current generation.
+            entries.append({**entry, "logical_key": "site-data/research/graph.json"})
     return catalogue_from_entries(root=root, origin=origin, release_id=release_id, entries=entries,
                                   template_root=template_root, template_objects=template_objects)
 

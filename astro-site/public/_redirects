@@ -1,6 +1,8 @@
 # Cloudflare Pages redirect rules
 # https://developers.cloudflare.com/pages/configuration/redirects/
 
+/site-data/research-graph.json  /site-data/research/graph.json  302
+
 # Long-tail research pages, cards, and research site-data live on the papers host.
 /research/articles/*  https://papers.globalinfectiousdisease.com/research/articles/:splat  301
 /zh/research/articles/*  https://papers.globalinfectiousdisease.com/zh/research/articles/:splat  301
