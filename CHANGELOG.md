@@ -2,7 +2,7 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
-## [0.22.0] - 2026-11-27
+## [0.21.2] - 2026-11-27
 
 ### Added
 
