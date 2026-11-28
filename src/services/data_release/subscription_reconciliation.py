@@ -145,5 +145,5 @@ async def run_loop(service: Any, *, root: Path, astro_dir: Path, stop: asyncio.E
             logger.error(json.dumps({"event": "subscription_reconciliation_failed", "error_type": type(exc).__name__}))
         try:
             await asyncio.wait_for(stop.wait(), timeout=interval_seconds)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass

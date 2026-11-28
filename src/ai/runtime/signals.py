@@ -133,7 +133,7 @@ class ActivitySignals:
                 logger.warning("Activity reconciliation failed: {}", type(exc).__name__)
             try:
                 await asyncio.wait_for(self._changed.wait(), self.interval)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     def _received(self, _connection, _pid, _channel, payload: str) -> None:

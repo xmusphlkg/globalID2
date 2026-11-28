@@ -95,7 +95,7 @@ def verify_site_commit(
         except HTTPError as exc:
             last_error = f"public_http_error:{exc.code}"
             retryable = exc.code in {408, 425, 429} or exc.code >= 500
-        except (URLError, socket.timeout, TimeoutError, OSError) as exc:
+        except (URLError, TimeoutError, OSError) as exc:
             last_error = f"public_transport_error:{type(exc).__name__}"
         if not retryable or attempt == attempts:
             break

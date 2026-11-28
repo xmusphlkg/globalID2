@@ -26,3 +26,5 @@ MemoryHigh=6G
 MemoryMax=8G
 TimeoutStopSec=900
 KillMode=mixed
+NoNewPrivileges=yes
+PrivateTmp=yes

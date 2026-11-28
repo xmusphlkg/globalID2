@@ -1,13 +1,19 @@
 // Independent validators use separate Node processes so CPU work can run on
 // multiple cores. Writers and cache promotion remain behind validation gates.
 import { spawn } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+export const DEFAULT_MAX_BUILD_CHECK_WORKERS = 3;
+export const MAX_BUILD_CHECK_WORKERS = 6;
+
 export function checkConcurrency(value = process.env.GIDS_BUILD_CHECK_WORKERS) {
-  const count = Number(value ?? Math.min(3, availableParallelism()));
-  if (!Number.isInteger(count) || count < 1 || count > 3) throw new Error('GIDS_BUILD_CHECK_WORKERS must be 1–3');
+  const count = Number(value ?? Math.min(DEFAULT_MAX_BUILD_CHECK_WORKERS, availableParallelism()));
+  if (!Number.isInteger(count) || count < 1 || count > MAX_BUILD_CHECK_WORKERS) {
+    throw new Error(`GIDS_BUILD_CHECK_WORKERS must be 1–${MAX_BUILD_CHECK_WORKERS}`);
+  }
   return count;
 }
 
@@ -79,45 +85,111 @@ export async function runStages(stages, { concurrency = 1, cwd, env = process.en
   }
 }
 
+function roundSeconds(value) {
+  return Number(Number(value).toFixed(3));
+}
+
 export async function buildPipeline({ cwd = resolve(import.meta.dirname, '..'), env = process.env, signal, run = runStages } = {}) {
   assertRuntimeDataReady(env);
   const concurrency = checkConcurrency(env.GIDS_BUILD_CHECK_WORKERS);
+  const timingReportSetting = typeof env.GIDS_BUILD_TIMING_REPORT === 'string'
+    ? env.GIDS_BUILD_TIMING_REPORT.trim()
+    : '';
+  const timingReportPath = timingReportSetting ? resolve(cwd, timingReportSetting) : '';
+  const pipelineStarted = performance.now();
+  const stageTimings = [];
+  let groupIndex = 0;
+  let pipelineError;
+
+  const runGroup = async (stages, groupOptions) => {
+    const group = ++groupIndex;
+    const groupWorkers = Math.min(groupOptions.concurrency ?? 1, stages.length);
+    const groupStarted = performance.now();
+    const result = await run(stages, groupOptions);
+    const groupWallSeconds = roundSeconds((performance.now() - groupStarted) / 1000);
+    if (Array.isArray(result)) {
+      for (const entry of result) {
+        stageTimings.push({
+          name: entry.name,
+          seconds: roundSeconds(entry.seconds),
+          group,
+          group_wall_seconds: groupWallSeconds,
+          group_workers: groupWorkers,
+        });
+      }
+    } else {
+      for (const item of stages) {
+        stageTimings.push({
+          name: item.name,
+          seconds: groupWallSeconds,
+          group,
+          group_wall_seconds: groupWallSeconds,
+          group_workers: groupWorkers,
+        });
+      }
+    }
+    return result;
+  };
+
   const stage = (name, file, ...args) => ({ name, args: ['--experimental-strip-types', `scripts/${file}.mjs`, ...args] });
   const options = { cwd, env, signal };
   const checks = { ...options, concurrency };
   const check = (name, file, ...args) => {
     const value = stage(name, file, ...args);
-    // CLI heap limits take precedence over the renderer's NODE_OPTIONS. Three
-    // validators must not each inherit the full 6 GiB rendering allowance.
+    // CLI heap limits take precedence over the renderer's NODE_OPTIONS. Parallel
+    // workers must not each inherit the full 6 GiB rendering allowance.
     value.args.unshift('--max-old-space-size=1536');
     return value;
   };
-  // Sync flags writes public inputs used by the compiler and source checks.
-  await run([stage('sync flags', 'sync-flags')], options);
-  // Source checks read frozen inputs and can overlap the renderer on other cores.
-  // runStages cancels the entire group if either checks or rendering fail.
-  await run([
-    stage('render and restore', 'build-site'),
-    check('source styles', 'check-style-boundaries'),
-    check('source translations', 'check-i18n'),
-    check('map ISO mapping', 'build-world-feature-iso', '--check'),
-  ], { ...options, concurrency: concurrency + 1 });
-  if (env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1') {
-    await run([stage('render independent research collections', 'build-site-research-collections')], options);
-  }
-  await run([stage('split research evidence', 'split-research-evidence')], options);
-  await run([stage('optimize map', 'optimize-world-map')], options);
-  await run([
-    check('performance audit', 'check-performance-budgets'),
-    check('page assets', 'check-build-assets'),
-    check('stylesheet audit', 'build-output'),
-    check('SEO audit', 'seo-audit-workers'),
-    check('output translations', 'check-i18n', '--dist'),
-  ], checks);
-  // Never promote a new page cache after any validator fails.
-  await run([stage('finalize page caches', 'finalize-research-build')], options);
-  if (env.GIDS_PAGES_DATA_WORKER === '1') {
-    await run([{ name: 'package Pages data Worker', args: ['../cloudflare/surveillance-data/scripts/build-pages.mjs', 'dist'] }], options);
+
+  try {
+    // Sync flags writes public inputs used by the compiler and source checks.
+    await runGroup([stage('sync flags', 'sync-flags')], options);
+    // Source checks read frozen inputs and can overlap the renderer on other cores.
+    // runStages cancels the entire group if either checks or rendering fail.
+    await runGroup([
+      stage('render and restore', 'build-site'),
+      check('source styles', 'check-style-boundaries'),
+      check('source translations', 'check-i18n'),
+      check('map ISO mapping', 'build-world-feature-iso', '--check'),
+    ], { ...options, concurrency: concurrency + 1 });
+    if (env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1') {
+      await runGroup([stage('render independent research collections', 'build-site-research-collections')], options);
+    }
+    // Disjoint dist/ post-processing writers:
+    // - split-research-evidence reads/writes dist/research/evidence-manifest.json & dist/research/evidence-shards/*
+    // - optimize-world-map reads public/data/world.json & writes dist/data/world.json
+    await runGroup([
+      check('split research evidence', 'split-research-evidence'),
+      check('optimize map', 'optimize-world-map'),
+    ], { ...options, concurrency: Math.min(2, concurrency) });
+    await runGroup([
+      check('performance audit', 'check-performance-budgets'),
+      check('page assets', 'check-build-assets'),
+      check('stylesheet audit', 'build-output'),
+      check('SEO audit', 'seo-audit-workers'),
+      check('output translations', 'check-i18n', '--dist'),
+    ], checks);
+    // Never promote a new page cache after any validator fails.
+    await runGroup([stage('finalize page caches', 'finalize-research-build')], options);
+    if (env.GIDS_PAGES_DATA_WORKER === '1') {
+      await runGroup([{ name: 'package Pages data Worker', args: ['../cloudflare/surveillance-data/scripts/build-pages.mjs', 'dist'] }], options);
+    }
+  } catch (error) {
+    pipelineError = error;
+    throw error;
+  } finally {
+    if (timingReportPath) {
+      const report = {
+        total_seconds: roundSeconds((performance.now() - pipelineStarted) / 1000),
+        workers: concurrency,
+        status: pipelineError ? 'failed' : 'ok',
+        ...(pipelineError ? { error: pipelineError.message } : {}),
+        stages: stageTimings,
+      };
+      mkdirSync(dirname(timingReportPath), { recursive: true });
+      writeFileSync(timingReportPath, `${JSON.stringify(report, null, 2)}\n`);
+    }
   }
 }
 

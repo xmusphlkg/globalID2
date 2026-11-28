@@ -131,7 +131,6 @@ def parse_nz_pdf(
 
     rows: List[Dict[str, str]] = []
     page_found: Optional[int] = None
-    report_date = date(year, month, 1)
 
     try:
         with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:

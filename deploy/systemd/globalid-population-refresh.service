@@ -12,3 +12,5 @@ WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=-__PROJECT_DIR__/.env
 ExecStart=/usr/bin/flock __PROJECT_DIR__/data/official-subdivision-refresh.lock __PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/update_population_automatically.py --apply --queue-release
 TimeoutStartSec=14400
+NoNewPrivileges=yes
+PrivateTmp=yes

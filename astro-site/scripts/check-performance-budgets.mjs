@@ -1,11 +1,17 @@
 import { openPageAuditCache } from './page-audit-cache.mjs';
 import { createHash } from 'node:crypto';
 import { openGzipSizeCache } from './gzip-size-cache.mjs';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
+import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { brotliCompressSync, gzipSync } from 'node:zlib';
 import { basename, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isIndependentResearchRoute } from './check-seo-output.mjs';
+
+const JS_IMPORT_RE = /(?:from\s*|import\s*\(?\s*)["']\.\/([^"']+\.js)["']/g;
+const ASTRO_ASSET_RE = /(?:(?:component-url|renderer-url)="\/_astro\/([^"?]+\.js)"|(?:src|href)="\/_astro\/([^"?]+\.(?:js|css))[^"?]*")/g;
+const CHART_ROUTE_RE = /^\/(?:(?:zh|fr)\/)?(?:compare|country-disease|countries|diseases|situation|research)\//;
 
 export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxJavaScriptChunkBytes: 350_000,
@@ -93,12 +99,29 @@ function addJavaScriptDependencies(assetName, assets, selected) {
   selected.add(assetName);
   if (!assetName.endsWith('.js')) return;
 
-  for (const match of asset.text.matchAll(/(?:from\s*|import\s*\(?\s*)["']\.\/([^"']+\.js)["']/g)) {
+  for (const match of asset.text.matchAll(JS_IMPORT_RE)) {
     addJavaScriptDependencies(match[1], assets, selected);
   }
 }
 
-export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCache, pageCache, independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1', env = process.env } = {}) {
+function extractPageFacts(bytes, gzipSize, digest) {
+  const html = bytes.toString('utf8');
+  const names = new Set();
+  if (html.includes('/_astro/')) {
+    for (const match of html.matchAll(ASTRO_ASSET_RE)) {
+      names.add(match[1] ?? match[2]);
+    }
+  }
+  // RegExp captures can retain the entire HTML backing string. Persist only
+  // detached asset names, otherwise a catalogue cache keeps gigabytes alive.
+  return {
+    rawBytes: bytes.length,
+    gzipBytes: gzipSize(bytes, digest),
+    assets: [...names].map(name => Buffer.from(name, 'utf8').toString('utf8')).sort(),
+  };
+}
+
+function preparePerformanceAudit(distDirectory, budgetOverrides = {}, { gzipCache, independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1', env = process.env } = {}) {
   const dist = resolve(distDirectory);
   const assetDirectory = join(dist, '_astro');
   const budgets = {
@@ -113,10 +136,10 @@ export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCach
   const errors = [];
 
   if (!existsSync(assetDirectory)) {
-    return { passed: false, errors: [`Missing build asset directory: ${assetDirectory}`], budgets };
+    return { earlyResult: { passed: false, errors: [`Missing build asset directory: ${assetDirectory}`], budgets } };
   }
 
-  const gzipSize = bytes => gzipCache ? gzipCache.measure(bytes) : gzipSync(bytes, { level: 9 }).length;
+  const gzipSize = (bytes, digest) => gzipCache ? gzipCache.measure(bytes, digest) : gzipSync(bytes, { level: 9 }).length;
   const assets = new Map();
   for (const entry of readdirSync(assetDirectory, { withFileTypes: true })) {
     if (!entry.isFile()) continue;
@@ -175,6 +198,27 @@ export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCach
 
   const pages = walkHtml(dist, [], dist, independentResearch);
   if (pages.length === 0) errors.push(`No HTML pages found in ${dist}.`);
+  return {
+    dist,
+    budgets,
+    errors,
+    gzipSize,
+    assets,
+    javaScript,
+    largestJavaScript,
+    fontAssets,
+    totalFontBytes,
+    legacyWoffFiles,
+    worldMap,
+    pages,
+  };
+}
+
+function finalizePerformanceAudit(context, factsForPage) {
+  const {
+    dist, budgets, errors, assets, javaScript, largestJavaScript,
+    fontAssets, totalFontBytes, legacyWoffFiles, worldMap, pages,
+  } = context;
   let largestRoute = { path: '', gzipBytes: 0, assetCount: 0 };
   let largestOrdinaryRoute = { path: '', gzipBytes: 0, assetCount: 0 };
   let largestPageHtml = { path: '', gzipBytes: 0 };
@@ -182,47 +226,40 @@ export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCach
   let totalHtmlGzipBytes = 0;
 
   const graphs = new Map();
-  const extract = bytes => {
-    const html = bytes.toString('utf8');
-    const names = new Set();
-    for (const match of html.matchAll(/(?:component-url|renderer-url)="\/_astro\/([^"?]+\.js)"/g)) names.add(match[1]);
-    for (const match of html.matchAll(/(?:src|href)="\/_astro\/([^"?]+\.(?:js|css))[^"?]*"/g)) names.add(match[1]);
-    // RegExp captures can retain the entire HTML backing string. Persist only
-    // detached asset names, otherwise a catalogue cache keeps gigabytes alive.
-    return { rawBytes: bytes.length, gzipBytes: gzipSize(bytes),
-      assets: [...names].map(name => Buffer.from(name, 'utf8').toString('utf8')).sort() };
-  };
-  for (const page of pages) {
-    const facts = pageCache ? pageCache.read(page, extract) : extract(readFileSync(page));
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    const facts = factsForPage(page, i);
     totalHtmlBytes += facts.rawBytes;
     const pageHtmlGzipBytes = facts.gzipBytes;
     totalHtmlGzipBytes += pageHtmlGzipBytes;
     const routePath = `/${relative(dist, page).replaceAll('\\', '/')}`;
     if (pageHtmlGzipBytes > largestPageHtml.gzipBytes) largestPageHtml = { path: routePath, gzipBytes: pageHtmlGzipBytes };
-    const graphKey = JSON.stringify(facts.assets);
-    let selected = graphs.get(graphKey);
-    if (!selected) {
-      selected = new Set();
+    const graphKey = facts.assets.join('\0');
+    let graph = graphs.get(graphKey);
+    if (!graph) {
+      const selected = new Set();
       for (const name of facts.assets) {
         if (name.endsWith('.js')) addJavaScriptDependencies(name, assets, selected);
         else if (assets.has(name)) selected.add(name);
       }
-      graphs.set(graphKey, selected);
+      let gzipBytes = 0;
+      for (const name of selected) gzipBytes += assets.get(name)?.gzipBytes ?? 0;
+      graph = { gzipBytes, assetCount: selected.size };
+      graphs.set(graphKey, graph);
     }
-    const gzipBytes = [...selected].reduce((sum, name) => sum + (assets.get(name)?.gzipBytes ?? 0), 0);
-    if (gzipBytes > largestRoute.gzipBytes) {
+    if (graph.gzipBytes > largestRoute.gzipBytes) {
       largestRoute = {
         path: routePath,
-        gzipBytes,
-        assetCount: selected.size,
+        gzipBytes: graph.gzipBytes,
+        assetCount: graph.assetCount,
       };
     }
     // Compare and country-disease are chart workspaces, in the same class as
     // disease, country, Situation, and Research pages. Brochure routes stay
     // on the ordinary cap.
-    const isChartRoute = /^\/(?:(?:zh|fr)\/)?(?:compare|country-disease|countries|diseases|situation|research)\//.test(routePath);
-    if (!isChartRoute && gzipBytes > largestOrdinaryRoute.gzipBytes) {
-      largestOrdinaryRoute = { path: routePath, gzipBytes, assetCount: selected.size };
+    const isChartRoute = CHART_ROUTE_RE.test(routePath);
+    if (!isChartRoute && graph.gzipBytes > largestOrdinaryRoute.gzipBytes) {
+      largestOrdinaryRoute = { path: routePath, gzipBytes: graph.gzipBytes, assetCount: graph.assetCount };
     }
   }
 
@@ -293,7 +330,91 @@ export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCach
   };
 }
 
-function runCli() {
+export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCache, pageCache, independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1', env = process.env } = {}) {
+  const context = preparePerformanceAudit(distDirectory, budgetOverrides, { gzipCache, independentResearch, env });
+  if (context.earlyResult) return context.earlyResult;
+  const extract = (bytes, digest) => extractPageFacts(bytes, context.gzipSize, digest);
+  return finalizePerformanceAudit(context, page => (
+    pageCache ? pageCache.read(page, extract) : extract(readFileSync(page))
+  ));
+}
+
+function fileSignature(file) {
+  const stat = statSync(file, { bigint: true });
+  return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+}
+
+export async function auditPerformanceParallel(distDirectory, budgetOverrides = {}, {
+  gzipCache,
+  pageCache,
+  independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1',
+  env = process.env,
+  workers = Number(process.env.GIDS_BUILD_PERF_WORKERS ?? Math.min(8, availableParallelism())),
+} = {}) {
+  if (!Number.isInteger(workers) || workers < 1 || workers > 16) {
+    throw new Error('GIDS_BUILD_PERF_WORKERS must be 1–16');
+  }
+  const context = preparePerformanceAudit(distDirectory, budgetOverrides, { gzipCache, independentResearch, env });
+  if (context.earlyResult) return context.earlyResult;
+
+  const { pages, gzipSize } = context;
+  const resolvedFacts = new Array(pages.length);
+  const misses = [];
+  for (let i = 0; i < pages.length; i++) {
+    const hit = pageCache?.tryHit?.(pages[i]);
+    if (hit !== undefined) resolvedFacts[i] = hit;
+    else misses.push(i);
+  }
+
+  const extract = (bytes, digest) => extractPageFacts(bytes, gzipSize, digest);
+  if (workers === 1 || misses.length < 16) {
+    for (const index of misses) {
+      const page = pages[index];
+      resolvedFacts[index] = pageCache ? pageCache.read(page, extract) : extract(readFileSync(page));
+    }
+    return finalizePerformanceAudit(context, (_page, i) => resolvedFacts[i]);
+  }
+
+  const count = Math.min(workers, misses.length);
+  const knownGzip = gzipCache?.snapshot?.() ?? null;
+  const threads = [];
+  try {
+    const batches = await Promise.all(Array.from({ length: count }, (_, workerIndex) => new Promise((done, reject) => {
+      const start = Math.floor(workerIndex * misses.length / count);
+      const end = Math.floor((workerIndex + 1) * misses.length / count);
+      const indices = misses.slice(start, end);
+      const files = indices.map(index => pages[index]);
+      const thread = new Worker(new URL(import.meta.url), {
+        workerData: { files, computeDigest: Boolean(pageCache || gzipCache), knownGzip },
+      });
+      threads.push(thread);
+      let received = false;
+      thread.once('message', value => { received = true; done({ indices, value }); });
+      thread.once('error', reject);
+      thread.once('exit', code => {
+        if (code !== 0 || !received) reject(new Error(`Performance audit worker exited before completing (${code})`));
+      });
+    })));
+    for (const { indices, value } of batches) {
+      for (let j = 0; j < indices.length; j++) {
+        const index = indices[j];
+        const { digest, facts } = value[j];
+        if (pageCache?.store) pageCache.store(pages[index], digest, facts);
+        if (gzipCache?.lookup && gzipCache?.record && digest) {
+          if (gzipCache.lookup(digest, facts.rawBytes) === undefined) {
+            gzipCache.record(digest, facts.rawBytes, facts.gzipBytes);
+          }
+        }
+        resolvedFacts[index] = facts;
+      }
+    }
+    return finalizePerformanceAudit(context, (_page, i) => resolvedFacts[i]);
+  } finally {
+    await Promise.allSettled(threads.map(thread => thread.terminate()));
+  }
+}
+
+async function runCli() {
   const distIndex = process.argv.indexOf('--dist');
   const dist = distIndex >= 0 && process.argv[distIndex + 1]
     ? process.argv[distIndex + 1]
@@ -301,7 +422,7 @@ function runCli() {
   const gzipCache = openGzipSizeCache(resolve(import.meta.dirname, '../../data/cache/build-gzip-sizes.json'));
   const version = createHash('sha256').update(readFileSync(new URL(import.meta.url))).update(process.versions.zlib).digest('hex');
   const pageCache = openPageAuditCache(resolve(import.meta.dirname, '../../data/cache/performance-page-facts.json'), version);
-  const result = auditPerformance(dist, {}, { gzipCache, pageCache });
+  const result = await auditPerformanceParallel(dist, {}, { gzipCache, pageCache });
   pageCache.save();
   result.pageFacts = pageCache.stats;
   gzipCache.save();
@@ -311,4 +432,29 @@ function runCli() {
   if (!result.passed) process.exitCode = 1;
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) runCli();
+if (!isMainThread) {
+  const { files, computeDigest, knownGzip } = workerData;
+  const compress = (bytes, digest) => {
+    if (knownGzip && digest) {
+      const saved = knownGzip[digest];
+      if (Array.isArray(saved) && saved[0] === bytes.length && Number.isSafeInteger(saved[1]) && saved[1] > 0 && saved[1] <= bytes.length + 1024) {
+        return saved[1];
+      }
+    }
+    return gzipSync(bytes, { level: 9 }).length;
+  };
+  const results = new Array(files.length);
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const before = computeDigest ? fileSignature(file) : null;
+    const bytes = readFileSync(file);
+    if (computeDigest && fileSignature(file) !== before) {
+      throw new Error(`Audit input changed while reading: ${file}`);
+    }
+    const digest = computeDigest ? createHash('sha256').update(bytes).digest('hex') : null;
+    results[i] = { digest, facts: extractPageFacts(bytes, compress, digest) };
+  }
+  parentPort.postMessage(results);
+} else if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+  await runCli();
+}

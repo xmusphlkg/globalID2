@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
-const allowedDevOrigins = (process.env.GLOBALID_DASHBOARD_ALLOWED_DEV_ORIGINS || "localhost,127.0.0.1,192.168.30.10")
+const allowedDevOrigins = (process.env.GLOBALID_DASHBOARD_ALLOWED_DEV_ORIGINS || "localhost,127.0.0.1")
   .split(",")
   .map((origin) => origin.trim().replace(/^https?:\/\//, "").replace(/\/$/, ""))
   .filter(Boolean);

@@ -606,7 +606,7 @@ async def _heartbeat_claimed_task(
         try:
             await asyncio.wait_for(finished.wait(), timeout=TASK_HEARTBEAT_SECONDS)
             continue
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
         try:
             owned = await task_manager.heartbeat_task_lease(
@@ -693,7 +693,7 @@ async def _recover_stale_tasks(
             logger.exception("Stale-task recovery sweep failed: {}", exc)
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=RECOVERY_SCAN_SECONDS)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
 
@@ -1009,7 +1009,7 @@ async def _run_owned_worker(
                 logger.info("Task worker idle, waiting for queued tasks")
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=POLL_INTERVAL_SECONDS)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     finally:

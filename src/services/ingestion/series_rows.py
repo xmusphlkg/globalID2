@@ -295,8 +295,8 @@ async def save_series_rows(
     else:
         # Test doubles and compatibility stores may return a namespace.
         # Preserve that contract while surfacing Registry pre-filter counts.
-        setattr(series_result, "skipped_unregistered", skipped_unregistered)
-        setattr(series_result, "skipped_missing", skipped_missing)
+        series_result.skipped_unregistered = skipped_unregistered
+        series_result.skipped_missing = skipped_missing
     quality_report = series_result.quality_report
     if getattr(series_result, "window_change_counts", None) is not None:
         logger.info(

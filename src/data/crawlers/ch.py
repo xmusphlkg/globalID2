@@ -469,7 +469,7 @@ class SwitzerlandIDDCrawler(BaseCrawler):
         return [
             row
             for row in rows
-            if (parsed := parse_idd_period(row.get("PeriodValue"), row.get("PeriodType", ""))) in keep
+            if parse_idd_period(row.get("PeriodValue"), row.get("PeriodType", "")) in keep
         ]
 
     @staticmethod

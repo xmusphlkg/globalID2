@@ -249,8 +249,6 @@ class TWMonthlyUpdater:
 
     def parse_source_csv(self, payload: bytes, *, source_file: str | None = None) -> List[Dict[str, str]]:
         """Normalize an immutable source snapshot without filesystem reads."""
-        csv_path = Path(source_file or self.output_csv.name)
-
         rows: List[Dict[str, str]] = []
         today = datetime.now(timezone.utc).date()
         with io.StringIO(payload.decode("utf-8-sig"), newline="") as handle:

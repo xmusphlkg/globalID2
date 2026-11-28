@@ -971,10 +971,8 @@ class BrazilSINANCrawler(BaseCrawler):
                     ): item.filename
                     for item in candidate_files
                 }
-                completed = 0
-                for future in as_completed(pending):
+                for completed, future in enumerate(as_completed(pending), start=1):
                     item_name = pending[future]
-                    completed += 1
                     try:
                         all_rows.extend(future.result())
                     except Exception as exc:

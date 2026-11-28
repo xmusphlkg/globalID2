@@ -523,7 +523,7 @@ class ReportFigureLibrary:
         diseases = packet.get("diseases") or []
         if not diseases:
             return {}
-        return sorted(diseases, key=lambda item: (item.get("risk") or {}).get("score", 0), reverse=True)[0]
+        return max(diseases, key=lambda item: (item.get("risk") or {}).get("score", 0))
 
     @staticmethod
     def _find_disease(packet: Dict[str, Any], disease_id: Optional[str]) -> Optional[Dict[str, Any]]:

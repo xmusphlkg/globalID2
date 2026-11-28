@@ -158,7 +158,7 @@ class DiseaseMappingAutomationService:
                 await asyncio.wait_for(self._task, timeout=10)
             except asyncio.CancelledError:
                 pass
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("Disease mapping automation did not stop within 10 seconds")
         self._task = None
 
@@ -176,7 +176,7 @@ class DiseaseMappingAutomationService:
                 self._last_cycle = {"error": str(exc), "at": datetime.now(timezone.utc).isoformat()}
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=poll_seconds)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     async def process_once(self) -> dict:

@@ -27,4 +27,6 @@ RestartSec=10
 SuccessExitStatus=143
 # Give the process up to 30 s to finish in-flight requests before hard-kill.
 TimeoutStopSec=30
+NoNewPrivileges=yes
+PrivateTmp=yes
 

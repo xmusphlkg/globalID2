@@ -43,8 +43,9 @@ def stamp_homepages(dist: Path, identity: dict) -> bool:
             if len(tags) != 1 or not re.search(content, tags[0][0]):
                 complete = False
                 continue
+            replacement = html.escape(str(identity[field]), quote=True)
             tag = re.sub(content,
-                lambda m: m[1] + '="' + html.escape(str(identity[field]), quote=True) + '"', tags[0][0])
+                lambda m, value=replacement: m[1] + '="' + value + '"', tags[0][0])
             body = body[:tags[0].start()] + tag + body[tags[0].end():]
         if body != path.read_text(encoding="utf-8"):
             path.write_text(body, encoding="utf-8")

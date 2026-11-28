@@ -234,10 +234,10 @@ def main():
         state["round"] = round_number + 1; save(); ready = []
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
             pending = {}; queue = iter(missing)
-            def submit():
-                target = next(queue, None)
+            def submit(_queue=queue, _pending=pending, _executor=executor):
+                target = next(_queue, None)
                 if target:
-                    pending[executor.submit(download_one, target, args.cache_directory)] = target
+                    _pending[_executor.submit(download_one, target, args.cache_directory)] = target
             for _ in range(args.workers):
                 submit()
             while pending:

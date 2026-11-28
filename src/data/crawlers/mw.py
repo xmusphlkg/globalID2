@@ -160,7 +160,7 @@ def _table_rows(pages):
                 continue
             if re.match(r"^\d+\.\s+Ongoing outbreaks", line, re.I):
                 break
-            if not line or line.isdigit() or line.startswith("DISEASES TARGETED") or line.startswith("CONDITIONS OF PUBLIC"):
+            if not line or line.isdigit() or line.startswith(("DISEASES TARGETED", "CONDITIONS OF PUBLIC")):
                 continue
             pattern = (r"(?P<label>[A-Za-z][A-Za-z\- /()]+?)\s+(?P<cases>\d[\d,]*|[-—])\s+(?P<deaths>\d[\d,]*|[-—])"
                        if has_deaths else r"(?P<label>[A-Za-z][A-Za-z\- /()]+?)\s+(?P<cases>\d[\d,]*|[-—])")

@@ -231,7 +231,7 @@ class HongKongCHPCrawler(BaseCrawler):
         if requested_months is not None:
             target_years = sorted({year for year, _ in requested_months})
         elif years is not None:
-            target_years = sorted(set(int(year) for year in years))
+            target_years = sorted({int(year) for year in years})
         else:
             target_years = self._default_years()
 

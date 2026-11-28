@@ -27,7 +27,7 @@ async def test_config():
         from src.core import get_config
         
         config = get_config()
-        console.print(f"  ✓ 配置加载成功")
+        console.print("  ✓ 配置加载成功")
         console.print(f"  ✓ 应用名称: {config.app_name}")
         console.print(f"  ✓ 版本: {config.version}")
         console.print(f"  ✓ 环境: {config.app_env}")
@@ -72,7 +72,7 @@ async def test_database():
         async with engine.connect() as conn:
             result = await conn.execute(text("SELECT version();"))
             version = result.scalar()
-            console.print(f"  ✓ 数据库连接成功")
+            console.print("  ✓ 数据库连接成功")
             console.print(f"  ✓ PostgreSQL 版本: {version.split(',')[0]}")
             
             # 检查 TimescaleDB 扩展
@@ -80,14 +80,14 @@ async def test_database():
                 text("SELECT * FROM pg_extension WHERE extname = 'timescaledb';")
             )
             if result.fetchone():
-                console.print(f"  ✓ TimescaleDB 扩展已安装")
+                console.print("  ✓ TimescaleDB 扩展已安装")
             
             # 检查 vector 扩展
             result = await conn.execute(
                 text("SELECT * FROM pg_extension WHERE extname = 'vector';")
             )
             if result.fetchone():
-                console.print(f"  ✓ pgvector 扩展已安装")
+                console.print("  ✓ pgvector 扩展已安装")
         
         return True
     except Exception as e:
@@ -110,19 +110,19 @@ async def test_redis():
         test_value = {"status": "ok", "timestamp": "2026-02-10"}
         
         await cache.set(test_key, test_value, ttl=60)
-        console.print(f"  ✓ 缓存写入成功")
+        console.print("  ✓ 缓存写入成功")
         
         retrieved = await cache.get(test_key)
         if retrieved == test_value:
-            console.print(f"  ✓ 缓存读取成功")
+            console.print("  ✓ 缓存读取成功")
         
         await cache.delete(test_key)
-        console.print(f"  ✓ 缓存删除成功")
+        console.print("  ✓ 缓存删除成功")
         
         return True
     except Exception as e:
         console.print(f"  ✗ [red]Redis 连接失败: {e}[/red]")
-        console.print(f"     提示: 确保 Redis 容器正在运行")
+        console.print("     提示: 确保 Redis 容器正在运行")
         return False
 
 

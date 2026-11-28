@@ -76,7 +76,6 @@ class BaseParser(ABC):
         Returns:
             :class:`ParseResult`
         """
-        pass
 
     @abstractmethod
     def validate(self, data: pd.DataFrame) -> bool:
@@ -89,7 +88,6 @@ class BaseParser(ABC):
         Returns:
             True if the data meets minimum quality requirements.
         """
-        pass
     
     def _is_column_meaningful(self, column: pd.Series, threshold: float = 0.1) -> bool:
         """

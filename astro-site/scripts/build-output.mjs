@@ -1,10 +1,19 @@
 import { existsSync, lstatSync, readFileSync, readdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname, relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+const INLINE_SITE_HEADER_STYLE_RE = /<style\b[^>]*>[\s\S]*?\.site-header\b[\s\S]*?<\/style>/i;
+const LINK_TAG_RE = /<link\b[^>]*>/gi;
+const LINK_ATTR_RE = /([\w-]+)\s*=\s*(["'])(.*?)\2/g;
+const STYLESHEET_HINT_RE = /stylesheet/i;
+const EXTERNAL_HREF_RE = /^(?:https?:|\/\/|data:)/i;
+const SITE_HEADER_CLASS_RE = /class=["'][^"']*\bsite-header\b/;
+const SITE_HEADER_CSS_RE = /\.site-header\b/;
+const WHITESPACE_RE = /\s+/;
 
 function* htmlFiles(root) {
   for (const entry of readdirSync(root, { withFileTypes: true })) {
-    const path = resolve(root, entry.name);
+    const path = join(root, entry.name);
     if (entry.isDirectory()) yield* htmlFiles(path);
     else if (entry.isFile() && entry.name.endsWith('.html')) yield path;
   }
@@ -15,9 +24,10 @@ function* htmlFiles(root) {
 // by every BaseLayout document, including restored incremental pages.
 export function validateStylesheets(root, { requiredPaths = [] } = {}) {
   root = resolve(root);
+  const rootPrefix = root + sep;
   for (const path of requiredPaths) {
     const file = resolve(root, path);
-    if (!file.startsWith(root + sep) || !existsSync(file) || !lstatSync(file).isFile()) {
+    if (!file.startsWith(rootPrefix) || !existsSync(file) || !lstatSync(file).isFile()) {
       throw new Error(`Build output omitted required route: ${path}`);
     }
   }
@@ -27,24 +37,32 @@ export function validateStylesheets(root, { requiredPaths = [] } = {}) {
   for (const path of htmlFiles(root)) {
     const html = readFileSync(path, 'utf8');
     pages += 1;
-    let baseStyles = /<style\b[^>]*>[\s\S]*?\.site-header\b[\s\S]*?<\/style>/i.test(html);
-    for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
-      const attributes = Object.fromEntries([...match[0].matchAll(/([\w-]+)\s*=\s*(["'])(.*?)\2/g)].map(item => [item[1].toLowerCase(), item[3]]));
-      if (!(attributes.rel ?? '').toLowerCase().split(/\s+/).includes('stylesheet')) continue;
-      const href = attributes.href ?? '';
-      if (/^(?:https?:|\/\/|data:)/i.test(href)) continue;
+    let baseStyles = false;
+    for (const match of html.matchAll(LINK_TAG_RE)) {
+      const rawTag = match[0];
+      if (!STYLESHEET_HINT_RE.test(rawTag)) continue;
+      let rel = '';
+      let href = '';
+      for (const item of rawTag.matchAll(LINK_ATTR_RE)) {
+        const key = item[1].toLowerCase();
+        if (key === 'rel') rel = item[3];
+        else if (key === 'href') href = item[3];
+      }
+      if (!rel.toLowerCase().split(WHITESPACE_RE).includes('stylesheet')) continue;
+      if (EXTERNAL_HREF_RE.test(href)) continue;
       const pathname = decodeURIComponent(href.split(/[?#]/)[0]);
       const asset = pathname.startsWith('/') ? resolve(root, '.' + pathname) : resolve(dirname(path), pathname);
-      if (!asset.startsWith(root + sep)) throw new Error(`Stylesheet escapes build output: ${href}`);
+      if (!asset.startsWith(rootPrefix)) throw new Error(`Stylesheet escapes build output: ${href}`);
       if (!assets.has(asset)) {
         if (!existsSync(asset) || !lstatSync(asset).isFile()) throw new Error(`Missing stylesheet ${href} in ${relative(root, path)}`);
         const css = readFileSync(asset, 'utf8');
         if (!css.trim()) throw new Error(`Empty stylesheet ${href} in ${relative(root, path)}`);
-        assets.set(asset, /\.site-header\b/.test(css));
+        assets.set(asset, SITE_HEADER_CSS_RE.test(css));
       }
       baseStyles ||= assets.get(asset);
     }
-    if (/class=["'][^"']*\bsite-header\b/.test(html)) {
+    if (!baseStyles && INLINE_SITE_HEADER_STYLE_RE.test(html)) baseStyles = true;
+    if (html.includes('site-header') && SITE_HEADER_CLASS_RE.test(html)) {
       styledPages += 1;
       if (!baseStyles) throw new Error(`Missing base layout CSS in ${relative(root, path)}; theme variables alone cannot style the page`);
     }

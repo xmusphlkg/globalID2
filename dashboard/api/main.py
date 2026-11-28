@@ -2,14 +2,17 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+import os
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from src.core.database import dispose_database, get_engine
 from src.core.logging import get_logger
+from src.core.metrics import PROMETHEUS_CONTENT_TYPE, metrics_registry
+from src.core.operational_metrics import refresh_operational_metrics
 from .deps import require_dashboard_api_key
 from .http import install_http_contract
 
@@ -45,6 +48,44 @@ from src.core.task_manager import task_manager
 
 logger = get_logger(__name__)
 AUTH_EXEMPT_PATHS = {"/health", "/api/v1/health"}
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+]
+
+
+def configured_cors_origins() -> list[str]:
+    raw = os.environ.get("DASHBOARD_CORS_ORIGINS", "")
+    parsed = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if not parsed:
+        return list(DEFAULT_CORS_ORIGINS)
+    return list(dict.fromkeys(parsed))
+
+
+def _metrics_public_enabled() -> bool:
+    return os.environ.get("METRICS_PUBLIC", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _auth_error_response(request: Request, exc: HTTPException) -> JSONResponse:
+    request_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id") or str(uuid4())
+    is_unavailable = exc.status_code == 503
+    code = "service_unavailable" if is_unavailable else "authentication_required"
+    title = "Service unavailable" if is_unavailable else "Authentication required"
+    return JSONResponse(
+        status_code=exc.status_code,
+        media_type="application/problem+json",
+        headers={"X-Request-ID": request_id},
+        content={
+            "type": f"https://globalid.dev/problems/{code}",
+            "title": title,
+            "status": exc.status_code,
+            "detail": str(exc.detail),
+            "code": code,
+            "instance": request.url.path,
+            "request_id": request_id,
+        },
+    )
 
 
 @asynccontextmanager
@@ -84,14 +125,10 @@ def create_app() -> FastAPI:
 
     install_http_contract(app)
 
-    # CORS – allow the Next.js dev server and common local ports.
+    # CORS – allow the Next.js dev server and common local ports (overridable via DASHBOARD_CORS_ORIGINS).
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:5173",
-        ],
+        allow_origins=configured_cors_origins(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -109,21 +146,7 @@ def create_app() -> FastAPI:
         try:
             require_dashboard_api_key(request)
         except HTTPException as exc:
-            request_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id") or str(uuid4())
-            return JSONResponse(
-                status_code=exc.status_code,
-                media_type="application/problem+json",
-                headers={"X-Request-ID": request_id},
-                content={
-                    "type": "https://globalid.dev/problems/authentication_required",
-                    "title": "Authentication required",
-                    "status": exc.status_code,
-                    "detail": str(exc.detail),
-                    "code": "authentication_required",
-                    "instance": request.url.path,
-                    "request_id": request_id,
-                },
-            )
+            return _auth_error_response(request, exc)
 
         return await call_next(request)
 
@@ -165,6 +188,19 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["Health"])
     async def health():
         return await readiness_payload()
+
+    @app.get("/metrics", include_in_schema=False)
+    async def prometheus_metrics(request: Request):
+        if not _metrics_public_enabled():
+            try:
+                require_dashboard_api_key(request)
+            except HTTPException as exc:
+                return _auth_error_response(request, exc)
+        await refresh_operational_metrics(metrics_registry)
+        return PlainTextResponse(
+            content=metrics_registry.render_prometheus(),
+            media_type=PROMETHEUS_CONTENT_TYPE,
+        )
 
     return app
 

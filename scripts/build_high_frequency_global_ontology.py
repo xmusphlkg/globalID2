@@ -39,7 +39,7 @@ def main():
                                  "observations": receipt["observations"], "numeric_observations": receipt["numeric_observations"],
                                  "latest": receipt["latest"]}
         for (local_code, version), row in sorted(identities.items()):
-            dimensions = json.loads(row["Dimensions"])
+            json.loads(row["Dimensions"])
             if scope == "who_flunet_weekly":
                 target = FLUNET_TARGETS.get(local_code)
             elif scope == "ca_phac_respiratory_weekly":

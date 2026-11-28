@@ -85,7 +85,7 @@ async def check_once(args, thresholds, *, client, database_reader=database_snaps
     async def read_db():
         try:
             return await asyncio.wait_for(database_reader(now=now, channels=channels), args.timeout_seconds), None
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return None, "database_timeout"
         except Exception:
             return None, "database_unavailable"

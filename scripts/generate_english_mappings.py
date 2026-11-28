@@ -21,6 +21,36 @@ from src.core.mapping_paths import expected_mapping_file, mapping_dir, resolve_m
 logger = get_logger(__name__)
 
 
+def _read_cn_mappings(cn_mapping_file: Path) -> dict[str, dict[str, str]]:
+    cn_mappings: dict[str, dict[str, str]] = {}
+    with open(cn_mapping_file, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            disease_id = row['disease_id']
+            local_code = row.get('local_code', '').strip()
+            aliases = row.get('aliases', '').strip()
+            cn_mappings[disease_id] = {
+                'local_code': local_code,
+                'aliases': aliases,
+            }
+    return cn_mappings
+
+
+def _write_english_mappings_csv(output_file: Path, rows: list[list[str]]) -> None:
+    with open(output_file, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            'disease_id',
+            'local_name',
+            'local_code',
+            'category',
+            'aliases',
+            'notes',
+            'data_source',
+        ])
+        writer.writerows(rows)
+
+
 async def generate_english_mappings():
     """
     生成英文疾病映射CSV
@@ -64,7 +94,7 @@ async def generate_english_mappings():
             return False
         
         logger.info(f"  ✓ 从标准疾病库读取了 {len(diseases)} 条记录")
-        logger.info(f"    - 包含字段: disease_id, standard_name_en, category, icd_10")
+        logger.info("    - 包含字段: disease_id, standard_name_en, category, icd_10")
     
     # 2. 从中文映射读取英文别名来源
     logger.info("\n步骤2: 从中文映射（configs/mapping/cn.csv）读取英文别名...")
@@ -72,18 +102,9 @@ async def generate_english_mappings():
     cn_mappings = {}  # {disease_id: {'local_code': str, 'aliases': str}}
     
     if cn_mapping_file.exists():
-        with open(cn_mapping_file, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                disease_id = row['disease_id']
-                local_code = row.get('local_code', '').strip()
-                aliases = row.get('aliases', '').strip()
-                cn_mappings[disease_id] = {
-                    'local_code': local_code,
-                    'aliases': aliases
-                }
+        cn_mappings = await asyncio.to_thread(_read_cn_mappings, cn_mapping_file)
         logger.info(f"  ✓ 从中文映射读取了 {len(cn_mappings)} 条记录")
-        logger.info(f"    - 提取来源: local_code字段 + aliases字段中的英文部分")
+        logger.info("    - 提取来源: local_code字段 + aliases字段中的英文部分")
     else:
         logger.warning(f"  ✗ 未找到中文映射文件: {cn_mapping_file}")
     
@@ -134,41 +155,28 @@ async def generate_english_mappings():
     
     # 5. 生成并写入CSV文件
     logger.info("\n步骤4: 合并数据并生成英文映射CSV...")
-    with open(output_file, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f)
-        
-        # 写入表头
-        writer.writerow([
-            'disease_id',
-            'local_name',
-            'local_code',
-            'category',
-            'aliases',
-            'notes',
-            'data_source'
+    rows = []
+    alias_count = 0
+    for disease in diseases:
+        disease_id, name_en, name_zh, category, icd10_code = disease
+
+        # 从中文映射提取英文别名
+        cn_mapping = cn_mappings.get(disease_id)
+        aliases = extract_english_aliases(disease_id, name_en, cn_mapping)
+        if aliases:
+            alias_count += 1
+
+        # 组装记录（组合标准库数据 + 中文映射的英文部分）
+        rows.append([
+            disease_id,
+            name_en,  # ← 来自 standard_diseases.standard_name_en
+            icd10_code or '',  # ← 来自 standard_diseases.icd_10
+            category or '',  # ← 来自 standard_diseases.category
+            aliases,  # ← 来自 cn_mapping 的英文部分（local_code + aliases）
+            f'From standard_diseases: {name_zh}',  # ← 来自 standard_diseases.standard_name_zh
+            'Standard Database + CN Mapping'  # 数据来源说明
         ])
-        
-        # 写入数据
-        alias_count = 0
-        for disease in diseases:
-            disease_id, name_en, name_zh, category, icd10_code = disease
-            
-            # 从中文映射提取英文别名
-            cn_mapping = cn_mappings.get(disease_id)
-            aliases = extract_english_aliases(disease_id, name_en, cn_mapping)
-            if aliases:
-                alias_count += 1
-            
-            # 写入记录（组合标准库数据 + 中文映射的英文部分）
-            writer.writerow([
-                disease_id,
-                name_en,  # ← 来自 standard_diseases.standard_name_en
-                icd10_code or '',  # ← 来自 standard_diseases.icd_10
-                category or '',  # ← 来自 standard_diseases.category
-                aliases,  # ← 来自 cn_mapping 的英文部分（local_code + aliases）
-                f'From standard_diseases: {name_zh}',  # ← 来自 standard_diseases.standard_name_zh
-                'Standard Database + CN Mapping'  # 数据来源说明
-            ])
+    await asyncio.to_thread(_write_english_mappings_csv, output_file, rows)
     
     logger.info(f"\n{'='*60}")
     logger.info("✅ 英文映射CSV生成完成！")
@@ -181,16 +189,16 @@ async def generate_english_mappings():
     print("📊 数据来源汇总:")
     print("="*80)
     print("【来自标准疾病库 standard_diseases】")
-    print(f"  • disease_id       : 疾病统一标识")
-    print(f"  • local_name       : 标准英文名称 (standard_name_en)")
-    print(f"  • local_code       : ICD-10编码 (icd_10)")
-    print(f"  • category         : 疾病分类")
-    print(f"  • notes            : 中文名称参考 (standard_name_zh)")
+    print("  • disease_id       : 疾病统一标识")
+    print("  • local_name       : 标准英文名称 (standard_name_en)")
+    print("  • local_code       : ICD-10编码 (icd_10)")
+    print("  • category         : 疾病分类")
+    print("  • notes            : 中文名称参考 (standard_name_zh)")
     print()
     print("【来自中文映射 configs/mapping/cn.csv】")
-    print(f"  • aliases          : 英文别名（从local_code和aliases字段提取）")
-    print(f"    - 提取 local_code 中的英文代码（如 SARS-CoV, AIDS, TB）")
-    print(f"    - 提取 aliases 中的纯英文部分（自动过滤中文）")
+    print("  • aliases          : 英文别名（从local_code和aliases字段提取）")
+    print("    - 提取 local_code 中的英文代码（如 SARS-CoV, AIDS, TB）")
+    print("    - 提取 aliases 中的纯英文部分（自动过滤中文）")
     print()
     print("="*80)
     print("📋 生成结果:")
@@ -199,8 +207,8 @@ async def generate_english_mappings():
     print()
     print("📋 下一步操作:")
     print(f"  1. 检查生成的文件: {output_file}")
-    print(f"  2. 运行以下命令导入数据库:")
-    print(f"     ./venv/bin/python scripts/full_rebuild_database.py --yes")
+    print("  2. 运行以下命令导入数据库:")
+    print("     ./venv/bin/python scripts/full_rebuild_database.py --yes")
     print()
     print("💡 维护提示:")
     print("  - 标准英文名称：维护 standard_diseases 表")

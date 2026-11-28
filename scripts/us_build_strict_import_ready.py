@@ -113,7 +113,7 @@ def choose_best_row(rows: Sequence[dict[str, str]]) -> dict[str, str]:
             label,
         )
 
-    return sorted(rows, key=rank)[0]
+    return min(rows, key=rank)
 
 
 def is_safe_aggregate_total(row: dict[str, str]) -> bool:

@@ -65,8 +65,6 @@ def render_metadata_sql(metadata, dialect):
     from sqlalchemy.schema import CreateTable, CreateIndex
     from sqlalchemy.sql.sqltypes import Enum as SAEnum
 
-    statements: List[str] = []
-
     # Collect enum types first to avoid duplicates
     enum_defs = {}
     for table in metadata.sorted_tables:
@@ -80,8 +78,7 @@ def render_metadata_sql(metadata, dialect):
                     enum_defs[name] = f"CREATE TYPE {name} AS ENUM ({quoted});"
 
     # Add enum defs first
-    for v in enum_defs.values():
-        statements.append(v)
+    statements: List[str] = list(enum_defs.values())
 
     # Add CREATE TABLE and CREATE INDEX statements
     for table in metadata.sorted_tables:
@@ -115,19 +112,6 @@ def main():
         "--   -- CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;\n"
         "--   -- SELECT create_hypertable('disease_records', 'time', chunk_time_interval => INTERVAL '1 month');\n"
         "--   -- CREATE EXTENSION IF NOT EXISTS pgvector;\n"
-        "\n"
-    )
-
-    EXTENSION_NOTES = (
-        "-- == Optional DB Extensions / Additional Operations ==\n"
-        "-- To enable time-series features (recommended for production):\n"
-        "--   CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;\n"
-        "--   SELECT create_hypertable('disease_records', 'time', chunk_time_interval => INTERVAL '1 month');\n"
-        "-- To enable native vector type (optional):\n"
-        "--   CREATE EXTENSION IF NOT EXISTS pgvector;\n"
-        "-- If you migrate JSON -> JSONB for better indexing, consider adding GIN indexes:\n"
-        "--   CREATE INDEX idx_countries_crawler_config_gin ON countries USING gin (crawler_config jsonb_path_ops);\n"
-        "--   CREATE INDEX idx_reports_key_findings_gin ON reports USING gin (key_findings jsonb_path_ops);\n"
         "\n"
     )
 

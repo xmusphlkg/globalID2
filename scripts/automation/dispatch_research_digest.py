@@ -422,7 +422,7 @@ def _post_json(
             raw = response.read(64 * 1024 + 1)
     except HTTPError as exc:
         raise DispatchError(f"worker_http_error:{exc.code}") from exc
-    except (URLError, socket.timeout, TimeoutError, OSError) as exc:
+    except (URLError, TimeoutError, OSError) as exc:
         raise DispatchError(f"worker_transport_error:{type(exc).__name__}") from exc
     if len(raw) > 64 * 1024:
         raise DispatchError("worker_response_too_large")
@@ -451,7 +451,7 @@ def require_content_item_capability(
             raw = response.read(64 * 1024 + 1)
     except HTTPError as exc:
         raise DispatchError(f"worker_http_error:{exc.code}") from exc
-    except (URLError, socket.timeout, TimeoutError, OSError) as exc:
+    except (URLError, TimeoutError, OSError) as exc:
         raise DispatchError(f"worker_transport_error:{type(exc).__name__}") from exc
     if status < 200 or status >= 300 or len(raw) > 64 * 1024:
         raise DispatchError("worker_capabilities_unavailable")

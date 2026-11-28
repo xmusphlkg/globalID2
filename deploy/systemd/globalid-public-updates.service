@@ -14,3 +14,5 @@ TimeoutStartSec=180
 UMask=0077
 StandardOutput=journal
 StandardError=journal
+NoNewPrivileges=yes
+PrivateTmp=yes

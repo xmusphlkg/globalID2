@@ -254,7 +254,7 @@ class KnowledgeAutomationService:
                     self._stop_event.wait(),
                     timeout=self._config().knowledge_automation_interval_seconds,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     async def reconcile_once(self) -> dict[str, Any]:

@@ -163,7 +163,7 @@ class LiteratureService:
                 logger.exception("Research Radar scheduler database operation failed; retrying next tick")
             try:
                 await asyncio.wait_for(self._stop_event.wait(), timeout=cfg.poll_interval_seconds)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     async def _run_tick(self, cfg) -> None:

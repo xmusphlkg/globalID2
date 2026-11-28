@@ -283,7 +283,7 @@ class ReviewerAgent(BaseAgent):
                 "logic": 0.5,
                 "professionalism": 0.5,
                 "overall": 0.5,
-                "reasoning": f"评分失败: {str(e)}" if language == "zh" else f"Assessment failed: {str(e)}",
+                "reasoning": f"评分失败: {e!s}" if language == "zh" else f"Assessment failed: {e!s}",
             }
     
     async def _fact_check(
@@ -482,9 +482,7 @@ class ReviewerAgent(BaseAgent):
         
         def convert_timestamps(obj):
             """Convert pandas Timestamp objects to strings recursively."""
-            if isinstance(obj, pd.Timestamp):
-                return obj.isoformat()
-            elif isinstance(obj, datetime):
+            if isinstance(obj, (pd.Timestamp, datetime)):
                 return obj.isoformat()
             elif isinstance(obj, dict):
                 return {key: convert_timestamps(value) for key, value in obj.items()}

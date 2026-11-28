@@ -471,7 +471,7 @@ class PublisherRssClient:
                     )
             except (httpx.HTTPError, ValueError):
                 status_code = response.status_code if response is not None else None
-                retryable = isinstance(response, type(None)) or status_code in _RETRYABLE_STATUS_CODES
+                retryable = response is None or status_code in _RETRYABLE_STATUS_CODES
                 if not retryable or attempt + 1 >= attempts:
                     raise
                 await asyncio.sleep(min(30.0, 0.5 * (2**attempt)))

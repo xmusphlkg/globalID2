@@ -118,11 +118,11 @@ def count_legacy_accesses(source: str, *, filename: str = "<memory>") -> AccessC
                 symbol_count += 1
 
     for node in ast.walk(tree):
-        if isinstance(node, ast.Name) and node.id in aliases:
-            symbol_count += 1
-        elif isinstance(node, ast.Attribute) and node.attr == _LEGACY_SYMBOL:
-            symbol_count += 1
-        elif isinstance(node, ast.ClassDef) and node.name == _LEGACY_SYMBOL:
+        if (
+            (isinstance(node, ast.Name) and node.id in aliases)
+            or (isinstance(node, ast.Attribute) and node.attr == _LEGACY_SYMBOL)
+            or (isinstance(node, ast.ClassDef) and node.name == _LEGACY_SYMBOL)
+        ):
             symbol_count += 1
         elif isinstance(node, ast.Constant) and isinstance(node.value, str):
             if id(node) in docstrings:

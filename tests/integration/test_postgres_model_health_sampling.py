@@ -406,10 +406,10 @@ async def test_success_index_migration_is_concurrent_reversible_and_covers_count
     ):
         async with engine.connect() as conn:
 
-            def run(sync):
+            def run(sync, _action=action):
                 context = MigrationContext.configure(sync)
                 with context.begin_transaction(), Operations.context(context):
-                    action()
+                    _action()
 
             await conn.run_sync(run)
     assert len(ddl) == 4

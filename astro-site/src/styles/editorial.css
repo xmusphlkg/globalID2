@@ -1,0 +1,37 @@
+/* 2026 scientific-editorial system */
+.skip-link {
+  position: fixed;
+  top: .5rem;
+  left: .5rem;
+  z-index: 1000;
+  transform: translateY(-160%);
+  background: #fff;
+  color: #102a43;
+  border: 2px solid #0f766e;
+  padding: .65rem 1rem;
+  font-weight: 700;
+}
+.skip-link:focus { transform: translateY(0); }
+
+:focus-visible { outline: 3px solid rgb(var(--color-teal)); outline-offset: 3px; }
+
+.search-page-form { margin-top: 2rem; padding: 1rem; border: 1px solid rgb(var(--border)); border-left: 4px solid rgb(var(--color-teal)); background: rgb(var(--surface)); }
+.search-page-form label { display: block; margin-bottom: .45rem; color: rgb(var(--text-strong)); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.search-page-form > div { display: grid; grid-template-columns: 1fr auto; }
+.search-page-form input { min-width: 0; min-height: 3rem; padding: .6rem .8rem; color: rgb(var(--text-strong)); background: rgb(var(--bg)); border: 1px solid rgb(var(--border)); }
+.search-page-form button { min-height: 3rem; padding: .6rem 1.2rem; color: #fff; background: #102a43; border: 1px solid #102a43; font-weight: 700; }
+.search-page-status { margin: 1.25rem 0; color: rgb(var(--text-muted)); }
+.search-result-group { margin-top: 2rem; }
+.search-result-group h2 { padding-bottom: .5rem; border-bottom: 2px solid rgb(var(--text-strong)); color: rgb(var(--text-strong)); font-size: 1.35rem; }
+.search-result-grid { display: grid; }
+.search-result-card { display: grid; gap: .3rem; padding: .95rem .2rem; color: rgb(var(--text-strong)); border-bottom: 1px solid rgb(var(--border)); text-decoration: none; }
+.search-result-card:hover strong { color: rgb(var(--color-teal)); text-decoration: underline; }
+.search-result-card span { color: rgb(var(--text-muted)); font-size: .88rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+.site-footer .site-footer-logo.brand-logo {
+  color: rgb(246 248 251);
+}

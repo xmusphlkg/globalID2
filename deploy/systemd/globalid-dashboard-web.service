@@ -17,3 +17,5 @@ RestartSec=5
 # Node exits 143 (128+SIGTERM) on a requested stop; that is not a failure.
 SuccessExitStatus=143
 TimeoutStopSec=20
+NoNewPrivileges=yes
+PrivateTmp=yes

@@ -61,7 +61,7 @@ async def _run(command, log_path):
                 os.killpg(child.pid, signal.SIGTERM)
                 try:
                     await asyncio.wait_for(child.wait(), timeout=20)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     os.killpg(child.pid, signal.SIGKILL)
                     await child.wait()
             raise

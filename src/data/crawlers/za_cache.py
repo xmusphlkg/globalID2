@@ -28,7 +28,7 @@ class NICDReportCache:
    receipt=cached|{'revalidated_at':now.isoformat()};status='revalidated_not_modified'
   else:
    payload=response.content
-   if not(payload.startswith(b'%PDF') or payload.startswith(b'PK')):raise ValueError('NICD report cache refuses non-document response')
+   if not payload.startswith((b'%PDF', b'PK')):raise ValueError('NICD report cache refuses non-document response')
    sha=hashlib.sha256(payload).hexdigest();suffix='.pdf' if payload.startswith(b'%PDF') else '.docx';path=self.directory/(sha+suffix)
    if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest()!=sha:raise ValueError('NICD immutable cache object integrity failed')
    path.write_bytes(payload)

@@ -443,7 +443,7 @@ class CHMonthlyUpdater:
                 },
             )
             bucket["cases"] = int(bucket["cases"]) + max(0, cases)
-            for field, bucket_key in (
+            for value, bucket_key in (
                 (label, "raw_disease_labels"),
                 (code, "disease_codes"),
                 (_norm_text(row.get("PeriodType")), "period_types"),
@@ -453,8 +453,8 @@ class CHMonthlyUpdater:
                 (_norm_text(row.get("Version")), "versions"),
                 (_norm_text(row.get("SourceURL")), "source_urls"),
             ):
-                if field and field not in bucket[bucket_key]:
-                    bucket[bucket_key].append(field)
+                if value and value not in bucket[bucket_key]:
+                    bucket[bucket_key].append(value)
             bucket["raw_rows"].append(row)
 
         upsert_rows: List[Dict[str, object]] = []

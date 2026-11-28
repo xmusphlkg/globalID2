@@ -4,7 +4,7 @@ GlobalID V2 Integration Test
 集成测试：测试整个系统的功能
 """
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -132,7 +132,7 @@ class IntegrationTest:
                     logger.info("  Disease already exists: COVID-19")
                 
                 # 3. 创建疾病记录
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 record = DiseaseRecord(
                     time=now,
                     disease_id=disease.id,
@@ -242,7 +242,7 @@ class IntegrationTest:
             logger.info("Generating test report...")
             generator = ReportGenerator()
             
-            period_end = datetime.utcnow()
+            period_end = datetime.now(timezone.utc)
             period_start = period_end - timedelta(days=7)
             
             report = await generator.generate(
@@ -285,7 +285,7 @@ class IntegrationTest:
         try:
             from src.generation import EmailService
             
-            email_service = EmailService()
+            EmailService()
             
             # 测试连接（不实际发送）
             logger.info("Testing Microsoft Graph email connection...")

@@ -1194,7 +1194,7 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
     ) -> List[Dict[str, str]]:
         """Fetch, normalize, and month-filter monthly rows from dportal endpoint."""
         rows: List[Dict[str, str]] = []
-        for year in sorted(set(int(value) for value in years if value)):
+        for year in sorted({int(value) for value in years if value}):
             raw_rows = self._fetch_bass_stats_list(year)
             parsed_rows = normalize_kdca_download_rows(
                 raw_rows,

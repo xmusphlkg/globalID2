@@ -133,7 +133,10 @@ def _build_pbir_visual_query(
                     raise ValueError("PHO IDTO PBIR filter source is ambiguous")
                 local_aliases[local_name] = alias_for(entity)
 
-            def filter_transform(node: dict[str, Any]) -> dict[str, Any]:
+            def filter_transform(
+                node: dict[str, Any],
+                aliases: dict[str, str] = local_aliases,
+            ) -> dict[str, Any]:
                 source_ref = node.get("SourceRef")
                 if not isinstance(source_ref, Mapping):
                     return node
@@ -144,11 +147,11 @@ def _build_pbir_visual_query(
                     return node
                 local_name = _norm_text(source_ref.get("Source"))
                 if local_name:
-                    if local_name not in local_aliases:
+                    if local_name not in aliases:
                         raise ValueError(
                             "PHO IDTO PBIR filter references an unknown source"
                         )
-                    node["SourceRef"] = {"Source": local_aliases[local_name]}
+                    node["SourceRef"] = {"Source": aliases[local_name]}
                 return node
 
             transformed_where = _transform_query_tree(
@@ -336,7 +339,7 @@ def decode_powerbi_dm0(response: Mapping[str, Any]) -> tuple[str, list[dict[str,
             name_map[value_name] = semantic_name
             semantic_names.add(semantic_name)
         dynamic_name = _norm_text(
-            ((selection.get("DynamicFormat") or {}).get("Format"))
+            (selection.get("DynamicFormat") or {}).get("Format")
         )
         if dynamic_name and semantic_name:
             dynamic_semantic = semantic_name + ".__dynamic_format__"

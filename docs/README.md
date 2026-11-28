@@ -16,7 +16,8 @@ remain available in Git history; they are not active deployment instructions.
 
 ## Architecture and database
 
-- [核心代码拆分与目录整理方案（分析完成，待开始）](architecture/CORE_CODE_REORGANIZATION_PLAN.md)
+- [核心代码拆分与目录整理方案（已完成并随 0.19.2 集成发布）](architecture/CORE_CODE_REORGANIZATION_PLAN.md)
+- [核心代码拆分实施记录（49 项候选已完成集成）](architecture/CORE_CODE_REORGANIZATION_PROGRESS.md)
 - [Database architecture](architecture/DATABASE.md)
 - [数据线、模型池与控制面重构方案](architecture/DATA_LINE_AND_CONTROL_PLANE_REFACTOR.md)
 - [疾病本体与来源系列系统 v3](architecture/DISEASE_ONTOLOGY_V3.md)
@@ -67,6 +68,7 @@ remain available in Git history; they are not active deployment instructions.
 - [Development and local operations](operations/DEVELOPMENT.md)
 - [国家数据写入并发](operations/INGESTION_CONCURRENCY.md)
 - [Unattended ingestion resilience](operations/INGESTION_RESILIENCE.md)
+- [Observability, security controls, and quality gates](operations/OBSERVABILITY_AND_SECURITY.md)
 - [Realtime publication monitoring](operations/REALTIME_DATA_MONITORING.md)
 - [Repository size maintenance](operations/REPOSITORY_SIZE_MAINTENANCE.md)
 - [Situation automation](operations/SITUATION_AUTOMATION.md)

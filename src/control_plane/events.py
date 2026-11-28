@@ -127,7 +127,7 @@ class ControlPlaneEventBus:
             while True:
                 try:
                     yield await asyncio.wait_for(queue.get(), timeout=15)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield {"type": "heartbeat", "occurred_at": datetime.now(timezone.utc).isoformat()}
         finally:
             self._fallback_subscribers.discard(queue)

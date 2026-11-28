@@ -86,7 +86,7 @@ def test_invalid_candidate_does_not_switch_current_pointer(tmp_path, failure):
     source.mkdir()
     index = source / "index.json"
     index.write_text('{}')
-    initial = freeze_literature_json(source, output, release_id="one", generated_at="t")
+    freeze_literature_json(source, output, release_id="one", generated_at="t")
     old_pointer = (output / "current.json").read_bytes()
     if failure == "missing_index":
         index.unlink()

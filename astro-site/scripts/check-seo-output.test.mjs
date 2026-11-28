@@ -212,3 +212,21 @@ test('the current graph download requires the graph payload in the build', () =>
     assert.ok(!auditSeoOutput(dist).errors.some(message => message.includes('points to missing')));
   } finally { rmSync(dist, { recursive: true, force: true }); }
 });
+
+test('anchor href fast path handles uppercase, unquoted, entity-encoded, duplicate, and relative links', () => {
+  const dist = pageDist({
+    'section/page': [
+      '<a name="top">No href</a>',
+      '<a HREF="/target/">Uppercase</a>',
+      '<a href=/target/?a=1&amp;b=2>Unquoted entity</a>',
+      '<a href="/missing/" href="/target/">Duplicate last wins</a>',
+      '<a href="../../target/">Relative valid</a>',
+      '<a href="missing-rel/">Relative broken</a>',
+    ].join(''),
+    target: '<p>ok</p>',
+  });
+  try {
+    const errors = linkErrors(auditSeoOutput(dist).errors);
+    assert.deepEqual(errors, ['/section/page/: broken internal link missing-rel/']);
+  } finally { rmSync(dist, { recursive: true, force: true }); }
+});

@@ -275,7 +275,7 @@ def parse_national_tables(payload, texts, *, reference, digest):
             appendices = re.findall(r"lampiran\s+(" + APPENDIX_NUMBER + r")", text, re.I)
             # The PDF's text order can repeat nearby headings. The geometric
             # table's physical page and full source text remain provenance.
-            if len(set(plain(a).lower() for a in appendices)) != 1:
+            if len({plain(a).lower() for a in appendices}) != 1:
                 current["rejected"].append("Ambiguous multiple appendix captions on one source page"); audit.append(current); continue
             appendix = plain(appendices[0]).lower()
             page = document.pages[index]

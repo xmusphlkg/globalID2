@@ -36,7 +36,8 @@
     "optimize:map": "node scripts/optimize-world-map.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "test:public": "node --experimental-strip-types --test src/lib/site-search.test.ts src/lib/download-filters.test.ts src/lib/download-presentation.test.ts src/lib/pathogen-resources.test.ts src/lib/situation-rss.test.ts src/lib/directory-pagination.test.ts src/lib/country-page-navigation.test.ts src/components/situation/model.test.ts src/components/situation/noticeLabels.test.ts src/components/situation/monitoring.test.ts src/components/situation/overview-data.test.ts"
+    "test:public": "node --experimental-strip-types --test src/lib/site-search.test.ts src/lib/download-filters.test.ts src/lib/download-presentation.test.ts src/lib/pathogen-resources.test.ts src/lib/situation-rss.test.ts src/lib/directory-pagination.test.ts src/lib/country-page-navigation.test.ts src/components/situation/model.test.ts src/components/situation/noticeLabels.test.ts src/components/situation/monitoring.test.ts src/components/situation/overview-data.test.ts",
+    "test:all": "node scripts/run-all-unit-tests.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.2",

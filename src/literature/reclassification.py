@@ -22,7 +22,6 @@ from src.domain import (
     LiteratureTopicLink,
 )
 
-from .query_batches import argument_batches
 from .publication_changes import build_literature_change_set
 from .classification import (
     CLASSIFICATION_VERSION,

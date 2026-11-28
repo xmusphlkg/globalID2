@@ -12,7 +12,6 @@ from sqlalchemy.orm import DeclarativeBase, declared_attr
 
 class Base(DeclarativeBase):
     """SQLAlchemy 声明式基类"""
-    pass
 
 
 def utc_now() -> datetime:

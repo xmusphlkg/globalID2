@@ -371,7 +371,6 @@ class MappingNotificationService:
                 row.status = "sending"
                 row.attempts = int(row.attempts or 0) + 1
             await db.commit()
-            claimed_ids = [row.id for row in rows]
 
         groups: dict[tuple[str, tuple[str, ...]], list[MappingNotificationOutbox]] = {}
         for row in rows:

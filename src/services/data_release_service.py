@@ -3,284 +3,131 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict, dataclass
-from datetime import datetime, time, timedelta, timezone
-import json
-import os
+from dataclasses import asdict
+from datetime import datetime, timedelta, timezone
+import os  # Re-exported for compatibility with existing diagnostics/tests.
 from pathlib import Path
 import signal  # Re-exported for compatibility with existing diagnostics/tests.
-import subprocess
-import sys
-from typing import Any, Optional
 from types import SimpleNamespace
+from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, or_, select
 
+from src.control_plane.schedule_state import schedule_state_repository
 from src.core import get_config, get_database, get_logger
+from src.core.country_library import get_country_bootstrap_config
 from src.core.data_share import (
     get_data_share_raw_base_url,
     get_data_share_repo_branch,
     get_data_share_repo_url,
 )
-from src.core.country_library import get_country_bootstrap_config
 from src.core.task_manager import task_manager
 from src.domain import Country, DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
-from src.domain.report import Report, ReportStatus
 from src.domain.collection import PublishDirty
+from src.domain.report import Report, ReportStatus
 from src.services.data_release import checks as release_checks
+from src.services.data_release import environment as release_environment
 from src.services.data_release import pipeline as release_pipeline
 from src.services.data_release.channel_control import is_automatic_json_paused
-from src.services.data_release.publication_wait import (
-    build_wait,
-    channel_of,
-    contract_fingerprint,
-    failure_kind,
-    surveillance_baseline_ready,
-    static_reservation_blocks_json,
-    wait_reason,
-)
-from src.services.data_release.global_selection import read_selected_batch, selection_batches
-from src.services.data_release.planning import publishable_scope_keys
-from src.services.data_release.literature_schedule import literature_publication_due_at
-from src.services.data_release.public_changelog import (
-    missing_public_changelog_versions,
-    public_changelog_blocker,
-)
 from src.services.data_release.commands import (
     build_cloudflare_deploy_command,
     build_generate_site_data_command,
     build_publish_download_repo_command,
-    build_publish_papers_r2_command,
-    build_split_reports_bundle_command,
-    build_publish_reports_r2_command,
-    build_verify_reports_host_command,
     build_publish_raw_archive_command,
-    build_split_papers_bundle_command,
+    build_publish_reports_r2_command,
     build_update_situation_notices_command,
     build_validate_situation_release_command,
 )
-from src.services.data_release.papers_bundle import (
-    DEFAULT_MAIN_SITE_ORIGIN,
-    DEFAULT_PAPERS_ORIGIN,
-    count_files,
+from src.services.data_release.environment import (
+    ASTRO_BUILD_TIMEOUT_SECONDS,
+    AUTO_RELEASE_TASK_TYPES,
+    CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS,
+    DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS,
+    DOWNLOAD_PUBLISH_TIMEOUT_SECONDS,
+    GENERATE_SITE_DATA_TIMEOUT_SECONDS,
+    GENERATED_DATA_PATHS,
+    GITHUB_SSH_PREFIXES,
+    LITERATURE_RELEASE_TASK_TYPES,
+    LOGGED_COMMAND_CANCEL_POLL_SECONDS,
+    RELEASE_RUNTIME_MUTABLE_PATHS,
+    SITE_VISUAL_MODULE_PREFIXES,
+    SUBSCRIPTION_SYNC_FALSE_VALUES,
+    SUBSCRIPTION_SYNC_STRICT_VALUES,
+    SUBSCRIPTION_SYNC_TIMEOUT_SECONDS,
 )
-from src.services.data_release.papers_r2 import (
-    R2PapersConfig,
-    derive_r2_credentials_from_api_token,
-    r2_preflight_payload,
+from src.services.data_release.global_selection import read_selected_batch, selection_batches
+from src.services.data_release.literature_schedule import literature_publication_due_at
+from src.services.data_release.models import (
+    DataReleaseJobConfig,
+    DataReleaseJobState,
+    _as_aware_utc,
+    _coerce_status,
+    _data_enabled,
+    _data_line,
+    _iso,
+    _parked_json_reservation,
+    _release_conflict_clause as _models_release_conflict_clause,
+    build_release_task_payload,
+    compute_next_run,
 )
-from src.services.data_release.reports_bundle import DEFAULT_REPORTS_ORIGIN
+from src.services.data_release.papers_r2 import R2PapersConfig
+from src.services.data_release.planning import publishable_scope_keys
 from src.services.data_release.process_runner import (
     run_capture,
     run_logged_command,
     terminate_process_tree,
 )
+from src.services.data_release.public_changelog import (
+    missing_public_changelog_versions,
+    public_changelog_blocker,
+)
+from src.services.data_release.publication_wait import (
+    build_wait,
+    channel_of,
+    contract_fingerprint,
+    failure_kind,
+    static_reservation_blocks_json,
+    surveillance_baseline_ready,
+    wait_reason,
+)
 from src.services.data_release.resilience import (
     automatic_trigger_eligible,
     classify_release_failure,
 )
-from src.services.exceptions import TaskCancelledError
+from src.services.exceptions import TaskCancelledError  # Re-exported for compatibility with existing tests.
 from src.services.settings_service import system_settings_service
-from src.control_plane.schedule_state import schedule_state_repository
-
-try:
-    from dotenv import dotenv_values
-except ImportError:  # pragma: no cover - python-dotenv is part of project requirements.
-    dotenv_values = None
 
 logger = get_logger(__name__)
 
-
-def _data_line(input_data: dict[str, Any]) -> str:
-    line = str(input_data.get("data_line") or "surveillance")
-    if line not in {"surveillance", "situation", "literature"}:
-        raise ValueError(f"Unknown JSON publication line: {line}")
-    return line
-
-
-def _data_enabled(config, input_data: dict[str, Any]) -> bool:
-    return bool(getattr(config, f"{_data_line(input_data)}_json_enabled", False))
-
-
-def _parked_json_reservation(line: str):
-    return and_(
-        Task.task_type == TaskType.EXPORT_DATA,
-        Task.status == TaskStatus.QUEUED,
-        Task.input_data["data_only"].as_boolean().is_(True),
-        func.coalesce(Task.input_data["data_line"].as_string(), "surveillance") == line,
-        Task.metadata_["publication_wait"]["kind"].as_string().in_(
-            ("contract_blocked", "baseline_invalid", "blocked_by_static")
-        ).is_(True),
-    )
+# Re-export compatibility symbols checked by tests/diagnostics.
+_REEXPORTED_SYMBOLS = (
+    os,
+    signal,
+    TaskCancelledError,
+    SITE_VISUAL_MODULE_PREFIXES,
+    SUBSCRIPTION_SYNC_FALSE_VALUES,
+    SUBSCRIPTION_SYNC_STRICT_VALUES,
+    SUBSCRIPTION_SYNC_TIMEOUT_SECONDS,
+)
 
 
 def _release_conflict_clause(input_data: dict[str, Any]):
-    """Channel reservation, including legacy surveillance-exporting sites."""
-    archive = Task.input_data["raw_archive_only"].as_boolean().is_(True)
-    data = Task.input_data["data_only"].as_boolean().is_(True)
-    literature = and_(data, (Task.input_data["data_line"].as_string() == "literature").is_(True))
-    static_safe = or_(
-        Task.input_data["situation_detached" if input_data.get("data_only") and _data_line(input_data) == "situation" else "content_only"].as_boolean().is_(True),
-        Task.input_data["reports_only"].as_boolean().is_(True),
-        Task.input_data["code_only"].as_boolean().is_(True),
+    """Channel reservation wrapper preserving module-level monkeypatch hooks."""
+    return _models_release_conflict_clause(
+        input_data,
+        is_paused=is_automatic_json_paused,
+        parked_reservation=_parked_json_reservation,
     )
-    if input_data.get("raw_archive_only"):
-        return archive
-    if input_data.get("data_only"):
-        if _data_line(input_data) == "literature":
-            # Research has private data artifacts but reads static site inputs.
-            return and_(~archive, or_(literature, ~data))
-        conflict = and_(~archive, ~literature, or_(data, ~static_safe))
-        other = "surveillance" if _data_line(input_data) == "situation" else "situation"
-        conflict = and_(conflict, ~_parked_json_reservation(other))
-        if is_automatic_json_paused(other):
-            other_line = (Task.input_data["data_line"].as_string().is_distinct_from("situation")
-                          if other == "surveillance" else
-                          (Task.input_data["data_line"].as_string() == "situation").is_(True))
-            # A parked retry owns its own candidate, not the other channel's
-            # output directory. Queued/running work keeps the shared JSON slot.
-            conflict = and_(conflict, ~and_(Task.status == TaskStatus.RETRYING, data, other_line))
-        return conflict
-    if input_data.get("reports_only") or input_data.get("code_only"):
-        return and_(~archive, or_(~data, literature))
-    if input_data.get("content_only") or input_data.get("situation_detached"):
-        conflicting_data = []
-        if not input_data.get("content_only"):
-            conflicting_data.append(and_(data, Task.input_data["data_line"].as_string().is_distinct_from("situation")))
-        if not input_data.get("situation_detached"):
-            conflicting_data.append(and_(data, Task.input_data["data_line"].as_string() == "situation"))
-        return and_(~archive, or_(~data, literature, *conflicting_data))
-    # An old site task can read/write observations and published curves. Until
-    # it drains, it owns both the static and the surveillance channel.
-    return ~archive
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 ASTRO_DIR = ROOT_DIR / "astro-site"
 ENV_PATH = ROOT_DIR / ".env"
 SUBSCRIPTIONS_SCRIPT = ROOT_DIR / "cloudflare" / "subscriptions" / "scripts" / "wrangler-env.sh"
-GENERATED_DATA_PATHS = (
-    "astro-site/src/data/about.json",
-    "astro-site/src/data/countries",
-    "astro-site/src/data/disease-knowledge",
-    "astro-site/src/data/disease-ontology.json",
-    "astro-site/src/data/diseases",
-    "astro-site/src/data/downloads.json",
-    "astro-site/src/data/meta.json",
-    "astro-site/src/data/reports",
-    "astro-site/src/data/research",
-    "astro-site/src/data/situation",
-    "astro-site/src/data/_release-projection",
-    "data/current",
-    "data/raw",
-)
 SITE_RELEASE_MANIFEST = ASTRO_DIR / "dist" / "release.json"
-SITE_VISUAL_MODULE_PREFIXES = (
-    "ChartFrame.",
-    "ComparisonTable.",
-    "CompareWorkspace.",
-    "CountrySeasonalityPicker.",
-    "DiseaseCountryCurve.",
-    "DiseaseCoverageMap.",
-    "DiseaseHeatmap.",
-    "DiseaseSeasonalityHeatmap.",
-    "EpidemicCurve.",
-)
-# These files are atomically maintained by background quality automation and
-# are part of the generated public-data snapshot, not source code.  They must
-# not make an otherwise valid unattended release fail its clean-worktree gate.
-# Keep this list deliberately narrow: unknown tracked changes remain blocking.
-RELEASE_RUNTIME_MUTABLE_PATHS = (
-    "configs/literature/weekly_ai_reviews.json",
-)
-AUTO_RELEASE_TASK_TYPES = (
-    TaskType.CRAWL_DATA,
-    TaskType.PROCESS_DATA,
-    TaskType.GENERATE_REPORT,
-    TaskType.SYNC_LITERATURE,
-    TaskType.ENRICH_LITERATURE,
-    TaskType.DISCOVER_LITERATURE_GAPS,
-    TaskType.REFRESH_SITUATION_SOURCES,
-)
-LITERATURE_RELEASE_TASK_TYPES = {
-    TaskType.SYNC_LITERATURE,
-    TaskType.ENRICH_LITERATURE,
-    TaskType.DISCOVER_LITERATURE_GAPS,
-}
-GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
-SUBSCRIPTION_SYNC_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
-SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict", "force"}
-LOGGED_COMMAND_CANCEL_POLL_SECONDS = 1.0
-DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS = 15 * 60
-# A complete export can revalidate several gigabytes of partitioned downloads.
-# Allow the full catalogue to finish under the worker's bounded memory budget.
-GENERATE_SITE_DATA_TIMEOUT_SECONDS = 2 * 60 * 60
-# The multilingual static site renders tens of thousands of country/disease
-# pages. Keep the build guard finite, but allow a full production render to
-# finish on release workers instead of aborting at the one-hour legacy limit.
-ASTRO_BUILD_TIMEOUT_SECONDS = 2 * 60 * 60
-CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS = 15 * 60
-SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
-# The initial partitioned download publication can introduce tens of thousands
-# of files and a multi-gigabyte Git pack. Keep this bounded, while giving the
-# first full sync enough time to upload after the raw archive is published.
-DOWNLOAD_PUBLISH_TIMEOUT_SECONDS = 60 * 60
 DOWNLOAD_REPO_BRANCH = get_data_share_repo_branch()
 DIRECT_DOWNLOAD_DIR = ROOT_DIR / "exports" / "site-downloads"
-
-
-def _iso(value: Optional[datetime]) -> Optional[str]:
-    return value.isoformat() if value else None
-
-
-def _coerce_status(value: Any, fallback: str = "idle") -> str:
-    if hasattr(value, "value"):
-        return str(value.value)
-    if value is None:
-        return fallback
-    return str(value)
-
-
-def _as_aware_utc(value: Optional[datetime]) -> Optional[datetime]:
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        return value.replace(tzinfo=ZoneInfo("UTC"))
-    return value.astimezone(ZoneInfo("UTC"))
-
-
-@dataclass
-class DataReleaseJobConfig:
-    job_id: str
-    name: str
-    enabled: bool = True
-    priority: str = "high"
-    auto_after_crawls: bool = False
-    # When enabled, publish the validated v2 snapshot after local generation.
-    include_git_push: bool = True
-    include_cloudflare_deploy: bool = True
-    require_clean_worktree: bool = True
-    interval_minutes: Optional[int] = None
-    daily_time: Optional[str] = "02:00"
-    timezone: Optional[str] = "UTC"
-    github_remote: str = "origin"
-    github_branch: Optional[str] = None
-    cloudflare_project_name: Optional[str] = None
-    commit_message_template: str = "chore(data-release): publish site data {timestamp}"
-    notes: Optional[str] = None
-
-
-@dataclass
-class DataReleaseJobState:
-    next_run_at: Optional[datetime] = None
-    last_started_at: Optional[datetime] = None
-    last_finished_at: Optional[datetime] = None
-    last_status: str = "idle"
-    last_error: Optional[str] = None
-    last_task_uuid: Optional[str] = None
-    run_count: int = 0
-    skipped_count: int = 0
 
 
 class DataReleaseService:
@@ -490,7 +337,7 @@ class DataReleaseService:
                 await asyncio.wait_for(
                     self._stop_event.wait(), timeout=cfg.poll_interval_seconds
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     def _automatic_retry_settings(self) -> tuple[int, int, int]:
@@ -1601,92 +1448,37 @@ class DataReleaseService:
                 if (data_only or pending_ids is not None or not manual) and not dirty_ids:
                     return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid,
                             "reason": "no_publishable_changes"}
-        description_parts = [
-            f"Refresh and generate site data, then build Astro site for release job {job.job_id}.",
-            (
-                f"Incrementally archive raw crawler data to {raw_archive.branch}."
-                if raw_archive.enabled
-                else "Raw crawler archive publication disabled for this run."
-            ),
-            (
-                f"Publish partitioned CSV/JSON/XLSX downloads to {branch}."
-                if job.include_git_push
-                else "GitHub download publication disabled for this run."
-            ),
-            f"Pages: {project_name}" if job.include_cloudflare_deploy else "Cloudflare deploy disabled.",
-        ]
-        if code_only:
-            description_parts = ["Build and publish code/templates using the existing data snapshot; no collection or download generation."]
-        if reports_only:
-            description_parts = ["Refresh report data, build report pages, publish changed files to Reports R2, and verify the public report host."]
-        if data_only:
-            description_parts = (["Build and publish a frozen literature generation independently of AI analysis and other data channels."]
-                                 if data_line == "literature" else
-                                 [f"Publish changed {data_line} JSON snapshots and their manifest without rebuilding static pages."])
-            if data_line == "surveillance" and job.include_git_push:
-                description_parts.append("Incrementally export and push matching CSV/JSON/XLSX downloads to GitHub before acknowledging these changes.")
-
-        input_data = {
-            # Maintenance publications can refresh content/templates without
-            # creating subscriber campaigns. Freeze this choice before queueing.
-            **({"suppress_subscription_dispatch": True} if suppress_subscription_dispatch else {}),
-            "release_job_id": job.job_id,
-            "release_job_name": job.name,
-            "priority": job.priority,
-            "auto_after_crawls": job.auto_after_crawls,
-            "include_git_push": bool(job.include_git_push and not reports_only and not code_only and (not data_only or data_line == "surveillance")),
-            "include_cloudflare_deploy": bool(job.include_cloudflare_deploy and not reports_only and not data_only),
-            "require_clean_worktree": job.require_clean_worktree,
-            "download_repo_branch": branch,
-            "deployment_branch": job.github_branch,
-            "github_repo_url": download_repo_url,
-            "download_url_base": download_url_base,
-            "cloudflare_project_name": project_name,
-            "commit_message_template": job.commit_message_template,
-            "timezone": job.timezone or self._config().timezone,
-            "trigger": trigger,
-            "manual_trigger": manual,
-            "incremental_country_codes": incremental_country_codes,
-            "incremental_site": incremental_site,
-            "full": full,
-            "reports_only": reports_only,
-            "code_only": code_only,
-            "data_only": data_only,
-            "data_line": data_line if data_only else None,
-            "situation_detached": situation_detached,
-            "literature_detached": literature_detached,
-            # Freeze the selected publication contract. A configuration change
-            # before execution/retry must not turn a static content task into
-            # a surveillance exporter (or acknowledge unselected data rows).
-            "content_only": content_only,
-            "country_scopes_exact": True,
-            "release_plan": release_plan,
-            "continuation_dirty_ids": release_plan.get("continuation_dirty_ids", []),
-            "continuation_parent_task_uuid": trigger_task_uuid if pending_ids is not None else None,
-            "publish_dirty_ids": dirty_ids,
-            "publish_dirty_before": None,
-            "publish_selected_at": marked_before,
-            "publish_change_count": len(dirty_ids),
-            "trigger_task_uuid": trigger_task_uuid,
-            "generated_paths": list(GENERATED_DATA_PATHS),
-            "raw_archive_enabled": bool(raw_archive.enabled and not data_only),
-            "raw_archive_repo_url": raw_archive.repo_url,
-            "raw_archive_branch": raw_archive.branch,
-        }
-        if surveillance_rebuild_all:
-            input_data["surveillance_rebuild_all"] = True
-        if publication_plan:
-            input_data["publication_plan"] = dict(publication_plan)
-            input_data["publication_expected_generations"] = dict(publication_plan.get("expected_generations", {}))
-            if publication_plan.get("execution_mode") == "country_template":
-                input_data["country_template_only"] = True
-                input_data["country_template_codes"] = list(publication_plan.get("country_codes", []))
-        if theme_only:
-            input_data.update(theme_only=True, include_git_push=False, include_cloudflare_deploy=False,
-                              raw_archive_enabled=False, publish_dirty_ids=[], continuation_dirty_ids=[],
-                              publish_change_count=0, content_only=False, situation_detached=False,
-                              literature_detached=False)
-            description_parts = ["Publish and verify the frozen compatible theme candidate; no content, HTML or Pages build."]
+        description_parts, input_data = build_release_task_payload(
+            job,
+            default_timezone=self._config().timezone,
+            branch=branch,
+            project_name=project_name,
+            download_repo_url=download_repo_url,
+            download_url_base=download_url_base,
+            raw_archive=raw_archive,
+            generated_paths=GENERATED_DATA_PATHS,
+            manual=manual,
+            trigger=trigger,
+            trigger_task_uuid=trigger_task_uuid,
+            full=full,
+            reports_only=reports_only,
+            code_only=code_only,
+            data_only=data_only,
+            data_line=data_line,
+            theme_only=theme_only,
+            situation_detached=situation_detached,
+            literature_detached=literature_detached,
+            content_only=content_only,
+            incremental_country_codes=incremental_country_codes,
+            incremental_site=incremental_site,
+            release_plan=release_plan,
+            dirty_ids=dirty_ids,
+            pending_ids=pending_ids,
+            marked_before=marked_before,
+            suppress_subscription_dispatch=suppress_subscription_dispatch,
+            publication_plan=publication_plan,
+            surveillance_rebuild_all=surveillance_rebuild_all,
+        )
         async with get_database() as db:
             # Reserve a channel atomically across scheduler/API processes.
             # JSON and static have separate runtime outputs, but their brief
@@ -1880,235 +1672,15 @@ class DataReleaseService:
         }
 
     async def integration_checks(self, job_id: str, *, code_only: bool = False) -> dict[str, Any]:
-        await self.ensure_storage()
-        job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
-        if job is None:
-            raise ValueError(f"Data release job not found: {job_id}")
-
-        branch = self._download_repo_branch(job)
-        download_repo = await self._download_repo_check(job) if job.include_git_push and not code_only else {
-            "payload": {
-                "repo_url": self._download_repo_url() or None,
-                "branch": branch,
-                "raw_base_url": self._download_repo_raw_base(job) or None,
-                "read_access_ok": False,
-                "write_access_ok": False,
-                "read_check_output": "Skipped: direct download publication is disabled.",
-                "write_check_output": "Skipped: direct download publication is disabled.",
-                "ssh_transport": "disabled",
-                "publisher_enabled": False,
-            },
-            "blockers": [],
-        }
-        worktree_all = await self._git_status_paths()
-        worktree = release_checks.release_blocking_worktree_paths(
-            worktree_all,
-            runtime_mutable_paths=RELEASE_RUNTIME_MUTABLE_PATHS,
+        return await release_environment.run_integration_checks(
+            self,
+            job_id,
+            code_only=code_only,
+            root_dir=ROOT_DIR,
+            astro_dir=ASTRO_DIR,
+            missing_changelog_fn=missing_public_changelog_versions,
+            changelog_blocker_fn=public_changelog_blocker,
         )
-        runtime_mutable_worktree = [
-            path for path in worktree_all if path not in worktree
-        ]
-        tracked_generated_paths = await self._tracked_generated_paths()
-
-        python_path = self._python_executable()
-        if code_only:
-            situation_notices_check = {"returncode": 0, "stdout": "Skipped for code-only release."}
-        elif python_path.exists():
-            situation_notices_check = await self._run_capture(
-                [*self._update_situation_notices_command(python_path=python_path), "--help"],
-                cwd=ROOT_DIR,
-                timeout=60,
-            )
-        else:
-            situation_notices_check = {"returncode": 127, "stdout": f"Python executable not found: {python_path}"}
-        wrangler_check = await self._run_capture(
-            ["npm", "exec", "--", "wrangler", "--version"],
-            cwd=ASTRO_DIR,
-            timeout=60,
-        )
-        cloudflare = await self._cloudflare_check(job.cloudflare_project_name)
-        archive_config = self._raw_archive_runtime()
-        raw_archive = {
-            "payload": {
-                "enabled": archive_config.enabled, "repo_url": archive_config.repo_url or None,
-                "branch": archive_config.branch, "independent": True,
-                "read_access_ok": None, "write_access_ok": None,
-                "ssh_transport": "deferred",
-                "read_check_output": "Checked by the independent raw archive task.",
-                "write_check_output": "Checked by the independent raw archive task.",
-            },
-            "blockers": [],
-        }
-        r2_enabled = self._r2_papers_enabled(job)
-        r2_papers = (
-            self._r2_papers_check(probe=True)
-            if r2_enabled
-            else {
-                "payload": {
-                    **r2_preflight_payload(None, probe=False),
-                    "enabled": False,
-                    "error": "R2 papers publish is disabled for this release job.",
-                },
-                "blockers": [],
-            }
-        )
-        if r2_enabled:
-            r2_papers["payload"]["enabled"] = True
-        r2_reports_enabled = self._r2_reports_enabled(job)
-        r2_reports = (
-            self._r2_reports_check(probe=True)
-            if r2_reports_enabled
-            else {
-                "payload": {
-                    **r2_preflight_payload(None, probe=False),
-                    "enabled": False,
-                    "public_base_url": DEFAULT_REPORTS_ORIGIN,
-                    "error": "R2 reports publish is disabled for this release job.",
-                },
-                "blockers": [],
-            }
-        )
-        if r2_reports_enabled:
-            r2_reports["payload"]["enabled"] = True
-        pages_budget = self._pages_budget_snapshot()
-
-        blockers: list[str] = []
-        if job.include_git_push:
-            blockers.extend(download_repo["blockers"])
-        if job.include_cloudflare_deploy and not job.include_git_push and not code_only:
-            blockers.append(
-                "Cloudflare deployment requires direct-download publication so the "
-                "new site never references unpublished CSV/JSON/XLSX partitions."
-            )
-        if job.include_cloudflare_deploy and not r2_enabled:
-            blockers.append(
-                "Cloudflare deployment requires R2 papers publication so article "
-                "pages are not left only on the Pages file budget."
-            )
-        if job.include_cloudflare_deploy and not r2_reports_enabled:
-            blockers.append("Cloudflare deployment requires the reports R2 channel so report archives are not left on Pages.")
-        if r2_enabled:
-            blockers.extend(r2_papers["blockers"])
-        if r2_reports_enabled:
-            blockers.extend(r2_reports["blockers"])
-        if job.include_cloudflare_deploy:
-            blockers.extend(cloudflare["blockers"])
-        if code_only:
-            from .data_release.stage_receipts import StageReceipts
-
-            try:
-                await asyncio.to_thread(
-                    StageReceipts(ROOT_DIR, "preflight", {}, {}).published_data_paths,
-                    [ASTRO_DIR / "src/data", ASTRO_DIR / "public/site-data"],
-                )
-            except RuntimeError as exc:
-                blockers.append(str(exc))
-        # The independent archive job owns its own access checks and retries.
-        if not python_path.exists():
-            blockers.append(f"Python executable not found: {python_path}")
-        elif situation_notices_check["returncode"] != 0:
-            output = str(situation_notices_check.get("stdout") or "").strip()
-            detail = output.splitlines()[-1] if output else "command returned no diagnostic output"
-            blockers.append(f"Situation Room refresh command is unavailable: {detail}")
-        if job.include_cloudflare_deploy and wrangler_check["returncode"] != 0:
-            blockers.append("Wrangler CLI is unavailable.")
-        if (
-            job.include_cloudflare_deploy
-            and cloudflare["payload"].get("project_access_ok")
-            and not cloudflare["payload"].get("production_branch")
-        ):
-            blockers.append("Cloudflare Pages project has no production branch configured.")
-        if tracked_generated_paths:
-            blockers.append(
-                "Generated data is still tracked by the code repository: "
-                + ", ".join(tracked_generated_paths)
-            )
-        try:
-            missing_changelog_versions = missing_public_changelog_versions(
-                markdown_path=ROOT_DIR / "CHANGELOG.md",
-                typescript_path=ASTRO_DIR / "src" / "data" / "changelog.ts",
-            )
-        except OSError as exc:
-            blockers.append(
-                "Public changelog could not be compared with CHANGELOG.md: "
-                f"{exc}"
-            )
-        else:
-            if missing_changelog_versions:
-                blockers.append(public_changelog_blocker(missing_changelog_versions))
-
-        return {
-            "checked_at": datetime.now(ZoneInfo("UTC")).isoformat(),
-            "overall_ready": not blockers,
-            "blockers": blockers,
-            "git": {
-                "env_var": "GITHUB_DATA_SHARE_REPO_URL",
-                "repo_url": download_repo["payload"]["repo_url"],
-                "branch": branch,
-                "raw_base_url": download_repo["payload"]["raw_base_url"],
-                "read_access_ok": download_repo["payload"]["read_access_ok"],
-                "write_access_ok": download_repo["payload"]["write_access_ok"],
-                "read_check_output": download_repo["payload"]["read_check_output"],
-                "write_check_output": download_repo["payload"]["write_check_output"],
-                "ssh_transport": download_repo["payload"].get("ssh_transport"),
-                "require_clean_worktree": job.require_clean_worktree,
-                "dirty_paths": worktree_all,
-                "dirty_blocking_paths": worktree,
-                "dirty_runtime_mutable_paths": runtime_mutable_worktree,
-            },
-            "cloudflare": cloudflare["payload"],
-            "raw_archive": raw_archive["payload"],
-            "r2_papers": r2_papers["payload"],
-            "r2_reports": r2_reports["payload"],
-            "pages_budget": pages_budget,
-            "channels": {
-                "pages_main": {
-                    "enabled": bool(job.include_cloudflare_deploy),
-                    "ready": bool(
-                        job.include_cloudflare_deploy
-                        and cloudflare["payload"].get("project_access_ok")
-                        and not cloudflare["blockers"]
-                    ),
-                    "file_count": pages_budget.get("file_count"),
-                    "file_budget": pages_budget.get("budget"),
-                },
-                "github_downloads": {
-                    "enabled": bool(job.include_git_push and not code_only),
-                    "ready": bool(
-                        job.include_git_push and not code_only
-                        and download_repo["payload"].get("read_access_ok")
-                        and download_repo["payload"].get("write_access_ok")
-                    ),
-                    "repo_url": download_repo["payload"].get("repo_url"),
-                },
-                "r2_papers": {
-                    "enabled": bool(r2_enabled),
-                    "ready": bool(
-                        r2_enabled and r2_papers["payload"].get("bucket_access_ok")
-                    ),
-                    "public_base_url": r2_papers["payload"].get("public_base_url"),
-                    "bucket": r2_papers["payload"].get("bucket"),
-                },
-                "r2_reports": {
-                    "enabled": bool(r2_reports_enabled),
-                    "ready": bool(r2_reports_enabled and r2_reports["payload"].get("bucket_access_ok")),
-                    "public_base_url": r2_reports["payload"].get("public_base_url"),
-                    "bucket": r2_reports["payload"].get("bucket"),
-                },
-            },
-            "commands": {
-                "python_path": str(python_path),
-                "python_exists": python_path.exists(),
-                "wrangler_available": wrangler_check["returncode"] == 0,
-                "wrangler_version": wrangler_check["stdout"].strip() or None,
-            },
-            "repository_boundary": {
-                "generated_paths": list(GENERATED_DATA_PATHS),
-                "tracked_paths": tracked_generated_paths,
-                "enforced": not tracked_generated_paths,
-                "runtime_mutable_paths": list(RELEASE_RUNTIME_MUTABLE_PATHS),
-            },
-        }
 
     async def execute_release_task(self, task: Task) -> dict[str, Any]:
         runtime = release_pipeline.ReleasePipelineRuntime(
@@ -2210,39 +1782,18 @@ class DataReleaseService:
         *,
         now: Optional[datetime] = None,
     ) -> Optional[datetime]:
-        timezone_name = job.timezone or self._config().timezone
-        zone = ZoneInfo(timezone_name)
-        current = now.astimezone(zone) if now else datetime.now(zone)
-        if job.interval_minutes:
-            return current + timedelta(minutes=max(1, job.interval_minutes))
-        if job.daily_time:
-            hour_text, minute_text = job.daily_time.split(":", 1)
-            scheduled = datetime.combine(
-                current.date(),
-                time(hour=int(hour_text), minute=int(minute_text), tzinfo=zone),
-            )
-            if scheduled <= current:
-                scheduled += timedelta(days=1)
-            return scheduled
-        return None
+        return compute_next_run(job, default_timezone=self._config().timezone, now=now)
 
     def _python_executable(self) -> Path:
-        venv_python = ROOT_DIR / "venv" / "bin" / "python3"
-        return venv_python if venv_python.exists() else Path(sys.executable)
+        return release_environment.python_executable(ROOT_DIR)
 
     def _render_commit_message(self, job: DataReleaseJobConfig, *, branch: str, tz: ZoneInfo) -> str:
-        now = datetime.now(tz)
-        template = job.commit_message_template or self._config().default_commit_message_template
-        variables = {
-            "timestamp": now.strftime("%Y-%m-%d %H:%M:%S %Z"),
-            "date": now.strftime("%Y-%m-%d"),
-            "branch": branch,
-            "job_id": job.job_id,
-        }
-        try:
-            return template.format(**variables)
-        except Exception:
-            return self._config().default_commit_message_template.format(**variables)
+        return release_environment.render_commit_message(
+            job,
+            branch=branch,
+            tz=tz,
+            default_template=self._config().default_commit_message_template,
+        )
 
     def _download_repo_url(self) -> str:
         return get_data_share_repo_url().strip()
@@ -2251,14 +1802,12 @@ class DataReleaseService:
         return self._normalize_download_repo_branch(job.github_branch)
 
     def _normalize_download_repo_branch(self, branch: Optional[str]) -> str:
-        default_branch = get_data_share_repo_branch()
-        candidate = (branch or "").strip()
-        legacy_branch = system_settings_service.github_runtime()["default_github_branch"].strip() or self._current_git_branch_fallback()
-        if not candidate:
-            return default_branch
-        if candidate == legacy_branch and default_branch != legacy_branch:
-            return default_branch
-        return candidate
+        return release_environment.normalize_download_repo_branch(
+            branch,
+            default_branch=get_data_share_repo_branch(),
+            legacy_branch=system_settings_service.github_runtime()["default_github_branch"],
+            fallback_branch=self._current_git_branch_fallback,
+        )
 
     def _download_repo_raw_base(self, job: DataReleaseJobConfig) -> str:
         return get_data_share_raw_base_url(
@@ -2270,14 +1819,10 @@ class DataReleaseService:
         return self._normalize_cloudflare_project_name(project_name)
 
     def _normalize_cloudflare_project_name(self, project_name: Optional[str]) -> str:
-        default_project_name = system_settings_service.cloudflare_runtime()["default_cloudflare_project_name"].strip() or "globalid"
-        candidate = (project_name or "").strip()
-        legacy_default_project_name = "globalid"
-        if not candidate:
-            return default_project_name
-        if candidate == legacy_default_project_name and default_project_name != legacy_default_project_name:
-            return default_project_name
-        return candidate
+        return release_environment.normalize_cloudflare_project_name(
+            project_name,
+            default_project_name=system_settings_service.cloudflare_runtime()["default_cloudflare_project_name"],
+        )
 
     def _cloudflare_api_token(self) -> str:
         return system_settings_service.cloudflare_runtime()["cloudflare_api_token"].strip()
@@ -2286,75 +1831,40 @@ class DataReleaseService:
         return system_settings_service.cloudflare_runtime()["cloudflare_account_id"].strip()
 
     async def _current_git_branch(self) -> str:
-        result = await self._run_capture(
-            ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
-            cwd=ROOT_DIR,
+        return await release_environment.current_git_branch(
+            root_dir=ROOT_DIR,
+            run_capture_fn=self._run_capture,
+            fallback_fn=self._current_git_branch_fallback,
         )
-        branch = result["stdout"].strip() if result["returncode"] == 0 else ""
-        if branch and branch != "HEAD":
-            return branch
-        return self._current_git_branch_fallback()
 
     async def _git_head_full(self) -> str:
-        result = await self._run_capture(["git", "rev-parse", "HEAD"], cwd=ROOT_DIR)
-        if result["returncode"] != 0:
-            return ""
-        return result["stdout"].strip()
+        return await release_environment.git_head_full(
+            root_dir=ROOT_DIR,
+            run_capture_fn=self._run_capture,
+        )
 
     async def _git_branch_commit(self, branch: str) -> str:
-        """Resolve a local or origin branch without changing the working tree."""
-
-        normalized = branch.strip()
-        if not normalized:
-            return ""
-        for ref in (f"refs/remotes/origin/{normalized}", f"refs/heads/{normalized}"):
-            result = await self._run_capture(
-                ["git", "rev-parse", "--verify", ref],
-                cwd=ROOT_DIR,
-            )
-            if result["returncode"] == 0 and result["stdout"].strip():
-                return result["stdout"].strip()
-        return ""
+        return await release_environment.git_branch_commit(
+            branch,
+            root_dir=ROOT_DIR,
+            run_capture_fn=self._run_capture,
+        )
 
     async def _site_release_identity(self, deployment_branch: str) -> dict[str, Any]:
-        source_commit = await self._git_head_full()
-        source_branch = await self._current_git_branch()
-        deployment_commit = await self._git_branch_commit(deployment_branch)
-        if source_commit and deployment_commit == source_commit:
-            source_branch = deployment_branch
-        built_at = datetime.now(ZoneInfo("UTC")).isoformat()
-        short_commit = source_commit[:12] if source_commit else "unknown"
-        release_id = f"{datetime.now(ZoneInfo('UTC')).strftime('%Y%m%dT%H%M%SZ')}-{short_commit}"
-        return {
-            "release_id": release_id,
-            "built_at": built_at,
-            "source_branch": source_branch or "detached",
-            "source_commit": source_commit or "unknown",
-            "deployment_branch": deployment_branch,
-            # Keep the provenance flag truthful: runtime-mutated registries do
-            # not block the release, but they are still changes relative to
-            # the source commit and must be surfaced to the deployment system.
-            "commit_dirty": bool(await self._git_status_paths()),
-        }
+        return await release_environment.site_release_identity(
+            deployment_branch,
+            git_head_full_fn=self._git_head_full,
+            current_git_branch_fn=self._current_git_branch,
+            git_branch_commit_fn=self._git_branch_commit,
+            git_status_paths_fn=self._git_status_paths,
+        )
 
     def _write_site_release_manifest(self, identity: dict[str, Any], *, astro_dir: Path | None = None) -> dict[str, Any]:
-        dist_dir = (astro_dir or ASTRO_DIR) / "dist"
-        if not dist_dir.is_dir():
-            raise RuntimeError(f"Astro build output is missing: {dist_dir}")
-
-        assets_dir = dist_dir / "_astro"
-        visual_modules = sorted(
-            path.name
-            for path in assets_dir.glob("*.js")
-            if path.is_file() and path.name.startswith(SITE_VISUAL_MODULE_PREFIXES)
+        return release_environment.write_site_release_manifest(
+            identity,
+            astro_dir=astro_dir or ASTRO_DIR,
+            visual_module_prefixes=SITE_VISUAL_MODULE_PREFIXES,
         )
-        payload = {
-            **identity,
-            "visual_modules": visual_modules,
-        }
-        from src.generation.site_data_writer import _write_if_changed
-        _write_if_changed(dist_dir / "release.json", (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
-        return payload
 
     def _cloudflare_deploy_command(
         self,
@@ -2413,17 +1923,9 @@ class DataReleaseService:
         )
 
     def _raw_archive_runtime(self) -> SimpleNamespace:
-        """Resolve raw-archive settings from the same control-center source as downloads."""
-
-        cfg = get_config()
-        archive = cfg.raw_archive
-        github = system_settings_service.github_runtime()
-        return SimpleNamespace(
-            enabled=bool(github["raw_archive_enabled"]),
-            repo_url=str(github["raw_archive_repo_url"] or "").strip(),
-            branch=str(github["raw_archive_branch"] or "").strip() or "main",
-            repository_dir=archive.repository_dir,
-            git_timeout_seconds=archive.git_timeout_seconds,
+        return release_environment.resolve_raw_archive_runtime(
+            config=get_config(),
+            github_runtime=system_settings_service.github_runtime(),
         )
 
     def _publish_raw_archive_command(
@@ -2446,253 +1948,98 @@ class DataReleaseService:
         return ROOT_DIR / "exports" / "reports-site"
 
     def _r2_papers_config(self) -> R2PapersConfig | None:
-        release = self._config()
-        account_id = (
-            str(release.r2_account_id or "").strip()
-            or str(self._cloudflare_account_id() or "").strip()
-        )
-        access_key_id = str(release.r2_access_key_id or "").strip()
-        secret_access_key = str(release.r2_secret_access_key or "").strip()
-        if not (access_key_id and secret_access_key):
-            derived = derive_r2_credentials_from_api_token(self._cloudflare_api_token())
-            if derived:
-                access_key_id, secret_access_key = derived
-        return R2PapersConfig.from_mapping(
-            {
-                "account_id": account_id,
-                "bucket": release.r2_papers_bucket,
-                "access_key_id": access_key_id,
-                "secret_access_key": secret_access_key,
-                "public_base_url": release.r2_papers_public_base_url or DEFAULT_PAPERS_ORIGIN,
-                "endpoint_url": release.r2_endpoint_url,
-            }
+        return release_environment.resolve_r2_papers_config(
+            self._config(),
+            cloudflare_account_id=self._cloudflare_account_id(),
+            cloudflare_api_token=self._cloudflare_api_token(),
         )
 
     def _r2_reports_config(self) -> R2PapersConfig | None:
-        release = self._config()
-        account_id = (
-            str(release.r2_account_id or "").strip()
-            or str(self._cloudflare_account_id() or "").strip()
-        )
-        access_key_id = str(release.r2_access_key_id or "").strip()
-        secret_access_key = str(release.r2_secret_access_key or "").strip()
-        if not (access_key_id and secret_access_key):
-            derived = derive_r2_credentials_from_api_token(self._cloudflare_api_token())
-            if derived:
-                access_key_id, secret_access_key = derived
-        return R2PapersConfig.from_mapping(
-            {
-                "account_id": account_id,
-                "bucket": release.r2_reports_bucket,
-                "access_key_id": access_key_id,
-                "secret_access_key": secret_access_key,
-                "public_base_url": release.r2_reports_public_base_url or DEFAULT_REPORTS_ORIGIN,
-                "endpoint_url": release.r2_endpoint_url,
-                "manifest_key": "reports-manifest.json",
-            }
+        return release_environment.resolve_r2_reports_config(
+            self._config(),
+            cloudflare_account_id=self._cloudflare_account_id(),
+            cloudflare_api_token=self._cloudflare_api_token(),
         )
 
     def _r2_papers_enabled(self, job: DataReleaseJobConfig | None = None) -> bool:
-        cfg = self._config()
-        if not bool(cfg.r2_papers_enabled):
-            return False
-        if job is not None and not job.include_cloudflare_deploy:
-            # Papers hosting is required whenever the public site deploys; when
-            # Cloudflare is off, skip remote papers publish as well.
-            return False
-        return True
+        return release_environment.r2_papers_enabled(self._config(), job)
 
     def _r2_reports_enabled(self, job: DataReleaseJobConfig | None = None) -> bool:
-        cfg = self._config()
-        if not bool(cfg.r2_reports_enabled):
-            return False
-        if job is not None and not job.include_cloudflare_deploy:
-            return False
-        return True
+        return release_environment.r2_reports_enabled(self._config(), job)
 
     def _split_papers_bundle_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:
-        cfg = self._config()
-        return build_split_papers_bundle_command(
+        return release_environment.split_papers_bundle_command(
+            self._config(),
             python_path=python_path,
             dist_dir=(astro_dir or ASTRO_DIR) / "dist",
             papers_dir=self._papers_site_dir(),
-            main_origin=str(cfg.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
-            papers_origin=str(
-                cfg.r2_papers_public_base_url or DEFAULT_PAPERS_ORIGIN
-            ),
-            pages_file_budget=int(cfg.pages_file_budget),
-            pages_file_warn=int(cfg.pages_file_warn),
-            # All long-tail research pages are published on the Papers host.
-            # The literature flag controls data publication, not URL ownership.
-            research_on_main=False,
         )
 
     def _publish_papers_r2_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:
-        command = build_publish_papers_r2_command(
+        return release_environment.publish_papers_r2_command(
             python_path=python_path,
             source_dir=self._papers_site_dir(),
-            articles_dir=(astro_dir or ASTRO_DIR) / "src" / "data" / "research" / "articles",
+            astro_dir=astro_dir or ASTRO_DIR,
+            include_custom_astro_paths=astro_dir is not None,
         )
-        if astro_dir is not None:
-            command.extend(["--site-dist", str(astro_dir / "dist"),
-                            "--research-source", str(astro_dir / "public/site-data/research")])
-        return command
 
     def _split_reports_bundle_command(self, *, python_path: Path, astro_dir: Path | None = None) -> list[str]:
-        cfg = self._config()
-        return build_split_reports_bundle_command(
+        return release_environment.split_reports_bundle_command(
+            self._config(),
             python_path=python_path,
             dist_dir=(astro_dir or ASTRO_DIR) / "dist",
             reports_dir=self._reports_site_dir(),
-            main_origin=str(cfg.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
-            reports_origin=str(cfg.r2_reports_public_base_url or DEFAULT_REPORTS_ORIGIN),
-            pages_file_budget=int(cfg.pages_file_budget),
-            pages_file_warn=int(cfg.pages_file_warn),
         )
 
     def _publish_reports_r2_command(self, *, python_path: Path) -> list[str]:
         return build_publish_reports_r2_command(python_path=python_path, source_dir=self._reports_site_dir())
 
     def _verify_reports_host_command(self, *, python_path: Path) -> list[str]:
-        cfg = self._config()
-        return build_verify_reports_host_command(
+        return release_environment.verify_reports_host_command(
+            self._config(),
             python_path=python_path,
             reports_dir=self._reports_site_dir(),
-            reports_origin=str(cfg.r2_reports_public_base_url or DEFAULT_REPORTS_ORIGIN),
         )
 
     def _r2_papers_check(self, *, probe: bool = True) -> dict[str, Any]:
-        payload = r2_preflight_payload(self._r2_papers_config(), probe=probe)
-        blockers: list[str] = []
-        if not payload.get("credentials_present"):
-            blockers.append(
-                "R2 papers credentials are missing "
-                "(R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / account id)."
-            )
-        elif not payload.get("bucket_access_ok"):
-            detail = str(payload.get("error") or "bucket probe failed").strip()
-            blockers.append(f"R2 papers bucket is not reachable: {detail}")
-        return {"payload": payload, "blockers": blockers}
+        return release_environment.r2_papers_check(self._r2_papers_config(), probe=probe)
 
     def _r2_reports_check(self, *, probe: bool = True) -> dict[str, Any]:
-        payload = r2_preflight_payload(self._r2_reports_config(), probe=probe)
-        if not payload.get("configured"):
-            payload["public_base_url"] = DEFAULT_REPORTS_ORIGIN
-        blockers: list[str] = []
-        if not payload.get("credentials_present"):
-            blockers.append("R2 reports credentials are missing (R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / account id).")
-        elif not payload.get("bucket_access_ok"):
-            detail = str(payload.get("error") or "bucket probe failed").strip()
-            blockers.append(f"R2 reports bucket is not reachable: {detail}")
-        return {"payload": payload, "blockers": blockers}
+        return release_environment.r2_reports_check(self._r2_reports_config(), probe=probe)
 
     def _pages_budget_snapshot(self) -> dict[str, Any]:
-        cfg = self._config()
-        dist_dir = ASTRO_DIR / "dist"
-        file_count = count_files(dist_dir) if dist_dir.is_dir() else None
-        budget = int(cfg.pages_file_budget)
-        warn_at = int(cfg.pages_file_warn)
-        return {
-            "dist_present": dist_dir.is_dir(),
-            "file_count": file_count,
-            "budget": budget,
-            "warn_at": warn_at,
-            "ok": None if file_count is None else file_count < budget,
-            "warn": None if file_count is None else file_count >= warn_at,
-        }
+        return release_environment.pages_budget_snapshot(self._config(), astro_dir=ASTRO_DIR)
 
     def _env_file_values(self) -> dict[str, str]:
-        if dotenv_values is None or not ENV_PATH.exists():
-            return {}
-        values = dotenv_values(ENV_PATH)
-        return {key: str(value) for key, value in values.items() if value is not None}
+        return release_environment.read_env_file_values(ENV_PATH)
 
     def _env_value(self, name: str, default: str = "") -> str:
-        return (os.getenv(name) or self._env_file_values().get(name) or default).strip()
+        return release_environment.resolve_env_value(
+            name,
+            env_file_values=self._env_file_values(),
+            default=default,
+        )
 
     def _subscription_options_sync_plan(self) -> tuple[bool, str]:
-        raw = self._env_value("SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE", "auto").lower()
-        if raw in SUBSCRIPTION_SYNC_FALSE_VALUES:
-            return False, "SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE is disabled."
-        if not SUBSCRIPTIONS_SCRIPT.exists():
-            return False, f"Subscription helper script is missing: {SUBSCRIPTIONS_SCRIPT}"
-
-        missing = [
-            name
-            for name in ("SUBSCRIPTIONS__D1_DATABASE_NAME", "SUBSCRIPTIONS__D1_DATABASE_ID")
-            if not self._env_value(name)
-        ]
-        target_environment = self._env_value("SUBSCRIPTIONS__REMOTE_ENVIRONMENT").lower()
-        if target_environment not in {"staging", "production"}:
-            missing.append("SUBSCRIPTIONS__REMOTE_ENVIRONMENT")
-        if self._env_value("SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC") != target_environment:
-            missing.append("SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC")
-        if not self._cloudflare_api_token():
-            missing.append("CLOUDFLARE_API_TOKEN")
-        if missing and raw not in SUBSCRIPTION_SYNC_STRICT_VALUES:
-            return False, "Subscription D1 sync is in auto mode and skipped because settings are missing: " + ", ".join(missing)
-
-        return True, "Subscription D1 option sync is enabled."
+        return release_environment.subscription_options_sync_plan(
+            env_value=self._env_value,
+            subscriptions_script=SUBSCRIPTIONS_SCRIPT,
+            cloudflare_api_token=self._cloudflare_api_token(),
+        )
 
     def _subscription_options_sync_is_strict(self) -> bool:
-        raw = self._env_value("SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE", "auto").lower()
-        return raw in SUBSCRIPTION_SYNC_STRICT_VALUES
+        return release_environment.subscription_options_sync_is_strict(env_value=self._env_value)
 
     async def _sync_subscription_options_if_needed(self, task_uuid: str, *, job_id: str) -> bool:
-        should_sync, sync_reason = self._subscription_options_sync_plan()
-        metadata = {"event": "subscription_options_sync", "release_job_id": job_id}
-        if not should_sync:
-            await task_manager.add_workbook_entry(
-                task_uuid,
-                entry_type="info",
-                title="Subscription Options Sync Skipped",
-                content=sync_reason,
-                content_type="text",
-                metadata={**metadata, "event": "subscription_options_sync_skip"},
-            )
-            return False
-
-        try:
-            await self._run_logged_command(
-                task_uuid,
-                title="Sync Subscription Options",
-                cmd=[
-                    str(SUBSCRIPTIONS_SCRIPT),
-                    "sync-options-remote",
-                    self._env_value("SUBSCRIPTIONS__REMOTE_ENVIRONMENT").lower(),
-                ],
-                cwd=ROOT_DIR,
-                env={
-                    "CI": "1",
-                    "CLOUDFLARE_API_TOKEN": self._cloudflare_api_token(),
-                    "CLOUDFLARE_ACCOUNT_ID": self._cloudflare_account_id(),
-                    "SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC": self._env_value(
-                        "SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC"
-                    ),
-                },
-                metadata=metadata,
-                timeout_seconds=SUBSCRIPTION_SYNC_TIMEOUT_SECONDS,
-            )
-            return True
-        except RuntimeError as exc:
-            if self._subscription_options_sync_is_strict():
-                raise
-            message = (
-                f"{sync_reason}\n\n"
-                "Subscription option sync is running in auto mode, so this release will continue. "
-                "Set SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE=true to make this step blocking.\n\n"
-                f"{exc}"
-            )
-            await task_manager.add_workbook_entry(
-                task_uuid,
-                entry_type="warning",
-                title="Subscription Options Sync Failed",
-                content=message,
-                content_type="text",
-                metadata={**metadata, "event": "subscription_options_sync_failed"},
-            )
-            logger.warning("Subscription options sync failed in auto mode; release will continue: {}", exc)
-            return False
+        return await release_environment.sync_subscription_options_if_needed(
+            self,
+            task_uuid,
+            job_id=job_id,
+            subscriptions_script=SUBSCRIPTIONS_SCRIPT,
+            root_dir=ROOT_DIR,
+            task_manager=task_manager,
+            logger=logger,
+        )
 
     def _is_github_ssh_repo_url(self, repo_url: str) -> bool:
         return release_checks.is_github_ssh_repo_url(repo_url, GITHUB_SSH_PREFIXES)
@@ -2850,23 +2197,7 @@ class DataReleaseService:
         await terminate_process_tree(proc, grace_seconds=grace_seconds)
 
     def _current_git_branch_fallback(self) -> str:
-        branch = os.getenv("DATA_RELEASE_GIT_BRANCH", "").strip()
-        if branch:
-            return branch
-        try:
-            # In a linked worktree .git is a gitdir pointer file. Ask Git to
-            # resolve it; reading .git/HEAD also truncated names with slashes.
-            result = subprocess.run(
-                ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
-                cwd=ROOT_DIR,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=5,
-            )
-        except (OSError, subprocess.SubprocessError):
-            return "detached"
-        return result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else "detached"
+        return release_environment.current_git_branch_fallback(root_dir=ROOT_DIR)
 
 
 data_release_service = DataReleaseService()

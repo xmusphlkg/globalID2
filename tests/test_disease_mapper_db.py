@@ -124,7 +124,7 @@ async def test_dataframe_mapping():
     mapped_count = result_df['disease_id'].notna().sum()
     unmapped_count = result_df['disease_id'].isna().sum()
     
-    print(f"\n统计:")
+    print("\n统计:")
     print(f"  已映射: {mapped_count}")
     print(f"  未映射: {unmapped_count}")
     
@@ -169,7 +169,7 @@ async def test_statistics():
     
     stats = await mapper.get_statistics()
     
-    print(f"\n疾病数据统计:")
+    print("\n疾病数据统计:")
     print(f"  国家: {stats['country_code'].upper()}")
     print(f"  标准疾病库: {stats['standard_diseases']} 种")
     print(f"  总映射数: {stats['total_mappings']} 条")
@@ -217,7 +217,7 @@ async def test_add_disease():
             print(f"  ✅ 疾病添加成功: {info.standard_name_en}")
             
             # 添加映射
-            print(f"\n添加测试映射")
+            print("\n添加测试映射")
             await mapper.add_mapping(
                 disease_id=test_id,
                 local_name='测试疾病名',
@@ -229,13 +229,13 @@ async def test_add_disease():
             if mapped_id == test_id:
                 print(f"  ✅ 映射添加成功: 测试疾病名 → {mapped_id}")
             else:
-                print(f"  ❌ 映射验证失败")
+                print("  ❌ 映射验证失败")
                 return False
         else:
-            print(f"  ❌ 疾病添加失败")
+            print("  ❌ 疾病添加失败")
             return False
         
-        print(f"\n✅ 测试通过\n")
+        print("\n✅ 测试通过\n")
         return True
         
     except Exception as e:

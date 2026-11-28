@@ -15,8 +15,7 @@ from src.generation.literature_visualizations import _facet_slug, build_related_
 def _normalize_seed_doi(value: Any) -> str | None:
     doi = str(value or "").strip().lower()
     for prefix in ("https://doi.org/", "http://doi.org/", "doi:"):
-        if doi.startswith(prefix):
-            doi = doi[len(prefix):]
+        doi = doi.removeprefix(prefix)
     return doi or None
 
 

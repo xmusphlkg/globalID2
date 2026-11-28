@@ -228,9 +228,7 @@ def build_surveillance_evidence(
                     )
                     if requested_exact and outside_exact_window:
                         relation_level = "historical_disease_geography_context"
-                    elif requested_exact and date_unverifiable:
-                        relation_level = "disease_context"
-                    elif requested_exact and related_only:
+                    elif requested_exact and (date_unverifiable or related_only):
                         relation_level = "disease_context"
                 else:
                     if disease_id not in article_disease_ids.get(article_id, set()):

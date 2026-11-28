@@ -1511,6 +1511,16 @@ def write_site_export_artifacts(
             for code, records in (context.get("all_records_by_country") or {}).items()
         }
     countries_simple = context["countries_simple"]
+    country_name_by_code = {
+        c["code"]: c["name"]
+        for c in countries_simple
+        if isinstance(c, dict) and "code" in c and c.get("name") is not None
+    }
+    country_name_zh_by_code = {
+        c["code"]: c["name_zh"]
+        for c in countries_simple
+        if isinstance(c, dict) and "code" in c and c.get("name_zh") is not None
+    }
     country_download_entries = context["country_download_entries"]
     country_exports = context["country_exports"]
     disease_download_entries = context["disease_download_entries"]

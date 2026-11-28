@@ -504,12 +504,14 @@ def _strip_existing_quality_review_notes(existing_notes: Any) -> str | None:
 
 
 def _is_quality_issue_segment(segment: str) -> bool:
-    return (
-        segment.startswith("missing required sections:")
-        or segment.startswith("missing substantive")
-        or segment.startswith("missing traceable sources")
-        or segment.startswith("language mismatch:")
-        or segment.startswith("insufficient evidence:")
+    return segment.startswith(
+        (
+            "missing required sections:",
+            "missing substantive",
+            "missing traceable sources",
+            "language mismatch:",
+            "insufficient evidence:",
+        )
     )
 
 

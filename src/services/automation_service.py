@@ -6,7 +6,7 @@ import asyncio
 import html
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
@@ -460,7 +460,7 @@ class AutomationService:
                 await asyncio.wait_for(
                     self._stop_event.wait(), timeout=cfg.poll_interval_seconds
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     async def _run_tick(self) -> None:
@@ -1019,10 +1019,11 @@ class AutomationService:
             # Debounce: don't send more than one warning per minute
             last_retry_warning = metadata.get("last_retry_warning_at")
             if last_retry_warning:
-                from datetime import datetime as dt
                 try:
-                    last_warning_time = dt.fromisoformat(last_retry_warning)
-                    if (dt.utcnow() - last_warning_time).total_seconds() < 60:
+                    last_warning_time = datetime.fromisoformat(last_retry_warning)
+                    if last_warning_time.tzinfo is None:
+                        last_warning_time = last_warning_time.replace(tzinfo=timezone.utc)
+                    if (datetime.now(timezone.utc) - last_warning_time).total_seconds() < 60:
                         return
                 except (ValueError, TypeError):
                     pass
@@ -1047,8 +1048,7 @@ class AutomationService:
             )
             
             if sent:
-                from datetime import datetime as dt
-                metadata["last_retry_warning_at"] = dt.utcnow().isoformat()
+                metadata["last_retry_warning_at"] = datetime.now(timezone.utc).isoformat()
                 task.metadata_ = metadata
                 await db.commit()
                 logger.info(f"Retry warning sent for task {task_uuid} (attempt {retry_count}/{retry_threshold})")

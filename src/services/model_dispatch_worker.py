@@ -31,7 +31,7 @@ async def run(*, wait_for_worker: bool = True) -> None:
         while wait_for_worker and not stop.is_set() and not worker_ready():
             try:
                 await asyncio.wait_for(stop.wait(), timeout=1.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
         if stop.is_set():
             return

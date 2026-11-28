@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
-@lru_cache(maxsize=None)
+@cache
 def source_label_codes(parent_country_code: str) -> dict[str, str]:
     """Map an upstream region label to its child ISO code when registered."""
 

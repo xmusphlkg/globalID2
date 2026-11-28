@@ -9,10 +9,10 @@ def test_fresh_build_keeps_one_asset_generation_and_bounded_shards():
                 'asset_generations': [['_astro/current.js'], ['_astro/older.js']]}
     local = {'files': [{'key': '_astro/new.js', 'path': '_astro/new.js'}],
              'asset_generations': [['_astro/new.js']]}
-    result = retain_remote_dependencies(local, previous, dict.fromkeys(paths, {}), now=1000)
+    result = retain_remote_dependencies(local, previous, {p: {} for p in paths}, now=1000)
     assert {p['key'] for p in result['files']} == {'_astro/new.js', '_astro/current.js', shard}
     assert result['library_shard_retirements'][shard] == 1000
-    again = retain_remote_dependencies(local, result, dict.fromkeys(paths, {}), now=1100)
+    again = retain_remote_dependencies(local, result, {p: {} for p in paths}, now=1100)
     assert again['library_shard_retirements'][shard] == 1000
-    expired = retain_remote_dependencies(local, result, dict.fromkeys(paths, {}), now=1000 + 48 * 3600)
+    expired = retain_remote_dependencies(local, result, {p: {} for p in paths}, now=1000 + 48 * 3600)
     assert shard not in {p['key'] for p in expired['files']}

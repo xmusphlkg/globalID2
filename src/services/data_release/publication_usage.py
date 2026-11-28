@@ -177,5 +177,5 @@ async def run_usage_collector(stop_event: asyncio.Event) -> None:
             logger.warning("Publication usage snapshot refresh failed; prior snapshot will age to stale")
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=300)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass

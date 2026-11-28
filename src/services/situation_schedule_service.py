@@ -41,8 +41,7 @@ def source_upstream(source_id: str) -> str:
 
     endpoint = str(SOURCE_REGISTRY[source_id].get("endpoint") or "")
     host = urlparse(endpoint).netloc.lower()
-    if host.startswith("www."):
-        host = host[4:]
+    host = host.removeprefix("www.")
     return host or source_id
 
 
@@ -284,7 +283,7 @@ class SituationScheduleService:
                 logger.exception("Situation scheduled refresh failed")
             try:
                 await asyncio.wait_for(self._stop_event.wait(), timeout=cfg.poll_interval_seconds)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     async def _tick(self) -> None:

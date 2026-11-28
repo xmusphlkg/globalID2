@@ -886,7 +886,7 @@ class EvidenceAnalyzer:
         latest_incidence = _num(incidence.iloc[-1]) if len(incidence) else None
         if latest_incidence is not None:
             observations.append(f"Latest crude incidence is {latest_incidence:.3f} per 100,000 population.")
-        observations.append(f"Peak observed period is {str(periods.iloc[peak_idx])} with {int(values.iloc[peak_idx]):,} cases.")
+        observations.append(f"Peak observed period is {periods.iloc[peak_idx]!s} with {int(values.iloc[peak_idx]):,} cases.")
 
         return {
             "chart_kind": "time_series_cases",

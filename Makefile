@@ -1,7 +1,10 @@
 # Makefile for GlobalID V2
 
+DOCKER_COMPOSE ?= docker compose
+
 .PHONY: help install up down restart logs ps test test-health clean format lint check \
-	check-python check-dashboard check-site check-subscriptions \
+	check-repository-boundaries check-python check-dashboard check-site \
+	check-subscriptions check-surveillance-data check-papers-json check-workers \
 	site-data site-data-external site-download-sync site-install site-dev site-build site-preview site-publish wpp-import \
 	autostart-install autostart-uninstall autostart-status
 
@@ -46,24 +49,24 @@ help:
 
 up:
 	@echo "启动 Docker 服务..."
-	sudo docker-compose up -d
+	$(DOCKER_COMPOSE) up -d
 	@echo "等待服务启动..."
 	@sleep 5
 	@make ps
 
 down:
 	@echo "停止 Docker 服务..."
-	sudo docker-compose down
+	$(DOCKER_COMPOSE) down
 
 restart:
 	@make down
 	@make up
 
 logs:
-	sudo docker-compose logs -f
+	$(DOCKER_COMPOSE) logs -f
 
 ps:
-	sudo docker-compose ps
+	$(DOCKER_COMPOSE) ps
 
 # ========== 开发命令 ==========
 
@@ -82,33 +85,43 @@ test-health:
 
 format:
 	@echo "格式化代码..."
-	venv/bin/black src tests
+	venv/bin/ruff format src dashboard/api tests
 	@echo "代码格式化完成"
 
 lint:
 	@echo "代码检查..."
-	venv/bin/ruff check src tests
+	venv/bin/ruff check src dashboard/api scripts tests
 	@echo "检查完成"
 
 check-python:
-	@echo "检查 Python 编译与完整测试集..."
-	venv/bin/python -m compileall -q src scripts tests
+	@echo "检查 Python 静态规则、编译与完整测试集..."
+	venv/bin/ruff check src dashboard/api scripts tests
+	venv/bin/python -m compileall -q src dashboard/api scripts tests
 	venv/bin/python -m pytest -q
 
 check-dashboard:
-	@echo "检查 Dashboard 类型与单元测试..."
+	@echo "检查 Dashboard 类型、静态规则与单元测试..."
 	cd dashboard && npm run lint && npm test
 
 check-site:
-	@echo "检查 Astro 类型、模块测试与生产构建..."
-	cd astro-site && npm run test:charts && npm run test:knowledge && npm run test:research && npm run test:seo && npm run test:perf
-	cd astro-site && npm run check && npm run build:astro
+	@echo "检查 Astro 类型、全量单元测试与生产构建..."
+	cd astro-site && npm run check && npm run test:all && npm run build:astro
 
 check-subscriptions:
 	@echo "检查订阅 Worker 类型、脚本与测试..."
-	cd cloudflare/subscriptions && npm run typecheck && npm test && bash -n scripts/wrangler-env.sh
+	cd cloudflare/subscriptions && CI=1 npm run verify && bash -n scripts/wrangler-env.sh
 
-check: check-repository-boundaries check-python check-dashboard check-site check-subscriptions
+check-surveillance-data:
+	@echo "检查 Surveillance Data Worker 类型与测试..."
+	cd cloudflare/surveillance-data && npm run typecheck && npm test
+
+check-papers-json:
+	@echo "检查 Papers JSON Worker 类型与测试..."
+	cd cloudflare/papers-json && npm run typecheck && npm test
+
+check-workers: check-subscriptions check-surveillance-data check-papers-json
+
+check: check-repository-boundaries check-python check-dashboard check-site check-workers
 	@echo "全项目检查完成（未修改源码、未访问 live-network、未部署）"
 check-repository-boundaries:
 	@./scripts/check_repository_boundaries.sh
@@ -122,10 +135,7 @@ site-data:
 	venv/bin/python3 scripts/generate_site_data.py
 	@echo "数据导出完成"
 
-site-data-external:
-	@echo "导出站点数据，并将下载链接指向外部数据仓库 ..."
-	venv/bin/python3 scripts/generate_site_data.py
-	@echo "外部下载链接导出完成"
+site-data-external: site-data
 
 site-download-sync:
 	@echo "增量发布分块 CSV/JSON/XLSX 数据 ..."

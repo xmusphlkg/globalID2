@@ -35,7 +35,7 @@ def get_engine():
             pool_pre_ping=True,
             pool_recycle=3600,
         )
-        logger.info(f"Database engine created")
+        logger.info("Database engine created")
     return _engine
 
 

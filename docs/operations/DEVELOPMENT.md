@@ -177,3 +177,7 @@ site JSON from PostgreSQL, publishes validated time-partitioned CSV/JSON/XLSX fi
 repository's `main` branch, builds Astro, and deploys the build without committing any
 generated files back to the code branch. See `docs/operations/DATA_VERSIONING.md` for the repository and
 retention boundaries.
+
+## Observability, security, and quality gates
+
+See [`docs/operations/OBSERVABILITY_AND_SECURITY.md`](OBSERVABILITY_AND_SECURITY.md) for Prometheus `/metrics` scraping and the local `venv/bin/python -m src.cli.main metrics` CLI, control-plane and infrastructure security settings (`DASHBOARD_API_KEY`, CORS, panel session rate limiting, loopback DB binds, systemd hardening), `make check` / `make check-workers` quality gates, and Astro build profiling (`GIDS_BUILD_TIMING_REPORT`, `GIDS_BUILD_CHECK_WORKERS`).

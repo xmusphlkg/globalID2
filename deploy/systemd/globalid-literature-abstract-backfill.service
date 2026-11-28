@@ -17,6 +17,8 @@ ExecStart=__PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/run_abstract_b
 Restart=on-failure
 RestartSec=120
 TimeoutStopSec=30
+NoNewPrivileges=yes
+PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target

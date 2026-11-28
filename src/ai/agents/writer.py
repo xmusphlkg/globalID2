@@ -458,9 +458,7 @@ class WriterAgent(BaseAgent):
         
         def convert_timestamps(obj):
             """Convert pandas Timestamp objects to strings recursively."""
-            if isinstance(obj, pd.Timestamp):
-                return obj.isoformat()
-            elif isinstance(obj, datetime):
+            if isinstance(obj, (pd.Timestamp, datetime)):
                 return obj.isoformat()
             elif isinstance(obj, dict):
                 return {key: convert_timestamps(value) for key, value in obj.items()}

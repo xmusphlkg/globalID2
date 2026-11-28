@@ -159,7 +159,6 @@ class ReportGenerationTest:
             analyst = AnalystAgent()
             
             # Enhanced analysis task with more context
-            disease_name = data['disease_name'].iloc[0] if len(data) > 0 else 'Unknown'
             disease_name_en = data['disease_name_en'].iloc[0] if len(data) > 0 else 'Unknown'
             countries = data['country_name_en'].unique().tolist() if len(data) > 0 else ['Unknown']
             date_range = (data['date'].min(), data['date'].max()) if len(data) > 0 else (None, None)
@@ -202,12 +201,13 @@ class ReportGenerationTest:
             
             retry_count = 0
             section_approved = False
+            suggestions: List[str] = []
             
             while retry_count <= max_retries and not section_approved:
                 try:
                     # Generate section content. If we have revision instructions from a previous review, pass them.
                     revision_instructions = None
-                    if retry_count > 0 and 'suggestions' in locals():
+                    if retry_count > 0 and suggestions:
                         revision_instructions = '; '.join(suggestions)
 
                     result = await writer.process(
@@ -404,8 +404,11 @@ class ReportGenerationTest:
             
             # 保存完整报告 (JSON)
             report_file = self.test_data_dir / f"complete_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            with open(report_file, 'w', encoding='utf-8') as f:
-                json.dump(final_report, f, ensure_ascii=False, indent=2, default=str)
+            await asyncio.to_thread(
+                report_file.write_text,
+                json.dumps(final_report, ensure_ascii=False, indent=2, default=str),
+                encoding='utf-8',
+            )
             
             # 生成 Markdown 报告
             markdown_file = self.test_data_dir / f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
@@ -415,7 +418,7 @@ class ReportGenerationTest:
             test_results['markdown_report_file'] = str(markdown_file)
             test_results['status'] = 'success'
             
-            print(f"\n✅ 完整流水线测试成功!")
+            print("\n✅ 完整流水线测试成功!")
             print(f"📄 JSON报告保存到: {report_file}")
             print(f"📋 Markdown报告保存到: {markdown_file}")
             
@@ -441,7 +444,7 @@ class ReportGenerationTest:
                 print(f"   错误: {results['error']}")
         
         if 'stages' in results:
-            print(f"\n阶段结果:")
+            print("\n阶段结果:")
             for stage_name, stage_result in results['stages'].items():
                 status_emoji = "✅" if stage_result.get('status') == 'success' else "❌"
                 print(f"  {status_emoji} {stage_name}: {stage_result.get('status')}")
@@ -551,7 +554,7 @@ async def main():
             print("\n🎉 所有AI报告生成测试通过!")
             exit(0)
         else:
-            print(f"\n😞 AI报告生成测试失败")
+            print("\n😞 AI报告生成测试失败")
             exit(1)
             
     except Exception as e:

@@ -266,7 +266,7 @@ class GermanySurvStatCrawler(BaseCrawler):
             for name, value in form.items()
             if "DropDownListFilterHierarchy" in name and not value
         ]
-        filter_hierarchy = sorted(filter_hierarchies)[-1] if filter_hierarchies else None
+        filter_hierarchy = max(filter_hierarchies) if filter_hierarchies else None
         if not filter_hierarchy:
             raise DESurvStatContractError("SurvStat did not expose a time filter selector")
         html = self._postback(html, target=filter_hierarchy, value="[ReportingDate].[WeekYear]").text
@@ -418,7 +418,7 @@ class GermanySurvStatCrawler(BaseCrawler):
 
     def _crawl_weekly(self, output_csv: Path, *, years: Iterable[int], region: Optional[str]) -> DEFetchSummary:
         rows: List[Dict[str, str]] = []
-        used_years = sorted(set(int(year) for year in years))
+        used_years = sorted({int(year) for year in years})
         for year in used_years:
             last_error: Optional[Exception] = None
             for _attempt in range(3):

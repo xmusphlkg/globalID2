@@ -157,5 +157,5 @@ class RuntimeMetricsMonitor:
                 logger.exception("Could not refresh shared model occupancy")
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=self.interval_seconds)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass

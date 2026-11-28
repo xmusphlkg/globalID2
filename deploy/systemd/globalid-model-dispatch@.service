@@ -18,6 +18,8 @@ Restart=on-failure
 RestartSec=10
 MemoryMax=2G
 TimeoutStopSec=60
+NoNewPrivileges=yes
+PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target

@@ -23,3 +23,5 @@ RestartSec=10
 SuccessExitStatus=143
 TimeoutStopSec=60
 KillMode=mixed
+NoNewPrivileges=yes
+PrivateTmp=yes

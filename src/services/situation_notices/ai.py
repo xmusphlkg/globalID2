@@ -96,7 +96,7 @@ SYSTEM_REVIEWER = reviewer_system("infectious-disease alert extraction")
 
 _DASHES = dict.fromkeys(map(ord, "‐‑‒–—−"), "-")
 _QUOTES = dict.fromkeys(map(ord, "‘’‚‛“”„‟«»"), "'")
-_INVISIBLE = dict.fromkeys(map(ord, "­​‌‍⁠﻿"), None)
+_INVISIBLE = dict.fromkeys(map(ord, "\u00ad\u200b\u200c\u200d\u2060\ufeff"), None)
 _INNER_HYPHEN = re.compile(r"(?<=[^\W\d_])-\s*(?=[^\W\d_])")
 _DIGIT_GROUP = re.compile(r"(?<=\d)[\s, ](?=\d{3}(?!\d))")
 _SPACE = re.compile(r"\s+")

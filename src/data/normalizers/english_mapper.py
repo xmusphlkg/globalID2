@@ -116,7 +116,7 @@ class EnglishDiseaseMapper(MultiLanguageDiseaseMapper):
                       AND dm.is_active = true
                     ORDER BY dm.priority DESC, dm.confidence_score DESC
                 """), {
-                    "country_pattern": f"%_EN"  # 匹配所有 *_EN 格式的英文映射
+                    "country_pattern": "%_EN"  # 匹配所有 *_EN 格式的英文映射
                 })
                 
                 candidates = result.fetchall()

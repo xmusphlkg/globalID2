@@ -324,9 +324,11 @@ def _managed_mapping_rows(managed_ids: set[str]) -> list[dict[str, Any]]:
             row["local_name"],
         )
         previous = deduplicated.get(key)
-        if previous is None or row["priority"] > previous["priority"]:
-            deduplicated[key] = row
-        elif row["priority"] == previous["priority"] and row["is_primary"]:
+        if (
+            previous is None
+            or row["priority"] > previous["priority"]
+            or (row["priority"] == previous["priority"] and row["is_primary"])
+        ):
             deduplicated[key] = row
     return [deduplicated[key] for key in sorted(deduplicated)]
 

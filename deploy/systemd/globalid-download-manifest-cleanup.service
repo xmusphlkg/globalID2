@@ -14,3 +14,5 @@ IOSchedulingClass=best-effort
 IOSchedulingPriority=7
 TimeoutStartSec=infinity
 UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes

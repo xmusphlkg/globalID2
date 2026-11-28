@@ -108,7 +108,7 @@ class MissingDataFetcher:
             def _norm(s):
                 try:
                     return s.strip().lower().replace(' ', '').replace('-', '').replace('_', '')
-                except:
+                except Exception:
                     return None
             
             # 加载中文映射
@@ -160,7 +160,7 @@ class MissingDataFetcher:
         def _norm(s):
             try:
                 return s.strip().lower().replace(' ', '').replace('-', '').replace('_', '')
-            except:
+            except Exception:
                 return None
         
         normalized = _norm(str(disease_name))
@@ -366,8 +366,6 @@ class MissingDataFetcher:
             
             # 标准化疾病名称
             if self.disease_mapper:
-                language = metadata.get('language', 'zh') if metadata else 'zh'
-                
                 # 确定疾病名称列（优先使用Diseases列，因为它包含中文名称）
                 disease_col = None
                 for col in ['Diseases', 'DiseasesCN', '疾病名称', 'Disease']:
@@ -407,7 +405,7 @@ class MissingDataFetcher:
             return df
             
         except Exception as e:
-            logger.error(f"处理URL失败 {url}: {e}", exc_info=True)
+            logger.exception(f"处理URL失败 {url}: {e}")
             return None
     
     async def fetch_missing_data_by_disease(
@@ -513,7 +511,7 @@ class MissingDataFetcher:
                 # 打印数据预览
                 self._print_dataframe_preview(df, url_info)
             else:
-                print(f"  ✗ 获取失败")
+                print("  ✗ 获取失败")
             
             # 添加延迟，避免请求过快
             if i < len(urls_info):
@@ -907,7 +905,7 @@ async def main():
         # 显示统计信息
         if 'standard_disease' in combined_df.columns:
             disease_stats = combined_df['standard_disease'].value_counts()
-            print(f"\n疾病数据统计（前10）:")
+            print("\n疾病数据统计（前10）:")
             for disease, count in disease_stats.head(10).items():
                 print(f"  {disease}: {count} 条记录")
         

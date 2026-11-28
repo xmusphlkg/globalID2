@@ -229,7 +229,7 @@ class IdleBacklogService:
                 await asyncio.wait_for(self._task, timeout=10)
             except asyncio.CancelledError:
                 pass
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("Idle backlog processing did not stop within 10 seconds")
         self._task = None
 
@@ -244,7 +244,7 @@ class IdleBacklogService:
                 self._last_cycle = {"status": "error", "error": str(exc)[:500]}
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self._config().idle_backlog_interval_seconds)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     def snapshot(self) -> dict[str, Any]:

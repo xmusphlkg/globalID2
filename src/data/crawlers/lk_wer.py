@@ -21,7 +21,7 @@ ONTOLOGY_SOURCE_ID = "SRC_LK_EPID_WER"
 INDEX_URL = "https://www.epid.gov.lk/epid/public/weekly-epidemiological-report"
 HISTORY_START_YEAR = 2025
 OFFICIAL_HOSTS = {"epid.gov.lk", "www.epid.gov.lk"}
-WAYBACK_HOSTS = {"web.archive.org", "web.archive.org"}
+WAYBACK_HOSTS = {"web.archive.org"}
 
 
 class SriLankaWERContractError(ValueError):

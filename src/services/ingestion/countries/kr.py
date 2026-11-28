@@ -189,7 +189,7 @@ async def collect_death(writer, *, source="kdca_death_annual", start_year, end_y
             raise RuntimeError(
                 "DATA_GO_KR_SERVICE_KEY is required for KDCA annual death capture"
             )
-        with capture_writer(writer) as capture:
+        with capture_writer(writer):
             await asyncio.to_thread(
                 crawler.fetch_death_annual,
                 start_year=int(start_year),

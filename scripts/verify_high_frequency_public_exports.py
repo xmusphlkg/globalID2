@@ -274,8 +274,6 @@ def projected_rows_for_source(projected_rows, source_rows, source_id):
     retains the selected series identity; use that identity for source-level
     projection checks.
     """
-    source_series = {str(r.get("series_code")): str(r.get("source_system") or "")
-                     for r in source_rows if r.get("series_code")}
     selected = []
     for row in projected_rows:
         if row.get("source_system") == source_id:

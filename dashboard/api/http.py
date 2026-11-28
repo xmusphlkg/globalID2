@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.core.logging import get_logger
+from src.core.metrics import extract_route_template, metrics_registry
 from dashboard.api.schemas.control_plane import ProblemDetail
 
 logger = get_logger(__name__)
@@ -50,7 +51,18 @@ class ControlPlaneHTTPMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
         started = time.perf_counter()
         response = await call_next(request)
-        duration_ms = (time.perf_counter() - started) * 1000
+        duration_seconds = time.perf_counter() - started
+        duration_ms = duration_seconds * 1000
+        if request.url.path != "/metrics":
+            try:
+                metrics_registry.record_http_request(
+                    method=request.method,
+                    route=extract_route_template(request),
+                    status_code=response.status_code,
+                    duration_seconds=duration_seconds,
+                )
+            except Exception:
+                pass
         response.headers["X-Request-ID"] = request_id
         response.headers["Server-Timing"] = f"app;dur={duration_ms:.1f}"
         logger.bind(

@@ -283,7 +283,6 @@ def parse_weekly_pdf(payload, *, reference, source_url=None, retrieved_at=None, 
         for index in candidates:
             page=doc.pages[index].dedupe_chars(tolerance=.7,extra_attrs=());text=page.extract_text() or "";words=page.extract_words(x_tolerance=1,y_tolerance=2)
             try:
-                legend=_fold(text)
                 zero_dash=bool(legend_pages)
                 caption_evidence=ocr_captions.get(index+1)
                 # Text-layer captions remain authoritative where available;
@@ -376,6 +375,7 @@ def parse_weekly_pdf(payload, *, reference, source_url=None, retrieved_at=None, 
                             rows.append(_row(scope=WEEKLY_SCOPE,label=label,icd=icd,value=value,missing=missing,period_start=start,period_end=end,frequency="weekly",measure=measure,sex=sex,definition=definition,dimensions=dims,source_url=source_url or reference["url"],digest=digest,retrieved_at=retrieved_at,year=sy))
                 pages.append({"page":index+1,"source_table":table_no,"rows":len(rows)-before})
             except (MexicoDGEContractError,ValueError,IndexError) as exc:
+                page_error=exc
                 # Roll back the page to avoid partial/conflicting header use.
                 rows=[r for r in rows if r["SourcePage"]!=str(index+1)]
                 if any(w['text']=='ENTIDAD' for w in words) and not ocr_captions.get(index+1):
@@ -390,8 +390,8 @@ def parse_weekly_pdf(payload, *, reference, source_url=None, retrieved_at=None, 
                             'excluded_source_cells':[cell for r in parsed for cell in json.loads(r['SourceProvenance']).get('excluded_source_cells',[])]})
                         continue
                     except (MexicoDGEContractError,ValueError,IndexError) as fallback_exc:
-                        exc=fallback_exc
-                failures.append({"page":index+1,"error":str(exc)})
+                        page_error=fallback_exc
+                failures.append({"page":index+1,"error":str(page_error)})
     rows,conflicts=deduplicate_rows(rows)
     failures.extend(conflicts)
     if not rows:raise MexicoDGEContractError("No verified DGE weekly national observations: "+json.dumps(failures,ensure_ascii=False))

@@ -1645,8 +1645,7 @@ class DiseaseKnowledgeFetcher:
 
     def _trusted_web_domain(self, url: str) -> tuple[str, bool] | None:
         host = urlparse(url).netloc.lower()
-        if host.startswith("www."):
-            host = host[4:]
+        host = host.removeprefix("www.")
         for domain, source_name, may_store_page_text in self.TRUSTED_WEB_DOMAINS:
             if host == domain or host.endswith(f".{domain}"):
                 return source_name, may_store_page_text
@@ -1774,10 +1773,10 @@ class DiseaseKnowledgeFetcher:
             "definition",
             "brief",
         )
-        for field in priority:
-            if field not in requested:
+        for section in priority:
+            if section not in requested:
                 continue
-            hints.extend(mapping.get(str(field), ()))
+            hints.extend(mapping.get(str(section), ()))
         return DiseaseKnowledgeFetcher._unique_strings(hints)
 
     def _get(self, url: str, params: dict[str, str] | None = None) -> requests.Response | None:

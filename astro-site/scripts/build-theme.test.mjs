@@ -55,10 +55,22 @@ test('the compatibility compiler rejects structural changes, CSS injection and s
   }
 });
 
+function readBundledStylesheet(entryUrl, seen = new Set()) {
+  const key = entryUrl.href;
+  if (seen.has(key)) return '';
+  seen.add(key);
+  const source = readFileSync(entryUrl, 'utf8');
+  return source.replace(/@import\s+(?:url\(\s*)?['"](\.[^'"]+)['"]\s*\)?[^;]*;/g, (_, specifier) => (
+    readBundledStylesheet(new URL(specifier, entryUrl), seen)
+  ));
+}
+
 test('every independently changeable theme variable has a bundled fallback', () => {
-  const css = readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+  const css = readBundledStylesheet(new URL('../src/styles/global.css', import.meta.url));
   for (const [selector, values] of [[':root', defaults.root], ["html[data-theme='light']", defaults.light]]) {
-    const block = css.slice(css.indexOf(`${selector} {`)).split('}')[0];
+    const index = css.indexOf(`${selector} {`);
+    assert.ok(index >= 0, `Missing ${selector} block in bundled global styles`);
+    const block = css.slice(index).split('}')[0];
     for (const key of Object.keys(values)) assert.ok(block.includes(`${key}:`), key);
   }
 });

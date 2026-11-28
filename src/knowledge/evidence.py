@@ -321,7 +321,7 @@ def build_evidence_manifest(
         for item in fragments
     )
     manifest_id = hashlib.sha256(
-        f"{profile_schema.profile_type}|{','.join(targets)}|{','.join(scope_aliases)}|{identity}".encode("utf-8")
+        f"{profile_schema.profile_type}|{','.join(targets)}|{','.join(scope_aliases)}|{identity}".encode()
     ).hexdigest()
     return EvidenceManifest(manifest_id, targets, tuple(fragments))
 

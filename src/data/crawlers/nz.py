@@ -928,8 +928,6 @@ class NewZealandPHFCrawler(BaseCrawler):
 
     async def crawl(self, **kwargs) -> List[CrawlerResult]:
         """Execute the full crawl pipeline."""
-        months = kwargs.get("months")
-        force = kwargs.get("force", False)
         max_pages = kwargs.get("max_pages", 10)
 
         index = self.fetch_report_index(max_pages=max_pages)

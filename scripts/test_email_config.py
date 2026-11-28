@@ -63,7 +63,7 @@ def main() -> int:
 
     print("Email configuration check")
     print("========================")
-    print(f"Provider: SMTP")
+    print("Provider: SMTP")
     print(f"SMTP host: {automation.smtp_host or '(empty)'}")
     print(f"SMTP port: {automation.smtp_port or '(empty)'}")
     print(f"SMTP username: {automation.smtp_username or '(empty)'}")

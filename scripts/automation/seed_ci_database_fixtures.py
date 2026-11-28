@@ -204,7 +204,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = parse_args(argv)
+    parse_args(argv)
     result = asyncio.run(seed_database())
     print(json.dumps(result, sort_keys=True))
     return 0

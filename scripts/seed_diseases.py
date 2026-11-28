@@ -88,7 +88,7 @@ async def main():
     try:
         await seed_diseases()
     except Exception as e:
-        logger.error(f"An unexpected error occurred during seeding: {e}", exc_info=True)
+        logger.exception(f"An unexpected error occurred during seeding: {e}")
 
 
 if __name__ == "__main__":

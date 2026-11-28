@@ -119,7 +119,7 @@ async def terminate_process_tree(
     if proc.returncode is None:
         try:
             await asyncio.wait_for(proc.wait(), timeout=grace_seconds)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
     try:
@@ -173,7 +173,7 @@ async def run_capture(
         return {"returncode": 127, "stdout": str(exc)}
     try:
         stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         await terminate(proc)
         return {
             "returncode": 124,
@@ -409,7 +409,7 @@ async def run_logged_command(
                     proc.stdout.read(OUTPUT_READ_CHUNK_BYTES),
                     timeout=min(cancel_poll_seconds, remaining_seconds),
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 if loop.time() >= deadline:
                     await fail_on_timeout()
                 continue
@@ -451,7 +451,7 @@ async def run_logged_command(
                 await fail_on_timeout()
             try:
                 await asyncio.wait_for(proc.wait(), timeout=remaining_seconds)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 await fail_on_timeout()
 
         returncode = proc.returncode

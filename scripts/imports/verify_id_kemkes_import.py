@@ -67,8 +67,8 @@ async def main():
             row=expected_by_key.get(key)
             if row is None:mismatch.append({'reason':'unexpected native identity','key':key[:4]});continue
             failures=[]
-            def check(condition,name):
-                if not condition:failures.append(name)
+            def check(condition,name,_failures=failures):
+                if not condition:_failures.append(name)
             check(raw==row,'full raw row')
             check(observed['time'].date().isoformat()==row['Date'],'statistic date')
             check(observed['value']==(float(row['Cases']) if row['Cases'] else None),'value/null')

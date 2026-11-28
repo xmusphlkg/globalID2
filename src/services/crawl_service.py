@@ -418,8 +418,8 @@ class CrawlService:
                 )
             except TypeError:
                 # Compatibility test doubles need not be dataclasses.
-                setattr(import_result, "inserted_or_updated", series_result.upserted)
-                setattr(import_result, "imported_new_data", True)
+                import_result.inserted_or_updated = series_result.upserted
+                import_result.imported_new_data = True
         return import_result
 
     @staticmethod
@@ -1655,9 +1655,7 @@ class CrawlService:
             end_year = datetime.now().year
         options = {"start_year": start_year, "end_year": end_year}
         connector = kr
-        if source == "kdca_death_annual":
-            connector_options = options
-        elif source == "kdca_region_annual":
+        if source in {"kdca_death_annual", "kdca_region_annual"}:
             connector_options = options
         else:
             raise ValueError(f"Unsupported Korea annual source: {source}")

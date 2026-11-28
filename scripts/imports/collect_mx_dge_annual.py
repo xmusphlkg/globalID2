@@ -44,7 +44,6 @@ def main():
     old=json.loads((RAW/'artifacts_manifest.json').read_text()) if (RAW/'artifacts_manifest.json').exists() else []
     known={r['source_url']:r for r in old if r['kind']=='mx_dge_pdf'}
     if args.offline_organize:
-        manifests=old
         plans=[x for x in old if x['kind']=='mx_dge_plan']
         if len(plans)!=1:raise ValueError('Offline organize needs one recorded collection plan')
         for record in old:

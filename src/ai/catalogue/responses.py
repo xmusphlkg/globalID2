@@ -101,7 +101,7 @@ def _openai_response_text(response: Any) -> str:
 
 def _looks_like_html(text: str) -> bool:
     normalized = text.lstrip().lower()
-    return normalized.startswith("<!doctype html") or normalized.startswith("<html")
+    return normalized.startswith(("<!doctype html", "<html"))
 
 
 def _response_preview(text: str, limit: int = 180) -> str:

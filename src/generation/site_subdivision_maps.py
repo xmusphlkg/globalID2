@@ -314,11 +314,12 @@ def reported_series(entry: dict, country_code: str, *, as_of: date | None = None
             status = "missing_or_suppressed" if country_code == "AU" else "missing"
         elif not finite(value) or value < 0 or int(value) != value:
             return None
-        elif status in {"partial", "partial_report_window", "period_scope_mismatch", "missing", "invalid", "excluded"}:
-            value, status = None, "incomplete"
         # ``raw`` remains explicit: it is a numeric source observation that
         # has not completed validation. It must not be presented as observed.
-        elif status not in {"observed", "provisional", "revised", "verified", "good", "complete", "confirmed", "high", "raw"}:
+        elif (
+            status in {"partial", "partial_report_window", "period_scope_mismatch", "missing", "invalid", "excluded"}
+            or status not in {"observed", "provisional", "revised", "verified", "good", "complete", "confirmed", "high", "raw"}
+        ):
             value, status = None, "incomplete"
         else:
             if status == "raw":
@@ -383,7 +384,7 @@ def build_map_payloads(code: str, snapshots: dict[str, dict], population_rows: l
     # explicit instead of filling them from another adapter.
     for disease_id, groups in source_candidates.items():
         if groups:
-            selected = sorted(groups, key=lambda item: (-len(groups[item]), item))[0]
+            selected = min(groups, key=lambda item: (-len(groups[item]), item))
             by_disease[disease_id] = groups[selected]
     populations: dict[str, dict] = defaultdict(dict)
     for row in population_rows:
@@ -400,7 +401,7 @@ def build_map_payloads(code: str, snapshots: dict[str, dict], population_rows: l
     for disease_id, entries in sorted(by_disease.items()):
         # Keep incompatible groups visible as excluded regions. Never merge them.
         counts = Counter(entry["comparison_key"] for entry in entries.values())
-        comparison_key = sorted(counts, key=lambda key: (-counts[key], key))[0]
+        comparison_key = min(counts, key=lambda key: (-counts[key], key))
         years = sorted({period["reporting_year"] for entry in entries.values() if entry["comparison_key"] == comparison_key for period in entry["periods"]})
         first = next(entry for entry in entries.values() if entry["comparison_key"] == comparison_key)
         basis = PROFILES[code]["basis"]

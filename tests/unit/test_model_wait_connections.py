@@ -209,7 +209,12 @@ async def test_mapping_releases_read_transaction_before_model_wait(monkeypatch):
 
     checkout = False
     category = SimpleNamespace(
-        id=1, ai_status="pending", ai_attempts=0, country_code="US"
+        id=1,
+        ai_status="pending",
+        ai_attempts=0,
+        country_code="US",
+        source_id="SRC_US_CDC",
+        source_code="measles",
     )
 
     class Result:

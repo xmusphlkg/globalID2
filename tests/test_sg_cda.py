@@ -32,12 +32,12 @@ def test_singapore_week_calendar_keeps_source_week_53() -> None:
 
 def test_historical_csv_preserves_zero_and_does_not_fill_absent_rows() -> None:
     payload = (
-        "epi_week,disease,no._of_cases\n"
-        "2016-W37,Cholera,0\n"
-        "2016-W37,HFMD,99\n"
-        "2022-W01,Monkeypox,0\n"
-        "2022-W26,Monkeypox,1\n"
-    ).encode()
+        b"epi_week,disease,no._of_cases\n"
+        b"2016-W37,Cholera,0\n"
+        b"2016-W37,HFMD,99\n"
+        b"2022-W01,Monkeypox,0\n"
+        b"2022-W26,Monkeypox,1\n"
+    )
     rows = parse_historical_csv(payload, source_url="https://example.test/history.csv", retrieved_at="2026-01-01T00:00:00+00:00")
     assert [(row["EpiWeek"], row["SourceDiseaseCode"], row["Cases"]) for row in rows] == [
         ("2016-W37", "cholera", "0"),

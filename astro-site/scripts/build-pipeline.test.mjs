@@ -85,7 +85,7 @@ test('failed checks cancel peers, skip queued work, and never promote caches', a
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test('render overlaps source checks, writers stay ordered and check workers are bounded', async () => {
+test('render overlaps source checks, disjoint writers parallelize, and check workers are bounded', async () => {
   const calls = [];
   await buildPipeline({ env: { GIDS_BUILD_CHECK_WORKERS: '1' }, run: async (stages, options) => {
     calls.push(stages.map(stage => stage.name));
@@ -96,9 +96,72 @@ test('render overlaps source checks, writers stay ordered and check workers are 
     }
   } });
   assert.deepEqual(calls.map(stages => stages[0]), ['sync flags', 'render and restore',
-    'split research evidence', 'optimize map', 'performance audit', 'finalize page caches']);
-  for (const value of ['0', '4', '1.5', 'NaN']) assert.throws(() => checkConcurrency(value));
+    'split research evidence', 'performance audit', 'finalize page caches']);
+  assert.deepEqual(calls[2], ['split research evidence', 'optimize map']);
+
+  const defaultWorkers = checkConcurrency(undefined);
+  assert.ok(Number.isInteger(defaultWorkers) && defaultWorkers >= 1 && defaultWorkers <= 3);
+  for (let i = 1; i <= 6; i++) assert.equal(checkConcurrency(String(i)), i);
+  for (const value of ['0', '7', '-1', '1.5', 'NaN', '']) assert.throws(() => checkConcurrency(value), /1–6/);
+
   const controller = new AbortController(); controller.abort();
   await assert.rejects(runStages([{ name: 'never', args: ['-e', 'process.exit(0)'] }],
     { signal: controller.signal, log() {} }), /interrupted/);
+});
+
+test('disjoint post-processing writers run concurrently and explicit worker counts up to 6 propagate', async () => {
+  const recorded = [];
+  await buildPipeline({ env: { GIDS_BUILD_CHECK_WORKERS: '6' }, run: async (stages, options) => {
+    recorded.push({ names: stages.map(stage => stage.name), concurrency: options.concurrency ?? 1 });
+  } });
+  const renderGroup = recorded.find(group => group.names.includes('render and restore'));
+  const postProcessGroup = recorded.find(group => group.names.includes('split research evidence'));
+  const auditGroup = recorded.find(group => group.names.includes('performance audit'));
+  assert.equal(renderGroup.concurrency, 7);
+  assert.deepEqual(postProcessGroup, { names: ['split research evidence', 'optimize map'], concurrency: 2 });
+  assert.equal(auditGroup.concurrency, 6);
+});
+
+test('GIDS_BUILD_TIMING_REPORT writes structured JSON timings only when configured', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'gids-build-timing-'));
+  try {
+    const defaultReportPath = join(root, 'timing.json');
+    await buildPipeline({ cwd: root, env: { GIDS_BUILD_CHECK_WORKERS: '2' }, run: async stages =>
+      stages.map((stage, idx) => ({ name: stage.name, seconds: 0.25 * (idx + 1) })) });
+    assert.equal(existsSync(defaultReportPath), false);
+
+    const relativeReport = join('reports', 'build-timing.json');
+    await buildPipeline({
+      cwd: root,
+      env: { GIDS_BUILD_CHECK_WORKERS: '4', GIDS_BUILD_TIMING_REPORT: relativeReport },
+      run: async stages => stages.map((stage, idx) => ({ name: stage.name, seconds: 0.5 + idx * 0.1 })),
+    });
+    const reportPath = join(root, relativeReport);
+    assert.equal(existsSync(reportPath), true);
+    const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+    assert.equal(report.status, 'ok');
+    assert.equal(report.workers, 4);
+    assert.equal(typeof report.total_seconds, 'number');
+    assert.ok(report.total_seconds >= 0);
+    assert.ok(Array.isArray(report.stages));
+    assert.ok(report.stages.some(stage => stage.name === 'split research evidence' && stage.group_workers === 2));
+    assert.ok(report.stages.some(stage => stage.name === 'optimize map' && stage.group_workers === 2));
+    assert.ok(report.stages.some(stage => stage.name === 'SEO audit' && stage.group_workers === 4));
+
+    const failureReportPath = join(root, 'failed-timing.json');
+    await assert.rejects(buildPipeline({
+      cwd: root,
+      env: { GIDS_BUILD_CHECK_WORKERS: '2', GIDS_BUILD_TIMING_REPORT: failureReportPath },
+      run: async stages => {
+        if (stages.some(stage => stage.name === 'SEO audit')) throw new Error('SEO audit failed');
+        return stages.map(stage => ({ name: stage.name, seconds: 0.12 }));
+      },
+    }), /SEO audit failed/);
+    const failedReport = JSON.parse(readFileSync(failureReportPath, 'utf8'));
+    assert.equal(failedReport.status, 'failed');
+    assert.equal(failedReport.error, 'SEO audit failed');
+    assert.equal(failedReport.workers, 2);
+    assert.equal(failedReport.stages.some(stage => stage.name === 'finalize page caches'), false);
+    assert.equal(failedReport.stages.some(stage => stage.name === 'sync flags'), true);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

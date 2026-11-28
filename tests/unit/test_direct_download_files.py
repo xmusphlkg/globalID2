@@ -920,7 +920,7 @@ def _two_country_context() -> dict:
 
 def test_cell_update_leaves_other_country_files_untouched(tmp_path) -> None:
     base = "https://raw.githubusercontent.com/example/data/main"
-    first = build_direct_download_files(_two_country_context(), tmp_path, download_url_base=base)
+    build_direct_download_files(_two_country_context(), tmp_path, download_url_base=base)
     china = {
         path: (path.stat().st_ino, path.read_bytes())
         for path in (tmp_path / "cells" / "cn").rglob("*") if path.is_file()

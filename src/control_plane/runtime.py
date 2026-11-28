@@ -256,7 +256,7 @@ class RuntimeRegistry:
                     stop_event.wait(),
                     timeout=max(5, heartbeat_ttl // 3),
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     async def list_services(self) -> tuple[list[dict[str, Any]], bool]:
@@ -313,7 +313,7 @@ class RuntimeRegistry:
                 await asyncio.wait_for(
                     stop_event.wait(), timeout=min(poll_seconds, remaining)
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
         return False
 
@@ -487,7 +487,7 @@ class RuntimeRegistry:
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=max(5, ttl_seconds // 3))
                 continue
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
             if not await self.renew_lease(name, owner, ttl_seconds=ttl_seconds):
                 logger.error("Runtime lease '{}' was lost; requesting shutdown", name)

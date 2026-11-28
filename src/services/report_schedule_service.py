@@ -215,7 +215,7 @@ class ReportScheduleService:
                 logger.exception("Automatic country report scheduling tick failed")
             try:
                 await asyncio.wait_for(self._stop_event.wait(), timeout=min(60, self._config().schedule_poll_interval_seconds))
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     async def _frequency_rows(self) -> list[dict[str, Any]]:

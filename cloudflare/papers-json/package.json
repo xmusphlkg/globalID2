@@ -1,0 +1,11 @@
+{
+  "name": "@globalid/papers-json",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "typecheck": "../surveillance-data/node_modules/.bin/tsc --noEmit -p tsconfig.json",
+    "test:runtime": "../surveillance-data/node_modules/.bin/wrangler deploy --dry-run --outdir .wrangler/test-bundle && node --test tests/runtime.test.mjs",
+    "build": "../surveillance-data/node_modules/.bin/wrangler deploy --dry-run"
+  }
+}

@@ -65,9 +65,9 @@
       "reason": "Dashboard quality endpoints still calculate coverage and zero counts from the flat table.",
       "max_references": {"DiseaseRecord": 19, "disease_records": 0}
     },
-    "dashboard/api/routers/sources.py": {
+    "dashboard/api/services/sources_flow_service.py": {
       "classification": "runtime_read",
-      "reason": "Source-flow statistics still infer source identity from legacy data_source text.",
+      "reason": "Source-flow statistics (extracted from dashboard/api/routers/sources.py) still infer source identity from legacy data_source text.",
       "max_references": {"DiseaseRecord": 10, "disease_records": 0}
     },
     "dashboard/api/services/disease_series_projection.py": {

@@ -40,7 +40,7 @@ test('real Astro build retains CSS and page scripts through a symlinked workspac
     symlinkSync(resolve(site, 'node_modules'), resolve(actual, 'node_modules'), 'dir');
     symlinkSync(resolve(root, 'actual'), resolve(root, 'linked'), 'dir');
     writeFileSync(resolve(actual, 'src/pages/index.astro'), '<html><head><title>Build asset fixture</title></head><body><a class="skip-link">Skip</a><main>Fixture</main><script>document.documentElement.dataset.assetFixture="ready";</script><style is:global>.skip-link { position: absolute; } body { margin: 0; }</style></body></html>');
-    const env = { ...process.env, GIDS_RESEARCH_BUILD_DIR: '', GIDS_REPORTS_BUILD_DIR: '', GIDS_COUNTRY_BUILD_DIR: '', GIDS_CODE_BUILD_DIR: linked, GIDS_ASTRO_RENDER_WORKERS: '2', GIDS_BUILD_PUBLIC_DIR: '' };
+    const env = { ...process.env, ASTRO_TELEMETRY_DISABLED: '1', XDG_CONFIG_HOME: resolve(root, '.config'), GIDS_RESEARCH_BUILD_DIR: '', GIDS_REPORTS_BUILD_DIR: '', GIDS_COUNTRY_BUILD_DIR: '', GIDS_CODE_BUILD_DIR: linked, GIDS_ASTRO_RENDER_WORKERS: '2', GIDS_BUILD_PUBLIC_DIR: '' };
     const result = spawnSync(process.execPath, [resolve(site, 'node_modules/astro/bin/astro.mjs'), 'build'], { cwd: actual, env, encoding: 'utf8', timeout: 60000 });
     assert.equal(result.status, 0, result.stdout + result.stderr);
     const html = readFileSync(resolve(actual, 'dist/index.html'), 'utf8');

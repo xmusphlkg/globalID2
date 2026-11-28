@@ -192,10 +192,16 @@ async def collect_database_snapshot(db, *, now: datetime, channels=CHANNELS,
                 "retry_count": int(retry_count or 0)})
         terminal_fields = (Task.status, Task.completed_at, Task.updated_at,
             Task.output_data["release_id"].as_string(), Task.output_data["manifest_sha256"].as_string())
-        async def last_terminal(statuses):
-            extra = (Task.task_uuid, Task.created_at) if channel == "literature" else ()
-            row = (await db.execute(select(*terminal_fields, *extra).where(
-                *clauses, Task.status.in_(statuses),
+        async def last_terminal(
+            statuses,
+            *,
+            _channel=channel,
+            _terminal_fields=terminal_fields,
+            _clauses=clauses,
+        ):
+            extra = (Task.task_uuid, Task.created_at) if _channel == "literature" else ()
+            row = (await db.execute(select(*_terminal_fields, *extra).where(
+                *_clauses, Task.status.in_(statuses),
             ).order_by(func.coalesce(Task.completed_at, Task.updated_at).desc(), Task.id.desc()).limit(1))).first()
             if row is None:
                 return None
@@ -307,7 +313,7 @@ async def probe_public_manifest(client, url: str, *, timeout_seconds: float = 10
 
     try:
         result = await asyncio.wait_for(probe_with_retry(), timeout=timeout_seconds)
-    except (asyncio.TimeoutError, httpx.TimeoutException):
+    except (TimeoutError, httpx.TimeoutException):
         result = {"available": False, "error_code": "http_timeout"}
     except _ProbeFailure as error:
         result = {"available": False, "error_code": error.code}

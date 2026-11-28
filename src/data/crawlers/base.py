@@ -175,7 +175,6 @@ class BaseCrawler(ABC):
         Returns:
             List of :class:`CrawlerResult` objects.
         """
-        pass
 
     @abstractmethod
     def parse(self, response: requests.Response) -> List[CrawlerResult]:
@@ -188,7 +187,6 @@ class BaseCrawler(ABC):
         Returns:
             List of :class:`CrawlerResult` objects.
         """
-        pass
     
     def __enter__(self):
         """Context manager entry."""

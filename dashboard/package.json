@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && node scripts/check-code-quality.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -17,8 +17,6 @@
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@headlessui/react": "^2.2.9",
-    "@heroicons/react": "^2.2.0",
-    "@remixicon/react": "^4.9.0",
     "@tailwindcss/forms": "^0.5.11",
     "@tanstack/react-query": "^5.90.21",
     "clsx": "^2.1.1",

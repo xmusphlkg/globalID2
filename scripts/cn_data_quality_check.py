@@ -99,7 +99,7 @@ class DataChecker:
             """))
             sources = result.fetchall()
             if sources:
-                print(f"\n  数据源统计:")
+                print("\n  数据源统计:")
                 for source, cnt in sources:
                     print(f"    {source}: {cnt:,} 条")
             
@@ -114,7 +114,7 @@ class DataChecker:
             """))
             top_diseases = result.fetchall()
             if top_diseases:
-                print(f"\n  Top 10 疾病记录数:")
+                print("\n  Top 10 疾病记录数:")
                 for name, count in top_diseases:
                     print(f"    {name}: {count:,} 条")
 
@@ -228,7 +228,7 @@ class DataChecker:
             """))
             zero_cases, zero_deaths, total = result.one()
             total = total or 1
-            print(f"\n  零值统计:")
+            print("\n  零值统计:")
             print(f"     cases=0: {zero_cases:,} ({zero_cases/total*100:.1f}%)")
             print(f"     deaths=0: {zero_deaths:,} ({zero_deaths/total*100:.1f}%)")
 
@@ -328,7 +328,7 @@ class DataChecker:
             """))
             unmapped_with_records = result.fetchall()
             if unmapped_with_records:
-                print(f"\n  ⚠️  有数据记录但未映射的疾病:")
+                print("\n  ⚠️  有数据记录但未映射的疾病:")
                 for name, cnt in unmapped_with_records:
                     print(f"     {name}: {cnt} 条记录")
                 self.add_warning('mapping', f'{len(unmapped_with_records)} 个疾病有记录但未标准化')

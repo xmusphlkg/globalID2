@@ -64,8 +64,7 @@ def annotate_country_part(part: dict, *, disease_id: str, country_code: str) -> 
 
     calendar = str(part.get("label") or part.get("id") or "")
     prefix = f"{disease_id} · "
-    if calendar.startswith(prefix):
-        calendar = calendar[len(prefix):]
+    calendar = calendar.removeprefix(prefix)
     return {
         **part,
         "label": f"{disease_id} · {calendar}",
@@ -85,7 +84,7 @@ def assemble_disease_parts(country_entries: list[dict], disease_id: str) -> list
             if str(part.get("disease_id") or "") != disease_id:
                 continue
             label = str(part.get("label") or "")
-            calendar = label[len(prefix):] if label.startswith(prefix) else label
+            calendar = label.removeprefix(prefix)
             assembled.append({
                 **part,
                 "label": f"{code} · {calendar}",

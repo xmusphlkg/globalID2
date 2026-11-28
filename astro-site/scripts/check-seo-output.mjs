@@ -15,6 +15,29 @@ const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/(?:articles|diseases|countrie
 // keeps the whole catalogue's HTML alive until the audit ends.
 const ownedString = value => Buffer.from(value, 'utf8').toString('utf8');
 
+const NAMED_ENTITIES = Object.freeze({ amp: '&', apos: "'", gt: '>', lt: '<', quot: '"' });
+const HTML_ENTITY_RE = /&(#x[\da-f]+|#\d+|amp|apos|gt|lt|quot);/gi;
+const ATTR_RE = /([\w:-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+const TAG_PATTERN_CACHE = new Map();
+const TITLE_RE = /<title>([\s\S]*?)<\/title>/i;
+const META_OR_LINK_TAG_RE = /<(meta|link)\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+const MAIN_OR_HEADING_OPEN_RE = /<(?:(main)|h([1-6]))\b/gi;
+const JSON_LD_SCRIPT_RE = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+const SKIP_HREF_RE = /^(?:#|mailto:|tel:|javascript:|data:)/i;
+const REFRESH_VALUE_RE = /^refresh\b/i;
+const WHITESPACE_RE = /\s+/g;
+const HREF_HINT_RE = /\bhref\b/i;
+const ANCHOR_TAG_RE = /<a\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+
+function tagPattern(name) {
+  let pattern = TAG_PATTERN_CACHE.get(name);
+  if (!pattern) {
+    pattern = new RegExp(`<${name}\\b(?:[^>"']|"[^"]*"|'[^']*')*>`, 'gi');
+    TAG_PATTERN_CACHE.set(name, pattern);
+  }
+  return pattern;
+}
+
 function walk(directory, suffix) {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const path = join(directory, entry.name);
@@ -23,25 +46,42 @@ function walk(directory, suffix) {
 }
 
 function decodeHtml(value) {
-  const named = { amp: '&', apos: "'", gt: '>', lt: '<', quot: '"' };
-  return String(value ?? '').replace(/&(#x[\da-f]+|#\d+|amp|apos|gt|lt|quot);/gi, (_, entity) => {
-    if (entity[0] !== '#') return named[entity.toLowerCase()] ?? _;
-    const hexadecimal = entity[1].toLowerCase() === 'x';
+  const text = String(value ?? '');
+  if (!text.includes('&')) return text;
+  return text.replace(HTML_ENTITY_RE, (match, entity) => {
+    if (entity[0] !== '#') return NAMED_ENTITIES[entity.toLowerCase()] ?? match;
+    const hexadecimal = entity[1] === 'x' || entity[1] === 'X';
     return String.fromCodePoint(Number.parseInt(entity.slice(hexadecimal ? 2 : 1), hexadecimal ? 16 : 10));
   });
 }
 
-function attributes(tag) {
+export function attributes(tag) {
   const output = {};
-  for (const match of tag.matchAll(/([\w:-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
+  for (const match of tag.matchAll(ATTR_RE)) {
     output[match[1].toLowerCase()] = decodeHtml(match[2] ?? match[3] ?? match[4] ?? '');
   }
   return output;
 }
 
 export function tags(html, name) {
-  const tagPattern = new RegExp(`<${name}\\b(?:[^>"']|"[^"]*"|'[^']*')*>`, 'gi');
-  return [...html.matchAll(tagPattern)].map(match => attributes(match[0]));
+  const output = [];
+  for (const match of html.matchAll(tagPattern(name))) {
+    output.push(attributes(match[0]));
+  }
+  return output;
+}
+
+function extractAnchorHref(rawTag) {
+  if (!rawTag.includes('href') && !HREF_HINT_RE.test(rawTag)) return undefined;
+  let href;
+  ATTR_RE.lastIndex = 0;
+  for (let match; (match = ATTR_RE.exec(rawTag)) !== null;) {
+    const key = match[1];
+    if (key.length === 4 && (key === 'href' || key.toLowerCase() === 'href')) {
+      href = decodeHtml(match[2] ?? match[3] ?? match[4] ?? '');
+    }
+  }
+  return href;
 }
 
 function routeFor(file, dist) {
@@ -87,17 +127,18 @@ export function redirectFor(pathname, redirects) {
   return undefined;
 }
 
-function isRedirectSource(route, redirects) {
-  return redirectFor(route, redirects) !== undefined;
-}
-
 export function auditSeoOutput(distDirectory, { files, partial = false, catalogue, independentResearch = process.env.GIDS_RESEARCH_PUBLICATION_ENABLED === '1' } = {}) {
   const dist = resolve(distDirectory);
   const redirects = redirectMap(dist);
+  const wildcardRedirects = [];
+  for (const [source, destination] of redirects) {
+    if (source.endsWith('*')) wildcardRedirects.push([source.slice(0, -1), destination]);
+  }
   // Shared navigation repeats across thousands of pages. Cache only within
   // this audit so a later audit still observes changed files and redirects.
   const targets = new Map();
   const redirectSources = new Map();
+  const parsedHrefs = new Map();
   const hasTarget = pathname => {
     if (independentResearch && isIndependentResearchRoute(pathname)) return true;
     if (pathname === '/site-data/research/graph.json') {
@@ -105,13 +146,58 @@ export function auditSeoOutput(distDirectory, { files, partial = false, catalogu
       return independentResearch || targetExists('/site-data/research-graph.json', dist);
     }
     if (workerDynamicLinks.has(pathname)) return true;
-    if (!targets.has(pathname)) targets.set(pathname, targetExists(pathname, dist));
+    if (!targets.has(pathname)) targets.set(ownedString(pathname), targetExists(pathname, dist));
     return targets.get(pathname);
   };
   const hasRedirect = pathname => {
     if (independentResearch && isIndependentResearchRoute(pathname)) return false;
-    if (!redirectSources.has(pathname)) redirectSources.set(pathname, isRedirectSource(pathname, redirects));
+    if (!redirectSources.has(pathname)) {
+      let matched = redirects.has(pathname);
+      if (!matched) {
+        for (let i = 0; i < wildcardRedirects.length; i++) {
+          if (pathname.startsWith(wildcardRedirects[i][0])) { matched = true; break; }
+        }
+      }
+      redirectSources.set(ownedString(pathname), matched);
+    }
     return redirectSources.get(pathname);
+  };
+  const resolveLinkTarget = (href, route) => {
+    const cacheable = (href.startsWith('/') && !href.startsWith('//'))
+      || href.startsWith('https://')
+      || href.startsWith('http://');
+    if (cacheable) {
+      const cached = parsedHrefs.get(href);
+      if (cached !== undefined) return cached;
+      let entry;
+      try {
+        const target = new URL(href, SITE_ORIGIN);
+        if (target.origin !== SITE_ORIGIN) {
+          entry = { external: true };
+        } else {
+          const pathname = ownedString(target.pathname);
+          const normalized = pathname === '/' || pathname.endsWith('/') || extname(pathname)
+            ? pathname
+            : `${pathname}/`;
+          entry = { external: false, pathname, normalized, isPapersTarget: PAPERS_ROUTE.test(pathname) };
+        }
+      } catch {
+        entry = null;
+      }
+      if (parsedHrefs.size < 20_000 && href.length < 256) parsedHrefs.set(ownedString(href), entry);
+      return entry;
+    }
+    try {
+      const target = new URL(href, `${SITE_ORIGIN}${route}`);
+      if (target.origin !== SITE_ORIGIN) return { external: true };
+      const pathname = target.pathname;
+      const normalized = pathname === '/' || pathname.endsWith('/') || extname(pathname)
+        ? pathname
+        : `${pathname}/`;
+      return { external: false, pathname, normalized, isPapersTarget: PAPERS_ROUTE.test(pathname) };
+    } catch {
+      return null;
+    }
   };
   const errors = [...(catalogue?.errors ?? [])];
   const pages = new Map(catalogue?.pages);
@@ -127,28 +213,59 @@ export function auditSeoOutput(distDirectory, { files, partial = false, catalogu
     // an unsplit build still contains from the audit.
     if (redirects.has(route)) continue;
     const html = readFileSync(file, 'utf8');
-    const title = decodeHtml(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] ?? '').replace(/\s+/g, ' ').trim();
-    const meta = tags(html, 'meta');
-    const link = tags(html, 'link');
-    const robots = meta.find(item => item.name === 'robots')?.content?.toLowerCase() ?? '';
+    const title = decodeHtml(html.match(TITLE_RE)?.[1] ?? '').replace(WHITESPACE_RE, ' ').trim();
+    let robots = '';
+    const description = [];
+    const canonical = [];
+    const hreflang = new Set();
+    let ogImage;
+    let ogImageAlt;
+    let twitterImageAlt;
+    let isGeneratedRedirect = false;
+    for (const tagMatch of html.matchAll(META_OR_LINK_TAG_RE)) {
+      const item = attributes(tagMatch[0]);
+      if (tagMatch[1][0] === 'm' || tagMatch[1][0] === 'M') {
+        if (!isGeneratedRedirect && item['http-equiv'] && REFRESH_VALUE_RE.test(item['http-equiv'])) {
+          isGeneratedRedirect = true;
+        }
+        if (item.name === 'robots' && !robots && item.content) robots = item.content.toLowerCase();
+        if (item.name === 'description') description.push(item);
+        if (item.property === 'og:image' && ogImage === undefined) ogImage = item.content;
+        if (item.property === 'og:image:alt' && ogImageAlt === undefined) ogImageAlt = item.content;
+        if (item.name === 'twitter:image:alt' && twitterImageAlt === undefined) twitterImageAlt = item.content;
+      } else {
+        if (item.rel === 'canonical') canonical.push(item);
+        else if (item.rel === 'alternate' && item.hreflang) hreflang.add(item.hreflang);
+      }
+    }
     const isIndexable = !robots.includes('noindex');
-    const description = meta.filter(item => item.name === 'description');
-    const canonical = link.filter(item => item.rel === 'canonical');
-    const hreflang = new Set(link.filter(item => item.rel === 'alternate').map(item => item.hreflang).filter(Boolean));
-    const ogImage = meta.find(item => item.property === 'og:image')?.content;
-    const ogImageAlt = meta.find(item => item.property === 'og:image:alt')?.content;
-    const twitterImageAlt = meta.find(item => item.name === 'twitter:image:alt')?.content;
     pages.set(route, { isIndexable });
     if (isIndexable) indexable += 1; else noindex += 1;
 
     // Astro emits a small HTML redirect document for `Astro.redirect()` routes
     // when building a static site. It intentionally has no document structure
     // or social metadata; the redirect target is what needs auditing instead.
-    const isGeneratedRedirect = /<meta\b[^>]*http-equiv=["']?refresh\b/i.test(html);
     if (isGeneratedRedirect) continue;
 
-    if ((html.match(/<main\b/gi) ?? []).length !== 1) errors.push(`${route}: must contain exactly one <main>`);
-    if ((html.match(/<h1\b/gi) ?? []).length !== 1) errors.push(`${route}: must contain exactly one <h1>`);
+    let mainCount = 0;
+    let h1Count = 0;
+    let previousHeading = 0;
+    let headingJump = null;
+    for (const match of html.matchAll(MAIN_OR_HEADING_OPEN_RE)) {
+      if (match[1] !== undefined) {
+        mainCount += 1;
+      } else {
+        const level = match[2].charCodeAt(0) - 48;
+        if (level === 1) h1Count += 1;
+        if (!headingJump && previousHeading && level > previousHeading + 1) {
+          headingJump = `${route}: heading jumps from h${previousHeading} to h${level}`;
+        }
+        previousHeading = level;
+      }
+    }
+
+    if (mainCount !== 1) errors.push(`${route}: must contain exactly one <main>`);
+    if (h1Count !== 1) errors.push(`${route}: must contain exactly one <h1>`);
     if (!title) errors.push(`${route}: missing title`);
     if (isIndexable && [...title].length > 70) errors.push(`${route}: title exceeds 70 characters`);
     if (description.length !== 1 || !description[0].content) errors.push(`${route}: missing or duplicate meta description`);
@@ -171,33 +288,23 @@ export function auditSeoOutput(distDirectory, { files, partial = false, catalogu
       }
     }
 
-    let previousHeading = 0;
-    for (const match of html.matchAll(/<h([1-6])\b/gi)) {
-      const level = Number(match[1]);
-      if (previousHeading && level > previousHeading + 1) {
-        errors.push(`${route}: heading jumps from h${previousHeading} to h${level}`);
-        break;
-      }
-      previousHeading = level;
-    }
+    if (headingJump) errors.push(headingJump);
 
-    for (const script of html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    for (const script of html.matchAll(JSON_LD_SCRIPT_RE)) {
       try { JSON.parse(decodeHtml(script[1])); } catch { errors.push(`${route}: invalid JSON-LD`); }
     }
 
-    for (const anchor of tags(html, 'a')) {
-      const href = anchor.href;
-      if (!href || /^(?:#|mailto:|tel:|javascript:|data:)/i.test(href)) continue;
-      let target;
-      try { target = new URL(href, `${SITE_ORIGIN}${route}`); } catch { errors.push(`${route}: invalid href ${href}`); continue; }
-      if (target.origin !== SITE_ORIGIN) continue;
-      const normalized = target.pathname === '/' || target.pathname.endsWith('/') || extname(target.pathname)
-        ? target.pathname
-        : `${target.pathname}/`;
+    const routeIsPapers = PAPERS_ROUTE.test(route);
+    for (const anchorMatch of html.matchAll(ANCHOR_TAG_RE)) {
+      const href = extractAnchorHref(anchorMatch[0]);
+      if (!href || SKIP_HREF_RE.test(href)) continue;
+      const target = resolveLinkTarget(href, route);
+      if (target === null) { errors.push(`${route}: invalid href ${href}`); continue; }
+      if (target.external) continue;
       // Papers pages and the paths they link to share one host after the
       // release split, so those links never pass through a redirect.
-      const sameHost = PAPERS_ROUTE.test(route) && PAPERS_ROUTE.test(target.pathname);
-      if (!sameHost && (hasRedirect(target.pathname) || hasRedirect(normalized))) errors.push(`${route}: internal link points through redirect ${href}`);
+      const sameHost = routeIsPapers && target.isPapersTarget;
+      if (!sameHost && (hasRedirect(target.pathname) || hasRedirect(target.normalized))) errors.push(`${route}: internal link points through redirect ${href}`);
       else if (!hasTarget(target.pathname)) errors.push(`${route}: broken internal link ${href}`);
     }
   }

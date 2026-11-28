@@ -387,4 +387,3 @@ class BaseAgent(ABC):
         Returns:
             Processing results
         """
-        pass

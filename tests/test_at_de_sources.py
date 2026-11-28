@@ -17,7 +17,7 @@ def test_ages_parser_uses_month_column_not_ytd() -> None:
         retrieved_at=datetime(2026, 3, 1, tzinfo=timezone.utc),
     )
     rows = parse_ages_csv(
-        '"Krankheit";"Feb 2026";"Jan - Feb 2026";"Jan - Feb 2025"\n"Campylobacteriose";"7";"11";"8"\n'.encode(),
+        b'"Krankheit";"Feb 2026";"Jan - Feb 2026";"Jan - Feb 2025"\n"Campylobacteriose";"7";"11";"8"\n',
         issue=issue,
     )
     assert [(row["Date"], row["Cases"], row["DiseaseCode"]) for row in rows] == [("2026-02-01", "7", "__source_native__")]
@@ -33,7 +33,7 @@ def test_ages_parser_accepts_live_german_month_and_two_digit_year() -> None:
         retrieved_at=datetime(2026, 7, 16, tzinfo=timezone.utc),
     )
     rows = parse_ages_csv(
-        '"Krankheit";"Jun 26";"Jan - Jun 2026"\n"Masern";"3";"8"\n'.encode(),
+        b'"Krankheit";"Jun 26";"Jan - Jun 2026"\n"Masern";"3";"8"\n',
         issue=issue,
     )
     assert rows[0]["Date"] == "2026-06-01"

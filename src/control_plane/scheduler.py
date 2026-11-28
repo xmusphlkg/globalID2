@@ -73,7 +73,7 @@ async def _monitor_worker(
                 return
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=15)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
 
@@ -164,7 +164,7 @@ async def run_scheduler() -> None:
         # A pending read-only HTTP thread may finish later; it cannot enqueue work.
         try:
             await asyncio.wait_for(usage_collector, timeout=1)
-        except (asyncio.TimeoutError, asyncio.CancelledError):
+        except (TimeoutError, asyncio.CancelledError):
             pass
         except Exception:
             logger.warning("Publication usage collector stopped with an error")

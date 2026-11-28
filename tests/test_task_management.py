@@ -53,7 +53,7 @@ async def _test_task_management_async():
         task_uuid=task.task_uuid,
         status=TaskStatus.RUNNING
     )
-    print(f"✓ Task status updated to: RUNNING")
+    print("✓ Task status updated to: RUNNING")
     
     # 3. Update progress
     print("\n3. Updating task progress...")
@@ -95,7 +95,7 @@ async def _test_task_management_async():
         task_uuid=task.task_uuid,
         status=TaskStatus.COMPLETED
     )
-    print(f"✓ Task completed")
+    print("✓ Task completed")
     
     # 6. Query task
     print("\n6. Querying task...")

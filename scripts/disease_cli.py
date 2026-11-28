@@ -114,7 +114,7 @@ async def cmd_add_disease(
     mapper = DiseaseMapperDB('cn')
     
     try:
-        record_id = await mapper.add_disease(
+        await mapper.add_disease(
             disease_id=disease_id,
             standard_name_en=name_en,
             standard_name_zh=name_zh,
@@ -126,7 +126,7 @@ async def cmd_add_disease(
             source='manual'
         )
         
-        print(f"✅ 疾病添加成功!")
+        print("✅ 疾病添加成功!")
         print(f"   ID: {disease_id}")
         print(f"   英文名: {name_en}")
         print(f"   中文名: {name_zh}")
@@ -149,7 +149,7 @@ async def cmd_add_mapping(
     mapper = DiseaseMapperDB(country)
     
     try:
-        record_id = await mapper.add_mapping(
+        await mapper.add_mapping(
             disease_id=disease_id,
             local_name=local_name,
             local_code=local_code,
@@ -159,7 +159,7 @@ async def cmd_add_mapping(
             source='manual'
         )
         
-        print(f"✅ 映射添加成功!")
+        print("✅ 映射添加成功!")
         print(f"   本地名: {local_name}")
         print(f"   疾病ID: {disease_id}")
         print(f"   类型: {'别名' if is_alias else '主名称'}\n")
@@ -209,7 +209,7 @@ async def cmd_approve_suggestion(suggestion_id, disease_id, create_mapping=True)
         """), {"id": suggestion_id, "disease_id": disease_id})
         await db.commit()
         
-        print(f"✅ 建议已批准\n")
+        print("✅ 建议已批准\n")
 
 
 def print_help():

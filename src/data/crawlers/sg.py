@@ -458,7 +458,7 @@ class SingaporeCDACrawler(BaseCrawler):
     def crawl_weekly_national(self, output_csv: Path, *, years: Sequence[int], include_history: bool = False) -> SGFetchSummary:
         fresh: List[Dict[str, str]] = []
         artifacts = 0
-        requested = set(int(value) for value in years if int(value) >= 2023)
+        requested = {int(value) for value in years if int(value) >= 2023}
         if include_history:
             fresh.extend(self._historical()); artifacts += 1
             requested.update(range(2023, datetime.now(timezone.utc).year + 1))

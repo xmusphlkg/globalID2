@@ -77,7 +77,7 @@ async def validate_global_selection(db, dirty_ids: list[int], *, line: str,
     selected = []
     for batch in selection_batches(dirty_ids):
         rows = await read_selected_batch(db, batch, lock=True)
-        if (set(row.id for row in rows) != set(batch)
+        if ({row.id for row in rows} != set(batch)
                 or any(row.line != line or row.scope_key != "*" for row in rows)):
             raise ValueError(f"{label} JSON selection does not match actual dirty rows")
         if task_uuid and any(row.published_at is not None and row.published_task_uuid != task_uuid

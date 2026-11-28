@@ -26,6 +26,11 @@ ENV/
 !.dev.vars.example
 /cloudflare/subscriptions/wrangler.toml
 /cloudflare/subscriptions/wrangler.generated.toml
+/cloudflare/subscriptions/wrangler.generated.jsonc
+/cloudflare/subscriptions/wrangler.run.*.jsonc
+/cloudflare/subscriptions/.dry-run/
+/cloudflare/subscriptions/.wrangler-config/
+/cloudflare/subscriptions/backups/
 
 # Python tooling caches
 .pytest_cache/

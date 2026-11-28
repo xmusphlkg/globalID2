@@ -2,20 +2,10 @@
 
 from __future__ import annotations
 
-from src.knowledge.repair_policy import (
-    _bilingual_alignment_failures,
-    _knowledge_repair_task_priority,
-    _normalize_requested_sections_by_language,
-    _normalize_repair_reasons_by_language,
- )
-
 import asyncio
-import csv
-import json
 import re
 import threading
 from contextvars import ContextVar
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping, Optional
@@ -34,22 +24,22 @@ from src.domain import (
 )
 from src.knowledge import (
     AIDiseaseBriefGenerator,
-    ReviewedDiseaseBriefGenerator,
-    apply_knowledge_quality_gate,
-    assess_knowledge_evidence,
-    assess_knowledge_brief,
-    attach_profile_schema,
     DiseaseKnowledgeFetcher,
     EVIDENCE_POLICY_VERSION,
-    has_grounding_content,
     KNOWLEDGE_SCHEMA_VERSION,
     KNOWLEDGE_SOURCE_STRATEGY_VERSION,
+    ReviewedDiseaseBriefGenerator,
+    SourceFetchReport,
+    apply_knowledge_quality_gate,
+    assess_knowledge_brief,
+    assess_knowledge_evidence,
+    attach_profile_schema,
+    has_grounding_content,
     knowledge_brief_block_reason,
     knowledge_brief_publication_tier,
     prepare_evidence_packet,
     public_disease_page_exclusion_reason,
     resolve_disease_knowledge_status,
-    SourceFetchReport,
 )
 from src.knowledge.citations import (
     KNOWLEDGE_CITATION_FIELDS,
@@ -60,28 +50,77 @@ from src.knowledge.profile_schema import (
     knowledge_profile_schema_signature,
     resolve_knowledge_profile_schema,
 )
+from src.knowledge.repair_policy import (
+    _bilingual_alignment_failures,
+    _knowledge_repair_task_priority,
+    _normalize_repair_reasons_by_language,
+    _normalize_requested_sections_by_language,
+)
 from src.ontology import load_disease_ontology
+from src.services.disease_knowledge import (
+    DEFAULT_DISEASE_CSV,
+    KNOWLEDGE_PIPELINE_VERSION,
+    KnowledgeEvidenceInsufficientError,
+    ROOT,
+    RetainedProfileEvidence,
+    SOURCE_GROUPS,
+    SOURCE_REFRESH_TTL_DAYS,
+    _PUBLICATION_WORKFLOW_METADATA_KEYS,
+    _SOURCE_TRANSPORT_DEFERRED,
+    _SOURCE_TRANSPORT_FAILURES,
+    _SUBSTANTIVE_SOURCE_ADAPTERS,
+    _active_approved_source_ids,
+    _active_knowledge_tasks_by_disease,
+    _assess_retained_profile_evidence,
+    _bilingual_publication_prerequisites,
+    _brief_metadata,
+    _brief_uses_current_pipeline,
+    _brief_uses_current_profile_schema,
+    _brief_value,
+    _enrich_source_attribution,
+    _evidence_block_reason,
+    _evidence_entity_aliases,
+    _evidence_gate_result,
+    _fetch_sources_with_report,
+    _generated_profile_failures,
+    _has_approved_public_sources,
+    _is_registry_definition_only_packet,
+    _knowledge_evidence_limits as _evidence_knowledge_evidence_limits,
+    _knowledge_snapshot,
+    _locked_existing_brief_result,
+    _merge_repair_payload,
+    _metadata_field,
+    _model_center_route_failure,
+    _normalize_generator_mode,
+    _profile_repair_diagnostics_by_language,
+    _profile_repair_metadata,
+    _profile_repair_sections,
+    _profile_repair_sections_by_language,
+    _publication_evidence_sections,
+    _registry_definition_target_sections,
+    _resolve_repair_sections_by_language,
+    _restore_brief_with_retained_evidence,
+    _safe_int,
+    _select_knowledge_repair_candidates,
+    _skipped_language_after_route_failure,
+    _source_discovery_state,
+    _source_gap_blocks_publication,
+    _source_qualification_reason,
+    _source_records_by_id,
+    _source_transport_retry_delay_seconds,
+    _sources_need_refresh,
+    _total_tokens_from_usage,
+    _translation_source_usable,
+    _use_source_id_citation_markers,
+    expand_sources,
+    load_standard_diseases,
+    source_to_dict,
+)
 from src.services.exceptions import TaskCancelledError
 
 logger = get_logger(__name__)
 
-ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_DISEASE_CSV = ROOT / "configs" / "standard_diseases.csv"
-KNOWLEDGE_PIPELINE_VERSION = 3
-SOURCE_REFRESH_TTL_DAYS = 30
 _KNOWLEDGE_STAGE_RUN: ContextVar[Any] = ContextVar("knowledge_stage_run", default=None)
-
-SOURCE_GROUPS = {
-    "who": ["who", "who_don"],
-    "who_don": ["who_don"],
-    "search": ["web_search"],
-    "web": ["web_search"],
-    "web_search": ["web_search"],
-    "wikidata": ["wikidata"],
-    "wikipedia": ["wikipedia"],
-    "pubmed": ["pubmed"],
-    "msd": ["msd"],
-}
 
 ACTIVE_KNOWLEDGE_TASK_STATUSES = (
     TaskStatus.PENDING,
@@ -91,56 +130,9 @@ ACTIVE_KNOWLEDGE_TASK_STATUSES = (
 )
 
 
-def _knowledge_evidence_limits() -> dict[str, int]:
-    config = get_config().ai
-    return {
-        "max_sources": int(config.knowledge_evidence_max_sources),
-        "max_manifest_characters": int(config.knowledge_evidence_manifest_max_characters),
-    }
-
-
-def _evidence_entity_aliases(disease: dict[str, Any]) -> list[str]:
-    """Return reviewed entity labels used to scope evidence fragments."""
-    values: list[Any] = [
-        disease.get("name_en"),
-        disease.get("standard_name_en"),
-        disease.get("name_zh"),
-        disease.get("standard_name_zh"),
-    ]
-    query_aliases = disease.get("query_aliases")
-    if isinstance(query_aliases, (list, tuple, set)):
-        values.extend(query_aliases)
-    aliases: list[str] = []
-    seen: set[str] = set()
-    for value in values:
-        alias = " ".join(str(value or "").split()).strip()
-        key = alias.casefold()
-        if alias and key not in seen:
-            seen.add(key)
-            aliases.append(alias)
-    return aliases
-
-
-class KnowledgeEvidenceInsufficientError(RuntimeError):
-    """Raised when automatic source enrichment cannot produce publishable knowledge."""
-
-
-def _knowledge_snapshot(
-    sources: list[DiseaseKnowledgeSource],
-    briefs: list[DiseaseKnowledgeBrief],
-    inherited_sources: list[dict[str, Any]],
-) -> str:
-    """Detect concurrent refresh/repair before writing a model result."""
-    return json.dumps(
-        {
-            "sources": [source_to_dict(row) for row in sources],
-            "briefs": [
-                {attr.key: getattr(row, attr.key) for attr in DiseaseKnowledgeBrief.__mapper__.column_attrs}
-                for row in briefs
-            ],
-            "inherited_sources": inherited_sources,
-        },
-        sort_keys=True, default=str,
+def _knowledge_evidence_limits(config: Any | None = None) -> dict[str, int]:
+    return _evidence_knowledge_evidence_limits(
+        config if config is not None else get_config()
     )
 
 
@@ -150,43 +142,6 @@ def _raise_if_model_work_failed() -> None:
     parent = current_parent()
     if parent is not None and parent.failures:
         raise AIWorkFailed("Knowledge model work failed: " + "; ".join(parent.failures))
-
-
-def load_standard_diseases(path: Path = DEFAULT_DISEASE_CSV) -> list[dict[str, Any]]:
-    """Load the standard disease catalogue from CSV."""
-    rows: list[dict[str, Any]] = []
-    with path.open(newline="", encoding="utf-8") as csv_file:
-        for raw in csv.DictReader(csv_file):
-            rows.append(
-                {
-                    "disease_id": raw["disease_id"],
-                    "name_en": raw.get("standard_name_en") or raw.get("name_en"),
-                    "name_zh": raw.get("standard_name_zh") or raw.get("name_zh"),
-                    "standard_name_en": raw.get("standard_name_en"),
-                    "standard_name_zh": raw.get("standard_name_zh"),
-                    "category": raw.get("category") or "Unknown",
-                    "icd_10": raw.get("icd_10"),
-                    "icd_11": raw.get("icd_11"),
-                    "description": raw.get("description") or "",
-                    "source": raw.get("source") or "",
-                }
-            )
-    return rows
-
-
-def expand_sources(values: list[str] | None) -> list[str]:
-    """Expand source groups into concrete adapters."""
-    if not values:
-        # MSD is retained as an explicit provenance-only adapter, but it never
-        # yields reusable grounding text. Do not spend automatic recovery
-        # rounds fetching rows the qualification gate must reject.
-        values = ["who", "search", "wikidata", "wikipedia", "pubmed"]
-    expanded: list[str] = []
-    for value in values:
-        for adapter in SOURCE_GROUPS.get(value, []):
-            if adapter not in expanded:
-                expanded.append(adapter)
-    return expanded
 
 
 async def _existing_sources(db, disease_id: str) -> list[DiseaseKnowledgeSource]:
@@ -432,113 +387,6 @@ async def _upsert_brief(db, payload: dict[str, Any]) -> DiseaseKnowledgeBrief:
     return row
 
 
-def source_to_dict(row: DiseaseKnowledgeSource) -> dict[str, Any]:
-    metadata = row.metadata_ or {}
-    return {
-        "id": row.id,
-        "disease_id": row.disease_id,
-        "source_type": row.source_type,
-        "source_name": row.source_name,
-        "url": row.url,
-        "resolved_url": row.resolved_url or metadata.get("resolved_url") or row.url,
-        "title": row.title,
-        "license": row.license,
-        "status": row.status,
-        "language": row.language,
-        "raw_excerpt": row.raw_excerpt,
-        "content_text": row.content_text or metadata.get("content_text"),
-        "content_sections": row.content_sections or metadata.get("content_sections") or [],
-        "raw_excerpt_hash": row.raw_excerpt_hash,
-        "review_status": row.review_status,
-        "metadata": metadata,
-        "fetched_at": row.fetched_at.isoformat() if row.fetched_at else None,
-    }
-
-
-def _safe_int(value: Any) -> int | None:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _brief_metadata(brief: Any) -> dict[str, Any]:
-    if isinstance(brief, dict):
-        metadata = brief.get("metadata") or brief.get("metadata_")
-    else:
-        metadata = getattr(brief, "metadata_", None) or getattr(brief, "metadata", None)
-    return metadata if isinstance(metadata, dict) else {}
-
-
-def _brief_uses_current_pipeline(brief: Any) -> bool:
-    metadata = _brief_metadata(brief)
-    return (
-        _safe_int(metadata.get("pipeline_version")) == KNOWLEDGE_PIPELINE_VERSION
-        and _safe_int(metadata.get("knowledge_schema_version")) == KNOWLEDGE_SCHEMA_VERSION
-        and _safe_int(metadata.get("evidence_policy_version")) == EVIDENCE_POLICY_VERSION
-        and _safe_int(metadata.get("citation_version")) == 2
-    )
-
-
-def _brief_uses_current_profile_schema(brief: Any, disease: dict[str, Any]) -> bool:
-    """Keep a generated profile current when its semantic contract changes."""
-
-    metadata = _brief_metadata(brief)
-    stored_signature = str(metadata.get("profile_schema_signature") or "").strip()
-    if stored_signature:
-        return stored_signature == knowledge_profile_schema_signature(disease)
-    stored_schema = metadata.get("profile_schema")
-    current_schema = disease.get("profile_schema")
-    if not isinstance(stored_schema, dict) or not isinstance(current_schema, dict):
-        # A profile without a persisted schema is handled by the regular
-        # pipeline version check; do not infer a semantic migration blindly.
-        return True
-    fields = ("profile_type", "required_fields", "optional_fields", "not_applicable_fields")
-    return all(
-        stored_schema.get(field) == current_schema.get(field) for field in fields
-    )
-
-
-def _sources_need_refresh(
-    sources: list[Any],
-    *,
-    now: datetime | None = None,
-    ttl_days: int = SOURCE_REFRESH_TTL_DAYS,
-) -> bool:
-    active_fetched_at = [
-        getattr(source, "fetched_at", None)
-        if not isinstance(source, dict)
-        else source.get("fetched_at")
-        for source in sources
-        if str(
-            getattr(source, "status", None)
-            if not isinstance(source, dict)
-            else source.get("status")
-        )
-        == "active"
-        and str(
-            getattr(source, "review_status", None)
-            if not isinstance(source, dict)
-            else source.get("review_status")
-        )
-        == "approved"
-    ]
-    parsed: list[datetime] = []
-    for value in active_fetched_at:
-        if isinstance(value, str):
-            try:
-                value = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            except ValueError:
-                value = None
-        if isinstance(value, datetime):
-            parsed.append(
-                value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
-            )
-    if not parsed:
-        return True
-    current = now or datetime.now(timezone.utc)
-    return current - max(parsed) >= timedelta(days=max(1, ttl_days))
-
 
 async def _acquire_disease_knowledge_lock(db, disease_id: str) -> None:
     """Serialize updates for one disease across API, CLI and worker processes."""
@@ -601,245 +449,6 @@ async def _automatic_model_repair_is_superseded(
     return True
 
 
-def _metadata_field(source: dict[str, Any], key: str) -> Any:
-    metadata = source.get("metadata")
-    if isinstance(metadata, dict):
-        return metadata.get(key)
-    return None
-
-
-def _enrich_source_attribution(
-    attribution: list[Any],
-    sources_by_id: dict[int, dict[str, Any]],
-) -> list[dict[str, Any]]:
-    enriched: list[dict[str, Any]] = []
-    metadata_keys = (
-        "pmid",
-        "doi",
-        "first_author",
-        "journal",
-        "pub_date",
-        "container_title",
-        "publisher",
-        "year",
-        "provider",
-        "content_kind",
-    )
-    direct_keys = (
-        "source_name",
-        "source_type",
-        "title",
-        "url",
-        "resolved_url",
-        "license",
-        "fetched_at",
-    )
-
-    for item in attribution:
-        if not isinstance(item, dict):
-            continue
-        source_id = _safe_int(item.get("source_id") or item.get("id"))
-        source = sources_by_id.get(source_id) if source_id is not None else None
-        if not source:
-            enriched.append(dict(item))
-            continue
-
-        source_metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
-        item_metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
-        merged = {
-            **item,
-            "id": item.get("id") or source.get("id"),
-            "source_id": item.get("source_id") or source.get("id"),
-            "metadata": {**source_metadata, **item_metadata},
-        }
-        for key in direct_keys:
-            if not merged.get(key):
-                merged[key] = source.get(key)
-        for key in metadata_keys:
-            if not merged.get(key):
-                merged[key] = _metadata_field(source, key)
-        enriched.append(merged)
-    return enriched
-
-
-def _has_approved_public_sources(sources: list[dict[str, Any]]) -> bool:
-    public_sources = [
-        source
-        for source in sources
-        if str(source.get("source_type") or "") in AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES
-    ]
-    return assess_knowledge_evidence(public_sources).sufficient
-
-
-def _evidence_block_reason(sources: list[dict[str, Any]]) -> str:
-    if not sources:
-        return "no_sources_fetched"
-    assessment = assess_knowledge_evidence(sources)
-    if assessment.issues:
-        return ",".join(assessment.issues)
-    if not any(has_grounding_content(src) for src in sources):
-        return "metadata_only_sources"
-    return "insufficient_source_evidence"
-
-
-def _evidence_gate_result(packet: Any) -> dict[str, Any]:
-    """Return the next machine action from global quality and field coverage."""
-
-    assessment = packet.assessment
-    coverage = packet.coverage
-    if (
-        coverage.complete
-        and coverage.required_sections == ("definition",)
-        and any(
-            str(source.get("source_type") or "") == "registry_definition"
-            and str(source.get("status") or "active").lower() == "active"
-            and str(source.get("review_status") or "").lower() == "approved"
-            and bool(
-                (source.get("metadata") or {}).get("registry_definition")
-                if isinstance(source.get("metadata"), dict)
-                else False
-            )
-            and has_grounding_content(source)
-            for source in packet.sources
-        )
-    ):
-        return {
-            "state": "ready_for_generation",
-            "reason": None,
-            "next_action": "generate_profile",
-            "evidence_quality": assessment.to_dict(),
-            "coverage": coverage.to_dict(),
-        }
-    if not assessment.sufficient:
-        return {
-            "state": "awaiting_evidence",
-            "reason": _evidence_block_reason(list(packet.sources)),
-            "next_action": "targeted_source_discovery",
-            "evidence_quality": assessment.to_dict(),
-            "coverage": coverage.to_dict(),
-        }
-    if not coverage.complete:
-        return {
-            "state": "awaiting_evidence",
-            "reason": "section_coverage_missing",
-            "next_action": "targeted_source_discovery",
-            "evidence_quality": assessment.to_dict(),
-            "coverage": coverage.to_dict(),
-        }
-    return {
-        "state": "ready_for_generation",
-        "reason": None,
-        "next_action": "generate_profile",
-        "evidence_quality": assessment.to_dict(),
-        "coverage": coverage.to_dict(),
-    }
-
-
-def _is_registry_definition_only_packet(packet: Any) -> bool:
-    """Whether the packet may ground only a registry-defined profile lead.
-
-    A definition-only registry source is sufficient for a narrow surveillance
-    or classification entity, but it must never be used to refresh optional
-    clinical or epidemiological prose left over from an older profile type.
-    """
-
-    coverage = packet.coverage
-    return (
-        coverage.required_sections == ("definition",)
-        and any(
-            str(source.get("source_type") or "") == "registry_definition"
-            and bool(
-                (source.get("metadata") or {}).get("registry_definition")
-                if isinstance(source.get("metadata"), dict)
-                else False
-            )
-            for source in packet.sources
-        )
-    )
-
-
-def _registry_definition_target_sections(
-    target_sections_by_language: Mapping[str, list[str]],
-    *,
-    registry_definition_only: bool,
-) -> dict[str, list[str]]:
-    """Restrict registry-only profiles to the sections their evidence can support."""
-
-    if not registry_definition_only:
-        return {
-            str(language): list(sections)
-            for language, sections in target_sections_by_language.items()
-        }
-    return {
-        language: ["brief", "definition"]
-        for language in ("en", "zh")
-    }
-
-
-_SOURCE_TRANSPORT_FAILURES = frozenset({"timeout", "error"})
-_SOURCE_TRANSPORT_DEFERRED = frozenset({"busy", "cooldown"})
-_SUBSTANTIVE_SOURCE_ADAPTERS = frozenset(
-    {"who", "who_don", "web_search", "wikipedia", "pubmed"}
-)
-
-
-def _source_discovery_state(result: Mapping[str, Any]) -> str:
-    """Classify a source-only result without treating a transport fault as no evidence.
-
-    The model is never allowed to bridge a missing evidence boundary.  A failed
-    upstream is nevertheless different from a completed multi-source search
-    that has no support for a required section: the former should retry with
-    backoff, while the latter should wait for a source-strategy change.
-    """
-
-    if not bool(result.get("source_gap")):
-        return "ready_for_generation"
-    outcomes = result.get("adapter_outcomes")
-    if isinstance(outcomes, Mapping):
-        substantive_outcomes = [
-            str(outcome or "").lower()
-            for adapter, outcome in outcomes.items()
-            if str(adapter or "").lower() in _SUBSTANTIVE_SOURCE_ADAPTERS
-        ]
-        unavailable = _SOURCE_TRANSPORT_FAILURES | _SOURCE_TRANSPORT_DEFERRED
-        # A single optional endpoint timing out must not hide successful WHO,
-        # PubMed, or direct public-health discovery.  Treat the result as a
-        # true transport issue only when every substantive route was
-        # unavailable; otherwise the next stage can target the actual missing
-        # section instead of re-running the whole adapter fan-out.
-        if substantive_outcomes and all(
-            outcome in unavailable for outcome in substantive_outcomes
-        ):
-            return "awaiting_source_transport"
-        if not substantive_outcomes and any(
-            str(outcome or "").lower() in _SOURCE_TRANSPORT_FAILURES
-            for outcome in outcomes.values()
-        ):
-            return "awaiting_source_transport"
-    return "awaiting_evidence"
-
-
-def _source_gap_blocks_publication(result: Mapping[str, Any]) -> bool:
-    """Return whether a source result proves a profile must leave publication.
-
-    A timeout says nothing about the validity of a previously published,
-    grounded profile. Only a completed discovery pass that still lacks required
-    evidence can revoke that profile while automatic enrichment continues.
-    """
-
-    return bool(result.get("source_gap")) and _source_discovery_state(result) == "awaiting_evidence"
-
-
-_PUBLICATION_WORKFLOW_METADATA_KEYS = frozenset(
-    {
-        "automation_state",
-        "block_reason",
-        "source_task_uuid",
-        "source_coverage",
-        "progressive_repair",
-    }
-)
-
 
 async def _archive_non_public_disease_briefs(
     db,
@@ -889,235 +498,6 @@ async def _archive_non_public_disease_briefs(
     return len(rows)
 
 
-@dataclass(frozen=True)
-class RetainedProfileEvidence:
-    """Result of validating a stored profile against currently active sources."""
-
-    eligible: bool
-    citation_fields: tuple[str, ...]
-    reason: str | None = None
-    rebuilt_manifest: dict[str, Any] | None = None
-
-
-def _brief_value(brief: Any, field: str) -> Any:
-    if isinstance(brief, Mapping):
-        return brief.get(field)
-    return getattr(brief, field, None)
-
-
-def _active_approved_source_ids(sources: list[Any]) -> set[int]:
-    """Return IDs that remain eligible for public citation."""
-
-    active_ids: set[int] = set()
-    for source in sources:
-        source_id = _safe_int(_brief_value(source, "id"))
-        if source_id is None:
-            continue
-        if (
-            str(_brief_value(source, "status") or "").lower() == "active"
-            and str(_brief_value(source, "review_status") or "").lower()
-            == "approved"
-        ):
-            active_ids.add(source_id)
-    return active_ids
-
-
-def _source_records_by_id(sources: list[Any]) -> dict[int, dict[str, Any]]:
-    """Normalize active source rows for retained-evidence revalidation."""
-
-    records: dict[int, dict[str, Any]] = {}
-    for source in sources:
-        record = dict(source) if isinstance(source, Mapping) else source_to_dict(source)
-        source_id = _safe_int(record.get("id") or record.get("source_id"))
-        if source_id is not None:
-            records[source_id] = record
-    return records
-
-
-def _assess_retained_profile_evidence(
-    brief: Any,
-    disease: dict[str, Any],
-    active_source_ids: set[int],
-    source_records_by_id: Mapping[int, dict[str, Any]] | None = None,
-) -> RetainedProfileEvidence:
-    """Prove a stored profile is still publishable without generating prose.
-
-    A source discovery result only describes the newly collected packet. It
-    cannot revoke a profile whose every publication-field citation still maps
-    to an active, approved source. For legacy rows that never persisted a
-    manifest, the current source corpus is used to rebuild one before the same
-    section-level citation validation runs.
-    """
-
-    language = str(_brief_value(brief, "language") or "en").strip().lower()
-    assessment = assess_knowledge_brief(brief, language, disease=disease)
-    citation_fields = tuple(dict.fromkeys(["brief", *assessment.required_fields]))
-    if not assessment.publishable:
-        return RetainedProfileEvidence(False, citation_fields, "profile_incomplete")
-    if not _brief_uses_current_profile_schema(brief, disease):
-        return RetainedProfileEvidence(False, citation_fields, "profile_contract_changed")
-
-    metadata = _brief_metadata(brief)
-    payload = {
-        field: _brief_value(brief, field)
-        for field in citation_fields
-    }
-    payload["source_attribution"] = _brief_value(brief, "source_attribution") or []
-
-    attribution = payload["source_attribution"]
-    if not isinstance(attribution, list):
-        return RetainedProfileEvidence(False, citation_fields, "missing_source_attribution")
-    marker_to_source_id: dict[int, int] = {}
-    for position, source in enumerate(attribution, start=1):
-        if not isinstance(source, Mapping):
-            continue
-        marker = (
-            _safe_int(source.get("citation_index"))
-            or _safe_int(source.get("position"))
-            or position
-        )
-        source_id = _safe_int(source.get("source_id")) or _safe_int(source.get("id"))
-        if source_id is not None:
-            marker_to_source_id[marker] = source_id
-    cited_source_ids: list[int] = []
-    for field in citation_fields:
-        markers = [
-            int(marker)
-            for marker in re.findall(r"\[(\d+)\]", str(payload.get(field) or ""))
-        ]
-        if not markers:
-            return RetainedProfileEvidence(False, citation_fields, f"{field}_uncited")
-        if any(marker_to_source_id.get(marker) not in active_source_ids for marker in markers):
-            return RetainedProfileEvidence(False, citation_fields, f"{field}_inactive_source")
-        for marker in markers:
-            source_id = marker_to_source_id[marker]
-            if source_id not in cited_source_ids:
-                cited_source_ids.append(source_id)
-
-    manifest = metadata.get("evidence_manifest")
-    if isinstance(manifest, Mapping) and isinstance(manifest.get("fragments"), list):
-        payload["metadata"] = metadata
-        if not validate_knowledge_citations(payload, fields=list(citation_fields)):
-            return RetainedProfileEvidence(True, citation_fields)
-
-    if source_records_by_id is None:
-        return RetainedProfileEvidence(False, citation_fields, "citation_manifest_unavailable")
-    cited_sources = [
-        source_records_by_id[source_id]
-        for source_id in cited_source_ids
-        if source_id in source_records_by_id
-    ]
-    if len(cited_sources) != len(cited_source_ids):
-        return RetainedProfileEvidence(False, citation_fields, "cited_source_record_missing")
-    profile_schema = resolve_knowledge_profile_schema(disease)
-    packet = prepare_evidence_packet(
-        cited_sources,
-        profile_schema,
-        target_sections=citation_fields,
-        entity_aliases=_evidence_entity_aliases(disease),
-        max_sources=len(cited_sources),
-        max_manifest_characters=_knowledge_evidence_limits()["max_manifest_characters"],
-        allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
-    )
-    if not packet.coverage.complete:
-        return RetainedProfileEvidence(False, citation_fields, "rebuilt_manifest_incomplete")
-    rebuilt_manifest = packet.manifest.to_dict()
-    payload["metadata"] = {**metadata, "evidence_manifest": rebuilt_manifest}
-    if validate_knowledge_citations(payload, fields=list(citation_fields)):
-        return RetainedProfileEvidence(False, citation_fields, "citation_validation_failed")
-    return RetainedProfileEvidence(
-        True,
-        citation_fields,
-        rebuilt_manifest=rebuilt_manifest,
-    )
-
-
-def _restore_brief_with_retained_evidence(
-    brief: Any,
-    disease: dict[str, Any],
-    active_source_ids: set[int],
-    source_records_by_id: Mapping[int, dict[str, Any]] | None = None,
-    *,
-    restored_at: datetime | None = None,
-) -> RetainedProfileEvidence:
-    """Publish a draft only after the retained-evidence boundary passes."""
-
-    retention = _assess_retained_profile_evidence(
-        brief,
-        disease,
-        active_source_ids,
-        source_records_by_id,
-    )
-    if not retention.eligible:
-        return retention
-    metadata = _brief_metadata(brief)
-    refreshed_metadata = {
-        key: value
-        for key, value in metadata.items()
-        if key not in _PUBLICATION_WORKFLOW_METADATA_KEYS
-    }
-    refreshed_metadata.update(
-        {
-            "pipeline_version": KNOWLEDGE_PIPELINE_VERSION,
-            "knowledge_schema_version": KNOWLEDGE_SCHEMA_VERSION,
-            "evidence_policy_version": EVIDENCE_POLICY_VERSION,
-            "citation_validation": {
-                "valid": True,
-                "validated_fields": list(retention.citation_fields),
-                "failures": [],
-            },
-            "retained_evidence_revalidated_at": (
-                restored_at or datetime.now(timezone.utc)
-            ).isoformat(),
-        }
-    )
-    if retention.rebuilt_manifest is not None:
-        refreshed_metadata["evidence_manifest"] = retention.rebuilt_manifest
-        refreshed_metadata["evidence_manifest_reconstructed_at"] = (
-            restored_at or datetime.now(timezone.utc)
-        ).isoformat()
-    if isinstance(brief, Mapping):
-        brief["status"] = "published"
-        brief["metadata"] = refreshed_metadata
-    else:
-        brief.status = "published"
-        brief.metadata_ = refreshed_metadata
-    return retention
-
-
-def _source_transport_retry_delay_seconds(
-    *,
-    attempt: int,
-    initial_delay_seconds: int,
-    maximum_delay_seconds: int,
-) -> int:
-    """Return bounded exponential source-transport backoff for one disease."""
-
-    multiplier = 2 ** min(max(0, attempt - 1), 6)
-    return min(
-        max(1, int(maximum_delay_seconds)),
-        max(1, int(initial_delay_seconds)) * multiplier,
-    )
-
-
-def _publication_evidence_sections(profile_schema: Any) -> list[str]:
-    """Return the evidence boundary required before either language can publish."""
-
-    required_fields = getattr(profile_schema, "required_fields", ())
-    return ["brief", *dict.fromkeys(str(field) for field in required_fields if field)]
-
-
-def _source_qualification_reason(source: dict[str, Any]) -> str | None:
-    """Classify sources that can never become grounding evidence without AI."""
-
-    metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
-    content_kind = str(metadata.get("content_kind") or "").strip().lower()
-    if metadata.get("metadata_only") or content_kind in {"scholarly_metadata", "search_result"}:
-        return "metadata_only"
-    if not has_grounding_content(source):
-        return "no_grounding_content"
-    return None
-
 
 async def _qualify_pending_sources(
     db,
@@ -1150,656 +530,6 @@ async def _qualify_pending_sources(
         rejected += 1
     return {"rejected": rejected, "retained_for_ai_review": retained}
 
-
-def _generated_profile_failures(
-    results: list[dict[str, Any]],
-    *,
-    target_sections_by_language: Mapping[str, list[str]] | None = None,
-    allow_progressive_drafts: bool = False,
-) -> list[str]:
-    """Return only failures that make a generated result unsafe to persist.
-
-    A targeted repair can safely advance an existing draft even when a
-    different required field remains absent. The public status stays ``draft``
-    until the whole profile passes the normal publication gate, but discarding
-    a grounded, validated field would make independent gaps alternate forever.
-    """
-    failures: list[str] = []
-    languages_seen: set[str] = set()
-    targets_by_language = target_sections_by_language or {}
-    for result in results:
-        payload = result.get("payload") if isinstance(result.get("payload"), dict) else result
-        trace = result.get("trace") if isinstance(result.get("trace"), dict) else {}
-        language = str(payload.get("language") or "unknown").strip().lower()
-        languages_seen.add(language)
-        if trace.get("error"):
-            failures.append(f"{language}: generator error: {trace['error']}")
-        assessment = assess_knowledge_brief(payload, language)
-        target_sections = list(targets_by_language.get(language) or [])
-        if allow_progressive_drafts and target_sections:
-            publication_targets = {
-                "brief",
-                *assessment.required_fields,
-            }
-            unavailable_targets = [
-                field
-                for field in target_sections
-                if field in publication_targets
-                and field in assessment.fields
-                and not assessment.fields[field].available
-            ]
-            if unavailable_targets:
-                failures.append(
-                    f"{language}: missing repaired target sections ("
-                    + ", ".join(unavailable_targets)
-                    + ")"
-                )
-        else:
-            if not assessment.fields["brief"].available:
-                failures.append(f"{language}: substantive brief is required")
-            if str(payload.get("status") or "").strip().lower() != "published":
-                failures.append(f"{language}: status is not published")
-            if not assessment.profile_available:
-                failures.append(
-                    f"{language}: no substantive profile ({'; '.join(assessment.issues) or 'quality gate failed'})"
-                )
-            if assessment.missing_required_fields:
-                failures.append(
-                    f"{language}: missing required sections ("
-                    + ", ".join(assessment.missing_required_fields)
-                    + ")"
-                )
-        citation_validation = (
-            payload.get("metadata", {}).get("citation_validation")
-            if isinstance(payload.get("metadata"), dict)
-            else None
-        )
-        if isinstance(citation_validation, dict) and citation_validation.get("failures"):
-            failures.append(
-                f"{language}: citation validation failed ("
-                + "; ".join(str(item) for item in citation_validation["failures"])
-                + ")"
-            )
-    for language in ("en", "zh"):
-        if language not in languages_seen:
-            failures.append(f"{language}: profile was not generated")
-    return failures
-
-
-
-
-def _profile_repair_sections(
-    briefs: list[Any],
-    disease: dict[str, Any],
-) -> list[str]:
-    """Return only fields that need evidence repair in either language."""
-    schema = disease["profile_schema"]
-    ordered_fields = ["brief", *schema["required_fields"], *schema["optional_fields"]]
-    by_language = _profile_repair_sections_by_language(briefs, disease)
-    targets = {field for fields in by_language.values() for field in fields}
-    return [field for field in ordered_fields if field in targets]
-
-
-def _profile_repair_diagnostics_by_language(
-    briefs: list[Any],
-    disease: dict[str, Any],
-) -> dict[str, dict[str, Any]]:
-    """Explain why each localized profile needs work without conflating states.
-
-    A policy/schema upgrade makes an older published profile eligible for
-    evidence revalidation, but it does not mean every public chapter vanished.
-    Keeping that distinction here gives the catalogue, scheduler, and task
-    workbook one truthful source of repair semantics.
-    """
-
-    schema = disease["profile_schema"]
-    ordered_fields = ["brief", *schema["required_fields"], *schema["optional_fields"]]
-    by_language = {
-        str(
-            getattr(brief, "language", None)
-            or (brief.get("language") if isinstance(brief, dict) else "")
-        ): brief
-        for brief in briefs
-    }
-    result: dict[str, dict[str, Any]] = {}
-    for language in ("en", "zh"):
-        brief = by_language.get(language)
-        if brief is None:
-            result[language] = {
-                "sections": list(ordered_fields),
-                "reasons": ["missing_language_profile"],
-                "missing_required_sections": list(schema["required_fields"]),
-                "pipeline_current": False,
-            }
-            continue
-
-        raw_status = (
-            getattr(brief, "status", None)
-            if not isinstance(brief, dict)
-            else brief.get("status")
-        )
-        status = str(raw_status or "").strip().lower()
-        assessment = assess_knowledge_brief(brief, language, disease=disease)
-        content_targets = set(assessment.missing_required_fields)
-        if not assessment.fields["brief"].available:
-            content_targets.add("brief")
-        profile_schema_current = _brief_uses_current_profile_schema(brief, disease)
-        pipeline_current = _brief_uses_current_pipeline(brief) and profile_schema_current
-        reasons: list[str] = []
-        is_draft = bool(status) and status != "published"
-        if is_draft:
-            reasons.append("draft_profile")
-        if content_targets:
-            reasons.append("content_gap")
-        if not pipeline_current:
-            reasons.append(
-                "evidence_revalidation"
-                if profile_schema_current
-                else "profile_contract_migration"
-            )
-
-        progressive_repair = bool(_brief_metadata(brief).get("progressive_repair"))
-        # Legacy drafts and policy migrations need a whole-profile generation:
-        # partial patching would incorrectly claim that unexamined legacy text
-        # has passed the current entity-scoped citation policy. Drafts written
-        # by progressive repair have already validated prior target fields, so
-        # only their remaining gaps should be scheduled next.
-        sections = (
-            list(ordered_fields)
-            if (is_draft and not progressive_repair) or not pipeline_current
-            else [field for field in ordered_fields if field in content_targets]
-        )
-        result[language] = {
-            "sections": sections,
-            "reasons": reasons,
-            "missing_required_sections": list(assessment.missing_required_fields),
-            "pipeline_current": pipeline_current,
-        }
-    return result
-
-
-def _profile_repair_metadata(
-    briefs: list[Any],
-    disease: dict[str, Any],
-) -> dict[str, Any]:
-    """Return a catalogue-safe repair projection shared by list and detail APIs."""
-
-    diagnostics = _profile_repair_diagnostics_by_language(briefs, disease)
-    repair_sections_by_language = {
-        language: list(diagnostics[language]["sections"])
-        for language in ("en", "zh")
-    }
-    repair_reasons_by_language = {
-        language: list(diagnostics[language]["reasons"])
-        for language in ("en", "zh")
-    }
-    ordered_fields = [
-        "brief",
-        *disease["profile_schema"]["required_fields"],
-        *disease["profile_schema"]["optional_fields"],
-    ]
-    repair_sections = [
-        field
-        for field in ordered_fields
-        if any(field in repair_sections_by_language[language] for language in ("en", "zh"))
-    ]
-    required_gap_sections = [
-        field
-        for field in ["brief", *disease["profile_schema"]["required_fields"]]
-        if any(
-            field in diagnostics[language]["missing_required_sections"]
-            or (
-                field == "brief"
-                and field in diagnostics[language]["sections"]
-                and "content_gap" in diagnostics[language]["reasons"]
-            )
-            for language in ("en", "zh")
-        )
-    ]
-    # A draft is not automatically a content gap. A complete profile can be a
-    # draft solely because it needs current-policy citation revalidation. If
-    # that routine maintenance is given the same priority as an absent
-    # required field, it occupies the source-first backlog and starves pages
-    # that cannot yet be published at all.
-    has_content_gap = any(
-        any(
-            reason in {"missing_language_profile", "content_gap"}
-            for reason in repair_reasons_by_language[language]
-        )
-        for language in ("en", "zh")
-    )
-    has_maintenance_repair = any(
-        any(
-            reason in {"draft_profile", "evidence_revalidation"}
-            for reason in repair_reasons_by_language[language]
-        )
-        for language in ("en", "zh")
-    )
-    has_profile_contract_migration = any(
-        "profile_contract_migration" in repair_reasons_by_language[language]
-        for language in ("en", "zh")
-    )
-    return {
-        "repair_sections": repair_sections,
-        "repair_sections_by_language": repair_sections_by_language,
-        "repair_reasons_by_language": repair_reasons_by_language,
-        "required_gap_sections": required_gap_sections,
-        "repair_priority": (
-            "urgent"
-            if not briefs
-            else "high"
-            if has_content_gap or has_profile_contract_migration
-            else "normal"
-            if has_maintenance_repair
-            else "none"
-        ),
-    }
-
-
-def _active_knowledge_tasks_by_disease(tasks: list[Task]) -> dict[str, Task]:
-    """Map active knowledge tasks to their disease IDs for idempotent enqueueing."""
-    result: dict[str, Task] = {}
-    for task in tasks:
-        input_data = dict(getattr(task, "input_data", None) or {})
-        candidates: list[str] = []
-        disease_ids = input_data.get("disease_ids")
-        if isinstance(disease_ids, list):
-            candidates.extend(str(value).strip().upper() for value in disease_ids if str(value).strip())
-        disease_id = input_data.get("disease_id") or input_data.get("disease")
-        if disease_id:
-            candidates.append(str(disease_id).strip().upper())
-        for candidate in candidates:
-            if candidate and candidate not in result:
-                result[candidate] = task
-    return result
-
-
-def _select_knowledge_repair_candidates(
-    catalogue: list[dict[str, Any]],
-    *,
-    active_by_disease: dict[str, Task] | None = None,
-    excluded_disease_ids: set[str] | None = None,
-    limit: int | None = None,
-    priorities: set[str] | None = None,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Return catalogue rows that should continue through automatic repair."""
-    active_by_disease = active_by_disease or {}
-    excluded_disease_ids = {
-        str(disease_id).strip().upper()
-        for disease_id in (excluded_disease_ids or set())
-        if str(disease_id).strip()
-    }
-    priorities = priorities or {"urgent", "high"}
-    selected: list[dict[str, Any]] = []
-    skipped: list[dict[str, Any]] = []
-
-    priority_rank = {"urgent": 0, "high": 1, "normal": 2, "none": 3}
-    repair_reason_rank = {
-        "missing_language_profile": 0,
-        "draft_profile": 1,
-        "content_gap": 2,
-        "evidence_revalidation": 3,
-    }
-    ordered = sorted(
-        catalogue,
-        key=lambda item: (
-            priority_rank.get(str(item.get("repair_priority") or "none"), 9),
-            min(
-                (
-                    repair_reason_rank.get(str(reason), 9)
-                    for reasons in (item.get("repair_reasons_by_language") or {}).values()
-                    for reason in (reasons or [])
-                ),
-                default=9,
-            ),
-            str(item.get("disease_id") or ""),
-        ),
-    )
-    for item in ordered:
-        disease_id = str(item.get("disease_id") or "").strip().upper()
-        repair_priority = str(item.get("repair_priority") or "none").strip().lower()
-        repair_sections = [
-            str(section).strip()
-            for section in (item.get("repair_sections") or [])
-            if str(section).strip()
-        ]
-        if not disease_id:
-            continue
-        if disease_id in excluded_disease_ids:
-            skipped.append(
-                {
-                    "disease_id": disease_id,
-                    "reason": "awaiting_evidence_backoff",
-                }
-            )
-            continue
-        exclusion_reason = public_disease_page_exclusion_reason(item)
-        if exclusion_reason:
-            skipped.append(
-                {
-                    "disease_id": disease_id,
-                    "reason": exclusion_reason,
-                }
-            )
-            continue
-        if repair_priority not in priorities or not repair_sections:
-            continue
-        active_task = active_by_disease.get(disease_id)
-        if active_task is not None:
-            skipped.append(
-                {
-                    "disease_id": disease_id,
-                    "reason": "already_running",
-                    "existing_task_uuid": getattr(active_task, "task_uuid", None),
-                    "existing_status": str(getattr(active_task, "status", "")),
-                }
-            )
-            continue
-        selected.append({**item, "disease_id": disease_id, "repair_sections": repair_sections})
-        if limit is not None and len(selected) >= limit:
-            break
-    return selected, skipped
-
-
-
-
-def _profile_repair_sections_by_language(
-    briefs: list[Any],
-    disease: dict[str, Any],
-) -> dict[str, list[str]]:
-    """Plan localized repairs so a complete translation is never regenerated."""
-    diagnostics = _profile_repair_diagnostics_by_language(briefs, disease)
-    return {
-        language: list(diagnostics[language]["sections"])
-        for language in ("en", "zh")
-    }
-
-
-def _bilingual_publication_prerequisites(
-    briefs: list[Any],
-    disease: dict[str, Any],
-) -> dict[str, list[str]]:
-    """Return the minimal companion sections needed for bilingual publication.
-
-    A targeted repair may originate from only one locale, while publication is
-    deliberately a bilingual contract.  Locking a draft companion profile
-    would make the requested repair fail after spending a model call, then
-    cause governance to alternate between EN and ZH retries.  This helper
-    adds only the companion locale's actual required gaps; it does not turn a
-    narrow content repair into a full legacy-profile regeneration.
-    """
-    schema = disease["profile_schema"]
-    ordered_fields = ["brief", *schema["required_fields"], *schema["optional_fields"]]
-    by_language = {
-        str(
-            getattr(brief, "language", None)
-            or (brief.get("language") if isinstance(brief, dict) else "")
-        ).strip().lower(): brief
-        for brief in briefs
-    }
-    prerequisites: dict[str, list[str]] = {}
-    for language in ("en", "zh"):
-        brief = by_language.get(language)
-        if brief is None:
-            prerequisites[language] = list(ordered_fields)
-            continue
-        assessment = assess_knowledge_brief(brief, language, disease=disease)
-        required = set(assessment.missing_required_fields)
-        if not assessment.fields["brief"].available:
-            required.add("brief")
-        prerequisites[language] = [
-            field for field in ordered_fields if field in required
-        ]
-    return prerequisites
-
-
-def _resolve_repair_sections_by_language(
-    briefs: list[Any],
-    disease: dict[str, Any],
-    *,
-    ordered_sections: list[str],
-    force: bool,
-    target_languages: list[str] | None,
-    requested_sections_by_language: dict[str, list[str]] | None,
-) -> dict[str, list[str]]:
-    """Resolve a narrow repair request without breaking bilingual publication.
-
-    The catalogue supplies a broad candidate, governance may narrow it to a
-    field-level retry, and the API may select a locale.  The result keeps that
-    intent but cannot leave a known required gap in the companion locale.
-    """
-    targets = _profile_repair_sections_by_language(briefs, disease)
-    if force:
-        targets = {language: list(ordered_sections) for language in ("en", "zh")}
-    if target_languages is not None:
-        allowed_languages = {
-            str(language).strip().lower()
-            for language in target_languages
-            if str(language).strip().lower() in {"en", "zh"}
-        }
-        if allowed_languages:
-            targets = {
-                language: fields if language in allowed_languages else []
-                for language, fields in targets.items()
-            }
-    requested = _normalize_requested_sections_by_language(
-        requested_sections_by_language,
-        ordered_sections=ordered_sections,
-    )
-    if not requested:
-        return targets
-
-    for language, sections in requested.items():
-        targets[language] = sections
-    companion_prerequisites = _bilingual_publication_prerequisites(briefs, disease)
-    for language, sections in companion_prerequisites.items():
-        if language in requested or not sections:
-            continue
-        selected = {*targets.get(language, []), *sections}
-        targets[language] = [
-            field for field in ordered_sections if field in selected
-        ]
-    return targets
-
-
-
-
-
-
-def _locked_existing_brief_result(brief: Any, disease: dict[str, Any]) -> dict[str, Any]:
-    """Wrap a complete localized brief without invoking the model."""
-    metadata = getattr(brief, "metadata_", None) or getattr(brief, "metadata", None) or {}
-    payload = {
-        "disease_id": getattr(brief, "disease_id", None) or disease.get("disease_id"),
-        "language": getattr(brief, "language", None),
-        "brief": getattr(brief, "brief", None),
-        "definition": getattr(brief, "definition", None),
-        "clinical_features": getattr(brief, "clinical_features", None),
-        "clinical_summary": getattr(brief, "clinical_summary", None),
-        "epidemiology": getattr(brief, "epidemiology", None),
-        "transmission": getattr(brief, "transmission", None),
-        "prevention": getattr(brief, "prevention", None),
-        "surveillance_note": getattr(brief, "surveillance_note", None),
-        "risk_groups": getattr(brief, "risk_groups", None),
-        "source_ids": getattr(brief, "source_ids", None) or [],
-        "source_attribution": getattr(brief, "source_attribution", None) or [],
-        "disclaimer": getattr(brief, "disclaimer", None),
-        "model": getattr(brief, "model", None),
-        "status": getattr(brief, "status", None),
-        "source_confidence": getattr(brief, "source_confidence", None),
-        "quality_score": getattr(brief, "quality_score", None),
-        "review_notes": getattr(brief, "review_notes", None),
-        "metadata": dict(metadata) if isinstance(metadata, dict) else {},
-    }
-    return {
-        "payload": payload,
-        "trace": {
-            "generator": "locked_existing",
-            "language": payload["language"],
-            "model": None,
-            "provider": None,
-            "token_usage": {},
-            "duration": 0.0,
-            "error": None,
-            "cache_hit": False,
-        },
-    }
-
-
-def _merge_repair_payload(
-    payload: dict[str, Any],
-    existing: Any | None,
-    target_sections: list[str],
-    disease: dict[str, Any],
-) -> dict[str, Any]:
-    """Lock already-published fields while replacing only requested gaps."""
-    merged = _use_source_id_citation_markers(dict(payload))
-    if existing is not None:
-        profile_contract_migration = not _brief_uses_current_profile_schema(
-            existing,
-            disease,
-        )
-        existing_payload = _use_source_id_citation_markers(
-            {
-                "brief": getattr(existing, "brief", None),
-                "definition": getattr(existing, "definition", None),
-                "clinical_features": getattr(existing, "clinical_features", None),
-                "epidemiology": getattr(existing, "epidemiology", None),
-                "transmission": getattr(existing, "transmission", None),
-                "prevention": getattr(existing, "prevention", None),
-                "surveillance_note": getattr(existing, "surveillance_note", None),
-                "risk_groups": getattr(existing, "risk_groups", None),
-                "source_attribution": getattr(existing, "source_attribution", None) or [],
-            }
-        )
-        for field in ("brief", "definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"):
-            if field not in target_sections:
-                if (
-                    profile_contract_migration
-                    and field in disease["profile_schema"]["optional_fields"]
-                ):
-                    merged[field] = None
-                else:
-                    merged[field] = existing_payload.get(field)
-        source_attribution: list[dict[str, Any]] = []
-        seen_sources: set[str] = set()
-        for source in [
-            *(merged.get("source_attribution") or []),
-            *(existing_payload.get("source_attribution") or []),
-        ]:
-            if not isinstance(source, dict):
-                continue
-            key = str(source.get("source_id") or source.get("id") or source.get("url") or "")
-            if not key or key in seen_sources:
-                continue
-            seen_sources.add(key)
-            source_attribution.append(source)
-        merged["source_attribution"] = source_attribution
-        merged["clinical_summary"] = merged.get("clinical_features")
-    merged["status"] = "published"
-    merged["metadata"] = {
-        **(merged.get("metadata") or {}),
-        "profile_schema": disease["profile_schema"],
-        "profile_schema_signature": knowledge_profile_schema_signature(disease),
-        "target_sections": target_sections,
-        "repair_mode": existing is not None,
-    }
-    merged = normalize_knowledge_citations(
-        merged,
-        marker_mode="source_id",
-        prune_uncited_sources=True,
-    )
-    merged, assessment = apply_knowledge_quality_gate(merged)
-    citation_failures = validate_knowledge_citations(
-        merged,
-        fields=target_sections,
-    )
-    merged["metadata"] = {
-        **(merged.get("metadata") or {}),
-        "pipeline_version": KNOWLEDGE_PIPELINE_VERSION,
-        "knowledge_schema_version": KNOWLEDGE_SCHEMA_VERSION,
-        "evidence_policy_version": EVIDENCE_POLICY_VERSION,
-        "citation_validation": {
-            "valid": not citation_failures,
-            "validated_fields": list(target_sections),
-            "failures": citation_failures,
-        },
-    }
-    if citation_failures:
-        merged["status"] = "draft"
-        merged["metadata"] = {
-            **merged["metadata"],
-            "automation_state": "awaiting_evidence",
-            "block_reason": "citation_validation_failed",
-        }
-    else:
-        target_set = set(target_sections)
-        publication_targets = target_set & {"brief", *assessment.required_fields}
-        accepted_targets = all(
-            assessment.fields[field].available
-            for field in publication_targets
-            if field in assessment.fields
-        )
-        remaining_required = [
-            field
-            for field in assessment.missing_required_fields
-            if field not in target_set
-        ]
-        if accepted_targets and remaining_required:
-            metadata = dict(merged.get("metadata") or {})
-            if metadata.get("block_reason") == "missing_required_sections":
-                metadata.pop("block_reason", None)
-            merged["metadata"] = {
-                **metadata,
-                "automation_state": "repairing_remaining_sections",
-                "progressive_repair": {
-                    "completed_sections": [
-                        field for field in target_sections if field in publication_targets
-                    ],
-                    "remaining_required_sections": remaining_required,
-                },
-            }
-        else:
-            metadata = dict(merged.get("metadata") or {})
-            if str(merged.get("status") or "").lower() == "published":
-                # Source or content recovery states are only meaningful while
-                # publication is blocked. Keeping one after a successful merge
-                # makes a published profile look as if it still needs review.
-                metadata.pop("automation_state", None)
-                metadata.pop("block_reason", None)
-            metadata.pop("progressive_repair", None)
-            merged["metadata"] = metadata
-    return merged
-
-
-def _use_source_id_citation_markers(payload: dict[str, Any]) -> dict[str, Any]:
-    """Convert sequential citations to stable source IDs before section merging."""
-    result = dict(payload)
-    sources = result.get("source_attribution") if isinstance(result.get("source_attribution"), list) else []
-    marker_to_source_id: dict[int, int] = {}
-    for position, source in enumerate(sources, start=1):
-        if not isinstance(source, dict):
-            continue
-        source_id = source.get("source_id") or source.get("id")
-        try:
-            source_id = int(source_id)
-        except (TypeError, ValueError):
-            continue
-        marker = source.get("citation_index") or position
-        try:
-            marker_to_source_id[int(marker)] = source_id
-        except (TypeError, ValueError):
-            continue
-
-    def replace(match: re.Match[str]) -> str:
-        marker = int(match.group(1))
-        return f"[{marker_to_source_id.get(marker, marker)}]"
-
-    for field in ("brief", "definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"):
-        value = result.get(field)
-        if isinstance(value, str):
-            result[field] = re.sub(r"\[(\d+)\]", replace, value)
-    return result
 
 
 async def _generate_brief_result(
@@ -1838,132 +568,6 @@ async def _translate_brief_result(
     return result
 
 
-def _translation_source_usable(
-    result: dict[str, Any] | None,
-    *,
-    target_sections: list[str],
-) -> bool:
-    if not isinstance(result, dict):
-        return False
-    trace = result.get("trace") if isinstance(result.get("trace"), dict) else {}
-    if trace.get("error"):
-        return False
-    payload = result.get("payload") if isinstance(result.get("payload"), dict) else {}
-    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
-    citation_repair = metadata.get("citation_repair") if isinstance(metadata.get("citation_repair"), dict) else {}
-    final_failures = citation_repair.get("final_failures")
-    if isinstance(final_failures, list) and final_failures:
-        return False
-    trace_failures = trace.get("citation_failures")
-    if isinstance(trace_failures, list) and trace_failures:
-        return False
-    language = "zh" if payload.get("language") == "zh" else "en"
-    assessment = assess_knowledge_brief(payload, language)
-    if any(
-        not assessment.fields[field].available
-        for field in target_sections
-        if field in assessment.fields
-    ):
-        return False
-    return bool(payload)
-
-
-def _model_center_route_failure(result: dict[str, Any] | None) -> bool:
-    if not isinstance(result, dict):
-        return False
-    trace = result.get("trace") if isinstance(result.get("trace"), dict) else {}
-    error = str(trace.get("error") or "").lower()
-    return any(
-        marker in error
-        for marker in (
-            "agent completion failed",
-            "no candidate model available",
-            "all models failed",
-            "rate limit",
-            "timeout",
-            "temporarily unavailable",
-        )
-    )
-
-
-def _skipped_language_after_route_failure(
-    *,
-    disease: dict[str, Any],
-    language: str,
-    target_sections: list[str],
-    upstream_language: str,
-) -> dict[str, Any]:
-    payload = {
-        "disease_id": disease.get("disease_id"),
-        "language": language,
-        "brief": None,
-        "definition": None,
-        "clinical_features": None,
-        "clinical_summary": None,
-        "epidemiology": None,
-        "transmission": None,
-        "prevention": None,
-        "surveillance_note": None,
-        "risk_groups": None,
-        "source_ids": [],
-        "source_attribution": [],
-        "model": "ai-model-center",
-        "status": "draft",
-        "source_confidence": "low",
-        "quality_score": 0.0,
-        "review_notes": (
-            f"Skipped {language.upper()} generation because "
-            f"{upstream_language.upper()} already failed at the model route."
-        ),
-        "metadata": {
-            "generator": "skipped_after_model_route_failure",
-            "target_sections": target_sections,
-            "profile_schema": disease.get("profile_schema"),
-            "automation_state": "waiting_for_model_capacity",
-        },
-    }
-    return {
-        "payload": payload,
-        "trace": {
-            "generator": "skipped_after_model_route_failure",
-            "language": language,
-            "model": None,
-            "provider": None,
-            "token_usage": {},
-            "duration": 0.0,
-            "error": payload["review_notes"],
-            "cache_hit": False,
-        },
-    }
-
-
-def _fetch_sources_with_report(
-    fetcher: DiseaseKnowledgeFetcher,
-    disease: dict[str, Any],
-    *,
-    enabled_sources: list[str],
-    target_sections: list[str],
-    cancel_event: threading.Event | None = None,
-) -> SourceFetchReport:
-    if hasattr(fetcher, "fetch_with_report"):
-        return fetcher.fetch_with_report(
-            disease,
-            enabled_sources=enabled_sources,
-            target_sections=target_sections,
-            cancel_event=cancel_event,
-        )
-    candidates = fetcher.fetch(
-        disease,
-        enabled_sources=enabled_sources,
-        target_sections=target_sections,
-        cancel_event=cancel_event,
-    )
-    return SourceFetchReport(
-        candidates=list(candidates),
-        adapter_outcomes={source: "success" for source in enabled_sources},
-        adapter_durations={},
-    )
-
 
 async def _fetch_sources_for_update(
     fetcher: DiseaseKnowledgeFetcher,
@@ -1993,12 +597,6 @@ async def _fetch_sources_for_update(
         cancel_event.set()
         raise
 
-
-def _normalize_generator_mode(mode: str | None) -> str:
-    value = (mode or "ai").strip().lower()
-    if value not in {"ai", "auto"}:
-        return "ai"
-    return value
 
 
 def _generator_for_mode(
@@ -2042,16 +640,6 @@ async def _log_task(
         metadata=metadata or {},
     )
 
-
-def _total_tokens_from_usage(token_usage: Any) -> Optional[int]:
-    if not isinstance(token_usage, dict):
-        return None
-    total = token_usage.get("total")
-    if isinstance(total, int):
-        return total
-    if isinstance(total, float):
-        return int(total)
-    return None
 
 
 async def _raise_if_cancelled(task_uuid: Optional[str]) -> None:
@@ -2804,12 +1392,17 @@ class DiseaseKnowledgeUpdateService:
                 query_aliases: list[str] = []
                 seen_aliases: set[str] = set()
 
-                def add_alias(value: Any) -> None:
+                def add_alias(
+                    value: Any,
+                    *,
+                    _seen_aliases: set[str] = seen_aliases,
+                    _query_aliases: list[str] = query_aliases,
+                ) -> None:
                     alias = " ".join(str(value or "").split()).strip()
                     key = alias.casefold()
-                    if alias and key not in seen_aliases:
-                        seen_aliases.add(key)
-                        query_aliases.append(alias)
+                    if alias and key not in _seen_aliases:
+                        _seen_aliases.add(key)
+                        _query_aliases.append(alias)
 
                 labels = detail.get("labels") if isinstance(detail.get("labels"), dict) else {}
                 for label in labels.values():
@@ -3069,7 +1662,6 @@ class DiseaseKnowledgeUpdateService:
             for brief in brief_rows
         }
         repair_metadata = _profile_repair_metadata(list(brief_rows), disease)
-        repair_sections = repair_metadata["repair_sections"]
         published_languages = sorted([
             brief.language
             for brief in brief_rows
@@ -3092,7 +1684,6 @@ class DiseaseKnowledgeUpdateService:
                 "required_gap_sections": [],
                 "repair_priority": "none",
             }
-            repair_sections = []
         else:
             knowledge_status = (
                 "published"
@@ -3538,7 +2129,6 @@ class DiseaseKnowledgeUpdateService:
             if self._stage_run and self._stage_run.current != "organize":
                 await self._stage_run.transition("organize", metrics={"step": "evidence" if source_only else "brief"})
             profile_schema = resolve_knowledge_profile_schema(disease_payload)
-            profile_schema_signature = knowledge_profile_schema_signature(disease_payload)
             evidence_packet = prepare_evidence_packet(
                 source_dicts,
                 profile_schema,
@@ -3713,7 +2303,6 @@ class DiseaseKnowledgeUpdateService:
         if task_uuid:
             await task_manager.update_task_progress(task_uuid, 40)
         profile_schema = resolve_knowledge_profile_schema(disease_payload)
-        profile_schema_signature = knowledge_profile_schema_signature(disease_payload)
         direct_packet = prepare_evidence_packet(
             source_dicts,
             profile_schema,

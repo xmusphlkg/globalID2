@@ -2,77 +2,90 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
-from uuid import UUID
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from sqlalchemy import desc, func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from ..deps import get_db
-from ..schemas.task import TaskOut
 from src.ai.model_center import (
     bootstrap_model_center_from_env,
     discover_provider_models_by_id,
     get_runtime_routes,
-    mask_api_key,
-)
-from src.ai.catalogue.health import (
-    get_model_rate_limit_state,
-    get_model_runtime_health_state,
-    get_provider_rate_limit_state,
-    get_provider_runtime_health_state,
-)
-from src.ai.catalogue.options import (
-    availability_view,
-    get_thinking_mode,
-    with_availability,
-    with_thinking_mode,
+    mask_api_key as mask_api_key,
 )
 from src.ai.runtime_metrics import read_runtime_metrics
 from src.core.db_schema import ensure_task_type_enum_schema
 from src.core.task_manager import task_manager
-from src.domain.ai_model_center import AIModelCallLog, AIModelConfig, AIProviderConfig
-from src.domain.country import Country
-from src.domain.report import Report, ReportType
-from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
+from src.domain.ai_model_center import AIModelConfig, AIProviderConfig
 from src.services.ai_content_governance_service import ai_content_governance_service
 from src.services.disease_duplicate_audit_service import DiseaseDuplicateAuditService
+from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService
 from src.services.model_operations import run_worker_operation
-from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService, SOURCE_GROUPS, expand_sources
 
+from ..deps import get_db
 from ..schemas.ai_tasks import (
-    AIStartRequest as AIStartRequest,
     AIContentGovernanceRequest as AIContentGovernanceRequest,
     AIContentGovernanceResponse as AIContentGovernanceResponse,
-    KnowledgeRepairRetryRequest as KnowledgeRepairRetryRequest,
+    AIStartRequest as AIStartRequest,
     DiseaseDuplicateAuditRequest as DiseaseDuplicateAuditRequest,
     DiseaseDuplicateAuditStatusRequest as DiseaseDuplicateAuditStatusRequest,
+    KnowledgeRepairRetryRequest as KnowledgeRepairRetryRequest,
 )
 from ..schemas.disease_knowledge import (
+    DiseaseKnowledgeBriefDetail as DiseaseKnowledgeBriefDetail,
     DiseaseKnowledgeCatalogueItem as DiseaseKnowledgeCatalogueItem,
-    DiseaseKnowledgeTaskSkipped as DiseaseKnowledgeTaskSkipped,
-    DiseaseKnowledgeStartRequest as DiseaseKnowledgeStartRequest,
-    DiseaseKnowledgeStartResponse as DiseaseKnowledgeStartResponse,
+    DiseaseKnowledgeDetail as DiseaseKnowledgeDetail,
     DiseaseKnowledgeRepairRequest as DiseaseKnowledgeRepairRequest,
     DiseaseKnowledgeRepairResponse as DiseaseKnowledgeRepairResponse,
     DiseaseKnowledgeSourceDetail as DiseaseKnowledgeSourceDetail,
-    DiseaseKnowledgeBriefDetail as DiseaseKnowledgeBriefDetail,
-    DiseaseKnowledgeDetail as DiseaseKnowledgeDetail,
+    DiseaseKnowledgeStartRequest as DiseaseKnowledgeStartRequest,
+    DiseaseKnowledgeStartResponse as DiseaseKnowledgeStartResponse,
+    DiseaseKnowledgeTaskSkipped as DiseaseKnowledgeTaskSkipped,
 )
 from ..schemas.model_center import (
-    ProviderCreateRequest as ProviderCreateRequest,
-    ProviderBootstrapRequest as ProviderBootstrapRequest,
-    ProviderUpdateRequest as ProviderUpdateRequest,
-    ProviderOut as ProviderOut,
+    AIModelCallLogOut as AIModelCallLogOut,
     AvailabilityWindowIn as AvailabilityWindowIn,
     ModelCreateRequest as ModelCreateRequest,
-    ModelUpdateRequest as ModelUpdateRequest,
     ModelOut as ModelOut,
+    ModelUpdateRequest as ModelUpdateRequest,
+    ProviderBootstrapRequest as ProviderBootstrapRequest,
+    ProviderCreateRequest as ProviderCreateRequest,
+    ProviderOut as ProviderOut,
+    ProviderUpdateRequest as ProviderUpdateRequest,
     RuntimeRouteOut as RuntimeRouteOut,
-    AIModelCallLogOut as AIModelCallLogOut,
     ThinkingMode as ThinkingMode,
+)
+from ..schemas.task import TaskOut
+from ..services.ai_model_center_service import (
+    _active_knowledge_tasks_by_disease as _active_knowledge_tasks_by_disease,
+    _apply_availability as _apply_availability,
+    _dedupe_disease_ids as _dedupe_disease_ids,
+    _find_disease_in_catalogue as _find_disease_in_catalogue,
+    _load_active_knowledge_tasks as _load_active_knowledge_tasks,
+    _model_to_out as _model_to_out,
+    _normalize_analysis_depth as _normalize_analysis_depth,
+    _normalize_priority as _normalize_priority,
+    _normalize_report_layout as _normalize_report_layout,
+    _normalize_report_type as _normalize_report_type,
+    _normalize_reuse_strategy as _normalize_reuse_strategy,
+    _normalize_source_groups as _normalize_source_groups,
+    _provider_to_out as _provider_to_out,
+    _task_to_out as _task_to_out,
+    _without_completion_caps as _without_completion_caps,
+    create_model_record,
+    create_provider_record,
+    delete_model_record,
+    delete_provider_record,
+    enqueue_disease_knowledge_repair_runs,
+    enqueue_disease_knowledge_runs,
+    enqueue_report_generation_task,
+    fetch_call_logs_page,
+    list_model_outputs,
+    list_provider_outputs,
+    runtime_route_to_out,
+    update_model_record,
+    update_provider_record,
 )
 
 router = APIRouter()
@@ -83,11 +96,15 @@ async def run_disease_duplicate_audit(body: DiseaseDuplicateAuditRequest):
     if body.include_ai:
         return await run_worker_operation("disease_audit", body.model_dump())
     service = DiseaseDuplicateAuditService()
-    return service.run_local_audit(include_new_disease_candidates=body.include_new_disease_candidates)
+    return service.run_local_audit(
+        include_new_disease_candidates=body.include_new_disease_candidates
+    )
 
 
 @router.get("/ai/disease-audit/status", response_model=Dict[str, Any])
-async def get_disease_duplicate_audit_status(include_new_disease_candidates: bool = True):
+async def get_disease_duplicate_audit_status(
+    include_new_disease_candidates: bool = True,
+):
     service = DiseaseDuplicateAuditService()
     return await service.status(
         include_new_disease_candidates=include_new_disease_candidates,
@@ -117,145 +134,35 @@ async def list_disease_knowledge_catalogue(
     return await service.list_catalogue(db, search=search)
 
 
-@router.post("/knowledge/runs", response_model=DiseaseKnowledgeStartResponse, status_code=202)
+@router.post(
+    "/knowledge/runs", response_model=DiseaseKnowledgeStartResponse, status_code=202
+)
 async def start_disease_knowledge_tasks(
     body: DiseaseKnowledgeStartRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    service = DiseaseKnowledgeUpdateService()
-    await ensure_task_type_enum_schema(db)
-    requested_ids = _dedupe_disease_ids(body.disease_ids)
-    if not requested_ids:
-        raise HTTPException(422, "At least one disease id is required")
-
-    priority = _normalize_priority(body.priority)
-    source_groups = _normalize_source_groups(body.source)
-    active_tasks = await _load_active_knowledge_tasks(db)
-    active_by_disease = _active_knowledge_tasks_by_disease(active_tasks)
-
-    created_tasks: list[TaskOut] = []
-    skipped: list[DiseaseKnowledgeTaskSkipped] = []
-
-    for disease_id in requested_ids:
-        disease = _find_disease_in_catalogue(service, disease_id)
-        if disease is None:
-            skipped.append(
-                DiseaseKnowledgeTaskSkipped(
-                    disease_id=disease_id,
-                    reason="not_found",
-                    existing_task_uuid=None,
-                    existing_status=None,
-                )
-            )
-            continue
-
-        existing = active_by_disease.get(disease_id.upper())
-        if existing is not None:
-            skipped.append(
-                DiseaseKnowledgeTaskSkipped(
-                    disease_id=disease_id,
-                    reason="already_running",
-                    existing_task_uuid=existing.task_uuid,
-                    existing_status=str(existing.status),
-                )
-            )
-            continue
-
-        task_name = body.task_name or f"Update {disease['name_en']} knowledge"
-        if body.task_name and len(requested_ids) > 1:
-            task_name = f"{body.task_name} · {disease['name_en']}"
-
-        description = body.description or (
-            f"Disease: {disease_id}, "
-            f"Sources: {', '.join(source_groups) or 'default'}, "
-            f"Force: {'Yes' if body.force else 'No'}, "
-            f"Generator: {body.generator}"
-        )
-
-        task = await task_manager.create_task(
-            task_type=TaskType.UPDATE_DISEASE_KNOWLEDGE,
-            task_name=task_name,
-            priority=priority,
-            description=description,
-            input_data={
-                "disease_id": disease_id,
-                "disease_ids": [disease_id],
-                "source_groups": source_groups,
-                "source": source_groups,
-                "force": body.force,
-                "generator": body.generator,
-                "initiated_via": "dashboard",
-                "requested_by": "ai-control-panel",
-            },
-        )
-        await task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="info",
-            title="Task Queued",
-            content=(
-                f"Queued from AI control panel for disease {disease_id} "
-                f"with sources {', '.join(source_groups) or 'default'}."
-            ),
-            content_type="text",
-            metadata={
-                "disease_id": disease_id,
-                "source_groups": source_groups,
-                "generator": body.generator,
-                "force": body.force,
-            },
-        )
-        task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
-        created_tasks.append(_task_to_out(task))
-
-    if not created_tasks and skipped:
-        return DiseaseKnowledgeStartResponse(
-            requested_disease_ids=requested_ids,
-            created_tasks=[],
-            skipped=skipped,
-        )
-
-    return DiseaseKnowledgeStartResponse(
-        requested_disease_ids=requested_ids,
-        created_tasks=created_tasks,
-        skipped=skipped,
+    return await enqueue_disease_knowledge_runs(
+        db,
+        body,
+        service=DiseaseKnowledgeUpdateService(),
+        task_manager_ref=task_manager,
+        ensure_schema=ensure_task_type_enum_schema,
     )
 
 
-@router.post("/knowledge/repair-runs", response_model=DiseaseKnowledgeRepairResponse, status_code=202)
+@router.post(
+    "/knowledge/repair-runs",
+    response_model=DiseaseKnowledgeRepairResponse,
+    status_code=202,
+)
 async def start_disease_knowledge_repair_tasks(
     body: DiseaseKnowledgeRepairRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    service = DiseaseKnowledgeUpdateService()
-    source_groups = _normalize_source_groups(body.source)
-    if body.priority is not None:
-        _normalize_priority(body.priority)
-    result = await service.enqueue_repair_tasks(
+    return await enqueue_disease_knowledge_repair_runs(
         db,
-        source_groups=source_groups,
-        force=body.force,
-        generator_mode=body.generator,
-        priority=body.priority,
-        limit=body.limit,
-        requested_by="ai-control-panel",
-        initiated_via="dashboard-repair",
-    )
-    return DiseaseKnowledgeRepairResponse(
-        created_count=result["created_count"],
-        skipped_count=result["skipped_count"],
-        source_groups=result["source_groups"],
-        generator=result["generator"],
-        force=result["force"],
-        created_tasks=[_task_to_out(task) for task in result["created_tasks"]],
-        skipped=[
-            DiseaseKnowledgeTaskSkipped(
-                disease_id=str(item.get("disease_id") or ""),
-                reason=str(item.get("reason") or "skipped"),
-                existing_task_uuid=item.get("existing_task_uuid"),
-                existing_status=item.get("existing_status"),
-            )
-            for item in result["skipped"]
-        ],
+        body,
+        service=DiseaseKnowledgeUpdateService(),
     )
 
 
@@ -292,194 +199,39 @@ async def get_disease_knowledge_detail(
     return DiseaseKnowledgeDetail(**payload)
 
 
-def _without_completion_caps(extra_params: Any) -> Dict[str, Any]:
-    """Drop stored completion budgets so they cannot be forwarded upstream."""
-    params = dict(extra_params) if isinstance(extra_params, dict) else {}
-    for key in (
-        "max_tokens",
-        "max_completion_tokens",
-        "runtime_completion_max_tokens",
-        "health_check_max_tokens",
-    ):
-        params.pop(key, None)
-    return params
-
-
-def _apply_availability(extra_params: Dict[str, Any], timezone_name: Optional[str], windows: Any) -> Dict[str, Any]:
-    try:
-        return with_availability(extra_params, timezone_name, windows)
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-
-
 @router.post("/reports/runs", response_model=TaskOut, status_code=202)
 async def start_ai_task(
     body: AIStartRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """Create a GENERATE_REPORT task and enqueue it for external worker execution."""
-    country = (
-        await db.execute(
-            select(Country).where(func.upper(Country.code) == body.country_code.strip().upper())
-        )
-    ).scalar_one_or_none()
-    if not country:
-        raise HTTPException(404, f"Country not found: {body.country_code}")
-
-    reuse_report_id = None
-    if body.reuse_report_uuid is not None:
-        reuse_report_id = (
-            await db.execute(
-                select(Report.id).where(Report.report_uuid == body.reuse_report_uuid)
-            )
-        ).scalar_one_or_none()
-        if reuse_report_id is None:
-            raise HTTPException(404, "Reuse report not found")
-
-    report_type = _normalize_report_type(body.report_type)
-    priority = _normalize_priority(body.priority)
-    reuse_strategy = _normalize_reuse_strategy(body.reuse_strategy)
-    report_layout = _normalize_report_layout(body.report_layout)
-    analysis_depth = _normalize_analysis_depth(body.analysis_depth)
-
-    running_q = select(Task).where(
-        Task.task_type == TaskType.GENERATE_REPORT,
-        Task.country_id == country.id,
-        Task.status.in_([TaskStatus.RUNNING, TaskStatus.QUEUED]),
+    return await enqueue_report_generation_task(
+        db, body, task_manager_ref=task_manager
     )
-    running = (await db.execute(running_q)).scalar_one_or_none()
-    if running:
-        raise HTTPException(
-            409,
-            f"An AI task is already running for this country (task {running.task_uuid})",
-        )
-
-    country_code = country.code.upper()
-    task_name = body.task_name or f"Generate {report_type.upper()} Report for {country_code}"
-    description = body.description or (
-        f"Report Type: {report_type}, Days: {body.days}, "
-        f"Language: {body.language}, "
-        f"Layout: {report_layout}, "
-        f"Analysis Depth: {analysis_depth}, "
-        f"Quality Threshold: {body.quality_threshold:.2f}, "
-        f"Review: {'Yes' if body.enable_review else 'No'}, "
-        f"Email: {'Yes' if body.send_email else 'No'}, "
-        f"Reuse Failed: {'Yes' if body.reuse_from_failed else 'No'}, "
-        f"Reuse Strategy: {reuse_strategy}, "
-        f"Reuse Report UUID: {body.reuse_report_uuid or 'Auto'}"
-    )
-
-    language = (body.language or "en").strip().lower()
-    if language not in {"zh", "en"}:
-        raise HTTPException(422, "Invalid language, expected 'zh' or 'en'")
-
-    task = await task_manager.create_task(
-        task_type=TaskType.GENERATE_REPORT,
-        task_name=task_name,
-        country_id=country.id,
-        priority=priority,
-        description=description,
-        input_data={
-            "country": country_code,
-            "country_code": country_code,
-            "report_type": report_type,
-            "period_start": body.period_start,
-            "period_end": body.period_end,
-            "language": language,
-            "days": body.days,
-            "enable_review": body.enable_review,
-            "report_layout": report_layout,
-            "analysis_depth": analysis_depth,
-            "quality_threshold": body.quality_threshold,
-            "send_email": body.send_email,
-            "reuse_from_failed": body.reuse_from_failed,
-            "reuse_strategy": reuse_strategy,
-            "reuse_report_id": reuse_report_id,
-            "reuse_report_uuid": str(body.reuse_report_uuid) if body.reuse_report_uuid else None,
-        },
-    )
-
-    task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
-
-    return _task_to_out(task)
 
 
 @router.get("/ai/models/providers", response_model=List[ProviderOut])
 async def list_providers(db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
-    rows = (
-        await db.execute(
-            select(AIProviderConfig).order_by(AIProviderConfig.priority.asc(), AIProviderConfig.id.asc())
-        )
-    ).scalars().all()
-    return [_provider_to_out(item) for item in rows]
+    return await list_provider_outputs(db)
 
 
 @router.post("/ai/models/providers", response_model=ProviderOut, status_code=201)
-async def create_provider(body: ProviderCreateRequest, db: AsyncSession = Depends(get_db)):
+async def create_provider(
+    body: ProviderCreateRequest, db: AsyncSession = Depends(get_db)
+):
     await bootstrap_model_center_from_env(force=False)
-
-    exists = (
-        await db.execute(select(AIProviderConfig).where(AIProviderConfig.provider_key == body.provider_key))
-    ).scalar_one_or_none()
-    if exists:
-        raise HTTPException(409, f"Provider key already exists: {body.provider_key}")
-
-    provider = AIProviderConfig(
-        provider_key=body.provider_key,
-        provider_name=body.provider_name,
-        display_name=body.display_name,
-        api_style=body.api_style,
-        base_url=body.base_url,
-        api_key=body.api_key,
-        organization=body.organization,
-        extra_headers=body.extra_headers,
-        extra_config=body.extra_config,
-        is_active=body.is_active,
-        priority=body.priority,
-    )
-    db.add(provider)
-    await db.commit()
-    await db.refresh(provider)
-    return _provider_to_out(provider)
+    return await create_provider_record(db, body)
 
 
 @router.put("/ai/models/providers/{provider_key}", response_model=ProviderOut)
-async def update_provider(provider_key: str, body: ProviderUpdateRequest, db: AsyncSession = Depends(get_db)):
+async def update_provider(
+    provider_key: str,
+    body: ProviderUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+):
     await bootstrap_model_center_from_env(force=False)
-
-    provider = (
-        await db.execute(
-            select(AIProviderConfig).where(AIProviderConfig.provider_key == provider_key)
-        )
-    ).scalar_one_or_none()
-    if provider is None:
-        raise HTTPException(404, "Provider not found")
-
-    if body.display_name is not None:
-        provider.display_name = body.display_name
-    if body.api_style is not None:
-        provider.api_style = body.api_style
-    if body.base_url is not None:
-        provider.base_url = body.base_url
-    if body.api_key is not None:
-        provider.api_key = body.api_key
-    if body.clear_api_key:
-        provider.api_key = None
-    if body.organization is not None:
-        provider.organization = body.organization
-    if body.extra_headers is not None:
-        provider.extra_headers = body.extra_headers
-    if body.extra_config is not None:
-        provider.extra_config = body.extra_config
-    if body.is_active is not None:
-        provider.is_active = body.is_active
-    if body.priority is not None:
-        provider.priority = body.priority
-
-    await db.commit()
-    await db.refresh(provider)
-    return _provider_to_out(provider)
+    return await update_provider_record(db, provider_key, body)
 
 
 @router.post("/ai/models/providers/bootstrap")
@@ -491,58 +243,7 @@ async def bootstrap_providers(body: ProviderBootstrapRequest):
 @router.delete("/ai/models/providers/{provider_key}")
 async def delete_provider(provider_key: str, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
-
-    provider = (
-        await db.execute(
-            select(AIProviderConfig).where(AIProviderConfig.provider_key == provider_key)
-        )
-    ).scalar_one_or_none()
-    if provider is None:
-        raise HTTPException(404, "Provider not found")
-
-    models_to_delete = (
-        await db.execute(
-            select(AIModelConfig)
-            .where(AIModelConfig.provider_id == provider.id)
-            .order_by(AIModelConfig.priority.asc(), AIModelConfig.id.asc())
-        )
-    ).scalars().all()
-
-    had_default_model = any(model.is_default for model in models_to_delete)
-
-    await db.delete(provider)
-    await db.flush()
-
-    replacement = None
-    if had_default_model:
-        replacement = (
-            await db.execute(
-                select(AIModelConfig)
-                .where(AIModelConfig.provider_id != provider.id)
-                .where(AIModelConfig.is_enabled.is_(True))
-                .order_by(AIModelConfig.is_enabled.desc(), AIModelConfig.priority.asc(), AIModelConfig.id.asc())
-            )
-        ).scalars().first()
-
-        if replacement is None:
-            replacement = (
-                await db.execute(
-                    select(AIModelConfig)
-                    .where(AIModelConfig.provider_id != provider.id)
-                    .order_by(AIModelConfig.priority.asc(), AIModelConfig.id.asc())
-                )
-            ).scalars().first()
-
-        if replacement is not None:
-            replacement.is_default = True
-
-    await db.commit()
-    return {
-        "ok": True,
-        "provider_key": provider.provider_key,
-        "removed_model_count": len(models_to_delete),
-        "default_promoted_model_key": replacement.model_key if replacement is not None else None,
-    }
+    return await delete_provider_record(db, provider_key)
 
 
 @router.post("/ai/models/providers/{provider_key}/test")
@@ -556,22 +257,30 @@ async def test_provider(
     await bootstrap_model_center_from_env(force=False)
     provider_id = (
         await db.execute(
-            select(AIProviderConfig.id).where(AIProviderConfig.provider_key == provider_key)
+            select(AIProviderConfig.id).where(
+                AIProviderConfig.provider_key == provider_key
+            )
         )
     ).scalar_one_or_none()
     if provider_id is None:
         raise HTTPException(404, "Provider not found")
     await db.rollback()
-    return await run_worker_operation("check_provider", {"provider_id": int(provider_id), "structured": structured})
+    return await run_worker_operation(
+        "check_provider", {"provider_id": int(provider_id), "structured": structured}
+    )
 
 
 @router.post("/ai/models/providers/{provider_key}/discover-models")
-async def discover_provider_models(provider_key: str, db: AsyncSession = Depends(get_db)):
+async def discover_provider_models(
+    provider_key: str, db: AsyncSession = Depends(get_db)
+):
     """Read the provider API catalogue; discovered models are not auto-enabled."""
     await bootstrap_model_center_from_env(force=False)
     provider_id = (
         await db.execute(
-            select(AIProviderConfig.id).where(AIProviderConfig.provider_key == provider_key)
+            select(AIProviderConfig.id).where(
+                AIProviderConfig.provider_key == provider_key
+            )
         )
     ).scalar_one_or_none()
     if provider_id is None:
@@ -582,188 +291,27 @@ async def discover_provider_models(provider_key: str, db: AsyncSession = Depends
 @router.get("/ai/models", response_model=List[ModelOut])
 async def list_models(db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
-    rows = (
-        await db.execute(
-            select(AIModelConfig)
-            .options(selectinload(AIModelConfig.provider))
-            .order_by(AIModelConfig.priority.asc(), AIModelConfig.id.asc())
-        )
-    ).scalars().all()
-    return [_model_to_out(item) for item in rows]
+    return await list_model_outputs(db)
 
 
 @router.post("/ai/models", response_model=ModelOut, status_code=201)
 async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
-
-    provider = (
-        await db.execute(
-            select(AIProviderConfig).where(AIProviderConfig.provider_key == body.provider_key)
-        )
-    ).scalar_one_or_none()
-    if provider is None:
-        raise HTTPException(404, "Provider not found")
-
-    model_key = body.model_key or f"{provider.provider_key}:{body.model_name}"
-    exists = (
-        await db.execute(select(AIModelConfig).where(AIModelConfig.model_key == model_key))
-    ).scalar_one_or_none()
-    if exists:
-        raise HTTPException(409, f"Model key already exists: {model_key}")
-
-    if body.is_default:
-        for old in (await db.execute(select(AIModelConfig).where(AIModelConfig.is_default.is_(True)))).scalars().all():
-            old.is_default = False
-
-    extra_params = _without_completion_caps(body.extra_params)
-    if body.runtime_max_concurrency is not None:
-        extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
-    if body.thinking_mode is not None:
-        extra_params = with_thinking_mode(extra_params, body.thinking_mode)
-    if "availability_windows" in body.model_fields_set or "availability_timezone" in body.model_fields_set:
-        extra_params = _apply_availability(
-            extra_params,
-            body.availability_timezone,
-            [item.model_dump() for item in body.availability_windows] if body.availability_windows else [],
-        )
-    model = AIModelConfig(
-        provider_id=provider.id,
-        model_key=model_key,
-        model_name=body.model_name,
-        display_name=body.display_name or body.model_name,
-        model_type=body.model_type,
-        api_style=body.api_style,
-        temperature=body.temperature,
-        max_tokens=None,
-        extra_params=extra_params,
-        is_enabled=body.is_enabled,
-        is_default=body.is_default,
-        priority=body.priority,
-    )
-    db.add(model)
-    await db.commit()
-
-    model = (
-        await db.execute(
-            select(AIModelConfig)
-            .options(selectinload(AIModelConfig.provider))
-            .where(AIModelConfig.id == model.id)
-        )
-    ).scalar_one()
-
-    return _model_to_out(model)
+    return await create_model_record(db, body)
 
 
 @router.put("/ai/models/{model_key}", response_model=ModelOut)
-async def update_model(model_key: str, body: ModelUpdateRequest, db: AsyncSession = Depends(get_db)):
+async def update_model(
+    model_key: str, body: ModelUpdateRequest, db: AsyncSession = Depends(get_db)
+):
     await bootstrap_model_center_from_env(force=False)
-
-    model = (
-        await db.execute(
-            select(AIModelConfig)
-            .options(selectinload(AIModelConfig.provider))
-            .where(AIModelConfig.model_key == model_key)
-            .with_for_update(of=AIModelConfig)
-        )
-    ).scalar_one_or_none()
-    if model is None:
-        raise HTTPException(404, "Model not found")
-
-    if body.display_name is not None:
-        model.display_name = body.display_name
-    if body.model_type is not None:
-        model.model_type = body.model_type
-    if body.api_style is not None:
-        model.api_style = body.api_style
-    if body.temperature is not None:
-        model.temperature = body.temperature
-    model.max_tokens = None
-    if (
-        body.extra_params is not None
-        or body.thinking_mode is not None
-        or "runtime_max_concurrency" in body.model_fields_set
-        or "availability_windows" in body.model_fields_set
-        or "availability_timezone" in body.model_fields_set
-    ):
-        extra_params = _without_completion_caps(
-            body.extra_params if body.extra_params is not None else (model.extra_params or {})
-        )
-        if "runtime_max_concurrency" in body.model_fields_set:
-            if body.runtime_max_concurrency is None:
-                extra_params.pop("runtime_max_concurrency", None)
-            else:
-                extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
-        if body.thinking_mode is not None:
-            extra_params = with_thinking_mode(extra_params, body.thinking_mode)
-        if "availability_windows" in body.model_fields_set or "availability_timezone" in body.model_fields_set:
-            current = availability_view(extra_params)
-            windows = (
-                [item.model_dump() for item in body.availability_windows]
-                if body.availability_windows is not None
-                else current["availability_windows"]
-            )
-            timezone_name = (
-                body.availability_timezone
-                if "availability_timezone" in body.model_fields_set
-                else current["availability_timezone"]
-            )
-            extra_params = _apply_availability(extra_params, timezone_name, windows)
-        model.extra_params = extra_params
-    elif model.extra_params:
-        model.extra_params = _without_completion_caps(model.extra_params)
-    if body.is_enabled is not None:
-        model.is_enabled = body.is_enabled
-    if body.priority is not None:
-        model.priority = body.priority
-
-    if body.is_default is True:
-        for old in (await db.execute(select(AIModelConfig).where(AIModelConfig.is_default.is_(True)))).scalars().all():
-            old.is_default = False
-        model.is_default = True
-    elif body.is_default is False:
-        model.is_default = False
-
-    await db.commit()
-    await db.refresh(model)
-    return _model_to_out(model)
+    return await update_model_record(db, model_key, body)
 
 
 @router.delete("/ai/models/{model_key}")
 async def delete_model(model_key: str, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
-
-    model = (
-        await db.execute(
-            select(AIModelConfig).where(AIModelConfig.model_key == model_key)
-        )
-    ).scalar_one_or_none()
-    if model is None:
-        raise HTTPException(404, "Model not found")
-
-    deleted_model_key = model.model_key
-    was_default = bool(model.is_default)
-
-    await db.delete(model)
-    await db.flush()
-
-    replacement = None
-    if was_default:
-        replacement = (
-            await db.execute(
-                select(AIModelConfig)
-                .where(AIModelConfig.id != model.id)
-                .order_by(AIModelConfig.is_enabled.desc(), AIModelConfig.priority.asc(), AIModelConfig.id.asc())
-            )
-        ).scalars().first()
-        if replacement is not None:
-            replacement.is_default = True
-
-    await db.commit()
-    return {
-        "ok": True,
-        "deleted_model_key": deleted_model_key,
-        "new_default_model_key": replacement.model_key if replacement is not None else None,
-    }
+    return await delete_model_record(db, model_key)
 
 
 @router.post("/ai/models/{model_key}/test")
@@ -781,7 +329,9 @@ async def test_model(
     if model_id is None:
         raise HTTPException(404, "Model not found")
     await db.rollback()
-    return await run_worker_operation("check_model", {"model_id": int(model_id), "structured": structured})
+    return await run_worker_operation(
+        "check_model", {"model_id": int(model_id), "structured": structured}
+    )
 
 
 @router.post("/ai/models/check-all")
@@ -800,40 +350,18 @@ async def list_ai_model_call_logs(
     status: Optional[str] = Query(None, pattern="^(success|failed)$"),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(AIModelCallLog)
-    if provider_key:
-        query = query.where(AIModelCallLog.provider_key == provider_key)
-    if model_key:
-        query = query.where(AIModelCallLog.model_key == model_key)
-    if status:
-        query = query.where(AIModelCallLog.status == status)
-    total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar_one()
-    rows = (
-        await db.execute(
-            query.order_by(desc(AIModelCallLog.created_at), desc(AIModelCallLog.id))
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-        )
-    ).scalars().all()
+    items, total, offset = await fetch_call_logs_page(
+        db,
+        page=page,
+        page_size=page_size,
+        provider_key=provider_key,
+        model_key=model_key,
+        status=status,
+    )
     response.headers["X-Total-Count"] = str(total)
     response.headers["X-Limit"] = str(page_size)
-    response.headers["X-Offset"] = str((page - 1) * page_size)
-    return [
-        AIModelCallLogOut(
-            id=row.id,
-            request_id=row.request_id,
-            model_key=row.model_key,
-            model_name=row.model_name,
-            provider_key=row.provider_key,
-            agent_name=row.agent_name,
-            status=row.status,
-            latency_ms=row.latency_ms,
-            error_type=row.error_type,
-            error_message=row.error_message,
-            created_at=row.created_at.isoformat(),
-        )
-        for row in rows
-    ]
+    response.headers["X-Offset"] = str(offset)
+    return items
 
 
 @router.get("/ai/models/runtime", response_model=List[RuntimeRouteOut])
@@ -843,268 +371,4 @@ async def list_runtime_routes():
     # report occupied durable permits, not a count of live HTTP connections.
     snapshot = await read_runtime_metrics(routes)
     routes = snapshot.apply_to_routes(routes)
-    return [
-        RuntimeRouteOut(
-            model_id=int(route["model_id"]),
-            model_key=str(route["model_key"]),
-            model_name=str(route["model_name"]),
-            provider_id=int(route["provider_id"]),
-            provider_key=str(route["provider_key"]),
-            provider_name=str(route["provider_name"]),
-            api_style=str(route["api_style"]),
-            base_url=route.get("base_url"),
-            has_api_key=bool(route.get("api_key")),
-            api_key_hint=mask_api_key(route.get("api_key")),
-            priority=route.get("priority"),
-            available_for_routing=bool(route.get("available_for_routing")),
-            routing_status=str(route.get("routing_status") or "probe_unavailable"),
-            routing_status_reason=route.get("routing_status_reason"),
-            last_check_status=route.get("last_check_status"),
-            last_checked_at=route.get("last_checked_at"),
-            rate_limit_active=bool(route.get("rate_limit_active")),
-            rate_limit_scope=route.get("rate_limit_scope"),
-            rate_limit_cooldown_until=route.get("rate_limit_cooldown_until"),
-            rate_limit_remaining_seconds=int(route.get("rate_limit_remaining_seconds") or 0),
-            rate_limit_count=int(route.get("rate_limit_count") or 0),
-            last_rate_limit_at=route.get("last_rate_limit_at"),
-            runtime_failure_active=bool(route.get("runtime_failure_active")),
-            runtime_failure_scope=route.get("runtime_failure_scope"),
-            runtime_failure_cooldown_until=route.get("runtime_failure_cooldown_until"),
-            runtime_failure_remaining_seconds=int(route.get("runtime_failure_remaining_seconds") or 0),
-            runtime_failure_kind=route.get("runtime_failure_kind"),
-            runtime_failure_streak=int(route.get("runtime_failure_streak") or 0),
-            runtime_failure_streak_raw=int(route.get("runtime_failure_streak_raw") or 0),
-            runtime_failure_count=int(route.get("runtime_failure_count") or 0),
-            runtime_timeout_count=int(route.get("runtime_timeout_count") or 0),
-            runtime_success_count=int(route.get("runtime_success_count") or 0),
-            runtime_degraded=bool(route.get("runtime_degraded")),
-            runtime_degraded_scope=route.get("runtime_degraded_scope"),
-            runtime_degraded_reason=route.get("runtime_degraded_reason"),
-            runtime_latency_ewma_ms=route.get("runtime_latency_ewma_ms"),
-            runtime_last_failure_at=route.get("runtime_last_failure_at"),
-            runtime_last_success_at=route.get("runtime_last_success_at"),
-            runtime_last_error=route.get("runtime_last_error"),
-            runtime_provider_capacity=int(route.get("runtime_provider_capacity") or 0),
-            runtime_provider_inflight=int(route.get("runtime_provider_inflight") or 0),
-            runtime_provider_max_capacity=int(route.get("runtime_provider_max_capacity") or 0),
-            runtime_model_capacity=int(route.get("runtime_model_capacity") or 0),
-            runtime_model_inflight=int(route.get("runtime_model_inflight") or 0),
-        )
-        for route in routes
-    ]
-
-
-def _normalize_report_type(value: str) -> str:
-    normalized = (value or "monthly").strip().lower()
-    allowed = {rt.value for rt in ReportType}
-    if normalized not in allowed:
-        joined = ", ".join(sorted(allowed))
-        raise HTTPException(422, f"Invalid report_type '{value}'. Allowed values: {joined}")
-    return normalized
-
-
-def _normalize_priority(value: str) -> TaskPriority:
-    normalized = (value or TaskPriority.NORMAL.value).strip().lower()
-    try:
-        return TaskPriority(normalized)
-    except ValueError as exc:
-        allowed = ", ".join([p.value for p in TaskPriority])
-        raise HTTPException(422, f"Invalid priority '{value}'. Allowed values: {allowed}") from exc
-
-
-def _normalize_reuse_strategy(value: str) -> str:
-    normalized = (value or "auto").strip().lower()
-    allowed = {"auto", "safe", "resume", "manual"}
-    if normalized not in allowed:
-        joined = ", ".join(sorted(allowed))
-        raise HTTPException(422, f"Invalid reuse_strategy '{value}'. Allowed values: {joined}")
-    return normalized
-
-
-def _normalize_report_layout(value: str) -> str:
-    normalized = (value or "analytical_v3").strip().lower()
-    allowed = {"analytical_v3", "structured", "legacy"}
-    if normalized not in allowed:
-        joined = ", ".join(sorted(allowed))
-        raise HTTPException(422, f"Invalid report_layout '{value}'. Allowed values: {joined}")
-    return normalized
-
-
-def _normalize_analysis_depth(value: str) -> str:
-    normalized = (value or "deep").strip().lower()
-    allowed = {"deep", "deterministic"}
-    if normalized not in allowed:
-        joined = ", ".join(sorted(allowed))
-        raise HTTPException(422, f"Invalid analysis_depth '{value}'. Allowed values: {joined}")
-    return normalized
-
-
-def _normalize_source_groups(values: list[str] | None) -> list[str]:
-    cleaned = [str(value).strip().lower() for value in (values or []) if str(value).strip()]
-    if not cleaned:
-        cleaned = ["who", "search", "wikidata", "wikipedia", "pubmed", "msd"]
-    allowed = set(SOURCE_GROUPS)
-    invalid = sorted({value for value in cleaned if value not in allowed})
-    if invalid:
-        joined = ", ".join(invalid)
-        raise HTTPException(422, f"Invalid source groups: {joined}")
-    return expand_sources(cleaned)
-
-
-def _dedupe_disease_ids(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        disease_id = str(value or "").strip().upper()
-        if not disease_id or disease_id in seen:
-            continue
-        seen.add(disease_id)
-        result.append(disease_id)
-    return result
-
-
-async def _load_active_knowledge_tasks(db: AsyncSession) -> list[Task]:
-    result = await db.execute(
-        select(Task)
-        .where(
-            Task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE,
-            Task.status.in_(
-                [
-                    TaskStatus.PENDING,
-                    TaskStatus.QUEUED,
-                    TaskStatus.RUNNING,
-                    TaskStatus.RETRYING,
-                ]
-            ),
-        )
-        .order_by(Task.created_at.asc())
-    )
-    return list(result.scalars().all())
-
-
-def _active_knowledge_tasks_by_disease(tasks: list[Task]) -> dict[str, Task]:
-    result: dict[str, Task] = {}
-    for task in tasks:
-        input_data = dict(task.input_data or {})
-        disease_ids = input_data.get("disease_ids")
-        disease_id = input_data.get("disease_id")
-        candidates: list[str] = []
-        if isinstance(disease_ids, list):
-            candidates.extend(str(value).strip().upper() for value in disease_ids if str(value).strip())
-        if disease_id:
-            candidates.append(str(disease_id).strip().upper())
-        for candidate in candidates:
-            if candidate and candidate not in result:
-                result[candidate] = task
-    return result
-
-
-def _find_disease_in_catalogue(service: DiseaseKnowledgeUpdateService, disease_id: str) -> dict[str, Any] | None:
-    wanted = str(disease_id or "").strip().upper()
-    for disease in service.load_standard_diseases():
-        if str(disease.get("disease_id") or "").upper() == wanted:
-            return disease
-    return None
-
-
-def _task_to_out(task: Task) -> TaskOut:
-    metadata = dict(task.metadata_ or {})
-    cancel_requested = bool(metadata.get("cancel_requested"))
-    cancel_requested_at = metadata.get("cancel_requested_at") if isinstance(metadata.get("cancel_requested_at"), str) else None
-    return TaskOut(
-        id=task.id,
-        task_uuid=task.task_uuid,
-        task_name=task.task_name,
-        task_type=task.task_type,
-        status=task.status,
-        priority=task.priority,
-        progress=task.progress or 0,
-        country_id=task.country_id,
-        report_id=task.report_id,
-        description=task.description,
-        last_error=task.last_error,
-        created_at=task.created_at,
-        started_at=task.started_at,
-        completed_at=task.completed_at,
-        actual_duration=task.actual_duration,
-        workbook_count=0,
-        cancel_requested=cancel_requested,
-        cancel_requested_at=cancel_requested_at,
-    )
-
-
-def _provider_to_out(provider: AIProviderConfig) -> ProviderOut:
-    rate_limit_meta = get_provider_rate_limit_state(provider)
-    runtime_health = get_provider_runtime_health_state(provider)
-    return ProviderOut(
-        id=provider.id,
-        provider_key=provider.provider_key,
-        provider_name=provider.provider_name,
-        display_name=provider.display_name,
-        api_style=provider.api_style,
-        base_url=provider.base_url,
-        organization=provider.organization,
-        is_active=provider.is_active,
-        priority=provider.priority,
-        has_api_key=bool(provider.api_key),
-        api_key_hint=mask_api_key(provider.api_key),
-        extra_headers=provider.extra_headers or {},
-        extra_config=provider.extra_config or {},
-        last_check_status=provider.last_check_status,
-        last_check_message=provider.last_check_message,
-        last_checked_at=provider.last_checked_at.isoformat() if provider.last_checked_at else None,
-        rate_limit_active=rate_limit_meta["rate_limit_active"],
-        rate_limit_cooldown_until=rate_limit_meta["rate_limit_cooldown_until"],
-        rate_limit_remaining_seconds=rate_limit_meta["rate_limit_remaining_seconds"],
-        rate_limit_count=rate_limit_meta["rate_limit_count"],
-        last_rate_limit_at=rate_limit_meta["last_rate_limit_at"],
-        runtime_failure_active=runtime_health["runtime_failure_active"],
-        runtime_failure_cooldown_until=runtime_health["runtime_failure_cooldown_until"],
-        runtime_failure_remaining_seconds=runtime_health["runtime_failure_remaining_seconds"],
-        runtime_failure_streak=runtime_health["runtime_failure_streak"],
-        runtime_timeout_count=runtime_health["runtime_timeout_count"],
-        runtime_latency_ewma_ms=runtime_health["runtime_latency_ewma_ms"],
-        runtime_last_error=runtime_health["runtime_last_error"],
-    )
-
-
-def _model_to_out(model: AIModelConfig) -> ModelOut:
-    provider = model.provider
-    rate_limit_meta = get_model_rate_limit_state(model, provider)
-    runtime_health = get_model_runtime_health_state(model, provider)
-    return ModelOut(
-        id=model.id,
-        provider_id=model.provider_id,
-        provider_key=provider.provider_key if provider else "",
-        provider_name=provider.provider_name if provider else "",
-        model_key=model.model_key,
-        model_name=model.model_name,
-        display_name=model.display_name,
-        model_type=model.model_type,
-        api_style=model.api_style,
-        temperature=model.temperature,
-        runtime_max_concurrency=(model.extra_params or {}).get("runtime_max_concurrency"),
-        thinking_mode=get_thinking_mode(model.extra_params),
-        **availability_view(model.extra_params),
-        extra_params=model.extra_params or {},
-        is_enabled=model.is_enabled,
-        is_default=model.is_default,
-        priority=model.priority,
-        last_check_status=model.last_check_status,
-        last_check_message=model.last_check_message,
-        last_checked_at=model.last_checked_at.isoformat() if model.last_checked_at else None,
-        rate_limit_active=rate_limit_meta["rate_limit_active"],
-        rate_limit_scope=rate_limit_meta.get("rate_limit_scope"),
-        rate_limit_cooldown_until=rate_limit_meta["rate_limit_cooldown_until"],
-        rate_limit_remaining_seconds=rate_limit_meta["rate_limit_remaining_seconds"],
-        rate_limit_count=rate_limit_meta["rate_limit_count"],
-        last_rate_limit_at=rate_limit_meta["last_rate_limit_at"],
-        runtime_failure_active=runtime_health["runtime_failure_active"],
-        runtime_failure_scope=runtime_health.get("runtime_failure_scope"),
-        runtime_failure_cooldown_until=runtime_health["runtime_failure_cooldown_until"],
-        runtime_failure_remaining_seconds=runtime_health["runtime_failure_remaining_seconds"],
-        runtime_failure_streak=runtime_health["runtime_failure_streak"],
-        runtime_timeout_count=runtime_health["runtime_timeout_count"],
-        runtime_latency_ewma_ms=runtime_health["runtime_latency_ewma_ms"],
-        runtime_last_error=runtime_health["runtime_last_error"],
-    )
+    return [runtime_route_to_out(route) for route in routes]

@@ -1,0 +1,759 @@
+@layer components {
+  .chart-shell {
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--surface));
+    box-shadow: none;
+    @apply rounded-none p-4 sm:p-5;
+  }
+
+  .chart-toolbar {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .chart-frame-toolbar {
+    @apply mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between;
+  }
+
+  .chart-frame-toolbar-left {
+    min-width: 0;
+    flex: 1 1 auto;
+    @apply flex flex-col gap-3;
+  }
+
+  .chart-frame-toolbar-main {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .chart-frame-actions {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .chart-view-toggle {
+    border: 1px solid rgb(var(--border) / 0.82);
+    background-color: rgb(var(--surface) / 0.92);
+    @apply inline-flex rounded-none;
+  }
+
+  .chart-view-btn {
+    border-right: 1px solid rgb(var(--border) / 0.78);
+    color: rgb(var(--text));
+    background-color: transparent;
+    letter-spacing: 0.02em;
+    @apply px-4 py-2 text-sm font-semibold transition-colors;
+  }
+
+  .chart-view-btn:last-child {
+    border-right: none;
+  }
+
+  .chart-view-btn:hover {
+    color: rgb(var(--text-strong));
+    background-color: rgb(var(--surface-raised) / 0.74);
+  }
+
+  .chart-view-btn-active {
+    color: rgb(var(--text-strong));
+    background-color: rgb(var(--color-brand) / 0.12);
+  }
+
+  .chart-toggle {
+    border: 1px solid rgb(var(--border) / 0.82);
+    color: rgb(var(--text));
+    background-color: rgb(var(--surface-raised) / 0.36);
+    letter-spacing: 0.04em;
+    @apply rounded-none px-3 py-1.5 text-[11px] font-semibold transition-all;
+  }
+
+  .chart-toggle:hover {
+    border-color: rgb(var(--border-soft));
+    color: rgb(var(--text-strong));
+    background-color: rgb(var(--surface-raised) / 0.88);
+  }
+
+  .chart-toggle-active {
+    border-color: rgb(var(--color-brand) / 0.5);
+    color: rgb(var(--text-strong));
+    background-color: rgb(var(--color-brand) / 0.14);
+  }
+
+  .chart-toggle-small {
+    letter-spacing: 0.02em;
+    @apply px-2 py-1 text-[10px];
+  }
+
+  .chart-chip {
+    border: 1px solid rgb(var(--border) / 0.7);
+    background-color: rgb(var(--surface) / 0.88);
+    color: rgb(var(--text-muted));
+    letter-spacing: 0.03em;
+    @apply rounded-none px-2.5 py-1 text-[11px] font-semibold;
+  }
+
+  .chart-chip-warning {
+    border-color: color-mix(in srgb, #d97706 56%, rgb(var(--border)));
+    background: color-mix(in srgb, #f59e0b 10%, rgb(var(--surface)));
+    color: color-mix(in srgb, #b45309 72%, rgb(var(--text-strong)));
+  }
+
+  .chart-stage {
+    width: 100%;
+    min-height: 0;
+    @apply grid items-stretch gap-4;
+  }
+
+  .chart-stage-with-aside {
+    @apply xl:grid-cols-[minmax(0,1fr)_220px];
+  }
+
+  .chart-stage-with-wide-aside {
+    @apply xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)];
+    @apply gap-5;
+  }
+
+  .chart-canvas {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .chart-scroll-x {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.35rem;
+    min-height: 0;
+  }
+
+  .chart-aside {
+    border-left: 1px solid rgb(var(--border) / 0.7);
+    padding-left: 1rem;
+    max-height: min(54vh, 420px);
+    overflow: auto;
+    min-height: 0;
+  }
+
+  .chart-aside-wide {
+    max-height: min(54vh, 420px);
+  }
+
+  .chart-legend {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .chart-legend-item {
+    border: 1px solid rgb(var(--border) / 0.4);
+    background-color: rgb(var(--surface-raised) / 0.22);
+    @apply px-2.5 py-1.5;
+  }
+
+  .chart-legend-row {
+    @apply flex items-start gap-2.5;
+  }
+
+  .chart-legend-swatch {
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    margin-top: 0.35rem;
+  }
+
+  .chart-legend-name {
+    color: rgb(var(--text-strong));
+    @apply text-[13px] font-medium leading-5;
+  }
+
+  .chart-legend-meta {
+    color: rgb(var(--text-muted));
+    @apply mt-0.5 text-[11px] leading-4;
+  }
+
+  .chart-footer-info {
+    border-top: 1px solid rgb(var(--border) / 0.64);
+    @apply mt-5 flex flex-col gap-3 pt-3;
+  }
+
+  .chart-note-panel {
+    border: 1px solid rgb(var(--border) / 0.64);
+    background-color: rgb(var(--surface) / 0.78);
+    color: rgb(var(--text-muted));
+    @apply px-3 py-2 text-xs leading-5;
+  }
+
+  .chart-sidebar {
+    min-height: 0;
+    @apply flex flex-col gap-3;
+  }
+
+  .chart-sidebar-compact {
+    @apply gap-2;
+  }
+
+  .chart-sidebar-header {
+    @apply flex items-start justify-between gap-3;
+  }
+
+  .chart-sidebar-title {
+    color: rgb(var(--text-strong));
+    @apply text-sm font-semibold tracking-[0.02em];
+  }
+
+  .chart-sidebar-copy {
+    color: rgb(var(--text-muted));
+    @apply mt-1 text-xs leading-5;
+  }
+
+  .chart-sidebar-list {
+    border: 1px solid rgb(var(--border) / 0.74);
+    background-color: rgb(var(--surface) / 0.96);
+    max-height: min(58vh, 660px);
+    min-height: 0;
+    @apply overflow-auto rounded-none;
+  }
+
+  .chart-sidebar-list-compact {
+    max-height: min(42vh, 280px);
+  }
+
+  .chart-sidebar-item {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid rgb(var(--border) / 0.42);
+    color: rgb(var(--text));
+    background-color: transparent;
+    @apply block cursor-pointer px-3 py-3 transition-colors;
+  }
+
+  .chart-sidebar-item-compact {
+    @apply px-2.5 py-2;
+  }
+
+  .chart-sidebar-item-compact .chart-sidebar-item-inner {
+    @apply gap-2;
+  }
+
+  .chart-sidebar-item-compact .chart-sidebar-name {
+    @apply text-[13px];
+  }
+
+  .chart-sidebar-compact-total {
+    color: rgb(var(--text-muted));
+    @apply text-[11px] font-normal tabular-nums;
+  }
+
+  .chart-sidebar-item::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--chart-sidebar-volume, 0%);
+    background-color: rgb(var(--color-brand) / 0.1);
+    pointer-events: none;
+    opacity: 0.72;
+    transition: width 220ms ease, opacity 180ms ease, background-color 180ms ease;
+  }
+
+  .chart-sidebar-item:last-child {
+    border-bottom: none;
+  }
+
+  .chart-sidebar-item:hover {
+    background-color: rgb(var(--bg-soft) / 0.42);
+  }
+
+  .chart-sidebar-item:hover::before {
+    opacity: 0.94;
+    background-color: rgb(var(--color-brand) / 0.14);
+  }
+
+  .chart-sidebar-item-active {
+    background-color: rgb(var(--color-brand) / 0.08);
+  }
+
+  .chart-sidebar-item-active::before {
+    background-color: rgb(var(--color-brand) / 0.18);
+  }
+
+  .chart-sidebar-item-inner {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+  }
+
+  .chart-sidebar-checkbox {
+    accent-color: rgb(var(--color-brand));
+  }
+
+  .chart-sidebar-checkbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+  }
+
+  .chart-sidebar-swatch {
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    margin-top: 0.35rem;
+    border: 1px solid rgb(var(--border-soft));
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px rgb(var(--surface) / 0.82);
+  }
+
+  .chart-sidebar-swatch-active {
+    box-shadow: none;
+  }
+
+  .chart-sidebar-name {
+    color: rgb(var(--text-strong));
+    @apply truncate text-sm font-medium;
+  }
+
+  .chart-sidebar-meta {
+    color: rgb(var(--text-muted));
+    @apply mt-1 text-xs leading-5;
+  }
+
+  .chart-sidebar-empty {
+    color: rgb(var(--text-muted));
+    @apply px-4 py-6 text-sm;
+  }
+
+  .chart-sidebar-warning,
+  .chart-data-warning {
+    border: 1px solid rgb(var(--color-accent) / 0.38);
+    background-color: rgb(var(--color-accent) / 0.08);
+    color: rgb(var(--text-muted));
+    @apply flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-xs leading-5;
+  }
+
+  .chart-data-warning {
+    border-left: none;
+    border-right: none;
+  }
+
+  .data-preview-wrap {
+    border: 1px solid rgb(var(--border) / 0.7);
+    background-color: rgb(var(--surface) / 0.75);
+    max-height: min(72vh, 720px);
+    @apply overflow-auto rounded-none;
+  }
+
+  .data-preview-meta {
+    color: rgb(var(--text-muted));
+    @apply border-b px-4 py-3 text-xs leading-5;
+  }
+
+  .data-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+  }
+
+  .data-preview-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: rgb(var(--surface-raised) / 0.95);
+    color: rgb(var(--text-faint));
+    border-bottom: 1px solid rgb(var(--border) / 0.74);
+    @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.12em];
+  }
+
+  .data-preview-table tbody td {
+    border-bottom: 1px solid rgb(var(--border) / 0.38);
+    color: rgb(var(--text));
+    @apply px-3 py-2 text-sm;
+  }
+
+  .data-preview-table tbody tr:hover {
+    background-color: rgb(var(--bg-soft) / 0.34);
+  }
+
+  .data-preview-table .is-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: rgb(var(--surface) / 0.98);
+  }
+
+  .chart-link-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    border: 1px solid rgb(var(--border) / 0.82);
+    background-color: rgb(var(--surface-raised) / 0.76);
+    color: rgb(var(--text-strong));
+    letter-spacing: 0.02em;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16);
+    @apply inline-flex items-center gap-2 rounded-none px-3 py-1.5 text-xs font-semibold transition-all;
+  }
+
+  .chart-link-btn:hover {
+    border-color: rgb(var(--border-soft));
+    background-color: rgb(var(--surface));
+  }
+
+  .chart-fullscreen-btn {
+    min-width: max-content;
+    justify-content: center;
+  }
+
+  .chart-fullscreen-btn svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .panel-fullscreen:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    max-height: none;
+    background: rgb(var(--bg));
+    padding: 1rem;
+    overflow: auto;
+  }
+
+  .panel-fullscreen:fullscreen.disease-coverage-map,
+  .panel-fullscreen:fullscreen.coverage-map-shell {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+  }
+
+  .panel-fullscreen:fullscreen .disease-coverage-frame,
+  .panel-fullscreen:fullscreen .coverage-map-canvas {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chart-shell-fullscreen {
+    height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-shell-fullscreen .chart-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chart-shell-fullscreen .chart-stage-with-wide-aside {
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 380px);
+  }
+
+  .chart-shell-fullscreen .chart-canvas {
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-shell-fullscreen .chart-aside {
+    max-height: none;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-shell-fullscreen .chart-aside-wide {
+    max-height: none;
+  }
+
+  .chart-shell-fullscreen .data-preview-wrap {
+    max-height: calc(100vh - 210px);
+  }
+
+  .chart-shell-fullscreen .chart-canvas>* {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chart-shell-fullscreen .chart-scroll-x {
+    height: 100%;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .chart-shell-fullscreen .chart-scroll-x>* {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chart-shell-fullscreen .chart-aside-wide .chart-sidebar {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chart-shell-fullscreen .chart-aside-wide .chart-sidebar-list {
+    flex: 1 1 auto;
+    max-height: none;
+  }
+
+  .chart-shell-fullscreen .chart-footer-info {
+    flex: 0 0 auto;
+    max-height: min(24vh, 220px);
+    overflow: auto;
+  }
+
+  .comparison-shell {
+    border: 1px solid rgb(var(--border) / 0.72);
+    background:
+      linear-gradient(180deg, rgb(var(--surface) / 0.98), rgb(var(--surface-raised) / 0.52));
+    box-shadow: 0 1px 0 rgb(var(--border) / 0.2);
+    @apply overflow-hidden rounded-none;
+  }
+
+  .comparison-toolbar {
+    border-bottom: 1px solid rgb(var(--border) / 0.7);
+    background:
+      linear-gradient(180deg, rgb(var(--surface) / 0.94), rgb(var(--surface-raised) / 0.38));
+    @apply flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center;
+  }
+
+  .comparison-table-wrap {
+    max-height: min(72vh, 760px);
+    @apply overflow-auto;
+  }
+
+  .comparison-table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+  }
+
+  .comparison-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background:
+      linear-gradient(180deg, rgb(var(--surface) / 0.98), rgb(var(--surface-raised) / 0.94));
+    box-shadow: inset 0 -1px 0 rgb(var(--border) / 0.74);
+  }
+
+  .comparison-table thead .comparison-head-sticky {
+    left: 0;
+    z-index: 4;
+    box-shadow:
+      inset -1px 0 0 rgb(var(--border) / 0.58),
+      inset 0 -1px 0 rgb(var(--border) / 0.74);
+  }
+
+  .comparison-cell-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: rgb(var(--surface) / 0.98);
+    box-shadow: inset -1px 0 0 rgb(var(--border) / 0.44);
+  }
+
+  .comparison-table tbody tr:nth-child(2n) {
+    background-color: rgb(var(--surface-raised) / 0.14);
+  }
+
+  .comparison-table tbody tr:nth-child(2n) .comparison-cell-sticky {
+    background-color: rgb(var(--surface-raised) / 0.46);
+  }
+
+  .comparison-table tbody tr:hover .comparison-cell-sticky {
+    background-color: rgb(var(--bg-soft) / 0.54);
+  }
+
+  .comparison-cell-primary {
+    color: rgb(var(--text-strong));
+  }
+
+  .comparison-cell-secondary {
+    color: rgb(var(--text-muted));
+  }
+
+  .comparison-cell-number {
+    color: rgb(var(--text));
+  }
+
+  .comparison-cell-accent {
+    color: rgb(var(--color-accent));
+  }
+
+  .comparison-cell-danger {
+    color: rgb(185 28 28);
+  }
+
+  html[data-theme='dark'] .comparison-cell-danger {
+    color: rgb(252 165 165);
+  }
+
+  .comparison-empty {
+    color: rgb(var(--text-faint));
+  }
+
+  .comparison-sparkline {
+    display: block;
+    width: 120px;
+    height: 30px;
+    color: rgb(var(--color-brand));
+  }
+
+  .comparison-sparkline-track {
+    stroke: rgb(var(--border) / 0.66);
+    stroke-width: 1;
+  }
+
+  .comparison-sparkline-fill {
+    fill: rgb(var(--color-brand) / 0.1);
+  }
+
+  .comparison-sparkline-line {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .comparison-sparkline-dot {
+    fill: currentColor;
+  }
+
+  .comparison-shell-fullscreen {
+    min-height: calc(100vh - 2rem);
+  }
+
+  .comparison-shell-fullscreen .comparison-table-wrap {
+    max-height: calc(100vh - 210px);
+  }
+
+  .table-caption {
+    color: rgb(var(--text-muted));
+    @apply border-b px-4 py-3 text-sm;
+  }
+
+  .chart-loading-shell {
+    border: 1px solid rgb(var(--border) / 0.7);
+    background:
+      linear-gradient(180deg, rgb(var(--surface) / 0.98), rgb(var(--surface-raised) / 0.44));
+    @apply space-y-3 rounded-none p-4 sm:p-5;
+  }
+
+  .chart-loading-toolbar {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .chart-loading-pill,
+  .chart-loading-line,
+  .chart-loading-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgb(var(--border) / 0.44);
+    background-color: rgb(var(--surface-raised) / 0.32);
+  }
+
+  .chart-loading-pill::after,
+  .chart-loading-line::after,
+  .chart-loading-panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.3), transparent);
+    animation: chart-loading-shimmer 1.6s infinite;
+  }
+
+  .chart-loading-pill {
+    @apply h-8 rounded-none;
+  }
+
+  .chart-loading-line {
+    @apply h-4 rounded-none;
+  }
+
+  .chart-loading-panel {
+    min-height: 220px;
+    display: grid;
+    place-items: center;
+    @apply rounded-none;
+  }
+  .chart-loading-panel > .gids-loading { position: relative; z-index: 1; }
+}
+
+@media (min-width: 1280px) {
+  .chart-shell:not(.chart-shell-fullscreen) .chart-stage-with-wide-aside {
+    height: var(--chart-stage-height, auto);
+  }
+
+  .chart-shell:not(.chart-shell-fullscreen) .chart-aside-wide {
+    overflow: hidden;
+  }
+
+  .chart-shell:not(.chart-shell-fullscreen) .chart-aside-wide .chart-sidebar {
+    height: 100%;
+  }
+
+  .chart-shell:not(.chart-shell-fullscreen) .chart-aside-wide .chart-sidebar-list {
+    flex: 1 1 auto;
+    max-height: none;
+  }
+}
+
+@media (max-width: 1279px) {
+  .chart-aside {
+    border-left: none;
+    border-top: 1px solid rgb(var(--border) / 0.7);
+    padding-left: 0;
+    padding-top: 1rem;
+  }
+
+  .chart-aside-wide {
+    max-height: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .chart-shell-fullscreen .chart-stage-with-wide-aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@layer utilities {
+  @keyframes chart-loading-shimmer {
+    100% {
+      transform: translateX(180%);
+    }
+  }
+
+  /* Journal markdown typography for disease detail page */
+  .journal-markdown strong,
+  .journal-markdown b {
+    color: rgb(15 23 42);
+    font-weight: 700;
+  }
+
+  .journal-markdown h1,
+  .journal-markdown h2,
+  .journal-markdown h3,
+  .journal-markdown h4,
+  .journal-markdown h5,
+  .journal-markdown h6 {
+    color: rgb(15 23 42);
+  }
+
+  html[data-theme='dark'] .journal-markdown strong,
+  html[data-theme='dark'] .journal-markdown b {
+    color: rgb(241 245 249);
+  }
+
+  html[data-theme='dark'] .journal-markdown h1,
+  html[data-theme='dark'] .journal-markdown h2,
+  html[data-theme='dark'] .journal-markdown h3,
+  html[data-theme='dark'] .journal-markdown h4,
+  html[data-theme='dark'] .journal-markdown h5,
+  html[data-theme='dark'] .journal-markdown h6 {
+    color: rgb(241 245 249);
+  }
+
+}

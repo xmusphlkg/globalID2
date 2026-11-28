@@ -49,7 +49,7 @@ def health():
     # 检查配置
     try:
         from src.core import get_config
-        config = get_config()
+        get_config()
         console.print("✓ [green]配置加载成功[/green]")
     except Exception as e:
         console.print(f"✗ [red]配置加载失败: {e}[/red]")
@@ -199,6 +199,25 @@ def test_cache():
     except Exception as e:
         console.print(f"\n[bold red]✗ 缓存测试失败: {e}[/bold red]")
         raise typer.Exit(1)
+
+
+@app.command()
+def metrics(
+    include_operational: bool = typer.Option(
+        False,
+        "--include-operational",
+        help="采集实时运行指标快照（任务队列、发布脏标记、组件心跳与可用 AI 模型）",
+    ),
+) -> None:
+    """输出 Prometheus 文本格式指标（只读）"""
+    from src.core.metrics import metrics_registry
+
+    if include_operational:
+        from src.core.operational_metrics import refresh_operational_metrics
+
+        asyncio.run(refresh_operational_metrics(metrics_registry, force=True))
+
+    typer.echo(metrics_registry.render_prometheus(), nl=False)
 
 
 if __name__ == "__main__":

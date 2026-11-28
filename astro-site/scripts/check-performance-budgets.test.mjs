@@ -5,7 +5,8 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { auditPerformance, profileBudgetOverrides } from './check-performance-budgets.mjs';
+import { auditPerformance, auditPerformanceParallel, profileBudgetOverrides } from './check-performance-budgets.mjs';
+import { openGzipSizeCache } from './gzip-size-cache.mjs';
 import { openPageAuditCache } from './page-audit-cache.mjs';
 
 function fixture() {
@@ -241,4 +242,48 @@ test('cached compression sizes still enforce changed budgets', async t => {
   assert.equal(strict.passed,false);
   assert.match(strict.errors.join('\n'),/Largest page HTML/);
   assert.ok(cache.stats.hits>0);
+});
+
+test('parallel performance audit matches serial audit exactly and populates caches', async (t) => {
+  const directory = fixture();
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  writeFileSync(join(directory, '_astro', 'entry.js'), 'import "./shared.js";');
+  writeFileSync(join(directory, '_astro', 'shared.js'), 'export const ok = true;');
+  writeFileSync(join(directory, '_astro', 'base.css'), 'body{margin:0}');
+  for (let i = 0; i < 24; i++) {
+    const dir = join(directory, i % 3 === 0 ? `countries/c${i}` : `about/p${i}`);
+    mkdirSync(dir, { recursive: true });
+    const html = i % 2 === 0
+      ? `<link rel="stylesheet" href="/_astro/base.css"><astro-island component-url="/_astro/entry.js"></astro-island><main>${'page-body-'.repeat(i + 5)}</main>`
+      : `<link rel="stylesheet" href="/_astro/base.css"><main>${'brochure-'.repeat(i + 3)}</main>`;
+    writeFileSync(join(dir, 'index.html'), html);
+  }
+  const budgets = {
+    maxJavaScriptChunkBytes: 10_000,
+    maxRouteCompressedAssetsBytes: 10_000,
+    maxOrdinaryRouteCompressedAssetsBytes: 10_000,
+    maxWorldMapBytes: 10_000,
+    maxWorldMapBrotliBytes: 10_000,
+  };
+  const serial = auditPerformance(directory, budgets);
+  const pageCachePath = join(directory, 'page-facts.json');
+  const gzipCachePath = join(directory, 'gzip-sizes.json');
+  const pageCache = openPageAuditCache(pageCachePath, 'parallel-test');
+  const gzipCache = openGzipSizeCache(gzipCachePath);
+  const parallel = await auditPerformanceParallel(directory, budgets, { pageCache, gzipCache, workers: 2 });
+  assert.deepEqual(parallel, serial);
+  assert.equal(pageCache.stats.misses, 24);
+  pageCache.save();
+  gzipCache.save();
+
+  const warmPageCache = openPageAuditCache(pageCachePath, 'parallel-test');
+  const warmGzipCache = openGzipSizeCache(gzipCachePath);
+  const warm = await auditPerformanceParallel(directory, budgets, { pageCache: warmPageCache, gzipCache: warmGzipCache, workers: 2 });
+  assert.deepEqual(warm, serial);
+  assert.equal(warmPageCache.stats.hits, 24);
+  assert.equal(warmPageCache.stats.misses, 0);
+
+  for (const workers of [0, 17, 1.5, NaN]) {
+    await assert.rejects(auditPerformanceParallel(directory, budgets, { workers }), /1–16/);
+  }
 });

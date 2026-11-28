@@ -130,7 +130,11 @@ def test_cold_and_warm_results_equal_uncached_real_matcher(tmp_path):
     path = tmp_path / 'titles.json'
     cold = LiteratureTitleCache(path, identity(diseases, aliases))
     for index, title in enumerate(titles):
-        assert cold.links(str(index), title, lambda: _title_estimated_literature_links(title, diseases, aliases, prepared)) == expected[index]
+        assert cold.links(
+            str(index),
+            title,
+            lambda title=title: _title_estimated_literature_links(title, diseases, aliases, prepared),
+        ) == expected[index]
     cold.save()
     warm = LiteratureTitleCache(path, identity(diseases, aliases))
     assert [warm.links(str(i), title, forbidden) for i, title in enumerate(titles)] == expected

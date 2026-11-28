@@ -48,10 +48,10 @@ async def test_parser_basic():
     )
     
     if df is not None:
-        print(f"\n✅ 解析成功！")
+        print("\n✅ 解析成功！")
         print(f"数据行数: {len(df)}")
         print(f"数据列数: {len(df.columns)}")
-        print(f"\n前5行数据:")
+        print("\n前5行数据:")
         print(df.head())
     else:
         print("\n❌ 解析失败")
@@ -93,11 +93,11 @@ async def test_crawler_integration():
         # 显示第一个数据框的信息
         if processed_data:
             df = processed_data[0]
-            print(f"\n第一个数据框信息:")
+            print("\n第一个数据框信息:")
             print(f"- 行数: {len(df)}")
             print(f"- 列数: {len(df.columns)}")
             print(f"- 疾病数量: {df['Diseases'].nunique()}")
-            print(f"\n前3行数据:")
+            print("\n前3行数据:")
             print(df.head(3))
     else:
         print("\n❌ 没有爬取到数据")
@@ -116,7 +116,7 @@ async def test_disease_mapper():
     
     # 显示统计信息
     stats = await mapper.get_statistics()
-    print(f"\n📊 映射统计:")
+    print("\n📊 映射统计:")
     print(f"  国家: {stats['country_code'].upper()}")
     print(f"  标准疾病库: {stats['standard_diseases']} 条")
     print(f"  本地映射: {stats['total_mappings']} 条")

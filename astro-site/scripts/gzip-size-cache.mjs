@@ -14,20 +14,31 @@ export function openGzipSizeCache(path, { compress = bytes => gzipSync(bytes, { 
   } catch { /* Missing or damaged caches are recomputed. */ }
   const entries = {};
   const stats = { hits: 0, misses: 0 };
+  const lookup = (key, rawBytes) => {
+    const saved = entries[key] ?? previous[key];
+    if (Array.isArray(saved) && saved[0] === rawBytes && Number.isSafeInteger(saved[1]) && saved[1] > 0 && saved[1] <= rawBytes + 1024) {
+      stats.hits += 1;
+      entries[key] = saved;
+      return saved[1];
+    }
+    return undefined;
+  };
+  const record = (key, rawBytes, size) => {
+    stats.misses += 1;
+    entries[key] = [rawBytes, size];
+    return size;
+  };
+  const snapshot = () => ({ ...previous, ...entries });
   return {
     stats,
-    measure(bytes) {
-      const key = createHash('sha256').update(bytes).digest('hex');
-      const saved = entries[key] ?? previous[key];
-      if (Array.isArray(saved) && saved[0] === bytes.length && Number.isSafeInteger(saved[1]) && saved[1] > 0 && saved[1] <= bytes.length + 1024) {
-        stats.hits += 1;
-        entries[key] = saved;
-        return saved[1];
-      }
-      stats.misses += 1;
-      const size = compress(bytes);
-      entries[key] = [bytes.length, size];
-      return size;
+    lookup,
+    record,
+    snapshot,
+    measure(bytes, knownKey) {
+      const key = knownKey ?? createHash('sha256').update(bytes).digest('hex');
+      const hit = lookup(key, bytes.length);
+      if (hit !== undefined) return hit;
+      return record(key, bytes.length, compress(bytes));
     },
     save() {
       mkdirSync(dirname(path), { recursive: true });

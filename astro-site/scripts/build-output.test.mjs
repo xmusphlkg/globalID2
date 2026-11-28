@@ -116,7 +116,8 @@ test('real Astro build retains layout CSS through a symlinked workspace ancestor
       <script>document.documentElement.dataset.assetFixture="ready";</script>
       <style is:global>.site-header { height: 73px; display: flex; } body { margin: 0; }</style>
     </body></html>`);
-    const env = { ...process.env, GIDS_RESEARCH_BUILD_DIR: '', GIDS_REPORTS_BUILD_DIR: '', GIDS_COUNTRY_BUILD_DIR: '',
+    const env = { ...process.env, ASTRO_TELEMETRY_DISABLED: '1', XDG_CONFIG_HOME: resolve(root, '.config'),
+      GIDS_RESEARCH_BUILD_DIR: '', GIDS_REPORTS_BUILD_DIR: '', GIDS_COUNTRY_BUILD_DIR: '',
       GIDS_CODE_BUILD_DIR: linked, GIDS_ASTRO_RENDER_WORKERS: '2', GIDS_BUILD_PUBLIC_DIR: '',
       GIDS_SITE_BUILD_OUTPUT_DIR: resolve(linked, '.dist-build-test') };
     const result = spawnSync(process.execPath, [resolve(site, 'node_modules/astro/bin/astro.mjs'), 'build'], {

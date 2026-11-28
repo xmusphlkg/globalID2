@@ -48,7 +48,7 @@ def capture_archive(directory,*,resume=False,workers=4):
  def download(report):
   try:
    payload,receipt,_=fetch(report['url'])
-   if not(payload.startswith(b'%PDF') or payload.startswith(b'PK')):raise ValueError('Official report response not PDF/DOCX')
+   if not payload.startswith((b'%PDF', b'PK')):raise ValueError('Official report response not PDF/DOCX')
    return report|receipt
   except Exception as exc:return report|{'error':str(exc)}
  with ThreadPoolExecutor(max_workers=workers) as pool:captured=list(pool.map(download,reports))

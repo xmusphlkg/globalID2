@@ -163,7 +163,7 @@ async def probe_public_research(client, url: str, *, papers_origin: str,
 
     try:
         result = await asyncio.wait_for(probe(), timeout=timeout_seconds)
-    except (asyncio.TimeoutError, httpx.TimeoutException):
+    except (TimeoutError, httpx.TimeoutException):
         result = {"available": False, "error_code": "http_timeout"}
     except _ProbeFailure as error:
         result = {"available": False, "error_code": error.code}

@@ -33,7 +33,7 @@ def cache_control_for(request_path: str) -> str:
         return "public, max-age=300, stale-while-revalidate=86400"
     if request_path.startswith("/data/"):
         return "public, max-age=86400"
-    if request_path.endswith(".html") or request_path.endswith("/"):
+    if request_path.endswith((".html", "/")):
         return "public, max-age=0, must-revalidate"
     return "public, max-age=86400"
 

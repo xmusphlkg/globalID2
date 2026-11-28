@@ -13,3 +13,5 @@ EnvironmentFile=-__PROJECT_DIR__/.env
 RuntimeDirectory=globalid-notify
 RuntimeDirectoryPreserve=yes
 ExecStart=__PROJECT_DIR__/venv/bin/python __PROJECT_DIR__/scripts/send_systemd_failure_alert.py %i
+NoNewPrivileges=yes
+PrivateTmp=yes

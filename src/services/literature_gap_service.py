@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-import asyncio
 import hashlib
 import json
 from pathlib import Path
@@ -80,7 +79,7 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _gap_id(signal_id: str, disease_id: str) -> str:
-    digest = hashlib.sha256(f"{signal_id}|{disease_id}".encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(f"{signal_id}|{disease_id}".encode()).hexdigest()
     return f"gap_{digest[:24]}"
 
 

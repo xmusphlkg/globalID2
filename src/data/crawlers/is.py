@@ -550,7 +550,7 @@ class IcelandDOHCrawler(BaseCrawler):
                 SOURCE_SCOPE_RESPIRATORY: ("weekly", "iso_week"),
             }[scope]
             digest = hashlib.sha256(
-                f"{scope}\x1f{entity}\x1f{label}".encode("utf-8")
+                f"{scope}\x1f{entity}\x1f{label}".encode()
             ).hexdigest()[:20]
             definition = ISSeriesDefinition(
                 source_scope=scope,

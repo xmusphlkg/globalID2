@@ -36,3 +36,5 @@ MemoryMax=32G
 # a healthy idempotent task into a forced recovery.
 TimeoutStopSec=900
 KillMode=mixed
+NoNewPrivileges=yes
+PrivateTmp=yes

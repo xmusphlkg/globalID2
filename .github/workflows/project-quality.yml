@@ -1,6 +1,19 @@
 name: Project quality gates
 
 on:
+  pull_request:
+    branches:
+      - development
+      - master
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
   workflow_dispatch:
 
 permissions:
@@ -63,6 +76,10 @@ jobs:
           venv/bin/python -m src.cli.main init-db
           venv/bin/python scripts/full_rebuild_database.py --mode mappings --yes --checkpoint-file /tmp/globalid-ci-rebuild.json
           venv/bin/python scripts/automation/seed_ci_database_fixtures.py
+      - name: Run Python static checks and bytecode compilation
+        run: |
+          venv/bin/ruff check src dashboard/api scripts tests
+          venv/bin/python -m compileall -q src dashboard/api scripts tests
       - name: Run complete offline Python suite
         env:
           PYTEST_ADDOPTS: --tb=short
@@ -112,18 +129,8 @@ jobs:
         run: python3 scripts/automation/prepare_site_build_fixture.py
       - run: npm run check
         working-directory: astro-site
-      - run: npm run test:charts
-        working-directory: astro-site
-      - run: npm run test:knowledge
-        working-directory: astro-site
-      - run: npm run test:research
-        working-directory: astro-site
-      - run: npm run test:seo
-        working-directory: astro-site
-      - run: npm run test:perf
-        working-directory: astro-site
-      - name: Test incremental build caches and HTML validation
-        run: node --test scripts/*build-cache.test.mjs scripts/file-fingerprints.test.mjs scripts/gzip-size-cache.test.mjs scripts/page-audit-cache.test.mjs scripts/build-pipeline.test.mjs scripts/html-visible-text.test.mjs
+      - name: Run complete Astro deterministic unit test suite
+        run: npm run test:all
         working-directory: astro-site
       - run: npm run build:astro
         working-directory: astro-site
@@ -141,10 +148,36 @@ jobs:
           cache-dependency-path: cloudflare/subscriptions/package-lock.json
       - run: npm ci
         working-directory: cloudflare/subscriptions
+      - run: npm run verify
+        working-directory: cloudflare/subscriptions
+      - run: bash -n scripts/wrangler-env.sh
+        working-directory: cloudflare/subscriptions
+
+  data-and-papers-workers:
+    name: Surveillance Data & Papers JSON Worker contract and type tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloudflare/surveillance-data/package-lock.json
+      - run: npm ci
+        working-directory: cloudflare/surveillance-data
       - run: npm test
-        working-directory: cloudflare/subscriptions
+        working-directory: cloudflare/surveillance-data
       - run: npm run typecheck
-        working-directory: cloudflare/subscriptions
+        working-directory: cloudflare/surveillance-data
+      - run: npm run test:runtime
+        working-directory: cloudflare/surveillance-data
+      - run: npm test
+        working-directory: cloudflare/papers-json
+      - run: npm run typecheck
+        working-directory: cloudflare/papers-json
+      - run: npm run test:runtime
+        working-directory: cloudflare/papers-json
 
   migration-smoke:
     name: PostgreSQL migration round-trip

@@ -731,14 +731,14 @@ def cluster_alerts(alerts: Iterable[dict[str, Any]], *, as_of: date) -> list[dic
         rows.sort(key=lambda item: (item["published_date"], item["alert_id"]))
         parent = list(range(len(rows)))
 
-        def find(index: int) -> int:
-            while parent[index] != index:
-                parent[index] = parent[parent[index]]
-                index = parent[index]
+        def find(index: int, _parent: list[int] = parent) -> int:
+            while _parent[index] != index:
+                _parent[index] = _parent[_parent[index]]
+                index = _parent[index]
             return index
 
-        def union(left: int, right: int) -> None:
-            parent[find(right)] = find(left)
+        def union(left: int, right: int, _parent: list[int] = parent, _find=find) -> None:
+            _parent[_find(right)] = _find(left)
 
         first_in_notice: dict[str, int] = {}
         latest_in_country: dict[str, int] = {}
@@ -779,7 +779,7 @@ def _outbreak(key: str, members: list[dict[str, Any]], as_of: date) -> dict[str,
     catalogue_ids = Counter(item["disease_id"] for item in members if item.get("disease_id"))
     return {
         # Anchored on the earliest alert, so the id survives later additions.
-        "outbreak_id": "OB-" + hashlib.sha1(f"{key}|{anchor['alert_id']}".encode("utf-8")).hexdigest()[:12],
+        "outbreak_id": "OB-" + hashlib.sha1(f"{key}|{anchor['alert_id']}".encode()).hexdigest()[:12],
         "disease_id": catalogue_ids.most_common(1)[0][0] if catalogue_ids else None,
         "disease_label": anchor["disease_label"],
         "first_published": anchor["published_date"],

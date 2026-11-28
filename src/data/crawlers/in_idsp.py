@@ -194,7 +194,6 @@ def _events_from_pdf(pdf):
                 candidates = [w for w in header_words if w["text"] == label and w["top"] < 105]
                 if candidates:
                     centers[label] = (candidates[0]["x0"] + candidates[0]["x1"]) / 2
-            ids = [w for w in header_words if w["text"] in {"Unique", "ID.", "State-UT", "UT"} and w["top"] < 110]
             # The ID and state headers are split over two words in most PDFs;
             # their first table cells are stable enough to use the observed row
             # starts when a compound heading has no single token.

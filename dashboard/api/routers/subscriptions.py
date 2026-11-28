@@ -474,7 +474,7 @@ async def subscription_sync_options():
     )
     try:
         stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=180)
-    except asyncio.TimeoutError as exc:
+    except TimeoutError as exc:
         proc.kill()
         await proc.wait()
         raise HTTPException(504, "Subscription option sync timed out after 180 seconds.") from exc

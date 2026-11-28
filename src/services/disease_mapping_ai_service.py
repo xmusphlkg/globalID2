@@ -336,7 +336,7 @@ class DiseaseMappingAIService:
             )
         except (AIOutputError, asyncio.CancelledError):
             raise
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             raise RuntimeError(f"Mapping peer review timed out after {timeout}s") from exc
         except Exception as exc:
             # Transport, quota and auth errors: the automation circuit reads

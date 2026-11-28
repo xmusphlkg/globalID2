@@ -176,7 +176,7 @@ def format_report_date(date_str: Optional[str]) -> str:
             return date_str.strftime('%Y-%m-%d')
         else:
             return str(date_str)
-    except:
+    except Exception:
         return str(date_str)
 
 
@@ -384,171 +384,6 @@ class TestDiseaseMappers:
         # Verify English mappings exist
         assert stats['total_mappings'] > 0, "Should have English mappings"
         print(f"✓ English mapper [{country_code}]: {stats['total_mappings']} mappings")
-    """
-    Test suite for all data crawler sources.
-    
-    Tests three different data sources to ensure proper crawling,
-    parsing, and data extraction capabilities.
-    """
-    
-    @pytest.mark.asyncio
-    async def test_cdc_weekly(self, crawler, processor):
-        """
-        Test CDC Weekly data source (English).
-        
-        Validates:
-            1. Report discovery from CDC Weekly archive
-            2. Successful crawling of report content
-            3. Data processing and disease extraction
-            4. Non-empty DataFrame output
-        
-        Expected: ~40-50 disease records per report
-        """
-        # Step 1: Discover available reports
-        list_results = await crawler.fetch_list(source="cdc_weekly")
-        assert len(list_results) > 0, "Should discover reports"
-        
-        # Step 2: Force crawl one report for testing (bypasses date check)
-        crawl_results = await crawler.crawl(source="cdc_weekly", force=True)
-        assert len(crawl_results) > 0, "Should crawl at least 1 report"
-        
-        # Step 3: Process crawled data into structured format
-        processed = await processor.process_crawler_results(
-            crawl_results[:1], 
-            save_to_file=False
-        )
-        assert len(processed) > 0, "Should process data"
-        
-        # Step 4: Verify disease data extraction
-        df = processed[0]
-        assert not df.empty, "Should have disease data"
-        
-        print(f"✓ cdc_weekly: {len(df)} diseases")
-    
-    @pytest.mark.asyncio
-    async def test_nhc(self, crawler, processor):
-        """
-        Test NHC (National Health Commission) data source (Chinese).
-        
-        Validates:
-            1. Report discovery from NHC official website
-            2. Successful crawling of Chinese language reports
-            3. Chinese disease name parsing and normalization
-            4. Data integrity after processing
-        
-        Expected: ~50-60 disease records per report
-        """
-        # Step 1: Discover available reports
-        list_results = await crawler.fetch_list(source="nhc")
-        assert len(list_results) > 0, "Should discover reports"
-        
-        # Step 2: Force crawl one report for testing
-        crawl_results = await crawler.crawl(source="nhc", force=True)
-        assert len(crawl_results) > 0, "Should crawl at least 1 report"
-        
-        # Step 3: Process with Chinese disease mapper
-        processed = await processor.process_crawler_results(
-            crawl_results[:1], 
-            save_to_file=False
-        )
-        assert len(processed) > 0, "Should process data"
-        
-        # Step 4: Verify Chinese disease extraction
-        df = processed[0]
-        assert not df.empty, "Should have disease data"
-        
-        print(f"✓ nhc: {len(df)} diseases")
-    
-    @pytest.mark.asyncio
-    async def test_pubmed(self, crawler, processor):
-        """
-        Test PubMed RSS feed data source (English).
-        
-        Validates:
-            1. RSS feed parsing and article discovery
-            2. Successful retrieval of PubMed abstracts
-            3. Disease mention extraction from medical literature
-            4. Structured data output
-        
-        Expected: ~40-50 disease mentions per abstract
-        """
-        # Step 1: Parse RSS feed for latest articles
-        list_results = await crawler.fetch_list(source="pubmed")
-        assert len(list_results) > 0, "Should discover reports"
-        
-        # Step 2: Fetch article content
-        crawl_results = await crawler.crawl(source="pubmed", force=True)
-        assert len(crawl_results) > 0, "Should crawl at least 1 report"
-        
-        # Step 3: Extract disease mentions from text
-        processed = await processor.process_crawler_results(
-            crawl_results[:1], 
-            save_to_file=False
-        )
-        assert len(processed) > 0, "Should process data"
-        
-        # Step 4: Verify disease mention extraction
-        df = processed[0]
-        assert not df.empty, "Should have disease data"
-        
-        print(f"✓ pubmed: {len(df)} diseases")
-
-
-class TestDiseaseMappers:
-    """
-    Test suite for disease name mapping system.
-    
-    Tests both Chinese and English disease mappers to ensure
-    proper normalization and standardization of disease names.
-    """
-    
-    @pytest.mark.asyncio
-    async def test_chinese_mapper(self):
-        """
-        Test Chinese disease mapper functionality.
-        
-        Validates:
-            1. Mapper initialization with CN country code
-            2. Database connection and query execution
-            3. Chinese disease name mapping availability
-            4. Statistics reporting (total mappings, aliases)
-        
-        Expected: ~120+ Chinese disease name mappings
-        """
-        # Initialize Chinese mapper (country_code="CN", language="zh")
-        mapper = await create_disease_mapper(country_code="CN", language="zh")
-        
-        # Retrieve mapping statistics from database
-        stats = await mapper.get_statistics()
-        
-        # Verify mappings exist
-        assert stats['total_mappings'] > 0, "Should have Chinese mappings"
-        print(f"✓ Chinese mapper: {stats['total_mappings']} mappings")
-    
-    @pytest.mark.asyncio
-    async def test_english_mapper(self):
-        """
-        Test English disease mapper functionality.
-        
-        Validates:
-            1. Multi-language mapper initialization
-            2. English variant name recognition
-            3. Mapping to standard disease IDs
-            4. Statistics accuracy
-        
-        Expected: ~140+ English disease name mappings
-        Note: English mapper uses CN_EN country code internally
-        """
-        # Initialize English mapper (country_code="CN", language="en")
-        mapper = await create_disease_mapper(country_code="CN", language="en")
-        
-        # Retrieve mapping statistics
-        stats = await mapper.get_statistics()
-        
-        # Verify English mappings exist
-        assert stats['total_mappings'] > 0, "Should have English mappings"
-        print(f"✓ English mapper: {stats['total_mappings']} mappings")
-
 
 
 # ============================================================================
@@ -632,7 +467,7 @@ async def run_quick_tests(country_code: str = "CN", verbose: bool = False):
         passed += 1
         total += 1
     except Exception as e:
-        print(f"  ❌ Chinese Mapper      - ERROR")
+        print("  ❌ Chinese Mapper      - ERROR")
         if verbose:
             print(f"      Error: {e}")
         total += 1
@@ -648,7 +483,7 @@ async def run_quick_tests(country_code: str = "CN", verbose: bool = False):
         passed += 1
         total += 1
     except Exception as e:
-        print(f"  ❌ English Mapper      - ERROR")
+        print("  ❌ English Mapper      - ERROR")
         if verbose:
             print(f"      Error: {e}")
         total += 1

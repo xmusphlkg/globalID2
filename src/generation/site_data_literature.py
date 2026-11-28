@@ -566,8 +566,8 @@ async def collect_literature_export(
             "topics": [],
             "title_estimated_diseases": title_cache.links(
                 article.article_id, article.title,
-                lambda: _title_estimated_literature_links(
-                    article.title, diseases_by_id, title_disease_aliases, prepared_title_disease_aliases
+                lambda title=article.title: _title_estimated_literature_links(
+                    title, diseases_by_id, title_disease_aliases, prepared_title_disease_aliases
                 ),
             ),
             "title_estimated_topics": _title_estimated_topics(article.title),
@@ -760,8 +760,13 @@ async def collect_literature_export(
         )
         classification_evidence = (article.metadata_ or {}).get("classification_evidence") or {}
 
-        def controlled_entities(section: str, *, name_key: str = "name") -> list[dict[str, Any]]:
-            values = classification_evidence.get(section) or {}
+        def controlled_entities(
+            section: str,
+            *,
+            name_key: str = "name",
+            evidence_map: dict[str, Any] = classification_evidence,
+        ) -> list[dict[str, Any]]:
+            values = evidence_map.get(section) or {}
             if not isinstance(values, dict):
                 return []
             return sorted(
@@ -774,7 +779,7 @@ async def collect_literature_export(
                     for key, evidence in values.items()
                     if isinstance(evidence, dict)
                 ],
-                key=lambda item: item["confidence"],
+                key=lambda entry: entry["confidence"],
                 reverse=True,
             )
 

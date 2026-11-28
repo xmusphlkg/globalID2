@@ -294,7 +294,7 @@ class ChinaCDCCrawler(BaseCrawler):
             f" max_date={max_date} fill_missing={fill_missing}"
         )
         if new_results:
-            new_months = sorted(set(r.year_month for r in new_results if r.year_month))
+            new_months = sorted({r.year_month for r in new_results if r.year_month})
             logger.info(f"[CN-CDC] New data months | months={new_months}")
         
         return {

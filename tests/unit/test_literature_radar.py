@@ -638,7 +638,6 @@ def test_browser_research_index_splits_lists_that_exceed_the_file_budget(tmp_pat
         "articles": articles,
     }
     full_size = len(_compact_json_bytes(document))
-    slim_size = len(_compact_json_bytes({**document, "articles": []}))
     budget = 1024
     assert budget < full_size
 
