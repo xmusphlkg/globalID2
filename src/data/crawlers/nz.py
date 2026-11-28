@@ -76,10 +76,12 @@ _NON_NATIONAL_PDF_HINTS = ("rolling", "dhb", "district")
 DHB_TOTAL_CSV_URL = (
     "https://raw.githubusercontent.com/ESR-NZ/Notifiable-Diseases-Annual-Dashboard-/main/data/DHB_Total.csv"
 )
-# raw.githubusercontent.com intermittently closes the TLS stream. jsDelivr
-# serves the same repository file when the canonical URL fails.
+DHB_CONTENTS_API_URL = (
+    "https://api.github.com/repos/ESR-NZ/Notifiable-Diseases-Annual-Dashboard-/contents/data/DHB_Total.csv?ref=main"
+)
 DHB_TOTAL_CSV_MIRRORS = (
     DHB_TOTAL_CSV_URL,
+    DHB_CONTENTS_API_URL,
     "https://cdn.jsdelivr.net/gh/ESR-NZ/Notifiable-Diseases-Annual-Dashboard-@main/data/DHB_Total.csv",
 )
 DHB_REPOSITORY_URL = "https://github.com/ESR-NZ/Notifiable-Diseases-Annual-Dashboard-"
@@ -246,6 +248,8 @@ class NewZealandPHFCrawler(BaseCrawler):
             return super().get(url, **kwargs)
         self.dhb_failures.check(url)
         try:
+            if url == DHB_CONTENTS_API_URL:
+                kwargs["headers"] = {**(kwargs.get("headers") or {}), "Accept": "application/vnd.github.raw+json"}
             kwargs.setdefault("timeout", (10, 30))
             response = super().get(url, **kwargs)
         except (requests.ConnectionError, requests.Timeout) as exc:

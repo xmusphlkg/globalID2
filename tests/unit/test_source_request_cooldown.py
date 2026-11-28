@@ -8,7 +8,7 @@ import pytest
 import requests
 
 from src.data.crawlers import base, request_cooldown
-from src.data.crawlers.nz import DHB_TOTAL_CSV_MIRRORS, NewZealandPHFCrawler
+from src.data.crawlers.nz import DHB_CONTENTS_API_URL, DHB_TOTAL_CSV_MIRRORS, NewZealandPHFCrawler
 from src.data.crawlers.request_cooldown import (
     RequestFailureCooldown,
     SourceRequestDeferred,
@@ -136,6 +136,8 @@ def test_nz_mirror_switch_is_bounded_and_next_instance_skips_timed_out_host(tmp_
         calls.append((url, kwargs["timeout"]))
         if url == DHB_TOTAL_CSV_MIRRORS[0]:
             raise requests.ConnectTimeout("canonical host unavailable")
+        assert url == DHB_CONTENTS_API_URL
+        assert kwargs["headers"]["Accept"] == "application/vnd.github.raw+json"
         return SimpleNamespace(content=b"actual CSV bytes")
 
     monkeypatch.setattr(base.BaseCrawler, "get", transport)
